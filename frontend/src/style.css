@@ -1,0 +1,18 @@
+html {
+    background-color: transparent;
+    text-align: center;
+    color: white;
+}
+
+body {
+    background-color: transparent;
+    margin: 0;
+    color: white;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    overflow: hidden; /* Prevent scrollbars */
+}
+
+#app {
+    height: 100vh;
+    text-align: center;
+}
