@@ -97,6 +97,7 @@
   }
 
   .island {
+    margin-top: 5px;
     background-color: #000000;
     border-radius: var(--island-radius);
     cursor: pointer;

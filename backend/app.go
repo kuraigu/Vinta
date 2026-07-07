@@ -129,14 +129,22 @@ func setClickRegion(hwnd uintptr, width int, height int, borderRadius int) {
 		borderRadius = height / 2
 	}
 
+	// We add a 5px padding to the OS clip mask to perfectly shadow the CSS pill.
+	// Since the CSS pill now has a 5px margin-top, it renders at y=5.
+	// By expanding our region by 5px, our top edge hits y=0. The curve centers perfectly align,
+	// meaning the jagged OS cut happens exactly 5px outside the CSS border in all directions,
+	// allowing the CSS anti-aliasing to render immaculately on the transparent background.
+	padding := 5
+	visualTop := 5 // Matches the CSS margin-top
+
 	// Center the clickable region within the fixed-size OS window
-	left := (MaxWindowWidth - width) / 2
-	right := left + width
-	top := 0
-	bottom := height
+	left := ((MaxWindowWidth - width) / 2) - padding
+	right := ((MaxWindowWidth - width) / 2) + width + padding
+	top := visualTop - padding
+	bottom := visualTop + height + padding
 
 	// CreateRoundRectRgn takes the ellipse diameter, not radius
-	ellipseSize := borderRadius * 2
+	ellipseSize := (borderRadius + padding) * 2
 
 	var hrgn uintptr
 	if width == 0 || height == 0 {
