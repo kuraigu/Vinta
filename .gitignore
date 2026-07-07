@@ -37,6 +37,7 @@ frontend/node_modules/
 dist/
 dist-ssr/
 *.local
+vite.config.ts.timestamp-*
 
 # -------------------------------------------------------------------
 # Editor / OS / Environment
