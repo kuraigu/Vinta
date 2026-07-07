@@ -2,7 +2,7 @@
   import Clock from '../components/Clock.svelte'
   import HorizontalBar from '../components/HorizontalBar.svelte'
   import Calendar from '../components/Calendar.svelte'
-  import SystemStats from '../components/SystemStats.svelte'
+  import Weather from '../components/Weather.svelte'
   import BentoGrid from '../components/BentoGrid.svelte'
   import BentoItem from '../components/BentoItem.svelte'
   import DotIndicator from '../components/DotIndicator.svelte'
@@ -11,8 +11,8 @@
 
   // This page dictates its own dimensions to the parent App!
   export const config = {
-    minimal: { w: 250, h: 35, r: 35 },
-    expanded: { w: 580, h: 280, r: 35 }
+    minimal: { w: 320, h: 35, r: 35 },
+    expanded: { w: 580, h: 300, r: 35 }
   }
 </script>
 
@@ -20,6 +20,8 @@
   {#if !expanded}
     <DotIndicator />
     <Calendar {expanded} />
+    <HorizontalBar />
+    <Weather {expanded} />
     <HorizontalBar />
     <Clock {expanded} />
   {:else}
@@ -32,7 +34,7 @@
           <Clock {expanded} />
         </BentoItem>
         <BentoItem>
-          <SystemStats {expanded} />
+          <Weather {expanded} />
         </BentoItem>
       </BentoGrid>
     </BentoGrid>
@@ -48,6 +50,11 @@
     justify-content: center;
     gap: 1rem;
     box-sizing: border-box;
+  }
+
+  .page-container.minimal {
+    min-width: max-content; /* Prevents squishing during the spring bounce */
+    white-space: nowrap; /* Prevents text from breaking to two lines */
   }
 
   .page-container.expanded {
