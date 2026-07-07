@@ -1,6 +1,8 @@
+// Package main provides the entry point and window configuration for Vinta.
 package main
 
 import (
+	"Vinta/backend"
 	"embed"
 
 	"github.com/wailsapp/wails/v2"
@@ -13,23 +15,29 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
+//go:embed build/windows/icon.ico
+var icon []byte
+
 func main() {
 	// Create an instance of the app structure
-	app := NewApp()
+	app := backend.NewApp(icon)
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:  "Vinta",
-		Width:  600,
-		Height: 200,
+		Title:         "Vinta",
+		Width:         600,
+		Height:        400,
 		Frameless:     true,
 		AlwaysOnTop:   true,
 		DisableResize: true,
+		SingleInstanceLock: &options.SingleInstanceLock{
+			UniqueId: "vinta-dynamic-island",
+		},
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
 		BackgroundColour: &options.RGBA{R: 0, G: 0, B: 0, A: 0},
-		OnStartup:        app.startup,
+		OnStartup:        app.Startup,
 		Bind: []interface{}{
 			app,
 		},
