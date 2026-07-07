@@ -1,0 +1,50 @@
+<script lang="ts">
+  export let color: string = '#34c759' // default to a pleasant green
+  export let size: string = '8px'
+</script>
+
+<div class="dot-container" style="--dot-color: {color}; --dot-size: {size};">
+  <div class="pulse" />
+  <div class="dot" />
+</div>
+
+<style>
+  .dot-container {
+    position: relative;
+    width: var(--dot-size);
+    height: var(--dot-size);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .dot {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: var(--dot-color);
+    border-radius: 50%;
+    z-index: 2;
+  }
+
+  .pulse {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: var(--dot-color);
+    border-radius: 50%;
+    z-index: 1;
+    animation: pulse-animation 2s infinite cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  @keyframes pulse-animation {
+    0% {
+      transform: scale(1);
+      opacity: 0.8;
+    }
+    100% {
+      transform: scale(2.5);
+      opacity: 0;
+    }
+  }
+</style>

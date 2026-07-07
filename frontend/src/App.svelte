@@ -1,127 +1,141 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount } from 'svelte'
+  import { SetWidgetBounds } from '../wailsjs/go/backend/App.js'
+  import ClockPage from './pages/ClockPage.svelte'
 
-  let expanded = false;
-  let time = new Date();
-  let timer: ReturnType<typeof setInterval>;
+  // Dynamic Routing: The active app that the island is displaying
+  let activePage = ClockPage
+
+  // App-specific dimensions (dynamically pulled from the active page via binding!)
+  let islandConfig = {
+    minimal: { w: 300, h: 35, r: 10 },
+    expanded: { w: 600, h: 150, r: 35 }
+  }
+
+  let expanded = false
+  let islandNode: HTMLElement
 
   onMount(() => {
-    timer = setInterval(() => {
-      time = new Date();
-    }, 1000);
-  });
+    // Force OS clipping to match our minimal config immediately on startup
+    SetWidgetBounds(
+      islandConfig.minimal.w,
+      islandConfig.minimal.h,
+      islandConfig.minimal.r
+    )
+  })
 
-  onDestroy(() => {
-    clearInterval(timer);
-  });
+  function handleExpand() {
+    if (expanded) return
+    // Update click region first (instant, no OS resize = no flicker), then let CSS animate
+    SetWidgetBounds(
+      islandConfig.expanded.w,
+      islandConfig.expanded.h,
+      islandConfig.expanded.r
+    )
+    expanded = true
+  }
+
+  function handleShrink() {
+    if (!expanded) return
+    expanded = false
+
+    // Wait for the CSS animation to finish before shrinking the click region
+    const onTransitionEnd = (e: TransitionEvent) => {
+      if (e.target !== islandNode) return
+      islandNode.removeEventListener('transitionend', onTransitionEnd)
+      if (!expanded) {
+        SetWidgetBounds(
+          islandConfig.minimal.w,
+          islandConfig.minimal.h,
+          islandConfig.minimal.r
+        )
+      }
+    }
+    islandNode.addEventListener('transitionend', onTransitionEnd)
+  }
 
   function toggle() {
-    expanded = !expanded;
+    if (expanded) {
+      handleShrink()
+    } else {
+      handleExpand()
+    }
   }
 </script>
 
-<main>
-  <!-- svelte-ignore a11y-click-events-have-key-events -->
-  <!-- svelte-ignore a11y-no-static-element-interactions -->
-  <div 
-    class="island {expanded ? 'expanded' : ''}" 
-    on:click={toggle}
-    on:mouseenter={() => expanded = true}
-    on:mouseleave={() => expanded = false}
-  >
-    {#if expanded}
-      <div class="content expanded-content">
-        <div class="time">{time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-        <div class="date">{time.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</div>
-      </div>
-    {:else}
-      <div class="content minimal-content">
-        <!-- Minimal state indicator -->
-        <div class="dot"></div>
-      </div>
-    {/if}
+<!-- svelte-ignore a11y-click-events-have-key-events -->
+<div
+  bind:this={islandNode}
+  class="island {expanded ? 'expanded' : ''}"
+  style="
+    --island-width: {expanded
+    ? islandConfig.expanded.w
+    : islandConfig.minimal.w}px;
+    --island-height: {expanded
+    ? islandConfig.expanded.h
+    : islandConfig.minimal.h}px;
+    --island-radius: {expanded
+    ? islandConfig.expanded.r
+    : islandConfig.minimal.r}px;
+  "
+  on:click={toggle}
+>
+  <div class="content">
+    <svelte:component this={activePage} {expanded} bind:config={islandConfig} />
   </div>
-</main>
+</div>
 
 <style>
-  main {
-    width: 100vw;
-    height: 100vh;
+  :global(body) {
+    margin: 0;
+    padding: 0;
     display: flex;
     justify-content: center;
     align-items: flex-start;
-    padding-top: 15px; /* Distance from top of screen */
+    height: 100vh;
+    overflow: hidden;
   }
 
   .island {
     background-color: #000000;
-    border-radius: 40px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+    border-radius: var(--island-radius);
     cursor: pointer;
     overflow: hidden;
-    
-    /* Default collapsed state */
-    width: 150px;
-    height: 35px;
-    
+
+    width: var(--island-width);
+    height: var(--island-height);
+
     /* Smooth spring-like transition */
     transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    
+
     display: flex;
     align-items: center;
     justify-content: center;
     color: white;
-  }
-
-  .island.expanded {
-    width: 320px;
-    height: 130px;
-    border-radius: 35px;
+    pointer-events: auto; /* Re-enable clicks on the island itself */
   }
 
   .content {
     /* Smooth fade in for content */
     animation: fadeIn 0.4s ease-in-out;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-  }
-
-  .expanded-content {
     width: 100%;
     height: 100%;
-  }
-
-  .time {
-    font-size: 3rem;
-    font-weight: 700;
-    letter-spacing: -1.5px;
-    line-height: 1;
-    margin-bottom: 5px;
-  }
-
-  .date {
-    font-size: 1rem;
-    color: #a0a0a0;
-    font-weight: 500;
-  }
-
-  .minimal-content {
-    width: 100%;
-    height: 100%;
-  }
-
-  .dot {
-    width: 6px;
-    height: 6px;
-    background-color: #34c759; /* Green active dot */
-    border-radius: 50%;
   }
 
   @keyframes fadeIn {
-    0% { opacity: 0; transform: scale(0.9); }
-    50% { opacity: 0; }
-    100% { opacity: 1; transform: scale(1); }
+    0% {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+    50% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
   }
 </style>
