@@ -11,12 +11,4 @@ Vinta is an open-source, highly customizable Dynamic Island for PC. Built with G
 (Coming Soon)
 
 ## Development
-To run this project locally, you will need:
-- Go 1.20+
-- Node.js 16+
-- Wails CLI v2 (`go install github.com/wailsapp/wails/v2/cmd/wails@latest`)
-
-Clone the repo and run:
-```bash
-wails dev
-```
+Please see [CONTRIBUTING.md](CONTRIBUTING.md) for development setup, prerequisites (Go, Node, Wails), project structure, and instructions on how to build and run the project locally.
