@@ -88,14 +88,8 @@
   .expanded {
     width: 100%;
     height: 100%;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 24px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-sizing: border-box;
-    backdrop-filter: blur(10px);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1),
-      0 10px 30px rgba(0, 0, 0, 0.2);
-    padding: 1rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
 
   .calendar-grid {

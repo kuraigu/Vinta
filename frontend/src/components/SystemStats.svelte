@@ -80,9 +80,6 @@
 
 <style>
   .stats-card {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 24px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
     padding: 0.8rem 1rem;
     display: flex;
     flex-direction: row;
@@ -90,9 +87,6 @@
     justify-content: space-around;
     height: 100%;
     box-sizing: border-box;
-    backdrop-filter: blur(10px);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1),
-      0 10px 30px rgba(0, 0, 0, 0.2);
     /* Fade in when expanded */
     animation: fadeScale 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   }
