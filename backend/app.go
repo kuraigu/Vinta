@@ -153,7 +153,7 @@ func setClickRegion(hwnd uintptr, width int, height int, borderRadius int) {
 	// bRedraw = 0: do NOT force a repaint. Webview2 composites its own frames.
 	oldRgn, _, _ := procSetWindowRgn.Call(hwnd, hrgn, 0)
 	if oldRgn != 0 {
-		procDeleteObject.Call(oldRgn)
+		_, _, _ = procDeleteObject.Call(oldRgn)
 	}
 }
 
