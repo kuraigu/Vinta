@@ -12,14 +12,28 @@ export const shapeStore = writable<IslandShape>('pill')
 
 export type AppNotification = {
   id: number
+  appName?: string
+  icon?: string
   title: string
   message: string
+  time?: string
 }
 
 export const notifData = writable<AppNotification[]>([
   {
     id: 1,
-    title: 'Notification',
-    message: 'This is what a real notification will look like.'
+    appName: 'Messages',
+    icon: '💬',
+    title: 'Sarah Jenkins',
+    message: 'Are we still on for the design review later?',
+    time: 'Now'
+  },
+  {
+    id: 2,
+    appName: 'System',
+    icon: '⚙️',
+    title: 'Update Available',
+    message: 'A new system update is ready to install.',
+    time: '5m'
   }
 ])

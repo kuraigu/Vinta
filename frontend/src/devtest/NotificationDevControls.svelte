@@ -5,8 +5,11 @@
     notifData.update((n) => [
       {
         id: Date.now(),
+        appName: 'System',
+        icon: 'https://github.com/fluidicon.png',
         title: 'System Alert',
-        message: 'Battery is running low (10%).'
+        message: 'Battery is running low (10%).',
+        time: 'Just now'
       },
       ...n
     ])
@@ -16,8 +19,11 @@
     notifData.update((n) => [
       {
         id: Date.now() + 1,
+        appName: 'Games',
+        icon: '🏆',
         title: 'Achievement Unlocked',
-        message: 'You completed the first task!'
+        message: 'You completed the first task!',
+        time: 'Just now'
       },
       ...n
     ])

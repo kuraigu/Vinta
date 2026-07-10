@@ -1,40 +1,69 @@
 <script lang="ts">
-  import DotIndicator from './DotIndicator.svelte'
+  import { flip } from 'svelte/animate'
+  import { fly, fade } from 'svelte/transition'
 
   export let expanded: boolean = false
   export let notifications: Array<{
     id: number
+    appName?: string
+    icon?: string
     title: string
     message: string
+    time?: string
   }> = []
 
   $: latest = notifications[0] || { title: 'No notifications', message: '' }
+
+  function isImageUrl(url: string | undefined): boolean {
+    if (!url) return false
+    return url.startsWith('http') || url.startsWith('data:') || url.startsWith('/')
+  }
 </script>
 
 <div class="notification-container">
   {#if !expanded}
-    <div class="banner-view">
-      <div class="banner-icon">
-        <DotIndicator color="#007aff" size="12px" />
-      </div>
-      <div class="banner-content">
-        <span class="banner-title">{latest.title}</span>
-        <span class="banner-message">{latest.message}</span>
-      </div>
+    <div class="banner-view-container">
+      {#key latest.id}
+        <div class="banner-view" in:fly={{ y: -10, duration: 300 }} out:fade={{ duration: 150 }}>
+          <div class="banner-icon">
+            {#if isImageUrl(latest.icon)}
+              <img src={latest.icon} alt="app icon" class="notif-img-icon" />
+            {:else}
+              <span class="icon-text">{latest.icon || '💬'}</span>
+            {/if}
+          </div>
+          <div class="banner-content">
+            <span class="banner-title">{latest.title}</span>
+            <span class="banner-message">{latest.message}</span>
+          </div>
+        </div>
+      {/key}
     </div>
   {:else}
     <div class="expanded-view">
       <div class="notif-header">
-        <DotIndicator color="#007aff" />
         <h3>Notifications</h3>
       </div>
       <div class="notif-list">
         {#each notifications as notif (notif.id)}
-          <div class="notif-item">
+          <div class="notif-item" animate:flip={{ duration: 300 }} in:fly={{ x: -20, duration: 300 }} out:fade={{ duration: 150 }}>
             <div class="notif-item-header">
-              <span class="notif-item-title">{notif.title}</span>
+              <div class="notif-item-app-group">
+                <div class="notif-item-icon">
+                  {#if isImageUrl(notif.icon)}
+                    <img src={notif.icon} alt="app icon" class="notif-img-icon" />
+                  {:else}
+                    <span class="icon-text">{notif.icon || '💬'}</span>
+                  {/if}
+                </div>
+                <span class="notif-item-app">{notif.appName || 'Notification'}</span>
+              </div>
+              <span class="notif-item-time">{notif.time || 'Now'}</span>
             </div>
-            <p class="notif-item-message">{notif.message}</p>
+            <div class="notif-item-body">
+              <span class="notif-item-title">{notif.title}</span>
+              <p class="notif-item-message">{notif.message}</p>
+            </div>
           </div>
         {/each}
         {#if notifications.length === 0}
@@ -56,7 +85,15 @@
     color: var(--c-text-primary);
   }
 
+  .banner-view-container {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    place-items: center;
+  }
+
   .banner-view {
+    grid-area: 1 / 1;
     display: flex;
     align-items: center;
     width: 100%;
@@ -70,9 +107,19 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 24px;
-    height: 24px;
+    width: 36px;
+    height: 36px;
     flex-shrink: 0;
+    font-size: 22px;
+    background: var(--c-item-bg);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .notif-img-icon {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
 
   .banner-content {
@@ -80,10 +127,18 @@
     flex-direction: column;
     justify-content: center;
     overflow: hidden;
-    white-space: nowrap;
     text-align: left;
     flex: 1;
+    min-width: 0;
     gap: 2px;
+  }
+
+  .banner-title, .banner-message {
+    display: block;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    width: 100%;
   }
 
   .banner-title {
@@ -95,9 +150,7 @@
 
   .banner-message {
     font-size: 0.85rem;
-    color: #b0b0b0;
-    text-overflow: ellipsis;
-    overflow: hidden;
+    color: var(--c-text-muted);
     line-height: 1.1;
   }
 
@@ -147,18 +200,64 @@
     border-radius: 4px;
   }
 
-  .stack-item {
+  .notif-item {
     background: var(--c-item-bg);
     border-radius: 12px;
     padding: 12px 16px;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 8px;
     transition: background 0.2s;
   }
 
-  .stack-item:hover {
+  .notif-item:hover {
     background: var(--c-hover);
+  }
+
+  .notif-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  .notif-item-app-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .notif-item-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    font-size: 14px;
+    background: transparent;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .notif-item-app {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--c-text-muted);
+  }
+
+  .notif-item-time {
+    font-size: 0.75rem;
+    color: var(--c-text-muted);
+  }
+
+  .notif-item-body {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    gap: 2px;
+    min-width: 0;
   }
 
   .notif-item-title {
@@ -170,7 +269,7 @@
   .notif-item-message {
     margin: 0;
     font-size: 0.85rem;
-    color: #b0b0b0;
+    color: var(--c-text-muted);
     line-height: 1.3;
   }
 

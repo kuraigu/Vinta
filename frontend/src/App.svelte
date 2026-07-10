@@ -207,7 +207,9 @@
 
   .island {
     margin-top: 5px; /* Matches visualTop in backend/app.go */
-    background-color: var(--c-bg);
+    background: var(--c-bg);
+    backdrop-filter: blur(30px) saturate(120%);
+    -webkit-backdrop-filter: blur(30px) saturate(120%);
     cursor: pointer;
 
     box-sizing: border-box;
