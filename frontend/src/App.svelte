@@ -16,7 +16,7 @@
   let islandNode: HTMLElement
 
   onMount(() => {
-    // Force OS clipping to match our minimal config immediately on startup
+    // Set initial OS click region to match the minimal pill
     SetWidgetBounds(
       islandConfig.minimal.w,
       islandConfig.minimal.h,
@@ -26,7 +26,6 @@
 
   function handleExpand() {
     if (expanded) return
-    // Update click region first (instant, no OS resize = no flicker), then let CSS animate
     SetWidgetBounds(
       islandConfig.expanded.w,
       islandConfig.expanded.h,
@@ -39,7 +38,7 @@
     if (!expanded) return
     expanded = false
 
-    // Wait for the CSS animation to finish before shrinking the click region
+    // Wait for CSS animation to finish before shrinking the OS click region
     const onTransitionEnd = (e: TransitionEvent) => {
       if (e.target !== islandNode) return
       islandNode.removeEventListener('transitionend', onTransitionEnd)
@@ -101,19 +100,30 @@
     background-color: #000000;
     border-radius: var(--island-radius);
     cursor: pointer;
-    overflow: hidden;
 
     width: var(--island-width);
     height: var(--island-height);
 
+    box-sizing: border-box;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 0 0 transparent;
+
     /* Smooth spring-like transition */
-    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: width 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+      height 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+      border-radius 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275),
+      border-color 0.3s ease, box-shadow 0.3s ease;
 
     display: flex;
     align-items: center;
     justify-content: center;
     color: white;
     pointer-events: auto; /* Re-enable clicks on the island itself */
+  }
+
+  .island:hover {
+    border-color: rgba(255, 255, 255, 0.25);
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.18);
   }
 
   .content {

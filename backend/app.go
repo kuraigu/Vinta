@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"github.com/getlantern/systray"
@@ -30,10 +31,14 @@ const (
 	WS_EX_APPWINDOW = 0x00040000
 	//nolint:revive // Windows API constants
 	WS_EX_TOOLWINDOW = 0x00000080
-	// MaxWindowWidth defines maximum native OS window bounds to support future widget expansion
-	MaxWindowWidth  = 600
-	MaxWindowHeight = 400
+
+	// GlowPadding is the extra space around the pill given to the OS region so
+	// that CSS box-shadow and border-glow can render without being clipped.
+	GlowPadding = 10
 )
+
+// screenWidth caches the screen width so SetWidgetBounds can center the region correctly.
+var screenWidth int
 
 // App struct
 type App struct {
@@ -53,7 +58,10 @@ func NewApp(icon []byte) *App {
 func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
 
-	// Center the window horizontally at the top tightly wrapped
+	// Expand the window to fill the entire screen so CSS has full real estate.
+	// SetWindowRgn is used to define the interactive region — only the pill
+	// area (plus GlowPadding) receives mouse events; everything else is
+	// click-through. The extra padding lets glows and borders render freely.
 	screens, _ := runtime.ScreenGetAll(ctx)
 	if len(screens) > 0 {
 		screen := screens[0]
@@ -63,13 +71,13 @@ func (a *App) Startup(ctx context.Context) {
 				break
 			}
 		}
-
-		windowX := (screen.Size.Width / 2) - (MaxWindowWidth / 2)
-		runtime.WindowSetSize(ctx, MaxWindowWidth, MaxWindowHeight)
-		runtime.WindowSetPosition(ctx, windowX, 15)
+		screenWidth = screen.Width
+		runtime.WindowSetSize(ctx, screen.Width, screen.Height)
+		runtime.WindowSetPosition(ctx, 0, 0)
 	}
 
-	// Hide the window from the Windows taskbar by finding its handle and setting the ToolWindow extended style
+	// Hide the window from the Windows taskbar by setting the ToolWindow extended style.
+	// Also initialise the click region to empty until Svelte calls SetWidgetBounds.
 	titlePtr, _ := syscall.UTF16PtrFromString("Vinta")
 	hwnd, _, _ := procFindWindow.Call(0, uintptr(unsafe.Pointer(titlePtr)))
 	if hwnd != 0 {
@@ -79,11 +87,24 @@ func (a *App) Startup(ctx context.Context) {
 		style = style &^ WS_EX_APPWINDOW
 		_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwl), style)
 
-		// Clip the interactive region to nothing until Svelte loads and pushes the true sizes.
-		// The OS window itself stays at MaxWindowWidth x MaxWindowHeight forever — we never resize it.
-		// This is the key trick: SetWindowRgn controls click-through, CSS controls visuals.
+		// Start fully click-through; Svelte will call SetWidgetBounds on mount.
 		setClickRegion(hwnd, 0, 0, 0)
 	}
+
+	// Launch background loop to re-assert AlwaysOnTop.
+	// This ensures Vinta stays above games running in Borderless Windowed mode
+	// that might launch after Vinta and steal the Topmost z-band.
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				runtime.WindowSetAlwaysOnTop(ctx, true)
+				time.Sleep(2 * time.Second)
+			}
+		}
+	}()
 
 	// Launch the system tray
 	go systray.Run(a.onReady, a.onExit)
@@ -106,51 +127,41 @@ func (a *App) onExit() {
 	// Clean up here if necessary
 }
 
-// SetWidgetBounds is called by the frontend to update the interactive click region of the widget.
-// The OS window is NEVER resized — it stays permanently at MaxWindowWidth x MaxWindowHeight.
-// This eliminates all Webview2 flicker caused by native window resize operations.
-// CSS is solely responsible for the visual pill shape and animation.
-// SetWindowRgn is used only to control which pixels can receive mouse clicks,
-// so that clicks on the transparent area outside the pill pass through to windows below.
-func (a *App) SetWidgetBounds(width int, height int, borderRadius int) {
+// SetWidgetBounds is called by the frontend whenever the pill size changes.
+// It updates the Win32 window region so only the pill (plus GlowPadding) receives
+// mouse events; everything else passes through to the desktop.
+// GlowPadding ensures CSS box-shadow and border-glow are not clipped by the OS mask.
+func (a *App) SetWidgetBounds(width int, height int, _ int) {
 	titlePtr, _ := syscall.UTF16PtrFromString("Vinta")
 	hwnd, _, _ := procFindWindow.Call(0, uintptr(unsafe.Pointer(titlePtr)))
 	if hwnd != 0 {
-		setClickRegion(hwnd, width, height, borderRadius)
+		setClickRegion(hwnd, width, height, GlowPadding)
 	}
 }
 
-// setClickRegion updates the Win32 window region to match the pill shape.
-// bRedraw is always 0 — we never ask the OS to force-repaint, since Webview2
-// manages its own compositing. The visual rendering is driven entirely by CSS.
-func setClickRegion(hwnd uintptr, width int, height int, borderRadius int) {
-	// CSS caps border-radius at half the height
-	if borderRadius > height/2 {
-		borderRadius = height / 2
-	}
-
-	// We add a 5px padding to the OS clip mask to perfectly shadow the CSS pill.
-	// Since the CSS pill now has a 5px margin-top, it renders at y=5.
-	// By expanding our region by 5px, our top edge hits y=0. The curve centers perfectly align,
-	// meaning the jagged OS cut happens exactly 5px outside the CSS border in all directions,
-	// allowing the CSS anti-aliasing to render immaculately on the transparent background.
-	padding := 5
-	visualTop := 5 // Matches the CSS margin-top
-
-	// Center the clickable region within the fixed-size OS window
-	left := ((MaxWindowWidth - width) / 2) - padding
-	right := ((MaxWindowWidth - width) / 2) + width + padding
-	top := visualTop - padding
-	bottom := visualTop + height + padding
-
-	// CreateRoundRectRgn takes the ellipse diameter, not radius
-	ellipseSize := (borderRadius + padding) * 2
-
+// setClickRegion updates the Win32 window region to a rounded rect around the pill.
+// padding expands the region beyond the visual pill so CSS effects render freely.
+// bRedraw is always 0 — Webview2 manages its own compositing.
+func setClickRegion(hwnd uintptr, width int, height int, padding int) {
 	var hrgn uintptr
+
 	if width == 0 || height == 0 {
-		// Empty region = fully click-through (invisible)
+		// Empty region = fully click-through
 		hrgn = 0
 	} else {
+		// Center the pill horizontally; place it near the top (CSS margin-top: 5px)
+		visualTop := 5
+		centerX := screenWidth / 2
+
+		left := centerX - (width / 2) - padding
+		right := centerX + (width / 2) + padding
+		top := visualTop - padding
+		bottom := visualTop + height + padding
+
+		// CreateRoundRectRgn takes the ellipse diameter, not radius.
+		// We approximate the rounded corners using the padding as extra radius.
+		ellipseSize := padding * 2
+
 		hrgn, _, _ = procCreateRoundRectRgn.Call(
 			uintptr(left), uintptr(top),
 			uintptr(right), uintptr(bottom),

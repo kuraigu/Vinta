@@ -25,8 +25,6 @@ func main() {
 	// Create application with options
 	err := wails.Run(&options.App{
 		Title:         "Vinta",
-		Width:         600,
-		Height:        400,
 		Frameless:     true,
 		AlwaysOnTop:   true,
 		DisableResize: true,
