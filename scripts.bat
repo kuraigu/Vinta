@@ -6,8 +6,13 @@ if "%1"=="dev" (
 ) else if "%1"=="run" (
     taskkill /IM Vinta.exe /F 2>nul
     wails build
-    if %errorlevel% neq 0 exit /b %errorlevel%
+    if errorlevel 1 exit /b 1
     start "" "build\bin\Vinta.exe"
+) else if "%1"=="test" (
+    taskkill /IM Vinta.exe /F 2>nul
+    wails build
+    if errorlevel 1 exit /b 1
+    start "" "build\bin\Vinta.exe" -test
 ) else if "%1"=="lint" (
     echo Running Go Lint...
     gofmt -w .
@@ -17,5 +22,5 @@ if "%1"=="dev" (
     call npm run lint
     call npm run format
 ) else (
-    echo Usage: scripts.bat [dev^|build^|run^|lint]
+    echo Usage: scripts.bat [dev^|build^|run^|test^|lint]
 )
