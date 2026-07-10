@@ -1,38 +1,83 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
+  import { onMount, setContext } from 'svelte'
   import { fade } from 'svelte/transition'
-  import { SetWidgetBounds } from '../wailsjs/go/backend/App.js'
-  import ClockPage from './pages/ClockPage.svelte'
+  import { SetWidgetBounds, IsTestMode } from '../wailsjs/go/backend/App.js'
+  import ClockPage, { config as clockConfig } from './pages/ClockPage.svelte'
+  import DevPill from './devtest/DevPill.svelte'
 
   // Dynamic Routing: The active app that the island is displaying
-  let activePage = ClockPage
+  let activePage: any = ClockPage
 
   // App-specific dimensions (dynamically pulled from the active page via binding!)
-  let islandConfig = {
-    minimal: { w: 300, h: 35, r: 10 },
-    expanded: { w: 600, h: 150, r: 35 }
-  }
+  let islandConfig = clockConfig
 
   let expanded = false
   let islandNode: HTMLElement
+  let isTestMode = false
 
-  onMount(() => {
-    // Set initial OS click region to match the minimal pill
+  // Global navigate for dev pill / pages
+  setContext(
+    'navigate',
+    (page: any, pageConfig: any, expand: boolean = false) => {
+      // Save old config values before updating
+      const oldW = expanded ? islandConfig.expanded.w : islandConfig.minimal.w
+      const oldH = expanded ? islandConfig.expanded.h : islandConfig.minimal.h
+
+      activePage = page
+      islandConfig = pageConfig
+      expanded = expand
+
+      const newW = expanded ? islandConfig.expanded.w : islandConfig.minimal.w
+      const newH = expanded ? islandConfig.expanded.h : islandConfig.minimal.h
+      const newR = expanded ? islandConfig.expanded.r : islandConfig.minimal.r
+
+      const scale = window.devicePixelRatio || 1
+
+      if (newW >= oldW && newH >= oldH) {
+        // Growing in all dimensions (or same). Safe to update OS region immediately.
+        SetWidgetBounds(newW, newH, newR, scale)
+      } else {
+        // Shrinking in at least one dimension.
+        // Create a temporary bounding box so the CSS animation isn't clipped!
+        const maxW = Math.max(oldW, newW)
+        const maxH = Math.max(oldH, newH)
+        SetWidgetBounds(maxW, maxH, newR, scale)
+
+        const onTransitionEnd = (e: TransitionEvent) => {
+          if (e.target !== islandNode) return
+          islandNode.removeEventListener('transitionend', onTransitionEnd)
+          // Ensure we haven't navigated again while waiting
+          if (activePage === page && expanded === expand) {
+            SetWidgetBounds(newW, newH, newR, scale)
+          }
+        }
+        islandNode.addEventListener('transitionend', onTransitionEnd)
+      }
+    }
+  )
+
+  onMount(async () => {
+    // Check if launched via `scripts.bat test`
+    isTestMode = await IsTestMode()
+    const scale = window.devicePixelRatio || 1
     SetWidgetBounds(
       islandConfig.minimal.w,
       islandConfig.minimal.h,
-      islandConfig.minimal.r
+      islandConfig.minimal.r,
+      scale
     )
   })
 
   function handleExpand() {
     if (expanded) return
+    expanded = true
+    const scale = window.devicePixelRatio || 1
     SetWidgetBounds(
       islandConfig.expanded.w,
       islandConfig.expanded.h,
-      islandConfig.expanded.r
+      islandConfig.expanded.r,
+      scale
     )
-    expanded = true
   }
 
   function handleShrink() {
@@ -44,10 +89,12 @@
       if (e.target !== islandNode) return
       islandNode.removeEventListener('transitionend', onTransitionEnd)
       if (!expanded) {
+        const scale = window.devicePixelRatio || 1
         SetWidgetBounds(
           islandConfig.minimal.w,
           islandConfig.minimal.h,
-          islandConfig.minimal.r
+          islandConfig.minimal.r,
+          scale
         )
       }
     }
@@ -63,54 +110,60 @@
   }
 </script>
 
-<!-- svelte-ignore a11y-click-events-have-key-events -->
-<div
-  bind:this={islandNode}
-  class="island {expanded ? 'expanded' : ''}"
-  style="
-    --island-width: {expanded
-    ? islandConfig.expanded.w
-    : islandConfig.minimal.w}px;
-    --island-height: {expanded
-    ? islandConfig.expanded.h
-    : islandConfig.minimal.h}px;
-    --island-radius: {expanded
-    ? islandConfig.expanded.r
-    : islandConfig.minimal.r}px;
-  "
-  on:click={toggle}
->
-  <div class="content">
-    {#if !expanded}
-      <div
-        class="view"
-        in:fade={{ duration: 200, delay: 350 }}
-        out:fade={{ duration: 100 }}
-        style="width: {islandConfig.minimal.w}px; height: {islandConfig.minimal
-          .h}px;"
-      >
-        <svelte:component
-          this={activePage}
-          expanded={false}
-          bind:config={islandConfig}
-        />
-      </div>
-    {:else}
-      <div
-        class="view"
-        in:fade={{ duration: 200, delay: 350 }}
-        out:fade={{ duration: 100 }}
-        style="width: {islandConfig.expanded.w}px; height: {islandConfig
-          .expanded.h}px;"
-      >
-        <svelte:component
-          this={activePage}
-          expanded={true}
-          bind:config={islandConfig}
-        />
-      </div>
-    {/if}
+<div class="island-container">
+  <!-- svelte-ignore a11y-click-events-have-key-events -->
+  <div
+    bind:this={islandNode}
+    class="island {expanded ? 'expanded' : ''}"
+    style="
+      --island-width: {expanded
+      ? islandConfig.expanded.w
+      : islandConfig.minimal.w}px;
+      --island-height: {expanded
+      ? islandConfig.expanded.h
+      : islandConfig.minimal.h}px;
+      --island-radius: {expanded
+      ? islandConfig.expanded.r
+      : islandConfig.minimal.r}px;
+    "
+    on:click={toggle}
+  >
+    <div class="content">
+      {#if !expanded}
+        <div
+          class="view"
+          in:fade={{ duration: 200, delay: 350 }}
+          out:fade={{ duration: 100 }}
+          style="width: {islandConfig.minimal.w}px; height: {islandConfig
+            .minimal.h}px;"
+        >
+          <svelte:component
+            this={activePage}
+            expanded={false}
+            bind:config={islandConfig}
+          />
+        </div>
+      {:else}
+        <div
+          class="view"
+          in:fade={{ duration: 200, delay: 350 }}
+          out:fade={{ duration: 100 }}
+          style="width: {islandConfig.expanded.w}px; height: {islandConfig
+            .expanded.h}px;"
+        >
+          <svelte:component
+            this={activePage}
+            expanded={true}
+            bind:config={islandConfig}
+          />
+        </div>
+      {/if}
+    </div>
   </div>
+
+  {#if isTestMode}
+    <DevPill {activePage} />
+  {/if}
 </div>
 
 <style>
@@ -124,8 +177,15 @@
     overflow: hidden;
   }
 
+  .island-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px; /* Matches the gap in backend/app.go */
+  }
+
   .island {
-    margin-top: 5px;
+    margin-top: 5px; /* Matches visualTop in backend/app.go */
     background-color: #000000;
     border-radius: var(--island-radius);
     cursor: pointer;
@@ -165,6 +225,7 @@
     height: 100%;
     border-radius: inherit;
     overflow: hidden;
+    position: relative;
   }
 
   .view {
