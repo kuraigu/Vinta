@@ -1,6 +1,6 @@
 <script lang="ts">
   import Clock from '../components/Clock.svelte'
-  import HorizontalBar from '../components/HorizontalBar.svelte'
+  import Divider from '../components/Divider.svelte'
   import Calendar from '../components/Calendar.svelte'
   import Weather from '../components/Weather.svelte'
   import BentoGrid from '../components/BentoGrid.svelte'
@@ -16,28 +16,32 @@
   }
 </script>
 
-<div class="page-container {expanded ? 'expanded' : 'minimal'}">
+<div class="page-container">
   {#if !expanded}
-    <DotIndicator />
-    <Calendar {expanded} />
-    <HorizontalBar />
-    <Weather {expanded} />
-    <HorizontalBar />
-    <Clock {expanded} />
+    <div class="minimal-view">
+      <DotIndicator />
+      <Calendar expanded={false} />
+      <Divider />
+      <Weather expanded={false} />
+      <Divider />
+      <Clock expanded={false} />
+    </div>
   {:else}
-    <BentoGrid columns="200px 1fr" gap="1rem">
-      <BentoItem>
-        <Calendar {expanded} />
-      </BentoItem>
-      <BentoGrid columns="1fr" rows="1fr 1fr" gap="1rem">
+    <div class="expanded-view">
+      <BentoGrid columns="200px 1fr" gap="1rem">
         <BentoItem>
-          <Clock {expanded} />
+          <Calendar expanded={true} />
         </BentoItem>
-        <BentoItem>
-          <Weather {expanded} />
-        </BentoItem>
+        <BentoGrid columns="1fr" rows="1fr 1fr" gap="1rem">
+          <BentoItem>
+            <Clock expanded={true} />
+          </BentoItem>
+          <BentoItem>
+            <Weather expanded={true} />
+          </BentoItem>
+        </BentoGrid>
       </BentoGrid>
-    </BentoGrid>
+    </div>
   {/if}
 </div>
 
@@ -48,16 +52,23 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 1rem;
     box-sizing: border-box;
   }
 
-  .page-container.minimal {
-    min-width: max-content; /* Prevents squishing during the spring bounce */
-    white-space: nowrap; /* Prevents text from breaking to two lines */
+  .minimal-view {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    gap: 1rem;
+    min-width: max-content; /* Prevents squishing */
+    white-space: nowrap; /* Prevents text breaking */
   }
 
-  .page-container.expanded {
+  .expanded-view {
     padding: 1rem;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
   }
 </style>

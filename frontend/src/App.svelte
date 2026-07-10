@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
+  import { fade } from 'svelte/transition'
   import { SetWidgetBounds } from '../wailsjs/go/backend/App.js'
   import ClockPage from './pages/ClockPage.svelte'
 
@@ -80,7 +81,35 @@
   on:click={toggle}
 >
   <div class="content">
-    <svelte:component this={activePage} {expanded} bind:config={islandConfig} />
+    {#if !expanded}
+      <div
+        class="view"
+        in:fade={{ duration: 200, delay: 350 }}
+        out:fade={{ duration: 100 }}
+        style="width: {islandConfig.minimal.w}px; height: {islandConfig.minimal
+          .h}px;"
+      >
+        <svelte:component
+          this={activePage}
+          expanded={false}
+          bind:config={islandConfig}
+        />
+      </div>
+    {:else}
+      <div
+        class="view"
+        in:fade={{ duration: 200, delay: 350 }}
+        out:fade={{ duration: 100 }}
+        style="width: {islandConfig.expanded.w}px; height: {islandConfig
+          .expanded.h}px;"
+      >
+        <svelte:component
+          this={activePage}
+          expanded={true}
+          bind:config={islandConfig}
+        />
+      </div>
+    {/if}
   </div>
 </div>
 
@@ -108,11 +137,14 @@
     border: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: 0 0 0 transparent;
 
-    /* Smooth spring-like transition */
-    transition: width 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275),
-      height 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275),
-      border-radius 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275),
-      border-color 0.3s ease, box-shadow 0.3s ease;
+    /* Smooth Apple-like ease-out transition without the spring bounce */
+    transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+      height 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+      border-radius 0.4s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.3s ease,
+      box-shadow 0.3s ease;
+
+    /* Hardware acceleration to prevent frame drops */
+    will-change: width, height, border-radius;
 
     display: flex;
     align-items: center;
@@ -127,13 +159,20 @@
   }
 
   .content {
-    /* Smooth fade in for content */
-    animation: fadeIn 0.4s ease-in-out;
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    overflow: hidden;
+  }
+
+  .view {
+    grid-area: 1 / 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 100%;
-    height: 100%;
+    box-sizing: border-box;
   }
 
   @keyframes fadeIn {
