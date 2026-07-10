@@ -4,6 +4,7 @@ package backend
 import (
 	"context"
 	"fmt"
+	"os"
 	"syscall"
 	"time"
 	"unsafe"
@@ -20,6 +21,8 @@ var (
 
 	gdi32                  = syscall.NewLazyDLL("gdi32.dll")
 	procCreateRoundRectRgn = gdi32.NewProc("CreateRoundRectRgn")
+	procCreateRectRgn      = gdi32.NewProc("CreateRectRgn")
+	procCombineRgn         = gdi32.NewProc("CombineRgn")
 	procSetWindowRgn       = user32.NewProc("SetWindowRgn")
 	procDeleteObject       = gdi32.NewProc("DeleteObject")
 )
@@ -35,15 +38,24 @@ const (
 	// GlowPadding is the extra space around the pill given to the OS region so
 	// that CSS box-shadow and border-glow can render without being clipped.
 	GlowPadding = 10
+
+	// RGN_OR is used to combine two regions.
+	RGN_OR = 2
 )
 
-// screenWidth caches the screen width so SetWidgetBounds can center the region correctly.
+// screenWidth caches the screen dimensions so SetWidgetBounds can center regions correctly.
 var screenWidth int
+var screenHeight int
 
 // App struct
 type App struct {
-	ctx  context.Context
-	icon []byte
+	ctx   context.Context
+	icon  []byte
+	pillW int
+	pillH int
+	devW  int
+	devH  int
+	scale float64
 }
 
 // NewApp creates a new App application struct
@@ -72,6 +84,7 @@ func (a *App) Startup(ctx context.Context) {
 			}
 		}
 		screenWidth = screen.Width
+		screenHeight = screen.Height
 		runtime.WindowSetSize(ctx, screen.Width, screen.Height)
 		runtime.WindowSetPosition(ctx, 0, 0)
 	}
@@ -88,7 +101,7 @@ func (a *App) Startup(ctx context.Context) {
 		_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwl), style)
 
 		// Start fully click-through; Svelte will call SetWidgetBounds on mount.
-		setClickRegion(hwnd, 0, 0, 0)
+		a.updateWindowRegion()
 	}
 
 	// Launch background loop to re-assert AlwaysOnTop.
@@ -127,50 +140,112 @@ func (a *App) onExit() {
 	// Clean up here if necessary
 }
 
-// SetWidgetBounds is called by the frontend whenever the pill size changes.
-// It updates the Win32 window region so only the pill (plus GlowPadding) receives
-// mouse events; everything else passes through to the desktop.
-// GlowPadding ensures CSS box-shadow and border-glow are not clipped by the OS mask.
-func (a *App) SetWidgetBounds(width int, height int, _ int) {
+// SetWidgetBounds is called by the frontend whenever the main pill size changes.
+func (a *App) SetWidgetBounds(width int, height int, _ int, scale float64) {
+	a.pillW = width
+	a.pillH = height
+	if scale > 0 {
+		a.scale = scale
+	}
+	a.updateWindowRegion()
+}
+
+// SetDevPillBounds is called by the frontend to show a separate developer menu.
+func (a *App) SetDevPillBounds(width int, height int, scale float64) {
+	a.devW = width
+	a.devH = height
+	if scale > 0 {
+		a.scale = scale
+	}
+	a.updateWindowRegion()
+}
+
+func (a *App) updateWindowRegion() {
 	titlePtr, _ := syscall.UTF16PtrFromString("Vinta")
 	hwnd, _, _ := procFindWindow.Call(0, uintptr(unsafe.Pointer(titlePtr)))
 	if hwnd != 0 {
-		setClickRegion(hwnd, width, height, GlowPadding)
+		setClickRegion(hwnd, a.pillW, a.pillH, a.devW, a.devH, GlowPadding, a.scale)
 	}
 }
 
-// setClickRegion updates the Win32 window region to a rounded rect around the pill.
-// padding expands the region beyond the visual pill so CSS effects render freely.
-// bRedraw is always 0 — Webview2 manages its own compositing.
-func setClickRegion(hwnd uintptr, width int, height int, padding int) {
-	var hrgn uintptr
+// setClickRegion updates the Win32 window region to combine the main pill and the dev pill.
+func setClickRegion(hwnd uintptr, w int, h int, dw int, dh int, padding int, scale float64) {
+	var hrgnMain uintptr
+	var hrgnDev uintptr
+	var hrgnFinal uintptr
 
-	if width == 0 || height == 0 {
-		// Empty region = fully click-through
-		hrgn = 0
-	} else {
-		// Center the pill horizontally; place it near the top (CSS margin-top: 5px)
-		visualTop := 5
-		centerX := screenWidth / 2
+	if scale <= 0 {
+		scale = 1.0
+	}
 
-		left := centerX - (width / 2) - padding
-		right := centerX + (width / 2) + padding
+	scaleInt := func(v int) int {
+		return int(float64(v) * scale)
+	}
+
+	// 1. Create main pill region
+	if w > 0 && h > 0 {
+		visualTop := scaleInt(5)
+		physicalCenterX := scaleInt(screenWidth) / 2
+		pw := scaleInt(w)
+		ph := scaleInt(h)
+		
+		left := physicalCenterX - (pw / 2) - padding
+		right := physicalCenterX + (pw / 2) + padding
 		top := visualTop - padding
-		bottom := visualTop + height + padding
-
-		// CreateRoundRectRgn takes the ellipse diameter, not radius.
-		// We approximate the rounded corners using the padding as extra radius.
+		bottom := visualTop + ph + padding
 		ellipseSize := padding * 2
 
-		hrgn, _, _ = procCreateRoundRectRgn.Call(
+		hrgnMain, _, _ = procCreateRoundRectRgn.Call(
 			uintptr(left), uintptr(top),
 			uintptr(right), uintptr(bottom),
 			uintptr(ellipseSize), uintptr(ellipseSize),
 		)
 	}
 
-	// bRedraw = 0: do NOT force a repaint. Webview2 composites its own frames.
-	oldRgn, _, _ := procSetWindowRgn.Call(hwnd, hrgn, 0)
+	// 2. Create dev pill region (stacked under main pill)
+	if dw > 0 && dh > 0 {
+		gap := scaleInt(15) // Must match the CSS flex gap
+		visualTop := scaleInt(5)
+		
+		// If main pill exists, stack it below it. Otherwise, default to some position.
+		devTopOffset := visualTop
+		if w > 0 && h > 0 {
+			ph := scaleInt(h)
+			devTopOffset = visualTop + ph + gap
+		}
+		
+		devPadding := 20
+		physicalCenterX := scaleInt(screenWidth) / 2
+		pdw := scaleInt(dw)
+		pdh := scaleInt(dh)
+		
+		devLeft := physicalCenterX - (pdw / 2) - devPadding
+		devRight := physicalCenterX + (pdw / 2) + devPadding
+		devTop := devTopOffset - devPadding
+		devBottom := devTop + pdh + devPadding
+
+		hrgnDev, _, _ = procCreateRoundRectRgn.Call(
+			uintptr(devLeft), uintptr(devTop),
+			uintptr(devRight), uintptr(devBottom),
+			uintptr(24), uintptr(24),
+		)
+	}
+
+	// 3. Combine regions
+	if hrgnMain != 0 && hrgnDev != 0 {
+		// Both exist, combine into hrgnMain
+		procCombineRgn.Call(hrgnMain, hrgnMain, hrgnDev, uintptr(RGN_OR))
+		hrgnFinal = hrgnMain
+		procDeleteObject.Call(hrgnDev) // cleanup
+	} else if hrgnMain != 0 {
+		hrgnFinal = hrgnMain
+	} else if hrgnDev != 0 {
+		hrgnFinal = hrgnDev
+	} else {
+		hrgnFinal = 0 // fully transparent
+	}
+
+	oldRgn, _, _ := procSetWindowRgn.Call(hwnd, hrgnFinal, 0)
 	if oldRgn != 0 {
 		_, _, _ = procDeleteObject.Call(oldRgn)
 	}
@@ -179,4 +254,14 @@ func setClickRegion(hwnd uintptr, width int, height int, padding int) {
 // Greet returns a greeting for the given name
 func (a *App) Greet(name string) string {
 	return fmt.Sprintf("Hello %s, It's show time!", name)
+}
+
+// IsTestMode returns true if the application was launched with the -test flag.
+func (a *App) IsTestMode() bool {
+	for _, arg := range os.Args {
+		if arg == "-test" {
+			return true
+		}
+	}
+	return false
 }
