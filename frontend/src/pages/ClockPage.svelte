@@ -1,3 +1,11 @@
+<script context="module" lang="ts">
+  // This page dictates its own dimensions to the parent App!
+  export const config = {
+    minimal: { w: 320, h: 35, r: 35 },
+    expanded: { w: 580, h: 300, r: 35 }
+  }
+</script>
+
 <script lang="ts">
   import Clock from '../components/Clock.svelte'
   import Divider from '../components/Divider.svelte'
@@ -9,11 +17,6 @@
 
   export let expanded: boolean = false
 
-  // This page dictates its own dimensions to the parent App!
-  export const config = {
-    minimal: { w: 320, h: 35, r: 35 },
-    expanded: { w: 580, h: 300, r: 35 }
-  }
 </script>
 
 <div class="page-container">
