@@ -65,7 +65,6 @@
   .minimal .time {
     font-size: 1rem;
     font-weight: 400;
-    margin-left: 8px; /* Offset from the green dot */
   }
 
   .seconds {

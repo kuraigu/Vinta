@@ -75,7 +75,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    color: white;
+    color: var(--c-text-primary);
   }
 
   /* MINIMAL */

@@ -12,8 +12,4 @@
   export let expanded: boolean = false
 </script>
 
-
-<Notification 
-  {expanded} 
-  notifications={$notifData} 
-/>
+<Notification {expanded} notifications={$notifData} />

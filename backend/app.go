@@ -21,7 +21,6 @@ var (
 
 	gdi32                  = syscall.NewLazyDLL("gdi32.dll")
 	procCreateRoundRectRgn = gdi32.NewProc("CreateRoundRectRgn")
-	procCreateRectRgn      = gdi32.NewProc("CreateRectRgn")
 	procCombineRgn         = gdi32.NewProc("CombineRgn")
 	procSetWindowRgn       = user32.NewProc("SetWindowRgn")
 	procDeleteObject       = gdi32.NewProc("DeleteObject")
@@ -39,13 +38,12 @@ const (
 	// that CSS box-shadow and border-glow can render without being clipped.
 	GlowPadding = 10
 
-	// RGN_OR is used to combine two regions.
-	RGN_OR = 2
+	// rgnOr is used to combine two regions.
+	rgnOr = 2
 )
 
 // screenWidth caches the screen dimensions so SetWidgetBounds can center regions correctly.
 var screenWidth int
-var screenHeight int
 
 // App struct
 type App struct {
@@ -84,7 +82,6 @@ func (a *App) Startup(ctx context.Context) {
 			}
 		}
 		screenWidth = screen.Width
-		screenHeight = screen.Height
 		runtime.WindowSetSize(ctx, screen.Width, screen.Height)
 		runtime.WindowSetPosition(ctx, 0, 0)
 	}
@@ -188,7 +185,7 @@ func setClickRegion(hwnd uintptr, w int, h int, dw int, dh int, padding int, sca
 		physicalCenterX := scaleInt(screenWidth) / 2
 		pw := scaleInt(w)
 		ph := scaleInt(h)
-		
+
 		left := physicalCenterX - (pw / 2) - padding
 		right := physicalCenterX + (pw / 2) + padding
 		top := visualTop - padding
@@ -206,19 +203,19 @@ func setClickRegion(hwnd uintptr, w int, h int, dw int, dh int, padding int, sca
 	if dw > 0 && dh > 0 {
 		gap := scaleInt(15) // Must match the CSS flex gap
 		visualTop := scaleInt(5)
-		
+
 		// If main pill exists, stack it below it. Otherwise, default to some position.
 		devTopOffset := visualTop
 		if w > 0 && h > 0 {
 			ph := scaleInt(h)
 			devTopOffset = visualTop + ph + gap
 		}
-		
+
 		devPadding := 20
 		physicalCenterX := scaleInt(screenWidth) / 2
 		pdw := scaleInt(dw)
 		pdh := scaleInt(dh)
-		
+
 		devLeft := physicalCenterX - (pdw / 2) - devPadding
 		devRight := physicalCenterX + (pdw / 2) + devPadding
 		devTop := devTopOffset - devPadding
@@ -234,9 +231,9 @@ func setClickRegion(hwnd uintptr, w int, h int, dw int, dh int, padding int, sca
 	// 3. Combine regions
 	if hrgnMain != 0 && hrgnDev != 0 {
 		// Both exist, combine into hrgnMain
-		procCombineRgn.Call(hrgnMain, hrgnMain, hrgnDev, uintptr(RGN_OR))
+		_, _, _ = procCombineRgn.Call(hrgnMain, hrgnMain, hrgnDev, uintptr(rgnOr))
 		hrgnFinal = hrgnMain
-		procDeleteObject.Call(hrgnDev) // cleanup
+		_, _, _ = procDeleteObject.Call(hrgnDev) // cleanup
 	} else if hrgnMain != 0 {
 		hrgnFinal = hrgnMain
 	} else if hrgnDev != 0 {

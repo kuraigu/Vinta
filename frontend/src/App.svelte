@@ -4,21 +4,48 @@
   import { SetWidgetBounds, IsTestMode } from '../wailsjs/go/backend/App.js'
   import ClockPage, { config as clockConfig } from './pages/ClockPage.svelte'
   import DevPill from './devtest/DevPill.svelte'
+  import Colors from './Colors.svelte'
+  import { themeStore, shapeStore } from './store'
+
+  $: document.documentElement.setAttribute('data-theme', $themeStore)
+
+  import type { ComponentType } from 'svelte'
+  import type { IslandConfig } from './store'
 
   // Dynamic Routing: The active app that the island is displaying
-  let activePage: any = ClockPage
+  let activePage: ComponentType = ClockPage
 
   // App-specific dimensions (dynamically pulled from the active page via binding!)
-  let islandConfig = clockConfig
+  let islandConfig: IslandConfig = clockConfig
 
   let expanded = false
   let islandNode: HTMLElement
   let isTestMode = false
 
+  function updateBounds(w: number, h: number, r: number) {
+    const computedR = $shapeStore === 'box' ? 12 : r
+    const scale = window.devicePixelRatio || 1
+    SetWidgetBounds(w, h, computedR, scale)
+  }
+
+  // React to shape changes immediately, but don't react to 'expanded' changes
+  // to avoid instantly shrinking the OS window region and clipping the animation.
+  shapeStore.subscribe(() => {
+    if (!islandNode) return
+    const currentW = expanded ? islandConfig.expanded.w : islandConfig.minimal.w
+    const currentH = expanded ? islandConfig.expanded.h : islandConfig.minimal.h
+    const currentR = expanded ? islandConfig.expanded.r : islandConfig.minimal.r
+    updateBounds(currentW, currentH, currentR)
+  })
+
   // Global navigate for dev pill / pages
   setContext(
     'navigate',
-    (page: any, pageConfig: any, expand: boolean = false) => {
+    (
+      page: ComponentType,
+      pageConfig: IslandConfig,
+      expand: boolean = false
+    ) => {
       // Save old config values before updating
       const oldW = expanded ? islandConfig.expanded.w : islandConfig.minimal.w
       const oldH = expanded ? islandConfig.expanded.h : islandConfig.minimal.h
@@ -31,24 +58,22 @@
       const newH = expanded ? islandConfig.expanded.h : islandConfig.minimal.h
       const newR = expanded ? islandConfig.expanded.r : islandConfig.minimal.r
 
-      const scale = window.devicePixelRatio || 1
-
       if (newW >= oldW && newH >= oldH) {
         // Growing in all dimensions (or same). Safe to update OS region immediately.
-        SetWidgetBounds(newW, newH, newR, scale)
+        updateBounds(newW, newH, newR)
       } else {
         // Shrinking in at least one dimension.
         // Create a temporary bounding box so the CSS animation isn't clipped!
         const maxW = Math.max(oldW, newW)
         const maxH = Math.max(oldH, newH)
-        SetWidgetBounds(maxW, maxH, newR, scale)
+        updateBounds(maxW, maxH, newR)
 
         const onTransitionEnd = (e: TransitionEvent) => {
           if (e.target !== islandNode) return
           islandNode.removeEventListener('transitionend', onTransitionEnd)
           // Ensure we haven't navigated again while waiting
           if (activePage === page && expanded === expand) {
-            SetWidgetBounds(newW, newH, newR, scale)
+            updateBounds(newW, newH, newR)
           }
         }
         islandNode.addEventListener('transitionend', onTransitionEnd)
@@ -59,24 +84,20 @@
   onMount(async () => {
     // Check if launched via `scripts.bat test`
     isTestMode = await IsTestMode()
-    const scale = window.devicePixelRatio || 1
-    SetWidgetBounds(
+    updateBounds(
       islandConfig.minimal.w,
       islandConfig.minimal.h,
-      islandConfig.minimal.r,
-      scale
+      islandConfig.minimal.r
     )
   })
 
   function handleExpand() {
     if (expanded) return
     expanded = true
-    const scale = window.devicePixelRatio || 1
-    SetWidgetBounds(
+    updateBounds(
       islandConfig.expanded.w,
       islandConfig.expanded.h,
-      islandConfig.expanded.r,
-      scale
+      islandConfig.expanded.r
     )
   }
 
@@ -89,12 +110,10 @@
       if (e.target !== islandNode) return
       islandNode.removeEventListener('transitionend', onTransitionEnd)
       if (!expanded) {
-        const scale = window.devicePixelRatio || 1
-        SetWidgetBounds(
+        updateBounds(
           islandConfig.minimal.w,
           islandConfig.minimal.h,
-          islandConfig.minimal.r,
-          scale
+          islandConfig.minimal.r
         )
       }
     }
@@ -111,18 +130,17 @@
 </script>
 
 <div class="island-container">
+  <Colors />
   <!-- svelte-ignore a11y-click-events-have-key-events -->
   <div
     bind:this={islandNode}
     class="island {expanded ? 'expanded' : ''}"
     style="
-      --island-width: {expanded
-      ? islandConfig.expanded.w
-      : islandConfig.minimal.w}px;
-      --island-height: {expanded
-      ? islandConfig.expanded.h
-      : islandConfig.minimal.h}px;
-      --island-radius: {expanded
+      width: {expanded ? islandConfig.expanded.w : islandConfig.minimal.w}px;
+      height: {expanded ? islandConfig.expanded.h : islandConfig.minimal.h}px;
+      border-radius: {$shapeStore === 'box'
+      ? 12
+      : expanded
       ? islandConfig.expanded.r
       : islandConfig.minimal.r}px;
     "
@@ -175,6 +193,9 @@
     align-items: flex-start;
     height: 100vh;
     overflow: hidden;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   .island-container {
@@ -186,15 +207,11 @@
 
   .island {
     margin-top: 5px; /* Matches visualTop in backend/app.go */
-    background-color: #000000;
-    border-radius: var(--island-radius);
+    background-color: var(--c-bg);
     cursor: pointer;
 
-    width: var(--island-width);
-    height: var(--island-height);
-
     box-sizing: border-box;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--c-border);
     box-shadow: 0 0 0 transparent;
 
     /* Smooth Apple-like ease-out transition without the spring bounce */
@@ -209,13 +226,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
+    color: var(--c-text-primary);
     pointer-events: auto; /* Re-enable clicks on the island itself */
   }
 
   .island:hover {
-    border-color: rgba(255, 255, 255, 0.25);
-    box-shadow: 0 0 12px rgba(255, 255, 255, 0.18);
+    border-color: var(--c-text-muted);
   }
 
   .content {

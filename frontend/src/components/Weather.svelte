@@ -76,7 +76,7 @@
     display: flex;
     align-items: center;
     gap: 0.4rem;
-    color: white;
+    color: var(--c-text-primary);
   }
 
   .temp-minimal {
@@ -92,7 +92,7 @@
     align-items: center;
     height: 100%;
     box-sizing: border-box;
-    color: white;
+    color: var(--c-text-primary);
   }
 
   .left-col {
@@ -137,7 +137,7 @@
 
   .hi-lo {
     font-size: 0.8rem;
-    color: rgba(255, 255, 255, 0.6);
+    color: var(--c-text-secondary);
     font-weight: 500;
   }
 </style>

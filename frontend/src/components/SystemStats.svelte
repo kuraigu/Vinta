@@ -110,7 +110,7 @@
 
   .ring-bg {
     fill: none;
-    stroke: rgba(255, 255, 255, 0.05);
+    stroke: var(--c-border);
     stroke-width: 6;
   }
 
@@ -145,14 +145,14 @@
   .value {
     font-size: 0.95rem;
     font-weight: 700;
-    color: white;
+    color: var(--c-text-primary);
     letter-spacing: -0.5px;
   }
 
   .label {
     font-size: 0.75rem;
     font-weight: 700;
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--c-text-secondary);
     letter-spacing: 1px;
     text-transform: uppercase;
   }

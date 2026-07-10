@@ -13,21 +13,19 @@
   import Weather from '../components/Weather.svelte'
   import BentoGrid from '../components/BentoGrid.svelte'
   import BentoItem from '../components/BentoItem.svelte'
-  import DotIndicator from '../components/DotIndicator.svelte'
 
   export let expanded: boolean = false
-
 </script>
 
 <div class="page-container">
   {#if !expanded}
     <div class="minimal-view">
-      <DotIndicator />
+      <!--<DotIndicator />-->
       <Calendar expanded={false} />
       <Divider />
-      <Weather expanded={false} />
-      <Divider />
       <Clock expanded={false} />
+      <Divider />
+      <Weather expanded={false} />
     </div>
   {:else}
     <div class="expanded-view">

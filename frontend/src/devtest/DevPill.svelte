@@ -2,17 +2,25 @@
   import { onMount, getContext } from 'svelte'
   import { fade } from 'svelte/transition'
   import { SetDevPillBounds } from '../../wailsjs/go/backend/App.js'
-  
-  import NotificationPage, { config as notifConfig } from '../pages/NotificationPage.svelte'
+
+  import NotificationPage, {
+    config as notifConfig
+  } from '../pages/NotificationPage.svelte'
   import ClockPage, { config as clockConfig } from '../pages/ClockPage.svelte'
   import NotificationDevControls from './NotificationDevControls.svelte'
+  import type { ComponentType } from 'svelte'
+  import type { IslandConfig } from '../store'
+  import { themeStore, shapeStore } from '../store'
 
-  export let activePage: any
+  export let activePage: ComponentType
 
   let devW = 400
   let devH = 60
 
-  const navigate: any = getContext('navigate')
+  const navigate =
+    getContext<
+      (page: ComponentType, config: IslandConfig, expand?: boolean) => void
+    >('navigate')
 
   onMount(() => {
     const scale = window.devicePixelRatio || 1
@@ -20,7 +28,15 @@
   })
 
   // Registry pattern: Each page provides its own config and optional dev controls
-  const pages: Record<string, any> = {
+  const pages: Record<
+    string,
+    {
+      label: string
+      page: ComponentType
+      config: IslandConfig
+      controls: ComponentType | null
+    }
+  > = {
     clock: {
       label: 'Clock (Idle)',
       page: ClockPage,
@@ -41,7 +57,7 @@
     const target = e.target as HTMLSelectElement
     targetMode = target.value
     const pageData = pages[targetMode]
-    
+
     // Always navigate to the selected page when changed from the dropdown
     navigate(pageData.page, pageData.config, false)
   }
@@ -55,10 +71,28 @@
   <div class="left-section">
     <span class="label">Dev</span>
     <select class="page-select" on:change={handlePageChange} value={targetMode}>
-      {#each Object.entries(pages) as [key, data]}
+      {#each Object.entries(pages) as [key, data] (key)}
         <option value={key}>{data.label}</option>
       {/each}
     </select>
+
+    <div class="quick-toggles">
+      <button
+        class="icon-btn"
+        on:click={() =>
+          ($themeStore = $themeStore === 'dark' ? 'light' : 'dark')}
+        title="Toggle Theme"
+      >
+        {$themeStore === 'dark' ? '☀️' : '🌙'}
+      </button>
+      <button
+        class="icon-btn"
+        on:click={() => ($shapeStore = $shapeStore === 'pill' ? 'box' : 'pill')}
+        title="Toggle Shape"
+      >
+        {$shapeStore === 'pill' ? '🔲' : '💊'}
+      </button>
+    </div>
   </div>
 
   <div class="actions">
@@ -71,16 +105,17 @@
 <style>
   .dev-pill {
     /* No absolute positioning! We are in a flex column now */
-    background: rgba(20, 20, 20, 0.95);
+    background: var(--c-bg);
+    color: var(--c-text-primary);
+    padding: 8px 12px;
     border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--c-border);
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 0 15px;
     box-sizing: border-box;
-    color: white;
     z-index: 9999;
     pointer-events: auto; /* Ensures it receives clicks */
   }
@@ -100,10 +135,10 @@
   }
 
   .page-select {
-    background: rgba(0, 0, 0, 0.5);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: white;
-    padding: 5px 10px;
+    background: transparent;
+    color: var(--c-text-primary);
+    border: 1px solid var(--c-border);
+    padding: 4px 8px;
     border-radius: 6px;
     font-size: 0.85rem;
     outline: none;
@@ -111,26 +146,32 @@
   }
 
   .page-select:focus {
-    border-color: rgba(255, 255, 255, 0.4);
+    border-color: var(--c-primary);
+  }
+
+  .quick-toggles {
+    display: flex;
+    gap: 4px;
+    margin-left: 4px;
+  }
+
+  .icon-btn {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--c-text-primary);
+    padding: 4px 6px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background 0.2s;
+  }
+
+  .icon-btn:hover {
+    background: var(--c-hover);
   }
 
   .actions {
     display: flex;
     gap: 8px;
-  }
-
-  button {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: white;
-    padding: 5px 12px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.8rem;
-    transition: background 0.2s;
-  }
-
-  button:hover {
-    background: rgba(255, 255, 255, 0.2);
   }
 </style>

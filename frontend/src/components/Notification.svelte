@@ -2,9 +2,13 @@
   import DotIndicator from './DotIndicator.svelte'
 
   export let expanded: boolean = false
-  export let notifications: Array<{id: number, title: string, message: string}> = []
+  export let notifications: Array<{
+    id: number
+    title: string
+    message: string
+  }> = []
 
-  $: latest = notifications[0] || { title: "No notifications", message: "" }
+  $: latest = notifications[0] || { title: 'No notifications', message: '' }
 </script>
 
 <div class="notification-container">
@@ -49,7 +53,7 @@
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
-    color: white;
+    color: var(--c-text-primary);
   }
 
   .banner-view {
@@ -85,7 +89,7 @@
   .banner-title {
     font-size: 0.95rem;
     font-weight: 600;
-    color: #ffffff;
+    color: var(--c-text-primary);
     line-height: 1.1;
   }
 
@@ -143,24 +147,24 @@
     border-radius: 4px;
   }
 
-  .notif-item {
-    background: rgba(255, 255, 255, 0.05);
+  .stack-item {
+    background: var(--c-item-bg);
     border-radius: 12px;
-    padding: 12px;
+    padding: 12px 16px;
     display: flex;
     flex-direction: column;
     gap: 4px;
     transition: background 0.2s;
   }
 
-  .notif-item:hover {
-    background: rgba(255, 255, 255, 0.08);
+  .stack-item:hover {
+    background: var(--c-hover);
   }
 
   .notif-item-title {
     font-size: 0.95rem;
     font-weight: 600;
-    color: #ffffff;
+    color: var(--c-text-primary);
   }
 
   .notif-item-message {

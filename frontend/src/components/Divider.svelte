@@ -2,7 +2,7 @@
   // Export properties so the bar is completely reusable!
   export let width: string = '2px'
   export let height: string = '60%'
-  export let color: string = 'rgba(255, 255, 255, 0.05)'
+  export let color: string = 'var(--c-item-bg)'
   export let radius: string = '999px'
 </script>
 
