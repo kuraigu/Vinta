@@ -1,23 +1,26 @@
+version: "2"
+
 run:
   timeout: 5m
 
-linters:
-  disable-all: true
+formatters:
   enable:
     - gofmt
+
+linters:
+  default: none
+  enable:
     - govet
     - errcheck
     - staticcheck
     - ineffassign
-    - typecheck
-    - gosimple
     - unused
     - misspell
     - revive
+  exclusions:
+    paths:
+      - frontend/node_modules
 
 issues:
-  exclude-dirs:
-    - frontend/node_modules
-  exclude-use-default: false
   max-issues-per-linter: 0
   max-same-issues: 0

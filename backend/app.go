@@ -81,8 +81,8 @@ func (a *App) Startup(ctx context.Context) {
 				break
 			}
 		}
-		screenWidth = screen.Width
-		runtime.WindowSetSize(ctx, screen.Width, screen.Height)
+		screenWidth = screen.Size.Width
+		runtime.WindowSetSize(ctx, screen.Size.Width, screen.Size.Height)
 		runtime.WindowSetPosition(ctx, 0, 0)
 	}
 
