@@ -1,6 +1,6 @@
 module Vinta
 
-go 1.24
+go 1.25
 
 require (
 	github.com/getlantern/systray v1.2.2
