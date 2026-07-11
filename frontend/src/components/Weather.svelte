@@ -1,14 +1,14 @@
 <script lang="ts">
   // This component is currently running on mock data -kuraigu (Innoh Reloza)
 
-  export let expanded: boolean = false
+  let { expanded = false } = $props<{ expanded?: boolean }>()
 
   // Mock data
-  let temp = 72
-  let condition = 'Partly Cloudy'
-  let location = 'San Francisco'
-  let high = 75
-  let low = 62
+  let temp = $state(72)
+  let condition = $state('Partly Cloudy')
+  let location = $state('San Francisco')
+  let high = $state(75)
+  let low = $state(62)
 </script>
 
 {#if !expanded}

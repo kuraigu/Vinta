@@ -2,21 +2,26 @@
   import { flip } from 'svelte/animate'
   import { fly, fade } from 'svelte/transition'
 
-  export let expanded: boolean = false
-  export let notifications: Array<{
-    id: number
-    appName?: string
-    icon?: string
-    title: string
-    message: string
-    time?: string
-  }> = []
+  let { expanded = false, notifications = [] } = $props<{
+    expanded?: boolean
+    notifications?: Array<{
+      id: number
+      appName?: string
+      icon?: string
+      title: string
+      message: string
+      time?: string
+    }>
+  }>()
 
-  $: latest = notifications[0] || ({ 
-    id: 0, 
-    title: 'No notifications', 
-    message: '' 
-  } as typeof notifications[0])
+  let latest = $derived(
+    notifications[0] ||
+      ({
+        id: 0,
+        title: 'No notifications',
+        message: ''
+      } as (typeof notifications)[0])
+  )
 
   function isImageUrl(url: string | undefined): boolean {
     if (!url) return false

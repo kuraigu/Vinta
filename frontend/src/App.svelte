@@ -7,20 +7,22 @@
   import Colors from './Colors.svelte'
   import { themeStore, shapeStore } from './store'
 
-  $: document.documentElement.setAttribute('data-theme', $themeStore)
+  $effect(() => {
+    document.documentElement.setAttribute('data-theme', $themeStore)
+  })
 
-  import type { ComponentType } from 'svelte'
+  import type { Component } from 'svelte'
   import type { IslandConfig } from './store'
 
   // Dynamic Routing: The active app that the island is displaying
-  let activePage: ComponentType = ClockPage
+  let activePage = $state<Component>(ClockPage)
 
   // App-specific dimensions (dynamically pulled from the active page via binding!)
-  let islandConfig: IslandConfig = clockConfig
+  let islandConfig = $state<IslandConfig>(clockConfig)
 
-  let expanded = false
-  let islandNode: HTMLElement
-  let isTestMode = false
+  let expanded = $state(false)
+  let islandNode = $state<HTMLElement>()
+  let isTestMode = $state(false)
 
   function updateBounds(w: number, h: number, r: number) {
     const computedR = $shapeStore === 'box' ? 12 : r
@@ -41,11 +43,7 @@
   // Global navigate for dev pill / pages
   setContext(
     'navigate',
-    (
-      page: ComponentType,
-      pageConfig: IslandConfig,
-      expand: boolean = false
-    ) => {
+    (page: Component, pageConfig: IslandConfig, expand: boolean = false) => {
       // Save old config values before updating
       const oldW = expanded ? islandConfig.expanded.w : islandConfig.minimal.w
       const oldH = expanded ? islandConfig.expanded.h : islandConfig.minimal.h
@@ -131,7 +129,8 @@
 
 <div class="island-container">
   <Colors />
-  <!-- svelte-ignore a11y-click-events-have-key-events -->
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
     bind:this={islandNode}
     class="island {expanded ? 'expanded' : ''}"
@@ -141,13 +140,14 @@
       border-radius: {$shapeStore === 'box'
       ? 12
       : expanded
-      ? islandConfig.expanded.r
-      : islandConfig.minimal.r}px;
+        ? islandConfig.expanded.r
+        : islandConfig.minimal.r}px;
     "
-    on:click={toggle}
+    onclick={toggle}
   >
     <div class="content">
       {#if !expanded}
+        {@const ActivePage = activePage}
         <div
           class="view"
           in:fade={{ duration: 200, delay: 350 }}
@@ -155,13 +155,10 @@
           style="width: {islandConfig.minimal.w}px; height: {islandConfig
             .minimal.h}px;"
         >
-          <svelte:component
-            this={activePage}
-            expanded={false}
-            bind:config={islandConfig}
-          />
+          <ActivePage expanded={false} />
         </div>
       {:else}
+        {@const ActivePage = activePage}
         <div
           class="view"
           in:fade={{ duration: 200, delay: 350 }}
@@ -169,18 +166,14 @@
           style="width: {islandConfig.expanded.w}px; height: {islandConfig
             .expanded.h}px;"
         >
-          <svelte:component
-            this={activePage}
-            expanded={true}
-            bind:config={islandConfig}
-          />
+          <ActivePage expanded={true} />
         </div>
       {/if}
     </div>
   </div>
 
   {#if isTestMode}
-    <DevPill {activePage} />
+    <DevPill />
   {/if}
 </div>
 
@@ -193,7 +186,11 @@
     align-items: flex-start;
     height: 100vh;
     overflow: hidden;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family:
+      'Inter',
+      system-ui,
+      -apple-system,
+      sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -217,9 +214,11 @@
     box-shadow: 0 0 0 transparent;
 
     /* Smooth Apple-like ease-out transition without the spring bounce */
-    transition: width 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+    transition:
+      width 0.4s cubic-bezier(0.22, 1, 0.36, 1),
       height 0.4s cubic-bezier(0.22, 1, 0.36, 1),
-      border-radius 0.4s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.3s ease,
+      border-radius 0.4s cubic-bezier(0.22, 1, 0.36, 1),
+      border-color 0.3s ease,
       box-shadow 0.3s ease;
 
     /* Hardware acceleration to prevent frame drops */

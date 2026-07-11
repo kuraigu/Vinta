@@ -4,11 +4,11 @@
 
   import { onMount } from 'svelte'
 
-  export let expanded: boolean = false
+  let { expanded = false } = $props<{ expanded?: boolean }>()
 
   // Mock data for CPU and RAM
-  let cpuUsage = 0
-  let ramUsage = 0
+  let cpuUsage = $state(0)
+  let ramUsage = $state(0)
 
   onMount(() => {
     // Animate to some initial value shortly after mount
@@ -32,8 +32,8 @@
   // Calculate SVG stroke dashes
   const radius = 24
   const circumference = 2 * Math.PI * radius
-  $: cpuOffset = circumference - (cpuUsage / 100) * circumference
-  $: ramOffset = circumference - (ramUsage / 100) * circumference
+  let cpuOffset = $derived(circumference - (cpuUsage / 100) * circumference)
+  let ramOffset = $derived(circumference - (ramUsage / 100) * circumference)
 </script>
 
 {#if expanded}

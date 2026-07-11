@@ -1,9 +1,16 @@
 <script lang="ts">
   // Export properties so the bar is completely reusable!
-  export let width: string = '2px'
-  export let height: string = '60%'
-  export let color: string = 'var(--c-item-bg)'
-  export let radius: string = '999px'
+  let {
+    width = '2px',
+    height = '60%',
+    color = 'var(--c-item-bg)',
+    radius = '999px'
+  } = $props<{
+    width?: string
+    height?: string
+    color?: string
+    radius?: string
+  }>()
 </script>
 
 <div
@@ -14,7 +21,7 @@
     background-color: {color}; 
     border-radius: {radius};
   "
-/>
+></div>
 
 <style>
   .divider {

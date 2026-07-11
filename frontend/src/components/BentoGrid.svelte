@@ -1,8 +1,17 @@
 <script lang="ts">
-  export let columns: string = '1fr'
-  export let rows: string = 'auto'
-  export let gap: string = '1rem'
-  export let height: string = '100%'
+  let {
+    columns = '1fr',
+    rows = 'auto',
+    gap = '1rem',
+    height = '100%',
+    children
+  } = $props<{
+    columns?: string
+    rows?: string
+    gap?: string
+    height?: string
+    children?: import('svelte').Snippet
+  }>()
 </script>
 
 <div
@@ -14,7 +23,7 @@
     --bento-height: {height};
   "
 >
-  <slot />
+  {@render children?.()}
 </div>
 
 <style>

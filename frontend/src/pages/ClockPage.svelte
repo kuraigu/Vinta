@@ -1,4 +1,4 @@
-<script context="module" lang="ts">
+<script module lang="ts">
   // This page dictates its own dimensions to the parent App!
   export const config = {
     minimal: { w: 320, h: 35, r: 35 },
@@ -14,7 +14,7 @@
   import BentoGrid from '../components/BentoGrid.svelte'
   import BentoItem from '../components/BentoItem.svelte'
 
-  export let expanded: boolean = false
+  let { expanded = false } = $props<{ expanded?: boolean }>()
 </script>
 
 <div class="page-container">

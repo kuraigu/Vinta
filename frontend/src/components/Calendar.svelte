@@ -1,9 +1,9 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
 
-  export let expanded: boolean = false
+  let { expanded = false } = $props<{ expanded?: boolean }>()
 
-  let now = new Date()
+  let now = $state(new Date())
   let timer: ReturnType<typeof setInterval>
 
   onMount(() => {
@@ -18,30 +18,34 @@
   })
 
   // Date formatted for minimal view (e.g. "Mon, Jul 7")
-  $: minimalDate = now.toLocaleDateString(undefined, {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric'
-  })
+  let minimalDate = $derived(
+    now.toLocaleDateString(undefined, {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric'
+    })
+  )
 
   // Calendar Header (e.g. "July 2026")
-  $: currentMonthStr = now.toLocaleDateString(undefined, {
-    month: 'long',
-    year: 'numeric'
-  })
+  let currentMonthStr = $derived(
+    now.toLocaleDateString(undefined, {
+      month: 'long',
+      year: 'numeric'
+    })
+  )
 
   // Calendar grid math
-  $: year = now.getFullYear()
-  $: month = now.getMonth() // 0-11
-  $: todayDate = now.getDate()
+  let year = $derived(now.getFullYear())
+  let month = $derived(now.getMonth()) // 0-11
+  let todayDate = $derived(now.getDate())
 
   // Find day of week for 1st of month (0 = Sun, 1 = Mon ... 6 = Sat)
-  $: firstDayOfMonth = new Date(year, month, 1).getDay()
-  $: daysInMonth = new Date(year, month + 1, 0).getDate()
+  let firstDayOfMonth = $derived(new Date(year, month, 1).getDay())
+  let daysInMonth = $derived(new Date(year, month + 1, 0).getDate())
 
   // Create arrays for Svelte {#each} blocks
-  $: blanks = Array(firstDayOfMonth).fill(null)
-  $: days = Array.from({ length: daysInMonth }, (_, i) => i + 1)
+  let blanks = $derived(Array(firstDayOfMonth).fill(null))
+  let days = $derived(Array.from({ length: daysInMonth }, (_, i) => i + 1))
 
   const weekDays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
 </script>
@@ -59,7 +63,7 @@
       </div>
       <div class="days">
         {#each blanks as _, i (i)}
-          <div class="day empty" data-index={_} />
+          <div class="day empty" data-index={_}></div>
         {/each}
         {#each days as day (day)}
           <div class="day {day === todayDate ? 'today' : ''}">{day}</div>

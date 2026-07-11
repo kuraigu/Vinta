@@ -1,11 +1,13 @@
 <script lang="ts">
-  export let color: string = '#34c759' // default to a pleasant green
-  export let size: string = '8px'
+  let {
+    color = '#34c759', // default to a pleasant green
+    size = '8px'
+  } = $props<{ color?: string; size?: string }>()
 </script>
 
 <div class="dot-container" style="--dot-color: {color}; --dot-size: {size};">
-  <div class="pulse" />
-  <div class="dot" />
+  <div class="pulse"></div>
+  <div class="dot"></div>
 </div>
 
 <style>

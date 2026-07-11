@@ -1,9 +1,9 @@
 <script lang="ts">
-  // Wrapper to ensure children in a grid cell stretch properly.
+  let { children } = $props<{ children?: import('svelte').Snippet }>()
 </script>
 
 <div class="bento-item">
-  <slot />
+  {@render children?.()}
 </div>
 
 <style>
@@ -19,7 +19,9 @@
     border-radius: 16px;
     border: 1px solid var(--c-border);
     box-sizing: border-box;
-    box-shadow: inset 0 1px 0 var(--c-border), 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow:
+      inset 0 1px 0 var(--c-border),
+      0 2px 8px rgba(0, 0, 0, 0.1);
     position: relative;
     overflow: hidden;
   }

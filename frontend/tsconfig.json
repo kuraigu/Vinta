@@ -8,7 +8,7 @@
     "allowJs": true,
     "checkJs": true,
     "isolatedModules": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "sourceMap": true,
     "strict": false,
     "esModuleInterop": true,
