@@ -12,11 +12,17 @@
     time?: string
   }> = []
 
-  $: latest = notifications[0] || { title: 'No notifications', message: '' }
+  $: latest = notifications[0] || ({ 
+    id: 0, 
+    title: 'No notifications', 
+    message: '' 
+  } as typeof notifications[0])
 
   function isImageUrl(url: string | undefined): boolean {
     if (!url) return false
-    return url.startsWith('http') || url.startsWith('data:') || url.startsWith('/')
+    return (
+      url.startsWith('http') || url.startsWith('data:') || url.startsWith('/')
+    )
   }
 </script>
 
@@ -24,7 +30,11 @@
   {#if !expanded}
     <div class="banner-view-container">
       {#key latest.id}
-        <div class="banner-view" in:fly={{ y: -10, duration: 300 }} out:fade={{ duration: 150 }}>
+        <div
+          class="banner-view"
+          in:fly={{ y: -10, duration: 300 }}
+          out:fade={{ duration: 150 }}
+        >
           <div class="banner-icon">
             {#if isImageUrl(latest.icon)}
               <img src={latest.icon} alt="app icon" class="notif-img-icon" />
@@ -46,17 +56,28 @@
       </div>
       <div class="notif-list">
         {#each notifications as notif (notif.id)}
-          <div class="notif-item" animate:flip={{ duration: 300 }} in:fly={{ x: -20, duration: 300 }} out:fade={{ duration: 150 }}>
+          <div
+            class="notif-item"
+            animate:flip={{ duration: 300 }}
+            in:fly={{ x: -20, duration: 300 }}
+            out:fade={{ duration: 150 }}
+          >
             <div class="notif-item-header">
               <div class="notif-item-app-group">
                 <div class="notif-item-icon">
                   {#if isImageUrl(notif.icon)}
-                    <img src={notif.icon} alt="app icon" class="notif-img-icon" />
+                    <img
+                      src={notif.icon}
+                      alt="app icon"
+                      class="notif-img-icon"
+                    />
                   {:else}
                     <span class="icon-text">{notif.icon || '💬'}</span>
                   {/if}
                 </div>
-                <span class="notif-item-app">{notif.appName || 'Notification'}</span>
+                <span class="notif-item-app"
+                  >{notif.appName || 'Notification'}</span
+                >
               </div>
               <span class="notif-item-time">{notif.time || 'Now'}</span>
             </div>
@@ -133,7 +154,8 @@
     gap: 2px;
   }
 
-  .banner-title, .banner-message {
+  .banner-title,
+  .banner-message {
     display: block;
     white-space: nowrap;
     text-overflow: ellipsis;

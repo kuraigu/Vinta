@@ -19,6 +19,7 @@ if "%1"=="dev" (
     golangci-lint run
     echo Running Frontend Lint...
     cd frontend
+    call npm run check
     call npm run lint
     call npm run format
 ) else (

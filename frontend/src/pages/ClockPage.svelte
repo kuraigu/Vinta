@@ -61,6 +61,7 @@
     align-items: center;
     justify-content: center;
     height: 100%;
+    margin-top: -2px; /* Visual optical adjustment for font baseline */
     gap: 1rem;
     min-width: max-content; /* Prevents squishing */
     white-space: nowrap; /* Prevents text breaking */
