@@ -1,9 +1,9 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
 
-  export let expanded: boolean = false
+  let { expanded = false } = $props<{ expanded?: boolean }>()
 
-  let time = new Date()
+  let time = $state(new Date())
   let timer: ReturnType<typeof setInterval>
 
   onMount(() => {

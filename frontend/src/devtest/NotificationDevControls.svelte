@@ -30,8 +30,8 @@
   }
 </script>
 
-<button class="action-btn" on:click={handleTest1}>Send 1</button>
-<button class="action-btn" on:click={handleTest2}>Send 2</button>
+<button class="action-btn" onclick={handleTest1}>Send 1</button>
+<button class="action-btn" onclick={handleTest2}>Send 2</button>
 
 <style>
   .action-btn {

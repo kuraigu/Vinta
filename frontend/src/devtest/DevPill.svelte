@@ -8,18 +8,16 @@
   } from '../pages/NotificationPage.svelte'
   import ClockPage, { config as clockConfig } from '../pages/ClockPage.svelte'
   import NotificationDevControls from './NotificationDevControls.svelte'
-  import type { ComponentType } from 'svelte'
+  import type { Component } from 'svelte'
   import type { IslandConfig } from '../store'
   import { themeStore, shapeStore } from '../store'
-
-  export let activePage: ComponentType
 
   let devW = 400
   let devH = 60
 
   const navigate =
     getContext<
-      (page: ComponentType, config: IslandConfig, expand?: boolean) => void
+      (page: Component, config: IslandConfig, expand?: boolean) => void
     >('navigate')
 
   onMount(() => {
@@ -32,9 +30,9 @@
     string,
     {
       label: string
-      page: ComponentType
+      page: Component
       config: IslandConfig
-      controls: ComponentType | null
+      controls: Component | null
     }
   > = {
     clock: {
@@ -51,7 +49,7 @@
     }
   }
 
-  let targetMode = 'clock'
+  let targetMode = $state('clock')
 
   function handlePageChange(e: Event) {
     const target = e.target as HTMLSelectElement
@@ -70,7 +68,7 @@
 >
   <div class="left-section">
     <span class="label">Dev</span>
-    <select class="page-select" on:change={handlePageChange} value={targetMode}>
+    <select class="page-select" onchange={handlePageChange} value={targetMode}>
       {#each Object.entries(pages) as [key, data] (key)}
         <option value={key}>{data.label}</option>
       {/each}
@@ -79,7 +77,7 @@
     <div class="quick-toggles">
       <button
         class="icon-btn"
-        on:click={() =>
+        onclick={() =>
           ($themeStore = $themeStore === 'dark' ? 'light' : 'dark')}
         title="Toggle Theme"
       >
@@ -87,7 +85,7 @@
       </button>
       <button
         class="icon-btn"
-        on:click={() => ($shapeStore = $shapeStore === 'pill' ? 'box' : 'pill')}
+        onclick={() => ($shapeStore = $shapeStore === 'pill' ? 'box' : 'pill')}
         title="Toggle Shape"
       >
         {$shapeStore === 'pill' ? '🔲' : '💊'}
@@ -97,7 +95,8 @@
 
   <div class="actions">
     {#if pages[targetMode].controls}
-      <svelte:component this={pages[targetMode].controls} />
+      {@const Controls = pages[targetMode].controls}
+      <Controls />
     {/if}
   </div>
 </div>

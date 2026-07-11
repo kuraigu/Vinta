@@ -26,8 +26,8 @@
   color: var(--c-text-primary);
   background: var(--c-bg);
 -->
-<style global>
-  :root {
+<style>
+  :global(:root) {
     /* DEFAULT DARK THEME */
     --c-primary: #007aff;
     --c-success: #34c759;
@@ -44,7 +44,7 @@
     --c-text-muted: #888888;
   }
 
-  [data-theme='light'] {
+  :global([data-theme='light']) {
     /* LIGHT THEME OVERRIDES */
     --c-bg: rgba(250, 250, 250, 0.9);
     --c-border: rgba(0, 0, 0, 0.1);
