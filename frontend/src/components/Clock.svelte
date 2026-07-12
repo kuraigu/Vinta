@@ -19,9 +19,6 @@
 </script>
 
 <div class="clock-container {expanded ? 'expanded' : 'minimal'}">
-  {#if !expanded}
-    <DotIndicator size="6px" />
-  {/if}
   <div class="time">
     {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
   </div>

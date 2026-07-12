@@ -23,6 +23,20 @@
   let islandNode = $state<HTMLElement>()
   let isTestMode = $state(false)
 
+  let isTransitionGlow = $state(true)
+  let glowTimeout: number
+
+  $effect(() => {
+    // Re-run this effect whenever expansion or page changes
+    const _p = activePage
+
+    isTransitionGlow = true
+    clearTimeout(glowTimeout)
+    glowTimeout = window.setTimeout(() => {
+      isTransitionGlow = false
+    }, 2500) // Glow plays for 2.5 seconds during transition
+  })
+
   function updateBounds(w: number, h: number, r: number) {
     const computedR = $shapeStore === 'box' ? 12 : r
     const scale = window.devicePixelRatio || 1
@@ -132,7 +146,9 @@
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
     bind:this={islandNode}
-    class="island {expanded ? 'expanded' : ''}"
+    class="island {expanded ? 'expanded' : ''} {isTransitionGlow
+      ? 'is-transition-glow'
+      : ''}"
     style="
       width: {expanded ? islandConfig.expanded.w : islandConfig.minimal.w}px;
       height: {expanded ? islandConfig.expanded.h : islandConfig.minimal.h}px;
@@ -209,6 +225,10 @@
   }
 
   .island {
+    --ambient-glow-ring:
+      inset 0 0 0 1px var(--island-border-color),
+      inset 0 0 0 1px var(--island-border-color);
+
     margin-top: 5px; /* Matches visualTop in backend/app.go */
     cursor: pointer;
     position: relative;
@@ -247,11 +267,62 @@
     font-variant-numeric: tabular-nums;
   }
 
+  @property --angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+  }
+
+  @keyframes orbit {
+    to {
+      --angle: 360deg;
+    }
+  }
+
+  .island::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: var(--ambient-glow-ring);
+
+    /* 
+     * NOTE: We must inline the mask instead of using a CSS variable. 
+     * Browsers have a bug where `@property` animations fail to update 
+     * if nested inside an unregistered CSS variable applied to a mask.
+     */
+    -webkit-mask: conic-gradient(
+      from var(--angle),
+      transparent 0%,
+      black 50%,
+      transparent 100%
+    );
+    mask: conic-gradient(
+      from var(--angle),
+      transparent 0%,
+      black 50%,
+      transparent 100%
+    );
+    pointer-events: none;
+    animation: orbit 3s linear infinite;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .island.is-transition-glow::before {
+    opacity: 1;
+  }
+
+  .island:hover::before {
+    opacity: 0; /* Hide glow when the solid hover ring activates */
+  }
+
   .island:hover {
     box-shadow:
       inset 0 0 0 1px var(--island-border-color),
       inset 0 0 0 1px var(--island-border-color),
-      0 5px 5px rgba(0, 0, 0, 0.5);
+      0 0 8px var(--island-border-color),
+      /* Neon glow effect */ 0 8px 16px rgba(0, 0, 0, 0.6);
   }
 
   .content {
