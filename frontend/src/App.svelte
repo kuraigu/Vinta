@@ -5,6 +5,7 @@
   import ClockPage, { config as clockConfig } from './pages/ClockPage.svelte'
   import DevPill from './devtest/DevPill.svelte'
   import Colors from './Colors.svelte'
+  import './properties/Borders.svelte'
   import { themeStore, shapeStore } from './store'
 
   $effect(() => {
@@ -226,9 +227,9 @@
   }
 
   .island {
-    --ambient-glow-ring:
-      inset 0 0 0 1px var(--island-border-color),
-      inset 0 0 0 1px var(--island-border-color);
+    /* Define the color for the shadow */
+    --vinta-border-color: var(--island-border-color);
+    --ambient-glow-ring: var(--vinta-border-shadow);
 
     margin-top: 5px; /* Matches visualTop in backend/app.go */
     cursor: pointer;
@@ -319,9 +320,10 @@
   }
 
   .island:hover {
+    /* Define the color for the shadow */
+    --vinta-border-color: var(--island-border-color);
     box-shadow:
-      inset 0 0 0 1px var(--island-border-color),
-      inset 0 0 0 1px var(--island-border-color),
+      var(--vinta-border-shadow),
       0 0 8px var(--island-border-color),
       /* Neon glow effect */ 0 8px 16px rgba(0, 0, 0, 0.6);
   }

@@ -68,7 +68,11 @@
 >
   <div class="left-section">
     <span class="label">Dev</span>
-    <select class="page-select" onchange={handlePageChange} value={targetMode}>
+    <select
+      class="page-select vinta-border"
+      onchange={handlePageChange}
+      value={targetMode}
+    >
       {#each Object.entries(pages) as [key, data] (key)}
         <option value={key}>{data.label}</option>
       {/each}
@@ -108,8 +112,11 @@
     color: var(--c-text-primary);
     padding: 8px 12px;
     border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    border: 1px solid var(--c-border);
+    --vinta-border-color: var(--c-border);
+    border: none;
+    box-shadow:
+      var(--vinta-border-shadow),
+      0 4px 12px rgba(0, 0, 0, 0.2);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -136,16 +143,16 @@
   .page-select {
     background: transparent;
     color: var(--c-text-primary);
-    border: 1px solid var(--c-border);
     padding: 4px 8px;
     border-radius: 6px;
+    --vinta-border-color: var(--c-border);
     font-size: 0.85rem;
     outline: none;
     cursor: pointer;
   }
 
   .page-select:focus {
-    border-color: var(--c-primary);
+    --vinta-border-color: var(--c-primary);
   }
 
   .quick-toggles {
@@ -156,7 +163,6 @@
 
   .icon-btn {
     background: transparent;
-    border: 1px solid transparent;
     color: var(--c-text-primary);
     padding: 4px 6px;
     border-radius: 6px;

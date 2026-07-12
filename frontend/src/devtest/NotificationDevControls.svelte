@@ -30,16 +30,16 @@
   }
 </script>
 
-<button class="action-btn" onclick={handleTest1}>Send 1</button>
-<button class="action-btn" onclick={handleTest2}>Send 2</button>
+<button class="action-btn vinta-border" onclick={handleTest1}>Send 1</button>
+<button class="action-btn vinta-border" onclick={handleTest2}>Send 2</button>
 
 <style>
   .action-btn {
     background: var(--c-item-bg);
-    border: 1px solid var(--c-border);
     color: var(--c-text-primary);
     padding: 6px 12px;
     border-radius: 6px;
+    --vinta-border-color: var(--c-border);
     cursor: pointer;
     font-size: 0.8rem;
     transition: background 0.2s;

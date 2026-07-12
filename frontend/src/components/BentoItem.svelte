@@ -17,9 +17,11 @@
 
     background: var(--c-item-bg);
     border-radius: 16px;
-    border: 1px solid var(--c-border);
+    --vinta-border-color: var(--c-border);
     box-sizing: border-box;
+    border: none;
     box-shadow:
+      var(--vinta-border-shadow),
       inset 0 1px 0 var(--c-border),
       0 2px 8px rgba(0, 0, 0, 0.1);
     position: relative;
