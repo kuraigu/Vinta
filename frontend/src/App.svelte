@@ -17,7 +17,6 @@
   // Dynamic Routing: The active app that the island is displaying
   let activePage = $state<Component>(ClockPage)
 
-  // App-specific dimensions (dynamically pulled from the active page via binding!)
   let islandConfig = $state<IslandConfig>(clockConfig)
 
   let expanded = $state(false)
@@ -137,11 +136,13 @@
     style="
       width: {expanded ? islandConfig.expanded.w : islandConfig.minimal.w}px;
       height: {expanded ? islandConfig.expanded.h : islandConfig.minimal.h}px;
-      border-radius: {$shapeStore === 'box'
+      --island-r: {$shapeStore === 'box'
       ? 12
       : expanded
         ? islandConfig.expanded.r
         : islandConfig.minimal.r}px;
+      border-radius: var(--island-r);
+      --island-border-color: {islandConfig.borderColor || 'transparent'};
     "
     onclick={toggle}
   >
@@ -178,6 +179,11 @@
 </div>
 
 <style>
+  /* Remove translateZ from root to prevent transparent viewport memory bloat */
+  :global(html) {
+    box-sizing: border-box;
+  }
+
   :global(body) {
     margin: 0;
     padding: 0;
@@ -204,35 +210,48 @@
 
   .island {
     margin-top: 5px; /* Matches visualTop in backend/app.go */
-    background: var(--c-bg);
-    backdrop-filter: blur(30px) saturate(120%);
-    -webkit-backdrop-filter: blur(30px) saturate(120%);
     cursor: pointer;
+    position: relative;
+    background: var(--c-bg);
 
-    box-sizing: border-box;
-    border: 1px solid var(--c-border);
-    box-shadow: 0 0 0 transparent;
+    background-clip: padding-box;
+    -webkit-background-clip: padding-box;
 
-    /* Smooth Apple-like ease-out transition without the spring bounce */
+    border: none;
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.15),
+      /* Top highlight */ inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+      /* Subtle border */ 0 5px 5px rgba(0, 0, 0, 0.5); /* Drop shadow */
+
     transition:
+      filter 0.4s ease,
+      box-shadow 0.4s ease,
+      --island-border-color 0.3s ease,
       width 0.4s cubic-bezier(0.22, 1, 0.36, 1),
       height 0.4s cubic-bezier(0.22, 1, 0.36, 1),
-      border-radius 0.4s cubic-bezier(0.22, 1, 0.36, 1),
-      border-color 0.3s ease,
-      box-shadow 0.3s ease;
-
-    /* Hardware acceleration to prevent frame drops */
-    will-change: width, height, border-radius;
+      border-radius 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--c-text-primary);
     pointer-events: auto; /* Re-enable clicks on the island itself */
+
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+
+    will-change: width, height, box-shadow;
+
+    contain: layout style;
+
+    font-variant-numeric: tabular-nums;
   }
 
   .island:hover {
-    border-color: var(--c-text-muted);
+    box-shadow:
+      inset 0 0 0 1px var(--island-border-color),
+      inset 0 0 0 1px var(--island-border-color),
+      0 5px 5px rgba(0, 0, 0, 0.5);
   }
 
   .content {
@@ -251,19 +270,5 @@
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
-  }
-
-  @keyframes fadeIn {
-    0% {
-      opacity: 0;
-      transform: scale(0.9);
-    }
-    50% {
-      opacity: 0;
-    }
-    100% {
-      opacity: 1;
-      transform: scale(1);
-    }
   }
 </style>

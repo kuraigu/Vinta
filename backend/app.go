@@ -34,9 +34,9 @@ const (
 	//nolint:revive // Windows API constants
 	WS_EX_TOOLWINDOW = 0x00000080
 
-	// GlowPadding is the extra space around the pill given to the OS region so
-	// that CSS box-shadow and border-glow can render without being clipped.
-	GlowPadding = 10
+	// OutsidePadding is the extra space outside the window
+	// This is useful for any objects that will render outside the pill without getting clipped
+	OutsidePadding = 15
 
 	// rgnOr is used to combine two regions.
 	rgnOr = 2
@@ -51,6 +51,7 @@ type App struct {
 	icon  []byte
 	pillW int
 	pillH int
+	pillR int
 	devW  int
 	devH  int
 	scale float64
@@ -138,9 +139,10 @@ func (a *App) onExit() {
 }
 
 // SetWidgetBounds is called by the frontend whenever the main pill size changes.
-func (a *App) SetWidgetBounds(width int, height int, _ int, scale float64) {
+func (a *App) SetWidgetBounds(width int, height int, r int, scale float64) {
 	a.pillW = width
 	a.pillH = height
+	a.pillR = r
 	if scale > 0 {
 		a.scale = scale
 	}
@@ -161,12 +163,12 @@ func (a *App) updateWindowRegion() {
 	titlePtr, _ := syscall.UTF16PtrFromString("Vinta")
 	hwnd, _, _ := procFindWindow.Call(0, uintptr(unsafe.Pointer(titlePtr)))
 	if hwnd != 0 {
-		setClickRegion(hwnd, a.pillW, a.pillH, a.devW, a.devH, GlowPadding, a.scale)
+		setClickRegion(hwnd, a.pillW, a.pillH, a.pillR, a.devW, a.devH, OutsidePadding, a.scale)
 	}
 }
 
 // setClickRegion updates the Win32 window region to combine the main pill and the dev pill.
-func setClickRegion(hwnd uintptr, w int, h int, dw int, dh int, padding int, scale float64) {
+func setClickRegion(hwnd uintptr, w int, h int, r int, dw int, dh int, padding int, scale float64) {
 	var hrgnMain uintptr
 	var hrgnDev uintptr
 	var hrgnFinal uintptr
@@ -190,7 +192,7 @@ func setClickRegion(hwnd uintptr, w int, h int, dw int, dh int, padding int, sca
 		right := physicalCenterX + (pw / 2) + padding
 		top := visualTop - padding
 		bottom := visualTop + ph + padding
-		ellipseSize := padding * 2
+		ellipseSize := (scaleInt(r) + padding) * 2
 
 		hrgnMain, _, _ = procCreateRoundRectRgn.Call(
 			uintptr(left), uintptr(top),
