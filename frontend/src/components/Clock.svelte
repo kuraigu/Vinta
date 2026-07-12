@@ -38,6 +38,7 @@
 
   .clock-container.minimal {
     flex-direction: row;
+    gap: 0.6rem;
   }
 
   .clock-container.expanded {
@@ -57,14 +58,15 @@
     letter-spacing: -2px;
     margin-bottom: 5px;
     background: linear-gradient(180deg, #ffffff 0%, #a0a0a0 100%);
+    background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     filter: drop-shadow(0 4px 12px rgba(255, 255, 255, 0.15));
   }
 
   .minimal .time {
-    font-size: 1rem;
-    font-weight: 400;
+    font-size: 0.95rem;
+    font-weight: 600;
   }
 
   .seconds {

@@ -45,6 +45,7 @@ func main() {
 			BackdropType:                      windows.None,
 			DisableWindowIcon:                 true,
 			DisableFramelessWindowDecorations: true,
+			WebviewGpuIsDisabled:              false,
 		},
 		Mac: &mac.Options{
 			TitleBar:             mac.TitleBarHiddenInset(),

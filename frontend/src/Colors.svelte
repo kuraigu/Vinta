@@ -33,8 +33,9 @@
     --c-success: #34c759;
     --c-danger: #ff3b30;
     --c-warning: #ffcc00;
+    --c-purple: #a78bfa;
 
-    --c-bg: rgba(20, 20, 20, 0.95);
+    --c-bg: rgba(20, 20, 20, 1);
     --c-border: rgba(255, 255, 255, 0.1);
     --c-hover: rgba(255, 255, 255, 0.08);
     --c-item-bg: rgba(255, 255, 255, 0.05);

@@ -84,8 +84,12 @@
 
   /* MINIMAL */
   .minimal .minimal-date {
-    font-size: 1rem;
-    font-weight: 500;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--c-text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   /* EXPANDED */
