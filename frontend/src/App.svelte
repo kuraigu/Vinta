@@ -28,7 +28,8 @@
 
   $effect(() => {
     // Re-run this effect whenever expansion or page changes
-    if (activePage) {}
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _p = activePage
 
     isTransitionGlow = true
     clearTimeout(glowTimeout)
