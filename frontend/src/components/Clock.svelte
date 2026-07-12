@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
-  import DotIndicator from './DotIndicator.svelte'
 
   let { expanded = false } = $props<{ expanded?: boolean }>()
 

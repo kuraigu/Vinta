@@ -28,7 +28,7 @@
 
   $effect(() => {
     // Re-run this effect whenever expansion or page changes
-    const _p = activePage
+    if (activePage) {}
 
     isTransitionGlow = true
     clearTimeout(glowTimeout)

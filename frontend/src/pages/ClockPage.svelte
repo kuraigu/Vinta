@@ -9,7 +9,6 @@
 
 <script lang="ts">
   import Clock from '../components/Clock.svelte'
-  import Divider from '../components/Divider.svelte'
   import Calendar from '../components/Calendar.svelte'
   import Weather from '../components/Weather.svelte'
   import BentoGrid from '../components/BentoGrid.svelte'
