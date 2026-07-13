@@ -125,12 +125,37 @@ func (a *App) onReady() {
 	systray.SetIcon(a.icon)
 	systray.SetTitle("Vinta")
 	systray.SetTooltip("Vinta Dynamic Island")
+	
+	mShow := systray.AddMenuItem("Show Vinta", "Bring the widget back into view")
+	systray.AddSeparator()
+	mTheme := systray.AddMenuItem("Toggle Theme", "Switch between Dark and Light mode")
+	mShape := systray.AddMenuItem("Toggle Shape", "Switch between Pill and Box shape")
+	systray.AddSeparator()
 	mQuit := systray.AddMenuItem("Quit Vinta", "Close the application")
 
 	go func() {
-		<-mQuit.ClickedCh
-		systray.Quit()
-		runtime.Quit(a.ctx)
+		for {
+			select {
+			case <-mShow.ClickedCh:
+				if a.ctx != nil {
+					runtime.EventsEmit(a.ctx, "show-pill")
+				}
+			case <-mTheme.ClickedCh:
+				if a.ctx != nil {
+					runtime.EventsEmit(a.ctx, "toggle-theme")
+				}
+			case <-mShape.ClickedCh:
+				if a.ctx != nil {
+					runtime.EventsEmit(a.ctx, "toggle-shape")
+				}
+			case <-mQuit.ClickedCh:
+				systray.Quit()
+				if a.ctx != nil {
+					runtime.Quit(a.ctx)
+				}
+				return
+			}
+		}
 	}()
 }
 
@@ -138,15 +163,23 @@ func (a *App) onExit() {
 	// Clean up here if necessary
 }
 
-// SetWidgetBounds is called by the frontend whenever the main pill size changes.
-func (a *App) SetWidgetBounds(width int, height int, r int, scale float64) {
+// SetWidgetBounds is called by the frontend whenever the widget dimensions change.
+// It updates the native Win32 click-through region so only the visible widget is clickable.
+func (a *App) SetWidgetBounds(width int, height int, radius int, scale float64) {
 	a.pillW = width
 	a.pillH = height
-	a.pillR = r
+	a.pillR = radius
 	if scale > 0 {
 		a.scale = scale
 	}
 	a.updateWindowRegion()
+}
+
+// Quit terminates the application
+func (a *App) Quit() {
+	if a.ctx != nil {
+		runtime.Quit(a.ctx)
+	}
 }
 
 // SetDevPillBounds is called by the frontend to show a separate developer menu.
@@ -163,7 +196,12 @@ func (a *App) updateWindowRegion() {
 	titlePtr, _ := syscall.UTF16PtrFromString("Vinta")
 	hwnd, _, _ := procFindWindow.Call(0, uintptr(unsafe.Pointer(titlePtr)))
 	if hwnd != 0 {
-		setClickRegion(hwnd, a.pillW, a.pillH, a.pillR, a.devW, a.devH, OutsidePadding, a.scale)
+		padding := OutsidePadding
+		// Use extremely tight bounds when hidden so we don't block background clicks
+		if a.pillW <= 80 && a.pillH <= 15 {
+			padding = 1
+		}
+		setClickRegion(hwnd, a.pillW, a.pillH, a.pillR, a.devW, a.devH, padding, a.scale)
 	}
 }
 

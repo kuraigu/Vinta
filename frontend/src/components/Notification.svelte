@@ -183,6 +183,7 @@
 
   .expanded-view {
     padding: 1.5rem;
+    padding-bottom: 60px; /* Room for dock */
     width: 100%;
     height: 100%;
     box-sizing: border-box;
@@ -208,6 +209,7 @@
   .notif-list {
     width: 100%;
     flex: 1;
+    min-height: 0; /* CRITICAL: prevents flex child from overflowing parent */
     overflow-y: auto;
     display: flex;
     flex-direction: column;

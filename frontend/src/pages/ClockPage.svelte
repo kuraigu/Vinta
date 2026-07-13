@@ -2,7 +2,7 @@
   // This page dictates its own dimensions to the parent App!
   export const config = {
     minimal: { w: 330, h: 35, r: 35 },
-    expanded: { w: 580, h: 300, r: 35 },
+    expanded: { w: 580, h: 340, r: 35 },
     borderColor: 'var(--c-island-border-idle)',
     glowColor: 'var(--c-island-glow-idle)'
   }
@@ -82,9 +82,10 @@
   }
 
   .expanded-view {
-    padding: 1rem;
     width: 100%;
     height: 100%;
+    padding: 24px;
+    padding-bottom: 56px; /* Space for Universal Dock */
     box-sizing: border-box;
   }
 </style>

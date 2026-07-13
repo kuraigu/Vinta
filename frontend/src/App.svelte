@@ -2,9 +2,18 @@
   import { onMount, setContext } from 'svelte'
   import { fade } from 'svelte/transition'
   import { SetWidgetBounds, IsTestMode } from '../wailsjs/go/backend/App.js'
+  import { EventsOn } from '../wailsjs/runtime/runtime.js'
   import ClockPage, { config as clockConfig } from './pages/ClockPage.svelte'
+  import SettingsPage from './pages/SettingsPage.svelte'
+  import Dock from './components/Dock.svelte'
   import DevPill from './devtest/DevPill.svelte'
-  import { themeStore, shapeStore } from './store'
+  import {
+    themeStore,
+    shapeStore,
+    autoHideStore,
+    notifData,
+    wakeMethodStore
+  } from './store'
   import Themes from './properties/Themes.svelte'
 
   $effect(() => {
@@ -20,6 +29,11 @@
   let islandConfig = $state<IslandConfig>(clockConfig)
 
   let expanded = $state(false)
+  let isHidden = $state(false)
+  let isHovering = $state(false)
+  let hideTimeout: number
+  let hoverShowTimeout: number
+
   let islandNode = $state<HTMLElement>()
   let isTestMode = $state(false)
 
@@ -35,7 +49,48 @@
     clearTimeout(glowTimeout)
     glowTimeout = window.setTimeout(() => {
       isTransitionGlow = false
-    }, 3300) // Glow plays for 3.3 seconds to allow the CSS animation to complete and fade out first
+    }, 3000)
+  })
+
+  $effect(() => {
+    // Auto-hide logic effect
+    if ($autoHideStore && !expanded && !isHidden && !isHovering) {
+      clearTimeout(hideTimeout)
+      hideTimeout = window.setTimeout(hideWidget, 5000)
+    } else {
+      clearTimeout(hideTimeout)
+    }
+  })
+
+  // Manage OS bounds when hiding/unhiding
+  function hideWidget() {
+    if (isHidden) return
+    isHidden = true
+  }
+
+  function showWidget() {
+    if (!isHidden) return
+    isHidden = false
+  }
+
+  // Expose manual hide for the dock
+  setContext('hidePill', () => {
+    hideWidget()
+    if (expanded) {
+      navigateTo(ClockPage, clockConfig, false)
+    }
+  })
+
+  // Expose manual wake up for components
+  setContext('wakeupPill', showWidget)
+
+  // Automatically wake up when new notifications arrive
+  let prevNotifCount = $state(0)
+  notifData.subscribe((notifs) => {
+    if (notifs.length > prevNotifCount) {
+      showWidget()
+    }
+    prevNotifCount = notifs.length
   })
 
   function updateBounds(w: number, h: number, r: number) {
@@ -44,104 +99,135 @@
     SetWidgetBounds(w, h, computedR, scale)
   }
 
-  // React to shape changes immediately, but don't react to 'expanded' changes
-  // to avoid instantly shrinking the OS window region and clipping the animation.
-  shapeStore.subscribe(() => {
+  // --- Centralized OS Bounds Manager ---
+  let currentOSBounds = { w: 0, h: 0, r: 0 }
+  let osBoundsTimeout: number
+
+  function applyBounds(w: number, h: number, r: number) {
+    if (w >= currentOSBounds.w && h >= currentOSBounds.h) {
+      // Growing in all dimensions (or same). Safe to update OS region immediately.
+      clearTimeout(osBoundsTimeout)
+      updateBounds(w, h, r)
+      currentOSBounds = { w, h, r }
+    } else {
+      // Shrinking in at least one dimension.
+      // Create a temporary bounding box so the CSS animation isn't clipped
+      const maxW = Math.max(currentOSBounds.w, w)
+      const maxH = Math.max(currentOSBounds.h, h)
+      const maxR = Math.max(currentOSBounds.r, r)
+      updateBounds(maxW, maxH, maxR)
+
+      clearTimeout(osBoundsTimeout)
+      osBoundsTimeout = window.setTimeout(() => {
+        updateBounds(w, h, r)
+        currentOSBounds = { w, h, r }
+      }, 450) // Wait slightly longer than 400ms CSS animation to be safe
+    }
+  }
+
+  $effect(() => {
     if (!islandNode) return
-    const currentW = expanded ? islandConfig.expanded.w : islandConfig.minimal.w
-    const currentH = expanded ? islandConfig.expanded.h : islandConfig.minimal.h
-    const currentR = expanded ? islandConfig.expanded.r : islandConfig.minimal.r
-    updateBounds(currentW, currentH, currentR)
+    
+    const target = isHidden
+      ? { w: 60, h: 8, r: 4 }
+      : expanded
+        ? islandConfig.expanded
+        : islandConfig.minimal
+
+    // Always use box radius if shapeStore is box
+    const r = isHidden ? 4 : ($shapeStore === 'box' ? 12 : target.r)
+    
+    applyBounds(target.w, target.h, r)
   })
 
+  function navigateTo(
+    page: Component,
+    pageConfig: IslandConfig,
+    expand: boolean = false
+  ) {
+    activePage = page
+    islandConfig = pageConfig
+    expanded = expand
+  }
+
   // Global navigate for dev pill / pages
-  setContext(
-    'navigate',
-    (page: Component, pageConfig: IslandConfig, expand: boolean = false) => {
-      // Save old config values before updating
-      const oldW = expanded ? islandConfig.expanded.w : islandConfig.minimal.w
-      const oldH = expanded ? islandConfig.expanded.h : islandConfig.minimal.h
-
-      activePage = page
-      islandConfig = pageConfig
-      expanded = expand
-
-      const newW = expanded ? islandConfig.expanded.w : islandConfig.minimal.w
-      const newH = expanded ? islandConfig.expanded.h : islandConfig.minimal.h
-      const newR = expanded ? islandConfig.expanded.r : islandConfig.minimal.r
-
-      if (newW >= oldW && newH >= oldH) {
-        // Growing in all dimensions (or same). Safe to update OS region immediately.
-        updateBounds(newW, newH, newR)
-      } else {
-        // Shrinking in at least one dimension.
-        // Create a temporary bounding box so the CSS animation isn't clipped!
-        const maxW = Math.max(oldW, newW)
-        const maxH = Math.max(oldH, newH)
-        updateBounds(maxW, maxH, newR)
-
-        const onTransitionEnd = (e: TransitionEvent) => {
-          if (e.target !== islandNode) return
-          islandNode.removeEventListener('transitionend', onTransitionEnd)
-          // Ensure we haven't navigated again while waiting
-          if (activePage === page && expanded === expand) {
-            updateBounds(newW, newH, newR)
-          }
-        }
-        islandNode.addEventListener('transitionend', onTransitionEnd)
-      }
-    }
-  )
+  setContext('navigate', navigateTo)
 
   onMount(async () => {
     // Check if launched via `scripts.bat test`
     isTestMode = await IsTestMode()
-    updateBounds(
-      islandConfig.minimal.w,
-      islandConfig.minimal.h,
-      islandConfig.minimal.r
-    )
+    currentOSBounds = {
+      w: islandConfig.minimal.w,
+      h: islandConfig.minimal.h,
+      r: islandConfig.minimal.r
+    }
+    updateBounds(currentOSBounds.w, currentOSBounds.h, currentOSBounds.r)
+
+    // Listen to systray events
+    EventsOn('toggle-theme', () => {
+      themeStore.update((t) => (t === 'dark' ? 'light' : 'dark'))
+    })
+    EventsOn('toggle-shape', () => {
+      shapeStore.update((s) => (s === 'pill' ? 'box' : 'pill'))
+    })
+    EventsOn('show-pill', showWidget)
   })
 
   function handleExpand() {
     if (expanded) return
     expanded = true
-    updateBounds(
-      islandConfig.expanded.w,
-      islandConfig.expanded.h,
-      islandConfig.expanded.r
-    )
   }
 
   function handleShrink() {
     if (!expanded) return
     expanded = false
-
-    // Wait for CSS animation to finish before shrinking the OS click region
-    const onTransitionEnd = (e: TransitionEvent) => {
-      if (e.target !== islandNode) return
-      islandNode.removeEventListener('transitionend', onTransitionEnd)
-      if (!expanded) {
-        updateBounds(
-          islandConfig.minimal.w,
-          islandConfig.minimal.h,
-          islandConfig.minimal.r
-        )
-      }
-    }
-    islandNode.addEventListener('transitionend', onTransitionEnd)
   }
 
-  function toggle() {
-    if (expanded) {
-      handleShrink()
-    } else {
+  function handleIslandClick() {
+    if (isHidden) {
+      showWidget()
+      return
+    }
+    if (!expanded) {
       handleExpand()
+    }
+  }
+
+  function handleFocusLoss() {
+    if (expanded) {
+      // Always minimize back to the Clock page to ensure a clean home state
+      navigateTo(ClockPage, clockConfig, false)
+    }
+  }
+
+  function handleKeyDown(e: KeyboardEvent) {
+    if (e.key === 'Escape' && expanded) {
+      handleFocusLoss()
+    }
+  }
+
+  function handleMouseEnter() {
+    isHovering = true
+    clearTimeout(hideTimeout)
+    if (isHidden && $wakeMethodStore === 'hover') {
+      hoverShowTimeout = window.setTimeout(showWidget, 150)
+    } else if (!isHidden) {
+      showWidget()
+    }
+  }
+
+  function handleMouseLeave() {
+    isHovering = false
+    clearTimeout(hoverShowTimeout)
+    if ($autoHideStore && !expanded && !isHidden) {
+      hideTimeout = window.setTimeout(hideWidget, 5000)
     }
   }
 </script>
 
-<div class="island-container">
+<svelte:window onblur={handleFocusLoss} onkeydown={handleKeyDown} />
+
+<div class="island-container" role="application">
   <Themes />
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -149,22 +235,47 @@
     bind:this={islandNode}
     class="island {expanded ? 'expanded' : ''} {isTransitionGlow
       ? 'is-transition-glow'
-      : ''}"
+      : ''} {isHidden ? 'is-hidden' : ''}"
+    onmouseenter={handleMouseEnter}
+    onmouseleave={handleMouseLeave}
     style="
-      width: {expanded ? islandConfig.expanded.w : islandConfig.minimal.w}px;
-      height: {expanded ? islandConfig.expanded.h : islandConfig.minimal.h}px;
-      --island-r: {$shapeStore === 'box'
-      ? 12
+      width: {isHidden
+      ? 60
       : expanded
-        ? islandConfig.expanded.r
-        : islandConfig.minimal.r}px;
+        ? islandConfig.expanded.w
+        : islandConfig.minimal.w}px;
+      height: {isHidden
+      ? 8
+      : expanded
+        ? islandConfig.expanded.h
+        : islandConfig.minimal.h}px;
+      --island-r: {isHidden
+      ? 4
+      : $shapeStore === 'box'
+        ? 12
+        : expanded
+          ? islandConfig.expanded.r
+          : islandConfig.minimal.r}px;
       border-radius: var(--island-r);
-      --island-border-color: {islandConfig.borderColor || 'transparent'};
-      --island-glow-color: {islandConfig.glowColor || 'transparent'};
+      --island-border-color: {isHidden
+      ? 'transparent'
+      : islandConfig.borderColor || 'transparent'};
+      --island-glow-color: {isHidden
+      ? 'transparent'
+      : islandConfig.glowColor || 'transparent'};
+      --island-hidden-glow: {islandConfig.glowColor ||
+      'rgba(255, 255, 255, 0.6)'};
     "
-    onclick={toggle}
+    onclick={handleIslandClick}
   >
-    <div class="content">
+    {#if isHidden}
+      <div class="hidden-dash" in:fade={{ duration: 200 }}></div>
+    {/if}
+
+    <div
+      class="content"
+      style="opacity: {isHidden ? 0 : 1}; transition: opacity 0.2s;"
+    >
       {#if !expanded}
         {@const ActivePage = activePage}
         <div
@@ -186,6 +297,9 @@
             .expanded.h}px;"
         >
           <ActivePage expanded={true} />
+          <div in:fade={{ duration: 200, delay: 450 }}>
+            <Dock {activePage} />
+          </div>
         </div>
       {/if}
     </div>
@@ -210,6 +324,8 @@
     align-items: flex-start;
     height: 100vh;
     overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
     font-family:
       'Inter',
       system-ui,
@@ -272,6 +388,24 @@
     contain: layout style;
 
     font-variant-numeric: tabular-nums;
+  }
+
+  .island.is-hidden {
+    box-shadow: none;
+    background-color: var(--c-bg); /* Maintain the native theme base */
+  }
+
+  .hidden-dash {
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 2px;
+    border-radius: 2px;
+    background-color: var(--island-hidden-glow);
+    box-shadow: 0 0 4px var(--island-hidden-glow);
+    z-index: 10;
   }
 
   @property --angle {
@@ -339,12 +473,12 @@
       fade-glow 3s ease-in-out forwards;
   }
 
-  .island:hover::before {
+  .island:not(.expanded):hover::before {
     opacity: 0 !important; /* Hide glow when the solid hover ring activates */
     animation: none !important;
   }
 
-  .island:hover {
+  .island:not(.expanded):hover {
     box-shadow:
       var(--island-hover-border),
       var(--island-hover-glow),
