@@ -57,7 +57,11 @@
     font-weight: 800;
     letter-spacing: -2px;
     margin-bottom: 5px;
-    background: linear-gradient(180deg, var(--c-clock-time-start) 0%, var(--c-clock-time-end) 100%);
+    background: linear-gradient(
+      180deg,
+      var(--c-clock-time-start) 0%,
+      var(--c-clock-time-end) 100%
+    );
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
