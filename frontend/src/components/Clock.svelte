@@ -57,11 +57,15 @@
     font-weight: 800;
     letter-spacing: -2px;
     margin-bottom: 5px;
-    background: linear-gradient(180deg, #ffffff 0%, #a0a0a0 100%);
+    background: linear-gradient(
+      180deg,
+      var(--c-clock-time-start) 0%,
+      var(--c-clock-time-end) 100%
+    );
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    filter: drop-shadow(0 4px 12px rgba(255, 255, 255, 0.15));
+    filter: drop-shadow(0 4px 12px var(--c-clock-time-shadow));
   }
 
   .minimal .time {

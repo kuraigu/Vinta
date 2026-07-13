@@ -108,7 +108,6 @@
     color: var(--c-text-primary);
     padding: 8px 12px;
     border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     border: 1px solid var(--c-border);
     display: flex;
     align-items: center;
@@ -134,7 +133,7 @@
   }
 
   .page-select {
-    background: transparent;
+    background: var(--c-bg);
     color: var(--c-text-primary);
     border: 1px solid var(--c-border);
     padding: 4px 8px;

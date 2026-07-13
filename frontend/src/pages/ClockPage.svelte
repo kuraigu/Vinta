@@ -3,7 +3,8 @@
   export const config = {
     minimal: { w: 330, h: 35, r: 35 },
     expanded: { w: 580, h: 300, r: 35 },
-    borderColor: 'var(--c-success)'
+    borderColor: 'var(--c-island-border-idle)',
+    glowColor: 'var(--c-island-glow-idle)'
   }
 </script>
 

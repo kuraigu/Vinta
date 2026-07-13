@@ -223,7 +223,7 @@
     background: transparent;
   }
   .notif-list::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--c-scrollbar-thumb);
     border-radius: 4px;
   }
 
@@ -302,7 +302,7 @@
 
   .empty-state {
     text-align: center;
-    color: #888;
+    color: var(--c-text-muted);
     margin-top: 2rem;
     font-size: 0.9rem;
   }

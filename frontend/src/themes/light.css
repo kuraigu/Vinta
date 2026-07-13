@@ -1,0 +1,41 @@
+:root[data-theme='light'] {
+  /* ACCENT COLORS */
+  /* Deepened and saturated across the board so they stand out crisply against light surfaces */
+  --c-primary: #0062d2; /* Richer, deeper blue */
+  --c-success: #248a3d; /* Forest green (replacing the bright neon green) */
+  --c-danger: #d70015; /* Deeper crimson red */
+  --c-warning: #b86e00; /* Dark amber/gold (yellow is completely illegible on white) */
+  --c-purple: #5856d6; /* Deep violet */
+
+  /* BACKGROUND & SURFACES */
+  --c-bg: rgb(235, 235, 235);
+  --c-border: rgba(0, 0, 0, 0.12); /* Bumped up slightly for crisper UI edges */
+  --c-hover: rgba(0, 0, 0, 0.06);
+  --c-item-bg: rgba(255, 255, 255, 0.85);
+
+  /* TYPOGRAPHY */
+  --c-text-primary: #1d1d1f;
+  --c-text-secondary: #515154; /* Darkened for better readability */
+  --c-text-muted: #76767a;
+
+  /* CONTEXTUAL COLOR SEMANTICS */
+  /* Borders use the new high-contrast base colors, while glows use an even deeper shade so the aura is visible against a bright room */
+  --c-island-border-idle: #cb38a6;
+  --c-island-border-notification: #ff8500;
+  --c-island-glow-idle: #cb38a6;
+  --c-island-glow-notification: #ff8500;
+
+  /* COMPONENT SPECIFIC VARIABLES */
+  --c-clock-time-start: #1d1d1f;
+  --c-clock-time-end: #515154;
+  --c-clock-time-shadow: rgba(0, 0, 0, 0.1);
+
+  /* ISLAND SPECIFIC */
+  --island-box-shadow:
+    inset 0 1px 0 0 rgba(0, 0, 0, 0.15), inset 0 0 0 1px rgba(0, 0, 0, 0.08),
+    0 5px 5px rgba(255, 255, 255, 0.2);
+  --island-hover-drop-shadow: 0 8px 10px rgba(235, 235, 235, 0.1);
+
+  /* SCROLLBARS */
+  --c-scrollbar-thumb: rgba(0, 0, 0, 0.25);
+}
