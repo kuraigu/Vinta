@@ -4,8 +4,8 @@
   import { SetWidgetBounds, IsTestMode } from '../wailsjs/go/backend/App.js'
   import ClockPage, { config as clockConfig } from './pages/ClockPage.svelte'
   import DevPill from './devtest/DevPill.svelte'
-  import Colors from './Colors.svelte'
   import { themeStore, shapeStore } from './store'
+  import Themes from './properties/Themes.svelte'
 
   $effect(() => {
     document.documentElement.setAttribute('data-theme', $themeStore)
@@ -35,7 +35,7 @@
     clearTimeout(glowTimeout)
     glowTimeout = window.setTimeout(() => {
       isTransitionGlow = false
-    }, 2500) // Glow plays for 2.5 seconds during transition
+    }, 3300) // Glow plays for 3.3 seconds to allow the CSS animation to complete and fade out first
   })
 
   function updateBounds(w: number, h: number, r: number) {
@@ -142,7 +142,7 @@
 </script>
 
 <div class="island-container">
-  <Colors />
+  <Themes />
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
@@ -160,6 +160,7 @@
         : islandConfig.minimal.r}px;
       border-radius: var(--island-r);
       --island-border-color: {islandConfig.borderColor || 'transparent'};
+      --island-glow-color: {islandConfig.glowColor || 'transparent'};
     "
     onclick={toggle}
   >
@@ -226,9 +227,17 @@
   }
 
   .island {
+    --island-border-color: transparent;
+    --island-glow-color: transparent;
+    --island-border-width: 1.5px;
+    --island-glow-width: 1.5px;
     --ambient-glow-ring:
-      inset 0 0 0 1px var(--island-border-color),
-      inset 0 0 0 1px var(--island-border-color);
+      inset 0 0 0 var(--island-glow-width) var(--island-glow-color),
+      inset 0 0 0 var(--island-glow-width) var(--island-glow-color);
+    --island-hover-border:
+      inset 0 0 0 var(--island-border-width) var(--island-border-color),
+      inset 0 0 0 var(--island-border-width) var(--island-border-color);
+    --island-hover-glow: 0 0 8px var(--island-border-color);
 
     margin-top: 5px; /* Matches visualTop in backend/app.go */
     cursor: pointer;
@@ -239,10 +248,7 @@
     -webkit-background-clip: padding-box;
 
     border: none;
-    box-shadow:
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.15),
-      /* Top highlight */ inset 0 0 0 1px rgba(255, 255, 255, 0.08),
-      /* Subtle border */ 0 5px 5px rgba(0, 0, 0, 0.5); /* Drop shadow */
+    box-shadow: var(--island-box-shadow);
 
     transition:
       filter 0.4s ease,
@@ -275,8 +281,26 @@
   }
 
   @keyframes orbit {
+    from {
+      --angle: 0deg;
+    }
     to {
       --angle: 360deg;
+    }
+  }
+
+  @keyframes fade-glow {
+    0% {
+      opacity: 0;
+    }
+    10% {
+      opacity: 1;
+    }
+    75% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
     }
   }
 
@@ -294,36 +318,37 @@
      */
     -webkit-mask: conic-gradient(
       from var(--angle),
-      transparent 0%,
-      black 50%,
-      transparent 100%
+      rgba(0, 0, 0, 0) 0%,
+      rgba(0, 0, 0, 1) 50%,
+      rgba(0, 0, 0, 0) 100%
     );
     mask: conic-gradient(
       from var(--angle),
-      transparent 0%,
-      black 50%,
-      transparent 100%
+      rgba(0, 0, 0, 0) 0%,
+      rgba(0, 0, 0, 1) 50%,
+      rgba(0, 0, 0, 0) 100%
     );
     pointer-events: none;
-    animation: orbit 3s linear infinite;
     opacity: 0;
-    transition: opacity 0.3s ease;
+    filter: drop-shadow(0 0 5px var(--island-glow-color));
   }
 
   .island.is-transition-glow::before {
-    opacity: 1;
+    animation:
+      orbit 3s linear forwards,
+      fade-glow 3s ease-in-out forwards;
   }
 
   .island:hover::before {
-    opacity: 0; /* Hide glow when the solid hover ring activates */
+    opacity: 0 !important; /* Hide glow when the solid hover ring activates */
+    animation: none !important;
   }
 
   .island:hover {
     box-shadow:
-      inset 0 0 0 1px var(--island-border-color),
-      inset 0 0 0 1px var(--island-border-color),
-      0 0 8px var(--island-border-color),
-      /* Neon glow effect */ 0 8px 16px rgba(0, 0, 0, 0.6);
+      var(--island-hover-border),
+      var(--island-hover-glow),
+      /* Neon glow effect */ var(--island-hover-drop-shadow);
   }
 
   .content {

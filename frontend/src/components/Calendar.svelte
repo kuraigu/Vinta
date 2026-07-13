@@ -124,7 +124,7 @@
 
   .weekday {
     font-size: 0.75rem;
-    color: #a0a0a0;
+    color: var(--c-text-muted);
     font-weight: 600;
     margin-bottom: 4px;
   }

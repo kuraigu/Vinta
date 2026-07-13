@@ -2,7 +2,8 @@
   export const config = {
     minimal: { w: 360, h: 65, r: 24 },
     expanded: { w: 420, h: 300, r: 35 },
-    borderColor: 'var(--c-primary)'
+    borderColor: 'var(--c-island-border-notification)',
+    glowColor: 'var(--c-island-glow-notification)'
   }
 </script>
 
