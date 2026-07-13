@@ -4,7 +4,7 @@ function persistentWritable<T>(key: string, initialValue: T) {
   const stored = localStorage.getItem(key)
   const initial = stored ? JSON.parse(stored) : initialValue
   const store = writable<T>(initial)
-  store.subscribe(value => {
+  store.subscribe((value) => {
     localStorage.setItem(key, JSON.stringify(value))
   })
   return store
@@ -21,8 +21,14 @@ export type IslandConfig = {
 
 export const themeStore = persistentWritable<AppTheme>('vinta_theme', 'dark')
 export const shapeStore = persistentWritable<IslandShape>('vinta_shape', 'pill')
-export const autoHideStore = persistentWritable<boolean>('vinta_autohide', false)
-export const wakeMethodStore = persistentWritable<'hover' | 'click'>('vinta_wakemethod', 'hover')
+export const autoHideStore = persistentWritable<boolean>(
+  'vinta_autohide',
+  false
+)
+export const wakeMethodStore = persistentWritable<'hover' | 'click'>(
+  'vinta_wakemethod',
+  'hover'
+)
 
 export type AppNotification = {
   id: number

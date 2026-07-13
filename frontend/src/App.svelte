@@ -4,7 +4,6 @@
   import { SetWidgetBounds, IsTestMode } from '../wailsjs/go/backend/App.js'
   import { EventsOn } from '../wailsjs/runtime/runtime.js'
   import ClockPage, { config as clockConfig } from './pages/ClockPage.svelte'
-  import SettingsPage from './pages/SettingsPage.svelte'
   import Dock from './components/Dock.svelte'
   import DevPill from './devtest/DevPill.svelte'
   import {
@@ -127,7 +126,7 @@
 
   $effect(() => {
     if (!islandNode) return
-    
+
     const target = isHidden
       ? { w: 60, h: 8, r: 4 }
       : expanded
@@ -135,8 +134,8 @@
         : islandConfig.minimal
 
     // Always use box radius if shapeStore is box
-    const r = isHidden ? 4 : ($shapeStore === 'box' ? 12 : target.r)
-    
+    const r = isHidden ? 4 : $shapeStore === 'box' ? 12 : target.r
+
     applyBounds(target.w, target.h, r)
   })
 
@@ -176,11 +175,6 @@
   function handleExpand() {
     if (expanded) return
     expanded = true
-  }
-
-  function handleShrink() {
-    if (!expanded) return
-    expanded = false
   }
 
   function handleIslandClick() {

@@ -5,7 +5,7 @@
     minimal: { w: 10, h: 10, r: 5 }, // Settings is never meant to be 'minimal'
     expanded: { w: 340, h: 260, r: 24 }, // Slightly taller for the Dock
     borderColor: 'var(--c-border)',
-    glowColor: 'transparent',
+    glowColor: 'transparent'
   }
 </script>
 
@@ -14,11 +14,8 @@
     themeStore,
     shapeStore,
     autoHideStore,
-    wakeMethodStore,
-    type AppTheme,
-    type IslandShape
+    wakeMethodStore
   } from '../store'
-  import { ShieldCheck, Moon, Type, EyeOff, Pointer } from 'lucide-svelte'
 
   export let expanded = true
 </script>
@@ -31,27 +28,39 @@
   <div class="content-scroll">
     <div class="section">
       <div class="section-title">Appearance</div>
-      
+
       <div class="setting-item">
         <span>Theme</span>
         <div class="segment-control">
-          <button class:active={$themeStore === 'dark'} on:click={() => $themeStore = 'dark'}>Dark</button>
-          <button class:active={$themeStore === 'light'} on:click={() => $themeStore = 'light'}>Light</button>
+          <button
+            class:active={$themeStore === 'dark'}
+            on:click={() => ($themeStore = 'dark')}>Dark</button
+          >
+          <button
+            class:active={$themeStore === 'light'}
+            on:click={() => ($themeStore = 'light')}>Light</button
+          >
         </div>
       </div>
 
       <div class="setting-item">
         <span>Shape</span>
         <div class="segment-control">
-          <button class:active={$shapeStore === 'pill'} on:click={() => $shapeStore = 'pill'}>Pill</button>
-          <button class:active={$shapeStore === 'box'} on:click={() => $shapeStore = 'box'}>Box</button>
+          <button
+            class:active={$shapeStore === 'pill'}
+            on:click={() => ($shapeStore = 'pill')}>Pill</button
+          >
+          <button
+            class:active={$shapeStore === 'box'}
+            on:click={() => ($shapeStore = 'box')}>Box</button
+          >
         </div>
       </div>
     </div>
 
     <div class="section">
       <div class="section-title">Behavior</div>
-      
+
       <div class="setting-item">
         <span>Auto-hide Pill</span>
         <label class="toggle">
@@ -63,8 +72,14 @@
       <div class="setting-item">
         <span>Wake Method</span>
         <div class="segment-control">
-          <button class:active={$wakeMethodStore === 'hover'} on:click={() => $wakeMethodStore = 'hover'}>Hover</button>
-          <button class:active={$wakeMethodStore === 'click'} on:click={() => $wakeMethodStore = 'click'}>Click</button>
+          <button
+            class:active={$wakeMethodStore === 'hover'}
+            on:click={() => ($wakeMethodStore = 'hover')}>Hover</button
+          >
+          <button
+            class:active={$wakeMethodStore === 'click'}
+            on:click={() => ($wakeMethodStore = 'click')}>Click</button
+          >
         </div>
       </div>
     </div>
@@ -184,7 +199,7 @@
     min-width: 120px;
   }
   .theme-select:focus {
-    border-color: var(--c-accent, #667EEA);
+    border-color: var(--c-accent, #667eea);
   }
 
   /* Toggle Switch CSS */
@@ -202,24 +217,27 @@
   .slider {
     position: absolute;
     cursor: pointer;
-    top: 0; left: 0; right: 0; bottom: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     background-color: var(--c-border);
-    transition: .4s;
+    transition: 0.4s;
     border-radius: 24px;
   }
   .slider:before {
     position: absolute;
-    content: "";
+    content: '';
     height: 18px;
     width: 18px;
     left: 3px;
     bottom: 3px;
     background-color: white;
-    transition: .4s;
+    transition: 0.4s;
     border-radius: 50%;
   }
   input:checked + .slider {
-    background-color: var(--c-accent, #667EEA);
+    background-color: var(--c-accent, #667eea);
   }
   input:checked + .slider:before {
     transform: translateX(20px);

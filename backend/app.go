@@ -125,7 +125,7 @@ func (a *App) onReady() {
 	systray.SetIcon(a.icon)
 	systray.SetTitle("Vinta")
 	systray.SetTooltip("Vinta Dynamic Island")
-	
+
 	mShow := systray.AddMenuItem("Show Vinta", "Bring the widget back into view")
 	systray.AddSeparator()
 	mTheme := systray.AddMenuItem("Toggle Theme", "Switch between Dark and Light mode")

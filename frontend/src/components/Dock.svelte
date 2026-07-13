@@ -10,13 +10,13 @@
   import type { IslandConfig } from '../store'
 
   const navigate =
-    getContext<(page: any, pageConfig: IslandConfig, expand?: boolean) => void>(
-      'navigate'
-    )
+    getContext<
+      (page: unknown, pageConfig: IslandConfig, expand?: boolean) => void
+    >('navigate')
 
   const hidePill = getContext<() => void>('hidePill')
 
-  export let activePage: any
+  export let activePage: unknown
 
   function goApps() {
     navigate(AppsPage, appsConfig, true)
@@ -37,7 +37,7 @@
     hidePill()
   }
 
-  function doQuit(e: Event) {
+  function doQuit() {
     Quit()
   }
 </script>

@@ -5,24 +5,26 @@
     minimal: { w: 10, h: 10, r: 5 }, // Apps page is never minimal
     expanded: { w: 340, h: 260, r: 24 }, // Slightly taller for the Dock
     borderColor: 'var(--c-border)',
-    glowColor: 'transparent',
+    glowColor: 'transparent'
   }
 </script>
 
 <script lang="ts">
   import { getContext } from 'svelte'
-  import { Clock, Bell, Settings, Info, RefreshCw } from 'lucide-svelte'
+  import { Clock, Bell, Info, RefreshCw } from 'lucide-svelte'
   import ClockPage, { config as clockConfig } from './ClockPage.svelte'
-  import NotificationPage, { config as notifConfig } from './NotificationPage.svelte'
-  import SettingsPage, { config as settingsConfig } from './SettingsPage.svelte'
+  import NotificationPage, {
+    config as notifConfig
+  } from './NotificationPage.svelte'
 
   export let expanded = true
 
-  const navigate = getContext<
-    (page: any, pageConfig: IslandConfig, expand?: boolean) => void
-  >('navigate')
+  const navigate =
+    getContext<
+      (page: unknown, pageConfig: IslandConfig, expand?: boolean) => void
+    >('navigate')
 
-  function openApp(page: any, config: IslandConfig) {
+  function openApp(page: unknown, config: IslandConfig) {
     navigate(page, config, true)
   }
 </script>
@@ -33,14 +35,26 @@
   </div>
 
   <div class="grid">
-    <button class="app-btn" onclick={(e) => { e.stopPropagation(); openApp(ClockPage, clockConfig) }}>
+    <button
+      class="app-btn"
+      onclick={(e) => {
+        e.stopPropagation()
+        openApp(ClockPage, clockConfig)
+      }}
+    >
       <div class="icon clock">
         <Clock size={24} />
       </div>
       <span class="label">Clock</span>
     </button>
 
-    <button class="app-btn" onclick={(e) => { e.stopPropagation(); openApp(NotificationPage, notifConfig) }}>
+    <button
+      class="app-btn"
+      onclick={(e) => {
+        e.stopPropagation()
+        openApp(NotificationPage, notifConfig)
+      }}
+    >
       <div class="icon notif">
         <Bell size={24} />
       </div>
@@ -123,13 +137,23 @@
     align-items: center;
     justify-content: center;
     color: white;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   }
 
-  .icon.clock { background: linear-gradient(135deg, #FF6B6B, #FF8E53); }
-  .icon.notif { background: linear-gradient(135deg, #4E65FF, #92EFFD); color: #1a1a1a; }
-  .icon.about { background: linear-gradient(135deg, #667EEA, #764BA2); }
-  .icon.updates { background: linear-gradient(135deg, #00C9FF, #92FE9D); color: #1a1a1a; }
+  .icon.clock {
+    background: linear-gradient(135deg, #ff6b6b, #ff8e53);
+  }
+  .icon.notif {
+    background: linear-gradient(135deg, #4e65ff, #92effd);
+    color: #1a1a1a;
+  }
+  .icon.about {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+  }
+  .icon.updates {
+    background: linear-gradient(135deg, #00c9ff, #92fe9d);
+    color: #1a1a1a;
+  }
 
   .label {
     font-size: 11px;
