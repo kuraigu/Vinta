@@ -3,6 +3,9 @@
   import { fade } from 'svelte/transition'
   import { SetWidgetBounds, IsTestMode } from '../wailsjs/go/backend/App.js'
   import { EventsOn } from '../wailsjs/runtime/runtime.js'
+  import NotificationPage, {
+    config as notifConfig
+  } from './pages/NotificationPage.svelte'
   import ClockPage, { config as clockConfig } from './pages/ClockPage.svelte'
   import Dock from './components/Dock.svelte'
   import DevPill from './devtest/DevPill.svelte'
@@ -11,7 +14,8 @@
     shapeStore,
     autoHideStore,
     notifData,
-    wakeMethodStore
+    wakeMethodStore,
+    dndStore
   } from './store'
   import Themes from './properties/Themes.svelte'
 
@@ -39,23 +43,32 @@
   let isTransitionGlow = $state(true)
   let glowTimeout: number
 
-  $effect(() => {
-    // Re-run this effect whenever expansion or page changes
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const _p = activePage
+  let islandAnim = $state('0.4s cubic-bezier(0.22, 1, 0.36, 1)')
 
+  function triggerGlow() {
     isTransitionGlow = true
     clearTimeout(glowTimeout)
     glowTimeout = window.setTimeout(() => {
       isTransitionGlow = false
     }, 3000)
+  }
+
+  $effect(() => {
+    // Re-run this effect whenever expansion or page changes
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _p = activePage
+
+    triggerGlow()
   })
 
   $effect(() => {
     // Auto-hide logic effect
     if ($autoHideStore && !expanded && !isHidden && !isHovering) {
       clearTimeout(hideTimeout)
-      hideTimeout = window.setTimeout(hideWidget, 5000)
+      hideTimeout = window.setTimeout(() => {
+        hideWidget()
+        navigateTo(ClockPage, clockConfig, false)
+      }, 20000)
     } else {
       clearTimeout(hideTimeout)
     }
@@ -64,12 +77,15 @@
   // Manage OS bounds when hiding/unhiding
   function hideWidget() {
     if (isHidden) return
+    islandAnim = '0.5s cubic-bezier(0.16, 1, 0.3, 1)'
     isHidden = true
   }
 
   function showWidget() {
     if (!isHidden) return
+    islandAnim = '0.5s cubic-bezier(0.16, 1, 0.3, 1)'
     isHidden = false
+    triggerGlow()
   }
 
   // Expose manual hide for the dock
@@ -144,6 +160,9 @@
     pageConfig: IslandConfig,
     expand: boolean = false
   ) {
+    if (expanded !== expand) {
+      islandAnim = '0.4s cubic-bezier(0.22, 1, 0.36, 1)'
+    }
     activePage = page
     islandConfig = pageConfig
     expanded = expand
@@ -174,29 +193,19 @@
 
   function handleExpand() {
     if (expanded) return
+    islandAnim = '0.4s cubic-bezier(0.22, 1, 0.36, 1)'
     expanded = true
   }
 
   function handleIslandClick() {
+    islandAnim = '0.4s cubic-bezier(0.22, 1, 0.36, 1)'
+    
     if (isHidden) {
       showWidget()
       return
     }
     if (!expanded) {
       handleExpand()
-    }
-  }
-
-  function handleFocusLoss() {
-    if (expanded) {
-      // Always minimize back to the Clock page to ensure a clean home state
-      navigateTo(ClockPage, clockConfig, false)
-    }
-  }
-
-  function handleKeyDown(e: KeyboardEvent) {
-    if (e.key === 'Escape' && expanded) {
-      handleFocusLoss()
     }
   }
 
@@ -217,9 +226,30 @@
       hideTimeout = window.setTimeout(hideWidget, 5000)
     }
   }
-</script>
 
-<svelte:window onblur={handleFocusLoss} onkeydown={handleKeyDown} />
+  onMount(() => {
+    EventsOn('notification', (payload: any) => {
+      notifData.update((n) => {
+        const newNotif = {
+          id: Date.now(),
+          appName: payload.appName,
+          icon: payload.icon,
+          title: payload.title,
+          message: payload.message,
+          timestamp: Date.now()
+        }
+        return [newNotif, ...n]
+      })
+
+      // Only force open the notification if DND is off and the pill is not already expanded by the user
+      if (!$dndStore && !expanded) {
+        showWidget()
+        navigateTo(NotificationPage, notifConfig, false)
+        triggerGlow()
+      }
+    })
+  })
+</script>
 
 <div class="island-container" role="application">
   <Themes />
@@ -259,6 +289,7 @@
       : islandConfig.glowColor || 'transparent'};
       --island-hidden-glow: {islandConfig.glowColor ||
       'rgba(255, 255, 255, 0.6)'};
+      --island-anim: {islandAnim};
     "
     onclick={handleIslandClick}
   >
@@ -270,32 +301,34 @@
       class="content"
       style="opacity: {isHidden ? 0 : 1}; transition: opacity 0.2s;"
     >
-      {#if !expanded}
-        {@const ActivePage = activePage}
-        <div
-          class="view"
-          in:fade={{ duration: 200, delay: 350 }}
-          out:fade={{ duration: 100 }}
-          style="width: {islandConfig.minimal.w}px; height: {islandConfig
-            .minimal.h}px;"
-        >
-          <ActivePage expanded={false} />
-        </div>
-      {:else}
-        {@const ActivePage = activePage}
-        <div
-          class="view"
-          in:fade={{ duration: 200, delay: 350 }}
-          out:fade={{ duration: 100 }}
-          style="width: {islandConfig.expanded.w}px; height: {islandConfig
-            .expanded.h}px;"
-        >
-          <ActivePage expanded={true} />
-          <div in:fade={{ duration: 200, delay: 450 }}>
-            <Dock {activePage} />
+      {#key activePage}
+        {#if !expanded}
+          {@const ActivePage = activePage}
+          <div
+            class="view"
+            in:fade={{ duration: 150, delay: 250 }}
+            out:fade={{ duration: 100 }}
+            style="width: {islandConfig.minimal.w}px; height: {islandConfig
+              .minimal.h}px;"
+          >
+            <ActivePage expanded={false} />
           </div>
-        </div>
-      {/if}
+        {:else}
+          {@const ActivePage = activePage}
+          <div
+            class="view"
+            in:fade={{ duration: 200, delay: 250 }}
+            out:fade={{ duration: 100 }}
+            style="width: {islandConfig.expanded.w}px; height: {islandConfig
+              .expanded.h}px;"
+          >
+            <ActivePage expanded={true} />
+            <div in:fade={{ duration: 200, delay: 350 }}>
+              <Dock {activePage} />
+            </div>
+          </div>
+        {/if}
+      {/key}
     </div>
   </div>
 
@@ -350,7 +383,6 @@
     --island-hover-glow: 0 0 8px var(--island-border-color);
 
     margin-top: 5px; /* Matches visualTop in backend/app.go */
-    cursor: pointer;
     position: relative;
     background: var(--c-bg);
 
@@ -364,9 +396,9 @@
       filter 0.4s ease,
       box-shadow 0.4s ease,
       --island-border-color 0.3s ease,
-      width 0.4s cubic-bezier(0.22, 1, 0.36, 1),
-      height 0.4s cubic-bezier(0.22, 1, 0.36, 1),
-      border-radius 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+      width var(--island-anim),
+      height var(--island-anim),
+      border-radius var(--island-anim);
 
     display: flex;
     align-items: center;
@@ -377,7 +409,7 @@
     transform: translateZ(0);
     -webkit-transform: translateZ(0);
 
-    will-change: width, height, box-shadow;
+    will-change: auto; /* Removed width/height to prevent texture reallocation lag */
 
     contain: layout style;
 
@@ -465,6 +497,10 @@
     animation:
       orbit 3s linear forwards,
       fade-glow 3s ease-in-out forwards;
+  }
+
+  .island:not(.expanded) {
+    cursor: pointer;
   }
 
   .island:not(.expanded):hover::before {

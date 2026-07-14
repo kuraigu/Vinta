@@ -1,6 +1,9 @@
 <script lang="ts">
   import { flip } from 'svelte/animate'
   import { fly, fade } from 'svelte/transition'
+  import { Bell, Trash2, X } from 'lucide-svelte'
+  import { notifData } from '../store'
+  import { onMount } from 'svelte'
 
   let { expanded = false, notifications = [] } = $props<{
     expanded?: boolean
@@ -10,7 +13,7 @@
       icon?: string
       title: string
       message: string
-      time?: string
+      timestamp?: number
     }>
   }>()
 
@@ -23,10 +26,47 @@
       } as (typeof notifications)[0])
   )
 
+  let now = $state(Date.now())
+
+  onMount(() => {
+    const interval = setInterval(() => {
+      now = Date.now()
+    }, 1000)
+    return () => clearInterval(interval)
+  })
+
+  function getRelativeTime(timestamp?: number): string {
+    if (!timestamp) return 'NOW'
+    const diffSeconds = Math.max(0, Math.floor((now - timestamp) / 1000))
+    if (diffSeconds < 5) return 'NOW'
+    if (diffSeconds < 60) return `${diffSeconds}s ago`
+    
+    const diffMinutes = Math.floor(diffSeconds / 60)
+    if (diffMinutes < 60) return `${diffMinutes}m ago`
+    
+    const diffHours = Math.floor(diffMinutes / 60)
+    if (diffHours < 24) return `${diffHours}h ago`
+    
+    const diffDays = Math.floor(diffHours / 24)
+    return `${diffDays}d ago`
+  }
+
+  function clearAll() {
+    notifData.set([])
+  }
+
+  function dismiss(id: number) {
+    notifData.update((n) => n.filter((x) => x.id !== id))
+  }
+
   function isImageUrl(url: string | undefined): boolean {
     if (!url) return false
     return (
-      url.startsWith('http') || url.startsWith('data:') || url.startsWith('/')
+      url.startsWith('http') ||
+      url.startsWith('data:') ||
+      url.startsWith('/') ||
+      url.startsWith('file:') ||
+      url.includes(':\\')
     )
   }
 </script>
@@ -43,13 +83,18 @@
           <div class="banner-icon">
             {#if isImageUrl(latest.icon)}
               <img src={latest.icon} alt="app icon" class="notif-img-icon" />
+            {:else if latest.icon}
+              <span class="icon-text">{latest.icon}</span>
             {:else}
-              <span class="icon-text">{latest.icon || '💬'}</span>
+              <Bell size={18} color="var(--c-text-secondary)" />
             {/if}
           </div>
           <div class="banner-content">
+            <span class="banner-app">{latest.appName || 'Notification'}</span>
             <span class="banner-title">{latest.title}</span>
-            <span class="banner-message">{latest.message}</span>
+            {#if latest.message}
+              <span class="banner-message">{latest.message}</span>
+            {/if}
           </div>
         </div>
       {/key}
@@ -58,6 +103,12 @@
     <div class="expanded-view">
       <div class="notif-header">
         <h3>Notifications</h3>
+        {#if notifications.length > 0}
+          <button class="clear-btn" onclick={clearAll}>
+            <Trash2 size={14} />
+            Clear
+          </button>
+        {/if}
       </div>
       <div class="notif-list">
         {#each notifications as notif (notif.id)}
@@ -76,15 +127,22 @@
                       alt="app icon"
                       class="notif-img-icon"
                     />
+                  {:else if notif.icon}
+                    <span class="icon-text">{notif.icon}</span>
                   {:else}
-                    <span class="icon-text">{notif.icon || '💬'}</span>
+                    <Bell size={16} color="var(--c-text-secondary)" />
                   {/if}
                 </div>
                 <span class="notif-item-app"
                   >{notif.appName || 'Notification'}</span
                 >
               </div>
-              <span class="notif-item-time">{notif.time || 'Now'}</span>
+              <div class="time-and-dismiss">
+                <span class="notif-item-time">{getRelativeTime(notif.timestamp)}</span>
+                <button class="dismiss-item-btn" onclick={(e) => { e.stopPropagation(); dismiss(notif.id); }}>
+                  <X size={14} />
+                </button>
+              </div>
             </div>
             <div class="notif-item-body">
               <span class="notif-item-title">{notif.title}</span>
@@ -124,9 +182,9 @@
     align-items: center;
     width: 100%;
     height: 100%;
-    padding: 0 15px;
+    padding: 0 16px 0 20px;
     box-sizing: border-box;
-    gap: 12px;
+    gap: 14px;
   }
 
   .banner-icon {
@@ -154,38 +212,43 @@
     justify-content: center;
     overflow: hidden;
     text-align: left;
-    flex: 1;
-    min-width: 0;
-    gap: 2px;
+    flex-grow: 1;
   }
 
-  .banner-title,
-  .banner-message {
-    display: block;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    overflow: hidden;
-    width: 100%;
+  .banner-app {
+    font-size: 0.7rem;
+    color: var(--c-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 3px;
   }
 
   .banner-title {
     font-size: 0.95rem;
     font-weight: 600;
     color: var(--c-text-primary);
-    line-height: 1.1;
+    line-height: 1.2;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .banner-message {
     font-size: 0.85rem;
-    color: var(--c-text-muted);
-    line-height: 1.1;
+    color: var(--c-text-secondary);
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .expanded-view {
-    padding: 1.5rem;
-    padding-bottom: 60px; /* Room for dock */
-    width: 100%;
+    padding: 20px 20px 60px 20px;
     height: 100%;
+    width: 100%;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -193,17 +256,63 @@
 
   .notif-header {
     display: flex;
+    justify-content: space-between;
     align-items: center;
     gap: 10px;
     width: 100%;
-    margin-bottom: 1rem;
+    margin-bottom: 24px;
     flex-shrink: 0;
   }
 
   h3 {
-    margin: 0;
-    font-size: 1.1rem;
+    color: var(--c-text-primary);
+    font-size: 16px;
     font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .dismiss-item-btn {
+    background: rgba(255, 255, 255, 0.06);
+    border: none;
+    color: var(--c-text-muted);
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    opacity: 0;
+  }
+
+  .notif-item:hover .dismiss-item-btn {
+    opacity: 1;
+  }
+
+  .dismiss-item-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: var(--c-text-primary);
+  }
+
+  .clear-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: none;
+    color: var(--c-text-secondary);
+    font-size: 12px;
+    font-weight: 500;
+    padding: 6px 10px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .clear-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--c-text-primary);
   }
 
   .notif-list {
@@ -217,7 +326,6 @@
     padding-right: 5px; /* for scrollbar */
   }
 
-  /* Custom scrollbar */
   .notif-list::-webkit-scrollbar {
     width: 4px;
   }
@@ -230,17 +338,13 @@
   }
 
   .notif-item {
-    background: var(--c-item-bg);
-    border-radius: 12px;
-    padding: 12px 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    transition: background 0.2s;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    position: relative;
   }
 
-  .notif-item:hover {
-    background: var(--c-hover);
+  .notif-item:last-child {
+    border-bottom: none;
   }
 
   .notif-item-header {
@@ -248,6 +352,13 @@
     justify-content: space-between;
     align-items: center;
     width: 100%;
+    margin-bottom: 4px;
+  }
+
+  .time-and-dismiss {
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
   .notif-item-app-group {

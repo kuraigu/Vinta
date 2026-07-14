@@ -1,37 +1,14 @@
 <script lang="ts">
   import { notifData } from '../store'
 
-  function handleTest1() {
-    notifData.update((n) => [
-      {
-        id: Date.now(),
-        appName: 'System',
-        icon: 'https://github.com/fluidicon.png',
-        title: 'System Alert',
-        message: 'Battery is running low (10%).',
-        time: 'Just now'
-      },
-      ...n
-    ])
-  }
+  import { SendTestNotification } from '../../wailsjs/go/backend/App.js'
 
-  function handleTest2() {
-    notifData.update((n) => [
-      {
-        id: Date.now() + 1,
-        appName: 'Games',
-        icon: '🏆',
-        title: 'Achievement Unlocked',
-        message: 'You completed the first task!',
-        time: 'Just now'
-      },
-      ...n
-    ])
+  function triggerNativeNotification() {
+    SendTestNotification()
   }
 </script>
 
-<button class="action-btn" onclick={handleTest1}>Send 1</button>
-<button class="action-btn" onclick={handleTest2}>Send 2</button>
+<button class="action-btn" onclick={triggerNativeNotification}>Send Native Windows Toast</button>
 
 <style>
   .action-btn {

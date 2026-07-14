@@ -29,6 +29,7 @@ export const wakeMethodStore = persistentWritable<'hover' | 'click'>(
   'vinta_wakemethod',
   'hover'
 )
+export const dndStore = persistentWritable<boolean>('vinta_dnd', false)
 
 export type AppNotification = {
   id: number
@@ -36,24 +37,7 @@ export type AppNotification = {
   icon?: string
   title: string
   message: string
-  time?: string
+  timestamp: number
 }
 
-export const notifData = writable<AppNotification[]>([
-  {
-    id: 1,
-    appName: 'Messages',
-    icon: '💬',
-    title: 'Sarah Jenkins',
-    message: 'Are we still on for the design review later?',
-    time: 'Now'
-  },
-  {
-    id: 2,
-    appName: 'System',
-    icon: '⚙️',
-    title: 'Update Available',
-    message: 'A new system update is ready to install.',
-    time: '5m'
-  }
-])
+export const notifData = writable<AppNotification[]>([])

@@ -14,7 +14,8 @@
     themeStore,
     shapeStore,
     autoHideStore,
-    wakeMethodStore
+    wakeMethodStore,
+    dndStore
   } from '../store'
 
   export let expanded = true
@@ -70,6 +71,14 @@
       </div>
 
       <div class="setting-item">
+        <span>Do Not Disturb</span>
+        <label class="toggle">
+          <input type="checkbox" bind:checked={$dndStore} />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="setting-item">
         <span>Wake Method</span>
         <div class="segment-control">
           <button
@@ -92,8 +101,7 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    padding: 16px;
-    padding-bottom: 56px; /* Space for Universal Dock */
+    padding: 20px 20px 60px 20px; /* Space for Universal Dock */
     box-sizing: border-box;
     color: var(--c-text-primary);
   }
@@ -101,13 +109,14 @@
   .header {
     display: flex;
     align-items: center;
-    margin-bottom: 16px;
+    margin-bottom: 24px;
     justify-content: center;
   }
 
   .title {
     font-weight: 600;
-    font-size: 14px;
+    font-size: 16px;
+    letter-spacing: -0.01em;
     text-align: center;
   }
 
