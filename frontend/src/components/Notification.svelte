@@ -281,7 +281,7 @@
   }
 
   .dismiss-item-btn {
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--c-item-bg);
     border: none;
     color: var(--c-text-muted);
     width: 24px;
@@ -300,12 +300,12 @@
   }
 
   .dismiss-item-btn:hover {
-    background: rgba(255, 255, 255, 0.15);
-    color: var(--c-text-primary);
+    background: var(--c-danger-hover-bg);
+    color: var(--c-danger-hover-text);
   }
 
   .clear-btn {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--c-item-bg);
     border: none;
     color: var(--c-text-secondary);
     font-size: 12px;
@@ -320,8 +320,8 @@
   }
 
   .clear-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--c-text-primary);
+    background: var(--c-danger-hover-bg);
+    color: var(--c-danger-hover-text);
   }
 
   .notif-list {
@@ -348,7 +348,7 @@
 
   .notif-item {
     padding: 12px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid var(--c-border);
     position: relative;
   }
 

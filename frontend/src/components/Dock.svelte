@@ -160,12 +160,8 @@
 
   .dock-btn:hover {
     color: var(--c-text-primary);
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--c-hover);
     transform: scale(1.1);
-  }
-
-  :global([data-theme='light']) .dock-btn:hover {
-    background: rgba(0, 0, 0, 0.05);
   }
 
   .dock-btn.active {
@@ -176,17 +172,17 @@
 
   /* Traffic light hover colors for actions */
   .dock-btn.danger:hover {
-    color: #ff3b30;
-    background: rgba(255, 59, 48, 0.1);
+    color: var(--c-danger-hover-text);
+    background: var(--c-danger-hover-bg);
   }
 
   .dock-btn.warning:hover {
-    color: #ffcc00;
-    background: rgba(255, 204, 0, 0.1);
+    color: var(--c-warning-hover-text);
+    background: var(--c-warning-hover-bg);
   }
 
   .dock-btn.success:hover {
-    color: #34c759;
-    background: rgba(52, 199, 89, 0.1);
+    color: var(--c-success-hover-text);
+    background: var(--c-success-hover-bg);
   }
 </style>

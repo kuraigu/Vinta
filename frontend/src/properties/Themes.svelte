@@ -8,9 +8,15 @@
   :global(:root) {
     /* BASE COLORS */
     --c-primary: #007aff;
-    --c-success: #34c759;
     --c-danger: #ff3b30;
+    --c-danger-hover-bg: rgba(255, 59, 48, 0.15);
+    --c-danger-hover-text: var(--c-danger);
     --c-warning: #ffcc00;
+    --c-warning-hover-bg: rgba(255, 204, 0, 0.15);
+    --c-warning-hover-text: var(--c-warning);
+    --c-success: #34c759;
+    --c-success-hover-bg: rgba(52, 199, 89, 0.15);
+    --c-success-hover-text: var(--c-success);
     --c-purple: #a78bfa;
 
     --c-bg: rgba(20, 20, 20, 1);

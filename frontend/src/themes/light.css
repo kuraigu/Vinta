@@ -2,9 +2,15 @@
   /* ACCENT COLORS */
   /* Deepened and saturated across the board so they stand out crisply against light surfaces */
   --c-primary: #0062d2; /* Richer, deeper blue */
-  --c-success: #248a3d; /* Forest green (replacing the bright neon green) */
   --c-danger: #d70015; /* Deeper crimson red */
+  --c-danger-hover-bg: rgba(215, 0, 21, 0.15); /* #d70015 with alpha */
+  --c-danger-hover-text: #d70015;
   --c-warning: #b86e00; /* Dark amber/gold (yellow is completely illegible on white) */
+  --c-warning-hover-bg: rgba(184, 110, 0, 0.15);
+  --c-warning-hover-text: var(--c-warning);
+  --c-success: #248a3d; /* Forest green */
+  --c-success-hover-bg: rgba(36, 138, 61, 0.15);
+  --c-success-hover-text: var(--c-success);
   --c-purple: #5856d6; /* Deep violet */
 
   /* BACKGROUND & SURFACES */
