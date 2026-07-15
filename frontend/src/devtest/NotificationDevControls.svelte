@@ -8,7 +8,9 @@
   }
 </script>
 
-<button class="action-btn" onclick={triggerNativeNotification}>Send Native Windows Toast</button>
+<button class="action-btn" onclick={triggerNativeNotification}
+  >Send Native Windows Toast</button
+>
 
 <style>
   .action-btn {

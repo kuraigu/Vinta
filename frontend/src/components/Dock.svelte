@@ -66,7 +66,11 @@
       <EyeOff size={18} />
     </button>
     <div class="divider"></div>
-    <button class="dock-btn warning" on:click={doMinimize} data-tooltip="Minimize">
+    <button
+      class="dock-btn warning"
+      on:click={doMinimize}
+      data-tooltip="Minimize"
+    >
       <Shrink size={18} />
     </button>
     <div class="divider"></div>

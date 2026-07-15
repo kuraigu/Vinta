@@ -17,8 +17,6 @@
     wakeMethodStore,
     dndStore
   } from '../store'
-
-  export let expanded = true
 </script>
 
 <div class="settings-page">
@@ -195,22 +193,6 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   }
 
-  .theme-select {
-    background: var(--c-bg);
-    color: var(--c-text-primary);
-    border: 1px solid var(--c-border);
-    border-radius: 8px;
-    padding: 6px 12px;
-    font-size: 14px;
-    font-family: inherit;
-    outline: none;
-    cursor: pointer;
-    min-width: 120px;
-  }
-  .theme-select:focus {
-    border-color: var(--c-accent, #667eea);
-  }
-
   /* Toggle Switch CSS */
   .toggle {
     position: relative;
@@ -250,19 +232,5 @@
   }
   input:checked + .slider:before {
     transform: translateX(20px);
-  }
-
-  .about-info {
-    background: var(--c-item-bg);
-    padding: 10px 12px;
-    border-radius: 8px;
-    font-size: 13px;
-    border: 1px solid var(--c-border);
-    text-align: center;
-    line-height: 1.4;
-  }
-  .about-info small {
-    color: var(--c-text-muted);
-    font-size: 11px;
   }
 </style>

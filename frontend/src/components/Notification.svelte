@@ -40,13 +40,13 @@
     const diffSeconds = Math.max(0, Math.floor((now - timestamp) / 1000))
     if (diffSeconds < 5) return 'NOW'
     if (diffSeconds < 60) return `${diffSeconds}s ago`
-    
+
     const diffMinutes = Math.floor(diffSeconds / 60)
     if (diffMinutes < 60) return `${diffMinutes}m ago`
-    
+
     const diffHours = Math.floor(diffMinutes / 60)
     if (diffHours < 24) return `${diffHours}h ago`
-    
+
     const diffDays = Math.floor(diffHours / 24)
     return `${diffDays}d ago`
   }
@@ -138,8 +138,16 @@
                 >
               </div>
               <div class="time-and-dismiss">
-                <span class="notif-item-time">{getRelativeTime(notif.timestamp)}</span>
-                <button class="dismiss-item-btn" onclick={(e) => { e.stopPropagation(); dismiss(notif.id); }}>
+                <span class="notif-item-time"
+                  >{getRelativeTime(notif.timestamp)}</span
+                >
+                <button
+                  class="dismiss-item-btn"
+                  onclick={(e) => {
+                    e.stopPropagation()
+                    dismiss(notif.id)
+                  }}
+                >
                   <X size={14} />
                 </button>
               </div>
@@ -213,6 +221,7 @@
     overflow: hidden;
     text-align: left;
     flex-grow: 1;
+    min-width: 0;
   }
 
   .banner-app {
@@ -404,6 +413,10 @@
     font-size: 0.95rem;
     font-weight: 600;
     color: var(--c-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
   }
 
   .notif-item-message {
@@ -411,6 +424,13 @@
     font-size: 0.85rem;
     color: var(--c-text-muted);
     line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
   }
 
   .empty-state {

@@ -17,8 +17,6 @@
     config as notifConfig
   } from './NotificationPage.svelte'
 
-  export let expanded = true
-
   const navigate =
     getContext<
       (page: unknown, pageConfig: IslandConfig, expand?: boolean) => void
