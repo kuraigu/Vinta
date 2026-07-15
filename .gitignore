@@ -62,7 +62,9 @@ vite.config.ts.timestamp-*
 # -------------------------------------------------------------------
 build/bin/
 build/obj/
+dist/
 frontend/dist/
 frontend/wailsjs/
 *.md5
 wails.json.user
+*.syso
