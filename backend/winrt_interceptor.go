@@ -1,8 +1,14 @@
 package backend
 
 import (
+	"bytes"
 	"context"
+	"database/sql"
+	"encoding/base64"
+	"encoding/xml"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -11,6 +17,7 @@ import (
 	"Vinta/backend/winrt/windows/ui/notifications"
 	"Vinta/backend/winrt/windows/ui/notifications/management"
 	"github.com/go-ole/go-ole"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
@@ -161,10 +168,13 @@ func StartNotificationListener(ctx context.Context) {
 						}
 					}()
 
-					// --- Extract notification text + image content ---
-					title, body, heroImage := extractNotifContent(un)
-					// --- Extract AppUserModelId ---
-					appName := extractAppId(un)
+					// --- Extract notification text + image content + appName from DB ---
+					title, body, heroImage, dbAppName := extractNotifContent(un, id)
+					// --- Extract AppUserModelId from WinRT (optional fallback) ---
+					appName := dbAppName
+					if appName == "" {
+						appName = extractAppId(un)
+					}
 					if appName == "" {
 						appName = title
 					}
@@ -274,27 +284,27 @@ func extractAppId(un *notifications.UserNotification) string {
 	return ""
 }
 
-// extractNotifContent extracts (title, body, heroImageURL) from a UserNotification.
-func extractNotifContent(un *notifications.UserNotification) (string, string, string) {
+// extractNotifContent extracts (title, body, heroImageURL, appName) from a UserNotification.
+func extractNotifContent(un *notifications.UserNotification, id uint32) (string, string, string, string) {
 	notif, err := un.GetNotification()
 	if err != nil || notif == nil {
-		return "", "", ""
+		return "", "", "", ""
 	}
 
 	visual, err := notif.GetVisual()
 	if err != nil || visual == nil {
-		return "", "", ""
+		return "", "", "", ""
 	}
 
 	// Try "ToastGeneric" first
 	binding, err := visual.GetBinding("ToastGeneric")
 	if err != nil || binding == nil {
-		return "", "", ""
+		return "", "", "", ""
 	}
 
 	textElementsPtr, err := binding.GetTextElements()
 	if err != nil || textElementsPtr == nil {
-		return "", "", ""
+		return "", "", "", ""
 	}
 
 	type iVectorViewVtbl struct {
@@ -344,8 +354,104 @@ func extractNotifContent(un *notifications.UserNotification) (string, string, st
 		body = texts[1]
 	}
 
-	// --- Image elements (disabled to prevent crashes) ---
-	heroImage := ""
+	// --- Image elements & AppName (fetched via on-demand SQLite payload query) ---
+	heroImage, dbAppName := extractDbDetails(id)
 
-	return title, body, heroImage
+	return title, body, heroImage, dbAppName
+}
+
+// WpnToastImage represents the image nodes in a Toast XML
+type WpnToastImage struct {
+	Src       string `xml:"src,attr"`
+	Placement string `xml:"placement,attr"`
+}
+
+// WpnToastBinding represents the binding node in a Toast XML
+type WpnToastBinding struct {
+	Images []WpnToastImage `xml:"image"`
+}
+
+// WpnToastVisual represents the visual node in a Toast XML
+type WpnToastVisual struct {
+	Binding WpnToastBinding `xml:"binding"`
+}
+
+// WpnToastXML represents the root Toast XML structure
+type WpnToastXML struct {
+	Visual WpnToastVisual `xml:"visual"`
+}
+
+// extractDbDetails queries the wpndatabase.db for the XML payload and AUMID of a notification.
+func extractDbDetails(id uint32) (string, string) {
+	localAppData := os.Getenv("LOCALAPPDATA")
+	if localAppData == "" {
+		return "", ""
+	}
+	dbPath := filepath.Join(localAppData, "Microsoft", "Windows", "Notifications", "wpndatabase.db")
+	if _, err := os.Stat(dbPath); err != nil {
+		return "", ""
+	}
+
+	// Open read-only to avoid locking conflicts
+	db, err := sql.Open("sqlite3", "file:"+dbPath+"?mode=ro")
+	if err != nil {
+		return "", ""
+	}
+	defer db.Close()
+
+	var payload []byte
+	var primaryId sql.NullString
+	err = db.QueryRow(`
+		SELECT n.Payload, h.PrimaryId 
+		FROM Notification n 
+		LEFT JOIN NotificationHandler h ON n.HandlerId = h.RecordId 
+		WHERE n.Id = ?`, id).Scan(&payload, &primaryId)
+	if err != nil {
+		return "", ""
+	}
+
+	appName := ""
+	if primaryId.Valid && primaryId.String != "" {
+		appName = primaryId.String
+	}
+
+	heroImage := ""
+	if len(payload) > 0 {
+		startIdx := bytes.Index(payload, []byte("<toast"))
+		endIdx := bytes.Index(payload, []byte("</toast>"))
+		if startIdx != -1 && endIdx != -1 {
+			xmlData := payload[startIdx : endIdx+8]
+			var toast WpnToastXML
+			if err := xml.Unmarshal(xmlData, &toast); err != nil {
+				return "", appName
+			}
+
+			for _, img := range toast.Visual.Binding.Images {
+				if img.Placement == "hero" {
+					heroImage = img.Src
+					break
+				}
+			}
+		}
+	}
+
+	if heroImage != "" {
+		if strings.HasPrefix(heroImage, "file:///") {
+			path := strings.TrimPrefix(heroImage, "file:///")
+			path = filepath.Clean(path)
+			if b, err := os.ReadFile(path); err == nil {
+				heroImage = "data:image/png;base64," + base64.StdEncoding.EncodeToString(b)
+			} else {
+				heroImage = ""
+			}
+		} else if filepath.IsAbs(heroImage) {
+			if b, err := os.ReadFile(heroImage); err == nil {
+				heroImage = "data:image/png;base64," + base64.StdEncoding.EncodeToString(b)
+			} else {
+				heroImage = ""
+			}
+		}
+	}
+
+	return heroImage, appName
 }

@@ -148,7 +148,37 @@
     )
   }
 
-  function getDisplayBrand(notif: { appName?: string; icon?: string }): {
+  function cleanAppName(appStr: string): string {
+    if (!appStr) return 'Notification'
+
+    let cleaned = appStr
+    const bangIdx = cleaned.lastIndexOf('!')
+    if (bangIdx !== -1) cleaned = cleaned.substring(bangIdx + 1)
+
+    if (cleaned.toLowerCase().endsWith('.exe')) {
+      const parts = cleaned.split(/[\\/]/)
+      let name = parts[parts.length - 1]
+      cleaned = name.substring(0, name.length - 4)
+    } else if (cleaned.includes('.')) {
+      const parts = cleaned.split('.')
+      const lastPart = parts[parts.length - 1]
+      if (lastPart) {
+        cleaned = lastPart
+      }
+    }
+
+    // Capitalize first letter
+    if (cleaned.length > 0) {
+      cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1)
+    }
+    return cleaned
+  }
+
+  function getDisplayBrand(notif: {
+    appName?: string
+    title?: string
+    icon?: string
+  }): {
     name: string
     icon: string | null
     category?: string
@@ -156,17 +186,26 @@
     const rawName = notif.appName || 'Notification'
     const defaultIcon = notif.icon || null
 
-    // Match against the WinRT display name (already human-readable, e.g. "Discord", "NVIDIA App")
     const matchString = (notif.appName || '').toLowerCase()
-    if (!matchString) return { name: rawName, icon: defaultIcon }
-
-    const allIcons = [...gameIcons, ...appIcons]
-    for (const brand of allIcons) {
-      if (brand.matchers.some((m) => matchString.includes(m))) {
-        return { name: brand.name, icon: brand.icon, category: brand.category }
+    if (matchString) {
+      const allIcons = [...gameIcons, ...appIcons]
+      for (const brand of allIcons) {
+        if (brand.matchers.some((m) => matchString.includes(m))) {
+          return {
+            name: brand.name,
+            icon: brand.icon,
+            category: brand.category
+          }
+        }
       }
     }
-    return { name: rawName, icon: defaultIcon }
+
+    let displayName = cleanAppName(rawName)
+    if (displayName.toLowerCase() === (notif.title || '').toLowerCase()) {
+      displayName = 'Notification'
+    }
+
+    return { name: displayName, icon: defaultIcon }
   }
 </script>
 
@@ -289,9 +328,9 @@
               }
             }}
           >
-            {#if !nested}
-              {@const iconUrl = brand.icon || brand.brandIcon}
-              <div class="notif-item-header">
+            <div class="notif-item-header">
+              {#if !nested}
+                {@const iconUrl = brand.icon || brand.brandIcon}
                 <div class="notif-item-app-group">
                   <div class="notif-item-icon">
                     {#if isImageUrl(iconUrl)}
@@ -322,48 +361,34 @@
                     >{brand.name || brand.brandName}</span
                   >
                 </div>
-                <div class="time-and-dismiss">
-                  <span class="notif-item-time"
-                    >{getRelativeTime(notif.timestamp)}</span
+              {/if}
+              <div class="time-and-dismiss">
+                <span class="notif-item-time"
+                  >{getRelativeTime(notif.timestamp)}</span
+                >
+                <div class="notif-actions">
+                  <div
+                    class="expand-indicator"
+                    class:is-expanded={expandedIds.has(notif.id)}
                   >
-                  <div class="notif-actions">
-                    <div
-                      class="expand-indicator"
-                      class:is-expanded={expandedIds.has(notif.id)}
-                    >
-                      <ChevronDown size={14} />
-                    </div>
-                    <button
-                      class="dismiss-item-btn"
-                      onclick={(e) => {
-                        e.stopPropagation()
-                        dismiss(notif.id)
-                      }}
-                      aria-label="Dismiss notification"
-                    >
-                      <X size={14} />
-                    </button>
+                    <ChevronDown size={14} />
                   </div>
+                  <button
+                    class="dismiss-item-btn"
+                    onclick={(e) => {
+                      e.stopPropagation()
+                      dismiss(notif.id)
+                    }}
+                    aria-label="Dismiss notification"
+                  >
+                    <X size={14} />
+                  </button>
                 </div>
               </div>
-            {/if}
+            </div>
             <div class="notif-item-body">
               <div class="notif-item-title-row">
                 <span class="notif-item-title">{notif.title}</span>
-                {#if nested}
-                  <div class="time-and-dismiss nested-actions">
-                    <button
-                      class="dismiss-item-btn"
-                      onclick={(e) => {
-                        e.stopPropagation()
-                        dismiss(notif.id)
-                      }}
-                      aria-label="Dismiss notification"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                {/if}
               </div>
               {#if notif.message}
                 <p
@@ -424,70 +449,88 @@
                 <div
                   class="notif-group-header"
                   onclick={(e) => {
-                    // Only toggle group if clicking header
                     if (expandedGroups.has(group.brandName)) {
                       e.stopPropagation()
                       toggleGroupExpand(group.brandName)
                     }
                   }}
                 >
-                  <div class="notif-item-app-group">
-                    <div class="notif-item-icon">
-                      {#if isImageUrl(group.brandIcon)}
-                        <img
-                          src={group.brandIcon}
-                          alt="app icon"
-                          class="notif-img-icon"
-                          onerror={(e) => {
-                            const img = e.currentTarget as HTMLImageElement
-                            img.style.display = 'none'
-                            if (img.nextElementSibling) {
-                              ;(
-                                img.nextElementSibling as HTMLElement
-                              ).style.display = 'block'
-                            }
-                          }}
-                        />
-                        <div style="display: none;">
+                  <div class="notif-group-header-top">
+                    <div class="notif-item-app-group">
+                      <div class="notif-item-icon">
+                        {#if isImageUrl(group.brandIcon)}
+                          <img
+                            src={group.brandIcon}
+                            alt="app icon"
+                            class="notif-img-icon"
+                            onerror={(e) => {
+                              const img = e.currentTarget as HTMLImageElement
+                              img.style.display = 'none'
+                              if (img.nextElementSibling) {
+                                ;(
+                                  img.nextElementSibling as HTMLElement
+                                ).style.display = 'block'
+                              }
+                            }}
+                          />
+                          <div style="display: none;">
+                            {@render fallbackIcon(group, 16)}
+                          </div>
+                        {:else if group.brandIcon}
+                          <span class="icon-text">{group.brandIcon}</span>
+                        {:else}
                           {@render fallbackIcon(group, 16)}
+                        {/if}
+                      </div>
+                      <span class="notif-item-app">{group.brandName}</span>
+                      <span class="notif-count-badge">{group.items.length}</span
+                      >
+                    </div>
+                    <div class="time-and-dismiss">
+                      {#if !expandedGroups.has(group.brandName)}
+                        <span class="notif-item-time"
+                          >{getRelativeTime(group.latestTimestamp)}</span
+                        >
+                      {/if}
+                      <div class="notif-actions">
+                        <div
+                          class="expand-indicator"
+                          class:is-expanded={expandedGroups.has(
+                            group.brandName
+                          )}
+                        >
+                          <ChevronDown size={14} />
                         </div>
-                      {:else if group.brandIcon}
-                        <span class="icon-text">{group.brandIcon}</span>
-                      {:else}
-                        {@render fallbackIcon(group, 16)}
+                        <button
+                          class="dismiss-item-btn"
+                          onclick={(e) => {
+                            e.stopPropagation()
+                            dismissGroup(group.brandName)
+                          }}
+                          aria-label="Dismiss group"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  {#if !expandedGroups.has(group.brandName)}
+                    <div class="notif-group-preview">
+                      <span class="notif-item-title"
+                        >{group.items[0].title}</span
+                      >
+                      {#if group.items[0].message}
+                        <p class="notif-item-message is-visible">
+                          {group.items[0].message}
+                        </p>
                       {/if}
                     </div>
-                    <span class="notif-item-app">{group.brandName}</span>
-                    <span class="notif-count-badge">{group.items.length}</span>
-                  </div>
-                  <div class="time-and-dismiss">
-                    <span class="notif-item-time"
-                      >{getRelativeTime(group.latestTimestamp)}</span
-                    >
-                    <div class="notif-actions">
-                      <div
-                        class="expand-indicator"
-                        class:is-expanded={expandedGroups.has(group.brandName)}
-                      >
-                        <ChevronDown size={14} />
-                      </div>
-                      <button
-                        class="dismiss-item-btn"
-                        onclick={(e) => {
-                          e.stopPropagation()
-                          dismissGroup(group.brandName)
-                        }}
-                        aria-label="Dismiss group"
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
-                  </div>
+                  {/if}
                 </div>
 
-                <div class="notif-group-items">
-                  {#each group.items as notif, i (notif.id)}
-                    {#if i === 0 || expandedGroups.has(group.brandName)}
+                {#if expandedGroups.has(group.brandName)}
+                  <div class="notif-group-items">
+                    {#each group.items as notif (notif.id)}
                       <div
                         transition:slide|local={{
                           duration: 250,
@@ -501,9 +544,9 @@
                           {@render renderNotifItem(notif, group, true)}
                         </div>
                       </div>
-                    {/if}
-                  {/each}
-                </div>
+                    {/each}
+                  </div>
+                {/if}
               </div>
             {/if}
           </div>
@@ -788,12 +831,16 @@
     margin-bottom: 6px;
   }
 
+  .notif-item.nested .notif-item-header {
+    justify-content: flex-end;
+  }
+
   .time-and-dismiss {
-    position: relative;
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    width: 80px;
+    gap: 8px;
+    position: relative;
     height: 26px;
   }
 
@@ -804,32 +851,85 @@
     letter-spacing: 0.05em;
     color: var(--c-text-muted);
     opacity: 0.6;
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .notif-actions {
-    position: absolute;
-    right: 0;
     display: flex;
     align-items: center;
     gap: 6px;
+    width: 0;
     opacity: 0;
+    overflow: hidden;
     pointer-events: none;
-    transform: translateX(4px);
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  .notif-item:hover .notif-item-time,
-  .notif-group-header:hover .notif-item-time {
-    opacity: 0;
-    transform: translateX(-4px);
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .notif-item:hover .notif-actions,
   .notif-group-header:hover .notif-actions {
+    width: 58px;
     opacity: 1;
     pointer-events: auto;
-    transform: translateX(0);
+  }
+
+  /* Connector layout for grouped notifications */
+  .notif-group {
+    background: transparent;
+    border: none;
+    position: relative;
+    width: 100%;
+    margin-bottom: 8px;
+    box-sizing: border-box;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .notif-group:not(.is-expanded) {
+    cursor: pointer;
+  }
+
+  .notif-group-header {
+    padding: 14px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    box-sizing: border-box;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .notif-group-header:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .notif-group-header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  .notif-group-preview {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    width: 100%;
+    gap: 4px;
+    padding-top: 4px;
+  }
+
+  .notif-group-items {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+    padding-left: 12px;
+    border-left: 1px dashed rgba(255, 255, 255, 0.08);
   }
 
   .expand-indicator {
@@ -880,13 +980,17 @@
 
   .notif-item:hover .notif-item-icon,
   .notif-group-header:hover .notif-item-icon {
-    transform: scale(1.08);
+    transform: scale(1.02);
   }
 
   .notif-item-app {
     font-size: 0.85rem;
     font-weight: 600;
     color: var(--c-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
   }
 
   .notif-item-time {
@@ -924,15 +1028,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     width: 100%;
-  }
-
-  .time-and-dismiss.nested-actions {
-    opacity: 0;
-    transition: opacity 0.2s ease;
-  }
-
-  .notif-item:hover .time-and-dismiss.nested-actions {
-    opacity: 1;
   }
 
   .notif-item-message {
