@@ -37,7 +37,9 @@ export type AppNotification = {
   icon?: string
   title: string
   message: string
+  heroImage?: string
   timestamp: number
 }
 
 export const notifData = writable<AppNotification[]>([])
+export const notificationPermissionDenied = writable<boolean>(false)

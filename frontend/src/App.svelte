@@ -2,7 +2,7 @@
   import { onMount, setContext } from 'svelte'
   import { fade } from 'svelte/transition'
   import { SetWidgetBounds, IsTestMode } from '../wailsjs/go/backend/App.js'
-  import { EventsOn } from '../wailsjs/runtime/runtime.js'
+  import { EventsOn, LogFatal, LogInfo } from '../wailsjs/runtime/runtime.js'
   import NotificationPage, {
     config as notifConfig
   } from './pages/NotificationPage.svelte'
@@ -14,6 +14,7 @@
     shapeStore,
     autoHideStore,
     notifData,
+    notificationPermissionDenied,
     wakeMethodStore,
     dndStore
   } from './store'
@@ -63,12 +64,13 @@
 
   $effect(() => {
     // Auto-hide logic effect
+    void hideTrigger
     if ($autoHideStore && !expanded && !isHidden && !isHovering) {
       clearTimeout(hideTimeout)
       hideTimeout = window.setTimeout(() => {
         hideWidget()
         navigateTo(ClockPage, clockConfig, false)
-      }, 20000)
+      }, 10000)
     } else {
       clearTimeout(hideTimeout)
     }
@@ -101,9 +103,11 @@
 
   // Automatically wake up when new notifications arrive
   let prevNotifCount = $state(0)
+  let hideTrigger = $state(0)
   notifData.subscribe((notifs) => {
     if (notifs.length > prevNotifCount) {
       showWidget()
+      hideTrigger++
     }
     prevNotifCount = notifs.length
   })
@@ -171,9 +175,25 @@
   // Global navigate for dev pill / pages
   setContext('navigate', navigateTo)
 
+  import { preloadIcons, findAppIconConflicts } from './appIcons'
+
   onMount(async () => {
+    // Preload SVG caches in the background
+    preloadIcons()
+
     // Check if launched via `scripts.bat test`
     isTestMode = await IsTestMode()
+    if (isTestMode) {
+      const conflicts = findAppIconConflicts()
+      if (conflicts.length > 0) {
+        LogFatal('APP ICON CONFLICTS FOUND:\n' + conflicts.join('\n'))
+        // LogFatal quits the application automatically
+      } else {
+        LogInfo('APP ICON TEST PASSED: No conflicts found.')
+        // In test mode we may optionally quit after all tests pass, but we'll leave it running for visual devtests unless told otherwise.
+      }
+    }
+
     currentOSBounds = {
       w: islandConfig.minimal.w,
       h: islandConfig.minimal.h,
@@ -228,25 +248,42 @@
   }
 
   onMount(() => {
-    EventsOn('notification', (payload: any) => {
-      notifData.update((n) => {
-        const newNotif = {
-          id: Date.now(),
-          appName: payload.appName,
-          icon: payload.icon,
-          title: payload.title,
-          message: payload.message,
-          timestamp: Date.now()
-        }
-        return [newNotif, ...n]
-      })
+    EventsOn(
+      'notification',
+      (payload: {
+        appName: string
+        icon: string
+        title: string
+        message: string
+        heroImage: string
+      }) => {
+        notifData.update((n) => {
+          const newNotif = {
+            id: Date.now(),
+            appName: payload.appName,
+            icon: payload.icon,
+            title: payload.title,
+            message: payload.message,
+            heroImage: payload.heroImage,
+            timestamp: Date.now()
+          }
+          return [newNotif, ...n].slice(0, 99)
+        })
 
-      // Only force open the notification if DND is off and the pill is not already expanded by the user
-      if (!$dndStore && !expanded) {
-        showWidget()
-        navigateTo(NotificationPage, notifConfig, false)
-        triggerGlow()
+        // Only force open the notification if DND is off and the pill is not already expanded by the user
+        if (!$dndStore && !expanded) {
+          showWidget()
+          navigateTo(NotificationPage, notifConfig, false)
+          triggerGlow()
+        }
       }
+    )
+
+    EventsOn('notification_permission_denied', () => {
+      notificationPermissionDenied.set(true)
+      // Force navigate to Notification page to show the banner
+      showWidget()
+      navigateTo(NotificationPage, notifConfig, true)
     })
   })
 </script>

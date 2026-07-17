@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"syscall"
 	"time"
 	"unsafe"
@@ -184,27 +183,6 @@ func (a *App) Quit() {
 	if a.ctx != nil {
 		runtime.Quit(a.ctx)
 	}
-}
-
-// SendTestNotification triggers a native Windows Toast notification via PowerShell
-func (a *App) SendTestNotification() {
-	script := `
-[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
-$template = [Windows.UI.Notifications.ToastNotificationManager]::GetTemplateContent([Windows.UI.Notifications.ToastTemplateType]::ToastImageAndText02)
-$textNodes = $template.GetElementsByTagName('text')
-$textNodes.Item(0).AppendChild($template.CreateTextNode('Hello Vinta')) | Out-Null
-$textNodes.Item(1).AppendChild($template.CreateTextNode('This is a test notification with an image.')) | Out-Null
-
-$imageNodes = $template.GetElementsByTagName('image')
-$imageNodes.Item(0).SetAttribute('src', 'https://github.githubassets.com/images/modules/logos_page/GitHub-Mark.png') | Out-Null
-$imageNodes.Item(0).SetAttribute('placement', 'appLogoOverride') | Out-Null
-$toast = [Windows.UI.Notifications.ToastNotification]::new($template)
-$notifier = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('App')
-$notifier.Show($toast)
-`
-	cmd := exec.Command("powershell", "-ExecutionPolicy", "Bypass", "-Command", script)
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-	cmd.Start()
 }
 
 // SetDevPillBounds is called by the frontend to show a separate developer menu.

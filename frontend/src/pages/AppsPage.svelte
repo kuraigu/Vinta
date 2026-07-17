@@ -16,6 +16,7 @@
   import NotificationPage, {
     config as notifConfig
   } from './NotificationPage.svelte'
+  import { notifData } from '../store'
 
   const navigate =
     getContext<
@@ -53,10 +54,17 @@
         openApp(NotificationPage, notifConfig)
       }}
     >
-      <div class="icon notif">
-        <Bell size={24} />
+      <div class="icon-wrapper">
+        <div class="icon notif">
+          <Bell size={24} />
+        </div>
+        {#if $notifData.length > 0}
+          <div class="badge">
+            {$notifData.length > 9 ? '9+' : $notifData.length}
+          </div>
+        {/if}
       </div>
-      <span class="label">Alerts</span>
+      <span class="label">Notifications</span>
     </button>
 
     <button class="app-btn placeholder" onclick={(e) => e.stopPropagation()}>
@@ -125,6 +133,32 @@
 
   .app-btn:active {
     transform: scale(0.95);
+  }
+
+  .icon-wrapper {
+    position: relative;
+    display: inline-block;
+  }
+
+  .badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: #ff3b30;
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    box-sizing: border-box;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    border: 1.5px solid var(--c-bg);
+    z-index: 2;
   }
 
   .icon {

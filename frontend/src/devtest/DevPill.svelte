@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, getContext } from 'svelte'
+  import { getContext, onMount, untrack } from 'svelte'
   import { fade } from 'svelte/transition'
   import { SetDevPillBounds } from '../../wailsjs/go/backend/App.js'
 
@@ -8,21 +8,35 @@
   } from '../pages/NotificationPage.svelte'
   import ClockPage, { config as clockConfig } from '../pages/ClockPage.svelte'
   import NotificationDevControls from './NotificationDevControls.svelte'
+  import CustomSelect from './CustomSelect.svelte'
   import type { Component } from 'svelte'
   import type { IslandConfig } from '../store'
   import { themeStore, shapeStore } from '../store'
 
-  let devW = 400
-  let devH = 60
+  let devW = $state(0)
+  let devH = $state(0)
+  let extraH = $state(0)
 
   const navigate =
     getContext<
       (page: Component, config: IslandConfig, expand?: boolean) => void
     >('navigate')
 
+  $effect(() => {
+    if (devW > 0 && devH > 0) {
+      const scale = window.devicePixelRatio || 1
+      SetDevPillBounds(devW, devH + extraH, scale)
+    }
+  })
+
+  // Listen to CustomSelect toggle events to expand the native OS click bounds
   onMount(() => {
-    const scale = window.devicePixelRatio || 1
-    SetDevPillBounds(devW, devH, scale)
+    const handleToggle = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      extraH = detail ? 250 : 0
+    }
+    window.addEventListener('dev-dropdown-toggle', handleToggle)
+    return () => window.removeEventListener('dev-dropdown-toggle', handleToggle)
   })
 
   // Registry pattern: Each page provides its own config and optional dev controls
@@ -49,30 +63,34 @@
     }
   }
 
+  let pageOptions = $derived(
+    Object.entries(pages).map(([key, data]) => ({
+      value: key,
+      label: data.label
+    }))
+  )
+
   let targetMode = $state('clock')
 
-  function handlePageChange(e: Event) {
-    const target = e.target as HTMLSelectElement
-    targetMode = target.value
+  $effect(() => {
     const pageData = pages[targetMode]
-
-    // Always navigate to the selected page when changed from the dropdown
-    navigate(pageData.page, pageData.config, false)
-  }
+    if (pageData) {
+      untrack(() => {
+        navigate(pageData.page, pageData.config, false)
+      })
+    }
+  })
 </script>
 
 <div
   class="dev-pill"
   in:fade={{ duration: 300 }}
-  style="width: {devW}px; height: {devH}px;"
+  bind:clientWidth={devW}
+  bind:clientHeight={devH}
 >
   <div class="left-section">
     <span class="label">Dev</span>
-    <select class="page-select" onchange={handlePageChange} value={targetMode}>
-      {#each Object.entries(pages) as [key, data] (key)}
-        <option value={key}>{data.label}</option>
-      {/each}
-    </select>
+    <CustomSelect options={pageOptions} bind:value={targetMode} />
 
     <div class="quick-toggles">
       <button
@@ -106,16 +124,17 @@
     /* No absolute positioning! We are in a flex column now */
     background: var(--c-bg);
     color: var(--c-text-primary);
-    padding: 8px 12px;
     border-radius: 12px;
     border: 1px solid var(--c-border);
     display: flex;
-    align-items: center;
+    align-items: center; /* Back to centered! */
     justify-content: space-between;
-    padding: 0 15px;
+    padding: 8px 15px;
     box-sizing: border-box;
     z-index: 9999;
     pointer-events: auto; /* Ensures it receives clicks */
+    width: max-content;
+    height: max-content;
   }
 
   .left-section {
@@ -126,21 +145,23 @@
 
   .label {
     font-size: 0.8rem;
-    font-weight: bold;
-    color: #ffaa00;
+    font-weight: 600;
+    color: var(--c-text-secondary);
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
   }
 
   .page-select {
     background: var(--c-bg);
     color: var(--c-text-primary);
     border: 1px solid var(--c-border);
-    padding: 4px 8px;
+    padding: 6px 8px;
     border-radius: 6px;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     outline: none;
     cursor: pointer;
+    position: relative;
+    z-index: 50;
   }
 
   .page-select:focus {
@@ -161,7 +182,9 @@
     border-radius: 6px;
     cursor: pointer;
     font-size: 1rem;
-    transition: background 0.2s;
+    position: relative;
+    z-index: 1;
+    /* Removed transition to avoid WebView2 compositing overlap bugs */
   }
 
   .icon-btn:hover {
