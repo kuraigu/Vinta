@@ -28,6 +28,12 @@
     --c-text-secondary: #b0b0b0;
     --c-text-muted: #888888;
 
+    --c-contrast-bg: rgba(255, 255, 255, 0.05);
+    --c-contrast-bg-border:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.5),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+    --c-contrast-bg-hover: rgba(255, 255, 255, 0.15);
+
     /* CONTEXTUAL COLOR SEMANTICS */
     --c-island-border-idle: #34c759;
     --c-island-border-notification: #007aff;
@@ -38,6 +44,13 @@
     --c-clock-time-start: #ffffff;
     --c-clock-time-end: #a0a0a0;
     --c-clock-time-shadow: rgba(255, 255, 255, 0.15);
+    --c-clear-contrast-bg-hover: rgba(255, 59, 48, 0.15);
+    --c-clear-contrast-bg-hover-border:
+      inset 0 0 0 1px rgba(255, 59, 48, 0.5),
+      inset 0 0 0 1px rgba(255, 59, 48, 0.5);
+    --c-dnd-active-hover-border:
+      inset 0 0 0 1px var(--c-warning), inset 0 0 0 1px var(--c-warning);
+    --c-clear-button-color: #ff453a;
 
     /* ISLAND SPECIFIC */
     --island-box-shadow:

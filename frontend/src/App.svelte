@@ -19,6 +19,7 @@
     dndStore
   } from './store'
   import Themes from './properties/Themes.svelte'
+  import AppControls from './utils/AppControls.svelte'
 
   $effect(() => {
     document.documentElement.setAttribute('data-theme', $themeStore)
@@ -267,6 +268,50 @@
             heroImage: payload.heroImage,
             timestamp: Date.now()
           }
+
+          // Deduplication: handle apps that send via two channels (e.g. Rise of Kingdoms):
+          // a fast transient notification (no AUMID) and a WPN-persisted copy (with AUMID).
+          // Titles from transients may contain C0 control chars (e.g. \u000f) injected by
+          // Android/GooglePlayGames bridges; WPN copies have clean titles. Normalize both.
+          const normalizeTitle = (t: string) =>
+            (t || '').replace(/[\x00-\x1f]/g, '').trim()
+          const normPayloadTitle = normalizeTitle(payload.title)
+          const normPayloadMsg = normalizeTitle(payload.message)
+          const fiveMinutesAgo = Date.now() - 5 * 60 * 1000
+
+          if (payload.appName && normPayloadTitle) {
+            // Case 1: New notification is identified, check for an earlier unidentified duplicate → upgrade it
+            const dupIdx = n.findIndex(
+              (x) =>
+                !x.appName &&
+                normalizeTitle(x.title) === normPayloadTitle &&
+                normalizeTitle(x.message) === normPayloadMsg &&
+                x.timestamp >= fiveMinutesAgo
+            )
+            if (dupIdx !== -1) {
+              const upgraded = [...n]
+              upgraded[dupIdx] = {
+                ...upgraded[dupIdx],
+                appName: payload.appName,
+                icon: payload.icon,
+                heroImage: payload.heroImage || upgraded[dupIdx].heroImage
+              }
+              return upgraded
+            }
+          } else if (!payload.appName && normPayloadTitle) {
+            // Case 2: New notification is unidentified, check if an identified version already exists → skip
+            const alreadyIdentified = n.some(
+              (x) =>
+                x.appName &&
+                normalizeTitle(x.title) === normPayloadTitle &&
+                normalizeTitle(x.message) === normPayloadMsg &&
+                x.timestamp >= fiveMinutesAgo
+            )
+            if (alreadyIdentified) {
+              return n // drop the duplicate unidentified copy
+            }
+          }
+
           return [newNotif, ...n].slice(0, 99)
         })
 
@@ -288,6 +333,10 @@
   })
 </script>
 
+<!-- PUT UTILS HERE -->
+<AppControls />
+
+<!-- ISLAND DIV HERE -->
 <div class="island-container" role="application">
   <Themes />
   <!-- svelte-ignore a11y_click_events_have_key_events -->

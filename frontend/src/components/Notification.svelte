@@ -5,6 +5,7 @@
   import {
     Bell,
     BellOff,
+    MessageSquareDot,
     Trash2,
     X,
     ChevronDown,
@@ -68,24 +69,47 @@
     latestTimestamp: number
   }
 
+  // Shared deduplication filter: strip control chars and hide unidentified "Notification"
+  // entries when an identified version of the same content (title+message) exists.
+  // Used by both groupedNotifications (full panel) and latest (minimized pill).
+  let filteredNotifications = $derived.by(() => {
+    const normTitle = (t: string) =>
+      (t || '').replace(/[\x00-\x1f]/g, '').trim()
+    const identifiedKeys = new Set<string>()
+    for (const notif of notifications) {
+      if (notif.appName) {
+        identifiedKeys.add(
+          normTitle(notif.title) + '\0' + normTitle(notif.message)
+        )
+      }
+    }
+    return notifications.filter((notif) => {
+      if (!notif.appName) {
+        const key = normTitle(notif.title) + '\0' + normTitle(notif.message)
+        if (identifiedKeys.has(key)) return false
+      }
+      return true
+    })
+  })
+
   let groupedNotifications = $derived.by(() => {
     const groups: Record<string, NotificationGroup> = {}
-    for (const notif of notifications) {
+    for (const notif of filteredNotifications) {
       const brand = getDisplayBrand(notif)
-      const key = brand.name
-      if (!groups[key]) {
-        groups[key] = {
-          brandName: key,
+      const groupKey = brand.name
+      if (!groups[groupKey]) {
+        groups[groupKey] = {
+          brandName: groupKey,
           brandIcon: brand.icon,
           brandCategory: brand.category,
           items: [],
           latestTimestamp: 0
         }
       }
-      groups[key].items.push(notif)
+      groups[groupKey].items.push(notif)
       const ts = notif.timestamp || now
-      if (ts > groups[key].latestTimestamp) {
-        groups[key].latestTimestamp = ts
+      if (ts > groups[groupKey].latestTimestamp) {
+        groups[groupKey].latestTimestamp = ts
       }
     }
     return Object.values(groups).sort(
@@ -93,14 +117,23 @@
     )
   })
 
-  let latest = $derived(
-    notifications[0] ||
+  // For the pill (minimized view), prefer the most recent IDENTIFIED notification.
+  // Unidentified "Notification" entries are shown only when there are zero identified
+  // notifications — this prevents the pill from flashing "Notification" for the ~50s
+  // gap before the WPN copy arrives from dual-channel apps like Rise of Kingdoms.
+  let latest = $derived.by(() => {
+    const identified = filteredNotifications.find((n) => n.appName)
+    const fallback = filteredNotifications[0]
+    return (
+      identified ||
+      fallback ||
       ({
         id: 0,
         title: 'No notifications',
         message: ''
       } as (typeof notifications)[0])
-  )
+    )
+  })
 
   let now = $state(Date.now())
 
@@ -229,7 +262,7 @@
   {:else if cat === 'dev'}
     <Terminal {size} color="var(--c-text-secondary)" />
   {:else}
-    <Bell {size} color="var(--c-text-secondary)" />
+    <MessageSquareDot {size} color="var(--c-text-secondary)" />
   {/if}
 {/snippet}
 
@@ -288,6 +321,7 @@
             onclick={() => dndStore.update((v) => !v)}
             title={$dndStore ? 'Do Not Disturb: ON' : 'Do Not Disturb: OFF'}
             aria-label="Toggle Do Not Disturb"
+            data-tooltip={$dndStore ? 'DND: ON' : 'DND: OFF'}
           >
             {#if $dndStore}
               <BellOff size={14} />
@@ -683,7 +717,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 10px;
+    gap: 2px;
     width: 100%;
     margin-bottom: 24px;
     flex-shrink: 0;
@@ -718,8 +752,11 @@
   }
 
   .clear-btn {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: none;
+    outline: none;
+
+    background: var(--c-contrast-bg);
+    box-shadow: var(--c-contrast-bg-border);
     color: var(--c-text-secondary);
     font-size: 12px;
     font-weight: 600;
@@ -733,9 +770,10 @@
   }
 
   .clear-btn:hover {
-    background: rgba(255, 59, 48, 0.15);
-    color: #ff453a;
-    border-color: rgba(255, 59, 48, 0.2);
+    background: var(--c-clear-contrast-bg-hover);
+    color: var(--c-clear-button-color);
+    /* Update the double inset box-shadow instead of calling border-color */
+    box-shadow: var(--c-clear-contrast-bg-hover-border);
     transform: scale(1.02);
   }
 
@@ -750,34 +788,42 @@
   }
 
   .dnd-btn {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: none;
+    outline: none;
+
+    background: var(--c-contrast-bg);
+    box-shadow: var(--c-contrast-bg-border);
     color: var(--c-text-secondary);
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 16px;
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: 6px;
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .dnd-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--c-text-primary);
-    transform: scale(1.08);
+    background: var(--c-contrast-bg-hover);
+    transform: scale(1.02);
+    /* Inherits the resting double inset shadow automatically! */
   }
 
   .dnd-btn.dnd-active {
-    background: rgba(255, 184, 0, 0.15);
-    border-color: rgba(255, 184, 0, 0.25);
-    color: #ffb800;
+    color: var(--c-warning);
+    background: var(--c-contrast-bg);
+    box-shadow: var(--c-dnd-active-hover-border);
   }
 
   .dnd-btn.dnd-active:hover {
-    background: rgba(255, 184, 0, 0.25);
-    color: #ffca40;
+    background: var(--c-contrast-bg-hover);
+    box-shadow:
+      inset 0 1px 0 0 var(--c-warning),
+      inset 0 0 0 1px var(--c-warning),
+      0 0 12px var(--c-warning-hover-bg);
+    transform: scale(1.02);
   }
 
   .notif-list {

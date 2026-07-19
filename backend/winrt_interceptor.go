@@ -69,6 +69,25 @@ func StartNotificationListener(ctx context.Context) {
 
 	logMsg("WinRT Notification access granted! Polling notifications...")
 
+	// Open the WPN database once and reuse the connection for all notifications.
+	// This avoids the overhead of opening/closing SQLite on every poll.
+	var wpnDb *sql.DB
+	localAppData := os.Getenv("LOCALAPPDATA")
+	if localAppData != "" {
+		dbPath := filepath.Join(localAppData, "Microsoft", "Windows", "Notifications", "wpndatabase.db")
+		if _, statErr := os.Stat(dbPath); statErr == nil {
+			wpnDb, err = sql.Open("sqlite3", "file:"+dbPath+"?mode=ro")
+			if err != nil {
+				logMsg("Failed to open wpndatabase.db: " + err.Error())
+				wpnDb = nil
+			} else {
+				wpnDb.SetMaxOpenConns(1)
+				defer wpnDb.Close()
+				logMsg("Opened wpndatabase.db for persistent queries")
+			}
+		}
+	}
+
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
 
@@ -169,18 +188,20 @@ func StartNotificationListener(ctx context.Context) {
 					}()
 
 					// --- Extract notification text + image content + appName from DB ---
-					title, body, heroImage, dbAppName := extractNotifContent(un, id)
-					// --- Extract AppUserModelId from WinRT (optional fallback) ---
+					title, body, heroImage, dbAppName := extractNotifContent(un, id, wpnDb)
+
+					// --- Extract AppUserModelId from WinRT (better fallback) ---
+					// "App" is the generic WPN PrimaryId for all unpackaged Win32 apps — not useful.
+					// Always try extractAppId(un) which may return a real package AUMID
+					// (e.g. Google Play Games AUMID for mobile games running on Windows).
+					winrtId := extractAppId(un)
 					appName := dbAppName
-					if appName == "" {
-						appName = extractAppId(un)
+					if appName == "" || strings.EqualFold(appName, "App") {
+						if winrtId != "" {
+							appName = winrtId
+						}
 					}
-					if appName == "" {
-						appName = title
-					}
-					if appName == "" {
-						appName = "Notification"
-					}
+					logMsg(fmt.Sprintf("Notification id=%d: dbAppName=%q winrtId=%q → appName=%q title=%q", id, dbAppName, winrtId, appName, title))
 
 					payload := NotificationPayload{
 						AppName:   appName,
@@ -189,7 +210,7 @@ func StartNotificationListener(ctx context.Context) {
 						HeroImage: heroImage,
 					}
 
-					logMsg(fmt.Sprintf("Emitting notification: title=%q body=%q heroImage=%q", title, body, heroImage))
+					logMsg(fmt.Sprintf("Emitting notification: appName=%q title=%q body=%q heroImage_len=%d", appName, title, body, len(heroImage)))
 					runtime.EventsEmit(ctx, "notification", payload)
 				}()
 			}
@@ -285,7 +306,7 @@ func extractAppId(un *notifications.UserNotification) string {
 }
 
 // extractNotifContent extracts (title, body, heroImageURL, appName) from a UserNotification.
-func extractNotifContent(un *notifications.UserNotification, id uint32) (string, string, string, string) {
+func extractNotifContent(un *notifications.UserNotification, id uint32, wpnDb *sql.DB) (string, string, string, string) {
 	notif, err := un.GetNotification()
 	if err != nil || notif == nil {
 		return "", "", "", ""
@@ -355,7 +376,7 @@ func extractNotifContent(un *notifications.UserNotification, id uint32) (string,
 	}
 
 	// --- Image elements & AppName (fetched via on-demand SQLite payload query) ---
-	heroImage, dbAppName := extractDbDetails(id)
+	heroImage, dbAppName := extractDbDetails(id, title, wpnDb)
 
 	return title, body, heroImage, dbAppName
 }
@@ -382,32 +403,80 @@ type WpnToastXML struct {
 }
 
 // extractDbDetails queries the wpndatabase.db for the XML payload and AUMID of a notification.
-func extractDbDetails(id uint32) (string, string) {
-	localAppData := os.Getenv("LOCALAPPDATA")
-	if localAppData == "" {
-		return "", ""
-	}
-	dbPath := filepath.Join(localAppData, "Microsoft", "Windows", "Notifications", "wpndatabase.db")
-	if _, err := os.Stat(dbPath); err != nil {
+// It retries a few times to handle the case where Windows writes the DB row asynchronously
+// after the WinRT notification event fires (which causes ErrNoRows on first query).
+// If the ID lookup fails entirely, it falls back to searching by notification title content
+// (handles apps like Rise of Kingdoms that send via two channels: WPN and a non-WPN bridge).
+func extractDbDetails(id uint32, titleHint string, db *sql.DB) (string, string) {
+	if db == nil {
 		return "", ""
 	}
 
-	// Open read-only to avoid locking conflicts
-	db, err := sql.Open("sqlite3", "file:"+dbPath+"?mode=ro")
-	if err != nil {
-		return "", ""
-	}
-	defer db.Close()
+	const maxRetries = 10
+	const retryDelay = 200 * time.Millisecond
 
 	var payload []byte
 	var primaryId sql.NullString
-	err = db.QueryRow(`
-		SELECT n.Payload, h.PrimaryId 
-		FROM Notification n 
-		LEFT JOIN NotificationHandler h ON n.HandlerId = h.RecordId 
-		WHERE n.Id = ?`, id).Scan(&payload, &primaryId)
-	if err != nil {
-		return "", ""
+
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		err := db.QueryRow(`
+			SELECT n.Payload, h.PrimaryId
+			FROM Notification n
+			LEFT JOIN NotificationHandler h ON n.HandlerId = h.RecordId
+			WHERE n.Id = ?`, id).Scan(&payload, &primaryId)
+		if err == sql.ErrNoRows {
+			// Notification row not yet written — wait and retry
+			logMsg(fmt.Sprintf("DB miss for id=%d attempt %d/%d, retrying...", id, attempt+1, maxRetries))
+			if attempt < maxRetries-1 {
+				time.Sleep(retryDelay)
+				continue
+			}
+			logMsg(fmt.Sprintf("DB: gave up waiting for id=%d after %d attempts", id, maxRetries))
+			return "", ""
+		}
+		if err != nil {
+			logMsg(fmt.Sprintf("DB error for id=%d: %v", id, err))
+			return "", ""
+		}
+		// Row found — but PrimaryId may be NULL if NotificationHandler isn't linked yet.
+		// Retry until we get a non-empty PrimaryId (or we have the payload).
+		if !primaryId.Valid || primaryId.String == "" {
+			logMsg(fmt.Sprintf("DB hit for id=%d attempt %d but PrimaryId is NULL, retrying...", id, attempt+1))
+			if attempt < maxRetries-1 {
+				time.Sleep(retryDelay)
+				continue
+			}
+			logMsg(fmt.Sprintf("DB: PrimaryId never populated for id=%d after %d attempts", id, maxRetries))
+			// Still use payload for hero image even without an appName
+			break
+		}
+		logMsg(fmt.Sprintf("DB hit for id=%d on attempt %d, primaryId=%q", id, attempt, primaryId.String))
+		break
+	}
+
+	// If ID lookup gave up and we have no payload, try a content-based fallback.
+	// Some apps (e.g. Rise of Kingdoms via Google Play Games) send one transient notification
+	// that never reaches wpndatabase.db, and a second WPN-persisted copy with the correct PrimaryId.
+	// Searching by title content finds the WPN copy.
+	if len(payload) == 0 && titleHint != "" {
+		like := "%" + strings.ReplaceAll(titleHint, "%", "\\%") + "%"
+		var fallbackPrimary sql.NullString
+		var fallbackPayload []byte
+		err := db.QueryRow(`
+			SELECT n.Payload, h.PrimaryId
+			FROM Notification n
+			LEFT JOIN NotificationHandler h ON n.HandlerId = h.RecordId
+			WHERE CAST(n.Payload AS TEXT) LIKE ? ESCAPE '\'
+			  AND h.PrimaryId IS NOT NULL
+			  AND h.PrimaryId != ''
+			  AND h.PrimaryId != 'App'
+			ORDER BY n.Id DESC
+			LIMIT 1`, like).Scan(&fallbackPayload, &fallbackPrimary)
+		if err == nil && fallbackPrimary.Valid && fallbackPrimary.String != "" {
+			logMsg(fmt.Sprintf("DB content fallback for id=%d: found primaryId=%q via title %q", id, fallbackPrimary.String, titleHint))
+			payload = fallbackPayload
+			primaryId = fallbackPrimary
+		}
 	}
 
 	appName := ""

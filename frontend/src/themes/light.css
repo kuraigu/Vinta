@@ -24,6 +24,11 @@
   --c-text-secondary: #515154; /* Darkened for better readability */
   --c-text-muted: #76767a;
 
+  --c-contrast-bg: rgba(0, 0, 0, 0.05);
+  --c-contrast-bg-border:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(0, 0, 0, 0.5);
+  --c-contrast-bg-hover: rgba(0, 0, 0, 0.15);
+
   /* CONTEXTUAL COLOR SEMANTICS */
   /* Borders use the new high-contrast base colors, while glows use an even deeper shade so the aura is visible against a bright room */
   --c-island-border-idle: #cb38a6;
@@ -35,6 +40,10 @@
   --c-clock-time-start: #1d1d1f;
   --c-clock-time-end: #515154;
   --c-clock-time-shadow: rgba(0, 0, 0, 0.1);
+  --c-clear-contrast-bg-hover: rgba(255, 59, 48, 0.12);
+  --c-clear-contrast-bg-hover-border:
+    inset 0 0 0 1px rgba(215, 0, 21, 0.5), inset 0 0 0 1px rgba(215, 0, 21, 0.5);
+  --c-clear-button-color: #d70015;
 
   /* ISLAND SPECIFIC */
   --island-box-shadow:
