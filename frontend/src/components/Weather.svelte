@@ -121,7 +121,7 @@
     opacity: 0.9;
     margin-bottom: 0.4rem;
   }
-  
+
   :global([data-theme='light']) .icon {
     /* Slightly deeper yellow/orange for better visibility on light background */
     --weather-icon-color: #f59e0b;

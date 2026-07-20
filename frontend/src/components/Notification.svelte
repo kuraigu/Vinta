@@ -22,17 +22,19 @@
   import { SvelteSet } from 'svelte/reactivity'
   import { appIcons, gameIcons } from '../appIcons'
 
+  export type NotificationItem = {
+    id: number
+    appName?: string
+    icon?: string
+    title: string
+    message: string
+    heroImage?: string
+    timestamp: number
+  }
+
   let { expanded = false, notifications = [] } = $props<{
     expanded?: boolean
-    notifications?: Array<{
-      id: number
-      appName?: string
-      icon?: string
-      title: string
-      message: string
-      heroImage?: string
-      timestamp?: number
-    }>
+    notifications?: NotificationItem[]
   }>()
 
   let expandedIds = new SvelteSet<number>()
@@ -73,8 +75,11 @@
   // entries when an identified version of the same content (title+message) exists.
   // Used by both groupedNotifications (full panel) and latest (minimized pill).
   let filteredNotifications = $derived.by(() => {
-    const normTitle = (t: string) =>
-      (t || '').replace(/[\x00-\x1f]/g, '').trim()
+    const normTitle = (t: string) => {
+      // eslint-disable-next-line no-control-regex
+      return (t || '').replace(/[\x00-\x1f]/g, '').trim()
+    }
+    // eslint-disable-next-line svelte/prefer-svelte-reactivity
     const identifiedKeys = new Set<string>()
     for (const notif of notifications) {
       if (notif.appName) {
@@ -347,7 +352,11 @@
         </div>
       {/if}
       <div class="notif-list">
-        {#snippet renderNotifItem(notif: any, brand: any, nested: boolean)}
+        {#snippet renderNotifItem(
+          notif: NotificationItem,
+          brand: NotificationGroup,
+          nested: boolean
+        )}
           <!-- svelte-ignore a11y_click_events_have_key_events -->
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <div
@@ -365,7 +374,7 @@
           >
             <div class="notif-item-header">
               {#if !nested}
-                {@const iconUrl = brand.icon || brand.brandIcon}
+                {@const iconUrl = brand.brandIcon}
                 <div class="notif-item-app-group">
                   <div class="notif-item-icon">
                     {#if isImageUrl(iconUrl)}
@@ -392,9 +401,7 @@
                       {@render fallbackIcon(brand, 16)}
                     {/if}
                   </div>
-                  <span class="notif-item-app"
-                    >{brand.name || brand.brandName}</span
-                  >
+                  <span class="notif-item-app">{brand.brandName}</span>
                 </div>
               {/if}
               <div class="time-and-dismiss">
@@ -423,7 +430,7 @@
             </div>
             <div class="notif-item-body">
               <div class="notif-item-title-row">
-                <span 
+                <span
                   class="notif-item-title"
                   class:is-expanded={expandedIds.has(notif.id)}
                 >

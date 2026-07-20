@@ -1,3 +1,4 @@
+// Package notifications provides the interface for launching and interacting with the C# notification interceptor.
 package notifications
 
 import (
@@ -37,7 +38,7 @@ func StartNotificationListener(ctx context.Context) {
 		logMsg("Failed to start VintaNotifications.exe: " + err.Error())
 		return
 	}
-	
+
 	logMsg("C# Notification Interceptor started successfully")
 
 	go func() {
@@ -54,7 +55,7 @@ func StartNotificationListener(ctx context.Context) {
 		if line == "" {
 			continue
 		}
-		
+
 		logMsg(fmt.Sprintf("[C# Interceptor]: %s", line))
 
 		var data map[string]interface{}
