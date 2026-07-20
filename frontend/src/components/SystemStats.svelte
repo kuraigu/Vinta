@@ -122,13 +122,15 @@
   }
 
   .cpu {
-    stroke: #ff3b30;
-    filter: drop-shadow(0 0 6px rgba(255, 59, 48, 0.5));
+    --stat-color: var(--c-danger);
+    stroke: var(--stat-color);
+    filter: drop-shadow(0 0 6px var(--stat-color));
   }
 
   .ram {
-    stroke: #0a84ff;
-    filter: drop-shadow(0 0 6px rgba(10, 132, 255, 0.5));
+    --stat-color: var(--c-primary);
+    stroke: var(--stat-color);
+    filter: drop-shadow(0 0 6px var(--stat-color));
   }
 
   .ring-label {

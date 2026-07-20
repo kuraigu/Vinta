@@ -18,7 +18,7 @@
     wakeMethodStore,
     dndStore
   } from './store'
-  import Themes from './properties/Themes.svelte'
+
   import AppControls from './utils/AppControls.svelte'
 
   $effect(() => {
@@ -63,17 +63,28 @@
     triggerGlow()
   })
 
+  let isTimeoutActive = $state(false)
+
   $effect(() => {
-    // Auto-hide logic effect
+    // Auto-hide and auto-revert logic effect
     void hideTrigger
-    if ($autoHideStore && !expanded && !isHidden && !isHovering) {
-      clearTimeout(hideTimeout)
-      hideTimeout = window.setTimeout(() => {
-        hideWidget()
-        navigateTo(ClockPage, clockConfig, false)
-      }, 10000)
-    } else {
-      clearTimeout(hideTimeout)
+    clearTimeout(hideTimeout)
+    isTimeoutActive = false
+
+    if (!expanded && !isHidden && !isHovering) {
+      // Set a timer if we need to auto-hide OR we need to revert back to ClockPage
+      if ($autoHideStore || activePage !== ClockPage) {
+        isTimeoutActive = true
+        hideTimeout = window.setTimeout(() => {
+          isTimeoutActive = false
+          if ($autoHideStore) {
+            hideWidget()
+          }
+          if (activePage !== ClockPage) {
+            navigateTo(ClockPage, clockConfig, false)
+          }
+        }, 10000)
+      }
     }
   })
 
@@ -269,58 +280,16 @@
             timestamp: Date.now()
           }
 
-          // Deduplication: handle apps that send via two channels (e.g. Rise of Kingdoms):
-          // a fast transient notification (no AUMID) and a WPN-persisted copy (with AUMID).
-          // Titles from transients may contain C0 control chars (e.g. \u000f) injected by
-          // Android/GooglePlayGames bridges; WPN copies have clean titles. Normalize both.
-          const normalizeTitle = (t: string) =>
-            (t || '').replace(/[\x00-\x1f]/g, '').trim()
-          const normPayloadTitle = normalizeTitle(payload.title)
-          const normPayloadMsg = normalizeTitle(payload.message)
-          const fiveMinutesAgo = Date.now() - 5 * 60 * 1000
+          n = [newNotif, ...n].slice(0, 99)
 
-          if (payload.appName && normPayloadTitle) {
-            // Case 1: New notification is identified, check for an earlier unidentified duplicate → upgrade it
-            const dupIdx = n.findIndex(
-              (x) =>
-                !x.appName &&
-                normalizeTitle(x.title) === normPayloadTitle &&
-                normalizeTitle(x.message) === normPayloadMsg &&
-                x.timestamp >= fiveMinutesAgo
-            )
-            if (dupIdx !== -1) {
-              const upgraded = [...n]
-              upgraded[dupIdx] = {
-                ...upgraded[dupIdx],
-                appName: payload.appName,
-                icon: payload.icon,
-                heroImage: payload.heroImage || upgraded[dupIdx].heroImage
-              }
-              return upgraded
-            }
-          } else if (!payload.appName && normPayloadTitle) {
-            // Case 2: New notification is unidentified, check if an identified version already exists → skip
-            const alreadyIdentified = n.some(
-              (x) =>
-                x.appName &&
-                normalizeTitle(x.title) === normPayloadTitle &&
-                normalizeTitle(x.message) === normPayloadMsg &&
-                x.timestamp >= fiveMinutesAgo
-            )
-            if (alreadyIdentified) {
-              return n // drop the duplicate unidentified copy
-            }
+          if (!$dndStore && !expanded) {
+            showWidget()
+            navigateTo(NotificationPage, notifConfig, false)
+            triggerGlow()
           }
 
-          return [newNotif, ...n].slice(0, 99)
+          return n
         })
-
-        // Only force open the notification if DND is off and the pill is not already expanded by the user
-        if (!$dndStore && !expanded) {
-          showWidget()
-          navigateTo(NotificationPage, notifConfig, false)
-          triggerGlow()
-        }
       }
     )
 
@@ -338,7 +307,7 @@
 
 <!-- ISLAND DIV HERE -->
 <div class="island-container" role="application">
-  <Themes />
+
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
@@ -416,6 +385,11 @@
         {/if}
       {/key}
     </div>
+
+    <!-- Shrinking Timeout Bar -->
+    {#if isTimeoutActive && activePage !== ClockPage && !expanded && !isHidden}
+      <div class="timeout-bar"></div>
+    {/if}
   </div>
 
   {#if isTestMode}
@@ -500,6 +474,29 @@
     contain: layout style;
 
     font-variant-numeric: tabular-nums;
+  }
+
+  .timeout-bar {
+    position: absolute;
+    bottom: 2px;
+    left: 50%;
+    transform: translateX(-50%);
+    height: 3px;
+    border-radius: 1.5px;
+    background-color: var(--island-hidden-glow);
+    animation: shrinkBar 10s linear forwards;
+    opacity: 0.7;
+    z-index: 20;
+    pointer-events: none;
+  }
+
+  @keyframes shrinkBar {
+    0% {
+      width: 40%;
+    }
+    100% {
+      width: 0%;
+    }
   }
 
   .island.is-hidden {

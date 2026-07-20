@@ -358,6 +358,7 @@
                 e.stopPropagation()
                 toggleGroupExpand(brand.brandName)
               } else {
+                e.stopPropagation()
                 toggleExpand(notif.id)
               }
             }}
@@ -422,7 +423,12 @@
             </div>
             <div class="notif-item-body">
               <div class="notif-item-title-row">
-                <span class="notif-item-title">{notif.title}</span>
+                <span 
+                  class="notif-item-title"
+                  class:is-expanded={expandedIds.has(notif.id)}
+                >
+                  {notif.title}
+                </span>
               </div>
               {#if notif.message}
                 <p
@@ -731,8 +737,8 @@
   }
 
   .dismiss-item-btn {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: var(--c-contrast-bg);
+    border: 1px solid var(--c-contrast-bg);
     color: var(--c-text-secondary);
     width: 26px;
     height: 26px;
@@ -745,10 +751,11 @@
   }
 
   .dismiss-item-btn:hover {
-    background: rgba(255, 59, 48, 0.15);
-    color: #ff453a;
-    border-color: rgba(255, 59, 48, 0.2);
-    transform: scale(1.1);
+    background: var(--c-danger-hover-bg);
+    color: var(--c-danger);
+    border-color: var(--c-danger);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(255, 59, 48, 0.2);
   }
 
   .clear-btn {
@@ -814,15 +821,10 @@
   .dnd-btn.dnd-active {
     color: var(--c-warning);
     background: var(--c-contrast-bg);
-    box-shadow: var(--c-dnd-active-hover-border);
   }
 
   .dnd-btn.dnd-active:hover {
     background: var(--c-contrast-bg-hover);
-    box-shadow:
-      inset 0 1px 0 0 var(--c-warning),
-      inset 0 0 0 1px var(--c-warning),
-      0 0 12px var(--c-warning-hover-bg);
     transform: scale(1.02);
   }
 
@@ -850,8 +852,8 @@
 
   .notif-item {
     padding: 14px 12px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.04);
+    background: var(--c-item-bg);
+    border: 1px solid var(--c-border);
     position: relative;
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
@@ -859,8 +861,8 @@
   }
 
   .notif-item:hover {
-    background-color: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.08);
+    background-color: var(--c-contrast-bg);
+    border-color: var(--c-hover);
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   }
@@ -887,7 +889,8 @@
     justify-content: flex-end;
     gap: 8px;
     position: relative;
-    height: 26px;
+    min-height: 26px;
+    padding: 2px 0;
   }
 
   .notif-item-time {
@@ -935,8 +938,8 @@
 
   .notif-group-header {
     padding: 14px 12px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.04);
+    background: var(--c-item-bg);
+    border: 1px solid var(--c-border);
     border-radius: 14px;
     display: flex;
     flex-direction: column;
@@ -948,8 +951,8 @@
   }
 
   .notif-group-header:hover {
-    background-color: rgba(255, 255, 255, 0.05);
-    border-color: rgba(255, 255, 255, 0.08);
+    background-color: var(--c-contrast-bg);
+    border-color: var(--c-hover);
   }
 
   .notif-group-header-top {
@@ -975,13 +978,13 @@
     gap: 10px;
     margin-top: 10px;
     padding-left: 12px;
-    border-left: 1px dashed rgba(255, 255, 255, 0.08);
+    border-left: 1px dashed var(--c-hover);
   }
 
   .expand-indicator {
     color: var(--c-text-secondary);
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    background: var(--c-contrast-bg);
+    border: 1px solid var(--c-contrast-bg);
     border-radius: 50%;
     width: 26px;
     height: 26px;
@@ -992,7 +995,7 @@
   }
 
   .expand-indicator:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--c-hover);
     color: var(--c-text-primary);
   }
 
@@ -1015,11 +1018,11 @@
     height: 24px;
     flex-shrink: 0;
     font-size: 14px;
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--c-hover);
     border-radius: 6px;
     overflow: hidden;
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      inset 0 1px 0 var(--c-hover),
       0 2px 4px rgba(0, 0, 0, 0.2);
     transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   }
@@ -1076,6 +1079,10 @@
     width: 100%;
   }
 
+  .notif-item-title.is-expanded {
+    white-space: normal;
+  }
+
   .notif-item-message {
     margin: 0;
     font-size: 0.85rem;
@@ -1114,7 +1121,7 @@
     max-height: 250px;
     display: block;
     object-fit: scale-down;
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: var(--c-contrast-bg);
   }
 
   .empty-state {
@@ -1129,16 +1136,16 @@
     display: flex;
     flex-direction: column;
     margin-bottom: 4px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.04);
+    background: var(--c-item-bg);
+    border: 1px solid var(--c-border);
     border-radius: 14px;
     overflow: hidden;
     transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .notif-group.unified-card:hover {
-    background: rgba(255, 255, 255, 0.04);
-    border-color: rgba(255, 255, 255, 0.06);
+    background: var(--c-border);
+    border-color: var(--c-hover);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   }
 
@@ -1163,9 +1170,9 @@
     font-weight: 700;
     padding: 2px 8px;
     border-radius: 12px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid var(--c-border);
     margin-left: 8px;
-    box-shadow: 0 2px 4px rgba(0, 122, 255, 0.4);
+    box-shadow: 0 2px 4px var(--c-primary);
   }
 
   .notification-container {
@@ -1181,10 +1188,10 @@
     gap: 8px;
     margin: 0 16px 12px;
     padding: 12px;
-    background: rgba(255, 69, 58, 0.1);
-    border: 1px solid rgba(255, 69, 58, 0.2);
+    background: var(--c-danger-hover-bg);
+    border: 1px solid var(--c-danger);
     border-radius: 8px;
-    color: #ff453a;
+    color: var(--c-danger);
     font-size: 13px;
     line-height: 1.4;
   }
@@ -1201,7 +1208,7 @@
   .notif-item.nested {
     background: transparent;
     border: none;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    border-top: 1px solid var(--c-contrast-bg);
     border-radius: 0;
     padding: 10px 12px;
     box-shadow: none;
@@ -1214,8 +1221,8 @@
   }
 
   .notif-item.nested:hover {
-    background-color: rgba(255, 255, 255, 0.02);
+    background-color: var(--c-contrast-bg);
     transform: none;
-    border-color: rgba(255, 255, 255, 0.05);
+    border-color: var(--c-contrast-bg);
   }
 </style>

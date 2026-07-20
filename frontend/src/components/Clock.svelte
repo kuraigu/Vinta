@@ -53,19 +53,28 @@
   }
 
   .expanded .time {
+    --clock-start: #ffffff;
+    --clock-end: #a0a0a0;
+    --clock-shadow: rgba(255, 255, 255, 0.15);
     font-size: 3.2rem;
     font-weight: 800;
     letter-spacing: -2px;
     margin-bottom: 5px;
     background: linear-gradient(
       180deg,
-      var(--c-clock-time-start) 0%,
-      var(--c-clock-time-end) 100%
+      var(--clock-start) 0%,
+      var(--clock-end) 100%
     );
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    filter: drop-shadow(0 4px 12px var(--c-clock-time-shadow));
+    filter: drop-shadow(0 4px 12px var(--clock-shadow));
+  }
+
+  :global([data-theme='light']) .expanded .time {
+    --clock-start: #1d1d1f;
+    --clock-end: #515154;
+    --clock-shadow: rgba(0, 0, 0, 0.1);
   }
 
   .minimal .time {
@@ -75,7 +84,7 @@
 
   .seconds {
     font-size: 1.1rem;
-    color: #808080;
+    color: var(--c-text-muted);
     font-weight: 600;
     margin-top: -5px;
     letter-spacing: 2px;

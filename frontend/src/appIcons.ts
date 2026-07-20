@@ -241,7 +241,8 @@ export const appIcons: AppBrand[] = [
       'nvapp',
       'nvidia geforce experience',
       'nvidia corporation.geforceexperience',
-      'nvidia.geforceexperience'
+      'nvidia.geforceexperience',
+      'nvidia app'
     ],
     category: 'system'
   },

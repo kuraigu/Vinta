@@ -49,6 +49,11 @@
     box-sizing: border-box;
   }
 
+  .notif-content {
+    width: 100%;
+    height: 100%;
+  }
+
   /* When minimal (!expanded), display horizontally */
   .notification-layout.minimal {
     display: flex;

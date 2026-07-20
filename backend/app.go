@@ -11,6 +11,8 @@ import (
 
 	"github.com/getlantern/systray"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
+
+	"Vinta/backend/notifications"
 )
 
 var (
@@ -99,7 +101,7 @@ func (a *App) Startup(ctx context.Context) {
 		_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwl), style)
 
 		// Start native notification interceptor
-		go StartNotificationListener(ctx)
+		go notifications.StartNotificationListener(ctx)
 
 		// Start fully click-through; Svelte will call SetWidgetBounds on mount.
 		a.updateWindowRegion()
