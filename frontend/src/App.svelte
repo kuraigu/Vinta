@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, setContext } from 'svelte'
   import { fade } from 'svelte/transition'
-  import { SetWidgetBounds, IsTestMode } from '../wailsjs/go/backend/App.js'
+  import { SetWidgetBounds, IsTestMode, FocusWindow } from '../wailsjs/go/backend/App.js'
   import { EventsOn, LogFatal, LogInfo } from '../wailsjs/runtime/runtime.js'
   import NotificationPage, {
     config as notifConfig
@@ -225,11 +225,13 @@
 
   function handleExpand() {
     if (expanded) return
+    FocusWindow()
     islandAnim = '0.4s cubic-bezier(0.22, 1, 0.36, 1)'
     expanded = true
   }
 
   function handleIslandClick() {
+    FocusWindow()
     islandAnim = '0.4s cubic-bezier(0.22, 1, 0.36, 1)'
 
     if (isHidden) {
@@ -244,6 +246,7 @@
   function handleMouseEnter() {
     isHovering = true
     clearTimeout(hideTimeout)
+    FocusWindow()
     if (isHidden && $wakeMethodStore === 'hover') {
       hoverShowTimeout = window.setTimeout(showWidget, 150)
     } else if (!isHidden) {
@@ -316,6 +319,9 @@
       : ''} {isHidden ? 'is-hidden' : ''}"
     onmouseenter={handleMouseEnter}
     onmouseleave={handleMouseLeave}
+    onwheel={() => {
+      FocusWindow()
+    }}
     style="
       width: {isHidden
       ? 60

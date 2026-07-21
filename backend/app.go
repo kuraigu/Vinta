@@ -188,6 +188,45 @@ func (a *App) Quit() {
 	}
 }
 
+// FocusWindow requests OS input focus so mouse wheel scroll events work immediately on hover
+func (a *App) FocusWindow() {
+	if a.ctx != nil {
+		runtime.WindowShow(a.ctx)
+		runtime.WindowUnminimise(a.ctx)
+		runtime.WindowSetAlwaysOnTop(a.ctx, true)
+
+		// Win32 AttachThreadInput + SetForegroundWindow + SetFocus to bypass OS focus lock
+		titlePtr, _ := syscall.UTF16PtrFromString("Vinta")
+		hwnd, _, _ := procFindWindow.Call(0, uintptr(unsafe.Pointer(titlePtr)))
+		if hwnd != 0 {
+			procGetForegroundWindow := user32.NewProc("GetForegroundWindow")
+			procGetWindowThreadProcessId := user32.NewProc("GetWindowThreadProcessId")
+			procAttachThreadInput := user32.NewProc("AttachThreadInput")
+			procSetForegroundWindow := user32.NewProc("SetForegroundWindow")
+			procSetActiveWindow := user32.NewProc("SetActiveWindow")
+			procSetFocus := user32.NewProc("SetFocus")
+
+			foreHwnd, _, _ := procGetForegroundWindow.Call()
+			if foreHwnd != 0 && foreHwnd != hwnd {
+				foreThread, _, _ := procGetWindowThreadProcessId.Call(foreHwnd, 0)
+				appThread, _, _ := procGetWindowThreadProcessId.Call(hwnd, 0)
+
+				if foreThread != appThread {
+					procAttachThreadInput.Call(foreThread, appThread, 1)
+					procSetForegroundWindow.Call(hwnd)
+					procSetActiveWindow.Call(hwnd)
+					procSetFocus.Call(hwnd)
+					procAttachThreadInput.Call(foreThread, appThread, 0)
+					return
+				}
+			}
+			procSetForegroundWindow.Call(hwnd)
+			procSetActiveWindow.Call(hwnd)
+			procSetFocus.Call(hwnd)
+		}
+	}
+}
+
 // SetDevPillBounds is called by the frontend to show a separate developer menu.
 func (a *App) SetDevPillBounds(width int, height int, scale float64) {
 	a.devW = width

@@ -140,10 +140,10 @@
   }
 
   .day.today {
-    background-color: #34c759; /* Vinta Green */
-    color: black;
+    background-color: var(--c-success);
+    color: #ffffff;
     font-weight: 700;
-    box-shadow: 0 4px 10px rgba(52, 199, 89, 0.4);
+    box-shadow: var(--c-calendar-today-glow);
     transform: scale(1.05);
   }
 </style>

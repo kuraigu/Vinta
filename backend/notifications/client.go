@@ -10,16 +10,42 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // StartNotificationListener spawns the C# notification interceptor
-// and streams its output.
+// and streams its output. If the interceptor crashes or exits unexpectedly,
+// it is automatically restarted with exponential backoff unless context is cancelled.
 func StartNotificationListener(ctx context.Context) {
 	exePath := filepath.Join("backend", "notifications", "bin", "Release", "net8.0-windows10.0.19041.0", "win-x64", "publish", "VintaNotifications.exe")
 	absExePath, _ := filepath.Abs(exePath)
 
+	restartDelay := 1 * time.Second
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		runInterceptor(ctx, absExePath)
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(restartDelay):
+			logMsg(fmt.Sprintf("Restarting C# Notification Interceptor (delay: %v)...", restartDelay))
+			if restartDelay < 16*time.Second {
+				restartDelay *= 2
+			}
+		}
+	}
+}
+
+func runInterceptor(ctx context.Context, absExePath string) {
 	cmd := exec.CommandContext(ctx, absExePath)
 	cmd.Dir = filepath.Dir(absExePath)
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
@@ -44,7 +70,7 @@ func StartNotificationListener(ctx context.Context) {
 	go func() {
 		<-ctx.Done()
 		if cmd.Process != nil {
-			cmd.Process.Kill()
+			_ = cmd.Process.Kill()
 		}
 	}()
 

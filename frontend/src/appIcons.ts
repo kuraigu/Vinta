@@ -214,3 +214,19 @@ export function findAppIconConflicts(): string[] {
   }
   return conflicts
 }
+
+// In-memory Base64 image cache to prevent redundant DOM re-allocations
+const imageCache = new Map<string, string>()
+
+export function getCachedBase64Url(url: string | undefined): string {
+  if (!url) return ''
+  if (!url.startsWith('data:image')) return url
+  if (imageCache.has(url)) return imageCache.get(url)!
+
+  imageCache.set(url, url)
+  if (imageCache.size > 100) {
+    const oldestKey = imageCache.keys().next().value
+    if (oldestKey) imageCache.delete(oldestKey)
+  }
+  return url
+}

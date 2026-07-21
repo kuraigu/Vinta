@@ -1,6 +1,6 @@
 <script lang="ts">
   import { getContext } from 'svelte'
-  import { Grid, Settings, Power, Shrink, EyeOff } from 'lucide-svelte'
+  import { Grid, Settings, Power, Minimize2, EyeOff } from 'lucide-svelte'
   import { AppControls } from '../utils/AppControls.svelte'
   import DockButton from './DockButton.svelte'
   import AppsPage from '../pages/AppsPage.svelte'
@@ -41,7 +41,7 @@
 
     <DockButton
       variant="success"
-      tooltip="Hide Pill"
+      tooltip="Hide Widget"
       onclick={(e: MouseEvent) => AppControls.doHide(hidePill, e)}
     >
       <EyeOff size={18} />
@@ -51,10 +51,10 @@
 
     <DockButton
       variant="warning"
-      tooltip="Minimize"
+      tooltip="Collapse Island"
       onclick={(e: MouseEvent) => AppControls.doMinimize(navigate, e)}
     >
-      <Shrink size={18} />
+      <Minimize2 size={18} />
     </DockButton>
 
     <div class="divider"></div>

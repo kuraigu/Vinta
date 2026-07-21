@@ -53,28 +53,19 @@
   }
 
   .expanded .time {
-    --clock-start: #ffffff;
-    --clock-end: #a0a0a0;
-    --clock-shadow: rgba(255, 255, 255, 0.15);
     font-size: 3.2rem;
     font-weight: 800;
     letter-spacing: -2px;
     margin-bottom: 5px;
     background: linear-gradient(
       180deg,
-      var(--clock-start) 0%,
-      var(--clock-end) 100%
+      var(--c-text-primary) 0%,
+      var(--c-text-secondary) 100%
     );
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    filter: drop-shadow(0 4px 12px var(--clock-shadow));
-  }
-
-  :global([data-theme='light']) .expanded .time {
-    --clock-start: #1d1d1f;
-    --clock-end: #515154;
-    --clock-shadow: rgba(0, 0, 0, 0.1);
+    filter: drop-shadow(0 4px 12px var(--c-clock-shadow));
   }
 
   .minimal .time {

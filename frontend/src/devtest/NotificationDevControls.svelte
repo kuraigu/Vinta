@@ -181,11 +181,6 @@
     outline: none;
   }
 
-  /* Force the native select to have a higher stacking context than sibling buttons */
-  select.action-select {
-    position: relative;
-    z-index: 50;
-  }
 
   .action-input {
     width: 160px;

@@ -151,22 +151,6 @@
     letter-spacing: 0.5px;
   }
 
-  .page-select {
-    background: var(--c-bg);
-    color: var(--c-text-primary);
-    border: 1px solid var(--c-border);
-    padding: 6px 8px;
-    border-radius: 6px;
-    font-size: 0.8rem;
-    outline: none;
-    cursor: pointer;
-    position: relative;
-    z-index: 50;
-  }
-
-  .page-select:focus {
-    border-color: var(--c-primary);
-  }
 
   .quick-toggles {
     display: flex;

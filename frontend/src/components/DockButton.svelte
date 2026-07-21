@@ -50,10 +50,10 @@
     bottom: calc(100% + 12px);
     left: 50%;
     transform: translateX(-50%) scale(0.9);
-    background: rgba(20, 20, 20, 0.95);
+    background: var(--c-dock-popover-bg);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-    color: #fff;
+    color: var(--c-text-primary);
     padding: 6px 10px;
     border-radius: 8px;
     font-size: 0.75rem;
@@ -62,17 +62,9 @@
     opacity: 0;
     pointer-events: none;
     transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: var(--c-dock-popover-shadow);
+    border: 1px solid var(--c-dock-popover-border);
     z-index: 100;
-  }
-
-  :global([data-theme='light'])
-    .dock-btn[data-tooltip]:not([data-tooltip=''])::after {
-    background: rgba(255, 255, 255, 0.95);
-    color: #000;
-    border: 1px solid rgba(0, 0, 0, 0.1);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   }
 
   .dock-btn[data-tooltip]:not([data-tooltip='']):hover::after {

@@ -43,4 +43,23 @@
 
   /* SCROLLBARS */
   --c-scrollbar-thumb: rgba(0, 0, 0, 0.25);
+
+  /* COMPONENT SEMANTIC TOKENS */
+  --c-clear-btn-hover-bg: rgba(215, 0, 21, 0.12);
+  --c-clear-btn-hover-text: #d70015;
+  --c-clear-btn-hover-border: inset 0 0 0 1px rgba(215, 0, 21, 0.3);
+
+  --c-dnd-active-bg: rgba(184, 110, 0, 0.15);
+  --c-dnd-active-text: #b86e00;
+  --c-dnd-active-border: inset 0 0 0 1px rgba(184, 110, 0, 0.35);
+
+  --c-dock-popover-bg: rgba(255, 255, 255, 0.96);
+  --c-dock-popover-border: rgba(0, 0, 0, 0.12);
+  --c-dock-popover-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+
+  --c-calendar-today-glow: 0 4px 10px rgba(36, 138, 61, 0.35);
+  --c-clock-shadow: rgba(0, 0, 0, 0.1);
+
+  --c-icon-badge-bg: rgba(0, 0, 0, 0.05);
+  --c-icon-badge-border: rgba(0, 0, 0, 0.1);
 }
