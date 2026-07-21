@@ -85,7 +85,8 @@ func (a *App) Startup(ctx context.Context) {
 			}
 		}
 		screenWidth = screen.Size.Width
-		runtime.WindowSetSize(ctx, screen.Size.Width, screen.Size.Height)
+		// DO NOT REMOVE -1 HERE. IT PREVENTS STREAMER MODE FROM OTHER APPS TO BE TRIGGERED BY VINTA
+		runtime.WindowSetSize(ctx, screen.Size.Width, screen.Size.Height-1)
 		runtime.WindowSetPosition(ctx, 0, 0)
 	}
 

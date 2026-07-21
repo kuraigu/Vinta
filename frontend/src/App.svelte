@@ -387,7 +387,9 @@
 
     <!-- Shrinking Timeout Bar -->
     {#if isTimeoutActive && activePage !== ClockPage && !expanded && !isHidden}
-      <div class="timeout-bar"></div>
+      {#key hideTrigger}
+        <div class="timeout-bar"></div>
+      {/key}
     {/if}
   </div>
 

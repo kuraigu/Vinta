@@ -1,22 +1,16 @@
-// ============================================================================
-// Vinta Notification Interceptor (C#)
-// ============================================================================
-// This standalone console application uses the native WinRT UserNotificationListener 
-// API to securely intercept Windows Action Center notifications. 
-//
-// It is spawned as a background subprocess by the Vinta Go backend. When a 
-// notification arrives, it extracts the details (Title, Message, AppUserModelID) 
-// and streams them back to the Go backend via standard output (stdout) as JSON.
-// ============================================================================
-
 using System;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Windows.UI.Notifications;
 using Windows.UI.Notifications.Management;
+using System.Xml.Linq;
+using System.Linq;
+using System.IO;
+using Microsoft.Data.Sqlite;
 
 var listener = UserNotificationListener.Current;
+SQLitePCL.Batteries.Init();
 var accessStatus = await listener.RequestAccessAsync();
 
 if (accessStatus != UserNotificationListenerAccessStatus.Allowed)
@@ -25,7 +19,6 @@ if (accessStatus != UserNotificationListenerAccessStatus.Allowed)
     return;
 }
 
-// Track seen notifications to avoid duplicates in polling
 var seenIds = new System.Collections.Generic.HashSet<uint>();
 
 var initialNotifs = await listener.GetNotificationsAsync(NotificationKinds.Toast);
@@ -36,21 +29,24 @@ foreach (var notif in initialNotifs)
 
 Console.WriteLine(JsonSerializer.Serialize(new StatusPayload { status = "Listening" }, AppJsonSerializerContext.Default.StatusPayload));
 
-// Poll for new notifications
 while (true)
 {
     try
     {
         var notifs = await listener.GetNotificationsAsync(NotificationKinds.Toast);
+        var retryCounts = new System.Collections.Generic.Dictionary<uint, int>();
         foreach (var notif in notifs)
         {
-            if (seenIds.Add(notif.Id))
+            if (!seenIds.Contains(notif.Id))
             {
-                ProcessNotification(notif);
+                if (ProcessNotification(notif, retryCounts))
+                {
+                    seenIds.Add(notif.Id);
+                    retryCounts.Remove(notif.Id);
+                }
             }
         }
         
-        // Remove old IDs that are no longer in the action center
         if (seenIds.Count > notifs.Count + 100) 
         {
             var currentIds = new System.Collections.Generic.HashSet<uint>();
@@ -60,25 +56,24 @@ while (true)
     }
     catch (Exception)
     {
-        // Ignore COM exceptions during polling
     }
 
     await Task.Delay(200);
 }
 
-void ProcessNotification(UserNotification notif)
+bool ProcessNotification(UserNotification notif, System.Collections.Generic.Dictionary<uint, int> retryCounts)
 {
     try 
     {
-        string appName = notif.AppInfo?.DisplayInfo?.DisplayName ?? "";
+        string appName = "";
+        try { appName = notif.AppInfo?.DisplayInfo?.DisplayName ?? ""; } catch {}
         if (string.IsNullOrEmpty(appName) || appName == "App")
         {
-            appName = notif.AppInfo?.AppUserModelId ?? "";
+            try { appName = notif.AppInfo?.AppUserModelId ?? ""; } catch {}
         }
 
         string title = "";
         string body = "";
-        string heroImage = "";
 
         if (notif.Notification != null && notif.Notification.Visual != null && notif.Notification.Visual.Bindings != null)
         {
@@ -98,19 +93,84 @@ void ProcessNotification(UserNotification notif)
             }
         }
 
+        string heroImage = "";
+        string icon = "";
+
+        bool dbSuccess = false;
+        try 
+        {
+            string dbPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + @"\Microsoft\Windows\Notifications\wpndatabase.db";
+            if (File.Exists(dbPath))
+            {
+                string tempPath = Path.GetTempFileName();
+                File.Copy(dbPath, tempPath, true);
+                
+                using (var connection = new SqliteConnection($"Data Source={tempPath}"))
+                {
+                    connection.Open();
+                    var command = connection.CreateCommand();
+                    command.CommandText = "SELECT Payload FROM Notification WHERE Id = @Id";
+                    command.Parameters.AddWithValue("@Id", notif.Id);
+                    
+                    using (var reader = command.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            dbSuccess = true;
+                            byte[] payloadBytes = (byte[])reader["Payload"];
+                            string xmlPayload = System.Text.Encoding.UTF8.GetString(payloadBytes);
+                            
+                            var doc = XDocument.Parse(xmlPayload);
+                            Console.Error.WriteLine($"[C# Interceptor] RAW XML: {xmlPayload}");
+                            string heroUrl = "";
+                            string iconUrl = "";
+                            foreach (var img in doc.Descendants().Where(x => x.Name.LocalName == "image"))
+                            {
+                                string placement = img.Attribute("placement")?.Value ?? "";
+                                string src = img.Attribute("src")?.Value ?? "";
+                                if (placement == "appLogoOverride") iconUrl = src;
+                                else if (string.IsNullOrEmpty(heroUrl)) heroUrl = src;
+                            }
+                            
+                            heroImage = NotificationPayload.DownloadImageAsBase64(heroUrl);
+                            icon = NotificationPayload.DownloadImageAsBase64(iconUrl);
+                        }
+                    }
+                }
+                
+                try { File.Delete(tempPath); } catch {}
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[SQLite] Error extracting image: {ex.Message}");
+        }
+
+        if (!dbSuccess)
+        {
+            if (!retryCounts.ContainsKey(notif.Id)) retryCounts[notif.Id] = 0;
+            retryCounts[notif.Id]++;
+            if (retryCounts[notif.Id] < 10) return false;
+        }
+        
         var payload = new NotificationPayload {
             id = notif.Id,
             appName = appName,
             title = title,
             message = body,
-            heroImage = heroImage
+            heroImage = heroImage,
+            icon = icon
         };
 
-        Console.WriteLine(JsonSerializer.Serialize(payload, AppJsonSerializerContext.Default.NotificationPayload));
+        string json = JsonSerializer.Serialize(payload, AppJsonSerializerContext.Default.NotificationPayload);
+        Console.WriteLine(json);
+        
+        return true;
     }
     catch (Exception ex)
     {
-        Console.Error.WriteLine($"Error processing notification {notif.Id}: {ex.Message}");
+        Console.Error.WriteLine($"[C# Interceptor] Error processing notification: {ex.Message}");
+        return true;
     }
 }
 
@@ -122,6 +182,29 @@ public class NotificationPayload {
     public string title { get; set; }
     public string message { get; set; }
     public string heroImage { get; set; }
+    public string icon { get; set; }
+
+    public static string DownloadImageAsBase64(string imgUrl)
+    {
+        if (string.IsNullOrEmpty(imgUrl)) return "";
+        try {
+            if (imgUrl.StartsWith("http")) {
+                using (var client = new System.Net.Http.HttpClient())
+                {
+                    var imgBytes = client.GetByteArrayAsync(imgUrl).Result;
+                    return "data:image/jpeg;base64," + Convert.ToBase64String(imgBytes);
+                }
+            } else if (imgUrl.StartsWith("file:///")) {
+                string localPath = Uri.UnescapeDataString(imgUrl.Substring(8)).Replace('/', '\\');
+                var imgBytes = System.IO.File.ReadAllBytes(localPath);
+                return "data:image/jpeg;base64," + Convert.ToBase64String(imgBytes);
+            } else if (imgUrl.StartsWith("C:\\") || imgUrl.StartsWith("D:\\")) {
+                var imgBytes = System.IO.File.ReadAllBytes(imgUrl);
+                return "data:image/jpeg;base64," + Convert.ToBase64String(imgBytes);
+            }
+        } catch {}
+        return "";
+    }
 }
 
 [JsonSerializable(typeof(ErrorPayload))]

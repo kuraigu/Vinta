@@ -66,6 +66,7 @@
   type NotificationGroup = {
     brandName: string
     brandIcon: string | null
+    brandAppIcon: string | null
     brandCategory?: string
     items: typeof notifications
     latestTimestamp: number
@@ -105,7 +106,8 @@
       if (!groups[groupKey]) {
         groups[groupKey] = {
           brandName: groupKey,
-          brandIcon: brand.icon,
+          brandIcon: brand.appIcon || brand.icon,
+          brandAppIcon: null,
           brandCategory: brand.category,
           items: [],
           latestTimestamp: 0
@@ -188,28 +190,7 @@
 
   function cleanAppName(appStr: string): string {
     if (!appStr) return 'Notification'
-
-    let cleaned = appStr
-    const bangIdx = cleaned.lastIndexOf('!')
-    if (bangIdx !== -1) cleaned = cleaned.substring(bangIdx + 1)
-
-    if (cleaned.toLowerCase().endsWith('.exe')) {
-      const parts = cleaned.split(/[\\/]/)
-      let name = parts[parts.length - 1]
-      cleaned = name.substring(0, name.length - 4)
-    } else if (cleaned.includes('.')) {
-      const parts = cleaned.split('.')
-      const lastPart = parts[parts.length - 1]
-      if (lastPart) {
-        cleaned = lastPart
-      }
-    }
-
-    // Capitalize first letter
-    if (cleaned.length > 0) {
-      cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1)
-    }
-    return cleaned
+    return appStr
   }
 
   function getDisplayBrand(notif: {
@@ -219,6 +200,7 @@
   }): {
     name: string
     icon: string | null
+    appIcon: string | null
     category?: string
   } {
     const rawName = notif.appName || 'Notification'
@@ -231,7 +213,8 @@
         if (brand.matchers.some((m) => matchString.includes(m))) {
           return {
             name: brand.name,
-            icon: brand.icon,
+            icon: defaultIcon || brand.icon,
+            appIcon: brand.icon,
             category: brand.category
           }
         }
@@ -243,7 +226,7 @@
       displayName = 'Notification'
     }
 
-    return { name: displayName, icon: defaultIcon }
+    return { name: displayName, icon: defaultIcon, appIcon: null }
   }
 </script>
 
@@ -281,7 +264,8 @@
           in:fly={{ y: -10, duration: 300 }}
           out:fade={{ duration: 150 }}
         >
-          <div class="banner-icon">
+          <div class="icon-wrapper">
+            <div class="banner-icon">
             {#if isImageUrl(brand.icon)}
               <img
                 src={brand.icon}
@@ -304,6 +288,10 @@
             {:else}
               {@render fallbackIcon(brand, 18)}
             {/if}
+          </div>
+          {#if brand.appIcon && isImageUrl(brand.appIcon) && brand.appIcon !== brand.icon}
+            <img src={brand.appIcon} alt="app badge" class="app-badge" />
+          {/if}
           </div>
           <div class="banner-content">
             <span class="banner-app">{brand.name}</span>
@@ -357,6 +345,8 @@
           brand: NotificationGroup,
           nested: boolean
         )}
+          {@const displayBrand = getDisplayBrand(notif)}
+          {@const iconUrl = displayBrand.icon}
           <!-- svelte-ignore a11y_click_events_have_key_events -->
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <div
@@ -372,102 +362,113 @@
               }
             }}
           >
-            <div class="notif-item-header">
-              {#if !nested}
-                {@const iconUrl = brand.brandIcon}
-                <div class="notif-item-app-group">
-                  <div class="notif-item-icon">
-                    {#if isImageUrl(iconUrl)}
-                      <img
-                        src={iconUrl}
-                        alt="app icon"
-                        class="notif-img-icon"
-                        onerror={(e) => {
-                          const img = e.currentTarget as HTMLImageElement
-                          img.style.display = 'none'
-                          if (img.nextElementSibling) {
-                            ;(
-                              img.nextElementSibling as HTMLElement
-                            ).style.display = 'block'
-                          }
-                        }}
-                      />
-                      <div style="display: none;">
-                        {@render fallbackIcon(brand, 16)}
-                      </div>
-                    {:else if iconUrl}
-                      <span class="icon-text">{iconUrl}</span>
-                    {:else}
-                      {@render fallbackIcon(brand, 16)}
-                    {/if}
-                  </div>
-                  <span class="notif-item-app">{brand.brandName}</span>
-                </div>
-              {/if}
-              <div class="time-and-dismiss">
-                <span class="notif-item-time"
-                  >{getRelativeTime(notif.timestamp)}</span
+          {#snippet timeAndDismiss()}
+            <div class="time-and-dismiss">
+              <span class="notif-item-time"
+                >{getRelativeTime(notif.timestamp)}</span
+              >
+              <div class="notif-actions">
+                <div
+                  class="expand-indicator"
+                  class:is-expanded={expandedIds.has(notif.id)}
                 >
-                <div class="notif-actions">
-                  <div
-                    class="expand-indicator"
-                    class:is-expanded={expandedIds.has(notif.id)}
-                  >
-                    <ChevronDown size={14} />
-                  </div>
-                  <button
-                    class="dismiss-item-btn"
-                    onclick={(e) => {
-                      e.stopPropagation()
-                      dismiss(notif.id)
-                    }}
-                    aria-label="Dismiss notification"
-                  >
-                    <X size={14} />
-                  </button>
+                  <ChevronDown size={14} />
                 </div>
+                <button
+                  class="dismiss-item-btn"
+                  onclick={(e) => {
+                    e.stopPropagation()
+                    dismiss(notif.id)
+                  }}
+                  aria-label="Dismiss notification"
+                >
+                  <X size={14} />
+                </button>
               </div>
             </div>
-            <div class="notif-item-body">
-              <div class="notif-item-title-row">
-                <span
-                  class="notif-item-title"
-                  class:is-expanded={expandedIds.has(notif.id)}
-                >
-                  {notif.title}
-                </span>
+          {/snippet}
+
+          {#if !nested}
+            <div class="notif-item-header">
+              <div class="notif-item-app-group">
+                {#if displayBrand.appIcon && isImageUrl(displayBrand.appIcon) && displayBrand.appIcon !== iconUrl}
+                  <img src={displayBrand.appIcon} alt="app badge" class="notif-header-app-icon" />
+                {/if}
+                <span class="notif-item-app">{brand.brandName}</span>
               </div>
-              {#if notif.message}
-                <p
-                  class="notif-item-message"
-                  class:is-expanded={expandedIds.has(notif.id)}
-                  class:is-visible={nested || expandedIds.has(notif.id)}
-                >
-                  {notif.message}
-                </p>
-              {/if}
-              {#if notif.heroImage && isImageUrl(notif.heroImage) && expandedIds.has(notif.id)}
-                <div class="hero-image-wrapper" style="display: none;">
+              {@render timeAndDismiss()}
+            </div>
+          {/if}
+
+          {#if nested}
+            <div class="nested-time-and-dismiss">
+              {@render timeAndDismiss()}
+            </div>
+          {/if}
+
+          <div class="notif-item-layout">
+            <div class="notif-item-avatar-col">
+              <div class="icon-wrapper">
+                <div class="notif-avatar-icon">
+                {#if isImageUrl(iconUrl)}
                   <img
-                    src={notif.heroImage}
-                    alt="hero"
-                    class="hero-image"
-                    onload={(e) => {
-                      if (
-                        (e.currentTarget as HTMLImageElement).naturalWidth >=
-                        150
-                      ) {
+                    src={iconUrl}
+                    alt="app icon"
+                    class="notif-img-icon"
+                    onerror={(e) => {
+                      const img = e.currentTarget as HTMLImageElement
+                      img.style.display = 'none'
+                      if (img.nextElementSibling) {
                         ;(
-                          (e.currentTarget as HTMLImageElement)
-                            .parentElement as HTMLElement
+                          img.nextElementSibling as HTMLElement
                         ).style.display = 'block'
                       }
                     }}
                   />
+                  <div style="display: none;">
+                    {@render fallbackIcon(displayBrand, 24)}
+                  </div>
+                {:else if iconUrl}
+                  <span class="icon-text">{iconUrl}</span>
+                {:else}
+                  {@render fallbackIcon(displayBrand, 24)}
+                {/if}
                 </div>
-              {/if}
+              </div>
+            </div>
+            
+            <div class="notif-item-content-col">
+              <div class="notif-item-body">
+                <div class="notif-item-title-row">
+                  <span
+                    class="notif-item-title"
+                    class:is-expanded={expandedIds.has(notif.id)}
+                  >
+                    {notif.title}
+                  </span>
+                </div>
+                {#if notif.message}
+                  <p
+                    class="notif-item-message"
+                    class:is-expanded={expandedIds.has(notif.id)}
+                    class:is-visible={nested || expandedIds.has(notif.id)}
+                  >
+                    {notif.message}
+                  </p>
+                {/if}
+                {#if notif.heroImage && isImageUrl(notif.heroImage) && expandedIds.has(notif.id)}
+                  <div class="hero-image-wrapper">
+                    <img
+                      src={notif.heroImage}
+                      alt="hero"
+                      class="hero-image"
+                    />
+                  </div>
+                {/if}
+              </div>
             </div>
           </div>
+        </div>
         {/snippet}
 
         {#each groupedNotifications as group (group.brandName)}
@@ -504,29 +505,34 @@
                 >
                   <div class="notif-group-header-top">
                     <div class="notif-item-app-group">
-                      <div class="notif-item-icon">
-                        {#if isImageUrl(group.brandIcon)}
-                          <img
-                            src={group.brandIcon}
-                            alt="app icon"
-                            class="notif-img-icon"
-                            onerror={(e) => {
-                              const img = e.currentTarget as HTMLImageElement
-                              img.style.display = 'none'
-                              if (img.nextElementSibling) {
-                                ;(
-                                  img.nextElementSibling as HTMLElement
-                                ).style.display = 'block'
-                              }
-                            }}
-                          />
-                          <div style="display: none;">
+                      <div class="icon-wrapper">
+                        <div class="notif-item-icon">
+                          {#if isImageUrl(group.brandIcon)}
+                            <img
+                              src={group.brandIcon}
+                              alt="app icon"
+                              class="notif-img-icon"
+                              onerror={(e) => {
+                                const img = e.currentTarget as HTMLImageElement
+                                img.style.display = 'none'
+                                if (img.nextElementSibling) {
+                                  ;(
+                                    img.nextElementSibling as HTMLElement
+                                  ).style.display = 'block'
+                                }
+                              }}
+                            />
+                            <div style="display: none;">
+                              {@render fallbackIcon(group, 16)}
+                            </div>
+                          {:else if group.brandIcon}
+                            <span class="icon-text">{group.brandIcon}</span>
+                          {:else}
                             {@render fallbackIcon(group, 16)}
-                          </div>
-                        {:else if group.brandIcon}
-                          <span class="icon-text">{group.brandIcon}</span>
-                        {:else}
-                          {@render fallbackIcon(group, 16)}
+                          {/if}
+                        </div>
+                        {#if group.brandAppIcon && isImageUrl(group.brandAppIcon) && group.brandAppIcon !== group.brandIcon}
+                          <img src={group.brandAppIcon} alt="app badge" class="app-badge" />
                         {/if}
                       </div>
                       <span class="notif-item-app">{group.brandName}</span>
@@ -635,6 +641,25 @@
     gap: 16px;
   }
 
+  .icon-wrapper {
+    position: relative;
+    display: inline-flex;
+    flex-shrink: 0;
+  }
+
+  .app-badge {
+    position: absolute;
+    bottom: -6px;
+    right: -6px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid var(--c-bg);
+    background: var(--c-item-bg);
+    object-fit: contain;
+    z-index: 2;
+  }
+
   .banner-icon {
     display: flex;
     align-items: center;
@@ -707,13 +732,17 @@
     width: 100%;
     border-radius: 6px;
     overflow: hidden;
+    display: flex;
+    justify-content: center;
+    background: var(--c-subtle-bg, rgba(0,0,0,0.1));
   }
 
   .hero-image {
-    width: 100%;
+    max-width: 100%;
+    width: auto;
     height: auto;
     display: block;
-    object-fit: cover;
+    object-fit: contain;
     max-height: 120px;
   }
 
@@ -898,6 +927,14 @@
     position: relative;
     min-height: 26px;
     padding: 2px 0;
+    white-space: nowrap;
+  }
+
+  .nested-time-and-dismiss {
+    position: absolute;
+    top: 12px;
+    right: 14px;
+    z-index: 10;
   }
 
   .notif-item-time {
@@ -1034,9 +1071,53 @@
     transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
+  .notif-avatar-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+    font-size: 18px;
+    background: var(--c-hover);
+    border-radius: 50%;
+    overflow: hidden;
+    box-shadow:
+      inset 0 1px 0 var(--c-hover),
+      0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .notif-item-layout {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .notif-item-avatar-col {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
+
+  .notif-item-content-col {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    min-width: 0;
+  }
+
   .notif-item:hover .notif-item-icon,
+  .notif-item:hover .notif-avatar-icon,
   .notif-group-header:hover .notif-item-icon {
     transform: scale(1.02);
+  }
+
+  .notif-header-app-icon {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    object-fit: cover;
   }
 
   .notif-item-app {
@@ -1079,7 +1160,7 @@
     font-size: 0.95rem;
     color: var(--c-text-primary);
     line-height: 1.4;
-    padding-right: 8px;
+    padding-right: 64px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;

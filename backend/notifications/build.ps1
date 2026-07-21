@@ -11,7 +11,7 @@ if (-not (Test-Path '.dotnet\dotnet.exe')) {
 }
 
 Write-Host 'Building project...'
-.\.dotnet\dotnet.exe publish -c Release -r win-x64 -p:PublishSingleFile=true --self-contained true
+.\.dotnet\dotnet.exe publish -c Release -r win-x64 --self-contained true
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host 'Build successful. Executable is at bin\Release\net8.0-windows10.0.19041.0\win-x64\publish\VintaNotifications.exe'

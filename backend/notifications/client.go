@@ -18,8 +18,10 @@ import (
 // and streams its output.
 func StartNotificationListener(ctx context.Context) {
 	exePath := filepath.Join("backend", "notifications", "bin", "Release", "net8.0-windows10.0.19041.0", "win-x64", "publish", "VintaNotifications.exe")
+	absExePath, _ := filepath.Abs(exePath)
 
-	cmd := exec.CommandContext(ctx, exePath)
+	cmd := exec.CommandContext(ctx, absExePath)
+	cmd.Dir = filepath.Dir(absExePath)
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 
 	stdout, err := cmd.StdoutPipe()
@@ -38,6 +40,13 @@ func StartNotificationListener(ctx context.Context) {
 		logMsg("Failed to start VintaNotifications.exe: " + err.Error())
 		return
 	}
+
+	go func() {
+		<-ctx.Done()
+		if cmd.Process != nil {
+			cmd.Process.Kill()
+		}
+	}()
 
 	logMsg("C# Notification Interceptor started successfully")
 
@@ -81,6 +90,7 @@ func StartNotificationListener(ctx context.Context) {
 			Title:     getString(data, "title"),
 			Message:   getString(data, "message"),
 			HeroImage: getString(data, "heroImage"),
+			Icon:      getString(data, "icon"),
 		}
 
 		runtime.EventsEmit(ctx, "notification", payload)
