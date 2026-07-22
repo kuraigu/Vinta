@@ -2,9 +2,15 @@
   /* ACCENT COLORS */
   /* Deepened and saturated across the board so they stand out crisply against light surfaces */
   --c-primary: #0062d2; /* Richer, deeper blue */
-  --c-success: #248a3d; /* Forest green (replacing the bright neon green) */
   --c-danger: #d70015; /* Deeper crimson red */
+  --c-danger-hover-bg: rgba(215, 0, 21, 0.15); /* #d70015 with alpha */
+  --c-danger-hover-text: #d70015;
   --c-warning: #b86e00; /* Dark amber/gold (yellow is completely illegible on white) */
+  --c-warning-hover-bg: rgba(184, 110, 0, 0.15);
+  --c-warning-hover-text: var(--c-warning);
+  --c-success: #248a3d; /* Forest green */
+  --c-success-hover-bg: rgba(36, 138, 61, 0.15);
+  --c-success-hover-text: var(--c-success);
   --c-purple: #5856d6; /* Deep violet */
 
   /* BACKGROUND & SURFACES */
@@ -18,17 +24,16 @@
   --c-text-secondary: #515154; /* Darkened for better readability */
   --c-text-muted: #76767a;
 
+  --c-contrast-bg: rgba(0, 0, 0, 0.05);
+  --c-contrast-bg-border: inset 0 0 0 1px rgba(0, 0, 0, 0.3);
+  --c-contrast-bg-hover: rgba(0, 0, 0, 0.15);
+
   /* CONTEXTUAL COLOR SEMANTICS */
   /* Borders use the new high-contrast base colors, while glows use an even deeper shade so the aura is visible against a bright room */
   --c-island-border-idle: #cb38a6;
   --c-island-border-notification: #ff8500;
   --c-island-glow-idle: #cb38a6;
   --c-island-glow-notification: #ff8500;
-
-  /* COMPONENT SPECIFIC VARIABLES */
-  --c-clock-time-start: #1d1d1f;
-  --c-clock-time-end: #515154;
-  --c-clock-time-shadow: rgba(0, 0, 0, 0.1);
 
   /* ISLAND SPECIFIC */
   --island-box-shadow:
@@ -38,4 +43,23 @@
 
   /* SCROLLBARS */
   --c-scrollbar-thumb: rgba(0, 0, 0, 0.25);
+
+  /* COMPONENT SEMANTIC TOKENS */
+  --c-clear-btn-hover-bg: rgba(215, 0, 21, 0.12);
+  --c-clear-btn-hover-text: #d70015;
+  --c-clear-btn-hover-border: inset 0 0 0 1px rgba(215, 0, 21, 0.3);
+
+  --c-dnd-active-bg: rgba(184, 110, 0, 0.15);
+  --c-dnd-active-text: #b86e00;
+  --c-dnd-active-border: inset 0 0 0 1px rgba(184, 110, 0, 0.35);
+
+  --c-dock-popover-bg: rgba(255, 255, 255, 0.96);
+  --c-dock-popover-border: rgba(0, 0, 0, 0.12);
+  --c-dock-popover-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+
+  --c-calendar-today-glow: 0 4px 10px rgba(36, 138, 61, 0.35);
+  --c-clock-shadow: rgba(0, 0, 0, 0.1);
+
+  --c-icon-badge-bg: rgba(0, 0, 0, 0.05);
+  --c-icon-badge-border: rgba(0, 0, 0, 0.1);
 }

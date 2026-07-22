@@ -14,10 +14,9 @@
     themeStore,
     shapeStore,
     autoHideStore,
-    wakeMethodStore
+    wakeMethodStore,
+    dndStore
   } from '../store'
-
-  export let expanded = true
 </script>
 
 <div class="settings-page">
@@ -70,6 +69,14 @@
       </div>
 
       <div class="setting-item">
+        <span>Do Not Disturb</span>
+        <label class="toggle">
+          <input type="checkbox" bind:checked={$dndStore} />
+          <span class="slider"></span>
+        </label>
+      </div>
+
+      <div class="setting-item">
         <span>Wake Method</span>
         <div class="segment-control">
           <button
@@ -92,8 +99,7 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    padding: 16px;
-    padding-bottom: 56px; /* Space for Universal Dock */
+    padding: 20px 20px 60px 20px; /* Space for Universal Dock */
     box-sizing: border-box;
     color: var(--c-text-primary);
   }
@@ -101,13 +107,14 @@
   .header {
     display: flex;
     align-items: center;
-    margin-bottom: 16px;
+    margin-bottom: 24px;
     justify-content: center;
   }
 
   .title {
     font-weight: 600;
-    font-size: 14px;
+    font-size: 16px;
+    letter-spacing: -0.01em;
     text-align: center;
   }
 
@@ -186,22 +193,6 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   }
 
-  .theme-select {
-    background: var(--c-bg);
-    color: var(--c-text-primary);
-    border: 1px solid var(--c-border);
-    border-radius: 8px;
-    padding: 6px 12px;
-    font-size: 14px;
-    font-family: inherit;
-    outline: none;
-    cursor: pointer;
-    min-width: 120px;
-  }
-  .theme-select:focus {
-    border-color: var(--c-accent, #667eea);
-  }
-
   /* Toggle Switch CSS */
   .toggle {
     position: relative;
@@ -241,19 +232,5 @@
   }
   input:checked + .slider:before {
     transform: translateX(20px);
-  }
-
-  .about-info {
-    background: var(--c-item-bg);
-    padding: 10px 12px;
-    border-radius: 8px;
-    font-size: 13px;
-    border: 1px solid var(--c-border);
-    text-align: center;
-    line-height: 1.4;
-  }
-  .about-info small {
-    color: var(--c-text-muted);
-    font-size: 11px;
   }
 </style>
