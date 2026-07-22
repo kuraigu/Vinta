@@ -18,7 +18,6 @@
     Terminal
   } from 'lucide-svelte'
   import { notifData, notificationPermissionDenied, dndStore } from '../store'
-  import { FocusWindow } from '../../wailsjs/go/backend/App.js'
   import { onMount } from 'svelte'
   import { SvelteSet } from 'svelte/reactivity'
   import { appIcons, gameIcons, getCachedBase64Url } from '../appIcons'
@@ -125,7 +124,7 @@
         groups[groupKey].latestTimestamp = ts
       }
     }
-    
+
     // Backfill avatar icons per sender (by title/sender handle) so rapid notifications inherit their own valid avatar
     for (const group of Object.values(groups)) {
       const senderAvatars: Record<string, string> = {}
@@ -478,13 +477,21 @@
                       />
                       <div style="display: none;">
                         {#if displayBrand.appIcon && isImageUrl(displayBrand.appIcon)}
-                          <img src={displayBrand.appIcon} alt="app icon" class="notif-img-icon" />
+                          <img
+                            src={displayBrand.appIcon}
+                            alt="app icon"
+                            class="notif-img-icon"
+                          />
                         {:else}
                           {@render fallbackIcon(displayBrand, 24)}
                         {/if}
                       </div>
                     {:else if displayBrand.appIcon && isImageUrl(displayBrand.appIcon)}
-                      <img src={displayBrand.appIcon} alt="app icon" class="notif-img-icon" />
+                      <img
+                        src={displayBrand.appIcon}
+                        alt="app icon"
+                        class="notif-img-icon"
+                      />
                     {:else if iconUrl}
                       <span class="icon-text">{iconUrl}</span>
                     {:else}

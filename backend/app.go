@@ -200,7 +200,7 @@ func (a *App) FocusWindow() {
 		hwnd, _, _ := procFindWindow.Call(0, uintptr(unsafe.Pointer(titlePtr)))
 		if hwnd != 0 {
 			procGetForegroundWindow := user32.NewProc("GetForegroundWindow")
-			procGetWindowThreadProcessId := user32.NewProc("GetWindowThreadProcessId")
+			procGetWindowThreadProcessID := user32.NewProc("GetWindowThreadProcessId")
 			procAttachThreadInput := user32.NewProc("AttachThreadInput")
 			procSetForegroundWindow := user32.NewProc("SetForegroundWindow")
 			procSetActiveWindow := user32.NewProc("SetActiveWindow")
@@ -208,21 +208,21 @@ func (a *App) FocusWindow() {
 
 			foreHwnd, _, _ := procGetForegroundWindow.Call()
 			if foreHwnd != 0 && foreHwnd != hwnd {
-				foreThread, _, _ := procGetWindowThreadProcessId.Call(foreHwnd, 0)
-				appThread, _, _ := procGetWindowThreadProcessId.Call(hwnd, 0)
+				foreThread, _, _ := procGetWindowThreadProcessID.Call(foreHwnd, 0)
+				appThread, _, _ := procGetWindowThreadProcessID.Call(hwnd, 0)
 
 				if foreThread != appThread {
-					procAttachThreadInput.Call(foreThread, appThread, 1)
-					procSetForegroundWindow.Call(hwnd)
-					procSetActiveWindow.Call(hwnd)
-					procSetFocus.Call(hwnd)
-					procAttachThreadInput.Call(foreThread, appThread, 0)
+					_, _, _ = procAttachThreadInput.Call(foreThread, appThread, 1)
+					_, _, _ = procSetForegroundWindow.Call(hwnd)
+					_, _, _ = procSetActiveWindow.Call(hwnd)
+					_, _, _ = procSetFocus.Call(hwnd)
+					_, _, _ = procAttachThreadInput.Call(foreThread, appThread, 0)
 					return
 				}
 			}
-			procSetForegroundWindow.Call(hwnd)
-			procSetActiveWindow.Call(hwnd)
-			procSetFocus.Call(hwnd)
+			_, _, _ = procSetForegroundWindow.Call(hwnd)
+			_, _, _ = procSetActiveWindow.Call(hwnd)
+			_, _, _ = procSetFocus.Call(hwnd)
 		}
 	}
 }

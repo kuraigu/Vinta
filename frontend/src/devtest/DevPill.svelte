@@ -151,7 +151,6 @@
     letter-spacing: 0.5px;
   }
 
-
   .quick-toggles {
     display: flex;
     gap: 4px;

@@ -1,7 +1,11 @@
 <script lang="ts">
   import { onMount, setContext } from 'svelte'
   import { fade } from 'svelte/transition'
-  import { SetWidgetBounds, IsTestMode, FocusWindow } from '../wailsjs/go/backend/App.js'
+  import {
+    SetWidgetBounds,
+    IsTestMode,
+    FocusWindow
+  } from '../wailsjs/go/backend/App.js'
   import { EventsOn, LogFatal, LogInfo } from '../wailsjs/runtime/runtime.js'
   import NotificationPage, {
     config as notifConfig

@@ -181,7 +181,6 @@
     outline: none;
   }
 
-
   .action-input {
     width: 160px;
   }
