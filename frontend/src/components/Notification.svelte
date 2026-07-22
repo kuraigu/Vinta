@@ -716,7 +716,7 @@
     height: 20px;
     border-radius: 50%;
     border: 2px solid var(--c-bg);
-    background: var(--c-item-bg);
+    background: var(--c-bg);
     object-fit: contain;
     z-index: 2;
   }
@@ -963,7 +963,6 @@
     display: flex;
     align-items: center;
     justify-content: flex-end;
-    gap: 8px;
     position: relative;
     min-height: 26px;
     padding: 2px 0;
@@ -974,19 +973,19 @@
 
   .nested-time-and-dismiss {
     position: absolute;
-    top: 12px;
-    right: 14px;
+    top: 10px;
+    right: 12px;
     z-index: 10;
   }
 
   .notif-item-time {
-    font-size: 0.72rem;
+    font-size: 0.68rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: var(--c-text-muted);
     opacity: 0.6;
-    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     flex-shrink: 0;
   }
 
@@ -994,18 +993,24 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    width: 0;
     opacity: 0;
-    overflow: hidden;
     pointer-events: none;
-    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .notif-item:hover .notif-actions,
   .notif-group-header:hover .notif-actions {
-    width: 58px;
     opacity: 1;
     pointer-events: auto;
+  }
+
+  .notif-item:hover .notif-item-time,
+  .notif-group-header:hover .notif-item-time {
+    opacity: 0;
   }
 
   /* Connector layout for grouped notifications */
@@ -1354,6 +1359,10 @@
     padding: 10px 12px;
     box-shadow: none;
     transition: background-color 0.2s ease;
+  }
+
+  .notif-item.nested .notif-item-content-col {
+    padding-right: 75px;
   }
 
   /* Make the first item NOT have a top border to blend with header */
