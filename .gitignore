@@ -62,7 +62,15 @@ vite.config.ts.timestamp-*
 # -------------------------------------------------------------------
 build/bin/
 build/obj/
+dist/
 frontend/dist/
 frontend/wailsjs/
 *.md5
 wails.json.user
+*.syso
+
+# C# Notification Interceptor
+backend/notifications/bin/
+backend/notifications/obj/
+backend/notifications/.dotnet/
+backend/notifications/packages/

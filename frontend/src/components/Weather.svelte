@@ -115,9 +115,16 @@
   }
 
   .icon {
-    color: #ffd60a;
-    filter: drop-shadow(0 0 10px rgba(255, 214, 10, 0.4));
+    --weather-icon-color: var(--c-warning);
+    color: var(--weather-icon-color);
+    filter: drop-shadow(0 0 10px var(--weather-icon-color));
+    opacity: 0.9;
     margin-bottom: 0.4rem;
+  }
+
+  :global([data-theme='light']) .icon {
+    /* Slightly deeper yellow/orange for better visibility on light background */
+    --weather-icon-color: #f59e0b;
   }
 
   .condition {

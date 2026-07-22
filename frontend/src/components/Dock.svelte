@@ -1,12 +1,10 @@
 <script lang="ts">
   import { getContext } from 'svelte'
-  import { Grid, Settings, Power, Minus, EyeOff } from 'lucide-svelte'
-  import { Quit } from '../../wailsjs/go/backend/App.js'
-  import ClockPage, { config as clockConfig } from '../pages/ClockPage.svelte'
-  import AppsPage, { config as appsConfig } from '../pages/AppsPage.svelte'
-  import SettingsPage, {
-    config as settingsConfig
-  } from '../pages/SettingsPage.svelte'
+  import { Grid, Settings, Power, Minimize2, EyeOff } from 'lucide-svelte'
+  import { AppControls } from '../utils/AppControls.svelte'
+  import DockButton from './DockButton.svelte'
+  import AppsPage from '../pages/AppsPage.svelte'
+  import SettingsPage from '../pages/SettingsPage.svelte'
   import type { IslandConfig } from '../store'
 
   const navigate =
@@ -16,80 +14,75 @@
 
   const hidePill = getContext<() => void>('hidePill')
 
-  export let activePage: unknown
-
-  function goApps() {
-    navigate(AppsPage, appsConfig, true)
-  }
-
-  function goSettings(e: Event) {
-    e.stopPropagation()
-    navigate(SettingsPage, settingsConfig, true)
-  }
-
-  function doMinimize(e: Event) {
-    e.stopPropagation()
-    navigate(ClockPage, clockConfig, false)
-  }
-
-  function doHide(e: Event) {
-    e.stopPropagation()
-    hidePill()
-  }
-
-  function doQuit() {
-    Quit()
-  }
+  let { activePage }: { activePage: unknown } = $props()
 </script>
 
 <div class="dock-container">
   <div class="dock">
-    <button
-      class="dock-btn"
-      class:active={activePage === AppsPage}
-      on:click={goApps}
-      title="Apps"
+    <DockButton
+      tooltip="Apps"
+      active={activePage === AppsPage}
+      onclick={() => AppControls.goApps(navigate)}
     >
       <Grid size={18} />
-    </button>
+    </DockButton>
+
     <div class="divider"></div>
-    <button
-      class="dock-btn"
-      class:active={activePage === SettingsPage}
-      on:click={goSettings}
-      title="Settings"
+
+    <DockButton
+      tooltip="Settings"
+      active={activePage === SettingsPage}
+      onclick={(e: MouseEvent) => AppControls.goSettings(navigate, e)}
     >
       <Settings size={18} />
-    </button>
+    </DockButton>
+
     <div class="divider"></div>
-    <button class="dock-btn danger" on:click={doQuit} title="Quit Vinta">
-      <Power size={18} />
-    </button>
-    <div class="divider"></div>
-    <button class="dock-btn" on:click={doMinimize} title="Minimize">
-      <Minus size={18} />
-    </button>
-    <div class="divider"></div>
-    <button class="dock-btn" on:click={doHide} title="Hide Pill">
+
+    <DockButton
+      variant="success"
+      tooltip="Hide Widget"
+      onclick={(e: MouseEvent) => AppControls.doHide(hidePill, e)}
+    >
       <EyeOff size={18} />
-    </button>
+    </DockButton>
+
+    <div class="divider"></div>
+
+    <DockButton
+      variant="warning"
+      tooltip="Collapse Island"
+      onclick={(e: MouseEvent) => AppControls.doMinimize(navigate, e)}
+    >
+      <Minimize2 size={18} />
+    </DockButton>
+
+    <div class="divider"></div>
+
+    <DockButton
+      variant="danger"
+      tooltip="Quit Vinta"
+      onclick={AppControls.doQuit}
+    >
+      <Power size={18} />
+    </DockButton>
   </div>
 </div>
 
 <style>
   .dock-container {
     position: absolute;
-    bottom: 8px; /* Moved lower */
+    bottom: 8px;
     left: 0;
     width: 100%;
     display: flex;
     justify-content: center;
     align-items: center;
-    pointer-events: none; /* Let clicks pass through container */
+    pointer-events: none;
   }
 
   .dock {
-    pointer-events: auto; /* Re-enable clicks for the dock itself */
+    pointer-events: auto;
     display: flex;
     align-items: center;
     padding: 6px 12px;
@@ -101,40 +94,5 @@
     height: 16px;
     background: var(--c-border);
     opacity: 0.3;
-  }
-
-  .dock-btn {
-    background: transparent;
-    border: none;
-    color: var(--c-text-secondary);
-    width: 32px;
-    height: 32px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
-  }
-
-  .dock-btn:hover {
-    color: var(--c-text-primary);
-    background: rgba(255, 255, 255, 0.1);
-    transform: scale(1.1);
-  }
-
-  :global([data-theme='light']) .dock-btn:hover {
-    background: rgba(0, 0, 0, 0.05);
-  }
-
-  .dock-btn.active {
-    color: var(--c-text-primary);
-    background: var(--c-item-bg);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-
-  .dock-btn.danger:hover {
-    color: var(--c-danger);
-    background: rgba(215, 0, 21, 0.1);
   }
 </style>

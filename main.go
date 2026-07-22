@@ -3,6 +3,7 @@ package main
 
 import (
 	"Vinta/backend"
+	"Vinta/backend/devtest"
 	"embed"
 
 	"github.com/wailsapp/wails/v2"
@@ -21,6 +22,8 @@ var icon []byte
 func main() {
 	// Create an instance of the app structure
 	app := backend.NewApp(icon)
+	devTools := devtest.NewDevTest()
+	cache := backend.NewCache()
 
 	// Create application with options
 	err := wails.Run(&options.App{
@@ -38,6 +41,8 @@ func main() {
 		OnStartup:        app.Startup,
 		Bind: []interface{}{
 			app,
+			devTools,
+			cache,
 		},
 		Windows: &windows.Options{
 			WebviewIsTransparent:              true,

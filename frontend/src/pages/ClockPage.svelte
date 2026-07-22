@@ -2,7 +2,7 @@
   // This page dictates its own dimensions to the parent App!
   export const config = {
     minimal: { w: 330, h: 35, r: 35 },
-    expanded: { w: 580, h: 340, r: 35 },
+    expanded: { w: 580, h: 380, r: 35 },
     borderColor: 'var(--c-island-border-idle)',
     glowColor: 'var(--c-island-glow-idle)'
   }
@@ -33,19 +33,24 @@
     </div>
   {:else}
     <div class="expanded-view">
-      <BentoGrid columns="200px 1fr" gap="1rem">
-        <BentoItem>
-          <Calendar expanded={true} />
-        </BentoItem>
-        <BentoGrid columns="1fr" rows="1fr 1fr" gap="1rem">
+      <div class="header">
+        <div class="title">Clock</div>
+      </div>
+      <div class="bento-container">
+        <BentoGrid columns="200px 1fr" gap="1rem">
           <BentoItem>
-            <Clock expanded={true} />
+            <Calendar expanded={true} />
           </BentoItem>
-          <BentoItem>
-            <Weather expanded={true} />
-          </BentoItem>
+          <BentoGrid columns="1fr" rows="1fr 1fr" gap="1rem">
+            <BentoItem>
+              <Clock expanded={true} />
+            </BentoItem>
+            <BentoItem>
+              <Weather expanded={true} />
+            </BentoItem>
+          </BentoGrid>
         </BentoGrid>
-      </BentoGrid>
+      </div>
     </div>
   {/if}
 </div>
@@ -84,8 +89,29 @@
   .expanded-view {
     width: 100%;
     height: 100%;
-    padding: 24px;
-    padding-bottom: 56px; /* Space for Universal Dock */
+    padding: 20px 20px 60px 20px;
     box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-shrink: 0;
+  }
+
+  .title {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--c-text-primary);
+  }
+
+  .bento-container {
+    flex: 1;
+    min-height: 0; /* Important for grid to not overflow */
   }
 </style>

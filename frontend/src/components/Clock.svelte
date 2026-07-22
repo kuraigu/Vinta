@@ -59,13 +59,13 @@
     margin-bottom: 5px;
     background: linear-gradient(
       180deg,
-      var(--c-clock-time-start) 0%,
-      var(--c-clock-time-end) 100%
+      var(--c-text-primary) 0%,
+      var(--c-text-secondary) 100%
     );
     background-clip: text;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    filter: drop-shadow(0 4px 12px var(--c-clock-time-shadow));
+    filter: drop-shadow(0 4px 12px var(--c-clock-shadow));
   }
 
   .minimal .time {
@@ -75,7 +75,7 @@
 
   .seconds {
     font-size: 1.1rem;
-    color: #808080;
+    color: var(--c-text-muted);
     font-weight: 600;
     margin-top: -5px;
     letter-spacing: 2px;

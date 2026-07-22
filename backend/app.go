@@ -11,6 +11,8 @@ import (
 
 	"github.com/getlantern/systray"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
+
+	"Vinta/backend/notifications"
 )
 
 var (
@@ -83,7 +85,8 @@ func (a *App) Startup(ctx context.Context) {
 			}
 		}
 		screenWidth = screen.Size.Width
-		runtime.WindowSetSize(ctx, screen.Size.Width, screen.Size.Height)
+		// DO NOT REMOVE -1 HERE. IT PREVENTS STREAMER MODE FROM OTHER APPS TO BE TRIGGERED BY VINTA
+		runtime.WindowSetSize(ctx, screen.Size.Width, screen.Size.Height-1)
 		runtime.WindowSetPosition(ctx, 0, 0)
 	}
 
@@ -97,6 +100,9 @@ func (a *App) Startup(ctx context.Context) {
 		style = style | WS_EX_TOOLWINDOW
 		style = style &^ WS_EX_APPWINDOW
 		_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwl), style)
+
+		// Start native notification interceptor
+		go notifications.StartNotificationListener(ctx)
 
 		// Start fully click-through; Svelte will call SetWidgetBounds on mount.
 		a.updateWindowRegion()
@@ -179,6 +185,45 @@ func (a *App) SetWidgetBounds(width int, height int, radius int, scale float64) 
 func (a *App) Quit() {
 	if a.ctx != nil {
 		runtime.Quit(a.ctx)
+	}
+}
+
+// FocusWindow requests OS input focus so mouse wheel scroll events work immediately on hover
+func (a *App) FocusWindow() {
+	if a.ctx != nil {
+		runtime.WindowShow(a.ctx)
+		runtime.WindowUnminimise(a.ctx)
+		runtime.WindowSetAlwaysOnTop(a.ctx, true)
+
+		// Win32 AttachThreadInput + SetForegroundWindow + SetFocus to bypass OS focus lock
+		titlePtr, _ := syscall.UTF16PtrFromString("Vinta")
+		hwnd, _, _ := procFindWindow.Call(0, uintptr(unsafe.Pointer(titlePtr)))
+		if hwnd != 0 {
+			procGetForegroundWindow := user32.NewProc("GetForegroundWindow")
+			procGetWindowThreadProcessID := user32.NewProc("GetWindowThreadProcessId")
+			procAttachThreadInput := user32.NewProc("AttachThreadInput")
+			procSetForegroundWindow := user32.NewProc("SetForegroundWindow")
+			procSetActiveWindow := user32.NewProc("SetActiveWindow")
+			procSetFocus := user32.NewProc("SetFocus")
+
+			foreHwnd, _, _ := procGetForegroundWindow.Call()
+			if foreHwnd != 0 && foreHwnd != hwnd {
+				foreThread, _, _ := procGetWindowThreadProcessID.Call(foreHwnd, 0)
+				appThread, _, _ := procGetWindowThreadProcessID.Call(hwnd, 0)
+
+				if foreThread != appThread {
+					_, _, _ = procAttachThreadInput.Call(foreThread, appThread, 1)
+					_, _, _ = procSetForegroundWindow.Call(hwnd)
+					_, _, _ = procSetActiveWindow.Call(hwnd)
+					_, _, _ = procSetFocus.Call(hwnd)
+					_, _, _ = procAttachThreadInput.Call(foreThread, appThread, 0)
+					return
+				}
+			}
+			_, _, _ = procSetForegroundWindow.Call(hwnd)
+			_, _, _ = procSetActiveWindow.Call(hwnd)
+			_, _, _ = procSetFocus.Call(hwnd)
+		}
 	}
 }
 

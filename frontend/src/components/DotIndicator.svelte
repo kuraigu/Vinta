@@ -1,6 +1,6 @@
 <script lang="ts">
   let {
-    color = '#34c759', // default to a pleasant green
+    color = 'var(--c-success)', // default to a pleasant green
     size = '8px'
   } = $props<{ color?: string; size?: string }>()
 </script>
