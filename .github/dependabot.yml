@@ -5,6 +5,15 @@ updates:
     directory: "/frontend"
     schedule:
       interval: "weekly"
+    open-pull-requests-limit: 5
+    versioning-strategy: "widen"
+    groups:
+      typescript-and-eslint:
+        patterns:
+          - "^typescript$"
+          - "^@typescript-eslint/.*"
+    labels:
+      - "deps"
 
   # Maintain dependencies for Go
   - package-ecosystem: "gomod"
