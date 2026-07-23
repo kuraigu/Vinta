@@ -1,0 +1,20 @@
+name: All Contributors
+
+on:
+  push:
+    branches:
+      - main
+  issue_comment:
+    types: [created]
+
+jobs:
+  contribute:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: All Contributors Action
+        uses: all-contributors/auto-action@v1
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

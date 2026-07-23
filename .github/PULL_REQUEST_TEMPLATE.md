@@ -2,7 +2,11 @@
 
 Please include a summary of the change and which issue is fixed.
 
-Fixes # (issue)
+Fixes Issue #
+
+### Key changes
+
+-
 
 ## Type of change
 
@@ -14,6 +18,11 @@ Fixes # (issue)
 ## Checklist:
 
 - [ ] I have read the `CONTRIBUTING.md` guide.
+- [ ] I have followed the design guidelines in `docs/DESIGN.md` (if making UI changes).
 - [ ] I have run `.\scripts.bat lint` locally and resolved all Go and Svelte/TS errors.
-- [ ] I have tested my changes locally using `.\scripts.bat run`.
-- [ ] I have commented my code, particularly in hard-to-understand areas.
+- [ ] I have tested my changes locally.
+
+## Contributor Recognition (Optional)
+
+- Preferred Display Name: [Leave blank to use your GitHub display name]
+- [ ] I prefer to remain anonymous / opt out of public listing in `docs/CONTRIBUTORS.md`
