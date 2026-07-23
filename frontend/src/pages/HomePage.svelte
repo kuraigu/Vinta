@@ -1,8 +1,7 @@
 <script module lang="ts">
-  // This page dictates its own dimensions to the parent App!
   export const config = {
     minimal: { w: 330, h: 35, r: 35 },
-    expanded: { w: 580, h: 380, r: 35 },
+    expanded: { w: 440, h: 370, r: 30 },
     borderColor: 'var(--c-island-border-idle)',
     glowColor: 'var(--c-island-glow-idle)'
   }
@@ -12,11 +11,42 @@
   import Clock from '../components/Clock.svelte'
   import Calendar from '../components/Calendar.svelte'
   import Weather from '../components/Weather.svelte'
-  import BentoGrid from '../components/BentoGrid.svelte'
   import BentoItem from '../components/BentoItem.svelte'
+  import ComponentGallery from '../components/ComponentGallery.svelte'
 
   let { expanded = false } = $props<{ expanded?: boolean }>()
+
+  const slideTitles = ['Clock', 'Calendar', 'Weather']
+  let activeSlideTitle = $state(slideTitles[0])
+
+  function handleSlideChange(index: number) {
+    activeSlideTitle = slideTitles[index] || 'Home'
+  }
 </script>
+
+{#snippet clockSlide()}
+  <div class="single-card-container">
+    <BentoItem>
+      <Clock expanded={true} />
+    </BentoItem>
+  </div>
+{/snippet}
+
+{#snippet calendarSlide()}
+  <div class="single-card-container">
+    <BentoItem>
+      <Calendar expanded={true} />
+    </BentoItem>
+  </div>
+{/snippet}
+
+{#snippet weatherSlide()}
+  <div class="single-card-container">
+    <BentoItem>
+      <Weather expanded={true} />
+    </BentoItem>
+  </div>
+{/snippet}
 
 <div class="page-container">
   {#if !expanded}
@@ -34,22 +64,17 @@
   {:else}
     <div class="expanded-view">
       <div class="header">
-        <div class="title">Clock</div>
+        <div class="title">{activeSlideTitle}</div>
       </div>
-      <div class="bento-container">
-        <BentoGrid columns="200px 1fr" gap="1rem">
-          <BentoItem>
-            <Calendar expanded={true} />
-          </BentoItem>
-          <BentoGrid columns="1fr" rows="1fr 1fr" gap="1rem">
-            <BentoItem>
-              <Clock expanded={true} />
-            </BentoItem>
-            <BentoItem>
-              <Weather expanded={true} />
-            </BentoItem>
-          </BentoGrid>
-        </BentoGrid>
+      <div class="gallery-wrapper">
+        <ComponentGallery
+          slides={[
+            { id: 'clock', snippet: clockSlide },
+            { id: 'calendar', snippet: calendarSlide },
+            { id: 'weather', snippet: weatherSlide }
+          ]}
+          onSlideChange={handleSlideChange}
+        />
       </div>
     </div>
   {/if}
@@ -83,13 +108,13 @@
     display: flex;
     align-items: center;
     overflow: hidden;
-    min-width: 0; /* Allows text truncation if it ever gets squished */
+    min-width: 0;
   }
 
   .expanded-view {
     width: 100%;
     height: 100%;
-    padding: 20px 20px 60px 20px;
+    padding: 14px 16px 44px 16px;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -99,19 +124,26 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-bottom: 24px;
+    margin-bottom: 10px;
     flex-shrink: 0;
   }
 
   .title {
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 600;
     letter-spacing: -0.01em;
     color: var(--c-text-primary);
   }
 
-  .bento-container {
+  .gallery-wrapper {
     flex: 1;
-    min-height: 0; /* Important for grid to not overflow */
+    min-height: 0;
+    width: 100%;
+  }
+
+  .single-card-container {
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
   }
 </style>

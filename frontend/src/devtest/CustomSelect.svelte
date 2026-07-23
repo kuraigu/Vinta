@@ -151,6 +151,9 @@
     cursor: pointer;
     transition: all 0.1s;
     flex-shrink: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .option-item:hover {
