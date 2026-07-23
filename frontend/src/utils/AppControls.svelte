@@ -1,6 +1,6 @@
 <script module lang="ts">
   import { Quit } from '../../wailsjs/go/backend/App.js'
-  import ClockPage, { config as clockConfig } from '../pages/ClockPage.svelte'
+  import HomePage, { config as homeConfig } from '../pages/HomePage.svelte'
   import AppsPage, { config as appsConfig } from '../pages/AppsPage.svelte'
   import SettingsPage, {
     config as settingsConfig
@@ -25,7 +25,7 @@
 
     doMinimize: (navigate: NavFn, e: Event) => {
       e.stopPropagation()
-      navigate(ClockPage, clockConfig, false)
+      navigate(HomePage, homeConfig, false)
     },
 
     doHide: (hidePill: () => void, e: Event) => {

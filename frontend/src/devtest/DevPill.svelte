@@ -6,7 +6,7 @@
   import NotificationPage, {
     config as notifConfig
   } from '../pages/NotificationPage.svelte'
-  import ClockPage, { config as clockConfig } from '../pages/ClockPage.svelte'
+  import HomePage, { config as homeConfig } from '../pages/HomePage.svelte'
   import NotificationDevControls from './NotificationDevControls.svelte'
   import CustomSelect from './CustomSelect.svelte'
   import type { Component } from 'svelte'
@@ -49,10 +49,10 @@
       controls: Component | null
     }
   > = {
-    clock: {
-      label: 'Clock (Idle)',
-      page: ClockPage,
-      config: clockConfig,
+    home: {
+      label: 'Home (Idle)',
+      page: HomePage,
+      config: homeConfig,
       controls: null
     },
     notification: {

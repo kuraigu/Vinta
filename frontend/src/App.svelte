@@ -10,7 +10,7 @@
   import NotificationPage, {
     config as notifConfig
   } from './pages/NotificationPage.svelte'
-  import ClockPage, { config as clockConfig } from './pages/ClockPage.svelte'
+  import HomePage, { config as homeConfig } from './pages/HomePage.svelte'
   import Dock from './components/Dock.svelte'
   import DevPill from './devtest/DevPill.svelte'
   import {
@@ -33,9 +33,9 @@
   import type { IslandConfig } from './store'
 
   // Dynamic Routing: The active app that the island is displaying
-  let activePage = $state<Component>(ClockPage)
+  let activePage = $state<Component>(HomePage)
 
-  let islandConfig = $state<IslandConfig>(clockConfig)
+  let islandConfig = $state<IslandConfig>(homeConfig)
 
   let expanded = $state(false)
   let isHidden = $state(false)
@@ -76,16 +76,16 @@
     isTimeoutActive = false
 
     if (!expanded && !isHidden && !isHovering) {
-      // Set a timer if we need to auto-hide OR we need to revert back to ClockPage
-      if ($autoHideStore || activePage !== ClockPage) {
+      // Set a timer if we need to auto-hide OR we need to revert back to HomePage
+      if ($autoHideStore || activePage !== HomePage) {
         isTimeoutActive = true
         hideTimeout = window.setTimeout(() => {
           isTimeoutActive = false
           if ($autoHideStore) {
             hideWidget()
           }
-          if (activePage !== ClockPage) {
-            navigateTo(ClockPage, clockConfig, false)
+          if (activePage !== HomePage) {
+            navigateTo(HomePage, homeConfig, false)
           }
         }, 10000)
       }
@@ -110,7 +110,7 @@
   setContext('hidePill', () => {
     hideWidget()
     if (expanded) {
-      navigateTo(ClockPage, clockConfig, false)
+      navigateTo(HomePage, homeConfig, false)
     }
   })
 
@@ -396,7 +396,7 @@
     </div>
 
     <!-- Shrinking Timeout Bar -->
-    {#if isTimeoutActive && activePage !== ClockPage && !expanded && !isHidden}
+    {#if isTimeoutActive && activePage !== HomePage && !expanded && !isHidden}
       {#key hideTrigger}
         <div class="timeout-bar"></div>
       {/key}

@@ -11,8 +11,8 @@
 
 <script lang="ts">
   import { getContext } from 'svelte'
-  import { Clock, Bell, Info, RefreshCw } from 'lucide-svelte'
-  import ClockPage, { config as clockConfig } from './ClockPage.svelte'
+  import { House, Bell, Info, RefreshCw } from 'lucide-svelte'
+  import HomePage, { config as homeConfig } from './HomePage.svelte'
   import NotificationPage, {
     config as notifConfig
   } from './NotificationPage.svelte'
@@ -38,13 +38,13 @@
       class="app-btn"
       onclick={(e) => {
         e.stopPropagation()
-        openApp(ClockPage, clockConfig)
+        openApp(HomePage, homeConfig)
       }}
     >
       <div class="icon clock">
-        <Clock size={24} />
+        <House size={24} />
       </div>
-      <span class="label">Clock</span>
+      <span class="label">Home</span>
     </button>
 
     <button
