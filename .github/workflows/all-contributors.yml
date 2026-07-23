@@ -1,0 +1,35 @@
+name: All Contributors
+
+on:
+  push:
+    branches:
+      - main
+  issue_comment:
+    types: [created]
+
+jobs:
+  contribute:
+    runs-on: ubuntu-latest
+    if: |
+      github.event_name == 'push' ||
+      (github.event_name == 'issue_comment' && contains(fromJSON('["OWNER", "COLLABORATOR"]'), github.event.comment.author_association))
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Update Contributors List
+        run: |
+          npx all-contributors-cli generate
+
+      - name: Commit and Push Changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "docs: update contributors hall of fame [skip ci]"
+          file_pattern: "docs/CONTRIBUTORS.md .all-contributorsrc"
