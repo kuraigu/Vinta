@@ -31,6 +31,33 @@ export const wakeMethodStore = persistentWritable<'hover' | 'click'>(
 )
 export const dndStore = persistentWritable<boolean>('vinta_dnd', false)
 
+export type TimeFormatOption = '12h' | '24h'
+export type DateFormatOption = 'default' | 'iso' | 'us' | 'eu'
+
+export const timeFormatStore = persistentWritable<TimeFormatOption>(
+  'vinta_time_format',
+  '12h'
+)
+
+export function getInitialTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Manila'
+  } catch {
+    return 'Asia/Manila'
+  }
+}
+
+// First-time launch auto-detects system timezone with Asia/Manila fallback.
+export const timezoneStore = persistentWritable<string>(
+  'vinta_timezone',
+  getInitialTimezone()
+)
+
+export const dateFormatStore = persistentWritable<DateFormatOption>(
+  'vinta_date_format',
+  'default'
+)
+
 export type AppNotification = {
   id: number
   appName?: string
