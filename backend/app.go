@@ -166,7 +166,13 @@ func (a *App) onReady() {
 }
 
 func (a *App) onExit() {
-	// Clean up here if necessary
+	notifications.StopNotificationListener()
+}
+
+// Shutdown is called when Wails application shuts down.
+func (a *App) Shutdown(_ context.Context) {
+	notifications.StopNotificationListener()
+	systray.Quit()
 }
 
 // SetWidgetBounds is called by the frontend whenever the widget dimensions change.
@@ -183,6 +189,7 @@ func (a *App) SetWidgetBounds(width int, height int, radius int, scale float64) 
 
 // Quit terminates the application
 func (a *App) Quit() {
+	notifications.StopNotificationListener()
 	if a.ctx != nil {
 		runtime.Quit(a.ctx)
 	}

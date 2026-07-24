@@ -1,11 +1,16 @@
-import { writable } from 'svelte/store'
+import { writable, get } from 'svelte/store'
+
+export const devTestingStore = writable<boolean>(false)
 
 function persistentWritable<T>(key: string, initialValue: T) {
   const stored = localStorage.getItem(key)
   const initial = stored ? JSON.parse(stored) : initialValue
   const store = writable<T>(initial)
   store.subscribe((value) => {
-    localStorage.setItem(key, JSON.stringify(value))
+    // Only persist to localStorage if NOT currently in DevTest testing mode
+    if (!get(devTestingStore)) {
+      localStorage.setItem(key, JSON.stringify(value))
+    }
   })
   return store
 }
@@ -57,6 +62,26 @@ export const dateFormatStore = persistentWritable<DateFormatOption>(
   'vinta_date_format',
   'default'
 )
+
+export type WeatherLocation = {
+  name: string
+  lat: number
+  lon: number
+}
+
+export type TemperatureUnit = 'celsius' | 'fahrenheit' | 'kelvin'
+
+export const weatherLocationStore = persistentWritable<WeatherLocation>(
+  'vinta_weather_location',
+  { name: 'Manila', lat: 14.5995, lon: 120.9842 }
+)
+
+export const weatherUnitStore = persistentWritable<TemperatureUnit>(
+  'vinta_weather_unit',
+  'celsius'
+)
+
+export const simulateOfflineStore = writable<boolean>(false)
 
 export type AppNotification = {
   id: number
