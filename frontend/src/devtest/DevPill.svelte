@@ -8,10 +8,11 @@
   } from '../pages/NotificationPage.svelte'
   import HomePage, { config as homeConfig } from '../pages/HomePage.svelte'
   import NotificationDevControls from './NotificationDevControls.svelte'
+  import WeatherDevControls from './WeatherDevControls.svelte'
   import CustomSelect from './CustomSelect.svelte'
   import type { Component } from 'svelte'
   import type { IslandConfig } from '../store'
-  import { themeStore, shapeStore } from '../store'
+  import { themeStore, shapeStore, devTestingStore } from '../store'
 
   let devW = $state(0)
   let devH = $state(0)
@@ -29,14 +30,18 @@
     }
   })
 
-  // Listen to CustomSelect toggle events to expand the native OS click bounds
+  // Activate DevTest non-persistent mode and listen to dropdown events
   onMount(() => {
+    devTestingStore.set(true)
     const handleToggle = (e: Event) => {
       const detail = (e as CustomEvent).detail
       extraH = detail ? 250 : 0
     }
     window.addEventListener('dev-dropdown-toggle', handleToggle)
-    return () => window.removeEventListener('dev-dropdown-toggle', handleToggle)
+    return () => {
+      devTestingStore.set(false)
+      window.removeEventListener('dev-dropdown-toggle', handleToggle)
+    }
   })
 
   // Registry pattern: Each page provides its own config and optional dev controls
@@ -53,7 +58,7 @@
       label: 'Home (Idle)',
       page: HomePage,
       config: homeConfig,
-      controls: null
+      controls: WeatherDevControls
     },
     notification: {
       label: 'Notification',
@@ -70,7 +75,8 @@
     }))
   )
 
-  let targetMode = $state('clock')
+  let targetMode = $state('home')
+  let isMinimized = $state(false)
 
   $effect(() => {
     const pageData = pages[targetMode]
@@ -88,9 +94,11 @@
   bind:clientWidth={devW}
   bind:clientHeight={devH}
 >
-  <div class="left-section">
-    <span class="label">Dev</span>
-    <CustomSelect options={pageOptions} bind:value={targetMode} />
+  <div class="top-toolbar">
+    <div class="toolbar-left">
+      <span class="label">DEV TEST</span>
+      <CustomSelect options={pageOptions} bind:value={targetMode} />
+    </div>
 
     <div class="quick-toggles">
       <button
@@ -108,39 +116,83 @@
       >
         {$shapeStore === 'pill' ? '🔲' : '💊'}
       </button>
+      <button
+        class="icon-btn minimize-btn"
+        onclick={() => (isMinimized = !isMinimized)}
+        title={isMinimized ? 'Expand DevTest Panel' : 'Minimize DevTest Panel'}
+      >
+        {isMinimized ? '🔽' : '🔼'}
+      </button>
     </div>
   </div>
 
-  <div class="actions">
-    {#if pages[targetMode].controls}
-      {@const Controls = pages[targetMode].controls}
+  {#if !isMinimized && pages[targetMode]?.controls}
+    {@const Controls = pages[targetMode].controls}
+    <div class="divider"></div>
+    <div class="actions-scroll">
       <Controls />
-    {/if}
-  </div>
+    </div>
+  {/if}
 </div>
 
 <style>
   .dev-pill {
-    /* No absolute positioning! We are in a flex column now */
+    /* Vertical panel layout instead of wide horizontal row */
     background: var(--c-bg);
     color: var(--c-text-primary);
-    border-radius: 12px;
+    border-radius: 14px;
     border: 1px solid var(--c-border);
     display: flex;
-    align-items: center; /* Back to centered! */
-    justify-content: space-between;
-    padding: 8px 15px;
+    flex-direction: column;
+    width: 380px;
+    max-height: 280px;
+    padding: 10px 12px;
     box-sizing: border-box;
     z-index: 9999;
-    pointer-events: auto; /* Ensures it receives clicks */
-    width: max-content;
-    height: max-content;
+    pointer-events: auto;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    gap: 8px;
   }
 
-  .left-section {
+  .top-toolbar {
     display: flex;
     align-items: center;
-    gap: 10px;
+    justify-content: space-between;
+    width: 100%;
+    flex-shrink: 0;
+  }
+
+  .toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .divider {
+    width: 100%;
+    height: 1px;
+    background: var(--c-border);
+    flex-shrink: 0;
+  }
+
+  .actions-scroll {
+    width: 100%;
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 2px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .actions-scroll::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .actions-scroll::-webkit-scrollbar-thumb {
+    background: var(--c-border);
+    border-radius: 4px;
   }
 
   .label {
@@ -154,7 +206,7 @@
   .quick-toggles {
     display: flex;
     gap: 4px;
-    margin-left: 4px;
+    margin-left: 2px;
   }
 
   .icon-btn {
@@ -167,15 +219,9 @@
     font-size: 1rem;
     position: relative;
     z-index: 1;
-    /* Removed transition to avoid WebView2 compositing overlap bugs */
   }
 
   .icon-btn:hover {
     background: var(--c-hover);
-  }
-
-  .actions {
-    display: flex;
-    gap: 8px;
   }
 </style>

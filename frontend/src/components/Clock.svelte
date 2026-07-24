@@ -20,27 +20,66 @@
   // Selected timezone from store (defaulting to Asia/Manila)
   let currentTimezone = $derived($timezoneStore || 'Asia/Manila')
 
+  // Format parts according to selected timezone
+  let timeParts = $derived.by(() => {
+    try {
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: currentTimezone,
+        hour: 'numeric',
+        minute: 'numeric',
+        second: 'numeric',
+        hour12: false,
+        weekday: 'long',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      })
+      const parts = formatter.formatToParts(time)
+      const getVal = (type: string) =>
+        parts.find((p) => p.type === type)?.value || '0'
+      const h24 = parseInt(getVal('hour'), 10)
+      const m = getVal('minute').padStart(2, '0')
+      const s = parseInt(getVal('second'), 10)
+      const weekday = getVal('weekday')
+      const month = getVal('month')
+      const day = getVal('day')
+      const year = getVal('year')
+
+      return {
+        h24,
+        m,
+        s,
+        fullDateStr: `${weekday}, ${month} ${day}`,
+        yearStr: year
+      }
+    } catch {
+      return {
+        h24: time.getHours(),
+        m: time.getMinutes().toString().padStart(2, '0'),
+        s: time.getSeconds(),
+        fullDateStr: time.toLocaleDateString('en-US', {
+          weekday: 'long',
+          month: 'short',
+          day: 'numeric'
+        }),
+        yearStr: time.getFullYear().toString()
+      }
+    }
+  })
+
   // Formatting helpers
   let is24H = $derived($timeFormatStore === '24h')
-  let rawHours = $derived(time.getHours())
   let hours = $derived.by(() => {
-    if (is24H) return rawHours.toString().padStart(2, '0')
-    const h = rawHours % 12 || 12
+    const h24 = timeParts.h24
+    if (is24H) return h24.toString().padStart(2, '0')
+    const h = h24 % 12 || 12
     return h.toString().padStart(2, '0')
   })
-  let minutes = $derived(time.getMinutes().toString().padStart(2, '0'))
-  let ampm = $derived(rawHours >= 12 ? 'PM' : 'AM')
-  let seconds = $derived(time.getSeconds())
-
-  let fullDateStr = $derived(
-    time.toLocaleDateString(undefined, {
-      weekday: 'long',
-      month: 'short',
-      day: 'numeric'
-    })
-  )
-
-  let yearStr = $derived(time.getFullYear())
+  let minutes = $derived(timeParts.m)
+  let ampm = $derived(timeParts.h24 >= 12 ? 'PM' : 'AM')
+  let seconds = $derived(timeParts.s)
+  let fullDateStr = $derived(timeParts.fullDateStr)
+  let yearStr = $derived(timeParts.yearStr)
 
   // GMT Offset calculation based on selected timezone
   let gmtOffset = $derived.by(() => {
