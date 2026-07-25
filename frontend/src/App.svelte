@@ -478,8 +478,11 @@
       FocusWindow()
     }}
     style="
-      transform: translateX({$hiddenPillOffsetXStore}px);
-      opacity: {activeOpacity};
+      transform: translateX({$hiddenPillOffsetXStore}px) {isQuitting
+      ? 'scale(0.6) translateY(-20px)'
+      : ''};
+      opacity: {isQuitting ? 0 : activeOpacity};
+      filter: {isQuitting ? 'blur(12px)' : 'none'};
       width: {isHidden
       ? hiddenBounds.w
       : expanded
