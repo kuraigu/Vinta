@@ -6,7 +6,7 @@
     SendTestNoTitleToast,
     SendTestBadge
   } from '../../wailsjs/go/devtest/DevTest.js'
-  import CustomSelect from './CustomSelect.svelte'
+  import CustomSelect from '../components/CustomSelect.svelte'
 
   let selectedAction = $state('native')
   let customAppName = $state('')

@@ -26,15 +26,77 @@ export type IslandConfig = {
 
 export const themeStore = persistentWritable<AppTheme>('vinta_theme', 'dark')
 export const shapeStore = persistentWritable<IslandShape>('vinta_shape', 'pill')
+export const opacityMinimalStore = persistentWritable<number>(
+  'vinta_opacity_minimal',
+  1.0
+)
+export const opacityExpandedStore = persistentWritable<number>(
+  'vinta_opacity_expanded',
+  1.0
+)
+export const opacityHiddenStore = persistentWritable<number>(
+  'vinta_opacity_hidden',
+  1.0
+)
+export const hiddenPillOffsetXStore = persistentWritable<number>(
+  'vinta_hidden_pill_offset_x',
+  0
+)
+export const allowDragPositionStore = persistentWritable<boolean>(
+  'vinta_allow_drag_position',
+  false
+)
+export const hardwareAccelStore = persistentWritable<boolean>(
+  'vinta_hardware_accel',
+  true
+)
+export const notifSoundStore = persistentWritable<boolean>(
+  'vinta_notif_sound',
+  true
+)
+export const notifVolumeStore = persistentWritable<number>(
+  'vinta_notif_volume',
+  0.8
+)
+export type GlowIntensity = 'disabled' | 'subtle' | 'vibrant'
+export const glowIntensityStore = persistentWritable<GlowIntensity>(
+  'vinta_glow_intensity',
+  'subtle'
+)
+export type CompactScale = 'small' | 'normal' | 'large'
+export const compactScaleStore = persistentWritable<CompactScale>(
+  'vinta_compact_scale',
+  'normal'
+)
+export const autostartStore = persistentWritable<boolean>(
+  'vinta_autostart',
+  false
+)
 export const autoHideStore = persistentWritable<boolean>(
   'vinta_autohide',
   false
 )
+export type AutoHideDelay = 5 | 10 | 20
+export const autoHideDelayStore = persistentWritable<AutoHideDelay>(
+  'vinta_autohide_delay',
+  10
+)
+
+export type AutoHideDisplayWidget = 'dash' | 'clock'
+export const autoHideDisplayStore = persistentWritable<AutoHideDisplayWidget>(
+  'vinta_autohide_display',
+  'dash'
+)
+
 export const wakeMethodStore = persistentWritable<'hover' | 'click'>(
   'vinta_wakemethod',
   'hover'
 )
 export const dndStore = persistentWritable<boolean>('vinta_dnd', false)
+export const notifAutoWakeStore = persistentWritable<boolean>(
+  'vinta_notif_autowake',
+  true
+)
 
 export type TimeFormatOption = '12h' | '24h'
 export type DateFormatOption = 'default' | 'iso' | 'us' | 'eu'
@@ -73,7 +135,7 @@ export type TemperatureUnit = 'celsius' | 'fahrenheit' | 'kelvin'
 
 export const weatherLocationStore = persistentWritable<WeatherLocation>(
   'vinta_weather_location',
-  { name: 'Manila', lat: 14.5995, lon: 120.9842 }
+  { name: 'Manila, Philippines', lat: 14.5995, lon: 120.9842 }
 )
 
 export const weatherUnitStore = persistentWritable<TemperatureUnit>(

@@ -9,9 +9,8 @@
 
 <script lang="ts">
   import { getContext } from 'svelte'
-  import { Shrink } from 'lucide-svelte'
+  import { ChevronUp } from 'lucide-svelte'
   import { AppControls } from '../utils/AppControls.svelte'
-  import DockButton from '../components/DockButton.svelte' // Note: Default import (removed curly braces)
   import Notification from '../components/Notification.svelte'
   import { notifData } from '../store'
   import type { IslandConfig } from '../store'
@@ -31,13 +30,13 @@
 
   {#if !expanded}
     <div class="shrink-action">
-      <DockButton
-        variant="warning"
-        tooltip=""
+      <button
+        class="collapse-btn"
+        title="Collapse notification"
         onclick={(e: MouseEvent) => AppControls.doMinimize(navigate, e)}
       >
-        <Shrink size={18} />
-      </DockButton>
+        <ChevronUp size={14} />
+      </button>
     </div>
   {/if}
 </div>
@@ -47,6 +46,7 @@
     width: 100%;
     height: 100%;
     box-sizing: border-box;
+    position: relative;
   }
 
   .notif-content {
@@ -67,14 +67,41 @@
   .notification-layout.minimal .notif-content {
     flex: 1;
     min-width: 0; /* Prevents text overflow issues in flexbox */
-    margin-right: 8px;
   }
 
-  /* Keep the dock button neatly centered on the right */
+  /* Sleek hover-only collapse button in top-right */
   .shrink-action {
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-shrink: 0; /* Prevents the button from getting squished */
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    margin-left: 6px;
+  }
+
+  .notification-layout.minimal:hover .shrink-action {
+    opacity: 0.85;
+  }
+
+  .collapse-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--c-border);
+    color: var(--c-text-secondary);
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0;
+  }
+
+  .collapse-btn:hover {
+    background: var(--c-hover);
+    color: var(--c-text-primary);
+    transform: scale(1.1);
   }
 </style>

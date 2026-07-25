@@ -47,7 +47,9 @@ func StartNotificationListener(ctx context.Context) {
 
 // StopNotificationListener forcefully terminates any running VintaNotifications.exe process tree.
 func StopNotificationListener() {
-	_ = exec.Command("taskkill", "/F", "/IM", "VintaNotifications.exe", "/T").Run()
+	cmd := exec.Command("taskkill", "/F", "/IM", "VintaNotifications.exe", "/T")
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	_ = cmd.Run()
 }
 
 func runInterceptor(ctx context.Context, absExePath string) {
@@ -75,7 +77,9 @@ func runInterceptor(ctx context.Context, absExePath string) {
 	go func() {
 		<-ctx.Done()
 		if cmd.Process != nil {
-			_ = exec.Command("taskkill", "/F", "/T", "/PID", fmt.Sprintf("%d", cmd.Process.Pid)).Run()
+			killCmd := exec.Command("taskkill", "/F", "/T", "/PID", fmt.Sprintf("%d", cmd.Process.Pid))
+			killCmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+			_ = killCmd.Run()
 			_ = cmd.Process.Kill()
 		}
 	}()

@@ -118,7 +118,7 @@
   // Swipe Action configuration
   let swipeOptions = $derived({
     enableSwipe: enableSwipe && slides.length > 1,
-    ignoreSelector: '.nav-btn, .dot-btn',
+    ignoreSelector: '.nav-btn, .dot-btn, select, option, .no-swipe',
     onDragStart: () => {
       isDragging = true
       isInstant = false

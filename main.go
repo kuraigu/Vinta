@@ -51,7 +51,7 @@ func main() {
 			BackdropType:                      windows.None,
 			DisableWindowIcon:                 true,
 			DisableFramelessWindowDecorations: true,
-			WebviewGpuIsDisabled:              false,
+			WebviewGpuIsDisabled:              !backend.GetHardwareAccelerationConfig(),
 		},
 		Mac: &mac.Options{
 			TitleBar:             mac.TitleBarHiddenInset(),

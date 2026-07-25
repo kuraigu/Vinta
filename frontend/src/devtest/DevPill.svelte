@@ -9,7 +9,7 @@
   import HomePage, { config as homeConfig } from '../pages/HomePage.svelte'
   import NotificationDevControls from './NotificationDevControls.svelte'
   import WeatherDevControls from './WeatherDevControls.svelte'
-  import CustomSelect from './CustomSelect.svelte'
+  import CustomSelect from '../components/CustomSelect.svelte'
   import type { Component } from 'svelte'
   import type { IslandConfig } from '../store'
   import { themeStore, shapeStore, devTestingStore } from '../store'
@@ -26,7 +26,7 @@
   $effect(() => {
     if (devW > 0 && devH > 0) {
       const scale = window.devicePixelRatio || 1
-      SetDevPillBounds(devW, devH + extraH, scale)
+      SetDevPillBounds(devW, devH, extraH, scale)
     }
   })
 
@@ -40,6 +40,8 @@
     window.addEventListener('dev-dropdown-toggle', handleToggle)
     return () => {
       devTestingStore.set(false)
+      const scale = window.devicePixelRatio || 1
+      SetDevPillBounds(0, 0, 0, scale)
       window.removeEventListener('dev-dropdown-toggle', handleToggle)
     }
   })
