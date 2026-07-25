@@ -15,7 +15,7 @@ jobs:
       (github.event_name == 'issue_comment' && contains(fromJSON('["OWNER", "COLLABORATOR"]'), github.event.comment.author_association))
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
