@@ -1,5 +1,4 @@
 <script module lang="ts">
-  import { Quit } from '../../wailsjs/go/backend/App.js'
   import HomePage, { config as homeConfig } from '../pages/HomePage.svelte'
   import AppsPage, { config as appsConfig } from '../pages/AppsPage.svelte'
   import SettingsPage, {
@@ -33,8 +32,9 @@
       hidePill()
     },
 
-    doQuit: () => {
-      Quit()
+    doQuit: (e?: Event) => {
+      if (e) e.stopPropagation()
+      window.dispatchEvent(new CustomEvent('vinta-quit'))
     }
   }
 </script>

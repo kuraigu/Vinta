@@ -1,10 +1,11 @@
 <script lang="ts">
-  import { onMount, setContext } from 'svelte'
+  import { onMount, setContext, type Component } from 'svelte'
   import { fade } from 'svelte/transition'
   import {
     SetWidgetBounds,
     IsTestMode,
-    FocusWindow
+    FocusWindow,
+    Quit
   } from '../wailsjs/go/backend/App.js'
   import { EventsOn, LogFatal, LogInfo } from '../wailsjs/runtime/runtime.js'
   import NotificationPage, {
@@ -12,33 +13,51 @@
   } from './pages/NotificationPage.svelte'
   import HomePage, { config as homeConfig } from './pages/HomePage.svelte'
   import Dock from './components/Dock.svelte'
+  import Clock from './components/Clock.svelte'
   import DevPill from './devtest/DevPill.svelte'
+  import AppControls from './utils/AppControls.svelte'
+  import { playNotifChime } from './services/audioService'
   import {
     themeStore,
     shapeStore,
     autoHideStore,
+    autoHideDelayStore,
+    autoHideDisplayStore,
+    notifAutoWakeStore,
     notifData,
     notificationPermissionDenied,
     wakeMethodStore,
-    dndStore
+    dndStore,
+    opacityMinimalStore,
+    opacityExpandedStore,
+    opacityHiddenStore,
+    hiddenPillOffsetXStore,
+    allowDragPositionStore,
+    notifSoundStore,
+    notifVolumeStore,
+    glowIntensityStore,
+    compactScaleStore,
+    type IslandConfig
   } from './store'
-
-  import AppControls from './utils/AppControls.svelte'
 
   $effect(() => {
     document.documentElement.setAttribute('data-theme', $themeStore)
   })
 
-  import type { Component } from 'svelte'
-  import type { IslandConfig } from './store'
-
   // Dynamic Routing: The active app that the island is displaying
   let activePage = $state<Component>(HomePage)
-
   let islandConfig = $state<IslandConfig>(homeConfig)
 
   let expanded = $state(false)
   let isHidden = $state(false)
+
+  let activeOpacity = $derived(
+    isHidden
+      ? $opacityHiddenStore
+      : expanded
+        ? $opacityExpandedStore
+        : $opacityMinimalStore
+  )
   let isHovering = $state(false)
   let hideTimeout: number
   let hoverShowTimeout: number
@@ -79,6 +98,7 @@
       // Set a timer if we need to auto-hide OR we need to revert back to HomePage
       if ($autoHideStore || activePage !== HomePage) {
         isTimeoutActive = true
+        const delayMs = ($autoHideDelayStore || 10) * 1000
         hideTimeout = window.setTimeout(() => {
           isTimeoutActive = false
           if ($autoHideStore) {
@@ -87,7 +107,7 @@
           if (activePage !== HomePage) {
             navigateTo(HomePage, homeConfig, false)
           }
-        }, 10000)
+        }, delayMs)
       }
     }
   })
@@ -117,11 +137,14 @@
   // Expose manual wake up for components
   setContext('wakeupPill', showWidget)
 
-  // Automatically wake up when new notifications arrive
+  // Automatically wake up when new notifications arrive and play audio chime
   let prevNotifCount = $state(0)
   let hideTrigger = $state(0)
   notifData.subscribe((notifs) => {
     if (notifs.length > prevNotifCount) {
+      if ($notifSoundStore && !$dndStore) {
+        playNotifChime($notifVolumeStore)
+      }
       showWidget()
       hideTrigger++
     }
@@ -131,7 +154,7 @@
   function updateBounds(w: number, h: number, r: number) {
     const computedR = $shapeStore === 'box' ? 12 : r
     const scale = window.devicePixelRatio || 1
-    SetWidgetBounds(w, h, computedR, scale)
+    SetWidgetBounds(w, h, computedR, scale, $hiddenPillOffsetXStore)
   }
 
   // --- Centralized OS Bounds Manager ---
@@ -160,20 +183,133 @@
     }
   }
 
+  let hiddenBounds = $derived(
+    $autoHideDisplayStore === 'clock'
+      ? { w: 105, h: 24, r: 12 }
+      : { w: 60, h: 8, r: 4 }
+  )
+
+  let compactW = $derived(
+    $compactScaleStore === 'small'
+      ? 320
+      : $compactScaleStore === 'large'
+        ? 400
+        : islandConfig.minimal.w
+  )
+
+  let glowOpacity = $derived(
+    $glowIntensityStore === 'disabled'
+      ? 0
+      : $glowIntensityStore === 'vibrant'
+        ? 1.0
+        : 0.6
+  )
+
+  let extraDropdownH = $state(0)
+  let isQuitting = $state(false)
+
+  onMount(() => {
+    const handleDropdownToggle = (e: Event) => {
+      const open = (e as CustomEvent).detail
+      extraDropdownH = open ? 220 : 0
+    }
+    const handleQuit = () => {
+      isQuitting = true
+      if ($notifSoundStore) {
+        playNotifChime($notifVolumeStore * 0.4)
+      }
+      setTimeout(() => {
+        Quit()
+      }, 350)
+    }
+    window.addEventListener('dev-dropdown-toggle', handleDropdownToggle)
+    window.addEventListener('vinta-quit', handleQuit)
+    return () => {
+      window.removeEventListener('dev-dropdown-toggle', handleDropdownToggle)
+      window.removeEventListener('vinta-quit', handleQuit)
+    }
+  })
+
   $effect(() => {
     if (!islandNode) return
 
-    const target = isHidden
-      ? { w: 60, h: 8, r: 4 }
+    // Track $hiddenPillOffsetXStore so Win32 click-through region moves in sync during horizontal drag
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _ox = $hiddenPillOffsetXStore
+
+    const baseW = isHidden
+      ? hiddenBounds.w
       : expanded
-        ? islandConfig.expanded
-        : islandConfig.minimal
+        ? islandConfig.expanded.w
+        : compactW
+
+    const baseH = isHidden
+      ? hiddenBounds.h
+      : expanded
+        ? islandConfig.expanded.h
+        : islandConfig.minimal.h
+
+    const targetW = baseW
+    const targetH = baseH + extraDropdownH
 
     // Always use box radius if shapeStore is box
-    const r = isHidden ? 4 : $shapeStore === 'box' ? 12 : target.r
+    const r = isHidden
+      ? hiddenBounds.r
+      : $shapeStore === 'box'
+        ? 12
+        : expanded
+          ? islandConfig.expanded.r
+          : islandConfig.minimal.r
 
-    applyBounds(target.w, target.h, r)
+    applyBounds(targetW, targetH, r)
   })
+
+  // Universal horizontal dragging across all island states
+  let isDraggingHidden = $state(false)
+  let hiddenDragStartX = 0
+  let hiddenDragStartOffset = 0
+
+  function handleHiddenPointerDown(e: PointerEvent) {
+    if (!$allowDragPositionStore) return
+    // Disable repositioning drag when expanded so page gestures and useSwipe work 100% cleanly
+    if (expanded) return
+
+    const target = e.target as HTMLElement
+    if (
+      target.closest(
+        'button, input, select, textarea, a, .custom-select, .no-drag, [role="button"]'
+      )
+    ) {
+      return
+    }
+    isDraggingHidden = true
+    hiddenDragStartX = e.clientX
+    hiddenDragStartOffset = $hiddenPillOffsetXStore
+    try {
+      ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+    } catch {
+      // Ignore
+    }
+  }
+
+  function handleHiddenPointerMove(e: PointerEvent) {
+    if (!isDraggingHidden) return
+    const dx = e.clientX - hiddenDragStartX
+    $hiddenPillOffsetXStore = Math.max(
+      -600,
+      Math.min(600, hiddenDragStartOffset + dx)
+    )
+  }
+
+  function handleHiddenPointerUp(e: PointerEvent) {
+    if (!isDraggingHidden) return
+    isDraggingHidden = false
+    try {
+      ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
+    } catch {
+      // Ignore
+    }
+  }
 
   function navigateTo(
     page: Component,
@@ -262,7 +398,8 @@
     isHovering = false
     clearTimeout(hoverShowTimeout)
     if ($autoHideStore && !expanded && !isHidden) {
-      hideTimeout = window.setTimeout(hideWidget, 5000)
+      const delayMs = ($autoHideDelayStore || 10) * 1000
+      hideTimeout = window.setTimeout(hideWidget, delayMs)
     }
   }
 
@@ -289,7 +426,7 @@
 
           n = [newNotif, ...n].slice(0, 99)
 
-          if (!$dndStore && !expanded) {
+          if (!$dndStore && $notifAutoWakeStore && !expanded) {
             showWidget()
             navigateTo(NotificationPage, notifConfig, false)
             triggerGlow()
@@ -320,25 +457,44 @@
     bind:this={islandNode}
     class="island {expanded ? 'expanded' : ''} {isTransitionGlow
       ? 'is-transition-glow'
-      : ''} {isHidden ? 'is-hidden' : ''}"
+      : ''} {isHidden ? 'is-hidden' : ''} {isQuitting ? 'is-quitting' : ''}"
     onmouseenter={handleMouseEnter}
     onmouseleave={handleMouseLeave}
+    onpointerdown={handleHiddenPointerDown}
+    onpointermove={handleHiddenPointerMove}
+    onpointerup={handleHiddenPointerUp}
+    onpointercancel={handleHiddenPointerUp}
+    ondblclick={(e) => {
+      const target = e.target as HTMLElement
+      if (
+        !target.closest(
+          'button, input, select, textarea, a, .custom-select, [role="button"]'
+        )
+      ) {
+        $hiddenPillOffsetXStore = 0
+      }
+    }}
     onwheel={() => {
       FocusWindow()
     }}
     style="
+      transform: translateX({$hiddenPillOffsetXStore}px) {isQuitting
+      ? 'scale(0.6) translateY(-20px)'
+      : ''};
+      opacity: {isQuitting ? 0 : activeOpacity};
+      filter: {isQuitting ? 'blur(12px)' : 'none'};
       width: {isHidden
-      ? 60
+      ? hiddenBounds.w
       : expanded
         ? islandConfig.expanded.w
-        : islandConfig.minimal.w}px;
+        : compactW}px;
       height: {isHidden
-      ? 8
+      ? hiddenBounds.h
       : expanded
         ? islandConfig.expanded.h
         : islandConfig.minimal.h}px;
       --island-r: {isHidden
-      ? 4
+      ? hiddenBounds.r
       : $shapeStore === 'box'
         ? 12
         : expanded
@@ -346,24 +502,34 @@
           : islandConfig.minimal.r}px;
       border-radius: var(--island-r);
       --island-border-color: {isHidden
-      ? 'transparent'
+      ? 'var(--c-border)'
       : islandConfig.borderColor || 'transparent'};
       --island-glow-color: {isHidden
       ? 'transparent'
       : islandConfig.glowColor || 'transparent'};
       --island-hidden-glow: {islandConfig.glowColor ||
       'rgba(255, 255, 255, 0.6)'};
+      --island-glow-opacity: {glowOpacity};
       --island-anim: {islandAnim};
     "
     onclick={handleIslandClick}
   >
     {#if isHidden}
-      <div class="hidden-dash" in:fade={{ duration: 200 }}></div>
+      {#if $autoHideDisplayStore === 'clock'}
+        <div class="hidden-widget-pill" in:fade={{ duration: 200 }}>
+          <Clock expanded={false} />
+          <div class="hidden-dash-mini"></div>
+        </div>
+      {:else}
+        <div class="hidden-dash" in:fade={{ duration: 200 }}></div>
+      {/if}
     {/if}
 
     <div
       class="content"
-      style="opacity: {isHidden ? 0 : 1}; transition: opacity 0.2s;"
+      style="opacity: {isHidden ? 0 : 1}; display: {isHidden
+        ? 'none'
+        : 'grid'}; transition: opacity 0.2s;"
     >
       {#key activePage}
         {#if !expanded}
@@ -398,7 +564,10 @@
     <!-- Shrinking Timeout Bar -->
     {#if isTimeoutActive && activePage !== HomePage && !expanded && !isHidden}
       {#key hideTrigger}
-        <div class="timeout-bar"></div>
+        <div
+          class="timeout-bar"
+          style="animation-duration: {$autoHideDelayStore || 10}s;"
+        ></div>
       {/key}
     {/if}
   </div>
@@ -511,8 +680,75 @@
   }
 
   .island.is-hidden {
-    box-shadow: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--c-border);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     background-color: var(--c-bg); /* Maintain the native theme base */
+  }
+
+  .hidden-widget-pill {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    padding: 0 4px;
+    box-sizing: border-box;
+    z-index: 10;
+    color: var(--c-text-primary);
+    overflow: hidden;
+  }
+
+  .hidden-widget-pill :global(.clock-container) {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .hidden-widget-pill :global(.clock-container.minimal .time) {
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    margin: 0;
+  }
+
+  .hidden-widget-pill :global(.ampm-minimal) {
+    font-size: 0.58rem;
+    font-weight: 700;
+    opacity: 0.85;
+    margin-left: 2px;
+    line-height: 1;
+  }
+
+  .hidden-widget-pill :global(.weather-minimal) {
+    font-size: 0.72rem;
+    gap: 0.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+  }
+
+  .hidden-dash-mini {
+    position: absolute;
+    bottom: 1px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 14px;
+    height: 1.5px;
+    border-radius: 1px;
+    background-color: var(--island-hidden-glow);
+    opacity: 0.7;
   }
 
   .hidden-dash {
@@ -548,10 +784,10 @@
       opacity: 0;
     }
     10% {
-      opacity: 1;
+      opacity: var(--island-glow-opacity, 1);
     }
     75% {
-      opacity: 1;
+      opacity: var(--island-glow-opacity, 1);
     }
     100% {
       opacity: 0;
@@ -625,5 +861,15 @@
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
+  }
+
+  .island.is-quitting {
+    transform: scale(0.6) translateY(-20px) !important;
+    opacity: 0 !important;
+    filter: blur(12px) !important;
+    transition:
+      transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+      opacity 0.35s ease,
+      filter 0.35s ease !important;
   }
 </style>

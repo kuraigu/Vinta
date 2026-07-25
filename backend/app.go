@@ -5,12 +5,15 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 	"unsafe"
 
 	"github.com/getlantern/systray"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"golang.org/x/sys/windows/registry"
 
 	"Vinta/backend/notifications"
 )
@@ -34,14 +37,9 @@ const (
 	//nolint:revive // Windows API constants
 	WS_EX_APPWINDOW = 0x00040000
 	//nolint:revive // Windows API constants
-	WS_EX_TOOLWINDOW = 0x00000080
-
-	// OutsidePadding is the extra space outside the window
-	// This is useful for any objects that will render outside the pill without getting clipped
-	OutsidePadding = 15
-
-	// rgnOr is used to combine two regions.
-	rgnOr = 2
+	WS_EX_TOOLWINDOW = 0x0000080
+	OutsidePadding   = 15
+	rgnOr            = 2
 )
 
 // screenWidth caches the screen dimensions so SetWidgetBounds can center regions correctly.
@@ -49,14 +47,16 @@ var screenWidth int
 
 // App struct
 type App struct {
-	ctx   context.Context
-	icon  []byte
-	pillW int
-	pillH int
-	pillR int
-	devW  int
-	devH  int
-	scale float64
+	ctx      context.Context
+	icon     []byte
+	pillW    int
+	pillH    int
+	pillR    int
+	offsetX  int
+	devW     int
+	devH     int
+	devExtra int
+	scale    float64
 }
 
 // NewApp creates a new App application struct
@@ -177,14 +177,60 @@ func (a *App) Shutdown(_ context.Context) {
 
 // SetWidgetBounds is called by the frontend whenever the widget dimensions change.
 // It updates the native Win32 click-through region so only the visible widget is clickable.
-func (a *App) SetWidgetBounds(width int, height int, radius int, scale float64) {
+func (a *App) SetWidgetBounds(width int, height int, radius int, scale float64, offsetX int) {
 	a.pillW = width
 	a.pillH = height
 	a.pillR = radius
+	a.offsetX = offsetX
 	if scale > 0 {
 		a.scale = scale
 	}
 	a.updateWindowRegion()
+}
+
+// SetAutostart registers or unregisters the app in Windows Startup Registry
+func (a *App) SetAutostart(enable bool) error {
+	// Dev/test mode guard: do not write autostart registry entries when running dev/test binaries
+	if isTestModeSync() {
+		return nil
+	}
+
+	exePath, err := os.Executable()
+	if err != nil {
+		return err
+	}
+
+	key, _, err := registry.CreateKey(
+		registry.CURRENT_USER,
+		`Software\Microsoft\Windows\CurrentVersion\Run`,
+		registry.SET_VALUE,
+	)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = key.Close() }()
+
+	if enable {
+		return key.SetStringValue("Vinta", fmt.Sprintf(`"%s"`, exePath))
+	}
+	_ = key.DeleteValue("Vinta")
+	return nil
+}
+
+// GetAutostart checks whether autostart is currently enabled in Windows Registry
+func (a *App) GetAutostart() bool {
+	key, err := registry.OpenKey(
+		registry.CURRENT_USER,
+		`Software\Microsoft\Windows\CurrentVersion\Run`,
+		registry.QUERY_VALUE,
+	)
+	if err != nil {
+		return false
+	}
+	defer func() { _ = key.Close() }()
+
+	val, _, err := key.GetStringValue("Vinta")
+	return err == nil && val != ""
 }
 
 // Quit terminates the application
@@ -235,9 +281,10 @@ func (a *App) FocusWindow() {
 }
 
 // SetDevPillBounds is called by the frontend to show a separate developer menu.
-func (a *App) SetDevPillBounds(width int, height int, scale float64) {
+func (a *App) SetDevPillBounds(width int, height int, extraH int, scale float64) {
 	a.devW = width
 	a.devH = height
+	a.devExtra = extraH
 	if scale > 0 {
 		a.scale = scale
 	}
@@ -249,16 +296,16 @@ func (a *App) updateWindowRegion() {
 	hwnd, _, _ := procFindWindow.Call(0, uintptr(unsafe.Pointer(titlePtr)))
 	if hwnd != 0 {
 		padding := OutsidePadding
-		// Use extremely tight bounds when hidden so we don't block background clicks
-		if a.pillW <= 80 && a.pillH <= 15 {
-			padding = 1
+		// Use tight padding (8px) when hidden to allow ambient glow and smooth drag without clipping
+		if a.pillW <= 110 && a.pillH <= 30 {
+			padding = 8
 		}
-		setClickRegion(hwnd, a.pillW, a.pillH, a.pillR, a.devW, a.devH, padding, a.scale)
+		setClickRegion(hwnd, a.pillW, a.pillH, a.pillR, a.offsetX, a.devW, a.devH, a.devExtra, padding, a.scale)
 	}
 }
 
 // setClickRegion updates the Win32 window region to combine the main pill and the dev pill.
-func setClickRegion(hwnd uintptr, w int, h int, r int, dw int, dh int, padding int, scale float64) {
+func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, dw int, dh int, extraH int, padding int, scale float64) {
 	var hrgnMain uintptr
 	var hrgnDev uintptr
 	var hrgnFinal uintptr
@@ -274,7 +321,7 @@ func setClickRegion(hwnd uintptr, w int, h int, r int, dw int, dh int, padding i
 	// 1. Create main pill region
 	if w > 0 && h > 0 {
 		visualTop := scaleInt(5)
-		physicalCenterX := scaleInt(screenWidth) / 2
+		physicalCenterX := (scaleInt(screenWidth) / 2) + scaleInt(offsetX)
 		pw := scaleInt(w)
 		ph := scaleInt(h)
 
@@ -303,15 +350,16 @@ func setClickRegion(hwnd uintptr, w int, h int, r int, dw int, dh int, padding i
 			devTopOffset = visualTop + ph + gap
 		}
 
-		devPadding := 20
+		devPadding := 6
+		extraMargin := scaleInt(extraH) // ONLY expand region when a dropdown is actively open!
 		physicalCenterX := scaleInt(screenWidth) / 2
 		pdw := scaleInt(dw)
 		pdh := scaleInt(dh)
 
 		devLeft := physicalCenterX - (pdw / 2) - devPadding
 		devRight := physicalCenterX + (pdw / 2) + devPadding
-		devTop := devTopOffset - devPadding
-		devBottom := devTop + pdh + devPadding
+		devTop := devTopOffset - devPadding - extraMargin
+		devBottom := devTopOffset + pdh + devPadding + extraMargin
 
 		hrgnDev, _, _ = procCreateRoundRectRgn.Call(
 			uintptr(devLeft), uintptr(devTop),
@@ -347,10 +395,49 @@ func (a *App) Greet(name string) string {
 
 // IsTestMode returns true if the application was launched with the -test flag.
 func (a *App) IsTestMode() bool {
+	return isTestModeSync()
+}
+
+func isTestModeSync() bool {
 	for _, arg := range os.Args {
 		if arg == "-test" {
 			return true
 		}
 	}
 	return false
+}
+
+// GetHardwareAccelerationConfig reads stored GPU acceleration setting from user config dir.
+func GetHardwareAccelerationConfig() bool {
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		return true // Default enabled
+	}
+	filePath := filepath.Join(configDir, "Vinta", "hw_accel.txt")
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return true // Default enabled
+	}
+	return strings.TrimSpace(string(data)) != "false"
+}
+
+// GetHardwareAcceleration returns whether GPU acceleration is enabled.
+func (a *App) GetHardwareAcceleration() bool {
+	return GetHardwareAccelerationConfig()
+}
+
+// SetHardwareAcceleration persists the GPU acceleration setting.
+func (a *App) SetHardwareAcceleration(enabled bool) error {
+	configDir, err := os.UserConfigDir()
+	if err != nil {
+		return err
+	}
+	dirPath := filepath.Join(configDir, "Vinta")
+	_ = os.MkdirAll(dirPath, 0755)
+	filePath := filepath.Join(dirPath, "hw_accel.txt")
+	val := "true"
+	if !enabled {
+		val = "false"
+	}
+	return os.WriteFile(filePath, []byte(val), 0644)
 }

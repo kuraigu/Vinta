@@ -54,3 +54,10 @@ Vinta supports custom community themes (including anime-styled or custom backgro
 ### 8. Non-Distracting Indicator States
 
 - Avoid overly fast or annoying blinking animations. Keep indicator states clean and steady to maintain a calm user experience.
+
+### 9. Custom Select Component Standards
+
+- **Never use native HTML `<select>` elements**: Standard `<select>` elements create native OS popups that bleed through transparent Tauri/Wails webview boundaries, clip inside scrollable containers (`overflow: hidden` / `overflow-y: auto`), and break when hovering over background elements.
+- **Use `<CustomSelect>`**: Always import and use `CustomSelect` from `frontend/src/components/CustomSelect.svelte`.
+- **Swipe Protection**: `<CustomSelect>` includes `.no-swipe` and pointer event suppression to ensure opening and scrolling options inside carousel viewports (`ComponentGallery`) does not trigger unwanted slide navigation.
+

@@ -12,12 +12,38 @@ export type SwipeOptions = {
   onDragEnd?: () => void
 }
 
+function findScrollableParent(
+  el: HTMLElement | null,
+  stopNode: HTMLElement
+): HTMLElement | null {
+  let current = el
+  while (current && current !== document.body) {
+    const style = window.getComputedStyle(current)
+    const isScrollable =
+      (style.overflowY === 'auto' ||
+        style.overflowY === 'scroll' ||
+        style.overflow === 'auto' ||
+        style.overflow === 'scroll') &&
+      current.scrollHeight > current.clientHeight
+
+    if (isScrollable) {
+      return current
+    }
+    if (current === stopNode) break
+    current = current.parentElement
+  }
+  return null
+}
+
 export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
   let opts = options
   let isDragging = false
   let hasMovedFar = false
+  let isVerticalScroll = false
+  let scrollTarget: HTMLElement | null = null
   let startX = 0
   let startY = 0
+  let lastY = 0
 
   function handlePointerDown(e: PointerEvent) {
     if (opts.enableSwipe === false) return
@@ -30,8 +56,11 @@ export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
 
     isDragging = true
     hasMovedFar = false
+    isVerticalScroll = false
+    scrollTarget = null
     startX = e.clientX
     startY = e.clientY
+    lastY = e.clientY
     opts.onDragStart?.()
   }
 
@@ -46,14 +75,31 @@ export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
       (Math.abs(dx) > dragThresh || Math.abs(dy) > dragThresh)
     ) {
       hasMovedFar = true
-      try {
-        node.setPointerCapture(e.pointerId)
-      } catch {
-        // Ignore pointer capture errors if unsupported
+
+      // Detect if drag direction is primarily vertical
+      if (Math.abs(dy) > Math.abs(dx)) {
+        isVerticalScroll = true
+        scrollTarget = findScrollableParent(e.target as HTMLElement, node)
+      } else {
+        isVerticalScroll = false
+        try {
+          node.setPointerCapture(e.pointerId)
+        } catch {
+          // Ignore pointer capture errors if unsupported
+        }
       }
     }
 
-    opts.onDragMove?.({ x: dx, y: dy })
+    if (isVerticalScroll) {
+      if (scrollTarget) {
+        const stepY = e.clientY - lastY
+        scrollTarget.scrollTop -= stepY
+      }
+      lastY = e.clientY
+      opts.onDragMove?.({ x: 0, y: dy })
+    } else {
+      opts.onDragMove?.({ x: dx, y: dy })
+    }
   }
 
   function handlePointerUp(e: PointerEvent) {
@@ -80,13 +126,17 @@ export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
 
     opts.onDragEnd?.()
 
-    if (hasMovedFar) {
+    if (hasMovedFar && !isVerticalScroll) {
       try {
         node.releasePointerCapture(e.pointerId)
       } catch {
         // Ignore if capture already lost
       }
     }
+
+    hasMovedFar = false
+    isVerticalScroll = false
+    scrollTarget = null
   }
 
   function handleClickCapture(e: MouseEvent) {

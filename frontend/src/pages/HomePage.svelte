@@ -111,6 +111,14 @@
     min-width: 0;
   }
 
+  .minimal-none-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--c-primary);
+    opacity: 0.8;
+  }
+
   .expanded-view {
     width: 100%;
     height: 100%;

@@ -18,6 +18,7 @@
     Terminal
   } from 'lucide-svelte'
   import { notifData, notificationPermissionDenied, dndStore } from '../store'
+  import { swipe } from '../utils/useSwipe'
   import { onMount } from 'svelte'
   import { SvelteSet } from 'svelte/reactivity'
   import { appIcons, gameIcons, getCachedBase64Url } from '../appIcons'
@@ -422,7 +423,13 @@
           >
         </div>
       {/if}
-      <div class="notif-list">
+      <div
+        class="notif-list"
+        use:swipe={{
+          enableSwipe: true,
+          ignoreSelector: 'button, .notif-actions'
+        }}
+      >
         {#snippet renderNotifItem(
           notif: NotificationItem,
           brand: NotificationGroup,
