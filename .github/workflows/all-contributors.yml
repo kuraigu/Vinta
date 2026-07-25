@@ -7,22 +7,48 @@ on:
   issue_comment:
     types: [created]
 
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
 jobs:
   contribute:
     runs-on: ubuntu-latest
     if: |
       github.event_name == 'push' ||
-      (github.event_name == 'issue_comment' && contains(fromJSON('["OWNER", "COLLABORATOR"]'), github.event.comment.author_association))
+      (github.event_name == 'issue_comment' && (github.event.comment.author_association == 'OWNER' || github.event.comment.author_association == 'MEMBER' || github.event.comment.author_association == 'COLLABORATOR'))
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+
+      - name: Auto-Sync Commit Counts
+        run: |
+          node -e '
+            const fs = require("fs");
+            const { execSync } = require("child_process");
+            const rcPath = ".all-contributorsrc";
+            if (fs.existsSync(rcPath)) {
+              const rc = JSON.parse(fs.readFileSync(rcPath, "utf8"));
+              for (const c of rc.contributors) {
+                try {
+                  const count = execSync(`git log --author="${c.login}" --oneline | wc -l`, { encoding: "utf8" }).trim();
+                  if (count && parseInt(count, 10) > 0) {
+                    c.commits = count;
+                  }
+                } catch (e) {}
+              }
+              fs.writeFileSync(rcPath, JSON.stringify(rc, null, 2) + "\n");
+            }
+          '
 
       - name: Update Contributors List
         run: |
