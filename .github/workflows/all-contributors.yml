@@ -29,7 +29,7 @@ jobs:
           npx all-contributors-cli generate
 
       - name: Commit and Push Changes
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "docs: update contributors hall of fame [skip ci]"
           file_pattern: "docs/CONTRIBUTORS.md .all-contributorsrc"
