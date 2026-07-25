@@ -833,16 +833,20 @@
     cursor: pointer;
   }
 
-  .island:not(.expanded):hover::before {
+  .island:not(.expanded):not(.is-hidden):hover::before {
     opacity: 0 !important; /* Hide glow when the solid hover ring activates */
     animation: none !important;
   }
 
-  .island:not(.expanded):hover {
+  .island:not(.expanded):not(.is-hidden):hover {
     box-shadow:
       var(--island-hover-border),
       var(--island-hover-glow),
       /* Neon glow effect */ var(--island-hover-drop-shadow);
+  }
+
+  .island.is-hidden:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
   }
 
   .content {

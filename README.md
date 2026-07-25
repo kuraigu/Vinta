@@ -7,37 +7,37 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-Vinta is an open-source, highly customizable Dynamic Island desktop widget for Windows PC.
+Vinta is an open-source, beautifully designed Dynamic Island widget built specifically for Windows PC. Floating effortlessly at the top of your screen, Vinta turns desktop notifications, live weather updates, system statistics, and everyday widgets into an intuitive and fluid interactive experience.
 
 ---
 
 ## Origin & Vision
 
-The name **Vinta** originates from the traditional outrigger boats (_vinta_) of Mindanao, Philippines, famous for their vibrant, colorful sails that glide fluidly over water.
+The name **Vinta** comes from the iconic outrigger boats (_vinta_) of Mindanao, Philippines, celebrated for their colorful sails that glide gracefully across open waters.
 
-Inspired by this maritime heritage, Vinta is designed to be a sleek, vibrant, and floating desktop Dynamic Island for PC—combining minimalist glassmorphic aesthetics, fluid 60fps micro-animations, and native system integration into a customizable desktop experience.
+Inspired by this heritage, Vinta brings that same fluid grace to your desktop interface. It blends clean glassmorphic visuals with responsive interactions, offering a modern desktop companion that stays out of your way until you need it.
 
 ---
 
 ## Features
 
-- **Frameless & Transparent:** Seamlessly floats on your desktop with native window clipping and custom backdrop blurs.
-- **Component Gallery Carousel:** Interactive slideshow supporting smooth touch and mouse drag gestures.
-- **Clock & Timezone Dial:** Circular glass progress ring, steady colon, and automatic timezone detection with GMT offsets.
-- **Weather Overview:** Real-time temperature displays, low/high range indicators, metrics bar, and 4-day forecast cards.
-- **Calendar & Bento Grid:** Modern date grid views and layout customization.
-- **System & Notification Hub:** Integrated notifications, system stats monitoring, and app shortcuts.
+- **Floating Island Experience:** Seamlessly floats at the top of your screen with smooth backdrop blurs and transparent glass borders.
+- **Interactive Component Gallery:** Swipe or drag through your favorite widgets including weather forecasts, live clocks, system meters, and calendar views.
+- **Live Weather & Forecasts:** Real-time local temperatures, atmospheric conditions, daily high and low ranges, and multi-day forecasts.
+- **Intelligent Notification Hub:** Captures incoming Windows notifications in a clean pop-up banner with customizable audio chimes and quiet hours.
+- **Customizable Appearance & Themes:** Personalize your island with dark and light modes, customizable opacity, ambient glow intensity, and compact width options.
+- **Flexible Screen Positioning:** Drag the island horizontally to align with your setup, or double-click anytime to return it to center.
 
 ---
 
-## Quick Navigation & Documentation
+## Documentation & Community
 
-- [Contributing Guide](CONTRIBUTING.md) — How to contribute code, test packages, or report bugs.
-- [Design Principles](docs/DESIGN.md) — Theme CSS variable compliance, UI standards, and aesthetics.
-- [Contributors Hall of Fame](docs/CONTRIBUTORS.md) — Recognition for our core team, code authors, and QA testers.
-- [Security Policy](SECURITY.md) — Vulnerability reporting and security guidelines.
-- [Code of Conduct](CODE_OF_CONDUCT.md) — Community standards and behavior expectations.
-- [Support & Help](SUPPORT.md) — Community channels, GitHub Discussions, and issue guidelines.
+- [Contributing Guide](CONTRIBUTING.md): Instructions for contributing code, testing features, or reporting issues.
+- [Design Principles](docs/DESIGN.md): Guidelines for UI component structure, styling rules, and design tokens.
+- [Contributors Hall of Fame](docs/CONTRIBUTORS.md): Recognition for developers, designers, and community members.
+- [Security Policy](SECURITY.md): Vulnerability reporting procedures and safety guidelines.
+- [Code of Conduct](CODE_OF_CONDUCT.md): Community standards and collaboration guidelines.
+- [Support & Help](SUPPORT.md): Community discussion links, issue reporting, and FAQ.
 
 ---
 
@@ -60,7 +60,7 @@ cd Vinta
 .\scripts.bat build
 ```
 
-The compiled executable will be placed in `build/bin/Vinta.exe`. See [CONTRIBUTING.md](CONTRIBUTING.md) for full developer details.
+The compiled executable will be saved to `build/bin/Vinta.exe`. Refer to [CONTRIBUTING.md](CONTRIBUTING.md) for full developer documentation.
 
 ---
 
