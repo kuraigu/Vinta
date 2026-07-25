@@ -4,14 +4,13 @@ updates:
   - package-ecosystem: "npm"
     directory: "/frontend"
     schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 5
-    versioning-strategy: "widen"
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    versioning-strategy: "increase-if-necessary"
     groups:
-      typescript-and-eslint:
+      frontend-dependencies:
         patterns:
-          - "^typescript$"
-          - "^@typescript-eslint/.*"
+          - "*"
     labels:
       - "deps"
 
@@ -19,10 +18,24 @@ updates:
   - package-ecosystem: "gomod"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    groups:
+      backend-dependencies:
+        patterns:
+          - "*"
+    labels:
+      - "deps"
 
   # Maintain dependencies for GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    groups:
+      github-actions-dependencies:
+        patterns:
+          - "*"
+    labels:
+      - "deps"
