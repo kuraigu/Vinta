@@ -6,6 +6,7 @@
     tooltip: string
     variant?: '' | 'danger' | 'warning' | 'success'
     active?: boolean
+    badge?: number
     children: Snippet
   }
 
@@ -14,6 +15,7 @@
     tooltip,
     variant = '',
     active = false,
+    badge = undefined,
     children
   }: Props = $props()
 </script>
@@ -26,6 +28,9 @@
   data-tooltip={tooltip}
 >
   {@render children()}
+  {#if badge !== undefined && badge > 0}
+    <span class="badge">{badge > 99 ? '99+' : badge}</span>
+  {/if}
 </button>
 
 <style>
@@ -98,5 +103,24 @@
   .dock-btn.success:hover {
     color: var(--c-success-hover-text);
     background: var(--c-success-hover-bg);
+  }
+
+  /* Notification badge */
+  .badge {
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    min-width: 14px;
+    height: 14px;
+    padding: 0 3px;
+    border-radius: 7px;
+    background: var(--c-primary, #6366f1);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 14px;
+    text-align: center;
+    pointer-events: none;
+    box-sizing: border-box;
   }
 </style>

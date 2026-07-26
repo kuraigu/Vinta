@@ -4,7 +4,12 @@
   import SettingsPage, {
     config as settingsConfig
   } from '../pages/SettingsPage.svelte'
-  import type { IslandConfig } from '../store'
+  import MediaPage, { config as mediaConfig } from '../pages/MediaPage.svelte'
+  import NotificationPage, {
+    config as notifConfig
+  } from '../pages/NotificationPage.svelte'
+  import { globalMediaStore, type IslandConfig } from '../store'
+  import { get } from 'svelte/store'
 
   type NavFn = (
     page: unknown,
@@ -13,8 +18,23 @@
   ) => void
 
   export const AppControls = {
+    goHome: (navigate: NavFn, e?: Event) => {
+      if (e) e.stopPropagation()
+      navigate(HomePage, homeConfig, true)
+    },
+
     goApps: (navigate: NavFn) => {
       navigate(AppsPage, appsConfig, true)
+    },
+
+    goMedia: (navigate: NavFn, e?: Event) => {
+      if (e) e.stopPropagation()
+      navigate(MediaPage, mediaConfig, true)
+    },
+
+    goNotif: (navigate: NavFn, e?: Event) => {
+      if (e) e.stopPropagation()
+      navigate(NotificationPage, notifConfig, true)
     },
 
     goSettings: (navigate: NavFn, e: Event) => {
@@ -22,9 +42,20 @@
       navigate(SettingsPage, settingsConfig, true)
     },
 
-    doMinimize: (navigate: NavFn, e: Event) => {
+    doMinimize: (
+      navigate: NavFn,
+      e: Event,
+      currentPage?: unknown,
+      currentConfig?: IslandConfig,
+      isMediaPlaying?: boolean
+    ) => {
       e.stopPropagation()
-      navigate(HomePage, homeConfig, false)
+      const mediaState = get(globalMediaStore)
+      if (currentPage === MediaPage || isMediaPlaying || mediaState.isPlaying) {
+        navigate(MediaPage, mediaConfig, false)
+      } else {
+        navigate(HomePage, homeConfig, false)
+      }
     },
 
     doHide: (hidePill: () => void, e: Event) => {

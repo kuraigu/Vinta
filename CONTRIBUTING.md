@@ -10,16 +10,25 @@ All contributors, whether you write code, update documentation, report bugs, or 
 
 ## Understanding Vinta Architecture
 
-Before creating new UI files, here is a quick guide on the difference between a **Vinta Component** and a **Vinta Page**:
+### Main Application (`Vinta.exe`)
 
-### Vinta Component
+Vinta is built using **Go + Wails v2 + Svelte 5**. The Go backend handles native Win32 window region clipping, click-through bounds, and configuration storage, while Svelte renders the Dynamic Island interface.
 
-- **What it is:** A reusable widget located in `frontend/src/components/`, such as `Clock.svelte`, `Weather.svelte`, `Calendar.svelte`, or `BentoGrid.svelte`.
+### Background Helper Service (`VintaServices.exe`)
+
+- **What it is:** A lightweight C# .NET 8 background helper located in `backend/services/`.
+- **Why C# is used:** Windows provides native WinRT WinMD APIs (`Windows.UI.Notifications` for system toast listeners and `Windows.Media.Control` for Global System Media Transport Controls). C# provides first-class native access to these APIs with zero Cgo/COM wrapper overhead, robust async event loops, and zero required third-party API keys or OAuth logins.
+- **Child Process Lifecycle:** `VintaServices.exe` is spawned as a child process by `Vinta.exe` and attached to a Windows Job Object with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`. When `Vinta.exe` exits or is closed, Windows automatically terminates `VintaServices.exe` instantly—preventing orphaned background processes.
+- **IPC & Media Controls:** `VintaServices.exe` emits JSON payloads over stdout (`type: notification` and `type: media`) and listens for control commands over stdin (`COMMAND:play_pause`, `COMMAND:next`, `COMMAND:previous`, `COMMAND:play`, `COMMAND:pause`) to hook play/pause/skip actions in Spotify, Apple Music, YouTube, VLC, and other media players.
+
+### Vinta Component vs Page
+
+#### Vinta Component
+- **What it is:** A reusable widget located in `frontend/src/components/`, such as `Clock.svelte`, `Weather.svelte`, `Calendar.svelte`, `MediaWidget.svelte`, or `BentoGrid.svelte`.
 - **How it works:** Components are designed to sit inside pages or carousels like `ComponentGallery.svelte`. They accept props such as `expanded` to adapt between minimal and expanded views.
 
-### Vinta Page
-
-- **What it is:** A top-level view located in `frontend/src/pages/`, such as `HomePage.svelte`, `AppsPage.svelte`, `NotificationPage.svelte`, or `SettingsPage.svelte`.
+#### Vinta Page
+- **What it is:** A top-level view located in `frontend/src/pages/`, such as `HomePage.svelte`, `MediaPage.svelte`, `AppsPage.svelte`, `NotificationPage.svelte`, or `SettingsPage.svelte`.
 - **How it works:** Pages sit inside `App.svelte` and handle overall screen navigation, island height, and component layout.
 
 ## How to Create New Components and Pages

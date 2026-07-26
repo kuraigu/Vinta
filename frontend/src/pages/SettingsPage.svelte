@@ -14,6 +14,9 @@
     themeStore,
     shapeStore,
     autoHideStore,
+    homeAutoHideStore,
+    mediaAutoHideStore,
+    notifAutoHideStore,
     autoHideDelayStore,
     autoHideDisplayStore,
     wakeMethodStore,
@@ -489,10 +492,32 @@
         <div class="setting-item">
           <div class="setting-label">
             <EyeOff size={14} class="item-icon" />
-            <span>Auto-hide Pill</span>
+            <span>Auto-hide Home</span>
           </div>
           <label class="toggle">
-            <input type="checkbox" bind:checked={$autoHideStore} />
+            <input type="checkbox" bind:checked={$homeAutoHideStore} />
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-label">
+            <EyeOff size={14} class="item-icon" />
+            <span>Auto-hide Now Playing</span>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" bind:checked={$mediaAutoHideStore} />
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-item">
+          <div class="setting-label">
+            <EyeOff size={14} class="item-icon" />
+            <span>Auto-hide Notifications</span>
+          </div>
+          <label class="toggle">
+            <input type="checkbox" bind:checked={$notifAutoHideStore} />
             <span class="slider"></span>
           </label>
         </div>
@@ -631,6 +656,7 @@
             <span class="slider"></span>
           </label>
         </div>
+
 
         <div class="setting-item">
           <div class="setting-label">
@@ -794,6 +820,8 @@
         { id: 'clock', snippet: clockSlide },
         { id: 'weather', snippet: weatherSlide }
       ]}
+      loop={true}
+      showControls={true}
     />
   </div>
 </div>
@@ -804,7 +832,7 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    padding: 14px 16px 44px 16px; /* Space for Universal Dock */
+    padding: 14px 16px 58px 16px;
     box-sizing: border-box;
     color: var(--c-text-primary);
   }
@@ -934,7 +962,6 @@
     font-weight: 500;
     color: var(--c-text-primary);
   }
-
   :global(.item-icon) {
     color: var(--c-primary, #6366f1);
     flex-shrink: 0;

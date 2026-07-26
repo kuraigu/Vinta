@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount, setContext, type Component } from 'svelte'
   import { fade } from 'svelte/transition'
+  import { Bell } from 'lucide-svelte'
   import {
     SetWidgetBounds,
     IsTestMode,
@@ -12,6 +13,7 @@
     config as notifConfig
   } from './pages/NotificationPage.svelte'
   import HomePage, { config as homeConfig } from './pages/HomePage.svelte'
+  import MediaPage, { config as mediaConfig } from './pages/MediaPage.svelte'
   import Dock from './components/Dock.svelte'
   import Clock from './components/Clock.svelte'
   import DevPill from './devtest/DevPill.svelte'
@@ -21,9 +23,14 @@
     themeStore,
     shapeStore,
     autoHideStore,
+    homeAutoHideStore,
+    mediaAutoHideStore,
+    notifAutoHideStore,
     autoHideDelayStore,
     autoHideDisplayStore,
     notifAutoWakeStore,
+    globalMediaStore,
+    type MediaData,
     notifData,
     notificationPermissionDenied,
     wakeMethodStore,
@@ -88,6 +95,15 @@
 
   let isTimeoutActive = $state(false)
 
+  // Per-page auto-hide: each page can opt in/out independently
+  let shouldCurrentPageAutoHide = $derived.by(() => {
+    if (activePage === HomePage) return $homeAutoHideStore
+    if (activePage === MediaPage) return $mediaAutoHideStore
+    if (activePage === NotificationPage) return $notifAutoHideStore
+    // Any future page defaults to the global auto-hide store
+    return $autoHideStore
+  })
+
   $effect(() => {
     // Auto-hide and auto-revert logic effect
     void hideTrigger
@@ -95,17 +111,24 @@
     isTimeoutActive = false
 
     if (!expanded && !isHidden && !isHovering) {
-      // Set a timer if we need to auto-hide OR we need to revert back to HomePage
-      if ($autoHideStore || activePage !== HomePage) {
+      // Set a timer if we need to auto-hide OR we need to revert back to HomePage (unless activePage is MediaPage)
+      if (
+        shouldCurrentPageAutoHide ||
+        (activePage !== HomePage && activePage !== MediaPage)
+      ) {
         isTimeoutActive = true
         const delayMs = ($autoHideDelayStore || 10) * 1000
         hideTimeout = window.setTimeout(() => {
           isTimeoutActive = false
-          if ($autoHideStore) {
+          if (shouldCurrentPageAutoHide) {
             hideWidget()
           }
-          if (activePage !== HomePage) {
-            navigateTo(HomePage, homeConfig, false)
+          if (activePage !== HomePage && activePage !== MediaPage) {
+            if ($globalMediaStore.isPlaying) {
+              navigateTo(MediaPage, mediaConfig, false)
+            } else {
+              navigateTo(HomePage, homeConfig, false)
+            }
           }
         }, delayMs)
       }
@@ -123,6 +146,9 @@
     if (!isHidden) return
     islandAnim = '0.5s cubic-bezier(0.16, 1, 0.3, 1)'
     isHidden = false
+    if ($globalMediaStore.isPlaying && activePage === HomePage) {
+      navigateTo(MediaPage, mediaConfig, false)
+    }
     triggerGlow()
   }
 
@@ -361,6 +387,23 @@
       shapeStore.update((s) => (s === 'pill' ? 'box' : 'pill'))
     })
     EventsOn('show-pill', showWidget)
+
+    let currentTrackId = ''
+    let isInitialMediaCheck = true
+    EventsOn('media-update', (data: Record<string, unknown>) => {
+      if (data) {
+        globalMediaStore.set(data as unknown as MediaData)
+        const isPlaying = Boolean(data.isPlaying)
+        if (isInitialMediaCheck && isPlaying && activePage === HomePage) {
+          isInitialMediaCheck = false
+          navigateTo(MediaPage, mediaConfig, false)
+        }
+        const newTitle = data.title ? String(data.title).trim() : ''
+        if (newTitle !== '') {
+          currentTrackId = newTitle
+        }
+      }
+    })
   })
 
   function handleExpand() {
@@ -394,10 +437,12 @@
     }
   }
 
+  // (shouldCurrentPageAutoHide is defined above near the auto-hide $effect)
+
   function handleMouseLeave() {
     isHovering = false
     clearTimeout(hoverShowTimeout)
-    if ($autoHideStore && !expanded && !isHidden) {
+    if (shouldCurrentPageAutoHide && !expanded && !isHidden) {
       const delayMs = ($autoHideDelayStore || 10) * 1000
       hideTimeout = window.setTimeout(hideWidget, delayMs)
     }
@@ -426,7 +471,9 @@
 
           n = [newNotif, ...n].slice(0, 99)
 
-          if (!$dndStore && $notifAutoWakeStore && !expanded) {
+          // Never steal an expanded page OR a minimized Now Playing view
+          const mediaIsActive = activePage === MediaPage && $globalMediaStore.isPlaying
+          if (!$dndStore && $notifAutoWakeStore && !expanded && !mediaIsActive) {
             showWidget()
             navigateTo(NotificationPage, notifConfig, false)
             triggerGlow()
@@ -443,6 +490,21 @@
       showWidget()
       navigateTo(NotificationPage, notifConfig, true)
     })
+  })
+
+  let tickerNotif = $state<any>(null)
+  let tickerTimeout: number
+
+  notifData.subscribe((notifs) => {
+    if (notifs.length > 0) {
+      tickerNotif = notifs[0]
+      clearTimeout(tickerTimeout)
+      tickerTimeout = window.setTimeout(() => {
+        tickerNotif = null
+      }, 5000)
+    } else {
+      tickerNotif = null
+    }
   })
 </script>
 
@@ -532,37 +594,51 @@
         : 'grid'}; transition: opacity 0.2s;"
     >
       {#key activePage}
-        {#if !expanded}
-          {@const ActivePage = activePage}
-          <div
-            class="view"
-            in:fade={{ duration: 150, delay: 250 }}
-            out:fade={{ duration: 100 }}
-            style="width: {islandConfig.minimal.w}px; height: {islandConfig
-              .minimal.h}px;"
-          >
-            <ActivePage expanded={false} />
-          </div>
-        {:else}
-          {@const ActivePage = activePage}
-          <div
-            class="view"
-            in:fade={{ duration: 200, delay: 250 }}
-            out:fade={{ duration: 100 }}
-            style="width: {islandConfig.expanded.w}px; height: {islandConfig
-              .expanded.h}px;"
-          >
-            <ActivePage expanded={true} />
-            <div in:fade={{ duration: 200, delay: 350 }}>
-              <Dock {activePage} />
-            </div>
-          </div>
-        {/if}
+        {@const ActivePage = activePage}
+        <div
+          class="view"
+          style="width: {expanded
+            ? islandConfig.expanded.w
+            : islandConfig.minimal.w}px; height: {expanded
+            ? islandConfig.expanded.h
+            : islandConfig.minimal.h}px;"
+        >
+          <ActivePage {expanded} />
+        </div>
       {/key}
+
+      {#if expanded && activePage !== NotificationPage && tickerNotif}
+        <!-- svelte-ignore a11y_click_events_have_key_events -->
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div
+          class="expanded-notif-ticker"
+          in:fade={{ duration: 150 }}
+          out:fade={{ duration: 150 }}
+          onclick={(e) => {
+            e.stopPropagation()
+            tickerNotif = null
+            navigateTo(NotificationPage, notifConfig, true)
+          }}
+        >
+          <div class="ticker-content">
+            <Bell size={10} class="ticker-bell" />
+            <span class="ticker-app">{tickerNotif.appName || 'Notification'}</span>
+            <span class="ticker-sep">•</span>
+            <span class="ticker-text">{tickerNotif.title || tickerNotif.message}</span>
+          </div>
+          <span class="ticker-badge">{$notifData.length}</span>
+        </div>
+      {/if}
+
+      {#if expanded}
+        <div in:fade={{ duration: 200, delay: 150 }}>
+          <Dock {activePage} />
+        </div>
+      {/if}
     </div>
 
     <!-- Shrinking Timeout Bar -->
-    {#if isTimeoutActive && activePage !== HomePage && !expanded && !isHidden}
+    {#if isTimeoutActive && shouldCurrentPageAutoHide && !expanded && !isHidden}
       {#key hideTrigger}
         <div
           class="timeout-bar"
@@ -857,6 +933,76 @@
     border-radius: inherit;
     overflow: hidden;
     position: relative;
+  }
+
+  .expanded-notif-ticker {
+    position: absolute;
+    top: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 90;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(30, 30, 45, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--c-border-subtle, rgba(255, 255, 255, 0.12));
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    max-width: 80%;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s ease;
+  }
+
+  .expanded-notif-ticker:hover {
+    background: rgba(45, 45, 65, 0.95);
+    transform: translateX(-50%) scale(1.02);
+  }
+
+  .ticker-content {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    overflow: hidden;
+    white-space: nowrap;
+    color: var(--c-text-primary);
+  }
+
+  :global(.ticker-bell) {
+    color: var(--c-primary, #6366f1);
+    flex-shrink: 0;
+  }
+
+  .ticker-app {
+    font-weight: 700;
+    color: var(--c-text-primary);
+    flex-shrink: 0;
+  }
+
+  .ticker-sep {
+    opacity: 0.5;
+    flex-shrink: 0;
+  }
+
+  .ticker-text {
+    opacity: 0.8;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ticker-badge {
+    background: #ef4444;
+    color: #fff;
+    font-size: 8px;
+    font-weight: 700;
+    padding: 1px 4px;
+    border-radius: 6px;
+    line-height: 1;
+    flex-shrink: 0;
   }
 
   .view {

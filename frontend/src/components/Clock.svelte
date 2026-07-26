@@ -201,10 +201,20 @@
     box-sizing: border-box;
   }
 
+  .clock-container.minimal {
+    width: auto;
+    justify-content: flex-start;
+  }
+
   .clock-container.minimal .time {
     font-size: 0.95rem;
     font-weight: 600;
     color: var(--c-text-primary);
+    font-variant-numeric: tabular-nums;
+    margin: 0;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
   }
 
   /* EXPANDED DESIGN */

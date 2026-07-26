@@ -85,73 +85,95 @@
     width: 100%;
     height: 100%;
     display: flex;
-    align-items: center;
+    flex-direction: column;
     justify-content: center;
+    align-items: center;
+    position: relative;
     box-sizing: border-box;
   }
 
+  /* Minimal View - 100% Symmetrical Left & Right margins */
   .minimal-view {
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 1.5rem;
+    justify-content: space-between;
     width: 100%;
+    max-width: 100%;
     height: 100%;
-    margin-top: -2px; /* Visual optical adjustment for font baseline */
-    padding: 0 1.2rem;
+    padding: 0 16px;
     box-sizing: border-box;
-    white-space: nowrap; /* Prevents text breaking */
   }
 
-  .side,
+  .side.left {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    flex: 1 1 0;
+    min-width: 0;
+    white-space: nowrap;
+  }
+
   .center {
     display: flex;
     align-items: center;
-    overflow: hidden;
+    justify-content: center;
+    flex: 1 1 0;
     min-width: 0;
+    white-space: nowrap;
   }
 
-  .minimal-none-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--c-primary);
-    opacity: 0.8;
+  .side.right {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex: 1 1 0;
+    min-width: 0;
+    white-space: nowrap;
   }
 
+  /* Expanded View - Integrated footer padding for Dock */
   .expanded-view {
     width: 100%;
     height: 100%;
-    padding: 14px 16px 44px 16px;
-    box-sizing: border-box;
     display: flex;
     flex-direction: column;
+    padding-bottom: 58px;
+    box-sizing: border-box;
   }
 
   .header {
     display: flex;
     justify-content: center;
     align-items: center;
-    margin-bottom: 10px;
-    flex-shrink: 0;
+    padding: 12px 16px 4px 16px;
   }
 
   .title {
-    font-size: 15px;
-    font-weight: 600;
-    letter-spacing: -0.01em;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    opacity: 0.85;
     color: var(--c-text-primary);
+    text-align: center;
   }
 
   .gallery-wrapper {
     flex: 1;
     min-height: 0;
     width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
   }
 
   .single-card-container {
     width: 100%;
     height: 100%;
+    padding: 0 16px;
     box-sizing: border-box;
+    display: flex;
+    justify-content: center;
+    align-items: center;
   }
 </style>

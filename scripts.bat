@@ -2,14 +2,14 @@
 if "%1"=="dev" (
     wails dev
 ) else if "%1"=="build" (
-    powershell -ExecutionPolicy Bypass -File backend\notifications\build.ps1
+    powershell -ExecutionPolicy Bypass -File backend\services\build.ps1
     if errorlevel 1 exit /b 1
     wails build
 ) else if "%1"=="run" (
     taskkill /IM Vinta.exe /F 2>nul
-    taskkill /IM VintaNotifications.exe /F 2>nul
+    taskkill /IM VintaServices.exe /F 2>nul
     if "%2" NEQ "no_build" (
-        powershell -ExecutionPolicy Bypass -File backend\notifications\build.ps1
+        powershell -ExecutionPolicy Bypass -File backend\services\build.ps1
         if errorlevel 1 exit /b 1
         wails build
         if errorlevel 1 exit /b 1
@@ -17,8 +17,8 @@ if "%1"=="dev" (
     start "" "build\bin\Vinta.exe"
 ) else if "%1"=="test" (
     taskkill /IM Vinta.exe /F 2>nul
-    taskkill /IM VintaNotifications.exe /F 2>nul
-    powershell -ExecutionPolicy Bypass -File backend\notifications\build.ps1
+    taskkill /IM VintaServices.exe /F 2>nul
+    powershell -ExecutionPolicy Bypass -File backend\services\build.ps1
     if errorlevel 1 exit /b 1
     wails build
     if errorlevel 1 exit /b 1

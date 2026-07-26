@@ -1,0 +1,110 @@
+<script module lang="ts">
+  export const config = {
+    minimal: { w: 340, h: 48, r: 24 },
+    expanded: { w: 420, h: 245, r: 28 },
+    borderColor: 'rgba(255, 60, 100, 0.4)',
+    glowColor: 'rgba(255, 60, 100, 0.35)'
+  }
+</script>
+
+<script lang="ts">
+  import MediaWidget from '../components/MediaWidget.svelte'
+  import Clock from '../components/Clock.svelte'
+
+  let { expanded = false }: { expanded?: boolean } = $props()
+</script>
+
+<div class="media-page-layout {expanded ? 'expanded' : 'minimal'}">
+  {#if !expanded}
+    <MediaWidget expanded={false} />
+  {:else}
+    <div class="header">
+      <div class="header-side left"></div>
+      <div class="header-center">
+        <div class="title">Now Playing</div>
+      </div>
+      <div class="header-side right">
+        <div class="clock-wrapper">
+          <Clock expanded={false} />
+        </div>
+      </div>
+    </div>
+    <div class="expanded-content">
+      <MediaWidget expanded={true} />
+    </div>
+  {/if}
+</div>
+
+<style>
+  .media-page-layout {
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .media-page-layout.expanded {
+    padding-bottom: 54px; /* Integrated space above Dock */
+  }
+
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px 2px 16px;
+    z-index: 2;
+    pointer-events: none;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .header-side {
+    flex: 1 1 0;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+  }
+
+  .header-side.right {
+    justify-content: flex-end;
+  }
+
+  .header-center {
+    flex: 1 1 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    white-space: nowrap;
+  }
+
+  .title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    opacity: 0.9;
+    color: var(--c-text-primary);
+    text-align: center;
+  }
+
+  .clock-wrapper {
+    font-size: 0.76rem;
+    font-weight: 600;
+    opacity: 0.75;
+  }
+
+  .expanded-content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    padding: 0 12px 4px 12px;
+    box-sizing: border-box;
+  }
+</style>
