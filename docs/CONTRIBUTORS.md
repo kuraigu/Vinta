@@ -18,7 +18,7 @@ All contributors are recognized here and credited directly inside the Vinta desk
 <table>
   <tbody>
     <tr>
-      <td align="center" valign="top" width="20%"><a href="https://github.com/kuraigu"><img src="https://github.com/kuraigu.png" width="48px;" alt="Innoh Reloza"/><br /><sub><b>Innoh Reloza</b></sub></a><br />founder<br /><sub><b>58 commits</b></sub></td>
+      <td align="center" valign="top" width="20%"><a href="https://github.com/kuraigu"><img src="https://github.com/kuraigu.png" width="48px;" alt="Innoh Reloza"/><br /><sub><b>Innoh Reloza</b></sub></a><br />founder</td>
     </tr>
   </tbody>
 </table>
@@ -28,12 +28,7 @@ All contributors are recognized here and credited directly inside the Vinta desk
 
 <!-- ALL-CONTRIBUTORS-LIST:END -->
 
-## How Contributions Are Measured
-
-- **Code, Docs & Design:** Measured by merged pull requests and commits.
-- **Testing & QA:** Measured by verified bug reports and release package test reports.
-
-You can also view the live [GitHub Commit Insights](https://github.com/kuraigu/Vinta/graphs/contributors).
+You can view the live [GitHub Commit Insights](https://github.com/kuraigu/Vinta/graphs/contributors).
 
 ## How to Get Listed
 

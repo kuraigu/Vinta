@@ -30,32 +30,17 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Auto-Sync Commit Counts
-        run: |
-          node -e '
-            const fs = require("fs");
-            const { execSync } = require("child_process");
-            const rcPath = ".all-contributorsrc";
-            if (fs.existsSync(rcPath)) {
-              const rc = JSON.parse(fs.readFileSync(rcPath, "utf8"));
-              for (const c of rc.contributors) {
-                try {
-                  const count = execSync(`git log --author="${c.login}" --oneline | wc -l`, { encoding: "utf8" }).trim();
-                  if (count && parseInt(count, 10) > 0) {
-                    c.commits = count;
-                  }
-                } catch (e) {}
-              }
-              fs.writeFileSync(rcPath, JSON.stringify(rc, null, 2) + "\n");
-            }
-          '
-
       - name: Update Contributors List
         run: |
           npx all-contributors-cli generate
 
+      - name: Get Last Commit Info
+        id: last_commit
+        run: |
+          echo "MSG=$(git log -1 --format='%h - %s' | tr -d '"')" >> $GITHUB_OUTPUT
+
       - name: Commit and Push Changes
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "docs: update contributors hall of fame [skip ci]"
+          commit_message: "docs: update contributors hall of fame (synced: ${{ steps.last_commit.outputs.MSG }}) [skip ci]"
           file_pattern: "docs/CONTRIBUTORS.md .all-contributorsrc"
