@@ -43,7 +43,6 @@
     notifSoundStore,
     notifVolumeStore,
     glowIntensityStore,
-    compactScaleStore,
     type IslandConfig
   } from './store'
 
@@ -215,13 +214,7 @@
       : { w: 60, h: 8, r: 4 }
   )
 
-  let compactW = $derived(
-    $compactScaleStore === 'small'
-      ? 320
-      : $compactScaleStore === 'large'
-        ? 400
-        : islandConfig.minimal.w
-  )
+  let compactW = $derived(islandConfig.minimal.w)
 
   let glowOpacity = $derived(
     $glowIntensityStore === 'disabled'
@@ -492,20 +485,6 @@
     })
   })
 
-  let tickerNotif = $state<any>(null)
-  let tickerTimeout: number
-
-  notifData.subscribe((notifs) => {
-    if (notifs.length > 0) {
-      tickerNotif = notifs[0]
-      clearTimeout(tickerTimeout)
-      tickerTimeout = window.setTimeout(() => {
-        tickerNotif = null
-      }, 5000)
-    } else {
-      tickerNotif = null
-    }
-  })
 </script>
 
 <!-- PUT UTILS HERE -->
@@ -606,29 +585,6 @@
           <ActivePage {expanded} />
         </div>
       {/key}
-
-      {#if expanded && activePage !== NotificationPage && tickerNotif}
-        <!-- svelte-ignore a11y_click_events_have_key_events -->
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
-        <div
-          class="expanded-notif-ticker"
-          in:fade={{ duration: 150 }}
-          out:fade={{ duration: 150 }}
-          onclick={(e) => {
-            e.stopPropagation()
-            tickerNotif = null
-            navigateTo(NotificationPage, notifConfig, true)
-          }}
-        >
-          <div class="ticker-content">
-            <Bell size={10} class="ticker-bell" />
-            <span class="ticker-app">{tickerNotif.appName || 'Notification'}</span>
-            <span class="ticker-sep">•</span>
-            <span class="ticker-text">{tickerNotif.title || tickerNotif.message}</span>
-          </div>
-          <span class="ticker-badge">{$notifData.length}</span>
-        </div>
-      {/if}
 
       {#if expanded}
         <div in:fade={{ duration: 200, delay: 150 }}>
@@ -935,75 +891,6 @@
     position: relative;
   }
 
-  .expanded-notif-ticker {
-    position: absolute;
-    top: 4px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 90;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background: rgba(30, 30, 45, 0.85);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid var(--c-border-subtle, rgba(255, 255, 255, 0.12));
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-size: 10px;
-    max-width: 80%;
-    cursor: pointer;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    transition: all 0.2s ease;
-  }
-
-  .expanded-notif-ticker:hover {
-    background: rgba(45, 45, 65, 0.95);
-    transform: translateX(-50%) scale(1.02);
-  }
-
-  .ticker-content {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    overflow: hidden;
-    white-space: nowrap;
-    color: var(--c-text-primary);
-  }
-
-  :global(.ticker-bell) {
-    color: var(--c-primary, #6366f1);
-    flex-shrink: 0;
-  }
-
-  .ticker-app {
-    font-weight: 700;
-    color: var(--c-text-primary);
-    flex-shrink: 0;
-  }
-
-  .ticker-sep {
-    opacity: 0.5;
-    flex-shrink: 0;
-  }
-
-  .ticker-text {
-    opacity: 0.8;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .ticker-badge {
-    background: #ef4444;
-    color: #fff;
-    font-size: 8px;
-    font-weight: 700;
-    padding: 1px 4px;
-    border-radius: 6px;
-    line-height: 1;
-    flex-shrink: 0;
-  }
 
   .view {
     grid-area: 1 / 1;

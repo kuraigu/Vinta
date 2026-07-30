@@ -143,7 +143,7 @@
 <style>
   .dock-container {
     position: absolute;
-    bottom: 8px;
+    bottom: 6px;
     left: 0;
     right: 0;
     display: flex;
@@ -159,20 +159,18 @@
     gap: 4px;
     padding: 4px 8px;
     border-radius: 20px;
-    background: var(--c-surface-elevated, rgba(30, 30, 40, 0.75));
+    background: var(--c-dock-popover-bg);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    border: 1px solid var(--c-border-subtle, rgba(255, 255, 255, 0.1));
-    box-shadow:
-      0 4px 16px rgba(0, 0, 0, 0.3),
-      0 0 0 1px rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--c-border);
+    box-shadow: var(--c-dock-popover-shadow);
     pointer-events: auto;
   }
 
   .divider {
     width: 1px;
     height: 16px;
-    background: var(--c-border-subtle, rgba(255, 255, 255, 0.1));
+    background: var(--c-border);
     margin: 0 2px;
   }
 </style>

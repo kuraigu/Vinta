@@ -13,7 +13,6 @@
   import {
     themeStore,
     shapeStore,
-    autoHideStore,
     homeAutoHideStore,
     mediaAutoHideStore,
     notifAutoHideStore,
@@ -37,7 +36,6 @@
     notifSoundStore,
     notifVolumeStore,
     glowIntensityStore,
-    compactScaleStore,
     autostartStore,
     getInitialTimezone
   } from '../store'
@@ -266,12 +264,6 @@
     { label: 'Light Mode', value: 'light' }
   ]
 
-  const compactScaleOptions = [
-    { label: 'Small (320px)', value: 'small' },
-    { label: 'Standard (360px)', value: 'normal' },
-    { label: 'Large (400px)', value: 'large' }
-  ]
-
   const glowIntensityOptions = [
     { label: 'Disabled', value: 'disabled' },
     { label: 'Subtle', value: 'subtle' },
@@ -343,19 +335,6 @@
               onclick={() => ($shapeStore = 'box')}>Box</button
             >
           </div>
-        </div>
-
-        <div class="setting-item flex-col">
-          <div class="setting-label">
-            <Maximize2 size={14} class="item-icon" />
-            <span>Compact Mode Width</span>
-          </div>
-          <CustomSelect
-            options={compactScaleOptions}
-            bind:value={$compactScaleStore}
-            fullWidth={true}
-            direction="auto"
-          />
         </div>
 
         <div class="setting-item flex-col">
@@ -657,7 +636,6 @@
           </label>
         </div>
 
-
         <div class="setting-item">
           <div class="setting-label">
             <Bell size={14} class="item-icon" />
@@ -808,7 +786,11 @@
 
 <div class="settings-page">
   <div class="header">
-    <div class="title">Settings</div>
+    <div class="header-side left"></div>
+    <div class="header-center">
+      <div class="title">Settings</div>
+    </div>
+    <div class="header-side right"></div>
   </div>
 
   <div class="gallery-wrapper">
@@ -840,14 +822,39 @@
   .header {
     display: flex;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
     margin-bottom: 8px;
     flex-shrink: 0;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .header-side {
+    flex: 1 1 0;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+  }
+
+  .header-side.left {
+    pointer-events: auto;
+  }
+
+  .header-side.right {
+    justify-content: flex-end;
+  }
+
+  .header-center {
+    flex: 1 1 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    white-space: nowrap;
   }
 
   .title {
     font-weight: 600;
-    font-size: 15px;
+    font-size: 0.9rem;
     letter-spacing: -0.01em;
     text-align: center;
     color: var(--c-text-primary);

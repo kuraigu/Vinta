@@ -24,7 +24,10 @@
 <button
   class="dock-btn {variant}"
   class:active
-  {onclick}
+  onclick={(e) => {
+    e.stopPropagation()
+    if (onclick) onclick(e)
+  }}
   data-tooltip={tooltip}
 >
   {@render children()}
@@ -115,7 +118,7 @@
     padding: 0 3px;
     border-radius: 7px;
     background: var(--c-primary, #6366f1);
-    color: #fff;
+    color: var(--c-text-primary, #ffffff);
     font-size: 9px;
     font-weight: 700;
     line-height: 14px;

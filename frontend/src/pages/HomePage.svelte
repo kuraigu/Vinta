@@ -64,7 +64,11 @@
   {:else}
     <div class="expanded-view">
       <div class="header">
-        <div class="title">{activeSlideTitle}</div>
+        <div class="header-side left"></div>
+        <div class="header-center">
+          <div class="title">{activeSlideTitle}</div>
+        </div>
+        <div class="header-side right"></div>
       </div>
       <div class="gallery-wrapper">
         <ComponentGallery
@@ -92,7 +96,7 @@
     box-sizing: border-box;
   }
 
-  /* Minimal View - 100% Symmetrical Left & Right margins */
+  /* Minimal View - Left content + fold button on right */
   .minimal-view {
     display: flex;
     align-items: center;
@@ -143,18 +147,42 @@
 
   .header {
     display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px 4px 16px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .header-side {
+    flex: 1 1 0;
+    display: flex;
+    align-items: center;
+    min-width: 0;
+  }
+
+  .header-side.left {
+    pointer-events: auto;
+  }
+
+  .header-side.right {
+    justify-content: flex-end;
+  }
+
+  .header-center {
+    flex: 1 1 0;
+    display: flex;
     justify-content: center;
     align-items: center;
-    padding: 12px 16px 4px 16px;
+    white-space: nowrap;
   }
 
   .title {
-    font-size: 0.85rem;
-    font-weight: 700;
-    letter-spacing: 0.03em;
-    opacity: 0.85;
-    color: var(--c-text-primary);
+    font-weight: 600;
+    font-size: 0.9rem;
+    letter-spacing: -0.01em;
     text-align: center;
+    color: var(--c-text-primary);
   }
 
   .gallery-wrapper {

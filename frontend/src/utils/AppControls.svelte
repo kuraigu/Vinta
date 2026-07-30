@@ -45,13 +45,15 @@
     doMinimize: (
       navigate: NavFn,
       e: Event,
-      currentPage?: unknown,
-      currentConfig?: IslandConfig,
+      _currentPage?: unknown,
+      _currentConfig?: IslandConfig,
       isMediaPlaying?: boolean
     ) => {
       e.stopPropagation()
+      e.preventDefault()
       const mediaState = get(globalMediaStore)
-      if (currentPage === MediaPage || isMediaPlaying || mediaState.isPlaying) {
+      const isPlaying = isMediaPlaying || mediaState.isPlaying
+      if (isPlaying) {
         navigate(MediaPage, mediaConfig, false)
       } else {
         navigate(HomePage, homeConfig, false)

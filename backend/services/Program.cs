@@ -681,8 +681,9 @@ void SendVolumeKey(byte vk)
     try
     {
         keybd_event(vk, 0, 0, 0);
+        Thread.Sleep(10);
         keybd_event(vk, 0, KEYEVENTF_KEYUP, 0);
-        // Invalidate cache so next emit picks up new value
+        // Invalidate volume cache so next emit picks up updated OS master volume
         _volumeCacheExpiry = DateTime.MinValue;
     }
     catch { }

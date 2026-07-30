@@ -94,30 +94,30 @@
     displayIndex--
   }
 
-  function handleTransitionEnd() {
+  function handleTransitionEnd(e?: TransitionEvent) {
+    if (e && e.propertyName !== 'transform') return
     if (!isLoopingable) return
-    // Only act if we triggered a deliberate slide transition (ignore spurious dragOffset fires)
-    if (!isTransitioning) return
-    isTransitioning = false
 
     if (displayIndex === 0) {
-      // Jump to real last slide instantly (no animation), then re-enable transitions next frame
       isInstant = true
       displayIndex = clonedSlides.length - 2
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           isInstant = false
+          isTransitioning = false
         })
       })
     } else if (displayIndex === clonedSlides.length - 1) {
-      // Jump to real first slide instantly (no animation), then re-enable transitions next frame
       isInstant = true
       displayIndex = 1
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           isInstant = false
+          isTransitioning = false
         })
       })
+    } else {
+      isTransitioning = false
     }
   }
 

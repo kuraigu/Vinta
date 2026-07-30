@@ -63,11 +63,7 @@ export const glowIntensityStore = persistentWritable<GlowIntensity>(
   'vinta_glow_intensity',
   'subtle'
 )
-export type CompactScale = 'small' | 'normal' | 'large'
-export const compactScaleStore = persistentWritable<CompactScale>(
-  'vinta_compact_scale',
-  'normal'
-)
+
 export const autostartStore = persistentWritable<boolean>(
   'vinta_autostart',
   false
