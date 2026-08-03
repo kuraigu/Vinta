@@ -1,36 +1,84 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte'
+
   interface Props {
     isPlaying?: boolean
+    audioPeak?: number
     barCount?: number
     variant?: 'minimal' | 'full'
+    progressPercent?: number
   }
 
-  let {
-    isPlaying = false,
-    barCount = 24,
-    variant = 'minimal'
-  }: Props = $props()
+  let props: Props = $props()
 
-  // Pre-generated seed heights for organic visual diversity
-  const seedHeights = [
-    35, 60, 90, 50, 75, 100, 80, 45, 70, 95, 85, 60,
-    40, 80, 95, 65, 50, 85, 90, 55, 75, 45, 65, 35
-  ]
+  const MIN_HEIGHT = 25 // 25% baseline (~5-6px) minimum height when paused/quiet/muted
 
-  let heights = $derived(
-    Array.from({ length: barCount }, (_, i) => seedHeights[i % seedHeights.length])
+  // Initialize the array once to prevent reallocation
+  let dynamicHeights = $state<number[]>(
+    Array(props.barCount || 24).fill(MIN_HEIGHT)
   )
+  let animFrame: number = 0
+
+  // Cleanly manage animation loop based on isPlaying state
+  $effect(() => {
+    if (props.isPlaying) {
+      if (!animFrame) animFrame = requestAnimationFrame(updateHeights)
+    } else {
+      if (animFrame) {
+        cancelAnimationFrame(animFrame)
+        animFrame = 0
+      }
+      // Set to baseline height when paused
+      const count = props.barCount || 24
+      for (let i = 0; i < count; i++) {
+        dynamicHeights[i] = MIN_HEIGHT
+      }
+    }
+  })
+
+  function updateHeights(time: number) {
+    if (!props.isPlaying) return
+
+    const t = time * 0.0045
+    const peak = props.audioPeak || 0
+    // Real audio peak signal gating: 0 when video/media has NO audio or is silent; active wave scaling when audio is present
+    const amplitude =
+      peak > 0.001 ? Math.min(1.5, Math.max(0.4, peak * 2.5)) : 0
+
+    const count = props.barCount || 24
+    for (let i = 0; i < count; i++) {
+      if (amplitude === 0) {
+        dynamicHeights[i] = MIN_HEIGHT
+      } else {
+        const wave1 = Math.sin(t * 2.8 + i * 0.45)
+        const wave2 = Math.cos(t * 4.2 + i * 0.75) * 0.5
+        const wave3 = Math.sin(t * 6.5 + i * 1.3) * 0.25
+        const combined = Math.abs(wave1 + wave2 + wave3) / 1.75
+        const val = Math.round(MIN_HEIGHT + combined * 75 * amplitude)
+        dynamicHeights[i] = Math.max(MIN_HEIGHT, Math.min(100, val))
+      }
+    }
+
+    animFrame = requestAnimationFrame(updateHeights)
+  }
+
+  onDestroy(() => {
+    if (animFrame) cancelAnimationFrame(animFrame)
+  })
 </script>
 
-<div class="dynamic-equalizer {variant}" class:is-playing={isPlaying}>
-  {#each heights as h, i (i)}
+<div
+  class="dynamic-equalizer {props.variant || 'minimal'}"
+  class:is-playing={props.isPlaying}
+>
+  {#each dynamicHeights as h, i (i)}
+    {@const barPercent = (i / Math.max(1, (props.barCount || 24) - 1)) * 100}
+    {@const isPlayed =
+      props.progressPercent === undefined ||
+      barPercent <= props.progressPercent}
     <div
-      class="eq-bar"
-      style="
-        --bar-height: {h}%;
-        --delay: {((i % 12) * 0.07).toFixed(2)}s;
-        --duration: {(0.6 + (i % 5) * 0.12).toFixed(2)}s;
-      "
+      class="eq-bar {isPlayed ? 'is-played' : 'is-unplayed'}"
+      style="height: {h}%;"
     ></div>
   {/each}
 </div>
@@ -46,39 +94,37 @@
   }
 
   .dynamic-equalizer.minimal {
-    gap: 2.5px;
+    gap: 2px;
     height: 12px;
+    width: 18px;
   }
 
   .eq-bar {
     flex: 1;
-    height: var(--bar-height);
-    background: var(--c-primary, #6366f1);
+    min-height: 5px;
     border-radius: 2px;
-    opacity: 0.4;
     transform-origin: bottom;
-    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.3s ease, background-color 0.3s ease;
+    transition:
+      opacity 0.3s ease,
+      background 0.3s ease;
+    background: rgba(255, 255, 255, 0.45);
+    opacity: 0.7;
+    will-change: height;
   }
 
-  .dynamic-equalizer.is-playing .eq-bar {
+  .eq-bar.is-played {
+    background: linear-gradient(180deg, #00f0ff 0%, #a855f7 50%, #ff007f 100%);
     opacity: 0.95;
-    background: linear-gradient(180deg, var(--c-purple, #a855f7) 0%, var(--c-primary, #6366f1) 100%);
-    animation: eqPulse var(--duration) infinite ease-in-out alternate;
-    animation-delay: var(--delay);
   }
 
-  @keyframes eqPulse {
-    0% {
-      transform: scaleY(0.25);
-      filter: brightness(0.9);
-    }
-    50% {
-      transform: scaleY(1.15);
-      filter: brightness(1.2);
-    }
-    100% {
-      transform: scaleY(0.4);
-      filter: brightness(1);
-    }
+  .dynamic-equalizer.is-playing .eq-bar.is-played {
+    opacity: 1;
+    box-shadow:
+      0 0 8px rgba(0, 240, 255, 0.6),
+      0 0 14px rgba(255, 0, 127, 0.4);
+  }
+
+  .dynamic-equalizer.is-playing .eq-bar.is-unplayed {
+    opacity: 0.4;
   }
 </style>

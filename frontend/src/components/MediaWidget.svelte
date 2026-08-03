@@ -12,12 +12,18 @@
 <script lang="ts">
   import { SendMediaControl } from '../../wailsjs/go/backend/App.js'
   import Clock from './Clock.svelte'
+  import DynamicEqualizer from './DynamicEqualizer.svelte'
   import { globalMediaStore, notifData } from '../store'
   import { Volume2, VolumeX, Laptop, Music, Bell } from 'lucide-svelte'
   import { getContext } from 'svelte'
-  import NotificationPage, { config as notifConfig } from '../pages/NotificationPage.svelte'
+  import NotificationPage, {
+    config as notifConfig
+  } from '../pages/NotificationPage.svelte'
 
-  const navigate = getContext<(page: unknown, pageConfig: IslandConfig, expand?: boolean) => void>('navigate')
+  const navigate =
+    getContext<
+      (page: unknown, pageConfig: IslandConfig, expand?: boolean) => void
+    >('navigate')
 
   interface Props {
     expanded?: boolean
@@ -35,6 +41,20 @@
   let prevNotifCount = $state(0)
   let isNewNotif = $state(false)
   let pulseTimeout: number
+
+  let isRewinding = $state(false)
+  let prevPercent = 0
+
+  $effect(() => {
+    const currentPercent = progressPercent
+    if (currentPercent < prevPercent - 5) {
+      isRewinding = true
+      window.requestAnimationFrame(() => {
+        isRewinding = false
+      })
+    }
+    prevPercent = currentPercent
+  })
 
   $effect(() => {
     const currentCount = $notifData.length
@@ -64,23 +84,41 @@
 
   function handleSeekInput(e: Event) {
     seekVal = Number((e.target as HTMLInputElement).value)
+    isDraggingSeek = true
   }
+
+  let seekDebounceTimer: ReturnType<typeof setTimeout> | null = null
 
   function handleSeekChange(e: Event) {
     const val = Number((e.target as HTMLInputElement).value)
-    isDraggingSeek = false
     SendMediaControl(`seek:${val}`)
+    if (media) media.positionMs = val
+    if (seekDebounceTimer) clearTimeout(seekDebounceTimer)
+    seekDebounceTimer = setTimeout(() => {
+      isDraggingSeek = false
+      seekDebounceTimer = null
+    }, 1000)
   }
 
+  let volThrottleTimer: ReturnType<typeof setTimeout> | null = null
   function handleVolInput(e: Event) {
     volVal = Number((e.target as HTMLInputElement).value)
-    SendMediaControl(`set_volume:${volVal}`)
+    isDraggingVol = true
+    if (!volThrottleTimer) {
+      SendMediaControl(`set_volume:${volVal}`)
+      volThrottleTimer = setTimeout(() => {
+        volThrottleTimer = null
+      }, 75)
+    }
   }
 
   function handleVolChange(e: Event) {
     const val = Number((e.target as HTMLInputElement).value)
-    isDraggingVol = false
+    if (volThrottleTimer) clearTimeout(volThrottleTimer)
+    volThrottleTimer = null
     SendMediaControl(`set_volume:${val}`)
+    if (media) media.volume = val
+    isDraggingVol = false
   }
 
   function formatTime(ms: number): string {
@@ -97,17 +135,12 @@
           100,
           Math.max(
             0,
-            ((isDraggingSeek ? seekVal : media.positionMs) / media.durationMs) * 100
+            ((isDraggingSeek ? seekVal : media.positionMs) / media.durationMs) *
+              100
           )
         )
       : 0
   )
-
-  // 24 Bold Audio Spectrum Waveform Heights for Soundcloud/iOS Visualizer
-  const waveformHeights = [
-    30, 50, 85, 45, 65, 95, 75, 40, 70, 90, 100, 75, 55, 85, 95, 65, 45, 80, 90,
-    60, 85, 50, 70, 40
-  ]
 </script>
 
 <div class="media-container {expanded ? 'expanded' : 'minimal'}">
@@ -143,8 +176,11 @@
 
       <!-- Track Info -->
       <div class="track-info-minimal">
-        <span class="track-title-mini">{media.title || 'No Media Playing'}</span>
-        <span class="artist-name-mini">{media.artist || 'Connect Media Player'}</span>
+        <span class="track-title-mini">{media.title || 'No Media Playing'}</span
+        >
+        <span class="artist-name-mini"
+          >{media.artist || 'Connect Media Player'}</span
+        >
       </div>
 
       <!-- Minimal Re-used <Clock>, Bouncing Equalizer & Subtle Notification Indicator -->
@@ -159,33 +195,32 @@
             }}
           >
             <Bell size={10} />
-            <span class="mini-notif-count">{$notifData.length > 9 ? '9+' : $notifData.length}</span>
+            <span class="mini-notif-count"
+              >{$notifData.length > 9 ? '9+' : $notifData.length}</span
+            >
           </button>
         {/if}
         <div class="minimal-clock-box">
           <Clock expanded={false} />
         </div>
         {#if media.isPlaying}
-          <div class="equalizer">
-            <span class="bar bar-1"></span>
-            <span class="bar bar-2"></span>
-            <span class="bar bar-3"></span>
-          </div>
+          <DynamicEqualizer
+            isPlaying={media.isPlaying}
+            audioPeak={media.audioPeak || 0}
+            variant="minimal"
+            barCount={4}
+          />
         {/if}
       </div>
 
-      <!-- Compact Visible Audio Waveform Bar Track -->
-      <div class="mini-wave-track">
-        {#each waveformHeights as height, i (i)}
-          {@const barPercent = (i / (waveformHeights.length - 1)) * 100}
-          {@const isPlayed = barPercent <= progressPercent}
-          <div
-            class="mini-wave-bar {isPlayed
-              ? 'played'
-              : 'unplayed'} {media.isPlaying && isPlayed ? 'dancing' : ''}"
-            style="height: {height}%; animation-delay: {i * 0.05}s;"
-          ></div>
-        {/each}
+      <!-- Compact Minimal Progress Track with Ghost Background & Capsule Laser Fill -->
+      <div class="mini-progress-track {isRewinding ? 'no-transition' : ''}">
+        <div class="mini-progress-ghost"></div>
+        <div
+          class="mini-progress-fill"
+          style="width: {progressPercent}%;"
+        ></div>
+        <div class="mini-progress-head" style="left: {progressPercent}%;"></div>
       </div>
     </div>
   {:else}
@@ -238,10 +273,6 @@
             <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
               <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
             </svg>
-          {:else}
-            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
-              <path d="M8 5v14l11-7z" />
-            </svg>
           {/if}
         </button>
       </div>
@@ -253,24 +284,31 @@
         >
         <div class="waveform-scrub-wrapper">
           <div class="spectrum-bars-container">
-            {#each waveformHeights as height, i (i)}
-              {@const barPercent = (i / (waveformHeights.length - 1)) * 100}
-              {@const isPlayed = barPercent <= progressPercent}
-              <div
-                class="spectrum-bar {isPlayed
-                  ? 'played'
-                  : 'unplayed'} {media.isPlaying && isPlayed ? 'dancing' : ''}"
-                style="height: {height}%; animation-delay: {i * 0.04}s;"
-              ></div>
-            {/each}
+            <DynamicEqualizer
+              isPlaying={media.isPlaying}
+              audioPeak={media.audioPeak || 0}
+              variant="full"
+              barCount={32}
+              {progressPercent}
+            />
+          </div>
+          <div class="whole-capsule-track {isRewinding ? 'no-transition' : ''}">
+            <div class="capsule-track-ghost"></div>
+            <div
+              class="capsule-track-fill"
+              style="width: {progressPercent}%;"
+            ></div>
+            <div
+              class="capsule-track-head"
+              style="left: {progressPercent}%;"
+            ></div>
           </div>
           <input
             type="range"
             min="0"
-            max={media.durationMs || 100}
+            max={media.durationMs > 0 ? media.durationMs : 100}
             value={isDraggingSeek ? seekVal : media.positionMs}
             class="scrub-input"
-            onpointerdown={() => (isDraggingSeek = true)}
             oninput={handleSeekInput}
             onchange={handleSeekChange}
           />
@@ -297,7 +335,10 @@
             onclick={(e) => handleControl('next', e)}
           >
             <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
-              <path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z" />
+              <path
+                d="M6 6h2v12H6zm3.5 6l8.5 6V6z"
+                transform="rotate(180 12 12)"
+              />
             </svg>
           </button>
         </div>
@@ -316,18 +357,21 @@
             {/if}
           </button>
 
+          <span class="vol-percentage-text"
+            >{Math.round(isDraggingVol ? volVal : (media.volume ?? 50))}%</span
+          >
+
           <div class="vol-slider-wrapper">
             <div
               class="vol-fill"
-              style="width: {isDraggingVol ? volVal : media.volume || 50}%"
+              style="width: {isDraggingVol ? volVal : (media.volume ?? 50)}%"
             ></div>
             <input
               type="range"
               min="0"
               max="100"
-              value={isDraggingVol ? volVal : media.volume || 50}
+              value={isDraggingVol ? volVal : (media.volume ?? 50)}
               class="vol-input"
-              onpointerdown={() => (isDraggingVol = true)}
               oninput={handleVolInput}
               onchange={handleVolChange}
             />
@@ -350,7 +394,6 @@
     pointer-events: none;
   }
 
-  /* Minimal Layout - Perfectly centered 3-column layout with safe pill-curve padding */
   .minimal-layout {
     pointer-events: auto;
     display: flex;
@@ -365,7 +408,6 @@
     box-sizing: border-box;
   }
 
-  /* Spinning Vinyl Disc */
   .vinyl-disc {
     width: 28px;
     height: 28px;
@@ -525,76 +567,92 @@
     white-space: nowrap;
   }
 
-  /* Compact Visible Audio Waveform Bar Track */
-  .mini-wave-track {
+  .no-transition,
+  .no-transition * {
+    transition: none !important;
+  }
+
+  .mini-progress-track {
     position: absolute;
-    bottom: 2px;
-    left: 20px;
-    right: 20px;
-    height: 7px;
-    display: flex;
-    align-items: flex-end;
-    gap: 2.5px;
+    bottom: 3px;
+    left: 45px;
+    right: 45px;
+    height: 4px;
+    border-radius: 9999px;
+    overflow: visible;
     pointer-events: none;
   }
 
-  .mini-wave-bar {
-    flex: 1;
-    border-radius: 1px;
-    transition: background 0.2s ease;
-  }
-
-  .mini-wave-bar.played {
-    background: linear-gradient(180deg, #ff3c64 0%, #1db954 100%);
-    box-shadow: 0 0 4px rgba(255, 60, 100, 0.8);
-  }
-
-  .mini-wave-bar.unplayed {
-    background: rgba(255, 255, 255, 0.25);
-  }
-
-  .mini-wave-bar.dancing {
-    animation: waveBounce 0.8s infinite ease-in-out alternate;
-  }
-
-  /* Equalizer Animation */
-  .equalizer {
-    display: flex;
-    align-items: flex-end;
-    gap: 2px;
-    height: 12px;
-  }
-
-  .bar {
-    width: 2.5px;
-    background-color: #1db954;
-    border-radius: 1px;
-    animation: bounce 1s infinite ease-in-out alternate;
-  }
-
-  .bar-1 {
-    height: 60%;
-    animation-delay: 0.1s;
-  }
-  .bar-2 {
+  .mini-progress-ghost {
+    position: absolute;
+    inset: 0;
+    width: 100%;
     height: 100%;
-    animation-delay: 0.3s;
-  }
-  .bar-3 {
-    height: 40%;
-    animation-delay: 0.2s;
+    background: rgba(255, 255, 255, 0.16);
+    border-radius: 9999px;
   }
 
-  @keyframes bounce {
+  .mini-progress-fill {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    height: 100%;
+    background: linear-gradient(90deg, #00f0ff 0%, #a855f7 50%, #ff007f 100%);
+    box-shadow:
+      0 0 8px #00f0ff,
+      0 0 16px #ff007f,
+      inset 0 0 4px #ffffff;
+    border-radius: 9999px;
+    transition: width 0.15s linear;
+  }
+
+  .mini-progress-head {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow:
+      0 0 10px #00f0ff,
+      0 0 18px #ff007f,
+      0 0 26px #a855f7;
+    z-index: 10;
+    pointer-events: none;
+    transition: left 0.1s linear;
+  }
+
+  .mini-progress-head::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    background: radial-gradient(
+      circle,
+      rgba(0, 240, 255, 0.6) 0%,
+      rgba(255, 0, 127, 0.3) 60%,
+      transparent 100%
+    );
+    box-shadow:
+      0 0 10px rgba(0, 240, 255, 0.7),
+      0 0 16px rgba(255, 0, 127, 0.5);
+    animation: subtleHeadPulse 1.8s infinite ease-in-out alternate;
+    pointer-events: none;
+  }
+
+  @keyframes subtleHeadPulse {
     0% {
-      transform: scaleY(0.3);
+      transform: scale(0.85);
+      opacity: 0.5;
     }
     100% {
-      transform: scaleY(1);
+      transform: scale(1.4);
+      opacity: 0.95;
     }
   }
 
-  /* Full-Card Background Styling - Theme Aware Cover Card */
   .card-bg-wrapper {
     position: absolute;
     inset: 0;
@@ -633,7 +691,6 @@
     );
   }
 
-  /* Expanded Card Layout */
   .expanded-card {
     position: relative;
     z-index: 2;
@@ -647,7 +704,6 @@
     pointer-events: auto;
   }
 
-  /* Top Bar */
   .top-meta-bar {
     display: flex;
     align-items: center;
@@ -685,7 +741,6 @@
     font-weight: 600;
   }
 
-  /* Middle Section - Centered Song Info */
   .middle-section {
     display: flex;
     align-items: center;
@@ -752,7 +807,9 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.38), 0 0 14px rgba(255, 255, 255, 0.25);
+    box-shadow:
+      0 4px 16px rgba(0, 0, 0, 0.38),
+      0 0 14px rgba(255, 255, 255, 0.25);
     transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     flex-shrink: 0;
   }
@@ -760,10 +817,11 @@
   .hero-play-btn:hover {
     transform: scale(1.08);
     background: #ffffff;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.48), 0 0 20px rgba(255, 255, 255, 0.4);
+    box-shadow:
+      0 6px 20px rgba(0, 0, 0, 0.48),
+      0 0 20px rgba(255, 255, 255, 0.4);
   }
 
-  /* Soundcloud / iOS Spectrum Audio Waveform Scrub Bar */
   .scrub-container {
     display: flex;
     align-items: center;
@@ -790,39 +848,63 @@
 
   .spectrum-bars-container {
     position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: flex-end;
-    gap: 3px;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 8px;
     pointer-events: none;
   }
 
-  .spectrum-bar {
-    flex: 1;
-    border-radius: 2px;
-    transition: background 0.15s ease;
+  .whole-capsule-track {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    border-radius: 9999px;
+    overflow: visible;
+    pointer-events: none;
   }
 
-  .spectrum-bar.played {
-    background: linear-gradient(180deg, #ff3c64 0%, #1db954 100%);
-    box-shadow: 0 0 6px rgba(255, 60, 100, 0.8);
+  .capsule-track-ghost {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255, 255, 255, 0.16);
+    border-radius: 9999px;
   }
 
-  .spectrum-bar.unplayed {
-    background: rgba(255, 255, 255, 0.2);
+  .capsule-track-fill {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    height: 100%;
+    background: linear-gradient(90deg, #00f0ff 0%, #a855f7 50%, #ff007f 100%);
+    box-shadow:
+      0 0 10px #00f0ff,
+      0 0 20px #ff007f,
+      inset 0 0 4px #ffffff;
+    border-radius: 9999px;
+    transition: width 0.15s linear;
   }
 
-  .spectrum-bar.dancing {
-    animation: waveBounce 0.8s infinite ease-in-out alternate;
-  }
-
-  @keyframes waveBounce {
-    0% {
-      transform: scaleY(0.45);
-    }
-    100% {
-      transform: scaleY(1.2);
-    }
+  .capsule-track-head {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow:
+      0 0 10px #00f0ff,
+      0 0 18px #ff007f,
+      0 0 26px #a855f7;
+    z-index: 10;
+    pointer-events: none;
+    transition: left 0.1s linear;
   }
 
   .scrub-input {
@@ -835,7 +917,6 @@
     z-index: 5;
   }
 
-  /* Bottom Controls Row */
   .bottom-controls-row {
     display: flex;
     align-items: center;
@@ -869,7 +950,6 @@
     transform: scale(1.08);
   }
 
-  /* Volume Slider Control */
   .volume-control {
     display: flex;
     align-items: center;
@@ -893,6 +973,16 @@
 
   .vol-icon-btn:hover {
     opacity: 1;
+  }
+
+  .vol-percentage-text {
+    font-size: 0.62rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--c-text-primary, #ffffff);
+    opacity: 0.85;
+    min-width: 24px;
+    text-align: right;
   }
 
   .vol-slider-wrapper {

@@ -17,9 +17,8 @@
     config as notifConfig
   } from './NotificationPage.svelte'
   import MediaPage, { config as mediaConfig } from './MediaPage.svelte'
-  import SettingsPage, {
-    config as settingsConfig
-  } from './SettingsPage.svelte'
+  import SettingsPage, { config as settingsConfig } from './SettingsPage.svelte'
+  import ScrollView from '../components/ScrollView.svelte'
   import { notifData } from '../store'
 
   const navigate =
@@ -101,7 +100,7 @@
     </div>
   </div>
 
-  <div class="bento-container">
+  <ScrollView class="bento-container">
     {#if filteredApps.length === 0}
       <div class="empty-state">No apps matching "{searchQuery}"</div>
     {:else}
@@ -130,7 +129,7 @@
         {/each}
       </div>
     {/if}
-  </div>
+  </ScrollView>
 </div>
 
 <style>
@@ -191,18 +190,8 @@
 
   .bento-container {
     flex: 1;
-    overflow-y: auto;
     min-height: 0;
     padding-right: 2px;
-  }
-
-  .bento-container::-webkit-scrollbar {
-    width: 4px;
-  }
-
-  .bento-container::-webkit-scrollbar-thumb {
-    background: var(--c-border, rgba(255, 255, 255, 0.15));
-    border-radius: 4px;
   }
 
   .bento-grid {
@@ -240,35 +229,39 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    color: #fff;
+    color: var(--c-text-primary);
   }
 
   .bento-app-card.gradient-orange .card-icon-wrapper {
-    background: linear-gradient(135deg, #ff7e5f, #feb47b);
+    background: linear-gradient(135deg, var(--c-warning), var(--c-amber));
   }
 
   .bento-app-card.gradient-pink .card-icon-wrapper {
-    background: linear-gradient(135deg, #ff416c, #ff4b2b);
+    background: linear-gradient(135deg, var(--c-danger), var(--c-purple));
   }
 
   .bento-app-card.gradient-blue .card-icon-wrapper {
-    background: linear-gradient(135deg, #3a7bd5, #3a6073);
+    background: linear-gradient(
+      135deg,
+      var(--c-primary),
+      var(--c-surface-elevated, #3a6073)
+    );
   }
 
   .bento-app-card.gradient-purple .card-icon-wrapper {
-    background: linear-gradient(135deg, #8e2de2, #4a00e0);
+    background: linear-gradient(135deg, var(--c-purple), var(--c-primary));
   }
 
   .bento-app-card.gradient-dark .card-icon-wrapper {
-    background: linear-gradient(135deg, #434343, #000000);
+    background: linear-gradient(135deg, var(--c-contrast-bg), var(--c-item-bg));
   }
 
   .card-badge {
     position: absolute;
     top: -3px;
     right: -3px;
-    background: #ef4444;
-    color: #fff;
+    background: var(--c-danger);
+    color: var(--c-text-primary);
     font-size: 8px;
     font-weight: 700;
     padding: 1px 4px;

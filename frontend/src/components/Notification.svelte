@@ -20,8 +20,9 @@
   import { notifData, notificationPermissionDenied, dndStore } from '../store'
   import { swipe } from '../utils/useSwipe'
   import { onMount } from 'svelte'
-  import { SvelteSet } from 'svelte/reactivity'
-  import { appIcons, gameIcons, getCachedBase64Url } from '../appIcons'
+  import { SvelteSet, SvelteMap } from 'svelte/reactivity'
+  import { appIcons, gameIcons } from '../appIcons'
+  import ScrollView from '../components/ScrollView.svelte'
 
   export type NotificationItem = {
     id: number
@@ -57,6 +58,8 @@
       expandedGroups.add(brandName)
     }
   }
+
+  let itemDragOffsets = new SvelteMap<string, number>()
 
   function dismissGroup(brandName: string) {
     notifData.update((n) =>
@@ -253,9 +256,6 @@
   } {
     const rawName = notif.appName || 'Notification'
     let defaultIcon = notif.icon || null
-    if (!defaultIcon && notif.heroImage && isImageUrl(notif.heroImage)) {
-      defaultIcon = notif.heroImage
-    }
 
     const allIcons = [...gameIcons, ...appIcons]
 
@@ -369,7 +369,14 @@
               {/if}
             </div>
             {#if brand.appIcon && isImageUrl(brand.appIcon) && brand.appIcon !== brand.icon}
-              <img src={brand.appIcon} alt="app badge" class="app-badge" />
+              <img
+                src={brand.appIcon}
+                alt="app badge"
+                class="app-badge"
+                onerror={(e) => {
+                  ;(e.currentTarget as HTMLImageElement).style.display = 'none'
+                }}
+              />
             {/if}
           </div>
           <div class="banner-content">
@@ -423,18 +430,11 @@
           >
         </div>
       {/if}
-      <div
-        class="notif-list"
-        use:swipe={{
-          enableSwipe: true,
-          ignoreSelector: 'button, .notif-actions'
-        }}
-      >
-        {#snippet renderNotifItem(
-          notif: NotificationItem,
-          brand: NotificationGroup,
-          nested: boolean
-        )}
+      {#snippet renderNotifItem(
+        notif: NotificationItem,
+        brand: NotificationGroup,
+        nested: boolean
+      )}
           {@const displayBrand = getDisplayBrand(notif)}
           {@const iconUrl = displayBrand.icon}
           <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -442,6 +442,28 @@
           <div
             class="notif-item"
             class:nested
+            class:is-swiping={itemDragOffsets.has(`item-${notif.id}`)}
+            style="transform: translateX({itemDragOffsets.get(
+              `item-${notif.id}`
+            ) || 0}px); transition: {itemDragOffsets.has(`item-${notif.id}`)
+              ? 'none'
+              : 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)'};"
+            use:swipe={{
+              enableSwipe: true,
+              ignoreSelector: 'button, .notif-actions, .expand-indicator',
+              onDragMove: (offset) => {
+                itemDragOffsets.set(`item-${notif.id}`, offset.x)
+              },
+              onDragEnd: () => {
+                itemDragOffsets.delete(`item-${notif.id}`)
+              },
+              onSwipeRight: () => {
+                dismiss(notif.id)
+              },
+              onSwipeLeft: () => {
+                dismiss(notif.id)
+              }
+            }}
             onclick={(e) => {
               if (nested && !expandedGroups.has(brand.brandName)) {
                 e.stopPropagation()
@@ -506,7 +528,7 @@
                   <div class="notif-avatar-icon">
                     {#if isImageUrl(iconUrl)}
                       <img
-                        src={getCachedBase64Url(iconUrl!)}
+                        src={iconUrl!}
                         alt="app icon"
                         class="notif-img-icon"
                         onerror={(e) => {
@@ -525,7 +547,19 @@
                             src={displayBrand.appIcon}
                             alt="app icon"
                             class="notif-img-icon"
+                            onerror={(e) => {
+                              const img = e.currentTarget as HTMLImageElement
+                              img.style.display = 'none'
+                              if (img.nextElementSibling) {
+                                ;(
+                                  img.nextElementSibling as HTMLElement
+                                ).style.display = 'block'
+                              }
+                            }}
                           />
+                          <div style="display: none;">
+                            {@render fallbackIcon(displayBrand, 24)}
+                          </div>
                         {:else}
                           {@render fallbackIcon(displayBrand, 24)}
                         {/if}
@@ -535,7 +569,19 @@
                         src={displayBrand.appIcon}
                         alt="app icon"
                         class="notif-img-icon"
+                        onerror={(e) => {
+                          const img = e.currentTarget as HTMLImageElement
+                          img.style.display = 'none'
+                          if (img.nextElementSibling) {
+                            ;(
+                              img.nextElementSibling as HTMLElement
+                            ).style.display = 'block'
+                          }
+                        }}
                       />
+                      <div style="display: none;">
+                        {@render fallbackIcon(displayBrand, 24)}
+                      </div>
                     {:else if iconUrl}
                       <span class="icon-text">{iconUrl}</span>
                     {:else}
@@ -579,7 +625,8 @@
           </div>
         {/snippet}
 
-        {#each groupedNotifications as group (group.brandName)}
+        <ScrollView class="notif-list">
+          {#each groupedNotifications as group (group.brandName)}
           <div
             animate:flip={{ duration: 300 }}
             in:fly={{ x: -20, duration: 300 }}
@@ -594,6 +641,32 @@
               <div
                 class="notif-group unified-card"
                 class:is-expanded={expandedGroups.has(group.brandName)}
+                class:is-swiping={itemDragOffsets.has(
+                  `group-${group.brandName}`
+                )}
+                style="transform: translateX({itemDragOffsets.get(
+                  `group-${group.brandName}`
+                ) || 0}px); transition: {itemDragOffsets.has(
+                  `group-${group.brandName}`
+                )
+                  ? 'none'
+                  : 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)'};"
+                use:swipe={{
+                  enableSwipe: true,
+                  ignoreSelector: 'button, .notif-actions, .expand-indicator',
+                  onDragMove: (offset) => {
+                    itemDragOffsets.set(`group-${group.brandName}`, offset.x)
+                  },
+                  onDragEnd: () => {
+                    itemDragOffsets.delete(`group-${group.brandName}`)
+                  },
+                  onSwipeRight: () => {
+                    dismissGroup(group.brandName)
+                  },
+                  onSwipeLeft: () => {
+                    dismissGroup(group.brandName)
+                  }
+                }}
                 onclick={() => {
                   if (!expandedGroups.has(group.brandName)) {
                     toggleGroupExpand(group.brandName)
@@ -631,7 +704,28 @@
                               }}
                             />
                             <div style="display: none;">
-                              {@render fallbackIcon(group, 16)}
+                              {#if group.brandAppIcon && isImageUrl(group.brandAppIcon)}
+                                <img
+                                  src={group.brandAppIcon}
+                                  alt="app icon"
+                                  class="notif-img-icon"
+                                  onerror={(e) => {
+                                    const img =
+                                      e.currentTarget as HTMLImageElement
+                                    img.style.display = 'none'
+                                    if (img.nextElementSibling) {
+                                      ;(
+                                        img.nextElementSibling as HTMLElement
+                                      ).style.display = 'block'
+                                    }
+                                  }}
+                                />
+                                <div style="display: none;">
+                                  {@render fallbackIcon(group, 16)}
+                                </div>
+                              {:else}
+                                {@render fallbackIcon(group, 16)}
+                              {/if}
                             </div>
                           {:else if group.brandIcon}
                             <span class="icon-text">{group.brandIcon}</span>
@@ -644,6 +738,11 @@
                             src={group.brandAppIcon}
                             alt="app badge"
                             class="app-badge"
+                            onerror={(e) => {
+                              ;(
+                                e.currentTarget as HTMLImageElement
+                              ).style.display = 'none'
+                            }}
                           />
                         {/if}
                       </div>
@@ -719,7 +818,7 @@
         {#if notifications.length === 0}
           <div class="empty-state">No new notifications</div>
         {/if}
-      </div>
+      </ScrollView>
     </div>
   {/if}
 </div>
@@ -958,23 +1057,11 @@
     width: 100%;
     flex: 1;
     min-height: 0; /* CRITICAL: prevents flex child from overflowing parent */
-    overflow-y: auto;
     display: flex;
     flex-direction: column;
     gap: 12px;
     padding-right: 5px; /* for scrollbar */
     outline: none;
-  }
-
-  .notif-list::-webkit-scrollbar {
-    width: 4px;
-  }
-  .notif-list::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  .notif-list::-webkit-scrollbar-thumb {
-    background: var(--c-scrollbar-thumb);
-    border-radius: 4px;
   }
 
   .notif-item {

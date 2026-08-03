@@ -1,20 +1,12 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Xml.Linq;
 using Microsoft.Data.Sqlite;
 using Windows.Media.Control;
-using Windows.Storage.Streams;
-using Windows.UI.Notifications;
-using Windows.UI.Notifications.Management;
+
+#nullable enable
 
 Console.OutputEncoding = Encoding.UTF8;
 SQLitePCL.Batteries.Init();
@@ -22,29 +14,116 @@ SQLitePCL.Batteries.Init();
 GlobalSystemMediaTransportControlsSessionManager? gsmtcManager = null;
 GlobalSystemMediaTransportControlsSession? currentMediaSession = null;
 
-// Shared HttpClient (singleton - avoids socket exhaustion from repeated creation/disposal)
 var sharedHttpClient = new HttpClient { Timeout = TimeSpan.FromSeconds(3) };
 
-// Debounce: prevent EmitMediaStateAsync from firing more than once per 150ms
-// (TimelinePropertiesChanged can fire many times per second during playback)
 int _emitPending = 0;
+bool _isMediaPlaying = false;
 
-// Volume cache: only re-query COM interfaces when actually needed, not on every position tick
 float _cachedVolume = 50f;
 bool _cachedMute = false;
 DateTime _volumeCacheExpiry = DateTime.MinValue;
-const int VolumeCacheTtlMs = 500;
+const int VolumeCacheTtlMs = 300;
 
-// App icon cache: avoid repeated SQLite queries for the same app
 var _iconCache = new Dictionary<string, string>();
+var _artCache = new Dictionary<string, string>();
 
-// Start Notification Listener Task
+string _vintaCacheDir = Path.Combine(Path.GetTempPath(), "vinta_img_cache");
+
+try {
+    if (Directory.Exists(_vintaCacheDir)) Directory.Delete(_vintaCacheDir, true);
+    Directory.CreateDirectory(_vintaCacheDir);
+} catch { }
+
+const byte VK_VOLUME_MUTE = 0xAD;
+const byte VK_VOLUME_DOWN = 0xAE;
+const byte VK_VOLUME_UP = 0xAF;
+
+// Periodic memory optimization task: free LOH base64 strings & unmanaged COM wrappers
+_ = Task.Run(async () =>
+{
+    while (true)
+    {
+        await Task.Delay(30000);
+        try
+        {
+            if (_artCache.Count > 4) _artCache.Clear();
+            if (_iconCache.Count > 15) _iconCache.Clear();
+            GC.Collect(2, GCCollectionMode.Optimized, false);
+        }
+        catch { }
+    }
+});
+
+_ = Task.Run(async () =>
+{
+    NativeMethods.CoInitializeEx(IntPtr.Zero, 0x2);
+    var meters = new List<IAudioMeterInformation>();
+    DateTime lastDeviceCheck = DateTime.MinValue;
+    
+    try
+    {
+        var enumerator = (IMMDeviceEnumerator)new MMDeviceEnumerator();
+        while (true)
+        {
+            await Task.Delay(40); // 25 FPS
+            try
+            {
+                if (_isMediaPlaying)
+                {
+                    if (DateTime.UtcNow - lastDeviceCheck > TimeSpan.FromSeconds(5))
+                    {
+                        foreach (var m in meters) { try { Marshal.ReleaseComObject(m); } catch { } }
+                        meters.Clear();
+                        
+                        if (enumerator.EnumAudioEndpoints(0, 1, out object colObj) == 0 && colObj != null)
+                        {
+                            var collection = (IMMDeviceCollection)colObj;
+                            collection.GetCount(out uint count);
+                            for (uint i = 0; i < count; i++)
+                            {
+                                if (collection.Item(i, out object devObj) == 0 && devObj != null)
+                                {
+                                    var dev = (IMMDevice)devObj;
+                                    Guid iid = typeof(IAudioMeterInformation).GUID;
+                                    if (dev.Activate(ref iid, 23, IntPtr.Zero, out object meterObj) == 0 && meterObj != null)
+                                    {
+                                        meters.Add((IAudioMeterInformation)meterObj);
+                                    }
+                                    Marshal.ReleaseComObject(devObj);
+                                }
+                            }
+                            Marshal.ReleaseComObject(colObj);
+                        }
+                        lastDeviceCheck = DateTime.UtcNow;
+                    }
+                    
+                    float maxPeak = 0f;
+                    foreach (var meter in meters)
+                    {
+                        try 
+                        {
+                            if (meter.GetPeakValue(out float peak) == 0)
+                            {
+                                if (peak > maxPeak) maxPeak = peak;
+                            }
+                        } 
+                        catch { }
+                    }
+                    
+                    try { System.IO.File.AppendAllText("audio_debug.log", $"Peak: {maxPeak}, Meters: {meters.Count}\n"); } catch { }
+                    
+                    Console.WriteLine($"{{\"type\":\"audio_peak\",\"peak\":{maxPeak.ToString(System.Globalization.CultureInfo.InvariantCulture)}}}");
+                }
+            }
+            catch { }
+        }
+    }
+    catch { }
+});
+
 _ = Task.Run(StartNotificationListener);
-
-// Start GSMTC Media Listener & Command Loop Task
 _ = Task.Run(StartMediaListenerAndCommandLoop);
 
-// Keep main thread alive
 await Task.Delay(-1);
 
 #region Notification Listener
@@ -52,17 +131,17 @@ async Task StartNotificationListener()
 {
     try
     {
-        var listener = UserNotificationListener.Current;
+        var listener = Windows.UI.Notifications.Management.UserNotificationListener.Current;
         var accessStatus = await listener.RequestAccessAsync();
 
-        if (accessStatus != UserNotificationListenerAccessStatus.Allowed)
+        if (accessStatus != Windows.UI.Notifications.Management.UserNotificationListenerAccessStatus.Allowed)
         {
             Console.WriteLine(JsonSerializer.Serialize(new { type = "error", error = "Access denied" }));
             return;
         }
 
         var seenIds = new HashSet<uint>();
-        var initialNotifs = await listener.GetNotificationsAsync(NotificationKinds.Toast);
+        var initialNotifs = await listener.GetNotificationsAsync(Windows.UI.Notifications.NotificationKinds.Toast);
         foreach (var notif in initialNotifs)
         {
             seenIds.Add(notif.Id);
@@ -74,7 +153,7 @@ async Task StartNotificationListener()
         {
             try
             {
-                var notifs = await listener.GetNotificationsAsync(NotificationKinds.Toast);
+                var notifs = await listener.GetNotificationsAsync(Windows.UI.Notifications.NotificationKinds.Toast);
                 foreach (var notif in notifs)
                 {
                     if (!seenIds.Contains(notif.Id))
@@ -86,20 +165,15 @@ async Task StartNotificationListener()
                     }
                 }
 
-                // Prune seenIds when it grows stale (keeps RAM tight)
                 if (seenIds.Count > notifs.Count + 50)
                 {
                     var currentIds = new HashSet<uint>(notifs.Select(n => n.Id));
                     seenIds.IntersectWith(currentIds);
                 }
             }
-            catch
-            {
-                // Ignore transient listener errors
-            }
+            catch { }
 
-            // 500ms poll — notifications are not time-critical to the millisecond
-            await Task.Delay(500);
+            await Task.Delay(100);
         }
     }
     catch (Exception ex)
@@ -108,7 +182,7 @@ async Task StartNotificationListener()
     }
 }
 
-async Task<bool> ProcessNotificationAsync(UserNotification notif)
+async Task<bool> ProcessNotificationAsync(Windows.UI.Notifications.UserNotification notif)
 {
     try
     {
@@ -120,11 +194,10 @@ async Task<bool> ProcessNotificationAsync(UserNotification notif)
         }
 
         string title = "";
-        string body = "";
+        var bodyBuilder = new StringBuilder();
         string heroImage = "";
         string icon = "";
 
-        // Parse notification text elements
         try
         {
             if (notif.Notification?.Visual?.Bindings != null)
@@ -135,13 +208,14 @@ async Task<bool> ProcessNotificationAsync(UserNotification notif)
                     if (texts != null && texts.Count > 0)
                     {
                         if (string.IsNullOrEmpty(title)) title = texts[0].Text ?? "";
-                        if (texts.Count > 1 && string.IsNullOrEmpty(body)) body = texts[1].Text ?? "";
+                        if (texts.Count > 1 && bodyBuilder.Length == 0) bodyBuilder.Append(texts[1].Text ?? "");
 
                         for (int i = 2; i < texts.Count; i++)
                         {
                             if (!string.IsNullOrEmpty(texts[i].Text))
                             {
-                                body += (string.IsNullOrEmpty(body) ? "" : "\n") + texts[i].Text;
+                                if (bodyBuilder.Length > 0) bodyBuilder.Append('\n');
+                                bodyBuilder.Append(texts[i].Text);
                             }
                         }
                     }
@@ -150,41 +224,56 @@ async Task<bool> ProcessNotificationAsync(UserNotification notif)
         }
         catch { }
 
-        // Attempt SQLite wpndatabase.db extraction for hero images & notification appLogoOverrides
         try
         {
-            var (extractedHero, extractedIcon) = ExtractNotificationImages(notif.Id);
-            if (!string.IsNullOrEmpty(extractedHero)) heroImage = extractedHero;
-            if (!string.IsNullOrEmpty(extractedIcon)) icon = extractedIcon;
-        }
-        catch { }
-
-        // Attempt direct WinRT logo stream extraction if icon was not found in wpndatabase.db
-        if (string.IsNullOrEmpty(icon))
-        {
-            try
+            if (notif.Notification?.Visual?.Bindings != null)
             {
-                if (notif.AppInfo?.DisplayInfo != null)
+                foreach (dynamic binding in notif.Notification.Visual.Bindings)
                 {
-                    var logoStreamRef = notif.AppInfo.DisplayInfo.GetLogo(new Windows.Foundation.Size(48, 48));
-                    if (logoStreamRef != null)
+                    try
                     {
-                        using var stream = await logoStreamRef.OpenReadAsync();
-                        using var netStream = stream.AsStreamForRead();
-                        using var ms = new MemoryStream();
-                        await netStream.CopyToAsync(ms);
-                        var bytes = ms.ToArray();
-                        if (bytes.Length > 0)
+                        var images = binding.GetImageElements();
+                        if (images != null)
                         {
-                            icon = "data:image/png;base64," + Convert.ToBase64String(bytes);
+                            foreach (var img in images)
+                            {
+                                string src = img.Source ?? "";
+                                File.AppendAllText(Path.Combine(Path.GetTempPath(), "vinta_img_cache_log.txt"), "RAM Extraction found image: " + src + "\n");
+                                if (string.IsNullOrEmpty(icon)) icon = ProcessImageUrl(src);
+                                else if (string.IsNullOrEmpty(heroImage)) heroImage = ProcessImageUrl(src);
+                            }
                         }
+                    }
+                    catch (Exception ex) 
+                    {
+                        File.AppendAllText(Path.Combine(Path.GetTempPath(), "vinta_img_cache_log.txt"), "RAM Extraction Exception: " + ex.Message + "\n");
                     }
                 }
             }
-            catch { }
         }
+        catch { }
 
-        // Fallback to SQLite AppCache lookup if icon was still empty
+        try
+        {
+            if (notif.AppInfo?.DisplayInfo != null)
+            {
+                var logoStreamRef = notif.AppInfo.DisplayInfo.GetLogo(new Windows.Foundation.Size(48, 48));
+                if (logoStreamRef != null)
+                {
+                    using var stream = await logoStreamRef.OpenReadAsync();
+                    using var netStream = stream.AsStreamForRead();
+                    using var ms = new MemoryStream();
+                    await netStream.CopyToAsync(ms);
+                    var bytes = ms.ToArray();
+                    if (bytes.Length > 0)
+                    {
+                        icon = "data:image/png;base64," + Convert.ToBase64String(bytes);
+                    }
+                }
+            }
+        }
+        catch { }
+
         if (string.IsNullOrEmpty(icon))
         {
             try
@@ -195,13 +284,40 @@ async Task<bool> ProcessNotificationAsync(UserNotification notif)
             catch { }
         }
 
+        try
+        {
+            var (extractedHero, extractedIcon) = ExtractNotificationImages(notif.Id);
+            
+            int retries = 10;
+            while (retries > 0 && string.IsNullOrEmpty(extractedHero) && string.IsNullOrEmpty(extractedIcon) && (appName.Contains("Discord", StringComparison.OrdinalIgnoreCase) || appName.Contains("Slack", StringComparison.OrdinalIgnoreCase) || appName.Contains("Telegram", StringComparison.OrdinalIgnoreCase)))
+            {
+                await Task.Delay(100);
+                (extractedHero, extractedIcon) = ExtractNotificationImages(notif.Id);
+                retries--;
+            }
+
+            if (!string.IsNullOrEmpty(extractedIcon)) 
+            {
+                icon = extractedIcon;
+            }
+            else if (!string.IsNullOrEmpty(extractedHero) && (appName.Contains("Discord", StringComparison.OrdinalIgnoreCase) || appName.Contains("Slack", StringComparison.OrdinalIgnoreCase) || appName.Contains("Telegram", StringComparison.OrdinalIgnoreCase)))
+            {
+                icon = extractedHero;
+            }
+            else if (!string.IsNullOrEmpty(extractedHero))
+            {
+                heroImage = extractedHero;
+            }
+        }
+        catch { }
+
         var payload = new
         {
             type = "notification",
             appName,
             icon,
             title,
-            message = body,
+            message = bodyBuilder.ToString(),
             heroImage
         };
 
@@ -261,8 +377,8 @@ async Task<bool> ProcessNotificationAsync(UserNotification notif)
                     }
                 }
 
-                heroImage = DownloadImageAsBase64(heroUrl);
-                icon = DownloadImageAsBase64(iconUrl);
+                heroImage = ProcessImageUrl(heroUrl);
+                icon = ProcessImageUrl(iconUrl);
             }
         }
         finally
@@ -274,148 +390,163 @@ async Task<bool> ProcessNotificationAsync(UserNotification notif)
 
     return (heroImage, icon);
 }
+string GetCachedImagePath(string identifier)
+{
+    using (var sha = System.Security.Cryptography.SHA256.Create())
+    {
+        var hash = sha.ComputeHash(Encoding.UTF8.GetBytes(identifier));
+        return Path.Combine(_vintaCacheDir, BitConverter.ToString(hash).Replace("-", "").ToLower() + ".img");
+    }
+}
 
-string DownloadImageAsBase64(string imgUrl)
+string CacheLocalFile(string path)
+{
+    File.AppendAllText(Path.Combine(Path.GetTempPath(), "vinta_img_cache_log.txt"), "CacheLocalFile called for: " + path + "\n");
+    if (!Directory.Exists(_vintaCacheDir)) Directory.CreateDirectory(_vintaCacheDir);
+    string cachedPath = GetCachedImagePath(path);
+    if (!File.Exists(cachedPath))
+    {
+        try
+        {
+            using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (var dest = new FileStream(cachedPath, FileMode.Create, FileAccess.Write, FileShare.None))
+            {
+                fs.CopyTo(dest);
+            }
+            File.AppendAllText(Path.Combine(Path.GetTempPath(), "vinta_img_cache_log.txt"), "CacheLocalFile successfully copied to: " + cachedPath + "\n");
+        }
+        catch (Exception ex)
+        {
+            File.AppendAllText(Path.Combine(Path.GetTempPath(), "vinta_img_cache_log.txt"), "CacheLocalFile Exception: " + ex.ToString() + "\n");
+            throw; // Rethrow to be caught by ProcessImageUrl
+        }
+    }
+    else
+    {
+        File.AppendAllText(Path.Combine(Path.GetTempPath(), "vinta_img_cache_log.txt"), "CacheLocalFile already exists at: " + cachedPath + "\n");
+    }
+    return "/local/" + Uri.EscapeDataString(cachedPath);
+}
+
+string ProcessImageUrl(string imgUrl)
 {
     if (string.IsNullOrEmpty(imgUrl)) return "";
     try
     {
         if (imgUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
         {
-            // Reuse shared HttpClient — no socket exhaustion
+            if (!Directory.Exists(_vintaCacheDir)) Directory.CreateDirectory(_vintaCacheDir);
+            string cachedPath = GetCachedImagePath(imgUrl);
+            if (File.Exists(cachedPath)) return "/local/" + Uri.EscapeDataString(cachedPath);
+
             var response = sharedHttpClient.GetAsync(imgUrl).Result;
             if (!response.IsSuccessStatusCode) return "";
-
             if (response.Content.Headers.ContentLength > 2 * 1024 * 1024) return "";
 
             var imgBytes = response.Content.ReadAsByteArrayAsync().Result;
             if (imgBytes.Length > 2 * 1024 * 1024) return "";
 
-            return "data:image/jpeg;base64," + Convert.ToBase64String(imgBytes);
+            File.WriteAllBytes(cachedPath, imgBytes);
+            return "/local/" + Uri.EscapeDataString(cachedPath);
         }
         else if (imgUrl.StartsWith("ms-appdata://", StringComparison.OrdinalIgnoreCase) || imgUrl.StartsWith("ms-appx://", StringComparison.OrdinalIgnoreCase))
         {
             string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             string packagesPath = Path.Combine(localAppData, "Packages");
-            string tempPath = Path.GetTempPath();
             string inetCachePath = Path.Combine(localAppData, @"Microsoft\Windows\INetCache");
             string fileName = Path.GetFileName(imgUrl);
 
             if (!string.IsNullOrEmpty(fileName))
             {
-                string localTempFile = Path.Combine(tempPath, fileName);
-                if (File.Exists(localTempFile))
-                {
-                    var imgBytes = File.ReadAllBytes(localTempFile);
-                    return "data:image/png;base64," + Convert.ToBase64String(imgBytes);
-                }
-
                 if (Directory.Exists(inetCachePath))
                 {
-                    // Limit search to top-level + 1 depth to avoid full recursive scan
                     var matches = Directory.GetFiles(inetCachePath, fileName, SearchOption.AllDirectories);
                     if (matches.Length > 0 && File.Exists(matches[0]))
                     {
-                        var imgBytes = File.ReadAllBytes(matches[0]);
-                        return "data:image/png;base64," + Convert.ToBase64String(imgBytes);
+                        return CacheLocalFile(matches[0]);
                     }
                 }
 
-                // Constrain Packages search: limit recursion depth to avoid scanning gigabytes of package data
                 if (Directory.Exists(packagesPath))
                 {
                     try
                     {
-                        var enumOptions = new EnumerationOptions
-                        {
-                            RecurseSubdirectories = true,
-                            MaxRecursionDepth = 5,
-                            IgnoreInaccessible = true
-                        };
-                        var match = Directory
-                            .EnumerateFiles(packagesPath, fileName, enumOptions)
-                            .FirstOrDefault();
+                        var enumOptions = new EnumerationOptions { RecurseSubdirectories = true, MaxRecursionDepth = 5, IgnoreInaccessible = true };
+                        var match = Directory.EnumerateFiles(packagesPath, fileName, enumOptions).FirstOrDefault();
                         if (match != null && File.Exists(match))
                         {
-                            var fileInfo = new FileInfo(match);
-                            if (fileInfo.Length <= 2 * 1024 * 1024)
-                            {
-                                var imgBytes = File.ReadAllBytes(match);
-                                return "data:image/png;base64," + Convert.ToBase64String(imgBytes);
-                            }
+                            return CacheLocalFile(match);
                         }
                     }
                     catch { }
                 }
             }
-            return "";
         }
         else if (imgUrl.StartsWith("file:///", StringComparison.OrdinalIgnoreCase))
         {
             string localPath = Uri.UnescapeDataString(imgUrl.Substring(8)).Replace('/', '\\');
-            if (!File.Exists(localPath)) return "";
-            var fileInfo = new FileInfo(localPath);
-            if (fileInfo.Length > 2 * 1024 * 1024) return "";
-
-            var imgBytes = File.ReadAllBytes(localPath);
-            return "data:image/jpeg;base64," + Convert.ToBase64String(imgBytes);
-        }
-        else if (File.Exists(imgUrl))
-        {
-            var fileInfo = new FileInfo(imgUrl);
-            if (fileInfo.Length <= 2 * 1024 * 1024)
+            if (File.Exists(localPath))
             {
-                var imgBytes = File.ReadAllBytes(imgUrl);
-                return "data:image/png;base64," + Convert.ToBase64String(imgBytes);
+                return CacheLocalFile(localPath);
+            }
+        }
+        else
+        {
+            string localPath = imgUrl.Replace('/', '\\').Trim();
+            if (File.Exists(localPath))
+            {
+                return CacheLocalFile(localPath);
             }
         }
     }
-    catch { }
+    catch (Exception ex) 
+    { 
+        File.AppendAllText(Path.Combine(Path.GetTempPath(), "vinta_img_cache_log.txt"), "ProcessImageUrl Exception for " + imgUrl + ": " + ex.ToString() + "\n");
+    }
+    
+    File.AppendAllText(Path.Combine(Path.GetTempPath(), "vinta_img_cache_log.txt"), "ProcessImageUrl failed/returned empty for: " + imgUrl + "\n");
     return "";
 }
-
 
 string ExtractAppIcon(string aumid)
 {
     if (string.IsNullOrEmpty(aumid)) return "";
-
     if (_iconCache.TryGetValue(aumid, out var cached)) return cached;
 
     try
     {
         var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         var dbPath = Path.Combine(localAppData, @"Packages\Microsoft.Windows.Search_cw5n1h2txyewy\LocalState\DeviceSearchCache\AppCache.db");
-        if (!File.Exists(dbPath)) return "";
-
-        using var conn = new SqliteConnection($"Data Source={dbPath};Mode=ReadOnly;Cache=Shared;");
-        conn.Open();
-
-        using var cmd = conn.CreateCommand();
-        cmd.CommandText = "SELECT Logo FROM Apps WHERE AUMID = @aumid LIMIT 1";
-        cmd.Parameters.AddWithValue("@aumid", aumid);
-
-        var result = cmd.ExecuteScalar();
-        if (result != null && result != DBNull.Value)
+        if (File.Exists(dbPath))
         {
-            var logoPath = result.ToString() ?? "";
-            if (!string.IsNullOrEmpty(logoPath) && File.Exists(logoPath))
+            using var conn = new SqliteConnection($"Data Source={dbPath};Mode=ReadOnly;Cache=Shared;");
+            conn.Open();
+
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT Logo FROM Apps WHERE AUMID = @aumid LIMIT 1";
+            cmd.Parameters.AddWithValue("@aumid", aumid);
+
+            var result = cmd.ExecuteScalar();
+            if (result != null && result != DBNull.Value)
             {
-                var bytes = File.ReadAllBytes(logoPath);
-                var icon = "data:image/png;base64," + Convert.ToBase64String(bytes);
-                _iconCache[aumid] = icon; // Cache hit for future notifications from same app
-                return icon;
+                var logoPath = result.ToString() ?? "";
+                if (!string.IsNullOrEmpty(logoPath) && File.Exists(logoPath))
+                {
+                    var icon = "/local/" + Uri.EscapeDataString(logoPath);
+                    _iconCache[aumid] = icon; 
+                    return icon;
+                }
             }
         }
     }
     catch { }
 
-    _iconCache[aumid] = ""; // Cache miss to avoid repeated DB hits
+    _iconCache[aumid] = ""; 
     return "";
 }
 #endregion
 
 #region GSMTC Media Listener & Command Loop
-
 async Task StartMediaListenerAndCommandLoop()
 {
     try
@@ -430,8 +561,6 @@ async Task StartMediaListenerAndCommandLoop()
     }
     catch { }
 
-    // Reduced polling: GSMTC events cover most cases.
-    // 3000ms fallback poll is sufficient for edge cases (session not firing events).
     _ = Task.Run(async () =>
     {
         while (true)
@@ -439,16 +568,12 @@ async Task StartMediaListenerAndCommandLoop()
             await Task.Delay(3000);
             try
             {
-                if (gsmtcManager != null)
-                {
-                    UpdateCurrentSession();
-                }
+                if (gsmtcManager != null) UpdateCurrentSession();
             }
             catch { }
         }
     });
 
-    // IPC Command Reader Loop reading stdin
     while (true)
     {
         try
@@ -456,7 +581,6 @@ async Task StartMediaListenerAndCommandLoop()
             var line = await Console.In.ReadLineAsync();
             if (line == null)
             {
-                // Stdin pipe closed by parent Vinta.exe -> terminate immediately!
                 Environment.Exit(0);
                 break;
             }
@@ -479,7 +603,6 @@ void UpdateCurrentSession()
     {
         var targetSession = gsmtcManager.GetCurrentSession();
 
-        // Fallback: If GetCurrentSession() returns null, search GetSessions() for an active playing session
         if (targetSession == null)
         {
             var sessions = gsmtcManager.GetSessions();
@@ -514,19 +637,10 @@ void UpdateCurrentSession()
     catch { }
 }
 
-void OnMediaPropertiesChanged(GlobalSystemMediaTransportControlsSession sender, MediaPropertiesChangedEventArgs args)
-    => ScheduleEmit(includeVolume: false);
+void OnMediaPropertiesChanged(GlobalSystemMediaTransportControlsSession sender, MediaPropertiesChangedEventArgs args) => ScheduleEmit(includeVolume: false);
+void OnPlaybackInfoChanged(GlobalSystemMediaTransportControlsSession sender, PlaybackInfoChangedEventArgs args) => ScheduleEmit(includeVolume: true);
+void OnTimelinePropertiesChanged(GlobalSystemMediaTransportControlsSession sender, TimelinePropertiesChangedEventArgs args) => ScheduleEmit(includeVolume: false);
 
-void OnPlaybackInfoChanged(GlobalSystemMediaTransportControlsSession sender, PlaybackInfoChangedEventArgs args)
-    => ScheduleEmit(includeVolume: true);
-
-void OnTimelinePropertiesChanged(GlobalSystemMediaTransportControlsSession sender, TimelinePropertiesChangedEventArgs args)
-    => ScheduleEmit(includeVolume: false); // Position ticks don't need volume re-query
-
-/// <summary>
-/// Debounced emit: coalesces rapid-fire events (e.g. many TimelinePropertiesChanged per second)
-/// into a single actual emission after 150ms, preventing CPU/RAM spike during playback.
-/// </summary>
 void ScheduleEmit(bool includeVolume)
 {
     if (Interlocked.CompareExchange(ref _emitPending, 1, 0) == 0)
@@ -542,6 +656,7 @@ void ScheduleEmit(bool includeVolume)
 
 async Task EmitMediaStateAsync(bool includeVolume = true)
 {
+    if (currentMediaSession == null) UpdateCurrentSession();
     if (currentMediaSession == null)
     {
         Console.WriteLine(JsonSerializer.Serialize(new { type = "media", isAvailable = false }));
@@ -558,31 +673,47 @@ async Task EmitMediaStateAsync(bool includeVolume = true)
         try { playbackInfo = currentMediaSession.GetPlaybackInfo(); } catch { }
         try { timelineProps = currentMediaSession.GetTimelineProperties(); } catch { }
 
+        string trackKey = $"{mediaProps?.Title}_{mediaProps?.Artist}";
         string albumArtBase64 = "";
-        if (mediaProps?.Thumbnail != null)
+
+        if (!string.IsNullOrEmpty(trackKey) && _artCache.TryGetValue(trackKey, out var cachedArt))
         {
-            try
+            albumArtBase64 = cachedArt;
+        }
+
+        if (string.IsNullOrEmpty(albumArtBase64) && mediaProps?.Thumbnail != null)
+        {
+            for (int retry = 0; retry < 3; retry++)
             {
-                using var stream = await mediaProps.Thumbnail.OpenReadAsync();
-                using var netStream = stream.AsStreamForRead();
-                using var ms = new MemoryStream();
-                await netStream.CopyToAsync(ms);
-                var bytes = ms.ToArray();
-                if (bytes.Length > 0)
+                try
                 {
-                    albumArtBase64 = "data:image/png;base64," + Convert.ToBase64String(bytes);
+                    using var stream = await mediaProps.Thumbnail.OpenReadAsync();
+                    using var netStream = stream.AsStreamForRead();
+                    using var ms = new MemoryStream();
+                    await netStream.CopyToAsync(ms);
+                    var bytes = ms.ToArray();
+                    if (bytes.Length > 0)
+                    {
+                        albumArtBase64 = "data:image/png;base64," + Convert.ToBase64String(bytes);
+                        if (!string.IsNullOrEmpty(trackKey))
+                        {
+                            if (_artCache.Count > 3) _artCache.Clear();
+                            _artCache[trackKey] = albumArtBase64;
+                        }
+                        break;
+                    }
                 }
+                catch { await Task.Delay(80); }
             }
-            catch { }
         }
 
         var isPlaying = playbackInfo?.PlaybackStatus == GlobalSystemMediaTransportControlsSessionPlaybackStatus.Playing;
+        _isMediaPlaying = isPlaying;
         var controls = playbackInfo?.Controls;
 
-        // Only query COM volume interfaces when needed (not on every position tick)
-        if (includeVolume || DateTime.UtcNow > _volumeCacheExpiry)
+        if (DateTime.UtcNow > _volumeCacheExpiry)
         {
-            var (vol, muted) = GetMasterVolume();
+            var (vol, muted) = GetSessionAudioVolumeAndMute();
             _cachedVolume = vol;
             _cachedMute = muted;
             _volumeCacheExpiry = DateTime.UtcNow.AddMilliseconds(VolumeCacheTtlMs);
@@ -598,6 +729,7 @@ async Task EmitMediaStateAsync(bool includeVolume = true)
             album = mediaProps?.AlbumTitle ?? "",
             albumArt = albumArtBase64,
             isPlaying,
+            audioPeak = 0f,
             positionMs = timelineProps?.Position.TotalMilliseconds ?? 0,
             durationMs = timelineProps?.EndTime.TotalMilliseconds ?? 0,
             volume = (int)Math.Round(_cachedVolume),
@@ -613,81 +745,107 @@ async Task EmitMediaStateAsync(bool includeVolume = true)
     catch { }
 }
 
-(float volume, bool isMuted) GetMasterVolume()
+// Robust session audio volume control with master device endpoint fallback
+(float volume, bool isMuted) GetSessionAudioVolumeAndMute()
 {
+    object? enumeratorObj = null;
+    object? devObj = null;
+    object? epvObj = null;
     try
     {
-        var enumerator = (IMMDeviceEnumerator)new MMDeviceEnumerator();
-        IMMDevice? dev = null;
-        int hr = enumerator.GetDefaultAudioEndpoint(0, 1, out dev);
-        if (hr != 0 || dev == null)
+        NativeMethods.CoInitializeEx(IntPtr.Zero, 0x2);
+        enumeratorObj = new MMDeviceEnumerator();
+        var enumerator = (IMMDeviceEnumerator)enumeratorObj;
+        if (enumerator.GetDefaultAudioEndpoint(0, 0, out devObj) == 0 && devObj != null)
         {
-            enumerator.GetDefaultAudioEndpoint(0, 0, out dev);
-        }
-
-        if (dev != null)
-        {
-            Guid iid = typeof(IAudioEndpointVolume).GUID;
-            dev.Activate(ref iid, 23, IntPtr.Zero, out object epvObj);
-            var epv = (IAudioEndpointVolume)epvObj;
-            epv.GetMasterVolumeLevelScalar(out float vol);
-            epv.GetMute(out bool mute);
-            return (vol * 100f, mute);
+            var dev = (IMMDevice)devObj;
+            Guid epvIid = typeof(IAudioEndpointVolume).GUID;
+            if (dev.Activate(ref epvIid, 23 /* CLSCTX_ALL */, IntPtr.Zero, out epvObj) == 0 && epvObj != null)
+            {
+                var epv = (IAudioEndpointVolume)epvObj;
+                epv.GetMasterVolumeLevelScalar(out float vol);
+                epv.GetMute(out bool mute);
+                return (vol * 100f, mute);
+            }
         }
     }
     catch { }
-    return (50f, false);
+    finally
+    {
+        if (epvObj != null) try { Marshal.ReleaseComObject(epvObj); } catch { }
+        if (devObj != null) try { Marshal.ReleaseComObject(devObj); } catch { }
+        if (enumeratorObj != null) try { Marshal.ReleaseComObject(enumeratorObj); } catch { }
+    }
+    return (_cachedVolume, _cachedMute);
 }
 
-void SetMasterVolume(float percent)
+void SetSessionAudioVolume(float percent)
 {
+    var clamped = Math.Clamp(percent, 0f, 100f);
+    _cachedVolume = clamped;
+    _volumeCacheExpiry = DateTime.UtcNow.AddMilliseconds(VolumeCacheTtlMs);
+
+    object? enumeratorObj = null;
+    object? devObj = null;
+    object? epvObj = null;
     try
     {
-        var clamped = Math.Clamp(percent, 0f, 100f);
-        _cachedVolume = clamped;
-        _volumeCacheExpiry = DateTime.UtcNow.AddMilliseconds(VolumeCacheTtlMs);
-
-        var enumerator = (IMMDeviceEnumerator)new MMDeviceEnumerator();
-        IMMDevice? dev = null;
-        int hr = enumerator.GetDefaultAudioEndpoint(0, 1, out dev);
-        if (hr != 0 || dev == null)
+        NativeMethods.CoInitializeEx(IntPtr.Zero, 0x2);
+        enumeratorObj = new MMDeviceEnumerator();
+        var enumerator = (IMMDeviceEnumerator)enumeratorObj;
+        if (enumerator.GetDefaultAudioEndpoint(0, 0, out devObj) == 0 && devObj != null)
         {
-            enumerator.GetDefaultAudioEndpoint(0, 0, out dev);
-        }
-
-        if (dev != null)
-        {
-            Guid iid = typeof(IAudioEndpointVolume).GUID;
-            dev.Activate(ref iid, 23, IntPtr.Zero, out object epvObj);
-            var epv = (IAudioEndpointVolume)epvObj;
-            Guid zero = Guid.Empty;
-            epv.SetMasterVolumeLevelScalar(clamped / 100f, ref zero);
+            var dev = (IMMDevice)devObj;
+            Guid epvIid = typeof(IAudioEndpointVolume).GUID;
+            if (dev.Activate(ref epvIid, 23 /* CLSCTX_ALL */, IntPtr.Zero, out epvObj) == 0 && epvObj != null)
+            {
+                var epv = (IAudioEndpointVolume)epvObj;
+                epv.SetMasterVolumeLevelScalar(clamped / 100f, IntPtr.Zero);
+            }
         }
     }
     catch { }
+    finally
+    {
+        if (epvObj != null) try { Marshal.ReleaseComObject(epvObj); } catch { }
+        if (devObj != null) try { Marshal.ReleaseComObject(devObj); } catch { }
+        if (enumeratorObj != null) try { Marshal.ReleaseComObject(enumeratorObj); } catch { }
+    }
 }
 
-const byte VK_VOLUME_MUTE = 0xAD;
-const byte VK_VOLUME_DOWN = 0xAE;
-const byte VK_VOLUME_UP = 0xAF;
-const byte VK_MEDIA_NEXT = 0xB0;
-const byte VK_MEDIA_PREV = 0xB1;
-const byte VK_MEDIA_STOP = 0xB2;
-const byte VK_MEDIA_PLAY_PAUSE = 0xB3;
-const uint KEYEVENTF_KEYUP = 0x0002;
-
-void SendVolumeKey(byte vk)
+void ToggleSessionAudioMute()
 {
+    _cachedMute = !_cachedMute;
+    _volumeCacheExpiry = DateTime.UtcNow.AddMilliseconds(VolumeCacheTtlMs);
+
+    object? enumeratorObj = null;
+    object? devObj = null;
+    object? epvObj = null;
     try
     {
-        keybd_event(vk, 0, 0, 0);
-        Thread.Sleep(10);
-        keybd_event(vk, 0, KEYEVENTF_KEYUP, 0);
-        // Invalidate volume cache so next emit picks up updated OS master volume
-        _volumeCacheExpiry = DateTime.MinValue;
+        NativeMethods.CoInitializeEx(IntPtr.Zero, 0x2);
+        enumeratorObj = new MMDeviceEnumerator();
+        var enumerator = (IMMDeviceEnumerator)enumeratorObj;
+        if (enumerator.GetDefaultAudioEndpoint(0, 0, out devObj) == 0 && devObj != null)
+        {
+            var dev = (IMMDevice)devObj;
+            Guid epvIid = typeof(IAudioEndpointVolume).GUID;
+            if (dev.Activate(ref epvIid, 23 /* CLSCTX_ALL */, IntPtr.Zero, out epvObj) == 0 && epvObj != null)
+            {
+                var epv = (IAudioEndpointVolume)epvObj;
+                epv.SetMute(_cachedMute, IntPtr.Zero);
+            }
+        }
     }
     catch { }
+    finally
+    {
+        if (epvObj != null) try { Marshal.ReleaseComObject(epvObj); } catch { }
+        if (devObj != null) try { Marshal.ReleaseComObject(devObj); } catch { }
+        if (enumeratorObj != null) try { Marshal.ReleaseComObject(enumeratorObj); } catch { }
+    }
 }
+
 
 async Task HandleMediaCommandAsync(string action)
 {
@@ -696,7 +854,7 @@ async Task HandleMediaCommandAsync(string action)
         string valStr = action.Substring("set_volume:".Length);
         if (float.TryParse(valStr, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float volPercent))
         {
-            SetMasterVolume(volPercent);
+            SetSessionAudioVolume(volPercent);
             await EmitMediaStateAsync(includeVolume: true);
         }
         return;
@@ -715,15 +873,29 @@ async Task HandleMediaCommandAsync(string action)
     }
     if (action == "mute")
     {
+        ToggleSessionAudioMute();
         SendVolumeKey(VK_VOLUME_MUTE);
         await EmitMediaStateAsync(includeVolume: true);
         return;
     }
-    if (action.StartsWith("seek:") && currentMediaSession != null)
+    
+    if (action.StartsWith("seek:"))
     {
-        if (double.TryParse(action.Substring("seek:".Length), System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double posMs))
+        if (currentMediaSession == null) UpdateCurrentSession();
+        if (currentMediaSession != null)
         {
-            try { await currentMediaSession.TryChangePlaybackPositionAsync((long)(posMs * 10000)); } catch { }
+            string seekStr = action.Substring("seek:".Length);
+            if (double.TryParse(seekStr, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double posMs))
+            {
+                try 
+                { 
+                    long ticks = (long)(posMs * 10000);
+                    await currentMediaSession.TryChangePlaybackPositionAsync(ticks);
+                    await Task.Delay(80);
+                    await EmitMediaStateAsync(includeVolume: false);
+                } 
+                catch { }
+            }
         }
         return;
     }
@@ -735,81 +907,145 @@ async Task HandleMediaCommandAsync(string action)
         {
             switch (action)
             {
-                case "play_pause":
-                    success = await currentMediaSession.TryTogglePlayPauseAsync();
-                    break;
-                case "play":
-                    success = await currentMediaSession.TryPlayAsync();
-                    break;
-                case "pause":
-                    success = await currentMediaSession.TryPauseAsync();
-                    break;
-                case "next":
-                    success = await currentMediaSession.TrySkipNextAsync();
-                    break;
+                case "play_pause": success = await currentMediaSession.TryTogglePlayPauseAsync(); break;
+                case "play": success = await currentMediaSession.TryPlayAsync(); break;
+                case "pause": success = await currentMediaSession.TryPauseAsync(); break;
+                case "next": success = await currentMediaSession.TrySkipNextAsync(); break;
                 case "previous":
-                case "prev":
-                    success = await currentMediaSession.TrySkipPreviousAsync();
-                    break;
+                case "prev": success = await currentMediaSession.TrySkipPreviousAsync(); break;
             }
         }
 
-        // Fallback: If GSMTC command was not handled or failed, send universal Win32 media key
-        if (!success)
-        {
-            switch (action)
-            {
-                case "play_pause":
-                case "play":
-                case "pause":
-                    SendVolumeKey(VK_MEDIA_PLAY_PAUSE);
-                    break;
-                case "next":
-                    SendVolumeKey(VK_MEDIA_NEXT);
-                    break;
-                case "previous":
-                case "prev":
-                    SendVolumeKey(VK_MEDIA_PREV);
-                    break;
-            }
-        }
+        await Task.Delay(150);
+        UpdateCurrentSession();
+        await EmitMediaStateAsync(includeVolume: true);
     }
     catch { }
 }
 #endregion
 
+void SendVolumeKey(byte vk)
+{
+    try
+    {
+        uint scanCode = NativeMethods.MapVirtualKey(vk, 0);
+        NativeMethods.keybd_event(vk, (byte)scanCode, 0x0001, 0);
+        Thread.Sleep(15);
+        NativeMethods.keybd_event(vk, (byte)scanCode, 0x0001 | 0x0002, 0);
+        _volumeCacheExpiry = DateTime.MinValue;
+    }
+    catch { }
+}
+
 #region COM Interface Declarations
-[DllImport("user32.dll")]
-static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, uint dwExtraInfo);
+internal static class ComGuids
+{
+    public const string MMDeviceEnumerator = "BCDE0395-E52F-467C-8E3D-C4579291692E";
+    public const string IMMDeviceEnumerator = "A95664D2-9614-4F35-A746-DE8DB63617E6";
+    public const string IMMDeviceCollection = "0BD7A1BE-7A1A-44DB-8397-CC5392387B5E";
+    public const string IMMDevice = "D666063F-1587-4E43-81F1-B948E807363F";
+    public const string IAudioEndpointVolume = "5CDF2C82-841E-4546-9722-0CF74078229A";
+    public const string IAudioMeterInformation = "C02216F6-8C67-4B5B-9D00-D008E73E0064";
+}
+
+internal static class NativeMethods
+{
+    [DllImport("ole32.dll")]
+    public static extern int CoInitializeEx(IntPtr pvReserved, uint dwCoInit);
+
+    [DllImport("user32.dll")]
+    public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, uint dwExtraInfo);
+
+    [DllImport("user32.dll")]
+    public static extern uint MapVirtualKey(uint uCode, uint uMapType);
+}
 
 [ComImport]
-[Guid("BCDE0395-E52F-467C-8E3D-C4579291692E")]
+[Guid(ComGuids.MMDeviceEnumerator)]
 class MMDeviceEnumerator { }
 
-[Guid("A95664D2-9614-4F35-A746-DE8DB63617E6"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+[Guid(ComGuids.IMMDeviceEnumerator), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
 interface IMMDeviceEnumerator
 {
-    int EnumAudioEndpoints(int dataFlow, int stateMask, out object devices);
-    int GetDefaultAudioEndpoint(int dataFlow, int role, out IMMDevice device);
+    [PreserveSig] int EnumAudioEndpoints(int dataFlow, int stateMask, [MarshalAs(UnmanagedType.IUnknown)] out object ppDevices);
+    [PreserveSig] int GetDefaultAudioEndpoint(int dataFlow, int role, [MarshalAs(UnmanagedType.IUnknown)] out object ppEndpoint);
 }
 
-[Guid("D6660630-1587-4E43-81F1-B948E807363F"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+[Guid(ComGuids.IMMDeviceCollection), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+interface IMMDeviceCollection
+{
+    [PreserveSig] int GetCount(out uint pcDevices);
+    [PreserveSig] int Item(uint nDevice, [MarshalAs(UnmanagedType.IUnknown)] out object ppDevice);
+}
+
+[Guid(ComGuids.IMMDevice), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
 interface IMMDevice
 {
-    int Activate(ref Guid iid, int dwClsCtx, IntPtr pActivationParams, [MarshalAs(UnmanagedType.IUnknown)] out object ppInterface);
+    [PreserveSig] int Activate(ref Guid iid, int dwClsCtx, IntPtr pActivationParams, [MarshalAs(UnmanagedType.IUnknown)] out object? ppInterface);
 }
 
-[Guid("5CDF2C82-841E-4546-9722-0CF74078229A"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+[Guid("77AA4508-8699-4224-99CE-57163E9F0D6F"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+interface IAudioSessionManager2
+{
+    [PreserveSig] int GetAudioSessionControl(IntPtr AudioSessionGuid, uint StreamFlags, out object SessionControl);
+    [PreserveSig] int GetSimpleAudioVolume(IntPtr AudioSessionGuid, uint StreamFlags, out ISimpleAudioVolume AudioVolume);
+    [PreserveSig] int GetSessionEnumerator(out IAudioSessionEnumerator SessionEnum);
+}
+
+[Guid("E2F56180-8904-43A0-801B-74A727366034"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+interface IAudioSessionEnumerator
+{
+    [PreserveSig] int GetCount(out int SessionCount);
+    [PreserveSig] int GetSession(int SessionIndex, [MarshalAs(UnmanagedType.IUnknown)] out object SessionControl);
+}
+
+[Guid("F4B89704-CA21-4361-A065-1804E92E68F3"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+interface IAudioSessionControl
+{
+    [PreserveSig] int GetState(out int pRetVal);
+    [PreserveSig] int GetDisplayName([MarshalAs(UnmanagedType.LPWStr)] out string pRetVal);
+    [PreserveSig] int SetDisplayName([MarshalAs(UnmanagedType.LPWStr)] string Value, [In] ref Guid EventContext);
+    [PreserveSig] int GetIconPath([MarshalAs(UnmanagedType.LPWStr)] out string pRetVal);
+    [PreserveSig] int SetIconPath([MarshalAs(UnmanagedType.LPWStr)] string Value, [In] ref Guid EventContext);
+    [PreserveSig] int GetGroupingParam(out Guid pRetVal);
+    [PreserveSig] int SetGroupingParam([In] ref Guid Override, [In] ref Guid EventContext);
+    [PreserveSig] int RegisterAudioSessionNotification(IntPtr NewNotifications);
+    [PreserveSig] int UnregisterAudioSessionNotification(IntPtr NewNotifications);
+}
+
+[Guid("870149E1-9394-44C0-8584-82B7E7DC5B2B"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+interface ISimpleAudioVolume
+{
+    [PreserveSig] int SetMasterVolume(float fLevel, [In] ref Guid pguidEventContext);
+    [PreserveSig] int GetMasterVolume(out float pfLevel);
+    [PreserveSig] int SetMute([MarshalAs(UnmanagedType.Bool)] bool bMute, [In] ref Guid pguidEventContext);
+    [PreserveSig] int GetMute([MarshalAs(UnmanagedType.Bool)] out bool pbMute);
+}
+
+[Guid(ComGuids.IAudioEndpointVolume), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
 interface IAudioEndpointVolume
 {
-    int RegisterControlChangeNotify(IntPtr pNotify);
-    int UnregisterControlChangeNotify(IntPtr pNotify);
-    int GetChannelCount(out uint pnChannelCount);
-    int SetMasterVolumeLevel(float fLevelDB, ref Guid pguidEventContext);
-    int SetMasterVolumeLevelScalar(float fLevel, ref Guid pguidEventContext);
-    int GetMasterVolumeLevel(out float pfLevelDB);
-    int GetMasterVolumeLevelScalar(out float pfLevel);
-    int SetMute([MarshalAs(UnmanagedType.Bool)] bool bMute, ref Guid pguidEventContext);
-    int GetMute([MarshalAs(UnmanagedType.Bool)] out bool pbMute);
+    [PreserveSig] int RegisterControlChangeNotify(IntPtr pNotify);
+    [PreserveSig] int UnregisterControlChangeNotify(IntPtr pNotify);
+    [PreserveSig] int GetChannelCount(out uint pnChannelCount);
+    [PreserveSig] int SetMasterVolumeLevel(float fLevelDB, IntPtr pguidEventContext);
+    [PreserveSig] int SetMasterVolumeLevelScalar(float fLevel, IntPtr pguidEventContext);
+    [PreserveSig] int GetMasterVolumeLevel(out float pfLevelDB);
+    [PreserveSig] int GetMasterVolumeLevelScalar(out float pfLevel);
+    [PreserveSig] int SetChannelVolumeLevel(uint nChannel, float fLevelDB, IntPtr pguidEventContext);
+    [PreserveSig] int SetChannelVolumeLevelScalar(uint nChannel, float fLevel, IntPtr pguidEventContext);
+    [PreserveSig] int GetChannelVolumeLevel(uint nChannel, out float pfLevelDB);
+    [PreserveSig] int GetChannelVolumeLevelScalar(uint nChannel, out float pfLevel);
+    [PreserveSig] int SetMute([MarshalAs(UnmanagedType.Bool)] bool bMute, IntPtr pguidEventContext);
+    [PreserveSig] int GetMute([MarshalAs(UnmanagedType.Bool)] out bool pbMute);
+}
+
+[Guid(ComGuids.IAudioMeterInformation), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+interface IAudioMeterInformation
+{
+    [PreserveSig] int GetPeakValue(out float pfPeak);
+    [PreserveSig] int GetMeteringChannelCount(out uint pnChannelCount);
+    [PreserveSig] int GetChannelsPeakValues(uint u32ChannelCount, [Out] float[] afPeakValues);
+    [PreserveSig] int QueryHardwareSupport(out uint pdwHardwareSupportMask);
 }
 #endregion

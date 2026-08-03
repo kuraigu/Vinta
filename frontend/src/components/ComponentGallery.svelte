@@ -1,13 +1,13 @@
 <script lang="ts">
-  import { onMount, type Snippet, type Component } from 'svelte'
+  import type { Snippet, Component } from 'svelte'
   import { ChevronLeft, ChevronRight } from 'lucide-svelte'
   import { swipe } from '../utils/useSwipe'
 
   export interface SlideItem {
     id?: string
     snippet?: Snippet
-    component?: Component<any>
-    props?: Record<string, any>
+    component?: Component<Record<string, unknown>>
+    props?: Record<string, unknown>
   }
 
   let {
@@ -49,8 +49,6 @@
   let isHovered = $state(false)
   let showArrowsTemp = $state(false)
   let autoPlayTimer: number
-  // Guards handleTransitionEnd from spurious fires (e.g. dragOffset settling)
-  let isTransitioning = false
 
   // Calculated real 0-based index for external consumers & pagination dots
   let activeRealIndex = $derived.by(() => {
@@ -68,7 +66,6 @@
   function goToSlide(targetRealIndex: number) {
     if (slides.length === 0) return
     isInstant = false
-    isTransitioning = true
     displayIndex = isLoopingable ? targetRealIndex + 1 : targetRealIndex
   }
 
@@ -79,7 +76,6 @@
       return
     }
     isInstant = false
-    isTransitioning = true
     displayIndex++
   }
 
@@ -90,7 +86,6 @@
       return
     }
     isInstant = false
-    isTransitioning = true
     displayIndex--
   }
 
@@ -104,7 +99,6 @@
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           isInstant = false
-          isTransitioning = false
         })
       })
     } else if (displayIndex === clonedSlides.length - 1) {
@@ -113,11 +107,8 @@
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           isInstant = false
-          isTransitioning = false
         })
       })
-    } else {
-      isTransitioning = false
     }
   }
 
@@ -165,6 +156,7 @@
   class:is-dragging={isDragging}
   class:is-swiping={isDragging}
   class:show-temp-arrows={showArrowsTemp}
+  class:is-instant={isInstant}
   use:swipe={swipeOptions}
   onmouseenter={() => (isHovered = true)}
   onmouseleave={() => (isHovered = false)}
@@ -258,6 +250,10 @@
 
   .gallery-container.is-dragging {
     cursor: grabbing;
+  }
+
+  .gallery-container.is-instant .gallery-slide {
+    transition: none !important;
   }
 
   .gallery-viewport {

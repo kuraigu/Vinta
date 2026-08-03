@@ -39,6 +39,7 @@
     autostartStore,
     getInitialTimezone
   } from '../store'
+  import ScrollView from '../components/ScrollView.svelte'
   import ComponentGallery from '../components/ComponentGallery.svelte'
   import CustomSelect from '../components/CustomSelect.svelte'
   import BentoItem from '../components/BentoItem.svelte'
@@ -296,7 +297,7 @@
 {#snippet appearanceSlide()}
   <div class="card-wrapper">
     <BentoItem>
-      <div class="section-content">
+      <ScrollView class="section-content">
         <div class="card-category-header">
           <div class="category-icon-badge purple">
             <Palette size={15} />
@@ -449,7 +450,7 @@
             class="range-slider no-swipe"
           />
         </div>
-      </div>
+      </ScrollView>
     </BentoItem>
   </div>
 {/snippet}
@@ -457,7 +458,7 @@
 {#snippet behaviorSlide()}
   <div class="card-wrapper">
     <BentoItem>
-      <div class="section-content">
+      <ScrollView class="section-content">
         <div class="card-category-header">
           <div class="category-icon-badge primary">
             <Sliders size={15} />
@@ -595,7 +596,7 @@
             <span class="slider"></span>
           </label>
         </div>
-      </div>
+      </ScrollView>
     </BentoItem>
   </div>
 {/snippet}
@@ -603,7 +604,7 @@
 {#snippet notificationsSlide()}
   <div class="card-wrapper">
     <BentoItem>
-      <div class="section-content">
+      <ScrollView class="section-content">
         <div class="card-category-header">
           <div class="category-icon-badge amber">
             <Bell size={15} />
@@ -648,7 +649,7 @@
           <Trash2 size={14} />
           <span>Clear All Notifications</span>
         </button>
-      </div>
+      </ScrollView>
     </BentoItem>
   </div>
 {/snippet}
@@ -656,7 +657,7 @@
 {#snippet clockSlide()}
   <div class="card-wrapper">
     <BentoItem>
-      <div class="section-content">
+      <ScrollView class="section-content">
         <div class="card-category-header">
           <div class="category-icon-badge primary">
             <Clock size={15} />
@@ -723,7 +724,7 @@
             searchPlaceholder="Search timezones..."
           />
         </div>
-      </div>
+      </ScrollView>
     </BentoItem>
   </div>
 {/snippet}
@@ -731,7 +732,7 @@
 {#snippet weatherSlide()}
   <div class="card-wrapper">
     <BentoItem>
-      <div class="section-content">
+      <ScrollView class="section-content">
         <div class="card-category-header">
           <div class="category-icon-badge amber">
             <CloudSun size={15} />
@@ -779,7 +780,7 @@
             onSelectPayload={handleSelectWeatherPayload}
           />
         </div>
-      </div>
+      </ScrollView>
     </BentoItem>
   </div>
 {/snippet}
@@ -878,17 +879,8 @@
     flex-direction: column;
     gap: 8px;
     height: 100%;
-    overflow-y: auto;
     padding: 10px 24px 30px 24px; /* Internal card padding with space for dropdowns */
     box-sizing: border-box;
-  }
-
-  .section-content::-webkit-scrollbar {
-    width: 4px;
-  }
-  .section-content::-webkit-scrollbar-thumb {
-    background: var(--c-border);
-    border-radius: 4px;
   }
 
   /* Category Header Banner */
@@ -914,15 +906,19 @@
   }
 
   .category-icon-badge.purple {
-    background: linear-gradient(135deg, #a855f7, #6366f1);
+    background: linear-gradient(135deg, var(--c-purple), var(--c-primary));
   }
 
   .category-icon-badge.primary {
-    background: linear-gradient(135deg, #6366f1, #3b82f6);
+    background: linear-gradient(
+      135deg,
+      var(--c-primary),
+      var(--c-surface-elevated, #3b82f6)
+    );
   }
 
   .category-icon-badge.amber {
-    background: linear-gradient(135deg, #f59e0b, #ec4899);
+    background: linear-gradient(135deg, var(--c-warning), var(--c-amber));
   }
 
   .category-text {
@@ -970,7 +966,7 @@
     color: var(--c-text-primary);
   }
   :global(.item-icon) {
-    color: var(--c-primary, #6366f1);
+    color: var(--c-primary);
     flex-shrink: 0;
   }
 
@@ -1045,7 +1041,7 @@
   }
 
   .custom-select option {
-    background: var(--c-bg, #1a1a24);
+    background: var(--c-bg);
     color: var(--c-text-primary);
   }
 
@@ -1071,7 +1067,7 @@
   }
 
   .action-btn.danger {
-    color: var(--c-warning, #f87171);
+    color: var(--c-warning);
     border-color: rgba(248, 113, 113, 0.3);
   }
 
@@ -1114,7 +1110,7 @@
     border-radius: 50%;
   }
   input:checked + .slider {
-    background-color: var(--c-primary, #6366f1);
+    background-color: var(--c-primary);
   }
   input:checked + .slider:before {
     transform: translateX(18px);

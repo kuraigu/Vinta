@@ -2,11 +2,10 @@ package backend
 
 import (
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/hex"
 	"io"
-	"mime"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -51,7 +50,7 @@ func downloadFile(url, filepath string) error {
 	return err
 }
 
-// CacheIcons takes a list of URLs, downloads missing ones, and returns a map of URL -> base64 data URI.
+// CacheIcons takes a list of URLs, downloads missing ones, and returns a map of URL to a local custom URI.
 func (c *Cache) CacheIcons(urls []string) map[string]string {
 	results := make(map[string]string)
 
@@ -84,17 +83,38 @@ func (c *Cache) CacheIcons(urls []string) map[string]string {
 			}
 		}
 
-		// Read the file and convert to Base64 to bypass WebView local file restrictions
-		data, err := os.ReadFile(localPath)
-		if err == nil {
-			mimeType := mime.TypeByExtension(ext)
-			if mimeType == "" {
-				mimeType = "image/svg+xml" // Default fallback
-			}
-			base64Str := base64.StdEncoding.EncodeToString(data)
-			results[u] = "data:" + mimeType + ";base64," + base64Str
-		}
+		// Return a custom URL path for the Wails AssetsHandler to intercept
+		results[u] = "/icon-cache/" + filename
 	}
 
 	return results
+}
+
+// ServeHTTP implements the http.Handler interface to serve cached files directly to the frontend.
+func (c *Cache) ServeHTTP(res http.ResponseWriter, req *http.Request) {
+	if strings.HasPrefix(req.URL.Path, "/icon-cache/") {
+		// Strip the prefix to get the actual filename
+		filename := strings.TrimPrefix(req.URL.Path, "/icon-cache/")
+		fullPath := filepath.Join(c.cacheDir, filename)
+
+		// http.ServeFile automatically handles reading, MIME types, and 404s if the file is missing
+		http.ServeFile(res, req, fullPath)
+		return
+	}
+
+	if strings.HasPrefix(req.URL.Path, "/local/") {
+		localPath := strings.TrimPrefix(req.URL.Path, "/local/")
+		println("DEBUG CACHE: Original localPath:", localPath)
+		if unescaped, err := url.PathUnescape(localPath); err == nil {
+			localPath = unescaped
+		}
+		println("DEBUG CACHE: Unescaped localPath:", localPath)
+		if localPath != "" {
+			http.ServeFile(res, req, localPath)
+			return
+		}
+	}
+
+	// If it is not an icon request, return 404 so Wails knows to handle it normally
+	res.WriteHeader(http.StatusNotFound)
 }

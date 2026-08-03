@@ -180,6 +180,7 @@ export interface MediaData {
   album: string
   albumArt: string
   isPlaying: boolean
+  audioPeak?: number
   positionMs: number
   durationMs: number
   volume?: number
@@ -198,6 +199,7 @@ export const globalMediaStore = writable<MediaData>({
   album: '',
   albumArt: '',
   isPlaying: false,
+  audioPeak: 0,
   positionMs: 0,
   durationMs: 0,
   volume: 50,

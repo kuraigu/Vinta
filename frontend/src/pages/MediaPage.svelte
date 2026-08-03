@@ -19,8 +19,7 @@
     <MediaWidget expanded={false} />
   {:else}
     <div class="header">
-      <div class="header-side left"></div>
-      <div class="header-center">
+      <div class="header-side left">
         <div class="title">Now Playing</div>
       </div>
       <div class="header-side right">
@@ -86,7 +85,7 @@
     letter-spacing: 0.03em;
     opacity: 0.9;
     color: var(--c-text-primary);
-    text-align: center;
+    text-align: left;
   }
 
   .clock-wrapper {

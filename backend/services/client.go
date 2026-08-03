@@ -185,7 +185,11 @@ func runServiceProcess(ctx context.Context, absExePath string) {
 
 	// Assign child process to Windows Job Object so OS auto-kills child if parent dies
 	if jobObjectHandle != 0 && cmd.Process != nil {
-		_, _, _ = procAssignProcessToJobObject.Call(jobObjectHandle, uintptr(cmd.Process.Pid))
+		hProcess, err := syscall.OpenProcess(0x0101, false, uint32(cmd.Process.Pid))
+		if err == nil {
+			_, _, _ = procAssignProcessToJobObject.Call(jobObjectHandle, uintptr(hProcess))
+			_ = syscall.CloseHandle(hProcess)
+		}
 	}
 
 	go func() {
@@ -213,6 +217,8 @@ func runServiceProcess(ctx context.Context, absExePath string) {
 				runtime.EventsEmit(ctx, "notification", raw)
 			case "media":
 				runtime.EventsEmit(ctx, "media-update", raw)
+			case "audio_peak":
+				runtime.EventsEmit(ctx, "audio-peak", raw)
 			}
 		}
 	}
