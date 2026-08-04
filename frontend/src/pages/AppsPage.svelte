@@ -3,7 +3,7 @@
 
   export const config: IslandConfig = {
     minimal: { w: 10, h: 10, r: 5 }, // Apps page is never minimal
-    expanded: { w: 340, h: 260, r: 24 }, // Slightly taller for the Dock
+    expanded: { w: 440, h: 380, r: 30 }, // Standardized dimensions
     borderColor: 'var(--c-border)',
     glowColor: 'transparent'
   }
@@ -11,11 +11,14 @@
 
 <script lang="ts">
   import { getContext } from 'svelte'
-  import { House, Bell, Info, RefreshCw } from 'lucide-svelte'
+  import { House, Bell, Music, Settings, Info, Search } from 'lucide-svelte'
   import HomePage, { config as homeConfig } from './HomePage.svelte'
   import NotificationPage, {
     config as notifConfig
   } from './NotificationPage.svelte'
+  import MediaPage, { config as mediaConfig } from './MediaPage.svelte'
+  import SettingsPage, { config as settingsConfig } from './SettingsPage.svelte'
+  import ScrollView from '../components/ScrollView.svelte'
   import { notifData } from '../store'
 
   const navigate =
@@ -26,61 +29,107 @@
   function openApp(page: unknown, config: IslandConfig) {
     navigate(page, config, true)
   }
+
+  let searchQuery = $state('')
+
+  const allApps = [
+    {
+      id: 'home',
+      name: 'Home',
+      desc: 'Widgets & Clock',
+      icon: House,
+      color: 'gradient-green',
+      action: () => openApp(HomePage, homeConfig)
+    },
+    {
+      id: 'media',
+      name: 'Media',
+      desc: 'Now Playing',
+      icon: Music,
+      color: 'gradient-pink',
+      action: () => openApp(MediaPage, mediaConfig)
+    },
+    {
+      id: 'notifs',
+      name: 'Notifications',
+      desc: 'System Alerts',
+      icon: Bell,
+      color: 'gradient-blue',
+      badge: true,
+      action: () => openApp(NotificationPage, notifConfig)
+    },
+    {
+      id: 'settings',
+      name: 'Settings',
+      desc: 'Customization',
+      icon: Settings,
+      color: 'gradient-dark',
+      action: () => openApp(SettingsPage, settingsConfig)
+    },
+    {
+      id: 'about',
+      name: 'About',
+      desc: 'Vinta Island v1.0',
+      icon: Info,
+      color: 'gradient-dark',
+      action: () => {}
+    }
+  ]
+
+  let filteredApps = $derived.by(() => {
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return allApps
+    return allApps.filter(
+      (app) =>
+        app.name.toLowerCase().includes(q) || app.desc.toLowerCase().includes(q)
+    )
+  })
 </script>
 
 <div class="apps-page">
   <div class="header">
     <div class="title">Apps</div>
+    <div class="search-box">
+      <Search size={13} class="search-icon" />
+      <input
+        type="text"
+        placeholder="Search apps..."
+        bind:value={searchQuery}
+        onclick={(e) => e.stopPropagation()}
+      />
+    </div>
   </div>
 
-  <div class="grid">
-    <button
-      class="app-btn"
-      onclick={(e) => {
-        e.stopPropagation()
-        openApp(HomePage, homeConfig)
-      }}
-    >
-      <div class="icon clock">
-        <House size={24} />
+  <ScrollView class="bento-container">
+    {#if filteredApps.length === 0}
+      <div class="empty-state">No apps matching "{searchQuery}"</div>
+    {:else}
+      <div class="bento-grid">
+        {#each filteredApps as app (app.id)}
+          <button
+            class="bento-app-card {app.color}"
+            onclick={(e) => {
+              e.stopPropagation()
+              app.action()
+            }}
+          >
+            <div class="card-icon-wrapper">
+              <app.icon size={20} />
+              {#if app.badge && $notifData.length > 0}
+                <span class="card-badge">
+                  {$notifData.length > 9 ? '9+' : $notifData.length}
+                </span>
+              {/if}
+            </div>
+            <div class="card-text">
+              <span class="card-title">{app.name}</span>
+              <span class="card-desc">{app.desc}</span>
+            </div>
+          </button>
+        {/each}
       </div>
-      <span class="label">Home</span>
-    </button>
-
-    <button
-      class="app-btn"
-      onclick={(e) => {
-        e.stopPropagation()
-        openApp(NotificationPage, notifConfig)
-      }}
-    >
-      <div class="icon-wrapper">
-        <div class="icon notif">
-          <Bell size={24} />
-        </div>
-        {#if $notifData.length > 0}
-          <div class="badge">
-            {$notifData.length > 9 ? '9+' : $notifData.length}
-          </div>
-        {/if}
-      </div>
-      <span class="label">Notifications</span>
-    </button>
-
-    <button class="app-btn placeholder" onclick={(e) => e.stopPropagation()}>
-      <div class="icon about">
-        <Info size={24} />
-      </div>
-      <span class="label">About</span>
-    </button>
-
-    <button class="app-btn placeholder" onclick={(e) => e.stopPropagation()}>
-      <div class="icon updates">
-        <RefreshCw size={24} />
-      </div>
-      <span class="label">Updates</span>
-    </button>
-  </div>
+    {/if}
+  </ScrollView>
 </div>
 
 <style>
@@ -89,116 +138,170 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    padding: 20px 20px 60px 20px; /* Bottom padding for dock */
+    padding: 14px 16px 58px 16px;
     box-sizing: border-box;
-    color: var(--c-text-primary);
   }
 
   .header {
     display: flex;
-    justify-content: center;
     align-items: center;
-    margin-bottom: 24px;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+    flex-shrink: 0;
   }
 
   .title {
-    font-size: 16px;
-    font-weight: 600;
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
     letter-spacing: -0.01em;
+    color: var(--c-text-primary);
   }
 
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-    padding: 0 10px;
-  }
-
-  .app-btn {
+  .search-box {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    justify-content: flex-start;
-    gap: 8px;
+    gap: 6px;
+    background: var(--c-item-bg, rgba(255, 255, 255, 0.08));
+    border: 1px solid var(--c-border, rgba(255, 255, 255, 0.1));
+    border-radius: 12px;
+    padding: 4px 10px;
+    flex: 1;
+    max-width: 190px;
+  }
+
+  :global(.search-icon) {
+    color: var(--c-text-muted);
+    flex-shrink: 0;
+  }
+
+  .search-box input {
     background: transparent;
     border: none;
-    cursor: pointer;
-    padding: 0;
-    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-
-  .app-btn:hover {
-    transform: scale(1.05);
-  }
-
-  .app-btn:active {
-    transform: scale(0.95);
-  }
-
-  .icon-wrapper {
-    position: relative;
-    display: inline-block;
-  }
-
-  .badge {
-    position: absolute;
-    top: -6px;
-    right: -6px;
-    background: #ff3b30;
-    color: white;
-    font-size: 10px;
-    font-weight: 700;
-    min-width: 18px;
-    height: 18px;
-    border-radius: 9px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0 4px;
-    box-sizing: border-box;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    border: 1.5px solid var(--c-bg);
-    z-index: 2;
-  }
-
-  .icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  }
-
-  .icon.clock {
-    background: linear-gradient(135deg, #ff6b6b, #ff8e53);
-  }
-  .icon.notif {
-    background: linear-gradient(135deg, #4e65ff, #92effd);
-    color: #1a1a1a;
-  }
-  .icon.about {
-    background: linear-gradient(135deg, #667eea, #764ba2);
-  }
-  .icon.updates {
-    background: linear-gradient(135deg, #00c9ff, #92fe9d);
-    color: #1a1a1a;
-  }
-
-  .label {
+    outline: none;
+    color: var(--c-text-primary);
     font-size: 11px;
-    font-weight: 500;
-    color: var(--c-text-secondary);
-    text-align: center;
+    width: 100%;
   }
 
-  .placeholder {
-    opacity: 0.5;
-    cursor: not-allowed;
+  .search-box input::placeholder {
+    color: var(--c-text-muted);
   }
-  .placeholder:hover {
-    transform: none;
+
+  .bento-container {
+    flex: 1;
+    min-height: 0;
+  }
+
+  .bento-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    padding: 10px 4px 10px 4px;
+    box-sizing: border-box;
+  }
+
+  .bento-app-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: var(--c-item-bg, rgba(255, 255, 255, 0.06));
+    border: 1px solid var(--c-border, rgba(255, 255, 255, 0.1));
+    color: var(--c-text-primary);
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .bento-app-card:hover {
+    background: var(--c-hover, rgba(255, 255, 255, 0.12));
+    transform: translateY(-2px);
+    border-color: var(--c-primary, #6366f1);
+  }
+
+  .card-icon-wrapper {
+    position: relative;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: var(--c-text-primary);
+  }
+
+  .bento-app-card.gradient-green .card-icon-wrapper {
+    background: linear-gradient(
+      135deg,
+      var(--c-success),
+      var(--c-island-border-idle)
+    );
+  }
+
+  .bento-app-card.gradient-pink .card-icon-wrapper {
+    background: linear-gradient(135deg, var(--c-danger), var(--c-purple));
+  }
+
+  .bento-app-card.gradient-blue .card-icon-wrapper {
+    background: linear-gradient(
+      135deg,
+      var(--c-primary),
+      var(--c-island-border-notification)
+    );
+  }
+
+  .bento-app-card.gradient-purple .card-icon-wrapper {
+    background: linear-gradient(135deg, var(--c-purple), var(--c-primary));
+  }
+
+  .bento-app-card.gradient-dark .card-icon-wrapper {
+    background: linear-gradient(135deg, var(--c-contrast-bg), var(--c-item-bg));
+  }
+
+  .card-badge {
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    background: var(--c-danger);
+    color: var(--c-text-primary);
+    font-size: 8px;
+    font-weight: 700;
+    padding: 1px 4px;
+    border-radius: 6px;
+    line-height: 1;
+    border: 1px solid rgba(0, 0, 0, 0.4);
+  }
+
+  .card-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .card-title {
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .card-desc {
+    font-size: 9px;
+    color: var(--c-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .empty-state {
+    font-size: 11px;
+    color: var(--c-text-muted);
+    text-align: center;
+    padding: 24px 0;
   }
 </style>

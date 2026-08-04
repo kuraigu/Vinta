@@ -147,7 +147,7 @@
 
 <div
   bind:this={wrapperNode}
-  class="custom-select-wrapper no-swipe"
+  class="custom-select-wrapper"
   class:full-width={fullWidth}
   use:clickOutside
 >

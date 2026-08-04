@@ -12,18 +12,24 @@
     config as notifConfig
   } from './pages/NotificationPage.svelte'
   import HomePage, { config as homeConfig } from './pages/HomePage.svelte'
+  import MediaPage, { config as mediaConfig } from './pages/MediaPage.svelte'
   import Dock from './components/Dock.svelte'
   import Clock from './components/Clock.svelte'
   import DevPill from './devtest/DevPill.svelte'
-  import AppControls from './utils/AppControls.svelte'
+  import { AppControls } from './utils/navigation'
   import { playNotifChime } from './services/audioService'
   import {
     themeStore,
     shapeStore,
     autoHideStore,
+    homeAutoHideStore,
+    mediaAutoHideStore,
+    notifAutoHideStore,
     autoHideDelayStore,
     autoHideDisplayStore,
     notifAutoWakeStore,
+    globalMediaStore,
+    type MediaData,
     notifData,
     notificationPermissionDenied,
     wakeMethodStore,
@@ -36,19 +42,35 @@
     notifSoundStore,
     notifVolumeStore,
     glowIntensityStore,
-    compactScaleStore,
     type IslandConfig
   } from './store'
-
-  $effect(() => {
-    document.documentElement.setAttribute('data-theme', $themeStore)
-  })
+  import { preloadIcons, findAppIconConflicts } from './appIcons'
 
   // Dynamic Routing: The active app that the island is displaying
   let activePage = $state<Component>(HomePage)
   let islandConfig = $state<IslandConfig>(homeConfig)
 
   let expanded = $state(false)
+  let cssExpanded = $state(false)
+  let isBlinking = $state(false)
+
+  function triggerBlink() {
+    isBlinking = true
+    window.setTimeout(() => {
+      isBlinking = false
+    }, 100)
+  }
+
+  $effect(() => {
+    if (expanded) {
+      const timer = window.setTimeout(() => {
+        cssExpanded = true
+      }, 50)
+      return () => window.clearTimeout(timer)
+    } else {
+      cssExpanded = false
+    }
+  })
   let isHidden = $state(false)
 
   let activeOpacity = $derived(
@@ -78,15 +100,17 @@
     }, 3000)
   }
 
-  $effect(() => {
-    // Re-run this effect whenever expansion or page changes
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const _p = activePage
+  let isTimeoutActive = $state(false)
 
-    triggerGlow()
+  // Per-page auto-hide: each page can opt in/out independently
+  let shouldCurrentPageAutoHide = $derived.by(() => {
+    if (activePage === HomePage) return $homeAutoHideStore
+    if (activePage === MediaPage) return $mediaAutoHideStore
+    if (activePage === NotificationPage) return $notifAutoHideStore
+    return $autoHideStore
   })
 
-  let isTimeoutActive = $state(false)
+  let hideTrigger = $state(0)
 
   $effect(() => {
     // Auto-hide and auto-revert logic effect
@@ -95,17 +119,20 @@
     isTimeoutActive = false
 
     if (!expanded && !isHidden && !isHovering) {
-      // Set a timer if we need to auto-hide OR we need to revert back to HomePage
-      if ($autoHideStore || activePage !== HomePage) {
+      if (
+        shouldCurrentPageAutoHide ||
+        (activePage !== HomePage && activePage !== MediaPage)
+      ) {
         isTimeoutActive = true
         const delayMs = ($autoHideDelayStore || 10) * 1000
         hideTimeout = window.setTimeout(() => {
           isTimeoutActive = false
-          if ($autoHideStore) {
+          if (shouldCurrentPageAutoHide) {
             hideWidget()
           }
-          if (activePage !== HomePage) {
-            navigateTo(HomePage, homeConfig, false)
+          if (activePage !== HomePage && activePage !== MediaPage) {
+            const fallback = AppControls.getFallbackPage()
+            navigateTo(fallback.page as Component, fallback.config, false)
           }
         }, delayMs)
       }
@@ -123,6 +150,9 @@
     if (!isHidden) return
     islandAnim = '0.5s cubic-bezier(0.16, 1, 0.3, 1)'
     isHidden = false
+    if ($globalMediaStore.isPlaying && activePage === HomePage && !expanded) {
+      navigateTo(MediaPage, mediaConfig, false)
+    }
     triggerGlow()
   }
 
@@ -130,26 +160,13 @@
   setContext('hidePill', () => {
     hideWidget()
     if (expanded) {
-      navigateTo(HomePage, homeConfig, false)
+      const fallback = AppControls.getFallbackPage()
+      navigateTo(fallback.page as Component, fallback.config, false)
     }
   })
 
   // Expose manual wake up for components
   setContext('wakeupPill', showWidget)
-
-  // Automatically wake up when new notifications arrive and play audio chime
-  let prevNotifCount = $state(0)
-  let hideTrigger = $state(0)
-  notifData.subscribe((notifs) => {
-    if (notifs.length > prevNotifCount) {
-      if ($notifSoundStore && !$dndStore) {
-        playNotifChime($notifVolumeStore)
-      }
-      showWidget()
-      hideTrigger++
-    }
-    prevNotifCount = notifs.length
-  })
 
   function updateBounds(w: number, h: number, r: number) {
     const computedR = $shapeStore === 'box' ? 12 : r
@@ -163,13 +180,10 @@
 
   function applyBounds(w: number, h: number, r: number) {
     if (w >= currentOSBounds.w && h >= currentOSBounds.h) {
-      // Growing in all dimensions (or same). Safe to update OS region immediately.
       clearTimeout(osBoundsTimeout)
       updateBounds(w, h, r)
       currentOSBounds = { w, h, r }
     } else {
-      // Shrinking in at least one dimension.
-      // Create a temporary bounding box so the CSS animation isn't clipped
       const maxW = Math.max(currentOSBounds.w, w)
       const maxH = Math.max(currentOSBounds.h, h)
       const maxR = Math.max(currentOSBounds.r, r)
@@ -179,7 +193,7 @@
       osBoundsTimeout = window.setTimeout(() => {
         updateBounds(w, h, r)
         currentOSBounds = { w, h, r }
-      }, 450) // Wait slightly longer than 400ms CSS animation to be safe
+      }, 450)
     }
   }
 
@@ -187,14 +201,6 @@
     $autoHideDisplayStore === 'clock'
       ? { w: 105, h: 24, r: 12 }
       : { w: 60, h: 8, r: 4 }
-  )
-
-  let compactW = $derived(
-    $compactScaleStore === 'small'
-      ? 320
-      : $compactScaleStore === 'large'
-        ? 400
-        : islandConfig.minimal.w
   )
 
   let glowOpacity = $derived(
@@ -208,7 +214,58 @@
   let extraDropdownH = $state(0)
   let isQuitting = $state(false)
 
+  function navigateTo(
+    page: Component,
+    pageConfig: IslandConfig,
+    expand: boolean = false
+  ) {
+    if (expanded !== expand || activePage !== page) {
+      triggerBlink()
+    }
+    if (expanded !== expand) {
+      islandAnim = '0.4s cubic-bezier(0.22, 1, 0.36, 1)'
+    }
+    activePage = page
+    islandConfig = pageConfig
+    expanded = expand
+    triggerGlow()
+  }
+
+  // Global navigate for dev pill / pages
+  setContext('navigate', navigateTo)
+
   onMount(() => {
+    // Disable native browser context menu globally across the widget
+    const disableGlobalContextMenu = (e: MouseEvent) => e.preventDefault()
+    window.addEventListener('contextmenu', disableGlobalContextMenu)
+
+    // Apply initial theme immediately to avoid layout styling flashes
+    $themeStore = 'dark'
+    document.documentElement.setAttribute('data-theme', 'dark')
+
+    // Preload SVG caches in the background
+    preloadIcons()
+
+    // Check if launched via `scripts.bat test`
+    IsTestMode().then((testMode) => {
+      isTestMode = testMode
+      if (isTestMode) {
+        const conflicts = findAppIconConflicts()
+        if (conflicts.length > 0) {
+          LogFatal('APP ICON CONFLICTS FOUND:\n' + conflicts.join('\n'))
+        } else {
+          LogInfo('APP ICON TEST PASSED: No conflicts found.')
+        }
+      }
+    })
+
+    currentOSBounds = {
+      w: islandConfig.minimal.w,
+      h: islandConfig.minimal.h,
+      r: islandConfig.minimal.r
+    }
+    updateBounds(currentOSBounds.w, currentOSBounds.h, currentOSBounds.r)
+
     const handleDropdownToggle = (e: Event) => {
       const open = (e as CustomEvent).detail
       extraDropdownH = open ? 220 : 0
@@ -218,13 +275,101 @@
       if ($notifSoundStore) {
         playNotifChime($notifVolumeStore * 0.4)
       }
-      setTimeout(() => {
+      window.setTimeout(() => {
         Quit()
       }, 350)
     }
+
     window.addEventListener('dev-dropdown-toggle', handleDropdownToggle)
     window.addEventListener('vinta-quit', handleQuit)
+
+    // Listen to systray events
+    EventsOn('toggle-theme', () => {
+      themeStore.update((t) => (t === 'dark' ? 'light' : 'dark'))
+    })
+    EventsOn('toggle-shape', () => {
+      shapeStore.update((s) => (s === 'pill' ? 'box' : 'pill'))
+    })
+    EventsOn('show-pill', showWidget)
+
+    let prevIsPlaying = false
+    EventsOn('media-update', (data: Record<string, unknown>) => {
+      if (data) {
+        globalMediaStore.set(data as unknown as MediaData)
+        const isPlaying = Boolean(data.isPlaying)
+        if (
+          isPlaying &&
+          !prevIsPlaying &&
+          !expanded &&
+          activePage === HomePage
+        ) {
+          navigateTo(MediaPage, mediaConfig, false)
+        }
+        prevIsPlaying = isPlaying
+      }
+    })
+
+    EventsOn('audio-peak', (data: Record<string, unknown>) => {
+      if (data && typeof data.peak === 'number') {
+        globalMediaStore.update((m) => ({
+          ...m,
+          audioPeak: data.peak as number
+        }))
+      }
+    })
+
+    EventsOn(
+      'notification',
+      (payload: {
+        appName: string
+        icon: string
+        title: string
+        message: string
+        heroImage: string
+      }) => {
+        const appName = payload.appName || ''
+        const title = payload.title || ''
+        const message = payload.message || ''
+
+        const newNotif = {
+          id: Date.now() + Math.floor(Math.random() * 1000),
+          appName,
+          icon: payload.icon,
+          title,
+          message,
+          heroImage: payload.heroImage,
+          timestamp: Date.now()
+        }
+
+        notifData.update((n) => {
+          return [newNotif, ...n].slice(0, 99)
+        })
+
+        // Auto-wake & navigate to notification page when notification arrives
+        const mediaIsActive =
+          activePage === MediaPage && $globalMediaStore.isPlaying
+        if (!$dndStore && $notifAutoWakeStore && !expanded && !mediaIsActive) {
+          showWidget()
+          navigateTo(NotificationPage, notifConfig, false)
+          triggerGlow()
+        }
+
+        if ($notifSoundStore && !$dndStore) {
+          playNotifChime($notifVolumeStore)
+        }
+        showWidget()
+        hideTrigger++
+      }
+    )
+
+    EventsOn('notification_permission_denied', () => {
+      notificationPermissionDenied.set(true)
+      showWidget()
+      navigateTo(NotificationPage, notifConfig, true)
+    })
+
     return () => {
+      window.removeEventListener('contextmenu', disableGlobalContextMenu)
       window.removeEventListener('dev-dropdown-toggle', handleDropdownToggle)
       window.removeEventListener('vinta-quit', handleQuit)
     }
@@ -233,15 +378,14 @@
   $effect(() => {
     if (!islandNode) return
 
-    // Track $hiddenPillOffsetXStore so Win32 click-through region moves in sync during horizontal drag
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const _ox = $hiddenPillOffsetXStore
+    // Track offset changes for horizontal dragging
+    void $hiddenPillOffsetXStore
 
     const baseW = isHidden
       ? hiddenBounds.w
       : expanded
         ? islandConfig.expanded.w
-        : compactW
+        : islandConfig.minimal.w
 
     const baseH = isHidden
       ? hiddenBounds.h
@@ -252,7 +396,6 @@
     const targetW = baseW
     const targetH = baseH + extraDropdownH
 
-    // Always use box radius if shapeStore is box
     const r = isHidden
       ? hiddenBounds.r
       : $shapeStore === 'box'
@@ -270,9 +413,7 @@
   let hiddenDragStartOffset = 0
 
   function handleHiddenPointerDown(e: PointerEvent) {
-    if (!$allowDragPositionStore) return
-    // Disable repositioning drag when expanded so page gestures and useSwipe work 100% cleanly
-    if (expanded) return
+    if (!$allowDragPositionStore || expanded) return
 
     const target = e.target as HTMLElement
     if (
@@ -311,61 +452,29 @@
     }
   }
 
-  function navigateTo(
-    page: Component,
-    pageConfig: IslandConfig,
-    expand: boolean = false
-  ) {
-    if (expanded !== expand) {
-      islandAnim = '0.4s cubic-bezier(0.22, 1, 0.36, 1)'
+  function handleContextMenu(e: MouseEvent) {
+    if (expanded) return
+
+    const target = e.target as HTMLElement
+    if (
+      target.closest(
+        'button, input, select, textarea, a, .custom-select, [role="button"]'
+      )
+    ) {
+      return
     }
-    activePage = page
-    islandConfig = pageConfig
-    expanded = expand
+    e.preventDefault()
+    if (isHidden) {
+      showWidget()
+    } else {
+      hideWidget()
+    }
   }
-
-  // Global navigate for dev pill / pages
-  setContext('navigate', navigateTo)
-
-  import { preloadIcons, findAppIconConflicts } from './appIcons'
-
-  onMount(async () => {
-    // Preload SVG caches in the background
-    preloadIcons()
-
-    // Check if launched via `scripts.bat test`
-    isTestMode = await IsTestMode()
-    if (isTestMode) {
-      const conflicts = findAppIconConflicts()
-      if (conflicts.length > 0) {
-        LogFatal('APP ICON CONFLICTS FOUND:\n' + conflicts.join('\n'))
-        // LogFatal quits the application automatically
-      } else {
-        LogInfo('APP ICON TEST PASSED: No conflicts found.')
-        // In test mode we may optionally quit after all tests pass, but we'll leave it running for visual devtests unless told otherwise.
-      }
-    }
-
-    currentOSBounds = {
-      w: islandConfig.minimal.w,
-      h: islandConfig.minimal.h,
-      r: islandConfig.minimal.r
-    }
-    updateBounds(currentOSBounds.w, currentOSBounds.h, currentOSBounds.r)
-
-    // Listen to systray events
-    EventsOn('toggle-theme', () => {
-      themeStore.update((t) => (t === 'dark' ? 'light' : 'dark'))
-    })
-    EventsOn('toggle-shape', () => {
-      shapeStore.update((s) => (s === 'pill' ? 'box' : 'pill'))
-    })
-    EventsOn('show-pill', showWidget)
-  })
 
   function handleExpand() {
     if (expanded) return
     FocusWindow()
+    triggerBlink()
     islandAnim = '0.4s cubic-bezier(0.22, 1, 0.36, 1)'
     expanded = true
   }
@@ -397,57 +506,12 @@
   function handleMouseLeave() {
     isHovering = false
     clearTimeout(hoverShowTimeout)
-    if ($autoHideStore && !expanded && !isHidden) {
+    if (shouldCurrentPageAutoHide && !expanded && !isHidden) {
       const delayMs = ($autoHideDelayStore || 10) * 1000
       hideTimeout = window.setTimeout(hideWidget, delayMs)
     }
   }
-
-  onMount(() => {
-    EventsOn(
-      'notification',
-      (payload: {
-        appName: string
-        icon: string
-        title: string
-        message: string
-        heroImage: string
-      }) => {
-        notifData.update((n) => {
-          const newNotif = {
-            id: Date.now(),
-            appName: payload.appName,
-            icon: payload.icon,
-            title: payload.title,
-            message: payload.message,
-            heroImage: payload.heroImage,
-            timestamp: Date.now()
-          }
-
-          n = [newNotif, ...n].slice(0, 99)
-
-          if (!$dndStore && $notifAutoWakeStore && !expanded) {
-            showWidget()
-            navigateTo(NotificationPage, notifConfig, false)
-            triggerGlow()
-          }
-
-          return n
-        })
-      }
-    )
-
-    EventsOn('notification_permission_denied', () => {
-      notificationPermissionDenied.set(true)
-      // Force navigate to Notification page to show the banner
-      showWidget()
-      navigateTo(NotificationPage, notifConfig, true)
-    })
-  })
 </script>
-
-<!-- PUT UTILS HERE -->
-<AppControls />
 
 <!-- ISLAND DIV HERE -->
 <div class="island-container" role="application">
@@ -464,6 +528,7 @@
     onpointermove={handleHiddenPointerMove}
     onpointerup={handleHiddenPointerUp}
     onpointercancel={handleHiddenPointerUp}
+    oncontextmenu={handleContextMenu}
     ondblclick={(e) => {
       const target = e.target as HTMLElement
       if (
@@ -485,19 +550,19 @@
       filter: {isQuitting ? 'blur(12px)' : 'none'};
       width: {isHidden
       ? hiddenBounds.w
-      : expanded
+      : cssExpanded
         ? islandConfig.expanded.w
-        : compactW}px;
+        : islandConfig.minimal.w}px;
       height: {isHidden
       ? hiddenBounds.h
-      : expanded
+      : cssExpanded
         ? islandConfig.expanded.h
         : islandConfig.minimal.h}px;
       --island-r: {isHidden
       ? hiddenBounds.r
       : $shapeStore === 'box'
         ? 12
-        : expanded
+        : cssExpanded
           ? islandConfig.expanded.r
           : islandConfig.minimal.r}px;
       border-radius: var(--island-r);
@@ -527,42 +592,35 @@
 
     <div
       class="content"
-      style="opacity: {isHidden ? 0 : 1}; display: {isHidden
+      style="opacity: {isHidden || isBlinking ? 0 : 1}; display: {isHidden
         ? 'none'
-        : 'grid'}; transition: opacity 0.2s;"
+        : 'grid'}; transition: opacity {isBlinking ? '0s' : '0.2s'};"
     >
       {#key activePage}
-        {#if !expanded}
-          {@const ActivePage = activePage}
-          <div
-            class="view"
-            in:fade={{ duration: 150, delay: 250 }}
-            out:fade={{ duration: 100 }}
-            style="width: {islandConfig.minimal.w}px; height: {islandConfig
-              .minimal.h}px;"
-          >
-            <ActivePage expanded={false} />
-          </div>
-        {:else}
-          {@const ActivePage = activePage}
-          <div
-            class="view"
-            in:fade={{ duration: 200, delay: 250 }}
-            out:fade={{ duration: 100 }}
-            style="width: {islandConfig.expanded.w}px; height: {islandConfig
-              .expanded.h}px;"
-          >
-            <ActivePage expanded={true} />
-            <div in:fade={{ duration: 200, delay: 350 }}>
-              <Dock {activePage} />
-            </div>
-          </div>
-        {/if}
+        {@const ActivePage = activePage}
+        <div
+          class="view"
+          style="width: {cssExpanded
+            ? islandConfig.expanded.w
+            : islandConfig.minimal.w}px; height: {cssExpanded
+            ? islandConfig.expanded.h
+            : islandConfig.minimal.h}px;"
+        >
+          {#if ActivePage}
+            <ActivePage {expanded} />
+          {/if}
+        </div>
       {/key}
+
+      {#if expanded}
+        <div in:fade={{ duration: 200, delay: 150 }}>
+          <Dock {activePage} />
+        </div>
+      {/if}
     </div>
 
     <!-- Shrinking Timeout Bar -->
-    {#if isTimeoutActive && activePage !== HomePage && !expanded && !isHidden}
+    {#if isTimeoutActive && shouldCurrentPageAutoHide && !expanded && !isHidden}
       {#key hideTrigger}
         <div
           class="timeout-bar"
@@ -606,7 +664,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 15px; /* Matches the gap in backend/app.go */
+    gap: 15px;
   }
 
   .island {
@@ -622,7 +680,7 @@
       inset 0 0 0 var(--island-border-width) var(--island-border-color);
     --island-hover-glow: 0 0 8px var(--island-border-color);
 
-    margin-top: 5px; /* Matches visualTop in backend/app.go */
+    margin-top: 5px;
     position: relative;
     background: var(--c-bg);
 
@@ -644,12 +702,12 @@
     align-items: center;
     justify-content: center;
     color: var(--c-text-primary);
-    pointer-events: auto; /* Re-enable clicks on the island itself */
+    pointer-events: auto;
 
     transform: translateZ(0);
     -webkit-transform: translateZ(0);
 
-    will-change: auto; /* Removed width/height to prevent texture reallocation lag */
+    will-change: width, height, border-radius;
 
     contain: layout style;
 
@@ -684,7 +742,7 @@
     border: 1px solid var(--c-border);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
-    background-color: var(--c-bg); /* Maintain the native theme base */
+    background-color: var(--c-bg);
   }
 
   .hidden-widget-pill {
@@ -800,12 +858,6 @@
     inset: 0;
     border-radius: inherit;
     box-shadow: var(--ambient-glow-ring);
-
-    /* 
-     * NOTE: We must inline the mask instead of using a CSS variable. 
-     * Browsers have a bug where `@property` animations fail to update 
-     * if nested inside an unregistered CSS variable applied to a mask.
-     */
     -webkit-mask: conic-gradient(
       from var(--angle),
       rgba(0, 0, 0, 0) 0%,
@@ -834,15 +886,14 @@
   }
 
   .island:not(.expanded):not(.is-hidden):hover::before {
-    opacity: 0 !important; /* Hide glow when the solid hover ring activates */
+    opacity: 0 !important;
     animation: none !important;
   }
 
   .island:not(.expanded):not(.is-hidden):hover {
     box-shadow:
-      var(--island-hover-border),
-      var(--island-hover-glow),
-      /* Neon glow effect */ var(--island-hover-drop-shadow);
+      var(--island-hover-border), var(--island-hover-glow),
+      var(--island-hover-drop-shadow);
   }
 
   .island.is-hidden:hover {
@@ -865,6 +916,9 @@
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
+    transition:
+      width var(--island-anim),
+      height var(--island-anim);
   }
 
   .island.is-quitting {

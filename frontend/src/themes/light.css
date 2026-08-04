@@ -62,4 +62,7 @@
 
   --c-icon-badge-bg: rgba(0, 0, 0, 0.05);
   --c-icon-badge-border: rgba(0, 0, 0, 0.1);
+
+  /* MEDIA SCRIM — bottom legibility gradient over album artwork */
+  --c-scrim: rgba(235, 235, 235, 0.78);
 }

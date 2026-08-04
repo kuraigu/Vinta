@@ -63,17 +63,25 @@ export const glowIntensityStore = persistentWritable<GlowIntensity>(
   'vinta_glow_intensity',
   'subtle'
 )
-export type CompactScale = 'small' | 'normal' | 'large'
-export const compactScaleStore = persistentWritable<CompactScale>(
-  'vinta_compact_scale',
-  'normal'
-)
+
 export const autostartStore = persistentWritable<boolean>(
   'vinta_autostart',
   false
 )
 export const autoHideStore = persistentWritable<boolean>(
   'vinta_autohide',
+  false
+)
+export const homeAutoHideStore = persistentWritable<boolean>(
+  'vinta_home_autohide',
+  false
+)
+export const mediaAutoHideStore = persistentWritable<boolean>(
+  'vinta_media_autohide',
+  true
+)
+export const notifAutoHideStore = persistentWritable<boolean>(
+  'vinta_notif_autohide',
   false
 )
 export type AutoHideDelay = 5 | 10 | 20
@@ -95,6 +103,10 @@ export const wakeMethodStore = persistentWritable<'hover' | 'click'>(
 export const dndStore = persistentWritable<boolean>('vinta_dnd', false)
 export const notifAutoWakeStore = persistentWritable<boolean>(
   'vinta_notif_autowake',
+  true
+)
+export const mediaAutoWakeStore = persistentWritable<boolean>(
+  'vinta_media_autowake',
   true
 )
 
@@ -157,3 +169,45 @@ export type AppNotification = {
 
 export const notifData = writable<AppNotification[]>([])
 export const notificationPermissionDenied = writable<boolean>(false)
+
+export interface MediaData {
+  isAvailable: boolean
+  sourceApp?: string
+  appName?: string
+  appIcon?: string
+  title: string
+  artist: string
+  album: string
+  albumArt: string
+  isPlaying: boolean
+  audioPeak?: number
+  positionMs: number
+  durationMs: number
+  volume?: number
+  isMuted?: boolean
+  canGoNext: boolean
+  canGoPrev: boolean
+  isShuffleActive?: boolean
+  autoRepeatMode?: number // 0: None, 1: Track, 2: List
+}
+
+export const globalMediaStore = writable<MediaData>({
+  isAvailable: false,
+  sourceApp: '',
+  appName: 'Media Player',
+  appIcon: '',
+  title: '',
+  artist: '',
+  album: '',
+  albumArt: '',
+  isPlaying: false,
+  audioPeak: 0,
+  positionMs: 0,
+  durationMs: 0,
+  volume: 50,
+  isMuted: false,
+  canGoNext: true,
+  canGoPrev: true,
+  isShuffleActive: false,
+  autoRepeatMode: 0
+})

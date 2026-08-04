@@ -10,19 +10,43 @@ All contributors, whether you write code, update documentation, report bugs, or 
 
 ## Understanding Vinta Architecture
 
-Before creating new UI files, here is a quick guide on the difference between a **Vinta Component** and a **Vinta Page**:
+### Main Application (`Vinta.exe`)
 
-### Vinta Component
+Vinta is built using **Go + Wails v2 + Svelte 5**. The Go backend handles native Win32 window region clipping, click-through bounds, and configuration storage, while Svelte renders the Dynamic Island interface.
 
-- **What it is:** A reusable widget located in `frontend/src/components/`, such as `Clock.svelte`, `Weather.svelte`, `Calendar.svelte`, or `BentoGrid.svelte`.
+### Native WinRT Services Bridge (`vintaservices.dll`)
+
+- **What it is:** A high-performance, native C++/WinRT in-process library located in `backend/services/` (`winrt_bridge.cpp` and `winrt_bridge.h`).
+- **In-Process Architecture:** `vintaservices.dll` is compiled alongside the application and dynamically loaded in-process by the Go backend via standard Windows syscalls. There are no secondary child processes or external .NET runtimes required.
+- **Why C++/WinRT is used:** Windows provides native WinRT APIs (`Windows.UI.Notifications` for system toast listeners, `Windows.Media.Control` for Global System Media Transport Controls, and CoreAudio COM APIs for real-time peak audio metering). Native C++/WinRT provides direct access with zero inter-process overhead, instant event dispatching, and a minimal memory footprint (~3MB).
+- **Direct Event Callbacks & Media Controls:** The bridge directly invokes Go callbacks for real-time media metadata, album art streams, toast notifications, and dynamic audio visualizer peaks. Control commands (`seek`, `play_pause`, `next`, `prev`, `set_volume`) are executed immediately on the active media session.
+
+### Vinta Component vs Page
+
+#### Vinta Component
+- **What it is:** A reusable widget located in `frontend/src/components/`, such as `Clock.svelte`, `Weather.svelte`, `Calendar.svelte`, `MediaWidget.svelte`, or `BentoGrid.svelte`.
 - **How it works:** Components are designed to sit inside pages or carousels like `ComponentGallery.svelte`. They accept props such as `expanded` to adapt between minimal and expanded views.
 
-### Vinta Page
-
-- **What it is:** A top-level view located in `frontend/src/pages/`, such as `HomePage.svelte`, `AppsPage.svelte`, `NotificationPage.svelte`, or `SettingsPage.svelte`.
+#### Vinta Page
+- **What it is:** A top-level view located in `frontend/src/pages/`, such as `HomePage.svelte`, `MediaPage.svelte`, `AppsPage.svelte`, `NotificationPage.svelte`, or `SettingsPage.svelte`.
 - **How it works:** Pages sit inside `App.svelte` and handle overall screen navigation, island height, and component layout.
 
-## How to Create New Components and Pages
+### Page Hierarchy & Minimization Standard
+
+To maintain a consistent, predictable user experience when closing, collapsing, or minimizing sub-apps and overlays, Vinta uses a standardized page hierarchy managed via `AppControls.getFallbackPage()` in `frontend/src/utils/AppControls.svelte`:
+
+1. **Page Priority Stack**:
+   - **`HomePage`**: Base island minimal page when system is idle.
+   - **`MediaPage`**: Preferred minimal page whenever audio/video media is actively playing.
+   - **`NotificationPage`**: Temporary alert overlay page displayed when an incoming notification arrives.
+   - **`AppsPage` / `SettingsPage`**: Expanded sub-applications.
+
+2. **Standardized Minimization (`AppControls.doMinimize(navigate, e)`)**:
+   - Never hardcode manual `if/else` checks for `HomePage` or `MediaPage` inside components.
+   - Always call `AppControls.doMinimize(navigate, e)` or `AppControls.getFallbackPage()` when closing or minimizing a page.
+   - **Automated Fallback**: If media is playing, the island automatically minimizes back to **`MediaPage`**; if media is stopped or paused, it minimizes to **`HomePage`**.
+
+## How to Create New Components, Pages, and Themes
 
 ### Creating a New Component
 
@@ -38,6 +62,40 @@ Before creating new UI files, here is a quick guide on the difference between a 
 2. Style the page container using design system CSS variables.
 3. Import and arrange your components.
 4. Register the new page route inside `frontend/src/store.ts` and `frontend/src/App.svelte`.
+
+### Creating a Theme
+
+Vinta uses a tokenized CSS variable system so that all UI components adapt cleanly between themes without hardcoding colors inside components.
+
+1. **Create Theme CSS File**: Add a new `.css` file inside `frontend/src/themes/` (e.g. `mytheme.css`).
+2. **Define Theme Tokens**: Target the root selector `:root[data-theme='mytheme']` and declare all semantic design tokens:
+   ```css
+   :root[data-theme='mytheme'] {
+     /* ACCENT COLORS */
+     --c-primary: #6366f1;
+     --c-danger: #ff3b30;
+     --c-warning: #ffcc00;
+     --c-success: #34c759;
+     --c-purple: #a78bfa;
+
+     /* BACKGROUNDS & SURFACES */
+     --c-bg: rgba(15, 15, 20, 1);
+     --c-border: rgba(255, 255, 255, 0.1);
+     --c-hover: rgba(255, 255, 255, 0.08);
+     --c-item-bg: rgba(255, 255, 255, 0.05);
+
+     /* TYPOGRAPHY */
+     --c-text-primary: #ffffff;
+     --c-text-secondary: #b0b0b0;
+     --c-text-muted: #888888;
+
+     /* MEDIA & AMBIENT SCRIM */
+     --c-scrim: rgba(0, 0, 0, 0.72);
+   }
+   ```
+3. **Import in `style.css`**: Add `@import './themes/mytheme.css';` at the top of `frontend/src/style.css`.
+4. **Register Theme Option**: Add your theme definition to `AppTheme` in `frontend/src/store.ts` and append `{ label: 'My Theme', value: 'mytheme' }` to `themeOptions` in `frontend/src/pages/SettingsPage.svelte`.
+5. **Verify Design Guidelines**: Ensure components consume `var(--c-token)` variables without hardcoded hex values (see [docs/DESIGN.md](docs/DESIGN.md)).
 
 ## Helper Scripts
 

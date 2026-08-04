@@ -69,8 +69,9 @@ frontend/wailsjs/
 wails.json.user
 *.syso
 
-# C# Notification Interceptor
-backend/notifications/bin/
-backend/notifications/obj/
-backend/notifications/.dotnet/
-backend/notifications/packages/
+# Native C++/WinRT Services Bridge
+*.obj
+*.exp
+*.lib
+backend/services/vintaservices.dll
+backend/services/native/*.obj

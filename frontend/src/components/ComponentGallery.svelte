@@ -1,124 +1,153 @@
 <script lang="ts">
-  import { type Component, type Snippet } from 'svelte'
+  import type { Snippet, Component } from 'svelte'
   import { ChevronLeft, ChevronRight } from 'lucide-svelte'
   import { swipe } from '../utils/useSwipe'
 
   export interface SlideItem {
-    id: string
-    title?: string
+    id?: string
     snippet?: Snippet
-    component?: Component<{ expanded?: boolean; [key: string]: unknown }>
+    component?: Component<Record<string, unknown>>
     props?: Record<string, unknown>
   }
 
   let {
     slides = [],
-    initialIndex = 0,
     autoPlay = false,
-    autoPlayInterval = 5000,
+    autoPlayInterval = 4000,
+    loop = true,
     showControls = true,
     showDots = true,
+    initialIndex = 0,
     enableSwipe = true,
-    loop = true,
-    onSlideChange
+    onSlideChange = () => {}
   } = $props<{
     slides: SlideItem[]
-    initialIndex?: number
     autoPlay?: boolean
     autoPlayInterval?: number
-    showControls?: boolean
-    showDots?: boolean
-    enableSwipe?: boolean
     loop?: boolean
+    showDots?: boolean
+    showControls?: boolean
+    initialIndex?: number
+    enableSwipe?: boolean
     onSlideChange?: (index: number) => void
   }>()
 
-  // Build cloned array for seamless infinite looping if loop=true & slides > 1
   let isLoopingable = $derived(loop && slides.length > 1)
 
   let clonedSlides = $derived.by(() => {
-    if (!isLoopingable) return slides
-    const lastClone = {
-      ...slides[slides.length - 1],
-      id: `${slides[slides.length - 1].id}-clone-last`
-    }
-    const firstClone = { ...slides[0], id: `${slides[0].id}-clone-first` }
-    return [lastClone, ...slides, firstClone]
+    if (!isLoopingable || slides.length === 0) return slides
+    const first = slides[0]
+    const last = slides[slides.length - 1]
+    return [last, ...slides, first]
   })
 
-  // Internal index tracking (1-based when looping to account for left clone)
-  let displayIndex = $state(initialIndex + (isLoopingable ? 1 : 0))
+  // Internal 1-based index when looping to account for left clone
+  let displayIndex = $state(initialIndex + (loop && slides.length > 1 ? 1 : 0))
   let isInstant = $state(false)
   let isDragging = $state(false)
+  let isAnimating = $state(false)
   let dragOffset = $state(0)
   let isHovered = $state(false)
+  let autoPlayTimer: number
 
-  let autoPlayTimer: number | undefined
+  // Synchronize when slides array changes dynamically
+  $effect(() => {
+    if (isLoopingable) {
+      if (displayIndex < 0 || displayIndex >= clonedSlides.length) {
+        displayIndex = 1
+      }
+    } else {
+      if (displayIndex < 0 || displayIndex >= slides.length) {
+        displayIndex = 0
+      }
+    }
+  })
 
-  // Active real index for dots & callbacks (0-based)
+  // Calculated real 0-based index for external consumers & pagination dots
   let activeRealIndex = $derived.by(() => {
-    if (slides.length === 0) return 0
-    if (!isLoopingable) return displayIndex
-    if (displayIndex === 0) return slides.length - 1
-    if (displayIndex === clonedSlides.length - 1) return 0
+    if (!isLoopingable || slides.length === 0) return Math.max(0, displayIndex)
+    if (displayIndex <= 0) return slides.length - 1
+    if (displayIndex >= clonedSlides.length - 1) return 0
     return displayIndex - 1
+  })
+
+  // Notify parent component on real slide change
+  $effect(() => {
+    onSlideChange(activeRealIndex)
   })
 
   function goToSlide(targetRealIndex: number) {
     if (slides.length === 0) return
-    const target = isLoopingable ? targetRealIndex + 1 : targetRealIndex
-    if (displayIndex !== target) {
-      isInstant = false
-      displayIndex = target
-      onSlideChange?.(targetRealIndex)
-    }
+    isInstant = false
+    isAnimating = true
+    displayIndex = isLoopingable ? targetRealIndex + 1 : targetRealIndex
   }
 
   function nextSlide() {
-    if (slides.length <= 1) return
+    if (slides.length === 0 || isAnimating) return
+    if (!isLoopingable) {
+      if (displayIndex < slides.length - 1) {
+        isAnimating = true
+        displayIndex++
+      }
+      return
+    }
+    if (displayIndex >= clonedSlides.length - 1) return
     isInstant = false
+    isAnimating = true
     displayIndex++
-    onSlideChange?.(activeRealIndex)
   }
 
   function prevSlide() {
-    if (slides.length <= 1) return
+    if (slides.length === 0 || isAnimating) return
+    if (!isLoopingable) {
+      if (displayIndex > 0) {
+        isAnimating = true
+        displayIndex--
+      }
+      return
+    }
+    if (displayIndex <= 0) return
     isInstant = false
+    isAnimating = true
     displayIndex--
-    onSlideChange?.(activeRealIndex)
   }
 
-  function handleTransitionEnd() {
-    if (!isLoopingable) return
-    // If we landed on the right clone (first slide clone), jump to real first slide
-    if (displayIndex >= clonedSlides.length - 1) {
+  function handleTransitionEnd(e?: TransitionEvent) {
+    if (e && (e.target !== e.currentTarget || e.propertyName !== 'transform'))
+      return
+    if (!isLoopingable) {
+      isAnimating = false
+      return
+    }
+
+    if (displayIndex <= 0) {
+      isInstant = true
+      displayIndex = clonedSlides.length - 2
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          isInstant = false
+          isAnimating = false
+        })
+      })
+    } else if (displayIndex >= clonedSlides.length - 1) {
       isInstant = true
       displayIndex = 1
-    }
-    // If we landed on the left clone (last slide clone), jump to real last slide
-    else if (displayIndex <= 0) {
-      isInstant = true
-      displayIndex = slides.length
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          isInstant = false
+          isAnimating = false
+        })
+      })
+    } else {
+      isAnimating = false
     }
   }
 
-  let showArrowsTemp = $state(true)
-  let hideArrowsTimeout: number
-
-  // Show arrows briefly on mount / expand
-  $effect(() => {
-    showArrowsTemp = true
-    clearTimeout(hideArrowsTimeout)
-    hideArrowsTimeout = window.setTimeout(() => {
-      showArrowsTemp = false
-    }, 2500)
-    return () => clearTimeout(hideArrowsTimeout)
-  })
-
-  // Swipe Action configuration
-  let swipeOptions = $derived({
+  const swipeOptions = $derived({
+    axis: 'x' as const,
     enableSwipe: enableSwipe && slides.length > 1,
-    ignoreSelector: '.nav-btn, .dot-btn, select, option, .no-swipe',
+    ignoreSelector: '.nav-edge-zone, .dot-btn, select, option, .no-swipe',
     onDragStart: () => {
       isDragging = true
       isInstant = false
@@ -159,7 +188,7 @@
   class="gallery-container"
   class:is-dragging={isDragging}
   class:is-swiping={isDragging}
-  class:show-temp-arrows={showArrowsTemp}
+  class:is-instant={isInstant}
   use:swipe={swipeOptions}
   onmouseenter={() => (isHovered = true)}
   onmouseleave={() => (isHovered = false)}
@@ -174,16 +203,14 @@
         transform: translateX(calc(-{displayIndex * 100}% + {dragOffset}px));
         transition: {isDragging || isInstant
         ? 'none'
-        : 'transform 0.4s cubic-bezier(0.22, 1, 0.36, 1)'};
+        : 'transform 0.38s cubic-bezier(0.22, 1, 0.36, 1)'};
       "
     >
-      {#each clonedSlides as slide, i (slide.id || i)}
+      {#each clonedSlides as slide, i (i)}
         <div
           class="gallery-slide"
           class:active={i === displayIndex ||
-            (isLoopingable &&
-              ((displayIndex === 0 && i === clonedSlides.length - 2) ||
-                (displayIndex === clonedSlides.length - 1 && i === 1)))}
+            (!isLoopingable && i === displayIndex)}
         >
           {#if slide.snippet}
             {@render slide.snippet()}
@@ -194,32 +221,37 @@
       {/each}
     </div>
 
+    <!-- Ambient edge hit-zones (replace chevrons) -->
     {#if showControls && slides.length > 1}
-      <button
-        class="nav-btn prev"
-        type="button"
+      <!-- svelte-ignore a11y_click_events_have_key_events -->
+      <div
+        class="nav-edge-zone prev"
+        class:disabled={!loop && activeRealIndex === 0}
         onclick={(e) => {
           e.stopPropagation()
           prevSlide()
         }}
-        disabled={!loop && activeRealIndex === 0}
         aria-label="Previous Slide"
+        role="button"
+        tabindex="0"
       >
-        <ChevronLeft size={16} />
-      </button>
+        <span class="nav-edge-icon"><ChevronLeft size={16} /></span>
+      </div>
 
-      <button
-        class="nav-btn next"
-        type="button"
+      <!-- svelte-ignore a11y_click_events_have_key_events -->
+      <div
+        class="nav-edge-zone next"
+        class:disabled={!loop && activeRealIndex === slides.length - 1}
         onclick={(e) => {
           e.stopPropagation()
           nextSlide()
         }}
-        disabled={!loop && activeRealIndex === slides.length - 1}
         aria-label="Next Slide"
+        role="button"
+        tabindex="0"
       >
-        <ChevronRight size={16} />
-      </button>
+        <span class="nav-edge-icon"><ChevronRight size={16} /></span>
+      </div>
     {/if}
   </div>
 
@@ -257,13 +289,16 @@
     cursor: grabbing;
   }
 
+  .gallery-container.is-instant .gallery-slide {
+    transition: none !important;
+  }
+
   .gallery-viewport {
     position: relative;
     flex: 1;
     min-height: 0;
     width: 100%;
     overflow: hidden;
-    border-radius: 16px;
   }
 
   .gallery-track {
@@ -277,7 +312,7 @@
     flex: 0 0 100%;
     width: 100%;
     height: 100%;
-    padding: 0 6px;
+    padding: 0;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -295,73 +330,81 @@
     pointer-events: auto;
   }
 
-  /* Navigation buttons - Theme aware styling */
-  .nav-btn {
+  /* Ambient edge navigation hit-zones - no icon, gradient hint only */
+  .nav-edge-zone {
     position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    background: var(--c-dock-popover-bg, rgba(25, 25, 30, 0.8));
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid var(--c-border, rgba(255, 255, 255, 0.18));
-    color: var(--c-text-primary, #ffffff);
+    top: 0;
+    bottom: 0;
+    width: 32px;
+    z-index: 10;
+    cursor: pointer;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.22s ease;
+    border: none;
+    background: transparent;
     display: flex;
     align-items: center;
     justify-content: center;
-    cursor: pointer;
-    opacity: 0;
-    transition:
-      opacity 0.3s ease,
-      background-color 0.2s ease,
-      transform 0.2s ease;
-    z-index: 25;
-    pointer-events: auto;
-    padding: 0;
-    box-shadow: var(--c-dock-popover-shadow, 0 4px 12px rgba(0, 0, 0, 0.4));
   }
 
-  /* Show arrows when expanded initially or when hovering container */
-  .gallery-container.show-temp-arrows .nav-btn,
-  .gallery-container:hover .nav-btn {
-    opacity: 0.75;
+  .nav-edge-zone.prev {
+    left: 0;
+    background: linear-gradient(
+      to right,
+      var(--c-nav-hint, rgba(99, 102, 241, 0.32)),
+      transparent
+    );
   }
 
-  /* Hide arrows completely when actively swiping/dragging */
-  .gallery-container.is-swiping .nav-btn {
+  .nav-edge-zone.next {
+    right: 0;
+    background: linear-gradient(
+      to left,
+      var(--c-nav-hint, rgba(99, 102, 241, 0.32)),
+      transparent
+    );
+  }
+
+  .nav-edge-zone.disabled {
+    pointer-events: none !important;
     opacity: 0 !important;
-    pointer-events: none;
   }
 
-  .nav-btn:hover:not(:disabled) {
+  /* Show zones on container hover */
+  .gallery-container:hover .nav-edge-zone:not(.disabled) {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .nav-edge-zone:hover {
     opacity: 1 !important;
-    background: var(--c-hover, rgba(50, 50, 65, 0.95));
-    color: var(--c-text-primary, #ffffff);
-    transform: translateY(-50%) scale(1.1);
   }
 
-  .nav-btn:disabled {
-    opacity: 0.15 !important;
-    cursor: not-allowed;
+  /* Directional icon centered in the zone */
+  .nav-edge-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--c-text-primary);
+    opacity: 0.75;
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.4));
+    pointer-events: none;
+    transition: opacity 0.2s ease;
   }
 
-  .nav-btn.prev {
-    left: 2px;
+  .nav-edge-zone:hover .nav-edge-icon {
+    opacity: 1;
   }
 
-  .nav-btn.next {
-    right: 2px;
-  }
-
-  /* Pagination dots bar - Theme aware styling */
+  /* Pagination dots bar */
   .pagination-dots {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
-    padding-top: 8px;
+    padding-top: 6px;
+    padding-bottom: 2px;
     flex-shrink: 0;
     z-index: 25;
   }

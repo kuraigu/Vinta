@@ -35,7 +35,8 @@ func main() {
 			UniqueId: "vinta-dynamic-island",
 		},
 		AssetServer: &assetserver.Options{
-			Assets: assets,
+			Assets:  assets,
+			Handler: cache,
 		},
 		BackgroundColour: &options.RGBA{R: 0, G: 0, B: 0, A: 0},
 		OnStartup:        app.Startup,

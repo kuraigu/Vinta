@@ -1,4 +1,5 @@
 export type SwipeOptions = {
+  axis?: 'x' | 'y' | 'both'
   enableSwipe?: boolean
   threshold?: number
   dragThreshold?: number
@@ -12,10 +13,11 @@ export type SwipeOptions = {
   onDragEnd?: () => void
 }
 
-function findScrollableParent(
-  el: HTMLElement | null,
-  stopNode: HTMLElement
-): HTMLElement | null {
+interface ExtendedPointerEvent extends PointerEvent {
+  _swipeHandledAxis?: 'x' | 'y' | 'both'
+}
+
+function findScrollableParent(el: HTMLElement | null): HTMLElement | null {
   let current = el
   while (current && current !== document.body) {
     const style = window.getComputedStyle(current)
@@ -29,7 +31,6 @@ function findScrollableParent(
     if (isScrollable) {
       return current
     }
-    if (current === stopNode) break
     current = current.parentElement
   }
   return null
@@ -40,12 +41,25 @@ export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
   let isDragging = false
   let hasMovedFar = false
   let isVerticalScroll = false
+  let isLockedToAxis = false
   let scrollTarget: HTMLElement | null = null
   let startX = 0
   let startY = 0
   let lastY = 0
 
+  let velocityY = 0
+  let lastTime = 0
+  let inertiaFrame = 0
+
   function handlePointerDown(e: PointerEvent) {
+    const extEvent = e as ExtendedPointerEvent
+    const requestedAxis = opts.axis ?? 'both'
+
+    if (
+      extEvent._swipeHandledAxis === 'both' ||
+      extEvent._swipeHandledAxis === requestedAxis
+    )
+      return
     if (opts.enableSwipe === false) return
     if (
       opts.ignoreSelector &&
@@ -54,13 +68,17 @@ export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
       return
     if (e.button !== 0 && e.pointerType === 'mouse') return
 
+    cancelAnimationFrame(inertiaFrame)
     isDragging = true
     hasMovedFar = false
     isVerticalScroll = false
+    isLockedToAxis = false
     scrollTarget = null
     startX = e.clientX
     startY = e.clientY
     lastY = e.clientY
+    velocityY = 0
+    lastTime = performance.now()
     opts.onDragStart?.()
   }
 
@@ -69,33 +87,57 @@ export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
     const dx = e.clientX - startX
     const dy = e.clientY - startY
     const dragThresh = opts.dragThreshold ?? 8
+    const requestedAxis = opts.axis ?? 'both'
+    const now = performance.now()
+    const dt = Math.max(1, now - lastTime)
 
     if (
       !hasMovedFar &&
       (Math.abs(dx) > dragThresh || Math.abs(dy) > dragThresh)
     ) {
-      hasMovedFar = true
+      const isVertical = Math.abs(dy) > Math.abs(dx)
 
-      // Detect if drag direction is primarily vertical
-      if (Math.abs(dy) > Math.abs(dx)) {
+      if (requestedAxis === 'x' && isVertical) {
+        isDragging = false
+        opts.onDragEnd?.()
+        return
+      }
+      if (requestedAxis === 'y' && !isVertical) {
+        isDragging = false
+        opts.onDragEnd?.()
+        return
+      }
+
+      hasMovedFar = true
+      isLockedToAxis = true
+
+      const extEvent = e as ExtendedPointerEvent
+      extEvent._swipeHandledAxis = requestedAxis
+
+      try {
+        node.setPointerCapture(e.pointerId)
+      } catch {
+        // Ignore pointer capture errors
+      }
+
+      if (isVertical) {
         isVerticalScroll = true
-        scrollTarget = findScrollableParent(e.target as HTMLElement, node)
+        scrollTarget = findScrollableParent(e.target as HTMLElement)
       } else {
         isVerticalScroll = false
-        try {
-          node.setPointerCapture(e.pointerId)
-        } catch {
-          // Ignore pointer capture errors if unsupported
-        }
       }
     }
+
+    if (!isLockedToAxis) return
 
     if (isVerticalScroll) {
       if (scrollTarget) {
         const stepY = e.clientY - lastY
         scrollTarget.scrollTop -= stepY
+        velocityY = stepY / dt
       }
       lastY = e.clientY
+      lastTime = now
       opts.onDragMove?.({ x: 0, y: dy })
     } else {
       opts.onDragMove?.({ x: dx, y: dy })
@@ -109,33 +151,51 @@ export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
     const dx = e.clientX - startX
     const dy = e.clientY - startY
     const thresh = opts.threshold ?? 40
+    const requestedAxis = opts.axis ?? 'both'
 
     if (Math.abs(dx) > Math.abs(dy)) {
-      if (dx < -thresh) {
-        opts.onSwipeLeft?.()
-      } else if (dx > thresh) {
-        opts.onSwipeRight?.()
+      if (requestedAxis !== 'y') {
+        if (dx < -thresh) {
+          opts.onSwipeLeft?.()
+        } else if (dx > thresh) {
+          opts.onSwipeRight?.()
+        }
       }
     } else {
-      if (dy < -thresh) {
-        opts.onSwipeUp?.()
-      } else if (dy > thresh) {
-        opts.onSwipeDown?.()
+      if (requestedAxis !== 'x') {
+        if (dy < -thresh) {
+          opts.onSwipeUp?.()
+        } else if (dy > thresh) {
+          opts.onSwipeDown?.()
+        }
       }
     }
 
     opts.onDragEnd?.()
 
-    if (hasMovedFar && !isVerticalScroll) {
+    if (hasMovedFar) {
       try {
         node.releasePointerCapture(e.pointerId)
       } catch {
-        // Ignore if capture already lost
+        // Ignore pointer release errors
       }
+    }
+
+    if (isVerticalScroll && scrollTarget && Math.abs(velocityY) > 0.1) {
+      let v = velocityY
+      const target = scrollTarget
+      function loop() {
+        if (Math.abs(v) < 0.05 || isDragging) return
+        target.scrollTop -= v * 16
+        v *= 0.92 // friction multiplier
+        inertiaFrame = requestAnimationFrame(loop)
+      }
+      inertiaFrame = requestAnimationFrame(loop)
     }
 
     hasMovedFar = false
     isVerticalScroll = false
+    isLockedToAxis = false
     scrollTarget = null
   }
 
@@ -158,6 +218,7 @@ export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
       opts = newOptions
     },
     destroy() {
+      cancelAnimationFrame(inertiaFrame)
       node.removeEventListener('pointerdown', handlePointerDown)
       node.removeEventListener('pointermove', handlePointerMove)
       node.removeEventListener('pointerup', handlePointerUp)
