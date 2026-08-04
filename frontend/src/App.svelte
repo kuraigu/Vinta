@@ -16,7 +16,7 @@
   import Dock from './components/Dock.svelte'
   import Clock from './components/Clock.svelte'
   import DevPill from './devtest/DevPill.svelte'
-  import AppControls from './utils/AppControls.svelte'
+  import { AppControls } from './utils/navigation'
   import { playNotifChime } from './services/audioService'
   import {
     themeStore,
@@ -348,12 +348,7 @@
         // Auto-wake & navigate to notification page when notification arrives
         const mediaIsActive =
           activePage === MediaPage && $globalMediaStore.isPlaying
-        if (
-          !$dndStore &&
-          $notifAutoWakeStore &&
-          !expanded &&
-          !mediaIsActive
-        ) {
+        if (!$dndStore && $notifAutoWakeStore && !expanded && !mediaIsActive) {
           showWidget()
           navigateTo(NotificationPage, notifConfig, false)
           triggerGlow()
@@ -517,9 +512,6 @@
     }
   }
 </script>
-
-<!-- PUT UTILS HERE -->
-<AppControls />
 
 <!-- ISLAND DIV HERE -->
 <div class="island-container" role="application">

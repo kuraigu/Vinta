@@ -224,7 +224,6 @@
     <!-- Ambient edge hit-zones (replace chevrons) -->
     {#if showControls && slides.length > 1}
       <!-- svelte-ignore a11y_click_events_have_key_events -->
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div
         class="nav-edge-zone prev"
         class:disabled={!loop && activeRealIndex === 0}
@@ -240,7 +239,6 @@
       </div>
 
       <!-- svelte-ignore a11y_click_events_have_key_events -->
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
       <div
         class="nav-edge-zone next"
         class:disabled={!loop && activeRealIndex === slides.length - 1}

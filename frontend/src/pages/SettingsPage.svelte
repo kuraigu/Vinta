@@ -175,7 +175,7 @@
       const searchedOpts = results.map((r) => ({
         label: r.name,
         value: r.name,
-        payload: r
+        payload: { name: r.name, lat: r.latitude, lon: r.longitude }
       }))
 
       const existingValues = new Set(searchedOpts.map((o) => o.value))
@@ -424,7 +424,9 @@
     <div class="setting-item flex-col">
       <div class="setting-label">
         <Maximize2 size={14} class="item-icon" />
-        <span>Expanded Opacity ({Math.round($opacityExpandedStore * 100)}%)</span>
+        <span
+          >Expanded Opacity ({Math.round($opacityExpandedStore * 100)}%)</span
+        >
       </div>
       <input
         type="range"

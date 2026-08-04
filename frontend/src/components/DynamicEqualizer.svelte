@@ -108,9 +108,7 @@
     const t = time * 0.0045
     const peak = audioPeak || 0
     const amplitude =
-      isPlaying && peak > 0.008
-        ? Math.min(1.5, Math.max(0.35, peak * 2.8))
-        : 0
+      isPlaying && peak > 0.008 ? Math.min(1.5, Math.max(0.35, peak * 2.8)) : 0
 
     // Linear Gradient for played audio bars
     let grad: CanvasGradient | string

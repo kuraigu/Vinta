@@ -1,6 +1,5 @@
 <script lang="ts">
-  import { getContext, onMount } from 'svelte'
-  import { EventsOn } from '../../wailsjs/runtime/runtime.js'
+  import { getContext } from 'svelte'
   import {
     Grid,
     Music,
@@ -16,7 +15,7 @@
   import AppsPage from '../pages/AppsPage.svelte'
   import HomePage from '../pages/HomePage.svelte'
   import NotificationPage from '../pages/NotificationPage.svelte'
-  import MediaPage, { config as mediaConfig } from '../pages/MediaPage.svelte'
+  import MediaPage from '../pages/MediaPage.svelte'
   import SettingsPage from '../pages/SettingsPage.svelte'
   import type { IslandConfig } from '../store'
   import { notifData } from '../store'
@@ -28,26 +27,8 @@
 
   const hidePill = getContext<() => void>('hidePill')
 
-  let {
-    activePage,
-    islandConfig
-  }: { activePage: unknown; islandConfig?: IslandConfig } = $props()
-
-  let isMediaPlaying = $state(false)
-
-  onMount(() => {
-    const unlisten = EventsOn(
-      'media-update',
-      (data: { isPlaying?: boolean }) => {
-        if (data && typeof data.isPlaying === 'boolean') {
-          isMediaPlaying = data.isPlaying
-        }
-      }
-    )
-    return () => {
-      if (unlisten) unlisten()
-    }
-  })
+  let { activePage }: { activePage: unknown; islandConfig?: IslandConfig } =
+    $props()
 </script>
 
 <div class="dock-container">
@@ -116,14 +97,7 @@
     <DockButton
       variant="warning"
       tooltip="Collapse Island"
-      onclick={(e: MouseEvent) =>
-        AppControls.doMinimize(
-          navigate,
-          e,
-          activePage,
-          islandConfig || mediaConfig,
-          isMediaPlaying
-        )}
+      onclick={(e: MouseEvent) => AppControls.doMinimize(navigate, e)}
     >
       <Minimize2 size={18} />
     </DockButton>
