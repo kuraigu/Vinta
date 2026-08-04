@@ -17,7 +17,20 @@
     expand?: boolean
   ) => void
 
+  export function getFallbackPage(): {
+    page: unknown
+    config: IslandConfig
+  } {
+    const mediaState = get(globalMediaStore)
+    if (mediaState.isPlaying) {
+      return { page: MediaPage, config: mediaConfig }
+    }
+    return { page: HomePage, config: homeConfig }
+  }
+
   export const AppControls = {
+    getFallbackPage,
+
     goHome: (navigate: NavFn, e?: Event) => {
       if (e) e.stopPropagation()
       navigate(HomePage, homeConfig, true)
@@ -37,27 +50,21 @@
       navigate(NotificationPage, notifConfig, true)
     },
 
-    goSettings: (navigate: NavFn, e: Event) => {
-      e.stopPropagation()
+    goSettings: (navigate: NavFn, e?: Event) => {
+      if (e) e.stopPropagation()
       navigate(SettingsPage, settingsConfig, true)
     },
 
     doMinimize: (
       navigate: NavFn,
-      e: Event,
-      _currentPage?: unknown,
-      _currentConfig?: IslandConfig,
-      isMediaPlaying?: boolean
+      e?: Event
     ) => {
-      e.stopPropagation()
-      e.preventDefault()
-      const mediaState = get(globalMediaStore)
-      const isPlaying = isMediaPlaying || mediaState.isPlaying
-      if (isPlaying) {
-        navigate(MediaPage, mediaConfig, false)
-      } else {
-        navigate(HomePage, homeConfig, false)
+      if (e) {
+        e.stopPropagation()
+        e.preventDefault()
       }
+      const fallback = getFallbackPage()
+      navigate(fallback.page, fallback.config, false)
     },
 
     doHide: (hidePill: () => void, e: Event) => {

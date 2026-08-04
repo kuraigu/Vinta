@@ -31,6 +31,21 @@ Vinta is built using **Go + Wails v2 + Svelte 5**. The Go backend handles native
 - **What it is:** A top-level view located in `frontend/src/pages/`, such as `HomePage.svelte`, `MediaPage.svelte`, `AppsPage.svelte`, `NotificationPage.svelte`, or `SettingsPage.svelte`.
 - **How it works:** Pages sit inside `App.svelte` and handle overall screen navigation, island height, and component layout.
 
+### Page Hierarchy & Minimization Standard
+
+To maintain a consistent, predictable user experience when closing, collapsing, or minimizing sub-apps and overlays, Vinta uses a standardized page hierarchy managed via `AppControls.getFallbackPage()` in `frontend/src/utils/AppControls.svelte`:
+
+1. **Page Priority Stack**:
+   - **`HomePage`**: Base island minimal page when system is idle.
+   - **`MediaPage`**: Preferred minimal page whenever audio/video media is actively playing.
+   - **`NotificationPage`**: Temporary alert overlay page displayed when an incoming notification arrives.
+   - **`AppsPage` / `SettingsPage`**: Expanded sub-applications.
+
+2. **Standardized Minimization (`AppControls.doMinimize(navigate, e)`)**:
+   - Never hardcode manual `if/else` checks for `HomePage` or `MediaPage` inside components.
+   - Always call `AppControls.doMinimize(navigate, e)` or `AppControls.getFallbackPage()` when closing or minimizing a page.
+   - **Automated Fallback**: If media is playing, the island automatically minimizes back to **`MediaPage`**; if media is stopped or paused, it minimizes to **`HomePage`**.
+
 ## How to Create New Components, Pages, and Themes
 
 ### Creating a New Component

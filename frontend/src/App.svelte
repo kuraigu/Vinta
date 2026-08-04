@@ -131,11 +131,8 @@
             hideWidget()
           }
           if (activePage !== HomePage && activePage !== MediaPage) {
-            if ($globalMediaStore.isPlaying) {
-              navigateTo(MediaPage, mediaConfig, false)
-            } else {
-              navigateTo(HomePage, homeConfig, false)
-            }
+            const fallback = AppControls.getFallbackPage()
+            navigateTo(fallback.page as Component, fallback.config, false)
           }
         }, delayMs)
       }
@@ -163,7 +160,8 @@
   setContext('hidePill', () => {
     hideWidget()
     if (expanded) {
-      navigateTo(HomePage, homeConfig, false)
+      const fallback = AppControls.getFallbackPage()
+      navigateTo(fallback.page as Component, fallback.config, false)
     }
   })
 
