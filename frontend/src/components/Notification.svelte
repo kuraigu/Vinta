@@ -1023,7 +1023,7 @@
   }
 
   .expanded-view {
-    padding: 20px 20px 60px 20px;
+    padding: 14px 16px 58px 16px;
     height: 100%;
     width: 100%;
     box-sizing: border-box;
@@ -1035,17 +1035,24 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 2px;
+    gap: 8px;
     width: 100%;
-    margin-bottom: 24px;
+    margin-bottom: 12px;
     flex-shrink: 0;
   }
 
+  .notif-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
   h3 {
+    margin: 0;
     color: var(--c-text-primary);
-    font-size: 18px;
+    font-size: 15px;
     font-weight: 700;
-    letter-spacing: -0.02em;
+    letter-spacing: -0.01em;
   }
 
   .dismiss-item-btn {
@@ -1079,8 +1086,9 @@
     color: var(--c-text-secondary);
     font-size: 11px;
     font-weight: 600;
-    padding: 5px 10px;
-    border-radius: 14px;
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 12px;
     display: inline-flex;
     align-items: center;
     gap: 5px;

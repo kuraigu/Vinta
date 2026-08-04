@@ -3,7 +3,7 @@
 
   export const config: IslandConfig = {
     minimal: { w: 10, h: 10, r: 5 }, // Apps page is never minimal
-    expanded: { w: 420, h: 285, r: 28 }, // Comfortable width and height for Bento Grid + Dock
+    expanded: { w: 440, h: 380, r: 30 }, // Standardized dimensions
     borderColor: 'var(--c-border)',
     glowColor: 'transparent'
   }

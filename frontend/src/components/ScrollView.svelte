@@ -15,6 +15,7 @@
   }>()
 
   let swipeOptions = $derived({
+    axis: 'y' as const,
     enableSwipe,
     ignoreSelector
   })

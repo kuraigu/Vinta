@@ -3,7 +3,7 @@
 
   export const config: IslandConfig = {
     minimal: { w: 10, h: 10, r: 5 },
-    expanded: { w: 440, h: 370, r: 30 },
+    expanded: { w: 530, h: 450, r: 32 },
     borderColor: 'var(--c-border)',
     glowColor: 'transparent'
   }
@@ -986,8 +986,8 @@
   }
 
   .title {
-    font-weight: 600;
-    font-size: 0.9rem;
+    font-weight: 700;
+    font-size: 15px;
     letter-spacing: -0.01em;
     text-align: center;
     color: var(--c-text-primary);

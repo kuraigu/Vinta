@@ -1,7 +1,7 @@
 <script module lang="ts">
   export const config = {
     minimal: { w: 330, h: 35, r: 35 },
-    expanded: { w: 440, h: 370, r: 30 },
+    expanded: { w: 440, h: 380, r: 30 },
     borderColor: 'var(--c-island-border-idle)',
     glowColor: 'var(--c-island-glow-idle)'
   }
@@ -149,9 +149,11 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 16px 4px 16px;
+    padding: 14px 16px 0 16px;
+    margin-bottom: 10px;
     width: 100%;
     box-sizing: border-box;
+    flex-shrink: 0;
   }
 
   .header-side {
@@ -178,8 +180,8 @@
   }
 
   .title {
-    font-weight: 600;
-    font-size: 0.9rem;
+    font-weight: 700;
+    font-size: 15px;
     letter-spacing: -0.01em;
     text-align: center;
     color: var(--c-text-primary);
@@ -193,12 +195,14 @@
     justify-content: center;
     align-items: center;
     position: relative;
+    padding: 0 16px;
+    box-sizing: border-box;
   }
 
   .single-card-container {
     width: 100%;
     height: 100%;
-    padding: 0 16px;
+    padding: 0;
     box-sizing: border-box;
     display: flex;
     justify-content: center;

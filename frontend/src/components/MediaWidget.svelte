@@ -2,8 +2,8 @@
   import type { IslandConfig } from '../store'
 
   export const config: IslandConfig = {
-    minimal: { w: 340, h: 48, r: 24 },
-    expanded: { w: 420, h: 220, r: 28 },
+    minimal: { w: 340, h: 44, r: 22 },
+    expanded: { w: 440, h: 250, r: 28 },
     borderColor: 'rgba(255, 60, 100, 0.4)',
     glowColor: 'rgba(255, 60, 100, 0.35)'
   }
@@ -14,7 +14,16 @@
   import Clock from './Clock.svelte'
   import DynamicEqualizer from './DynamicEqualizer.svelte'
   import { globalMediaStore, notifData } from '../store'
-  import { Volume2, VolumeX, Laptop, Music, Bell } from 'lucide-svelte'
+  import {
+    Volume2,
+    VolumeX,
+    Laptop,
+    Music,
+    Bell,
+    Shuffle,
+    Repeat,
+    Repeat1
+  } from 'lucide-svelte'
   import { getContext } from 'svelte'
   import NotificationPage, {
     config as notifConfig
@@ -85,8 +94,19 @@
     return () => clearInterval(interval)
   })
 
-  function handleControl(action: string, e: MouseEvent) {
-    e.stopPropagation()
+  function handleControl(action: string, e?: MouseEvent) {
+    if (e) e.stopPropagation()
+    if (action === 'shuffle') {
+      globalMediaStore.update((m) => ({
+        ...m,
+        isShuffleActive: !m.isShuffleActive
+      }))
+    } else if (action === 'repeat') {
+      globalMediaStore.update((m) => ({
+        ...m,
+        autoRepeatMode: ((m.autoRepeatMode || 0) + 1) % 3
+      }))
+    }
     SendMediaControl(action)
   }
 
@@ -345,15 +365,24 @@
         <span class="time-label">{formatTime(media.durationMs)}</span>
       </div>
 
-      <!-- Bottom Controls Row: Prev, Next, Volume Slider -->
+      <!-- Bottom Controls Row: Shuffle, Prev, Next, Repeat, Volume Slider -->
       <div class="bottom-controls-row">
         <div class="nav-controls">
+          <button
+            class="action-btn"
+            class:is-active={media.isShuffleActive}
+            title={media.isShuffleActive ? 'Shuffle: On' : 'Shuffle: Off'}
+            onclick={(e) => handleControl('shuffle', e)}
+          >
+            <Shuffle size={13} />
+          </button>
+
           <button
             class="action-btn"
             title="Previous Track"
             onclick={(e) => handleControl('prev', e)}
           >
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
               <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
             </svg>
           </button>
@@ -363,12 +392,29 @@
             title="Next Track"
             onclick={(e) => handleControl('next', e)}
           >
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
               <path
                 d="M6 6h2v12H6zm3.5 6l8.5 6V6z"
                 transform="rotate(180 12 12)"
               />
             </svg>
+          </button>
+
+          <button
+            class="action-btn"
+            class:is-active={media.autoRepeatMode && media.autoRepeatMode > 0}
+            title={media.autoRepeatMode === 1
+              ? 'Repeat: One Track'
+              : media.autoRepeatMode === 2
+                ? 'Repeat: All Tracks'
+                : 'Repeat: Off'}
+            onclick={(e) => handleControl('repeat', e)}
+          >
+            {#if media.autoRepeatMode === 1}
+              <Repeat1 size={13} />
+            {:else}
+              <Repeat size={13} />
+            {/if}
           </button>
         </div>
 
@@ -982,6 +1028,13 @@
   .action-btn:hover {
     background: rgba(255, 255, 255, 0.3);
     transform: scale(1.08);
+  }
+
+  .action-btn.is-active {
+    background: var(--c-primary, #6366f1);
+    border-color: rgba(255, 255, 255, 0.5);
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
   }
 
   .volume-control {

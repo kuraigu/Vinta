@@ -45,10 +45,23 @@
   let displayIndex = $state(initialIndex + (loop && slides.length > 1 ? 1 : 0))
   let isInstant = $state(false)
   let isDragging = $state(false)
+  let isAnimating = $state(false)
   let dragOffset = $state(0)
   let isHovered = $state(false)
-  let showArrowsTemp = $state(false)
   let autoPlayTimer: number
+
+  // Synchronize when slides array changes dynamically
+  $effect(() => {
+    if (isLoopingable) {
+      if (displayIndex < 0 || displayIndex >= clonedSlides.length) {
+        displayIndex = 1
+      }
+    } else {
+      if (displayIndex < 0 || displayIndex >= slides.length) {
+        displayIndex = 0
+      }
+    }
+  })
 
   // Calculated real 0-based index for external consumers & pagination dots
   let activeRealIndex = $derived.by(() => {
@@ -66,53 +79,73 @@
   function goToSlide(targetRealIndex: number) {
     if (slides.length === 0) return
     isInstant = false
+    isAnimating = true
     displayIndex = isLoopingable ? targetRealIndex + 1 : targetRealIndex
   }
 
   function nextSlide() {
-    if (slides.length === 0) return
+    if (slides.length === 0 || isAnimating) return
     if (!isLoopingable) {
-      if (displayIndex < slides.length - 1) displayIndex++
+      if (displayIndex < slides.length - 1) {
+        isAnimating = true
+        displayIndex++
+      }
       return
     }
+    if (displayIndex >= clonedSlides.length - 1) return
     isInstant = false
+    isAnimating = true
     displayIndex++
   }
 
   function prevSlide() {
-    if (slides.length === 0) return
+    if (slides.length === 0 || isAnimating) return
     if (!isLoopingable) {
-      if (displayIndex > 0) displayIndex--
+      if (displayIndex > 0) {
+        isAnimating = true
+        displayIndex--
+      }
       return
     }
+    if (displayIndex <= 0) return
     isInstant = false
+    isAnimating = true
     displayIndex--
   }
 
   function handleTransitionEnd(e?: TransitionEvent) {
-    if (e && e.propertyName !== 'transform') return
-    if (!isLoopingable) return
+    if (e && (e.target !== e.currentTarget || e.propertyName !== 'transform'))
+      return
+    if (!isLoopingable) {
+      isAnimating = false
+      return
+    }
 
-    if (displayIndex === 0) {
+    if (displayIndex <= 0) {
       isInstant = true
       displayIndex = clonedSlides.length - 2
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           isInstant = false
+          isAnimating = false
         })
       })
-    } else if (displayIndex === clonedSlides.length - 1) {
+    } else if (displayIndex >= clonedSlides.length - 1) {
       isInstant = true
       displayIndex = 1
       requestAnimationFrame(() => {
         requestAnimationFrame(() => {
           isInstant = false
+          isAnimating = false
         })
       })
+    } else {
+      isAnimating = false
     }
   }
 
   const swipeOptions = $derived({
+    axis: 'x' as const,
     enableSwipe: enableSwipe && slides.length > 1,
     ignoreSelector: '.nav-btn, .dot-btn, select, option, .no-swipe',
     onDragStart: () => {
@@ -155,7 +188,6 @@
   class="gallery-container"
   class:is-dragging={isDragging}
   class:is-swiping={isDragging}
-  class:show-temp-arrows={showArrowsTemp}
   class:is-instant={isInstant}
   use:swipe={swipeOptions}
   onmouseenter={() => (isHovered = true)}
@@ -171,7 +203,7 @@
         transform: translateX(calc(-{displayIndex * 100}% + {dragOffset}px));
         transition: {isDragging || isInstant
         ? 'none'
-        : 'transform 0.4s cubic-bezier(0.22, 1, 0.36, 1)'};
+        : 'transform 0.38s cubic-bezier(0.22, 1, 0.36, 1)'};
       "
     >
       {#each clonedSlides as slide, i (i)}
@@ -276,7 +308,7 @@
     flex: 0 0 100%;
     width: 100%;
     height: 100%;
-    padding: 0 6px;
+    padding: 0;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -294,13 +326,13 @@
     pointer-events: auto;
   }
 
-  /* Navigation buttons - Theme aware styling */
+  /* Navigation buttons - overlayed inside viewport */
   .nav-btn {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    width: 26px;
-    height: 26px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     background: var(--c-surface-elevated, rgba(30, 30, 40, 0.85));
     color: var(--c-text-muted, rgba(255, 255, 255, 0.7));
@@ -315,12 +347,14 @@
     transition:
       opacity 0.2s ease,
       background-color 0.2s ease,
-      transform 0.2s ease;
+      color 0.2s ease,
+      transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
     backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
   }
 
-  .gallery-container:hover .nav-btn,
-  .gallery-container.show-temp-arrows .nav-btn {
+  .gallery-container:hover .nav-btn {
     opacity: 0.9;
     pointer-events: auto;
   }
@@ -332,27 +366,33 @@
     transform: translateY(-50%) scale(1.1);
   }
 
+  .nav-btn:active {
+    transform: translateY(-50%) scale(0.95);
+  }
+
   .nav-btn:disabled {
     opacity: 0.15 !important;
     cursor: not-allowed;
+    transform: translateY(-50%) !important;
+    pointer-events: none;
   }
 
   .nav-btn.prev {
-    left: 2px;
+    left: 8px;
   }
 
   .nav-btn.next {
-    right: 2px;
+    right: 8px;
   }
 
-  /* Pagination dots bar - Natural flex block below gallery-viewport */
+  /* Pagination dots bar */
   .pagination-dots {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
-    padding-top: 8px;
-    padding-bottom: 4px;
+    padding-top: 6px;
+    padding-bottom: 2px;
     flex-shrink: 0;
     z-index: 25;
   }

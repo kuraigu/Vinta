@@ -1,4 +1,5 @@
 export type SwipeOptions = {
+  axis?: 'x' | 'y' | 'both'
   enableSwipe?: boolean
   threshold?: number
   dragThreshold?: number
@@ -13,7 +14,7 @@ export type SwipeOptions = {
 }
 
 interface ExtendedPointerEvent extends PointerEvent {
-  _swipeHandled?: boolean
+  _swipeHandledAxis?: 'x' | 'y' | 'both'
 }
 
 function findScrollableParent(el: HTMLElement | null): HTMLElement | null {
@@ -40,6 +41,7 @@ export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
   let isDragging = false
   let hasMovedFar = false
   let isVerticalScroll = false
+  let isLockedToAxis = false
   let scrollTarget: HTMLElement | null = null
   let startX = 0
   let startY = 0
@@ -51,7 +53,13 @@ export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
 
   function handlePointerDown(e: PointerEvent) {
     const extEvent = e as ExtendedPointerEvent
-    if (extEvent._swipeHandled) return
+    const requestedAxis = opts.axis ?? 'both'
+
+    if (
+      extEvent._swipeHandledAxis === 'both' ||
+      extEvent._swipeHandledAxis === requestedAxis
+    )
+      return
     if (opts.enableSwipe === false) return
     if (
       opts.ignoreSelector &&
@@ -60,12 +68,11 @@ export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
       return
     if (e.button !== 0 && e.pointerType === 'mouse') return
 
-    extEvent._swipeHandled = true
-
     cancelAnimationFrame(inertiaFrame)
     isDragging = true
     hasMovedFar = false
     isVerticalScroll = false
+    isLockedToAxis = false
     scrollTarget = null
     startX = e.clientX
     startY = e.clientY
@@ -80,6 +87,7 @@ export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
     const dx = e.clientX - startX
     const dy = e.clientY - startY
     const dragThresh = opts.dragThreshold ?? 8
+    const requestedAxis = opts.axis ?? 'both'
     const now = performance.now()
     const dt = Math.max(1, now - lastTime)
 
@@ -87,22 +95,40 @@ export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
       !hasMovedFar &&
       (Math.abs(dx) > dragThresh || Math.abs(dy) > dragThresh)
     ) {
-      hasMovedFar = true
+      const isVertical = Math.abs(dy) > Math.abs(dx)
 
-      // Unconditionally capture pointer so we don't trigger hover states on other elements
+      if (requestedAxis === 'x' && isVertical) {
+        isDragging = false
+        opts.onDragEnd?.()
+        return
+      }
+      if (requestedAxis === 'y' && !isVertical) {
+        isDragging = false
+        opts.onDragEnd?.()
+        return
+      }
+
+      hasMovedFar = true
+      isLockedToAxis = true
+
+      const extEvent = e as ExtendedPointerEvent
+      extEvent._swipeHandledAxis = requestedAxis
+
       try {
         node.setPointerCapture(e.pointerId)
       } catch {
-        // Ignore pointer capture errors if already released
+        // Ignore pointer capture errors
       }
 
-      if (Math.abs(dy) > Math.abs(dx)) {
+      if (isVertical) {
         isVerticalScroll = true
         scrollTarget = findScrollableParent(e.target as HTMLElement)
       } else {
         isVerticalScroll = false
       }
     }
+
+    if (!isLockedToAxis) return
 
     if (isVerticalScroll) {
       if (scrollTarget) {
@@ -125,18 +151,23 @@ export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
     const dx = e.clientX - startX
     const dy = e.clientY - startY
     const thresh = opts.threshold ?? 40
+    const requestedAxis = opts.axis ?? 'both'
 
     if (Math.abs(dx) > Math.abs(dy)) {
-      if (dx < -thresh) {
-        opts.onSwipeLeft?.()
-      } else if (dx > thresh) {
-        opts.onSwipeRight?.()
+      if (requestedAxis !== 'y') {
+        if (dx < -thresh) {
+          opts.onSwipeLeft?.()
+        } else if (dx > thresh) {
+          opts.onSwipeRight?.()
+        }
       }
     } else {
-      if (dy < -thresh) {
-        opts.onSwipeUp?.()
-      } else if (dy > thresh) {
-        opts.onSwipeDown?.()
+      if (requestedAxis !== 'x') {
+        if (dy < -thresh) {
+          opts.onSwipeUp?.()
+        } else if (dy > thresh) {
+          opts.onSwipeDown?.()
+        }
       }
     }
 
@@ -164,6 +195,7 @@ export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
 
     hasMovedFar = false
     isVerticalScroll = false
+    isLockedToAxis = false
     scrollTarget = null
   }
 

@@ -13,6 +13,7 @@
 #include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Foundation.Collections.h>
 #include <winrt/Windows.ApplicationModel.h>
+#include <winrt/Windows.Media.h>
 #include <winrt/Windows.Media.Control.h>
 #include <winrt/Windows.Storage.Streams.h>
 #include <winrt/Windows.UI.Notifications.Management.h>
@@ -817,6 +818,10 @@ static void EmitMediaState(bool includeVolume) {
     bool canGoPrev = true;
     bool canPause = true;
     bool canPlay = true;
+    bool isShuffleActive = false;
+    int autoRepeatMode = 0;
+    bool isShuffleEnabled = true;
+    bool isRepeatEnabled = true;
 
     winrt_media::GlobalSystemMediaTransportControlsSession session{nullptr};
     {
@@ -870,12 +875,31 @@ static void EmitMediaState(bool includeVolume) {
             isPlaying = (info.PlaybackStatus() == winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing);
             g_isMediaPlaying.store(isPlaying);
 
+            auto shuffleRef = info.IsShuffleActive();
+            if (shuffleRef) {
+                isShuffleActive = shuffleRef.Value();
+            }
+
+            auto repeatRef = info.AutoRepeatMode();
+            if (repeatRef) {
+                auto mode = repeatRef.Value();
+                if (mode == winrt::Windows::Media::MediaPlaybackAutoRepeatMode::Track) {
+                    autoRepeatMode = 1;
+                } else if (mode == winrt::Windows::Media::MediaPlaybackAutoRepeatMode::List) {
+                    autoRepeatMode = 2;
+                } else {
+                    autoRepeatMode = 0;
+                }
+            }
+
             auto controls = info.Controls();
             if (controls) {
                 canGoNext = controls.IsNextEnabled();
                 canGoPrev = controls.IsPreviousEnabled();
                 canPause = controls.IsPauseEnabled();
                 canPlay = controls.IsPlayEnabled();
+                isShuffleEnabled = controls.IsShuffleEnabled();
+                isRepeatEnabled = controls.IsRepeatEnabled();
             }
         }
     } catch (...) {}
@@ -899,6 +923,10 @@ static void EmitMediaState(bool includeVolume) {
          << "\"album\":\"" << EscapeJsonString(album) << "\","
          << "\"albumArt\":\"" << EscapeJsonString(albumArt) << "\","
          << "\"isPlaying\":" << (isPlaying ? "true" : "false") << ","
+         << "\"isShuffleActive\":" << (isShuffleActive ? "true" : "false") << ","
+         << "\"autoRepeatMode\":" << autoRepeatMode << ","
+         << "\"isShuffleEnabled\":" << (isShuffleEnabled ? "true" : "false") << ","
+         << "\"isRepeatEnabled\":" << (isRepeatEnabled ? "true" : "false") << ","
          << "\"audioPeak\":0.0,"
          << "\"positionMs\":" << std::fixed << std::setprecision(0) << posMs << ","
          << "\"durationMs\":" << std::fixed << std::setprecision(0) << durMs << ","
@@ -1105,6 +1133,26 @@ extern "C" BRIDGE_API int SendNativeMediaCommand(const char* command) {
             else if (cmd == "pause") session.TryPauseAsync();
             else if (cmd == "next") session.TrySkipNextAsync();
             else if (cmd == "previous" || cmd == "prev") session.TrySkipPreviousAsync();
+            else if (cmd == "shuffle" || cmd == "toggle_shuffle") {
+                auto info = session.GetPlaybackInfo();
+                bool cur = false;
+                if (info && info.IsShuffleActive()) cur = info.IsShuffleActive().Value();
+                session.TryChangeShuffleActiveAsync(!cur);
+            }
+            else if (cmd == "repeat" || cmd == "toggle_repeat") {
+                auto info = session.GetPlaybackInfo();
+                int nextMode = 1;
+                if (info && info.AutoRepeatMode()) {
+                    auto cur = info.AutoRepeatMode().Value();
+                    if (cur == winrt::Windows::Media::MediaPlaybackAutoRepeatMode::None) nextMode = 1;
+                    else if (cur == winrt::Windows::Media::MediaPlaybackAutoRepeatMode::Track) nextMode = 2;
+                    else nextMode = 0;
+                }
+                winrt::Windows::Media::MediaPlaybackAutoRepeatMode target = winrt::Windows::Media::MediaPlaybackAutoRepeatMode::None;
+                if (nextMode == 1) target = winrt::Windows::Media::MediaPlaybackAutoRepeatMode::Track;
+                else if (nextMode == 2) target = winrt::Windows::Media::MediaPlaybackAutoRepeatMode::List;
+                session.TryChangeAutoRepeatModeAsync(target);
+            }
         } catch (...) {}
 
         std::thread([]() {

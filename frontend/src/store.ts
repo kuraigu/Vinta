@@ -187,6 +187,8 @@ export interface MediaData {
   isMuted?: boolean
   canGoNext: boolean
   canGoPrev: boolean
+  isShuffleActive?: boolean
+  autoRepeatMode?: number // 0: None, 1: Track, 2: List
 }
 
 export const globalMediaStore = writable<MediaData>({
@@ -205,5 +207,7 @@ export const globalMediaStore = writable<MediaData>({
   volume: 50,
   isMuted: false,
   canGoNext: true,
-  canGoPrev: true
+  canGoPrev: true,
+  isShuffleActive: false,
+  autoRepeatMode: 0
 })

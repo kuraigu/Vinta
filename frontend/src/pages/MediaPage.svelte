@@ -1,7 +1,7 @@
 <script module lang="ts">
   export const config = {
-    minimal: { w: 340, h: 48, r: 24 },
-    expanded: { w: 420, h: 245, r: 28 },
+    minimal: { w: 340, h: 44, r: 22 },
+    expanded: { w: 440, h: 250, r: 28 },
     borderColor: 'rgba(255, 60, 100, 0.4)',
     glowColor: 'rgba(255, 60, 100, 0.35)'
   }
@@ -53,11 +53,13 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 16px 2px 16px;
+    padding: 14px 16px 0 16px;
+    margin-bottom: 6px;
     z-index: 2;
     pointer-events: none;
     width: 100%;
     box-sizing: border-box;
+    flex-shrink: 0;
   }
 
   .header-side {
@@ -71,27 +73,19 @@
     justify-content: flex-end;
   }
 
-  .header-center {
-    flex: 1 1 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    white-space: nowrap;
-  }
-
   .title {
-    font-size: 0.85rem;
+    font-size: 15px;
     font-weight: 700;
-    letter-spacing: 0.03em;
-    opacity: 0.9;
+    letter-spacing: -0.01em;
     color: var(--c-text-primary);
     text-align: left;
   }
 
   .clock-wrapper {
-    font-size: 0.76rem;
-    font-weight: 600;
-    opacity: 0.75;
+    font-size: 12px;
+    font-weight: 500;
+    opacity: 0.65;
+    font-feature-settings: 'tnum';
   }
 
   .expanded-content {
