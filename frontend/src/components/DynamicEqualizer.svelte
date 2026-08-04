@@ -9,19 +9,29 @@
     progressPercent?: number
   }
 
-  let props: Props = $props()
+  let {
+    isPlaying = false,
+    audioPeak = 0,
+    barCount = 24,
+    variant = 'minimal',
+    progressPercent
+  }: Props = $props()
 
   const MIN_HEIGHT = 25 // 25% baseline (~5-6px) minimum height when paused/quiet/muted
 
-  // Initialize the array once to prevent reallocation
-  let dynamicHeights = $state<number[]>(
-    Array(props.barCount || 24).fill(MIN_HEIGHT)
-  )
+  let dynamicHeights = $state<number[]>([])
   let animFrame: number = 0
+
+  $effect(() => {
+    const count = barCount || 24
+    if (dynamicHeights.length !== count) {
+      dynamicHeights = Array(count).fill(MIN_HEIGHT)
+    }
+  })
 
   // Cleanly manage animation loop based on isPlaying state
   $effect(() => {
-    if (props.isPlaying) {
+    if (isPlaying) {
       if (!animFrame) animFrame = requestAnimationFrame(updateHeights)
     } else {
       if (animFrame) {
@@ -29,7 +39,7 @@
         animFrame = 0
       }
       // Set to baseline height when paused
-      const count = props.barCount || 24
+      const count = barCount || 24
       for (let i = 0; i < count; i++) {
         dynamicHeights[i] = MIN_HEIGHT
       }
@@ -37,15 +47,15 @@
   })
 
   function updateHeights(time: number) {
-    if (!props.isPlaying) return
+    if (!isPlaying) return
 
     const t = time * 0.0045
-    const peak = props.audioPeak || 0
-    // Real audio peak signal gating: 0 when video/media has NO audio or is silent; active wave scaling when audio is present
+    const peak = audioPeak || 0
+    // Real audio peak signal gating: 0 when video/media has NO audio or is silent/muted; active wave scaling when audio is present
     const amplitude =
-      peak > 0.001 ? Math.min(1.5, Math.max(0.4, peak * 2.5)) : 0
+      peak > 0.008 ? Math.min(1.5, Math.max(0.35, peak * 2.8)) : 0
 
-    const count = props.barCount || 24
+    const count = barCount || 24
     for (let i = 0; i < count; i++) {
       if (amplitude === 0) {
         dynamicHeights[i] = MIN_HEIGHT
@@ -68,14 +78,13 @@
 </script>
 
 <div
-  class="dynamic-equalizer {props.variant || 'minimal'}"
-  class:is-playing={props.isPlaying}
+  class="dynamic-equalizer {variant || 'minimal'}"
+  class:is-playing={isPlaying}
 >
   {#each dynamicHeights as h, i (i)}
-    {@const barPercent = (i / Math.max(1, (props.barCount || 24) - 1)) * 100}
+    {@const barPercent = (i / Math.max(1, (barCount || 24) - 1)) * 100}
     {@const isPlayed =
-      props.progressPercent === undefined ||
-      barPercent <= props.progressPercent}
+      progressPercent === undefined || barPercent <= progressPercent}
     <div
       class="eq-bar {isPlayed ? 'is-played' : 'is-unplayed'}"
       style="height: {h}%;"

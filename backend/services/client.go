@@ -1,229 +1,222 @@
-// Package services provides management and IPC communication for VintaServices.exe.
+// Package services provides native in-process WinRT integration for media and notifications.
 package services
 
 import (
-	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
+	"math"
 	"os"
-	"os/exec"
 	"path/filepath"
+	"sync"
 	"syscall"
-	"time"
 	"unsafe"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"golang.org/x/sys/windows"
 )
 
 var (
-	stdinWriter io.WriteCloser
-	cancelCtx   context.CancelFunc
+	dllHandle                    syscall.Handle
+	procStartNativeWinRTServices uintptr
+	procStopNativeWinRTServices  uintptr
+	procSendNativeMediaCommand   uintptr
 
-	kernel32                     = syscall.NewLazyDLL("kernel32.dll")
-	procCreateJobObject          = kernel32.NewProc("CreateJobObjectW")
-	procSetInformationJobObject  = kernel32.NewProc("SetInformationJobObject")
-	procAssignProcessToJobObject = kernel32.NewProc("AssignProcessToJobObject")
-	jobObjectHandle              uintptr
+	mediaCallbackPtr uintptr
+	notifCallbackPtr uintptr
+	peakCallbackPtr  uintptr
+
+	wailsCtx  context.Context
+	serviceMu sync.Mutex
+	isStarted bool
 )
 
-const (
-	jobObjectExtendedLimitInformationClass = 9
-	jobObjectLimitKillOnJobClose           = 0x2000
-)
-
-//nolint:revive // Windows API C structs
-type JOBOBJECT_BASIC_LIMIT_INFORMATION struct {
-	PerProcessUserTimeLimit int64
-	PerJobUserTimeLimit     int64
-	LimitFlags              uint32
-	MinimumWorkingSetSize   uintptr
-	MaximumWorkingSetSize   uintptr
-	ActiveProcessLimit      uint32
-	Affinity                uintptr
-	PriorityClass           uint32
-	SchedulingClass         uint32
-}
-
-//nolint:revive // Windows API C structs
-type IO_COUNTERS struct {
-	ReadOperationCount  uint64
-	WriteOperationCount uint64
-	OtherOperationCount uint64
-	ReadTransferCount   uint64
-	WriteTransferCount  uint64
-	OtherTransferCount  uint64
-}
-
-//nolint:revive // Windows API C structs
-type JOBOBJECT_EXTENDED_LIMIT_INFORMATION struct {
-	BasicLimitInformation JOBOBJECT_BASIC_LIMIT_INFORMATION
-	IoInfo                IO_COUNTERS
-	ProcessMemoryLimit    uintptr
-	JobMemoryLimit        uintptr
-	PeakProcessMemoryUsed uintptr
-	PeakJobMemoryUsed     uintptr
-}
-
-func initJobObject() {
-	job, _, _ := procCreateJobObject.Call(0, 0)
-	if job != 0 {
-		var info JOBOBJECT_EXTENDED_LIMIT_INFORMATION
-		info.BasicLimitInformation.LimitFlags = jobObjectLimitKillOnJobClose
-		_, _, _ = procSetInformationJobObject.Call(
-			job,
-			uintptr(jobObjectExtendedLimitInformationClass),
-			uintptr(unsafe.Pointer(&info)),
-			uintptr(unsafe.Sizeof(info)),
-		)
-		jobObjectHandle = job
-	}
-}
-
-// StartServicesListener launches VintaServices.exe as a child process attached to a Windows Job Object.
+// StartServicesListener initializes the native C++/WinRT in-process bridge.
 func StartServicesListener(ctx context.Context) {
-	initJobObject()
+	serviceMu.Lock()
+	defer serviceMu.Unlock()
 
-	runCtx, cancel := context.WithCancel(ctx)
-	cancelCtx = cancel
+	if isStarted {
+		return
+	}
 
-	exePath, err := os.Executable()
+	wailsCtx = ctx
+
+	dllPath := findDLLPath()
+	if dllPath == "" {
+		logMsg("vintaservices.dll not found; media/notification services disabled")
+		return
+	}
+
+	handle, err := syscall.LoadLibrary(dllPath)
 	if err != nil {
-		logMsg("Failed to get executable path: " + err.Error())
+		logMsg(fmt.Sprintf("Failed to load %s: %v", dllPath, err))
 		return
 	}
+	dllHandle = handle
 
-	dir := filepath.Dir(exePath)
-	absExePath := filepath.Join(dir, "VintaServices.exe")
-
-	if _, err := os.Stat(absExePath); os.IsNotExist(err) {
-		absExePath = filepath.Join(dir, "..", "..", "backend", "services", "bin", "Release", "net8.0-windows10.0.19041.0", "win-x64", "publish", "VintaServices.exe")
-	}
-
-	if _, err := os.Stat(absExePath); os.IsNotExist(err) {
-		absExePath = filepath.Join(dir, "backend", "services", "bin", "Release", "net8.0-windows10.0.19041.0", "win-x64", "publish", "VintaServices.exe")
-	}
-
-	if _, err := os.Stat(absExePath); os.IsNotExist(err) {
-		logMsg("VintaServices.exe not found at: " + absExePath)
+	procStart, err := syscall.GetProcAddress(dllHandle, "StartNativeWinRTServices")
+	if err != nil {
+		logMsg("Failed to find StartNativeWinRTServices proc: " + err.Error())
 		return
 	}
+	procStartNativeWinRTServices = procStart
 
-	go monitorAndRunServices(runCtx, absExePath)
+	procStop, err := syscall.GetProcAddress(dllHandle, "StopNativeWinRTServices")
+	if err != nil {
+		logMsg("Failed to find StopNativeWinRTServices proc: " + err.Error())
+		return
+	}
+	procStopNativeWinRTServices = procStop
+
+	procCmd, err := syscall.GetProcAddress(dllHandle, "SendNativeMediaCommand")
+	if err != nil {
+		logMsg("Failed to find SendNativeMediaCommand proc: " + err.Error())
+		return
+	}
+	procSendNativeMediaCommand = procCmd
+
+	mediaCallbackPtr = syscall.NewCallback(onNativeMedia)
+	notifCallbackPtr = syscall.NewCallback(onNativeNotification)
+	peakCallbackPtr = syscall.NewCallback(onNativeAudioPeak)
+
+	ret, _, _ := syscall.SyscallN(
+		procStartNativeWinRTServices,
+		mediaCallbackPtr,
+		notifCallbackPtr,
+		peakCallbackPtr,
+	)
+
+	if ret == 1 {
+		isStarted = true
+		logMsg("Native C++/WinRT in-process bridge started successfully")
+	} else {
+		logMsg("Failed to initialize native WinRT services")
+	}
 }
 
-// StopServicesListener forcefully terminates any running VintaServices.exe process tree.
+// StopServicesListener halts the native WinRT worker threads and unloads the bridge.
 func StopServicesListener() {
-	if cancelCtx != nil {
-		cancelCtx()
+	serviceMu.Lock()
+	defer serviceMu.Unlock()
+
+	if !isStarted {
+		return
 	}
-	cmd := exec.Command("taskkill", "/F", "/IM", "VintaServices.exe", "/T")
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-	_ = cmd.Run()
+
+	if procStopNativeWinRTServices != 0 {
+		_, _, _ = syscall.SyscallN(procStopNativeWinRTServices)
+	}
+
+	if dllHandle != 0 {
+		_ = syscall.FreeLibrary(dllHandle)
+		dllHandle = 0
+	}
+
+	isStarted = false
+	logMsg("Native WinRT services stopped")
 }
 
-// SendMediaControl writes a control command to VintaServices.exe stdin pipe
+// SendMediaControl dispatches an action directly to the native GSMTC media controller.
 func SendMediaControl(action string) {
-	if stdinWriter != nil {
-		_, _ = fmt.Fprintf(stdinWriter, "COMMAND:%s\n", action)
+	serviceMu.Lock()
+	proc := procSendNativeMediaCommand
+	serviceMu.Unlock()
+
+	if proc == 0 || action == "" {
+		return
 	}
+
+	cmdBytes := append([]byte(action), 0)
+	_, _, _ = syscall.SyscallN(proc, uintptr(unsafe.Pointer(&cmdBytes[0])))
 }
 
-func monitorAndRunServices(ctx context.Context, absExePath string) {
-	restartDelay := 1 * time.Second
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-		}
-
-		runServiceProcess(ctx, absExePath)
-
-		select {
-		case <-ctx.Done():
-			return
-		case <-time.After(restartDelay):
-			logMsg(fmt.Sprintf("Restarting VintaServices.exe (delay: %v)...", restartDelay))
-			if restartDelay < 16*time.Second {
-				restartDelay *= 2
-			}
-		}
+func onNativeMedia(cStr *byte) uintptr {
+	if cStr == nil || wailsCtx == nil {
+		return 0
 	}
+
+	str := windows.BytePtrToString(cStr)
+	if str == "" {
+		return 0
+	}
+
+	var payload map[string]interface{}
+	if err := json.Unmarshal([]byte(str), &payload); err == nil {
+		runtime.EventsEmit(wailsCtx, "media-update", payload)
+	}
+
+	return 0
 }
 
-func runServiceProcess(ctx context.Context, absExePath string) {
-	cmd := exec.CommandContext(ctx, absExePath)
-	cmd.Dir = filepath.Dir(absExePath)
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-
-	var err error
-	stdinWriter, err = cmd.StdinPipe()
-	if err != nil {
-		logMsg("Failed to pipe stdin: " + err.Error())
-		return
+func onNativeNotification(cStr *byte) uintptr {
+	if cStr == nil || wailsCtx == nil {
+		return 0
 	}
 
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		logMsg("Failed to pipe stdout: " + err.Error())
-		return
+	str := windows.BytePtrToString(cStr)
+	if str == "" {
+		return 0
 	}
 
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		logMsg("Failed to pipe stderr: " + err.Error())
-		return
+	var payload map[string]interface{}
+	if err := json.Unmarshal([]byte(str), &payload); err == nil {
+		runtime.EventsEmit(wailsCtx, "notification", payload)
 	}
 
-	if err := cmd.Start(); err != nil {
-		logMsg("Failed to start VintaServices.exe: " + err.Error())
-		return
+	return 0
+}
+
+func onNativeAudioPeak(peakBits uintptr) uintptr {
+	if wailsCtx == nil {
+		return 0
 	}
 
-	// Assign child process to Windows Job Object so OS auto-kills child if parent dies
-	if jobObjectHandle != 0 && cmd.Process != nil {
-		hProcess, err := syscall.OpenProcess(0x0101, false, uint32(cmd.Process.Pid))
-		if err == nil {
-			_, _, _ = procAssignProcessToJobObject.Call(jobObjectHandle, uintptr(hProcess))
-			_ = syscall.CloseHandle(hProcess)
+	peak := math.Float32frombits(uint32(peakBits))
+	payload := map[string]interface{}{
+		"type": "audio_peak",
+		"peak": float64(peak),
+	}
+	runtime.EventsEmit(wailsCtx, "audio-peak", payload)
+	return 0
+}
+
+func findDLLPath() string {
+	exePath, err := os.Executable()
+	if err == nil {
+		dir := filepath.Dir(exePath)
+		candidates := []string{
+			filepath.Join(dir, "vintaservices.dll"),
+			filepath.Join(dir, "build", "bin", "vintaservices.dll"),
+			filepath.Join(dir, "backend", "services", "vintaservices.dll"),
+			filepath.Join(dir, "..", "..", "backend", "services", "vintaservices.dll"),
+			filepath.Join(dir, "..", "..", "build", "bin", "vintaservices.dll"),
 		}
-	}
-
-	go func() {
-		scanner := bufio.NewScanner(stderr)
-		for scanner.Scan() {
-			logMsg("[VintaServices Stderr] " + scanner.Text())
-		}
-	}()
-
-	scanner := bufio.NewScanner(stdout)
-	buf := make([]byte, 1024*1024)
-	scanner.Buffer(buf, 10*1024*1024)
-
-	for scanner.Scan() {
-		line := scanner.Text()
-		if line == "" {
-			continue
-		}
-
-		var raw map[string]interface{}
-		if err := json.Unmarshal([]byte(line), &raw); err == nil {
-			msgType, _ := raw["type"].(string)
-			switch msgType {
-			case "notification":
-				runtime.EventsEmit(ctx, "notification", raw)
-			case "media":
-				runtime.EventsEmit(ctx, "media-update", raw)
-			case "audio_peak":
-				runtime.EventsEmit(ctx, "audio-peak", raw)
+		for _, candidate := range candidates {
+			if fileExists(candidate) {
+				return candidate
 			}
 		}
 	}
 
-	_ = cmd.Wait()
+	// Working directory fallbacks
+	wdCandidates := []string{
+		"build\\bin\\vintaservices.dll",
+		"backend\\services\\vintaservices.dll",
+		"vintaservices.dll",
+	}
+	for _, c := range wdCandidates {
+		if abs, err := filepath.Abs(c); err == nil && fileExists(abs) {
+			return abs
+		}
+	}
+
+	return ""
+}
+
+func fileExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && !info.IsDir()
 }
 
 func logMsg(msg string) {

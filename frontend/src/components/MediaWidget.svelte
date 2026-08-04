@@ -35,26 +35,13 @@
 
   let isDraggingSeek = $state(false)
   let seekVal = $state(0)
+  let localPosMs = $state(0)
   let isDraggingVol = $state(false)
   let volVal = $state(50)
 
   let prevNotifCount = $state(0)
   let isNewNotif = $state(false)
   let pulseTimeout: number
-
-  let isRewinding = $state(false)
-  let prevPercent = 0
-
-  $effect(() => {
-    const currentPercent = progressPercent
-    if (currentPercent < prevPercent - 5) {
-      isRewinding = true
-      window.requestAnimationFrame(() => {
-        isRewinding = false
-      })
-    }
-    prevPercent = currentPercent
-  })
 
   $effect(() => {
     const currentCount = $notifData.length
@@ -68,8 +55,10 @@
     prevNotifCount = currentCount
   })
 
+  // Sync with incoming media store updates when not dragging
   $effect(() => {
     if (!isDraggingSeek) {
+      localPosMs = media.positionMs || 0
       seekVal = media.positionMs || 0
     }
     if (!isDraggingVol && media.volume !== undefined) {
@@ -77,27 +66,65 @@
     }
   })
 
+  // Smooth local timeline progression ticker when playing
+  $effect(() => {
+    if (!media.isPlaying || isDraggingSeek) return
+
+    let lastTick = performance.now()
+    const interval = setInterval(() => {
+      const now = performance.now()
+      const elapsed = now - lastTick
+      lastTick = now
+
+      if (!isDraggingSeek && media.durationMs > 0) {
+        localPosMs = Math.min(media.durationMs, localPosMs + elapsed)
+        seekVal = localPosMs
+      }
+    }, 100)
+
+    return () => clearInterval(interval)
+  })
+
   function handleControl(action: string, e: MouseEvent) {
     e.stopPropagation()
     SendMediaControl(action)
   }
 
-  function handleSeekInput(e: Event) {
-    seekVal = Number((e.target as HTMLInputElement).value)
+  let seekLockTimer: ReturnType<typeof setTimeout> | null = null
+
+  function handleSeekStart(e: PointerEvent) {
+    if (seekLockTimer) {
+      clearTimeout(seekLockTimer)
+      seekLockTimer = null
+    }
     isDraggingSeek = true
+    const val = Number((e.target as HTMLInputElement).value)
+    seekVal = val
+    localPosMs = val
   }
 
-  let seekDebounceTimer: ReturnType<typeof setTimeout> | null = null
-
-  function handleSeekChange(e: Event) {
+  function handleSeekInput(e: Event) {
+    isDraggingSeek = true
+    if (seekLockTimer) {
+      clearTimeout(seekLockTimer)
+      seekLockTimer = null
+    }
     const val = Number((e.target as HTMLInputElement).value)
+    seekVal = val
+    localPosMs = val
+  }
+
+  function handleSeekCommit(e: Event) {
+    const val = Number((e.target as HTMLInputElement).value)
+    seekVal = val
+    localPosMs = val
     SendMediaControl(`seek:${val}`)
-    if (media) media.positionMs = val
-    if (seekDebounceTimer) clearTimeout(seekDebounceTimer)
-    seekDebounceTimer = setTimeout(() => {
+
+    if (seekLockTimer) clearTimeout(seekLockTimer)
+    seekLockTimer = setTimeout(() => {
       isDraggingSeek = false
-      seekDebounceTimer = null
-    }, 1000)
+      seekLockTimer = null
+    }, 350)
   }
 
   let volThrottleTimer: ReturnType<typeof setTimeout> | null = null
@@ -129,16 +156,11 @@
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`
   }
 
+  let currentPos = $derived(isDraggingSeek ? seekVal : localPosMs)
+
   let progressPercent = $derived(
     media.durationMs > 0
-      ? Math.min(
-          100,
-          Math.max(
-            0,
-            ((isDraggingSeek ? seekVal : media.positionMs) / media.durationMs) *
-              100
-          )
-        )
+      ? Math.min(100, Math.max(0, (currentPos / media.durationMs) * 100))
       : 0
   )
 </script>
@@ -214,7 +236,7 @@
       </div>
 
       <!-- Compact Minimal Progress Track with Ghost Background & Capsule Laser Fill -->
-      <div class="mini-progress-track {isRewinding ? 'no-transition' : ''}">
+      <div class="mini-progress-track {isDraggingSeek ? 'is-dragging' : ''}">
         <div class="mini-progress-ghost"></div>
         <div
           class="mini-progress-fill"
@@ -273,15 +295,17 @@
             <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
               <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
             </svg>
+          {:else}
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+              <path d="M8 5v14l11-7z" />
+            </svg>
           {/if}
         </button>
       </div>
 
       <!-- Soundcloud / iOS Dynamic Audio Spectrum Waveform Scrub Bar -->
       <div class="scrub-container">
-        <span class="time-label"
-          >{formatTime(isDraggingSeek ? seekVal : media.positionMs)}</span
-        >
+        <span class="time-label">{formatTime(currentPos)}</span>
         <div class="waveform-scrub-wrapper">
           <div class="spectrum-bars-container">
             <DynamicEqualizer
@@ -292,7 +316,9 @@
               {progressPercent}
             />
           </div>
-          <div class="whole-capsule-track {isRewinding ? 'no-transition' : ''}">
+          <div
+            class="whole-capsule-track {isDraggingSeek ? 'is-dragging' : ''}"
+          >
             <div class="capsule-track-ghost"></div>
             <div
               class="capsule-track-fill"
@@ -307,10 +333,13 @@
             type="range"
             min="0"
             max={media.durationMs > 0 ? media.durationMs : 100}
-            value={isDraggingSeek ? seekVal : media.positionMs}
+            value={currentPos}
             class="scrub-input"
+            onpointerdown={handleSeekStart}
             oninput={handleSeekInput}
-            onchange={handleSeekChange}
+            onchange={handleSeekCommit}
+            onpointerup={handleSeekCommit}
+            onpointercancel={handleSeekCommit}
           />
         </div>
         <span class="time-label">{formatTime(media.durationMs)}</span>
@@ -567,11 +596,6 @@
     white-space: nowrap;
   }
 
-  .no-transition,
-  .no-transition * {
-    transition: none !important;
-  }
-
   .mini-progress-track {
     position: absolute;
     bottom: 3px;
@@ -581,6 +605,11 @@
     border-radius: 9999px;
     overflow: visible;
     pointer-events: none;
+  }
+
+  .mini-progress-track.is-dragging .mini-progress-fill,
+  .mini-progress-track.is-dragging .mini-progress-head {
+    transition: none !important;
   }
 
   .mini-progress-ghost {
@@ -604,7 +633,7 @@
       0 0 16px #ff007f,
       inset 0 0 4px #ffffff;
     border-radius: 9999px;
-    transition: width 0.15s linear;
+    transition: width 0.1s linear;
   }
 
   .mini-progress-head {
@@ -866,6 +895,11 @@
     pointer-events: none;
   }
 
+  .whole-capsule-track.is-dragging .capsule-track-fill,
+  .whole-capsule-track.is-dragging .capsule-track-head {
+    transition: none !important;
+  }
+
   .capsule-track-ghost {
     position: absolute;
     inset: 0;
@@ -887,7 +921,7 @@
       0 0 20px #ff007f,
       inset 0 0 4px #ffffff;
     border-radius: 9999px;
-    transition: width 0.15s linear;
+    transition: width 0.1s linear;
   }
 
   .capsule-track-head {

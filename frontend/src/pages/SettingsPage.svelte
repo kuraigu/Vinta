@@ -66,7 +66,9 @@
     Volume2,
     RotateCcw,
     Power,
-    Cpu
+    Cpu,
+    Database,
+    Check
   } from 'lucide-svelte'
 
   import { searchCities } from '../services/weatherService'
@@ -291,6 +293,120 @@
 
   function clearAllNotifications() {
     notifData.set([])
+  }
+
+  let cacheCleared = $state(false)
+  let clearTimer: ReturnType<typeof setTimeout> | null = null
+  let cacheSizeStr = $state('0 B')
+
+  function formatBytes(bytes: number): string {
+    if (bytes <= 0) return '0 B'
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  }
+
+  function calculateCacheSize() {
+    try {
+      let totalBytes = 0
+      const notifs = $notifData || []
+      if (notifs.length > 0) {
+        totalBytes += new Blob([JSON.stringify(notifs)]).size
+      }
+
+      const keepKeys = new Set([
+        'vinta_theme',
+        'vinta_shape',
+        'vinta_glow_intensity',
+        'vinta_home_autohide',
+        'vinta_media_autohide',
+        'vinta_notif_autohide',
+        'vinta_autohide_delay',
+        'vinta_autohide_display',
+        'vinta_wake_method',
+        'vinta_dnd',
+        'vinta_notif_autowake',
+        'vinta_time_format',
+        'vinta_timezone',
+        'vinta_date_format',
+        'vinta_weather_location',
+        'vinta_weather_unit',
+        'vinta_opacity_minimal',
+        'vinta_opacity_expanded',
+        'vinta_opacity_hidden',
+        'vinta_hidden_pill_offset_x',
+        'vinta_allow_drag_pos',
+        'vinta_hw_accel',
+        'vinta_notif_sound',
+        'vinta_notif_volume',
+        'vinta_autostart'
+      ])
+
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (key && !keepKeys.has(key)) {
+          const val = localStorage.getItem(key) || ''
+          totalBytes += (key.length + val.length) * 2
+        }
+      }
+
+      cacheSizeStr = formatBytes(totalBytes)
+    } catch {
+      cacheSizeStr = '0 B'
+    }
+  }
+
+  $effect(() => {
+    void $notifData
+    void cacheCleared
+    calculateCacheSize()
+  })
+
+  function handleClearCache() {
+    try {
+      notifData.set([])
+      const keepKeys = new Set([
+        'vinta_theme',
+        'vinta_shape',
+        'vinta_glow_intensity',
+        'vinta_home_autohide',
+        'vinta_media_autohide',
+        'vinta_notif_autohide',
+        'vinta_autohide_delay',
+        'vinta_autohide_display',
+        'vinta_wake_method',
+        'vinta_dnd',
+        'vinta_notif_autowake',
+        'vinta_time_format',
+        'vinta_timezone',
+        'vinta_date_format',
+        'vinta_weather_location',
+        'vinta_weather_unit',
+        'vinta_opacity_minimal',
+        'vinta_opacity_expanded',
+        'vinta_opacity_hidden',
+        'vinta_hidden_pill_offset_x',
+        'vinta_allow_drag_pos',
+        'vinta_hw_accel',
+        'vinta_notif_sound',
+        'vinta_notif_volume',
+        'vinta_autostart'
+      ])
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const key = localStorage.key(i)
+        if (key && !keepKeys.has(key)) {
+          localStorage.removeItem(key)
+        }
+      }
+      cacheCleared = true
+      calculateCacheSize()
+      if (clearTimer) clearTimeout(clearTimer)
+      clearTimer = setTimeout(() => {
+        cacheCleared = false
+      }, 2000)
+    } catch {
+      // Ignore
+    }
   }
 </script>
 
@@ -649,6 +765,22 @@
           <Trash2 size={14} />
           <span>Clear All Notifications</span>
         </button>
+
+        <button
+          class="action-btn"
+          class:success={cacheCleared}
+          onclick={handleClearCache}
+        >
+          {#if cacheCleared}
+            <Check size={14} />
+            <span>Cache Cleared!</span>
+            <span class="cache-size-badge">0 B</span>
+          {:else}
+            <Database size={14} />
+            <span>Clear App Cache</span>
+            <span class="cache-size-badge">{cacheSizeStr}</span>
+          {/if}
+        </button>
       </ScrollView>
     </BentoItem>
   </div>
@@ -874,7 +1006,7 @@
     box-sizing: border-box;
   }
 
-  .section-content {
+  :global(.section-content) {
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -1023,28 +1155,6 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   }
 
-  .custom-select {
-    width: 100%;
-    background: var(--c-contrast-bg, rgba(0, 0, 0, 0.3));
-    color: var(--c-text-primary);
-    border: 1px solid var(--c-border);
-    border-radius: 6px;
-    padding: 6px 10px;
-    font-size: 11px;
-    font-weight: 500;
-    outline: none;
-    cursor: pointer;
-  }
-
-  :global([data-theme='light']) .custom-select {
-    background: rgba(255, 255, 255, 0.85);
-  }
-
-  .custom-select option {
-    background: var(--c-bg);
-    color: var(--c-text-primary);
-  }
-
   .action-btn {
     display: flex;
     align-items: center;
@@ -1073,6 +1183,27 @@
 
   .action-btn.danger:hover {
     background: rgba(248, 113, 113, 0.15);
+  }
+
+  .action-btn.success {
+    color: var(--c-success, #34c759);
+    border-color: var(--c-success, #34c759);
+    background: rgba(52, 199, 89, 0.12);
+  }
+
+  .cache-size-badge {
+    margin-left: auto;
+    font-size: 10px;
+    font-weight: 600;
+    opacity: 0.75;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 1px 6px;
+    border-radius: 6px;
+    border: 1px solid var(--c-border);
+  }
+
+  :global([data-theme='light']) .cache-size-badge {
+    background: rgba(0, 0, 0, 0.06);
   }
 
   /* Toggle Switch CSS */

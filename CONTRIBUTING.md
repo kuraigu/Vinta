@@ -14,12 +14,12 @@ All contributors, whether you write code, update documentation, report bugs, or 
 
 Vinta is built using **Go + Wails v2 + Svelte 5**. The Go backend handles native Win32 window region clipping, click-through bounds, and configuration storage, while Svelte renders the Dynamic Island interface.
 
-### Background Helper Service (`VintaServices.exe`)
+### Native WinRT Services Bridge (`vintaservices.dll`)
 
-- **What it is:** A lightweight C# .NET 8 background helper located in `backend/services/`.
-- **Why C# is used:** Windows provides native WinRT WinMD APIs (`Windows.UI.Notifications` for system toast listeners and `Windows.Media.Control` for Global System Media Transport Controls). C# provides first-class native access to these APIs with zero Cgo/COM wrapper overhead, robust async event loops, and zero required third-party API keys or OAuth logins.
-- **Child Process Lifecycle:** `VintaServices.exe` is spawned as a child process by `Vinta.exe` and attached to a Windows Job Object with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`. When `Vinta.exe` exits or is closed, Windows automatically terminates `VintaServices.exe` instantly—preventing orphaned background processes.
-- **IPC & Media Controls:** `VintaServices.exe` emits JSON payloads over stdout (`type: notification` and `type: media`) and listens for control commands over stdin (`COMMAND:play_pause`, `COMMAND:next`, `COMMAND:previous`, `COMMAND:play`, `COMMAND:pause`) to hook play/pause/skip actions in Spotify, Apple Music, YouTube, VLC, and other media players.
+- **What it is:** A high-performance, native C++/WinRT in-process library located in `backend/services/` (`winrt_bridge.cpp` and `winrt_bridge.h`).
+- **In-Process Architecture:** `vintaservices.dll` is compiled alongside the application and dynamically loaded in-process by the Go backend via standard Windows syscalls. There are no secondary child processes or external .NET runtimes required.
+- **Why C++/WinRT is used:** Windows provides native WinRT APIs (`Windows.UI.Notifications` for system toast listeners, `Windows.Media.Control` for Global System Media Transport Controls, and CoreAudio COM APIs for real-time peak audio metering). Native C++/WinRT provides direct access with zero inter-process overhead, instant event dispatching, and a minimal memory footprint (~3MB).
+- **Direct Event Callbacks & Media Controls:** The bridge directly invokes Go callbacks for real-time media metadata, album art streams, toast notifications, and dynamic audio visualizer peaks. Control commands (`seek`, `play_pause`, `next`, `prev`, `set_volume`) are executed immediately on the active media session.
 
 ### Vinta Component vs Page
 

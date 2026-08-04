@@ -153,7 +153,7 @@
     if (!isHidden) return
     islandAnim = '0.5s cubic-bezier(0.16, 1, 0.3, 1)'
     isHidden = false
-    if ($globalMediaStore.isPlaying && activePage === HomePage) {
+    if ($globalMediaStore.isPlaying && activePage === HomePage && !expanded) {
       navigateTo(MediaPage, mediaConfig, false)
     }
     triggerGlow()
@@ -289,13 +289,20 @@
     })
     EventsOn('show-pill', showWidget)
 
+    let prevIsPlaying = false
     EventsOn('media-update', (data: Record<string, unknown>) => {
       if (data) {
         globalMediaStore.set(data as unknown as MediaData)
         const isPlaying = Boolean(data.isPlaying)
-        if (isPlaying && activePage === HomePage) {
+        if (
+          isPlaying &&
+          !prevIsPlaying &&
+          !expanded &&
+          activePage === HomePage
+        ) {
           navigateTo(MediaPage, mediaConfig, false)
         }
+        prevIsPlaying = isPlaying
       }
     })
 
@@ -341,6 +348,32 @@
             showWidget()
             navigateTo(NotificationPage, notifConfig, false)
             triggerGlow()
+          }
+
+          if (
+            payload.heroImage &&
+            (payload.heroImage.startsWith('data:') ||
+              payload.heroImage.startsWith('http'))
+          ) {
+            const img = new Image()
+            img.onload = () => {
+              const w = img.naturalWidth
+              const h = img.naturalHeight
+              if (w > 0 && h > 0) {
+                const ratio = w / h
+                if (ratio >= 0.75 && ratio <= 1.33 && (w <= 512 || h <= 512)) {
+                  notifData.update((items) => {
+                    const target = items.find((x) => x.id === newNotif.id)
+                    if (target) {
+                      target.icon = target.heroImage
+                      target.heroImage = ''
+                    }
+                    return [...items]
+                  })
+                }
+              }
+            }
+            img.src = payload.heroImage
           }
 
           return n
