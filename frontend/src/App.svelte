@@ -237,8 +237,13 @@
   setContext('navigate', navigateTo)
 
   onMount(() => {
+    // Disable native browser context menu globally across the widget
+    const disableGlobalContextMenu = (e: MouseEvent) => e.preventDefault()
+    window.addEventListener('contextmenu', disableGlobalContextMenu)
+
     // Apply initial theme immediately to avoid layout styling flashes
-    document.documentElement.setAttribute('data-theme', $themeStore)
+    $themeStore = 'dark'
+    document.documentElement.setAttribute('data-theme', 'dark')
 
     // Preload SVG caches in the background
     preloadIcons()
@@ -324,60 +329,37 @@
         message: string
         heroImage: string
       }) => {
+        const appName = payload.appName || ''
+        const title = payload.title || ''
+        const message = payload.message || ''
+
+        const newNotif = {
+          id: Date.now() + Math.floor(Math.random() * 1000),
+          appName,
+          icon: payload.icon,
+          title,
+          message,
+          heroImage: payload.heroImage,
+          timestamp: Date.now()
+        }
+
         notifData.update((n) => {
-          const newNotif = {
-            id: Date.now(),
-            appName: payload.appName,
-            icon: payload.icon,
-            title: payload.title,
-            message: payload.message,
-            heroImage: payload.heroImage,
-            timestamp: Date.now()
-          }
-
-          n = [newNotif, ...n].slice(0, 99)
-
-          const mediaIsActive =
-            activePage === MediaPage && $globalMediaStore.isPlaying
-          if (
-            !$dndStore &&
-            $notifAutoWakeStore &&
-            !expanded &&
-            !mediaIsActive
-          ) {
-            showWidget()
-            navigateTo(NotificationPage, notifConfig, false)
-            triggerGlow()
-          }
-
-          if (
-            payload.heroImage &&
-            (payload.heroImage.startsWith('data:') ||
-              payload.heroImage.startsWith('http'))
-          ) {
-            const img = new Image()
-            img.onload = () => {
-              const w = img.naturalWidth
-              const h = img.naturalHeight
-              if (w > 0 && h > 0) {
-                const ratio = w / h
-                if (ratio >= 0.75 && ratio <= 1.33 && (w <= 512 || h <= 512)) {
-                  notifData.update((items) => {
-                    const target = items.find((x) => x.id === newNotif.id)
-                    if (target) {
-                      target.icon = target.heroImage
-                      target.heroImage = ''
-                    }
-                    return [...items]
-                  })
-                }
-              }
-            }
-            img.src = payload.heroImage
-          }
-
-          return n
+          return [newNotif, ...n].slice(0, 99)
         })
+
+        // Auto-wake & navigate to notification page when notification arrives
+        const mediaIsActive =
+          activePage === MediaPage && $globalMediaStore.isPlaying
+        if (
+          !$dndStore &&
+          $notifAutoWakeStore &&
+          !expanded &&
+          !mediaIsActive
+        ) {
+          showWidget()
+          navigateTo(NotificationPage, notifConfig, false)
+          triggerGlow()
+        }
 
         if ($notifSoundStore && !$dndStore) {
           playNotifChime($notifVolumeStore)
@@ -394,6 +376,7 @@
     })
 
     return () => {
+      window.removeEventListener('contextmenu', disableGlobalContextMenu)
       window.removeEventListener('dev-dropdown-toggle', handleDropdownToggle)
       window.removeEventListener('vinta-quit', handleQuit)
     }

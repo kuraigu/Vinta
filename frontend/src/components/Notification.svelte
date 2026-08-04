@@ -841,15 +841,6 @@
                                 {group.items[0].message}
                               </p>
                             {/if}
-                            {#if group.items[0].heroImage && isImageUrl(group.items[0].heroImage) && group.items[0].heroImage !== group.brandIcon && group.items[0].heroImage !== group.items[0].icon}
-                              <div class="hero-image-wrapper">
-                                <img
-                                  src={group.items[0].heroImage}
-                                  alt="hero"
-                                  class="hero-image"
-                                />
-                              </div>
-                            {/if}
                           </div>
                         </div>
                       </div>
@@ -858,21 +849,12 @@
                 </div>
 
                 {#if expandedGroups.has(group.brandName)}
-                  <div class="notif-group-items">
+                  <div
+                    class="notif-group-items"
+                    transition:slide={{ duration: 250, easing: cubicOut }}
+                  >
                     {#each group.items as notif (notif.id)}
-                      <div
-                        transition:slide|local={{
-                          duration: 250,
-                          easing: cubicOut
-                        }}
-                      >
-                        <div
-                          in:fade={{ duration: 150, delay: 50 }}
-                          out:fade={{ duration: 100 }}
-                        >
-                          {@render renderNotifItem(notif, group, true)}
-                        </div>
-                      </div>
+                      {@render renderNotifItem(notif, group, true)}
                     {/each}
                   </div>
                 {/if}

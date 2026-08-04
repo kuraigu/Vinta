@@ -38,7 +38,7 @@
       name: 'Home',
       desc: 'Widgets & Clock',
       icon: House,
-      color: 'gradient-orange',
+      color: 'gradient-green',
       action: () => openApp(HomePage, homeConfig)
     },
     {
@@ -63,7 +63,7 @@
       name: 'Settings',
       desc: 'Customization',
       icon: Settings,
-      color: 'gradient-purple',
+      color: 'gradient-dark',
       action: () => openApp(SettingsPage, settingsConfig)
     },
     {
@@ -147,13 +147,14 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    margin-bottom: 12px;
+    margin-bottom: 14px;
     flex-shrink: 0;
   }
 
   .title {
-    font-weight: 700;
+    margin: 0;
     font-size: 15px;
+    font-weight: 700;
     letter-spacing: -0.01em;
     color: var(--c-text-primary);
   }
@@ -191,13 +192,14 @@
   .bento-container {
     flex: 1;
     min-height: 0;
-    padding-right: 2px;
   }
 
   .bento-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 8px;
+    padding: 10px 4px 10px 4px;
+    box-sizing: border-box;
   }
 
   .bento-app-card {
@@ -216,7 +218,7 @@
 
   .bento-app-card:hover {
     background: var(--c-hover, rgba(255, 255, 255, 0.12));
-    transform: translateY(-1px);
+    transform: translateY(-2px);
     border-color: var(--c-primary, #6366f1);
   }
 
@@ -232,8 +234,12 @@
     color: var(--c-text-primary);
   }
 
-  .bento-app-card.gradient-orange .card-icon-wrapper {
-    background: linear-gradient(135deg, var(--c-warning), var(--c-amber));
+  .bento-app-card.gradient-green .card-icon-wrapper {
+    background: linear-gradient(
+      135deg,
+      var(--c-success),
+      var(--c-island-border-idle)
+    );
   }
 
   .bento-app-card.gradient-pink .card-icon-wrapper {
@@ -244,7 +250,7 @@
     background: linear-gradient(
       135deg,
       var(--c-primary),
-      var(--c-surface-elevated, #3a6073)
+      var(--c-island-border-notification)
     );
   }
 

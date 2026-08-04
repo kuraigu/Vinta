@@ -3,7 +3,7 @@
 
   export const config: IslandConfig = {
     minimal: { w: 10, h: 10, r: 5 },
-    expanded: { w: 530, h: 450, r: 32 },
+    expanded: { w: 540, h: 440, r: 32 },
     borderColor: 'var(--c-border)',
     glowColor: 'transparent'
   }
@@ -40,15 +40,14 @@
     getInitialTimezone
   } from '../store'
   import ScrollView from '../components/ScrollView.svelte'
-  import ComponentGallery from '../components/ComponentGallery.svelte'
   import CustomSelect from '../components/CustomSelect.svelte'
-  import BentoItem from '../components/BentoItem.svelte'
   import {
     Palette,
     Sliders,
     Bell,
     Clock,
     CloudSun,
+    Cpu,
     Trash2,
     Moon,
     Maximize2,
@@ -66,7 +65,6 @@
     Volume2,
     RotateCcw,
     Power,
-    Cpu,
     Database,
     Check
   } from 'lucide-svelte'
@@ -109,7 +107,6 @@
 
   const baseWeatherPresets = [
     { name: 'Auto-detect (System IP)', lat: 14.5995, lon: 120.9842 },
-    // Philippines & Southeast Asia
     { name: 'Manila, Philippines', lat: 14.5995, lon: 120.9842 },
     { name: 'Quezon City, Philippines', lat: 14.676, lon: 121.0437 },
     { name: 'Cebu City, Philippines', lat: 10.3157, lon: 123.8854 },
@@ -119,131 +116,79 @@
     { name: 'Bangkok, Thailand', lat: 13.7563, lon: 100.5018 },
     { name: 'Kuala Lumpur, Malaysia', lat: 3.139, lon: 101.6869 },
     { name: 'Jakarta, Indonesia', lat: -6.2088, lon: 106.8456 },
-    { name: 'Bali, Indonesia', lat: -8.4095, lon: 115.1889 },
-    { name: 'Hanoi, Vietnam', lat: 21.0285, lon: 105.8542 },
-    { name: 'Ho Chi Minh City, Vietnam', lat: 10.8231, lon: 106.6297 },
-
-    // East & South Asia
     { name: 'Tokyo, Japan', lat: 35.6762, lon: 139.6503 },
-    { name: 'Osaka, Japan', lat: 34.6937, lon: 135.5023 },
-    { name: 'Kyoto, Japan', lat: 35.0116, lon: 135.7681 },
     { name: 'Seoul, South Korea', lat: 37.5665, lon: 126.978 },
-    { name: 'Busan, South Korea', lat: 35.1796, lon: 129.0756 },
     { name: 'Beijing, China', lat: 39.9042, lon: 116.4074 },
     { name: 'Shanghai, China', lat: 31.2304, lon: 121.4737 },
     { name: 'Hong Kong', lat: 22.3193, lon: 114.1694 },
-    { name: 'Taipei, Taiwan', lat: 25.033, lon: 121.5654 },
-    { name: 'Mumbai, India', lat: 19.076, lon: 72.8777 },
-    { name: 'New Delhi, India', lat: 28.6139, lon: 77.209 },
-
-    // Americas
     { name: 'New York, United States', lat: 40.7128, lon: -74.006 },
     { name: 'Los Angeles, United States', lat: 34.0522, lon: -118.2437 },
-    { name: 'Chicago, United States', lat: 41.8781, lon: -87.6298 },
-    { name: 'Houston, United States', lat: 29.7604, lon: -95.3698 },
-    { name: 'San Francisco, United States', lat: 37.7749, lon: -122.4194 },
-    { name: 'Seattle, United States', lat: 47.6062, lon: -122.3321 },
-    { name: 'Miami, United States', lat: 25.7617, lon: -80.1918 },
-    { name: 'Las Vegas, United States', lat: 36.1699, lon: -115.1398 },
-    { name: 'Toronto, Canada', lat: 43.6532, lon: -79.3832 },
-    { name: 'Vancouver, Canada', lat: 49.2827, lon: -123.1207 },
-    { name: 'Montreal, Canada', lat: 45.5017, lon: -73.5673 },
-    { name: 'Mexico City, Mexico', lat: 19.4326, lon: -99.1332 },
-    { name: 'São Paulo, Brazil', lat: -23.5505, lon: -46.6333 },
-    { name: 'Rio de Janeiro, Brazil', lat: -22.9068, lon: -43.1729 },
-    { name: 'Buenos Aires, Argentina', lat: -34.6037, lon: -58.3816 },
-
-    // Europe
     { name: 'London, United Kingdom', lat: 51.5074, lon: -0.1278 },
     { name: 'Paris, France', lat: 48.8566, lon: 2.3522 },
-    { name: 'Berlin, Germany', lat: 52.52, lon: 13.405 },
-    { name: 'Munich, Germany', lat: 48.1351, lon: 11.582 },
-    { name: 'Frankfurt, Germany', lat: 50.1109, lon: 8.6821 },
-    { name: 'Rome, Italy', lat: 41.9028, lon: 12.4964 },
-    { name: 'Milan, Italy', lat: 45.4642, lon: 9.19 },
-    { name: 'Madrid, Spain', lat: 40.4168, lon: -3.7038 },
-    { name: 'Barcelona, Spain', lat: 41.3851, lon: 2.1734 },
-    { name: 'Amsterdam, Netherlands', lat: 52.3676, lon: 4.9041 },
-    { name: 'Vienna, Austria', lat: 48.2082, lon: 16.3738 },
-    { name: 'Zurich, Switzerland', lat: 47.3769, lon: 8.5417 },
-    { name: 'Stockholm, Sweden', lat: 59.3293, lon: 18.0686 },
-    { name: 'Oslo, Norway', lat: 59.9139, lon: 10.7522 },
-    { name: 'Copenhagen, Denmark', lat: 55.6761, lon: 12.5683 },
-    { name: 'Dublin, Ireland', lat: 53.3498, lon: -6.2603 },
-    { name: 'Lisbon, Portugal', lat: 38.7223, lon: -9.1393 },
-    { name: 'Athens, Greece', lat: 37.9838, lon: 23.7275 },
-    { name: 'Istanbul, Turkey', lat: 41.0082, lon: 28.9784 },
-    { name: 'Prague, Czechia', lat: 50.0755, lon: 14.4378 },
-    { name: 'Warsaw, Poland', lat: 52.2297, lon: 21.0122 },
-
-    // Oceania, Middle East & Africa
-    { name: 'Sydney, Australia', lat: -33.8688, lon: 151.2093 },
-    { name: 'Melbourne, Australia', lat: -37.8136, lon: 144.9631 },
-    { name: 'Auckland, New Zealand', lat: -36.8485, lon: 174.7633 },
-    { name: 'Dubai, United Arab Emirates', lat: 25.2048, lon: 55.2708 },
-    { name: 'Abu Dhabi, United Arab Emirates', lat: 24.4539, lon: 54.3773 },
-    { name: 'Riyadh, Saudi Arabia', lat: 24.7136, lon: 46.6753 },
-    { name: 'Doha, Qatar', lat: 25.2854, lon: 51.531 },
-    { name: 'Cairo, Egypt', lat: 30.0444, lon: 31.2357 },
-    { name: 'Cape Town, South Africa', lat: -33.9249, lon: 18.4241 }
+    { name: 'Sydney, Australia', lat: -33.8688, lon: 151.2093 }
   ]
 
-  let dynamicSearchResults = $state<
-    { value: string; label: string; payload: (typeof baseWeatherPresets)[0] }[]
-  >([])
-
-  let weatherOptions = $derived([
-    ...baseWeatherPresets.map((p) => ({
-      value: p.name,
+  let weatherOptions = $state(
+    baseWeatherPresets.map((p) => ({
       label: p.name,
+      value: p.name,
       payload: p
-    })),
-    ...dynamicSearchResults.filter(
-      (ds) => !baseWeatherPresets.some((bp) => bp.name === ds.value)
-    )
-  ])
+    }))
+  )
 
   async function detectIpLocation() {
     try {
       const res = await fetch('https://ipapi.co/json/')
       if (res.ok) {
         const data = await res.json()
-        if (data.latitude && data.longitude) {
+        if (data.city && data.latitude && data.longitude) {
           $weatherLocationStore = {
-            name: `Auto-detect (${data.city || 'IP'})`,
+            name: `${data.city}, ${data.country_name || 'Auto'}`,
             lat: data.latitude,
             lon: data.longitude
-          }
-          if (data.timezone) {
-            $timezoneStore = data.timezone
           }
           return
         }
       }
     } catch {
-      // Fallback
+      // Fallback to Manila
     }
-    $weatherLocationStore = baseWeatherPresets[0]
+    $weatherLocationStore = {
+      name: 'Manila, Philippines',
+      lat: 14.5995,
+      lon: 120.9842
+    }
   }
 
   async function handleWeatherSearch(query: string) {
     if (!query || query.trim().length < 2) {
-      dynamicSearchResults = []
+      weatherOptions = baseWeatherPresets.map((p) => ({
+        label: p.name,
+        value: p.name,
+        payload: p
+      }))
       return
     }
+
     const results = await searchCities(query)
-    dynamicSearchResults = results.map((r) => {
-      const cityLabel = `${r.name}${r.country ? `, ${r.country}` : ''}`
-      return {
-        value: cityLabel,
-        label: `${cityLabel} ${r.timezone ? `[${r.timezone}]` : ''}`,
-        payload: {
-          name: cityLabel,
-          lat: r.latitude,
-          lon: r.longitude
-        }
-      }
-    })
+    if (results && results.length > 0) {
+      const searchedOpts = results.map((r) => ({
+        label: r.name,
+        value: r.name,
+        payload: r
+      }))
+
+      const existingValues = new Set(searchedOpts.map((o) => o.value))
+      const extraPresets = baseWeatherPresets
+        .filter((p) => !existingValues.has(p.name))
+        .map((p) => ({
+          label: p.name,
+          value: p.name,
+          payload: p
+        }))
+
+      weatherOptions = [...searchedOpts, ...extraPresets]
+    }
   }
 
   function handleSelectWeatherPayload(payload: unknown) {
@@ -262,10 +207,7 @@
     SetHardwareAcceleration
   } from '../../wailsjs/go/backend/App.js'
 
-  const themeOptions = [
-    { label: 'Dark Mode', value: 'dark' },
-    { label: 'Light Mode', value: 'light' }
-  ]
+  const themeOptions = [{ label: 'OLED Dark', value: 'dark' }]
 
   const glowIntensityOptions = [
     { label: 'Disabled', value: 'disabled' },
@@ -357,14 +299,11 @@
   }
 
   $effect(() => {
-    void $notifData
-    void cacheCleared
     calculateCacheSize()
   })
 
   function handleClearCache() {
     try {
-      notifData.set([])
       const keepKeys = new Set([
         'vinta_theme',
         'vinta_shape',
@@ -408,536 +347,489 @@
       // Ignore
     }
   }
+
+  // Sidebar Category Definition
+  const categories = [
+    { id: 'appearance', name: 'Appearance', icon: Palette },
+    { id: 'behavior', name: 'Behavior', icon: Sliders },
+    { id: 'notifications', name: 'Notifications', icon: Bell },
+    { id: 'clock', name: 'Clock & Date', icon: Clock },
+    { id: 'weather', name: 'Weather', icon: CloudSun },
+    { id: 'system', name: 'System', icon: Cpu }
+  ]
+
+  let activeTab = $state('appearance')
 </script>
 
-{#snippet appearanceSlide()}
-  <div class="card-wrapper">
-    <BentoItem>
-      <ScrollView class="section-content">
-        <div class="card-category-header">
-          <div class="category-icon-badge purple">
-            <Palette size={15} />
-          </div>
-          <div class="category-text">
-            <span class="category-name">Appearance</span>
-            <span class="category-desc">Visual theme and island shape</span>
-          </div>
-        </div>
+{#snippet appearanceSection()}
+  <div class="setting-group">
+    <div class="setting-item flex-col">
+      <div class="setting-label">
+        <Moon size={14} class="item-icon" />
+        <span>Theme</span>
+      </div>
+      <CustomSelect
+        options={themeOptions}
+        bind:value={$themeStore}
+        fullWidth={true}
+        direction="auto"
+      />
+    </div>
 
-        <div class="setting-item flex-col">
-          <div class="setting-label">
-            <Moon size={14} class="item-icon" />
-            <span>Theme</span>
-          </div>
-          <CustomSelect
-            options={themeOptions}
-            bind:value={$themeStore}
-            fullWidth={true}
-            direction="auto"
-          />
-        </div>
+    <div class="setting-item">
+      <div class="setting-label">
+        <Maximize2 size={14} class="item-icon" />
+        <span>Shape</span>
+      </div>
+      <div class="segment-control">
+        <button
+          class:active={$shapeStore === 'pill'}
+          onclick={() => ($shapeStore = 'pill')}>Pill</button
+        >
+        <button
+          class:active={$shapeStore === 'box'}
+          onclick={() => ($shapeStore = 'box')}>Box</button
+        >
+      </div>
+    </div>
 
-        <div class="setting-item">
-          <div class="setting-label">
-            <Maximize2 size={14} class="item-icon" />
-            <span>Shape</span>
-          </div>
-          <div class="segment-control">
-            <button
-              class:active={$shapeStore === 'pill'}
-              onclick={() => ($shapeStore = 'pill')}>Pill</button
-            >
-            <button
-              class:active={$shapeStore === 'box'}
-              onclick={() => ($shapeStore = 'box')}>Box</button
-            >
-          </div>
-        </div>
+    <div class="setting-item flex-col">
+      <div class="setting-label">
+        <Sparkles size={14} class="item-icon" />
+        <span>Ambient Glow Intensity</span>
+      </div>
+      <CustomSelect
+        options={glowIntensityOptions}
+        bind:value={$glowIntensityStore}
+        fullWidth={true}
+        direction="auto"
+      />
+    </div>
 
-        <div class="setting-item flex-col">
-          <div class="setting-label">
-            <Sparkles size={14} class="item-icon" />
-            <span>Ambient Glow Intensity</span>
-          </div>
-          <CustomSelect
-            options={glowIntensityOptions}
-            bind:value={$glowIntensityStore}
-            fullWidth={true}
-            direction="auto"
-          />
-        </div>
+    <div class="setting-item flex-col">
+      <div class="setting-label">
+        <Eye size={14} class="item-icon" />
+        <span>Compact Opacity ({Math.round($opacityMinimalStore * 100)}%)</span>
+      </div>
+      <input
+        type="range"
+        min="0.2"
+        max="1.0"
+        step="0.05"
+        bind:value={$opacityMinimalStore}
+        class="range-slider no-swipe"
+      />
+    </div>
 
-        <div class="setting-item">
-          <div class="setting-label">
-            <MousePointer size={14} class="item-icon" />
-            <span>Allow Screen Repositioning</span>
-          </div>
-          <label class="toggle">
-            <input type="checkbox" bind:checked={$allowDragPositionStore} />
-            <span class="slider"></span>
-          </label>
-        </div>
+    <div class="setting-item flex-col">
+      <div class="setting-label">
+        <Maximize2 size={14} class="item-icon" />
+        <span>Expanded Opacity ({Math.round($opacityExpandedStore * 100)}%)</span>
+      </div>
+      <input
+        type="range"
+        min="0.2"
+        max="1.0"
+        step="0.05"
+        bind:value={$opacityExpandedStore}
+        class="range-slider no-swipe"
+      />
+    </div>
 
-        <div class="setting-item">
-          <div class="setting-label">
-            <Cpu size={14} class="item-icon" />
-            <span>Hardware Acceleration</span>
-          </div>
-          <label class="toggle">
-            <input
-              type="checkbox"
-              bind:checked={$hardwareAccelStore}
-              onchange={(e) => {
-                SetHardwareAcceleration(e.currentTarget.checked).catch(() => {})
-              }}
-            />
-            <span class="slider"></span>
-          </label>
-        </div>
-
-        {#if $hiddenPillOffsetXStore !== 0}
-          <div class="setting-item">
-            <div class="setting-label">
-              <RotateCcw size={14} class="item-icon" />
-              <span>Island Position</span>
-            </div>
-            <button
-              class="action-btn"
-              onclick={() => ($hiddenPillOffsetXStore = 0)}
-            >
-              Reset to Center
-            </button>
-          </div>
-        {/if}
-
-        <div class="setting-item flex-col">
-          <div class="setting-label">
-            <Eye size={14} class="item-icon" />
-            <span
-              >Compact Mode Opacity ({Math.round(
-                $opacityMinimalStore * 100
-              )}%)</span
-            >
-          </div>
-          <input
-            type="range"
-            min="0.2"
-            max="1.0"
-            step="0.05"
-            bind:value={$opacityMinimalStore}
-            class="range-slider no-swipe"
-          />
-        </div>
-
-        <div class="setting-item flex-col">
-          <div class="setting-label">
-            <Maximize2 size={14} class="item-icon" />
-            <span
-              >Expanded Mode Opacity ({Math.round(
-                $opacityExpandedStore * 100
-              )}%)</span
-            >
-          </div>
-          <input
-            type="range"
-            min="0.2"
-            max="1.0"
-            step="0.05"
-            bind:value={$opacityExpandedStore}
-            class="range-slider no-swipe"
-          />
-        </div>
-
-        <div class="setting-item flex-col">
-          <div class="setting-label">
-            <EyeOff size={14} class="item-icon" />
-            <span
-              >Hidden Widget Opacity ({Math.round(
-                $opacityHiddenStore * 100
-              )}%)</span
-            >
-          </div>
-          <input
-            type="range"
-            min="0.2"
-            max="1.0"
-            step="0.05"
-            bind:value={$opacityHiddenStore}
-            class="range-slider no-swipe"
-          />
-        </div>
-      </ScrollView>
-    </BentoItem>
+    <div class="setting-item flex-col">
+      <div class="setting-label">
+        <EyeOff size={14} class="item-icon" />
+        <span>Hidden Opacity ({Math.round($opacityHiddenStore * 100)}%)</span>
+      </div>
+      <input
+        type="range"
+        min="0.2"
+        max="1.0"
+        step="0.05"
+        bind:value={$opacityHiddenStore}
+        class="range-slider no-swipe"
+      />
+    </div>
   </div>
 {/snippet}
 
-{#snippet behaviorSlide()}
-  <div class="card-wrapper">
-    <BentoItem>
-      <ScrollView class="section-content">
-        <div class="card-category-header">
-          <div class="category-icon-badge primary">
-            <Sliders size={15} />
-          </div>
-          <div class="category-text">
-            <span class="category-name">Behavior</span>
-            <span class="category-desc">Auto-hide and wake controls</span>
-          </div>
-        </div>
+{#snippet behaviorSection()}
+  <div class="setting-group">
+    <div class="setting-item">
+      <div class="setting-label">
+        <EyeOff size={14} class="item-icon" />
+        <span>Auto-hide Home</span>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" bind:checked={$homeAutoHideStore} />
+        <span class="slider"></span>
+      </label>
+    </div>
 
-        <div class="setting-item">
-          <div class="setting-label">
-            <EyeOff size={14} class="item-icon" />
-            <span>Auto-hide Home</span>
-          </div>
-          <label class="toggle">
-            <input type="checkbox" bind:checked={$homeAutoHideStore} />
-            <span class="slider"></span>
-          </label>
-        </div>
+    <div class="setting-item">
+      <div class="setting-label">
+        <EyeOff size={14} class="item-icon" />
+        <span>Auto-hide Now Playing</span>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" bind:checked={$mediaAutoHideStore} />
+        <span class="slider"></span>
+      </label>
+    </div>
 
-        <div class="setting-item">
-          <div class="setting-label">
-            <EyeOff size={14} class="item-icon" />
-            <span>Auto-hide Now Playing</span>
-          </div>
-          <label class="toggle">
-            <input type="checkbox" bind:checked={$mediaAutoHideStore} />
-            <span class="slider"></span>
-          </label>
-        </div>
+    <div class="setting-item">
+      <div class="setting-label">
+        <EyeOff size={14} class="item-icon" />
+        <span>Auto-hide Notifications</span>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" bind:checked={$notifAutoHideStore} />
+        <span class="slider"></span>
+      </label>
+    </div>
 
-        <div class="setting-item">
-          <div class="setting-label">
-            <EyeOff size={14} class="item-icon" />
-            <span>Auto-hide Notifications</span>
-          </div>
-          <label class="toggle">
-            <input type="checkbox" bind:checked={$notifAutoHideStore} />
-            <span class="slider"></span>
-          </label>
-        </div>
+    <div class="setting-item">
+      <div class="setting-label">
+        <Timer size={14} class="item-icon" />
+        <span>Auto-hide Delay</span>
+      </div>
+      <div class="segment-control">
+        <button
+          class:active={$autoHideDelayStore === 5}
+          onclick={() => ($autoHideDelayStore = 5)}>5s</button
+        >
+        <button
+          class:active={$autoHideDelayStore === 10}
+          onclick={() => ($autoHideDelayStore = 10)}>10s</button
+        >
+        <button
+          class:active={$autoHideDelayStore === 20}
+          onclick={() => ($autoHideDelayStore = 20)}>20s</button
+        >
+      </div>
+    </div>
 
-        <div class="setting-item">
-          <div class="setting-label">
-            <Timer size={14} class="item-icon" />
-            <span>Auto-hide Delay</span>
-          </div>
-          <div class="segment-control">
-            <button
-              class:active={$autoHideDelayStore === 5}
-              onclick={() => ($autoHideDelayStore = 5)}>5s</button
-            >
-            <button
-              class:active={$autoHideDelayStore === 10}
-              onclick={() => ($autoHideDelayStore = 10)}>10s</button
-            >
-            <button
-              class:active={$autoHideDelayStore === 20}
-              onclick={() => ($autoHideDelayStore = 20)}>20s</button
-            >
-          </div>
-        </div>
+    <div class="setting-item flex-col">
+      <div class="setting-label">
+        <Eye size={14} class="item-icon" />
+        <span>Hidden Island Display</span>
+      </div>
+      <div class="segment-control full-width">
+        <button
+          class:active={$autoHideDisplayStore === 'dash'}
+          onclick={() => ($autoHideDisplayStore = 'dash')}>None (Dash)</button
+        >
+        <button
+          class:active={$autoHideDisplayStore === 'clock'}
+          onclick={() => ($autoHideDisplayStore = 'clock')}>Time</button
+        >
+      </div>
+    </div>
 
-        <div class="setting-item flex-col">
-          <div class="setting-label">
-            <Eye size={14} class="item-icon" />
-            <span>Hidden Island Display Widget</span>
-          </div>
-          <div class="segment-control full-width">
-            <button
-              class:active={$autoHideDisplayStore === 'dash'}
-              onclick={() => ($autoHideDisplayStore = 'dash')}
-              >None (Dash)</button
-            >
-            <button
-              class:active={$autoHideDisplayStore === 'clock'}
-              onclick={() => ($autoHideDisplayStore = 'clock')}>Time</button
-            >
-          </div>
-        </div>
+    <div class="setting-item">
+      <div class="setting-label">
+        <MousePointer size={14} class="item-icon" />
+        <span>Wake Method</span>
+      </div>
+      <div class="segment-control">
+        <button
+          class:active={$wakeMethodStore === 'hover'}
+          onclick={() => ($wakeMethodStore = 'hover')}>Hover</button
+        >
+        <button
+          class:active={$wakeMethodStore === 'click'}
+          onclick={() => ($wakeMethodStore = 'click')}>Click</button
+        >
+      </div>
+    </div>
 
-        <div class="setting-item">
-          <div class="setting-label">
-            <MousePointer size={14} class="item-icon" />
-            <span>Wake Method</span>
-          </div>
-          <div class="segment-control">
-            <button
-              class:active={$wakeMethodStore === 'hover'}
-              onclick={() => ($wakeMethodStore = 'hover')}>Hover</button
-            >
-            <button
-              class:active={$wakeMethodStore === 'click'}
-              onclick={() => ($wakeMethodStore = 'click')}>Click</button
-            >
-          </div>
-        </div>
-
-        <div class="setting-item">
-          <div class="setting-label">
-            <Volume2 size={14} class="item-icon" />
-            <span>Notification Sound Effects</span>
-          </div>
-          <label class="toggle">
-            <input type="checkbox" bind:checked={$notifSoundStore} />
-            <span class="slider"></span>
-          </label>
-        </div>
-
-        {#if $notifSoundStore}
-          <div class="setting-item flex-col">
-            <div class="setting-label">
-              <Volume2 size={14} class="item-icon" />
-              <span>Chime Volume ({Math.round($notifVolumeStore * 100)}%)</span>
-            </div>
-            <input
-              type="range"
-              min="0.1"
-              max="1.0"
-              step="0.05"
-              bind:value={$notifVolumeStore}
-              class="range-slider no-swipe"
-            />
-          </div>
-        {/if}
-
-        <div class="setting-item">
-          <div class="setting-label">
-            <Power size={14} class="item-icon" />
-            <span>Launch on Windows Startup</span>
-          </div>
-          <label class="toggle">
-            <input type="checkbox" bind:checked={$autostartStore} />
-            <span class="slider"></span>
-          </label>
-        </div>
-      </ScrollView>
-    </BentoItem>
+    <div class="setting-item">
+      <div class="setting-label">
+        <MousePointer size={14} class="item-icon" />
+        <span>Allow Drag Repositioning</span>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" bind:checked={$allowDragPositionStore} />
+        <span class="slider"></span>
+      </label>
+    </div>
   </div>
 {/snippet}
 
-{#snippet notificationsSlide()}
-  <div class="card-wrapper">
-    <BentoItem>
-      <ScrollView class="section-content">
-        <div class="card-category-header">
-          <div class="category-icon-badge amber">
-            <Bell size={15} />
-          </div>
-          <div class="category-text">
-            <span class="category-name">Notifications</span>
-            <span class="category-desc">Do Not Disturb & wake options</span>
-          </div>
+{#snippet notificationsSection()}
+  <div class="setting-group">
+    <div class="setting-item">
+      <div class="setting-label">
+        <BellOff size={14} class="item-icon" />
+        <span>Do Not Disturb (DND)</span>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" bind:checked={$dndStore} />
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <div class="setting-item">
+      <div class="setting-label">
+        <BellRing size={14} class="item-icon" />
+        <span>Auto-wake on Notification</span>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" bind:checked={$notifAutoWakeStore} />
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <div class="setting-item">
+      <div class="setting-label">
+        <Volume2 size={14} class="item-icon" />
+        <span>Sound Effects</span>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" bind:checked={$notifSoundStore} />
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    {#if $notifSoundStore}
+      <div class="setting-item flex-col">
+        <div class="setting-label">
+          <Volume2 size={14} class="item-icon" />
+          <span>Chime Volume ({Math.round($notifVolumeStore * 100)}%)</span>
         </div>
+        <input
+          type="range"
+          min="0.1"
+          max="1.0"
+          step="0.05"
+          bind:value={$notifVolumeStore}
+          class="range-slider no-swipe"
+        />
+      </div>
+    {/if}
 
-        <div class="setting-item">
-          <div class="setting-label">
-            <BellOff size={14} class="item-icon" />
-            <span>Do Not Disturb (DND)</span>
-          </div>
-          <label class="toggle">
-            <input type="checkbox" bind:checked={$dndStore} />
-            <span class="slider"></span>
-          </label>
+    <div class="setting-item">
+      <div class="setting-label">
+        <Bell size={14} class="item-icon" />
+        <span>Active Notifications</span>
+      </div>
+      <span class="badge-count">{$notifData.length}</span>
+    </div>
+
+    <button class="action-btn danger" onclick={clearAllNotifications}>
+      <Trash2 size={14} />
+      <span>Clear All Notifications</span>
+    </button>
+  </div>
+{/snippet}
+
+{#snippet clockSection()}
+  <div class="setting-group">
+    <div class="setting-item">
+      <div class="setting-label">
+        <Clock size={14} class="item-icon" />
+        <span>Time Format</span>
+      </div>
+      <div class="segment-control">
+        <button
+          class:active={$timeFormatStore === '12h'}
+          onclick={() => ($timeFormatStore = '12h')}>12H</button
+        >
+        <button
+          class:active={$timeFormatStore === '24h'}
+          onclick={() => ($timeFormatStore = '24h')}>24H</button
+        >
+      </div>
+    </div>
+
+    <div class="setting-item">
+      <div class="setting-label">
+        <Calendar size={14} class="item-icon" />
+        <span>Date Format</span>
+      </div>
+      <div class="segment-control">
+        <button
+          class:active={$dateFormatStore === 'default'}
+          onclick={() => ($dateFormatStore = 'default')}>Def</button
+        >
+        <button
+          class:active={$dateFormatStore === 'iso'}
+          onclick={() => ($dateFormatStore = 'iso')}>ISO</button
+        >
+        <button
+          class:active={$dateFormatStore === 'us'}
+          onclick={() => ($dateFormatStore = 'us')}>US</button
+        >
+        <button
+          class:active={$dateFormatStore === 'eu'}
+          onclick={() => ($dateFormatStore = 'eu')}>EU</button
+        >
+      </div>
+    </div>
+
+    <div class="setting-item flex-col">
+      <div class="setting-label">
+        <Globe size={14} class="item-icon" />
+        <span>Timezone</span>
+      </div>
+      <CustomSelect
+        options={timezoneOptions}
+        bind:value={selectedTz}
+        fullWidth={true}
+        direction="auto"
+        searchable={true}
+        searchPlaceholder="Search timezones..."
+      />
+    </div>
+  </div>
+{/snippet}
+
+{#snippet weatherSection()}
+  <div class="setting-group">
+    <div class="setting-item">
+      <div class="setting-label">
+        <Thermometer size={14} class="item-icon" />
+        <span>Temperature Unit</span>
+      </div>
+      <div class="segment-control">
+        <button
+          class:active={$weatherUnitStore === 'celsius'}
+          onclick={() => ($weatherUnitStore = 'celsius')}>°C</button
+        >
+        <button
+          class:active={$weatherUnitStore === 'fahrenheit'}
+          onclick={() => ($weatherUnitStore = 'fahrenheit')}>°F</button
+        >
+        <button
+          class:active={$weatherUnitStore === 'kelvin'}
+          onclick={() => ($weatherUnitStore = 'kelvin')}>K</button
+        >
+      </div>
+    </div>
+
+    <div class="setting-item flex-col">
+      <div class="setting-label">
+        <MapPin size={14} class="item-icon" />
+        <span>Weather Location</span>
+      </div>
+      <CustomSelect
+        options={weatherOptions}
+        bind:value={selectedWeatherCity}
+        fullWidth={true}
+        direction="auto"
+        searchable={true}
+        searchPlaceholder="Search city name (e.g. Manila, New York, Tokyo)..."
+        onSearch={handleWeatherSearch}
+        onSelectPayload={handleSelectWeatherPayload}
+      />
+    </div>
+  </div>
+{/snippet}
+
+{#snippet systemSection()}
+  <div class="setting-group">
+    <div class="setting-item">
+      <div class="setting-label">
+        <Power size={14} class="item-icon" />
+        <span>Launch on Windows Startup</span>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" bind:checked={$autostartStore} />
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    <div class="setting-item">
+      <div class="setting-label">
+        <Cpu size={14} class="item-icon" />
+        <span>Hardware Acceleration</span>
+      </div>
+      <label class="toggle">
+        <input
+          type="checkbox"
+          bind:checked={$hardwareAccelStore}
+          onchange={(e) => {
+            SetHardwareAcceleration(e.currentTarget.checked).catch(() => {})
+          }}
+        />
+        <span class="slider"></span>
+      </label>
+    </div>
+
+    {#if $hiddenPillOffsetXStore !== 0}
+      <div class="setting-item">
+        <div class="setting-label">
+          <RotateCcw size={14} class="item-icon" />
+          <span>Island Position</span>
         </div>
-
-        <div class="setting-item">
-          <div class="setting-label">
-            <BellRing size={14} class="item-icon" />
-            <span>Auto-wake on Notification</span>
-          </div>
-          <label class="toggle">
-            <input type="checkbox" bind:checked={$notifAutoWakeStore} />
-            <span class="slider"></span>
-          </label>
-        </div>
-
-        <div class="setting-item">
-          <div class="setting-label">
-            <Bell size={14} class="item-icon" />
-            <span>Active Notifications</span>
-          </div>
-          <span class="badge-count">{$notifData.length}</span>
-        </div>
-
-        <button class="action-btn danger" onclick={clearAllNotifications}>
-          <Trash2 size={14} />
-          <span>Clear All Notifications</span>
-        </button>
-
         <button
           class="action-btn"
-          class:success={cacheCleared}
-          onclick={handleClearCache}
+          onclick={() => ($hiddenPillOffsetXStore = 0)}
         >
-          {#if cacheCleared}
-            <Check size={14} />
-            <span>Cache Cleared!</span>
-            <span class="cache-size-badge">0 B</span>
-          {:else}
-            <Database size={14} />
-            <span>Clear App Cache</span>
-            <span class="cache-size-badge">{cacheSizeStr}</span>
-          {/if}
+          Reset to Center
         </button>
-      </ScrollView>
-    </BentoItem>
-  </div>
-{/snippet}
+      </div>
+    {/if}
 
-{#snippet clockSlide()}
-  <div class="card-wrapper">
-    <BentoItem>
-      <ScrollView class="section-content">
-        <div class="card-category-header">
-          <div class="category-icon-badge primary">
-            <Clock size={15} />
-          </div>
-          <div class="category-text">
-            <span class="category-name">Clock & Timezone</span>
-            <span class="category-desc">Time format and regional timezone</span>
-          </div>
-        </div>
-
-        <div class="setting-item">
-          <div class="setting-label">
-            <Clock size={14} class="item-icon" />
-            <span>Time Format</span>
-          </div>
-          <div class="segment-control">
-            <button
-              class:active={$timeFormatStore === '12h'}
-              onclick={() => ($timeFormatStore = '12h')}>12H</button
-            >
-            <button
-              class:active={$timeFormatStore === '24h'}
-              onclick={() => ($timeFormatStore = '24h')}>24H</button
-            >
-          </div>
-        </div>
-
-        <div class="setting-item">
-          <div class="setting-label">
-            <Calendar size={14} class="item-icon" />
-            <span>Date Format</span>
-          </div>
-          <div class="segment-control">
-            <button
-              class:active={$dateFormatStore === 'default'}
-              onclick={() => ($dateFormatStore = 'default')}>Def</button
-            >
-            <button
-              class:active={$dateFormatStore === 'iso'}
-              onclick={() => ($dateFormatStore = 'iso')}>ISO</button
-            >
-            <button
-              class:active={$dateFormatStore === 'us'}
-              onclick={() => ($dateFormatStore = 'us')}>US</button
-            >
-            <button
-              class:active={$dateFormatStore === 'eu'}
-              onclick={() => ($dateFormatStore = 'eu')}>EU</button
-            >
-          </div>
-        </div>
-
-        <div class="setting-item flex-col">
-          <div class="setting-label">
-            <Globe size={14} class="item-icon" />
-            <span>Timezone</span>
-          </div>
-          <CustomSelect
-            options={timezoneOptions}
-            bind:value={selectedTz}
-            fullWidth={true}
-            direction="auto"
-            searchable={true}
-            searchPlaceholder="Search timezones..."
-          />
-        </div>
-      </ScrollView>
-    </BentoItem>
-  </div>
-{/snippet}
-
-{#snippet weatherSlide()}
-  <div class="card-wrapper">
-    <BentoItem>
-      <ScrollView class="section-content">
-        <div class="card-category-header">
-          <div class="category-icon-badge amber">
-            <CloudSun size={15} />
-          </div>
-          <div class="category-text">
-            <span class="category-name">Weather</span>
-            <span class="category-desc">Temperature unit and location</span>
-          </div>
-        </div>
-
-        <div class="setting-item">
-          <div class="setting-label">
-            <Thermometer size={14} class="item-icon" />
-            <span>Temperature Unit</span>
-          </div>
-          <div class="segment-control">
-            <button
-              class:active={$weatherUnitStore === 'celsius'}
-              onclick={() => ($weatherUnitStore = 'celsius')}>°C</button
-            >
-            <button
-              class:active={$weatherUnitStore === 'fahrenheit'}
-              onclick={() => ($weatherUnitStore = 'fahrenheit')}>°F</button
-            >
-            <button
-              class:active={$weatherUnitStore === 'kelvin'}
-              onclick={() => ($weatherUnitStore = 'kelvin')}>K</button
-            >
-          </div>
-        </div>
-
-        <div class="setting-item flex-col">
-          <div class="setting-label">
-            <MapPin size={14} class="item-icon" />
-            <span>Weather Location</span>
-          </div>
-          <CustomSelect
-            options={weatherOptions}
-            bind:value={selectedWeatherCity}
-            fullWidth={true}
-            direction="auto"
-            searchable={true}
-            searchPlaceholder="Search city name (e.g. Manila, New York, Tokyo)..."
-            onSearch={handleWeatherSearch}
-            onSelectPayload={handleSelectWeatherPayload}
-          />
-        </div>
-      </ScrollView>
-    </BentoItem>
+    <button
+      class="action-btn"
+      class:success={cacheCleared}
+      onclick={handleClearCache}
+    >
+      {#if cacheCleared}
+        <Check size={14} />
+        <span>Cache Cleared!</span>
+        <span class="cache-size-badge">0 B</span>
+      {:else}
+        <Database size={14} />
+        <span>Clear App Cache</span>
+        <span class="cache-size-badge">{cacheSizeStr}</span>
+      {/if}
+    </button>
   </div>
 {/snippet}
 
 <div class="settings-page">
   <div class="header">
-    <div class="header-side left"></div>
-    <div class="header-center">
-      <div class="title">Settings</div>
-    </div>
-    <div class="header-side right"></div>
+    <div class="title">Settings</div>
   </div>
 
-  <div class="gallery-wrapper">
-    <ComponentGallery
-      slides={[
-        { id: 'appearance', snippet: appearanceSlide },
-        { id: 'behavior', snippet: behaviorSlide },
-        { id: 'notifications', snippet: notificationsSlide },
-        { id: 'clock', snippet: clockSlide },
-        { id: 'weather', snippet: weatherSlide }
-      ]}
-      loop={true}
-      showControls={true}
-    />
+  <div class="settings-layout">
+    <!-- Left Category Navigation Sidebar -->
+    <div class="settings-sidebar">
+      {#each categories as cat (cat.id)}
+        <button
+          class="sidebar-tab"
+          class:active={activeTab === cat.id}
+          onclick={(e) => {
+            e.stopPropagation()
+            activeTab = cat.id
+          }}
+        >
+          <cat.icon size={15} class="tab-icon" />
+          <span class="tab-label">{cat.name}</span>
+        </button>
+      {/each}
+    </div>
+
+    <!-- Right Dynamic Settings Content View -->
+    <div class="settings-content">
+      <ScrollView class="content-scroll">
+        {#if activeTab === 'appearance'}
+          {@render appearanceSection()}
+        {:else if activeTab === 'behavior'}
+          {@render behaviorSection()}
+        {:else if activeTab === 'notifications'}
+          {@render notificationsSection()}
+        {:else if activeTab === 'clock'}
+          {@render clockSection()}
+        {:else if activeTab === 'weather'}
+          {@render weatherSection()}
+        {:else if activeTab === 'system'}
+          {@render systemSection()}
+        {/if}
+      </ScrollView>
+    </div>
   </div>
 </div>
 
@@ -955,167 +847,135 @@
   .header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    margin-bottom: 8px;
+    justify-content: center;
+    margin-bottom: 14px;
     flex-shrink: 0;
     width: 100%;
-    box-sizing: border-box;
-  }
-
-  .header-side {
-    flex: 1 1 0;
-    display: flex;
-    align-items: center;
-    min-width: 0;
-  }
-
-  .header-side.left {
-    pointer-events: auto;
-  }
-
-  .header-side.right {
-    justify-content: flex-end;
-  }
-
-  .header-center {
-    flex: 1 1 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    white-space: nowrap;
   }
 
   .title {
-    font-weight: 700;
     font-size: 15px;
+    font-weight: 700;
     letter-spacing: -0.01em;
-    text-align: center;
     color: var(--c-text-primary);
+    text-align: center;
   }
 
-  .gallery-wrapper {
+  .settings-layout {
     flex: 1;
     min-height: 0;
+    display: flex;
+    gap: 12px;
     width: 100%;
   }
 
-  .card-wrapper {
-    width: 100%;
-    height: 100%;
-    padding: 0;
-    box-sizing: border-box;
-  }
-
-  :global(.section-content) {
+  /* Left Sidebar Navigation */
+  .settings-sidebar {
+    width: 140px;
+    flex-shrink: 0;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    height: 100%;
-    padding: 10px 24px 30px 24px; /* Internal card padding with space for dropdowns */
+    gap: 4px;
+    border-right: 1px solid var(--c-border);
+    padding-right: 10px;
     box-sizing: border-box;
   }
 
-  /* Category Header Banner */
-  .card-category-header {
+  .sidebar-tab {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 6px 8px 10px 4px;
-    border-bottom: 1px solid var(--c-border);
-    margin-bottom: 2px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: transparent;
+    border: none;
+    color: var(--c-text-secondary);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    width: 100%;
+    box-sizing: border-box;
   }
 
-  .category-icon-badge {
-    width: 28px;
-    height: 28px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    color: white;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-  }
-
-  .category-icon-badge.purple {
-    background: linear-gradient(135deg, var(--c-purple), var(--c-primary));
-  }
-
-  .category-icon-badge.primary {
-    background: linear-gradient(
-      135deg,
-      var(--c-primary),
-      var(--c-surface-elevated, #3b82f6)
-    );
-  }
-
-  .category-icon-badge.amber {
-    background: linear-gradient(135deg, var(--c-warning), var(--c-amber));
-  }
-
-  .category-text {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-  }
-
-  .category-name {
-    font-size: 13px;
-    font-weight: 700;
+  .sidebar-tab:hover {
+    background: var(--c-hover, rgba(255, 255, 255, 0.08));
     color: var(--c-text-primary);
   }
 
-  .category-desc {
-    font-size: 10px;
-    color: var(--c-text-muted);
+  .sidebar-tab.active {
+    background: var(--c-item-bg, rgba(255, 255, 255, 0.12));
+    color: var(--c-primary, #6366f1);
+    font-weight: 600;
+    box-shadow: inset 0 1px 0 var(--c-border);
   }
 
-  /* Setting Items */
+  :global(.tab-icon) {
+    flex-shrink: 0;
+  }
+
+  .tab-label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Right Settings Scroll Content */
+  .settings-content {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .setting-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-right: 4px;
+    padding-bottom: 8px;
+  }
+
   .setting-item {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: var(--c-item-bg);
-    padding: 8px 10px;
-    border-radius: 10px;
-    font-size: 12px;
-    font-weight: 500;
-    border: 1px solid var(--c-border);
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: var(--c-item-bg, rgba(255, 255, 255, 0.05));
+    border: 1px solid var(--c-border, rgba(255, 255, 255, 0.08));
+    box-sizing: border-box;
   }
 
   .setting-item.flex-col {
     flex-direction: column;
     align-items: flex-start;
-    gap: 6px;
+    gap: 8px;
   }
 
   .setting-label {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     font-size: 12px;
     font-weight: 500;
     color: var(--c-text-primary);
   }
+
   :global(.item-icon) {
-    color: var(--c-primary);
+    color: var(--c-text-muted);
     flex-shrink: 0;
   }
 
-  .badge-count {
-    font-size: 11px;
-    font-weight: 700;
-    background: var(--c-primary);
-    color: white;
-    padding: 2px 8px;
-    border-radius: 10px;
-  }
-
+  /* Segment Control */
   .segment-control {
     display: flex;
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 6px;
+    background: var(--c-contrast-bg, rgba(0, 0, 0, 0.2));
     padding: 2px;
+    border-radius: 8px;
+    border: 1px solid var(--c-border);
     gap: 2px;
   }
 
@@ -1125,48 +985,92 @@
 
   .segment-control.full-width button {
     flex: 1;
-    text-align: center;
-    padding: 5px 4px;
-  }
-
-  :global([data-theme='light']) .segment-control {
-    background: rgba(0, 0, 0, 0.05);
   }
 
   .segment-control button {
     background: transparent;
     border: none;
     color: var(--c-text-secondary);
-    padding: 4px 10px;
     font-size: 11px;
-    font-weight: 600;
-    border-radius: 4px;
+    font-weight: 500;
+    padding: 4px 10px;
+    border-radius: 6px;
     cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .segment-control button:hover {
-    color: var(--c-text-primary);
+    transition: all 0.15s ease;
   }
 
   .segment-control button.active {
-    background: var(--c-border);
+    background: var(--c-item-bg);
     color: var(--c-text-primary);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    font-weight: 600;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
   }
 
+  /* Range Slider */
+  .range-slider {
+    width: 100%;
+    accent-color: var(--c-primary);
+    cursor: pointer;
+  }
+
+  /* Toggle Switch */
+  .toggle {
+    position: relative;
+    display: inline-block;
+    width: 36px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+
+  .toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background-color: var(--c-contrast-bg, rgba(255, 255, 255, 0.2));
+    transition: 0.3s;
+    border-radius: 20px;
+    border: 1px solid var(--c-border);
+  }
+
+  .slider:before {
+    position: absolute;
+    content: '';
+    height: 14px;
+    width: 14px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+  }
+
+  input:checked + .slider {
+    background-color: var(--c-primary);
+  }
+
+  input:checked + .slider:before {
+    transform: translateX(16px);
+  }
+
+  /* Action Buttons */
   .action-btn {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
     width: 100%;
-    padding: 8px;
+    padding: 9px 14px;
     border-radius: 10px;
-    border: 1px solid var(--c-border);
     background: var(--c-item-bg);
+    border: 1px solid var(--c-border);
     color: var(--c-text-primary);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -1177,80 +1081,32 @@
   }
 
   .action-btn.danger {
-    color: var(--c-warning);
-    border-color: rgba(248, 113, 113, 0.3);
+    color: var(--c-danger);
+    border-color: rgba(255, 59, 48, 0.3);
   }
 
   .action-btn.danger:hover {
-    background: rgba(248, 113, 113, 0.15);
+    background: var(--c-danger-hover-bg);
   }
 
   .action-btn.success {
-    color: var(--c-success, #34c759);
-    border-color: var(--c-success, #34c759);
-    background: rgba(52, 199, 89, 0.12);
+    color: var(--c-success);
+    border-color: rgba(52, 199, 89, 0.4);
+  }
+
+  .badge-count {
+    font-size: 11px;
+    font-weight: 700;
+    background: var(--c-primary);
+    color: #ffffff;
+    padding: 2px 7px;
+    border-radius: 10px;
   }
 
   .cache-size-badge {
     margin-left: auto;
     font-size: 10px;
-    font-weight: 600;
-    opacity: 0.75;
-    background: rgba(0, 0, 0, 0.2);
-    padding: 1px 6px;
-    border-radius: 6px;
-    border: 1px solid var(--c-border);
-  }
-
-  :global([data-theme='light']) .cache-size-badge {
-    background: rgba(0, 0, 0, 0.06);
-  }
-
-  /* Toggle Switch CSS */
-  .toggle {
-    position: relative;
-    display: inline-block;
-    width: 38px;
-    height: 20px;
-  }
-  .toggle input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-  }
-  .slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: var(--c-border);
-    transition: 0.3s;
-    border-radius: 20px;
-  }
-  .slider:before {
-    position: absolute;
-    content: '';
-    height: 14px;
-    width: 14px;
-    left: 3px;
-    bottom: 3px;
-    background-color: white;
-    transition: 0.3s;
-    border-radius: 50%;
-  }
-  input:checked + .slider {
-    background-color: var(--c-primary);
-  }
-  input:checked + .slider:before {
-    transform: translateX(18px);
-  }
-
-  .range-slider {
-    width: 100%;
-    accent-color: var(--c-primary);
-    cursor: pointer;
-    margin-top: 4px;
+    opacity: 0.7;
+    font-weight: 500;
   }
 </style>

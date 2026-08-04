@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
-  import { timeFormatStore, timezoneStore } from '../store'
+  import { timeFormatStore, timezoneStore, dateFormatStore } from '../store'
 
   let { expanded = false } = $props<{ expanded?: boolean }>()
 
@@ -20,7 +20,7 @@
   // Selected timezone from store (defaulting to Asia/Manila)
   let currentTimezone = $derived($timezoneStore || 'Asia/Manila')
 
-  // Format parts according to selected timezone
+  // Format parts according to selected timezone and date format
   let timeParts = $derived.by(() => {
     try {
       const formatter = new Intl.DateTimeFormat('en-US', {
@@ -31,9 +31,10 @@
         hour12: false,
         weekday: 'long',
         month: 'short',
-        day: 'numeric',
+        monthNumeric: '2-digit',
+        day: '2-digit',
         year: 'numeric'
-      })
+      } as Intl.DateTimeFormatOptions)
       const parts = formatter.formatToParts(time)
       const getVal = (type: string) =>
         parts.find((p) => p.type === type)?.value || '0'
@@ -42,27 +43,49 @@
       const s = parseInt(getVal('second'), 10)
       const weekday = getVal('weekday')
       const month = getVal('month')
-      const day = getVal('day')
+      const monthNum = (time.getMonth() + 1).toString().padStart(2, '0')
+      const day = getVal('day').padStart(2, '0')
       const year = getVal('year')
+
+      let dateBadgeText = `${weekday}, ${month} ${parseInt(day, 10)}, ${year}`
+      if ($dateFormatStore === 'iso') {
+        dateBadgeText = `${year}-${monthNum}-${day}`
+      } else if ($dateFormatStore === 'us') {
+        dateBadgeText = `${monthNum}/${day}/${year}`
+      } else if ($dateFormatStore === 'eu') {
+        dateBadgeText = `${day}/${monthNum}/${year}`
+      }
 
       return {
         h24,
         m,
         s,
-        fullDateStr: `${weekday}, ${month} ${day}`,
-        yearStr: year
+        fullDateStr: dateBadgeText
       }
     } catch {
+      const year = time.getFullYear()
+      const monthNum = (time.getMonth() + 1).toString().padStart(2, '0')
+      const day = time.getDate().toString().padStart(2, '0')
+
+      let dateBadgeText = time.toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      })
+      if ($dateFormatStore === 'iso') {
+        dateBadgeText = `${year}-${monthNum}-${day}`
+      } else if ($dateFormatStore === 'us') {
+        dateBadgeText = `${monthNum}/${day}/${year}`
+      } else if ($dateFormatStore === 'eu') {
+        dateBadgeText = `${day}/${monthNum}/${year}`
+      }
+
       return {
         h24: time.getHours(),
         m: time.getMinutes().toString().padStart(2, '0'),
         s: time.getSeconds(),
-        fullDateStr: time.toLocaleDateString('en-US', {
-          weekday: 'long',
-          month: 'short',
-          day: 'numeric'
-        }),
-        yearStr: time.getFullYear().toString()
+        fullDateStr: dateBadgeText
       }
     }
   })
@@ -79,7 +102,6 @@
   let ampm = $derived(timeParts.h24 >= 12 ? 'PM' : 'AM')
   let seconds = $derived(timeParts.s)
   let fullDateStr = $derived(timeParts.fullDateStr)
-  let yearStr = $derived(timeParts.yearStr)
 
   // GMT Offset calculation based on selected timezone
   let gmtOffset = $derived.by(() => {
@@ -123,7 +145,7 @@
 
       <!-- Date Badge Header -->
       <div class="date-header">
-        <span class="date-badge">{fullDateStr}, {yearStr}</span>
+        <span class="date-badge">{fullDateStr}</span>
       </div>
 
       <!-- Circular Progress Dial Hub -->

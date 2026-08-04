@@ -31,7 +31,7 @@ Vinta is built using **Go + Wails v2 + Svelte 5**. The Go backend handles native
 - **What it is:** A top-level view located in `frontend/src/pages/`, such as `HomePage.svelte`, `MediaPage.svelte`, `AppsPage.svelte`, `NotificationPage.svelte`, or `SettingsPage.svelte`.
 - **How it works:** Pages sit inside `App.svelte` and handle overall screen navigation, island height, and component layout.
 
-## How to Create New Components and Pages
+## How to Create New Components, Pages, and Themes
 
 ### Creating a New Component
 
@@ -47,6 +47,40 @@ Vinta is built using **Go + Wails v2 + Svelte 5**. The Go backend handles native
 2. Style the page container using design system CSS variables.
 3. Import and arrange your components.
 4. Register the new page route inside `frontend/src/store.ts` and `frontend/src/App.svelte`.
+
+### Creating a Theme
+
+Vinta uses a tokenized CSS variable system so that all UI components adapt cleanly between themes without hardcoding colors inside components.
+
+1. **Create Theme CSS File**: Add a new `.css` file inside `frontend/src/themes/` (e.g. `mytheme.css`).
+2. **Define Theme Tokens**: Target the root selector `:root[data-theme='mytheme']` and declare all semantic design tokens:
+   ```css
+   :root[data-theme='mytheme'] {
+     /* ACCENT COLORS */
+     --c-primary: #6366f1;
+     --c-danger: #ff3b30;
+     --c-warning: #ffcc00;
+     --c-success: #34c759;
+     --c-purple: #a78bfa;
+
+     /* BACKGROUNDS & SURFACES */
+     --c-bg: rgba(15, 15, 20, 1);
+     --c-border: rgba(255, 255, 255, 0.1);
+     --c-hover: rgba(255, 255, 255, 0.08);
+     --c-item-bg: rgba(255, 255, 255, 0.05);
+
+     /* TYPOGRAPHY */
+     --c-text-primary: #ffffff;
+     --c-text-secondary: #b0b0b0;
+     --c-text-muted: #888888;
+
+     /* MEDIA & AMBIENT SCRIM */
+     --c-scrim: rgba(0, 0, 0, 0.72);
+   }
+   ```
+3. **Import in `style.css`**: Add `@import './themes/mytheme.css';` at the top of `frontend/src/style.css`.
+4. **Register Theme Option**: Add your theme definition to `AppTheme` in `frontend/src/store.ts` and append `{ label: 'My Theme', value: 'mytheme' }` to `themeOptions` in `frontend/src/pages/SettingsPage.svelte`.
+5. **Verify Design Guidelines**: Ensure components consume `var(--c-token)` variables without hardcoded hex values (see [docs/DESIGN.md](docs/DESIGN.md)).
 
 ## Helper Scripts
 

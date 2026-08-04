@@ -11,7 +11,6 @@
   import Clock from '../components/Clock.svelte'
   import Calendar from '../components/Calendar.svelte'
   import Weather from '../components/Weather.svelte'
-  import BentoItem from '../components/BentoItem.svelte'
   import ComponentGallery from '../components/ComponentGallery.svelte'
 
   let { expanded = false } = $props<{ expanded?: boolean }>()
@@ -25,26 +24,20 @@
 </script>
 
 {#snippet clockSlide()}
-  <div class="single-card-container">
-    <BentoItem>
-      <Clock expanded={true} />
-    </BentoItem>
+  <div class="slide-bleed-card">
+    <Clock expanded={true} />
   </div>
 {/snippet}
 
 {#snippet calendarSlide()}
-  <div class="single-card-container">
-    <BentoItem>
-      <Calendar expanded={true} />
-    </BentoItem>
+  <div class="slide-bleed-card">
+    <Calendar expanded={true} />
   </div>
 {/snippet}
 
 {#snippet weatherSlide()}
-  <div class="single-card-container">
-    <BentoItem>
-      <Weather expanded={true} />
-    </BentoItem>
+  <div class="slide-bleed-card">
+    <Weather expanded={true} />
   </div>
 {/snippet}
 
@@ -96,7 +89,7 @@
     box-sizing: border-box;
   }
 
-  /* Minimal View - Left content + fold button on right */
+  /* Minimal View */
   .minimal-view {
     display: flex;
     align-items: center;
@@ -187,6 +180,7 @@
     color: var(--c-text-primary);
   }
 
+  /* Gallery fills edge-to-edge — viewport clips at its own border-radius */
   .gallery-wrapper {
     flex: 1;
     min-height: 0;
@@ -195,17 +189,23 @@
     justify-content: center;
     align-items: center;
     position: relative;
-    padding: 0 16px;
     box-sizing: border-box;
   }
 
-  .single-card-container {
+  /*
+   * Each slide card provides its own background so it bleeds cleanly
+   * to the outer viewport's border-radius: 16px clip boundary.
+   * No BentoItem wrapper needed — the viewport handles clipping.
+   */
+  .slide-bleed-card {
     width: 100%;
     height: 100%;
-    padding: 0;
-    box-sizing: border-box;
     display: flex;
-    justify-content: center;
-    align-items: center;
+    flex-direction: column;
+    box-sizing: border-box;
+    background: var(--c-item-bg);
+    /* Subtle inset highlight for depth, matching old BentoItem border treatment */
+    box-shadow: inset 0 1px 0 var(--c-border);
+    overflow: hidden;
   }
 </style>

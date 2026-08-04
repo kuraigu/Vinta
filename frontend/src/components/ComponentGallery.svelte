@@ -25,8 +25,8 @@
     autoPlay?: boolean
     autoPlayInterval?: number
     loop?: boolean
-    showControls?: boolean
     showDots?: boolean
+    showControls?: boolean
     initialIndex?: number
     enableSwipe?: boolean
     onSlideChange?: (index: number) => void
@@ -147,7 +147,7 @@
   const swipeOptions = $derived({
     axis: 'x' as const,
     enableSwipe: enableSwipe && slides.length > 1,
-    ignoreSelector: '.nav-btn, .dot-btn, select, option, .no-swipe',
+    ignoreSelector: '.nav-edge-zone, .dot-btn, select, option, .no-swipe',
     onDragStart: () => {
       isDragging = true
       isInstant = false
@@ -221,32 +221,39 @@
       {/each}
     </div>
 
+    <!-- Ambient edge hit-zones (replace chevrons) -->
     {#if showControls && slides.length > 1}
-      <button
-        class="nav-btn prev"
-        type="button"
+      <!-- svelte-ignore a11y_click_events_have_key_events -->
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div
+        class="nav-edge-zone prev"
+        class:disabled={!loop && activeRealIndex === 0}
         onclick={(e) => {
           e.stopPropagation()
           prevSlide()
         }}
-        disabled={!loop && activeRealIndex === 0}
         aria-label="Previous Slide"
+        role="button"
+        tabindex="0"
       >
-        <ChevronLeft size={16} />
-      </button>
+        <span class="nav-edge-icon"><ChevronLeft size={16} /></span>
+      </div>
 
-      <button
-        class="nav-btn next"
-        type="button"
+      <!-- svelte-ignore a11y_click_events_have_key_events -->
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div
+        class="nav-edge-zone next"
+        class:disabled={!loop && activeRealIndex === slides.length - 1}
         onclick={(e) => {
           e.stopPropagation()
           nextSlide()
         }}
-        disabled={!loop && activeRealIndex === slides.length - 1}
         aria-label="Next Slide"
+        role="button"
+        tabindex="0"
       >
-        <ChevronRight size={16} />
-      </button>
+        <span class="nav-edge-icon"><ChevronRight size={16} /></span>
+      </div>
     {/if}
   </div>
 
@@ -294,7 +301,6 @@
     min-height: 0;
     width: 100%;
     overflow: hidden;
-    border-radius: 16px;
   }
 
   .gallery-track {
@@ -326,63 +332,71 @@
     pointer-events: auto;
   }
 
-  /* Navigation buttons - overlayed inside viewport */
-  .nav-btn {
+  /* Ambient edge navigation hit-zones - no icon, gradient hint only */
+  .nav-edge-zone {
     position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    background: var(--c-surface-elevated, rgba(30, 30, 40, 0.85));
-    color: var(--c-text-muted, rgba(255, 255, 255, 0.7));
-    border: 1px solid var(--c-border, rgba(255, 255, 255, 0.12));
+    top: 0;
+    bottom: 0;
+    width: 32px;
+    z-index: 10;
+    cursor: pointer;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.22s ease;
+    border: none;
+    background: transparent;
     display: flex;
     align-items: center;
     justify-content: center;
-    cursor: pointer;
-    z-index: 10;
-    opacity: 0;
-    pointer-events: none;
-    transition:
-      opacity 0.2s ease,
-      background-color 0.2s ease,
-      color 0.2s ease,
-      transform 0.2s cubic-bezier(0.22, 1, 0.36, 1);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
   }
 
-  .gallery-container:hover .nav-btn {
-    opacity: 0.9;
+  .nav-edge-zone.prev {
+    left: 0;
+    background: linear-gradient(
+      to right,
+      var(--c-nav-hint, rgba(99, 102, 241, 0.32)),
+      transparent
+    );
+  }
+
+  .nav-edge-zone.next {
+    right: 0;
+    background: linear-gradient(
+      to left,
+      var(--c-nav-hint, rgba(99, 102, 241, 0.32)),
+      transparent
+    );
+  }
+
+  .nav-edge-zone.disabled {
+    pointer-events: none !important;
+    opacity: 0 !important;
+  }
+
+  /* Show zones on container hover */
+  .gallery-container:hover .nav-edge-zone:not(.disabled) {
+    opacity: 1;
     pointer-events: auto;
   }
 
-  .nav-btn:hover {
+  .nav-edge-zone:hover {
     opacity: 1 !important;
-    background: var(--c-hover, rgba(50, 50, 65, 0.95));
-    color: var(--c-text-primary, #ffffff);
-    transform: translateY(-50%) scale(1.1);
   }
 
-  .nav-btn:active {
-    transform: translateY(-50%) scale(0.95);
-  }
-
-  .nav-btn:disabled {
-    opacity: 0.15 !important;
-    cursor: not-allowed;
-    transform: translateY(-50%) !important;
+  /* Directional icon centered in the zone */
+  .nav-edge-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--c-text-primary);
+    opacity: 0.75;
+    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.4));
     pointer-events: none;
+    transition: opacity 0.2s ease;
   }
 
-  .nav-btn.prev {
-    left: 8px;
-  }
-
-  .nav-btn.next {
-    right: 8px;
+  .nav-edge-zone:hover .nav-edge-icon {
+    opacity: 1;
   }
 
   /* Pagination dots bar */

@@ -3,7 +3,7 @@
 
   export const config: IslandConfig = {
     minimal: { w: 340, h: 44, r: 22 },
-    expanded: { w: 440, h: 250, r: 28 },
+    expanded: { w: 440, h: 270, r: 28 },
     borderColor: 'rgba(255, 60, 100, 0.4)',
     glowColor: 'rgba(255, 60, 100, 0.35)'
   }
@@ -64,34 +64,69 @@
     prevNotifCount = currentCount
   })
 
-  // Sync with incoming media store updates when not dragging
+  let isSeekingLocked = $state(false)
+  let seekLockTimer: ReturnType<typeof setTimeout> | null = null
+
+  // Sync with incoming media store updates when track changes, play state changes, or external seek occurs
+  let prevTitle = $state('')
+  let prevArtist = $state('')
+  let prevIsPlaying = $state(false)
+
   $effect(() => {
-    if (!isDraggingSeek) {
-      localPosMs = media.positionMs || 0
-      seekVal = media.positionMs || 0
+    const curTitle = media.title || ''
+    const curArtist = media.artist || ''
+    const curPlaying = media.isPlaying || false
+    const backendPos = media.positionMs || 0
+
+    const isTrackChanged = curTitle !== prevTitle || curArtist !== prevArtist
+    const isPlayStateChanged = curPlaying !== prevIsPlaying
+
+    // Ignore backend position updates while dragging or during post-seek stabilization lock (1800ms)
+    if (!isDraggingSeek && !isSeekingLocked) {
+      if (isTrackChanged || isPlayStateChanged) {
+        localPosMs = backendPos
+        seekVal = backendPos
+      }
     }
+
+    prevTitle = curTitle
+    prevArtist = curArtist
+    prevIsPlaying = curPlaying
+
     if (!isDraggingVol && media.volume !== undefined) {
       volVal = media.volume
     }
   })
 
-  // Smooth local timeline progression ticker when playing
+  let lastSeekTimestamp = $state(0)
+
+  // Smooth local timeline progression — rAF gives display-rate updates,
+  // auto-pauses when window is hidden, and avoids setInterval timer drift.
   $effect(() => {
     if (!media.isPlaying || isDraggingSeek) return
 
     let lastTick = performance.now()
-    const interval = setInterval(() => {
+    let rafId: number
+
+    const tick = () => {
       const now = performance.now()
       const elapsed = now - lastTick
       lastTick = now
 
-      if (!isDraggingSeek && media.durationMs > 0) {
+      // Hold local timeline steady for 500ms after seek to match Spotify native audio decoder lag
+      const isSettlingAfterSeek = now - lastSeekTimestamp < 500
+
+      if (!isDraggingSeek && !isSettlingAfterSeek && media.durationMs > 0) {
         localPosMs = Math.min(media.durationMs, localPosMs + elapsed)
         seekVal = localPosMs
       }
-    }, 100)
 
-    return () => clearInterval(interval)
+      rafId = requestAnimationFrame(tick)
+    }
+
+    rafId = requestAnimationFrame(tick)
+
+    return () => cancelAnimationFrame(rafId)
   })
 
   function handleControl(action: string, e?: MouseEvent) {
@@ -110,14 +145,13 @@
     SendMediaControl(action)
   }
 
-  let seekLockTimer: ReturnType<typeof setTimeout> | null = null
-
   function handleSeekStart(e: PointerEvent) {
     if (seekLockTimer) {
       clearTimeout(seekLockTimer)
       seekLockTimer = null
     }
     isDraggingSeek = true
+    isSeekingLocked = true
     const val = Number((e.target as HTMLInputElement).value)
     seekVal = val
     localPosMs = val
@@ -125,6 +159,7 @@
 
   function handleSeekInput(e: Event) {
     isDraggingSeek = true
+    isSeekingLocked = true
     if (seekLockTimer) {
       clearTimeout(seekLockTimer)
       seekLockTimer = null
@@ -138,13 +173,16 @@
     const val = Number((e.target as HTMLInputElement).value)
     seekVal = val
     localPosMs = val
+    isDraggingSeek = false
+    isSeekingLocked = true
+    lastSeekTimestamp = performance.now()
     SendMediaControl(`seek:${val}`)
 
     if (seekLockTimer) clearTimeout(seekLockTimer)
     seekLockTimer = setTimeout(() => {
-      isDraggingSeek = false
+      isSeekingLocked = false
       seekLockTimer = null
-    }, 350)
+    }, 1800)
   }
 
   let volThrottleTimer: ReturnType<typeof setTimeout> | null = null
@@ -272,6 +310,8 @@
         <img src={media.albumArt} alt={media.title} class="card-bg-image" />
       {/if}
       <div class="card-bg-overlay"></div>
+      <!-- Bottom legibility scrim: fades from --c-scrim to transparent -->
+      <div class="card-bg-scrim"></div>
     </div>
 
     <!-- Expanded Player Content -->
@@ -358,8 +398,6 @@
             onpointerdown={handleSeekStart}
             oninput={handleSeekInput}
             onchange={handleSeekCommit}
-            onpointerup={handleSeekCommit}
-            onpointercancel={handleSeekCommit}
           />
         </div>
         <span class="time-label">{formatTime(media.durationMs)}</span>
@@ -371,7 +409,12 @@
           <button
             class="action-btn"
             class:is-active={media.isShuffleActive}
-            title={media.isShuffleActive ? 'Shuffle: On' : 'Shuffle: Off'}
+            disabled={media.isShuffleActive === undefined}
+            title={media.isShuffleActive === undefined
+              ? 'Shuffle: Not supported by current playback'
+              : media.isShuffleActive
+                ? 'Shuffle: On'
+                : 'Shuffle: Off'}
             onclick={(e) => handleControl('shuffle', e)}
           >
             <Shuffle size={13} />
@@ -403,11 +446,14 @@
           <button
             class="action-btn"
             class:is-active={media.autoRepeatMode && media.autoRepeatMode > 0}
-            title={media.autoRepeatMode === 1
-              ? 'Repeat: One Track'
-              : media.autoRepeatMode === 2
-                ? 'Repeat: All Tracks'
-                : 'Repeat: Off'}
+            disabled={media.autoRepeatMode === undefined}
+            title={media.autoRepeatMode === undefined
+              ? 'Repeat: Not supported by current playback'
+              : media.autoRepeatMode === 1
+                ? 'Repeat: One Track'
+                : media.autoRepeatMode === 2
+                  ? 'Repeat: All Tracks'
+                  : 'Repeat: Off'}
             onclick={(e) => handleControl('repeat', e)}
           >
             {#if media.autoRepeatMode === 1}
@@ -734,16 +780,14 @@
     z-index: 0;
     pointer-events: none;
     overflow: hidden;
-    border-radius: 16px;
-    border: 1px solid var(--c-border, rgba(255, 255, 255, 0.12));
   }
 
   .card-bg-image {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    opacity: 0.85;
-    filter: brightness(0.65);
+    opacity: 0.65;
+    filter: brightness(0.42);
   }
 
   .card-bg-overlay {
@@ -751,19 +795,25 @@
     inset: 0;
     background: linear-gradient(
       180deg,
-      rgba(0, 0, 0, 0.35) 0%,
-      rgba(0, 0, 0, 0.65) 60%,
-      rgba(0, 0, 0, 0.88) 100%
+      var(--c-scrim, rgba(0, 0, 0, 0.35)) 0%,
+      transparent 50%
     );
+    opacity: 0.55;
   }
 
-  :global([data-theme='light']) .card-bg-overlay {
+  /* Bottom legibility scrim — themed, anchored behind controls & metadata */
+  .card-bg-scrim {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 110px;
     background: linear-gradient(
-      180deg,
-      rgba(0, 0, 0, 0.25) 0%,
-      rgba(0, 0, 0, 0.55) 60%,
-      rgba(0, 0, 0, 0.78) 100%
+      to top,
+      var(--c-scrim, rgba(0, 0, 0, 0.72)) 0%,
+      transparent 100%
     );
+    pointer-events: none;
   }
 
   .expanded-card {
@@ -901,7 +951,8 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-top: 2px;
+    margin-top: 8px;
+    margin-bottom: 4px;
   }
 
   .time-label {
@@ -967,7 +1018,6 @@
       0 0 20px #ff007f,
       inset 0 0 4px #ffffff;
     border-radius: 9999px;
-    transition: width 0.1s linear;
   }
 
   .capsule-track-head {
@@ -984,7 +1034,6 @@
       0 0 26px #a855f7;
     z-index: 10;
     pointer-events: none;
-    transition: left 0.1s linear;
   }
 
   .scrub-input {
@@ -1002,6 +1051,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
+    margin-top: 6px;
   }
 
   .nav-controls {
@@ -1028,6 +1078,13 @@
   .action-btn:hover {
     background: rgba(255, 255, 255, 0.3);
     transform: scale(1.08);
+  }
+
+  .action-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    pointer-events: none;
+    transform: none !important;
   }
 
   .action-btn.is-active {
