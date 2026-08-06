@@ -167,12 +167,30 @@ func onNativeNotification(cStr *byte) uintptr {
 	return 0
 }
 
+var (
+	lastAudioPeak float32 = -1.0
+	peakMu        sync.Mutex
+)
+
 func onNativeAudioPeak(peakBits uintptr) uintptr {
 	if wailsCtx == nil {
 		return 0
 	}
 
 	peak := math.Float32frombits(uint32(peakBits))
+
+	peakMu.Lock()
+	if peak == 0 && lastAudioPeak == 0 {
+		peakMu.Unlock()
+		return 0
+	}
+	if math.Abs(float64(peak-lastAudioPeak)) < 0.012 && peak > 0 {
+		peakMu.Unlock()
+		return 0
+	}
+	lastAudioPeak = peak
+	peakMu.Unlock()
+
 	payload := map[string]interface{}{
 		"type": "audio_peak",
 		"peak": float64(peak),
