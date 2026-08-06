@@ -305,9 +305,9 @@ func (a *App) isAnyFullscreenGameRunning() bool {
 	procGetClassName := user32.NewProc("GetClassNameW")
 	procGetSystemMetrics := user32.NewProc("GetSystemMetrics")
 	procGetForegroundWindow := user32.NewProc("GetForegroundWindow")
+	procGetWindowThreadProcessID := user32.NewProc("GetWindowThreadProcessId")
 
-	titlePtr, _ := syscall.UTF16PtrFromString("Vinta")
-	vintaHwnd, _, _ := procFindWindow.Call(0, uintptr(unsafe.Pointer(titlePtr)))
+	myPid := uint32(os.Getpid())
 
 	smwVal, _, _ := procGetSystemMetrics.Call(0) // SM_CXSCREEN
 	smhVal, _, _ := procGetSystemMetrics.Call(1) // SM_CYSCREEN
@@ -322,28 +322,34 @@ func (a *App) isAnyFullscreenGameRunning() bool {
 		Left, Top, Right, Bottom int32
 	}
 
-	// 1. Check if active foreground window is fullscreen
+	// 1. Check if active foreground window is an external fullscreen application
 	foreHwnd, _, _ := procGetForegroundWindow.Call()
-	if foreHwnd != 0 && foreHwnd != vintaHwnd {
-		var classBuf [256]uint16
-		_, _, _ = procGetClassName.Call(foreHwnd, uintptr(unsafe.Pointer(&classBuf[0])), 256)
-		className := syscall.UTF16ToString(classBuf[:])
-		if className != "Progman" && className != "WorkerW" && className != "Shell_TrayWnd" && className != "Windows.UI.Core.CoreWindow" {
-			var rect RECT
-			_, _, _ = procGetWindowRect.Call(foreHwnd, uintptr(unsafe.Pointer(&rect)))
-			width := rect.Right - rect.Left
-			height := rect.Bottom - rect.Top
-			if rect.Left <= 0 && rect.Top <= 0 && width >= (smw-15) && height >= (smh-15) {
-				return true
+	if foreHwnd != 0 {
+		var forePid uint32
+		_, _, _ = procGetWindowThreadProcessID.Call(foreHwnd, uintptr(unsafe.Pointer(&forePid)))
+		if forePid != myPid {
+			var classBuf [256]uint16
+			_, _, _ = procGetClassName.Call(foreHwnd, uintptr(unsafe.Pointer(&classBuf[0])), 256)
+			className := syscall.UTF16ToString(classBuf[:])
+			if className != "Progman" && className != "WorkerW" && className != "Shell_TrayWnd" && className != "Windows.UI.Core.CoreWindow" {
+				var rect RECT
+				_, _, _ = procGetWindowRect.Call(foreHwnd, uintptr(unsafe.Pointer(&rect)))
+				width := rect.Right - rect.Left
+				height := rect.Bottom - rect.Top
+				if rect.Left <= 0 && rect.Top <= 0 && width >= (smw-15) && height >= (smh-15) {
+					return true
+				}
 			}
 		}
 	}
 
-	// 2. Check if any top-level visible window covers full screen bounds
+	// 2. Check if any top-level visible window (excluding Vinta's own windows) covers full screen bounds
 	var foundFullscreenGame bool
 	cb := syscall.NewCallback(func(hwnd uintptr, _ uintptr) uintptr {
-		if hwnd == vintaHwnd {
-			return 1 // continue
+		var pid uint32
+		_, _, _ = procGetWindowThreadProcessID.Call(hwnd, uintptr(unsafe.Pointer(&pid)))
+		if pid == myPid {
+			return 1 // ignore Vinta's own process windows
 		}
 
 		vis, _, _ := procIsWindowVisible.Call(hwnd)
