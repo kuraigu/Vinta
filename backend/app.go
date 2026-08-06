@@ -107,6 +107,9 @@ func (a *App) Startup(ctx context.Context) {
 		_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwl), style)
 
 		// Start native services interceptor (Notifications + Media controls)
+		// MANDATORY ARCHITECTURE NOTE: DO NOT ADD SLEEP / DEFER DELAYS HERE
+		// Windows Notification Manager registers toast events at window startup. Delaying this listener
+		// causes Vinta to miss initial toast registrations and fail hero image payloads.
 		go services.StartServicesListener(ctx)
 
 		// Start fully click-through; Svelte will call SetWidgetBounds on mount.
@@ -114,16 +117,29 @@ func (a *App) Startup(ctx context.Context) {
 	}
 
 	// Launch background loop to re-assert AlwaysOnTop.
-	// This ensures Vinta stays above games running in Borderless Windowed mode
-	// that might launch after Vinta and steal the Topmost z-band.
+	// Launch background loop to re-assert AlwaysOnTop z-band cleanly without stealing focus or interrupting fullscreen apps.
 	go func() {
+		procSetWindowPos := user32.NewProc("SetWindowPos")
 		for {
 			select {
 			case <-ctx.Done():
 				return
 			default:
-				runtime.WindowSetAlwaysOnTop(ctx, true)
-				time.Sleep(2 * time.Second)
+				time.Sleep(3 * time.Second)
+				if a.isAnyFullscreenGameRunning() {
+					continue
+				}
+				titlePtr, _ := syscall.UTF16PtrFromString("Vinta")
+				hwnd, _, _ := procFindWindow.Call(0, uintptr(unsafe.Pointer(titlePtr)))
+				if hwnd != 0 {
+					// HWND_TOPMOST = -1, SWP_NOMOVE (0x0002) | SWP_NOSIZE (0x0001) | SWP_NOACTIVATE (0x0010)
+					_, _, _ = procSetWindowPos.Call(
+						hwnd,
+						uintptr(^uintptr(0)),
+						0, 0, 0, 0,
+						0x0001|0x0002|0x0010,
+					)
+				}
 			}
 		}
 	}()
@@ -257,43 +273,29 @@ func (a *App) FocusWindow() {
 		return
 	}
 
-	// If any fullscreen game (League of Legends, EVE Online, CS2, Valorant) is active/visible, DO NOT grab focus to prevent tab-outs!
+	// If any fullscreen game or application is active/visible, DO NOT grab focus to prevent tab-outs!
 	if a.isAnyFullscreenGameRunning() {
 		return
 	}
 
+	// Do NOT grab focus if the current active foreground window is an external application
+	procGetForegroundWindow := user32.NewProc("GetForegroundWindow")
+	procGetClassName := user32.NewProc("GetClassNameW")
+	foreHwnd, _, _ := procGetForegroundWindow.Call()
+	if foreHwnd != 0 {
+		var classBuf [256]uint16
+		_, _, _ = procGetClassName.Call(foreHwnd, uintptr(unsafe.Pointer(&classBuf[0])), 256)
+		className := syscall.UTF16ToString(classBuf[:])
+		titlePtr, _ := syscall.UTF16PtrFromString("Vinta")
+		hwnd, _, _ := procFindWindow.Call(0, uintptr(unsafe.Pointer(titlePtr)))
+
+		if foreHwnd != hwnd && className != "Progman" && className != "WorkerW" && className != "Shell_TrayWnd" {
+			return
+		}
+	}
+
 	runtime.WindowShow(a.ctx)
 	runtime.WindowUnminimise(a.ctx)
-	runtime.WindowSetAlwaysOnTop(a.ctx, true)
-
-	titlePtr, _ := syscall.UTF16PtrFromString("Vinta")
-	hwnd, _, _ := procFindWindow.Call(0, uintptr(unsafe.Pointer(titlePtr)))
-	if hwnd != 0 {
-		procGetForegroundWindow := user32.NewProc("GetForegroundWindow")
-		procGetWindowThreadProcessID := user32.NewProc("GetWindowThreadProcessId")
-		procAttachThreadInput := user32.NewProc("AttachThreadInput")
-		procSetForegroundWindow := user32.NewProc("SetForegroundWindow")
-		procSetActiveWindow := user32.NewProc("SetActiveWindow")
-		procSetFocus := user32.NewProc("SetFocus")
-
-		foreHwnd, _, _ := procGetForegroundWindow.Call()
-		if foreHwnd != 0 && foreHwnd != hwnd {
-			foreThread, _, _ := procGetWindowThreadProcessID.Call(foreHwnd, 0)
-			appThread, _, _ := procGetWindowThreadProcessID.Call(hwnd, 0)
-
-			if foreThread != appThread {
-				_, _, _ = procAttachThreadInput.Call(foreThread, appThread, 1)
-				_, _, _ = procSetForegroundWindow.Call(hwnd)
-				_, _, _ = procSetActiveWindow.Call(hwnd)
-				_, _, _ = procSetFocus.Call(hwnd)
-				_, _, _ = procAttachThreadInput.Call(foreThread, appThread, 0)
-				return
-			}
-		}
-		_, _, _ = procSetForegroundWindow.Call(hwnd)
-		_, _, _ = procSetActiveWindow.Call(hwnd)
-		_, _, _ = procSetFocus.Call(hwnd)
-	}
 }
 
 func (a *App) isAnyFullscreenGameRunning() bool {
@@ -301,16 +303,44 @@ func (a *App) isAnyFullscreenGameRunning() bool {
 	procIsWindowVisible := user32.NewProc("IsWindowVisible")
 	procGetWindowRect := user32.NewProc("GetWindowRect")
 	procGetClassName := user32.NewProc("GetClassNameW")
+	procGetSystemMetrics := user32.NewProc("GetSystemMetrics")
+	procGetForegroundWindow := user32.NewProc("GetForegroundWindow")
 
 	titlePtr, _ := syscall.UTF16PtrFromString("Vinta")
 	vintaHwnd, _, _ := procFindWindow.Call(0, uintptr(unsafe.Pointer(titlePtr)))
 
-	var foundFullscreenGame bool
+	smwVal, _, _ := procGetSystemMetrics.Call(0) // SM_CXSCREEN
+	smhVal, _, _ := procGetSystemMetrics.Call(1) // SM_CYSCREEN
+	smw := int32(smwVal)
+	smh := int32(smhVal)
+	if smw == 0 || smh == 0 {
+		smw = int32(screenWidth)
+		smh = int32(screenHeight)
+	}
 
 	type RECT struct {
 		Left, Top, Right, Bottom int32
 	}
 
+	// 1. Check if active foreground window is fullscreen
+	foreHwnd, _, _ := procGetForegroundWindow.Call()
+	if foreHwnd != 0 && foreHwnd != vintaHwnd {
+		var classBuf [256]uint16
+		_, _, _ = procGetClassName.Call(foreHwnd, uintptr(unsafe.Pointer(&classBuf[0])), 256)
+		className := syscall.UTF16ToString(classBuf[:])
+		if className != "Progman" && className != "WorkerW" && className != "Shell_TrayWnd" && className != "Windows.UI.Core.CoreWindow" {
+			var rect RECT
+			_, _, _ = procGetWindowRect.Call(foreHwnd, uintptr(unsafe.Pointer(&rect)))
+			width := rect.Right - rect.Left
+			height := rect.Bottom - rect.Top
+			if rect.Left <= 0 && rect.Top <= 0 && width >= (smw-15) && height >= (smh-15) {
+				return true
+			}
+		}
+	}
+
+	// 2. Check if any top-level visible window covers full screen bounds
+	var foundFullscreenGame bool
 	cb := syscall.NewCallback(func(hwnd uintptr, _ uintptr) uintptr {
 		if hwnd == vintaHwnd {
 			return 1 // continue
@@ -325,7 +355,6 @@ func (a *App) isAnyFullscreenGameRunning() bool {
 		_, _, _ = procGetClassName.Call(hwnd, uintptr(unsafe.Pointer(&classBuf[0])), 256)
 		className := syscall.UTF16ToString(classBuf[:])
 
-		// Ignore Windows system desktop/shell windows
 		if className == "Progman" || className == "WorkerW" || className == "Shell_TrayWnd" || className == "Windows.UI.Core.CoreWindow" {
 			return 1
 		}
@@ -336,18 +365,7 @@ func (a *App) isAnyFullscreenGameRunning() bool {
 		width := rect.Right - rect.Left
 		height := rect.Bottom - rect.Top
 
-		scaleInt := func(v int) int {
-			if a.scale <= 0 {
-				return v
-			}
-			return int(float64(v) * a.scale)
-		}
-
-		sw := int32(scaleInt(screenWidth))
-		sh := int32(scaleInt(screenHeight))
-
-		// Check if window covers screen bounds (exclusive or borderless fullscreen game)
-		if rect.Left <= 0 && rect.Top <= 0 && width >= sw && height >= (sh-10) {
+		if rect.Left <= 0 && rect.Top <= 0 && width >= (smw-15) && height >= (smh-15) {
 			foundFullscreenGame = true
 			return 0 // stop enumeration
 		}
