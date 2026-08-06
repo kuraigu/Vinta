@@ -55,7 +55,6 @@
     Timer,
     Eye,
     MousePointer,
-    BellOff,
     BellRing,
     Calendar,
     Globe,
@@ -562,7 +561,12 @@
   <div class="setting-group">
     <div class="setting-item">
       <div class="setting-label">
-        <BellOff size={14} class="item-icon" />
+        <div class="dnd-label-icon">
+          <Bell size={14} class="item-icon" />
+          {#if $dndStore}
+            <span class="zzz-badge-small">z<sup>Z</sup></span>
+          {/if}
+        </div>
         <span>Do Not Disturb (DND)</span>
       </div>
       <label class="toggle">
@@ -1108,7 +1112,28 @@
   .cache-size-badge {
     margin-left: auto;
     font-size: 10px;
-    opacity: 0.7;
     font-weight: 500;
+  }
+
+  .dnd-label-icon {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .zzz-badge-small {
+    position: absolute;
+    top: -5px;
+    right: -7px;
+    font-size: 7px;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--c-dnd-active-text, #ff9500);
+    letter-spacing: -0.5px;
+    pointer-events: none;
+  }
+
+  .zzz-badge-small sup {
+    font-size: 5px;
   }
 </style>

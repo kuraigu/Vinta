@@ -6,7 +6,7 @@
     children,
     class: className = '',
     enableSwipe = true,
-    ignoreSelector = 'button, .no-drag, input, select, textarea, .custom-select, [role="button"], a'
+    ignoreSelector = 'input, select, textarea, range, .custom-select, .no-swipe, .no-drag'
   } = $props<{
     children?: Snippet
     class?: string

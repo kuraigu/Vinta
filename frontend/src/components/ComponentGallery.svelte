@@ -76,46 +76,14 @@
     onSlideChange(activeRealIndex)
   })
 
-  function goToSlide(targetRealIndex: number) {
-    if (slides.length === 0) return
-    isInstant = false
-    isAnimating = true
-    displayIndex = isLoopingable ? targetRealIndex + 1 : targetRealIndex
-  }
+  let transitionTimer: ReturnType<typeof setTimeout> | null = null
 
-  function nextSlide() {
-    if (slides.length === 0 || isAnimating) return
-    if (!isLoopingable) {
-      if (displayIndex < slides.length - 1) {
-        isAnimating = true
-        displayIndex++
-      }
-      return
+  function finishTransition() {
+    if (transitionTimer) {
+      clearTimeout(transitionTimer)
+      transitionTimer = null
     }
-    if (displayIndex >= clonedSlides.length - 1) return
-    isInstant = false
-    isAnimating = true
-    displayIndex++
-  }
 
-  function prevSlide() {
-    if (slides.length === 0 || isAnimating) return
-    if (!isLoopingable) {
-      if (displayIndex > 0) {
-        isAnimating = true
-        displayIndex--
-      }
-      return
-    }
-    if (displayIndex <= 0) return
-    isInstant = false
-    isAnimating = true
-    displayIndex--
-  }
-
-  function handleTransitionEnd(e?: TransitionEvent) {
-    if (e && (e.target !== e.currentTarget || e.propertyName !== 'transform'))
-      return
     if (!isLoopingable) {
       isAnimating = false
       return
@@ -144,13 +112,91 @@
     }
   }
 
+  function startTransition() {
+    isInstant = false
+    isAnimating = true
+    if (transitionTimer) clearTimeout(transitionTimer)
+    transitionTimer = setTimeout(() => {
+      finishTransition()
+    }, 400)
+  }
+
+  function goToSlide(targetRealIndex: number) {
+    if (slides.length === 0) return
+    if (
+      isLoopingable &&
+      (displayIndex <= 0 || displayIndex >= clonedSlides.length - 1)
+    ) {
+      isInstant = true
+      displayIndex = activeRealIndex + 1
+    }
+    startTransition()
+    displayIndex = isLoopingable ? targetRealIndex + 1 : targetRealIndex
+  }
+
+  function nextSlide() {
+    if (slides.length === 0) return
+    if (!isLoopingable) {
+      if (displayIndex < slides.length - 1) {
+        startTransition()
+        displayIndex++
+      }
+      return
+    }
+
+    if (displayIndex >= clonedSlides.length - 1) {
+      isInstant = true
+      displayIndex = 1
+    } else if (displayIndex <= 0) {
+      isInstant = true
+      displayIndex = clonedSlides.length - 2
+    }
+
+    startTransition()
+    displayIndex++
+  }
+
+  function prevSlide() {
+    if (slides.length === 0) return
+    if (!isLoopingable) {
+      if (displayIndex > 0) {
+        startTransition()
+        displayIndex--
+      }
+      return
+    }
+
+    if (displayIndex >= clonedSlides.length - 1) {
+      isInstant = true
+      displayIndex = 1
+    } else if (displayIndex <= 0) {
+      isInstant = true
+      displayIndex = clonedSlides.length - 2
+    }
+
+    startTransition()
+    displayIndex--
+  }
+
+  function handleTransitionEnd(e?: TransitionEvent) {
+    if (e && (e.target !== e.currentTarget || e.propertyName !== 'transform'))
+      return
+    finishTransition()
+  }
+
   const swipeOptions = $derived({
     axis: 'x' as const,
     enableSwipe: enableSwipe && slides.length > 1,
-    ignoreSelector: '.nav-edge-zone, .dot-btn, select, option, .no-swipe',
+    threshold: 20,
+    dragThreshold: 4,
+    ignoreSelector:
+      '.dot-btn, select, option, range, input, textarea, .no-swipe',
     onDragStart: () => {
       isDragging = true
       isInstant = false
+      if (isAnimating) {
+        finishTransition()
+      }
       dragOffset = 0
     },
     onDragMove: (offset: { x: number; y: number }) => {
