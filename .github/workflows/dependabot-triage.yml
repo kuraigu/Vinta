@@ -1,0 +1,53 @@
+name: Dependabot Triage & Auto-Close
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  check-peer-deps:
+    name: Check Peer Dependency Conflicts
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "20"
+
+      - name: Verify npm Install Peer Dependencies
+        id: npm_check
+        continue-on-error: true
+        run: |
+          cd frontend
+          npm install --dry-run
+
+      - name: Close PR if Peer Dependencies Conflict
+        if: steps.npm_check.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue_number = context.issue.number;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number,
+              body: '⚠️ **Dependabot Triage Notice**: This automated pull request failed dependency resolution due to a peer dependency conflict (e.g. TypeScript version incompatibility with `@typescript-eslint`). Auto-closing this PR to prevent CI pipeline failures.'
+            });
+
+            await github.rest.pulls.update({
+              owner,
+              repo,
+              pull_number: issue_number,
+              state: 'closed'
+            });
