@@ -4,7 +4,6 @@
   import {
     SetWidgetBounds,
     IsTestMode,
-    FocusWindow,
     Quit
   } from '../wailsjs/go/backend/App.js'
   import { EventsOn, LogFatal, LogInfo } from '../wailsjs/runtime/runtime.js'
@@ -484,14 +483,12 @@
 
   function handleExpand() {
     if (expanded) return
-    FocusWindow()
     triggerBlink()
     islandAnim = '0.4s cubic-bezier(0.22, 1, 0.36, 1)'
     expanded = true
   }
 
   function handleIslandClick() {
-    FocusWindow()
     islandAnim = '0.4s cubic-bezier(0.22, 1, 0.36, 1)'
 
     if (isHidden) {

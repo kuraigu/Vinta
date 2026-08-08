@@ -87,7 +87,7 @@
     <DockButton
       variant="success"
       tooltip="Hide Widget"
-      onclick={(e: MouseEvent) => AppControls.doHide(hidePill, e)}
+      onclick={(e: MouseEvent) => AppControls.doHide(navigate, hidePill, e)}
     >
       <EyeOff size={18} />
     </DockButton>

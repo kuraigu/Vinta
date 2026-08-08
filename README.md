@@ -28,6 +28,9 @@ Inspired by this heritage, Vinta brings that same fluid grace to your desktop in
 - **Customizable Appearance & Themes:** Personalize your island with dark and light modes, customizable opacity, ambient glow intensity, and compact width options.
 - **Flexible Screen Positioning:** Drag the island horizontally to align with your setup, or double-click anytime to return it to center.
 
+> [!NOTE]
+> **PC Gaming Note:** Vinta may not work well with **Exclusive Fullscreen** games, but works smoothly with **Fullscreen** and **Borderless** window modes. If Vinta hides or minimizes when launching a game, switch your game's display settings to **Fullscreen** or **Borderless**.
+
 ---
 
 ## Documentation & Community
