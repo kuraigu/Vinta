@@ -4,7 +4,6 @@
   import {
     SetWidgetBounds,
     IsTestMode,
-    FocusWindow,
     Quit
   } from '../wailsjs/go/backend/App.js'
   import { EventsOn, LogFatal, LogInfo } from '../wailsjs/runtime/runtime.js'
@@ -29,6 +28,7 @@
     autoHideDisplayStore,
     notifAutoWakeStore,
     globalMediaStore,
+    audioPeakStore,
     type MediaData,
     notifData,
     notificationPermissionDenied,
@@ -51,6 +51,7 @@
   let islandConfig = $state<IslandConfig>(homeConfig)
 
   let expanded = $state(false)
+  // eslint-disable-next-line svelte/prefer-writable-derived
   let cssExpanded = $state(false)
   let isBlinking = $state(false)
 
@@ -62,14 +63,7 @@
   }
 
   $effect(() => {
-    if (expanded) {
-      const timer = window.setTimeout(() => {
-        cssExpanded = true
-      }, 50)
-      return () => window.clearTimeout(timer)
-    } else {
-      cssExpanded = false
-    }
+    cssExpanded = expanded
   })
   let isHidden = $state(false)
 
@@ -176,11 +170,11 @@
 
   // --- Centralized OS Bounds Manager ---
   let currentOSBounds = { w: 0, h: 0, r: 0 }
-  let osBoundsTimeout: number
+  let targetPendingBounds = { w: 0, h: 0, r: 0 }
 
   function applyBounds(w: number, h: number, r: number) {
+    targetPendingBounds = { w, h, r }
     if (w >= currentOSBounds.w && h >= currentOSBounds.h) {
-      clearTimeout(osBoundsTimeout)
       updateBounds(w, h, r)
       currentOSBounds = { w, h, r }
     } else {
@@ -188,12 +182,22 @@
       const maxH = Math.max(currentOSBounds.h, h)
       const maxR = Math.max(currentOSBounds.r, r)
       updateBounds(maxW, maxH, maxR)
+    }
+  }
 
-      clearTimeout(osBoundsTimeout)
-      osBoundsTimeout = window.setTimeout(() => {
-        updateBounds(w, h, r)
-        currentOSBounds = { w, h, r }
-      }, 450)
+  function handleIslandTransitionEnd(e: TransitionEvent) {
+    if (
+      e.target === e.currentTarget &&
+      (e.propertyName === 'width' || e.propertyName === 'height')
+    ) {
+      if (targetPendingBounds.w > 0 && targetPendingBounds.h > 0) {
+        updateBounds(
+          targetPendingBounds.w,
+          targetPendingBounds.h,
+          targetPendingBounds.r
+        )
+        currentOSBounds = { ...targetPendingBounds }
+      }
     }
   }
 
@@ -227,7 +231,12 @@
     }
     activePage = page
     islandConfig = pageConfig
-    expanded = expand
+
+    // Batch the expanded state mutation onto the next visual frame so the browser
+    // parses new DOM nodes before starting the container size transition.
+    requestAnimationFrame(() => {
+      expanded = expand
+    })
     triggerGlow()
   }
 
@@ -243,8 +252,12 @@
     $themeStore = 'dark'
     document.documentElement.setAttribute('data-theme', 'dark')
 
-    // Preload SVG caches in the background
-    preloadIcons()
+    // Preload SVG caches in the background after first frame render
+    if (typeof window.requestIdleCallback === 'function') {
+      window.requestIdleCallback(() => preloadIcons())
+    } else {
+      window.setTimeout(() => preloadIcons(), 500)
+    }
 
     // Check if launched via `scripts.bat test`
     IsTestMode().then((testMode) => {
@@ -311,10 +324,7 @@
 
     EventsOn('audio-peak', (data: Record<string, unknown>) => {
       if (data && typeof data.peak === 'number') {
-        globalMediaStore.update((m) => ({
-          ...m,
-          audioPeak: data.peak as number
-        }))
+        audioPeakStore.set(data.peak as number)
       }
     })
 
@@ -473,14 +483,12 @@
 
   function handleExpand() {
     if (expanded) return
-    FocusWindow()
     triggerBlink()
     islandAnim = '0.4s cubic-bezier(0.22, 1, 0.36, 1)'
     expanded = true
   }
 
   function handleIslandClick() {
-    FocusWindow()
     islandAnim = '0.4s cubic-bezier(0.22, 1, 0.36, 1)'
 
     if (isHidden) {
@@ -495,7 +503,6 @@
   function handleMouseEnter() {
     isHovering = true
     clearTimeout(hideTimeout)
-    FocusWindow()
     if (isHidden && $wakeMethodStore === 'hover') {
       hoverShowTimeout = window.setTimeout(showWidget, 150)
     } else if (!isHidden) {
@@ -539,9 +546,6 @@
         $hiddenPillOffsetXStore = 0
       }
     }}
-    onwheel={() => {
-      FocusWindow()
-    }}
     style="
       transform: translateX({$hiddenPillOffsetXStore}px) {isQuitting
       ? 'scale(0.6) translateY(-20px)'
@@ -578,6 +582,7 @@
       --island-anim: {islandAnim};
     "
     onclick={handleIslandClick}
+    ontransitionend={handleIslandTransitionEnd}
   >
     {#if isHidden}
       {#if $autoHideDisplayStore === 'clock'}

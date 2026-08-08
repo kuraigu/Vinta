@@ -8,12 +8,7 @@ All UI contributions must follow these guidelines to maintain a clean and respon
 
 ### 1. Theme CSS Variables
 
-Never use hardcoded hex or RGB colors like `#ffffff` or `rgb(30, 30, 30)` inside component styles. All visual elements must use theme CSS tokens so light and dark modes switch cleanly:
-
-- **Accent Colors:** `var(--c-primary)`, `var(--c-purple)`, `var(--c-amber)`, `var(--c-warning)`, `var(--c-success)`
-- **Text & Labels:** `var(--c-text-primary)`, `var(--c-text-secondary)`, `var(--c-text-muted)`
-- **Backgrounds & Panels:** `var(--c-item-bg)`, `var(--c-contrast-bg)`, `var(--c-bg)`, `var(--c-dock-popover-bg)`
-- **Borders & Hover States:** `var(--c-border)`, `var(--c-hover)`
+Never use hardcoded hex or RGB colors like `#ffffff` or `rgb(30, 30, 30)` inside component styles. All visual elements must use theme CSS tokens so themes can switch cleanly.
 
 ### 2. Iconography Standards
 
@@ -60,4 +55,3 @@ Vinta supports custom community themes (including anime-styled or custom backgro
 - **Never use native HTML `<select>` elements**: Standard `<select>` elements create native OS popups that bleed through transparent Tauri/Wails webview boundaries, clip inside scrollable containers (`overflow: hidden` / `overflow-y: auto`), and break when hovering over background elements.
 - **Use `<CustomSelect>`**: Always import and use `CustomSelect` from `frontend/src/components/CustomSelect.svelte`.
 - **Swipe Protection**: `<CustomSelect>` includes `.no-swipe` and pointer event suppression to ensure opening and scrolling options inside carousel viewports (`ComponentGallery`) does not trigger unwanted slide navigation.
-

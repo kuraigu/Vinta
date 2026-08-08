@@ -13,7 +13,7 @@
   import { SendMediaControl } from '../../wailsjs/go/backend/App.js'
   import Clock from './Clock.svelte'
   import DynamicEqualizer from './DynamicEqualizer.svelte'
-  import { globalMediaStore, notifData } from '../store'
+  import { globalMediaStore, audioPeakStore, notifData } from '../store'
   import {
     Volume2,
     VolumeX,
@@ -100,12 +100,13 @@
 
   let lastSeekTimestamp = $state(0)
 
-  // Smooth local timeline progression — rAF gives display-rate updates,
-  // auto-pauses when window is hidden, and avoids setInterval timer drift.
+  // Throttled local timeline progression — rAF runs display-rate interpolation locally,
+  // but only mutates Svelte 5 $state at ~10 FPS (100ms intervals) to eliminate reactive signal thrashing.
   $effect(() => {
     if (!media.isPlaying || isDraggingSeek) return
 
     let lastTick = performance.now()
+    let lastStateUpdate = performance.now()
     let rafId: number
 
     const tick = () => {
@@ -118,7 +119,10 @@
 
       if (!isDraggingSeek && !isSettlingAfterSeek && media.durationMs > 0) {
         localPosMs = Math.min(media.durationMs, localPosMs + elapsed)
-        seekVal = localPosMs
+        if (now - lastStateUpdate >= 100) {
+          seekVal = localPosMs
+          lastStateUpdate = now
+        }
       }
 
       rafId = requestAnimationFrame(tick)
@@ -131,7 +135,22 @@
 
   function handleControl(action: string, e?: MouseEvent) {
     if (e) e.stopPropagation()
-    if (action === 'shuffle') {
+    if (action === 'play_pause') {
+      globalMediaStore.update((m) => ({
+        ...m,
+        isPlaying: !m.isPlaying
+      }))
+    } else if (action === 'play') {
+      globalMediaStore.update((m) => ({
+        ...m,
+        isPlaying: true
+      }))
+    } else if (action === 'pause') {
+      globalMediaStore.update((m) => ({
+        ...m,
+        isPlaying: false
+      }))
+    } else if (action === 'shuffle') {
       globalMediaStore.update((m) => ({
         ...m,
         isShuffleActive: !m.isShuffleActive
@@ -286,7 +305,7 @@
         {#if media.isPlaying}
           <DynamicEqualizer
             isPlaying={media.isPlaying}
-            audioPeak={media.audioPeak || 0}
+            audioPeak={$audioPeakStore}
             variant="minimal"
             barCount={4}
           />
@@ -370,7 +389,7 @@
           <div class="spectrum-bars-container">
             <DynamicEqualizer
               isPlaying={media.isPlaying}
-              audioPeak={media.audioPeak || 0}
+              audioPeak={$audioPeakStore}
               variant="full"
               barCount={32}
               {progressPercent}
@@ -1088,10 +1107,13 @@
   }
 
   .action-btn.is-active {
-    background: var(--c-primary, #6366f1);
-    border-color: rgba(255, 255, 255, 0.5);
-    color: #ffffff;
-    box-shadow: 0 0 10px rgba(99, 102, 241, 0.5);
+    background: var(--c-media-btn-active-bg, #ffffff);
+    border-color: var(--c-media-btn-active-border, rgba(255, 255, 255, 0.6));
+    color: var(--c-media-btn-active-text, #000000);
+    box-shadow: var(
+      --c-media-btn-active-glow,
+      0 0 10px rgba(255, 255, 255, 0.6)
+    );
   }
 
   .volume-control {

@@ -40,6 +40,8 @@ export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
   let opts = options
   let isDragging = false
   let hasMovedFar = false
+  let preventNextClick = false
+  let clearClickTimeout: ReturnType<typeof setTimeout> | null = null
   let isVerticalScroll = false
   let isLockedToAxis = false
   let scrollTarget: HTMLElement | null = null
@@ -61,16 +63,24 @@ export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
     )
       return
     if (opts.enableSwipe === false) return
-    if (
-      opts.ignoreSelector &&
-      (e.target as HTMLElement).closest(opts.ignoreSelector)
-    )
-      return
+    const defaultIgnore =
+      'select, option, input, textarea, range, .custom-select, .custom-select-trigger, .custom-select-options, .custom-select-option, .no-swipe'
+    const fullIgnoreSelector = opts.ignoreSelector
+      ? `${defaultIgnore}, ${opts.ignoreSelector}`
+      : defaultIgnore
+
+    if ((e.target as HTMLElement).closest(fullIgnoreSelector)) return
     if (e.button !== 0 && e.pointerType === 'mouse') return
 
     cancelAnimationFrame(inertiaFrame)
+    if (clearClickTimeout) {
+      clearTimeout(clearClickTimeout)
+      clearClickTimeout = null
+    }
+
     isDragging = true
     hasMovedFar = false
+    preventNextClick = false
     isVerticalScroll = false
     isLockedToAxis = false
     scrollTarget = null
@@ -86,10 +96,15 @@ export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
     if (!isDragging) return
     const dx = e.clientX - startX
     const dy = e.clientY - startY
-    const dragThresh = opts.dragThreshold ?? 8
+    const dragThresh = opts.dragThreshold ?? 6
     const requestedAxis = opts.axis ?? 'both'
     const now = performance.now()
     const dt = Math.max(1, now - lastTime)
+
+    const stepY = e.clientY - lastY
+    velocityY = stepY / dt
+    lastY = e.clientY
+    lastTime = now
 
     if (
       !hasMovedFar &&
@@ -109,7 +124,7 @@ export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
       }
 
       hasMovedFar = true
-      isLockedToAxis = true
+      preventNextClick = true
 
       const extEvent = e as ExtendedPointerEvent
       extEvent._swipeHandledAxis = requestedAxis
@@ -128,16 +143,16 @@ export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
       }
     }
 
+    if (!isLockedToAxis && hasMovedFar) {
+      isLockedToAxis = true
+    }
+
     if (!isLockedToAxis) return
 
     if (isVerticalScroll) {
       if (scrollTarget) {
-        const stepY = e.clientY - lastY
         scrollTarget.scrollTop -= stepY
-        velocityY = stepY / dt
       }
-      lastY = e.clientY
-      lastTime = now
       opts.onDragMove?.({ x: 0, y: dy })
     } else {
       opts.onDragMove?.({ x: dx, y: dy })
@@ -150,10 +165,13 @@ export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
 
     const dx = e.clientX - startX
     const dy = e.clientY - startY
-    const thresh = opts.threshold ?? 40
+    const thresh = opts.threshold ?? 20
     const requestedAxis = opts.axis ?? 'both'
 
-    if (Math.abs(dx) > Math.abs(dy)) {
+    const absDx = Math.abs(dx)
+    const absDy = Math.abs(dy)
+
+    if (absDx > absDy) {
       if (requestedAxis !== 'y') {
         if (dx < -thresh) {
           opts.onSwipeLeft?.()
@@ -181,6 +199,12 @@ export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
       }
     }
 
+    if (preventNextClick) {
+      clearClickTimeout = setTimeout(() => {
+        preventNextClick = false
+      }, 300)
+    }
+
     if (isVerticalScroll && scrollTarget && Math.abs(velocityY) > 0.1) {
       let v = velocityY
       const target = scrollTarget
@@ -200,10 +224,14 @@ export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
   }
 
   function handleClickCapture(e: MouseEvent) {
-    if (hasMovedFar) {
+    if (preventNextClick) {
       e.stopPropagation()
       e.preventDefault()
-      hasMovedFar = false
+      preventNextClick = false
+      if (clearClickTimeout) {
+        clearTimeout(clearClickTimeout)
+        clearClickTimeout = null
+      }
     }
   }
 
@@ -219,6 +247,7 @@ export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
     },
     destroy() {
       cancelAnimationFrame(inertiaFrame)
+      if (clearClickTimeout) clearTimeout(clearClickTimeout)
       node.removeEventListener('pointerdown', handlePointerDown)
       node.removeEventListener('pointermove', handlePointerMove)
       node.removeEventListener('pointerup', handlePointerUp)

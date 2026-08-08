@@ -63,8 +63,13 @@ export const AppControls = {
     navigate(fallback.page, fallback.config, false)
   },
 
-  doHide: (hidePill: () => void, e: Event) => {
+  doHide: (navigate: NavFn, hidePill: () => void, e: Event) => {
     e.stopPropagation()
+    e.preventDefault() // Good practice to include this if e is provided
+
+    const fallback = getFallbackPage()
+    navigate(fallback.page, fallback.config, false)
+
     hidePill()
   },
 

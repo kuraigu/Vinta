@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	goruntime "runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -19,10 +20,19 @@ import (
 )
 
 var (
-	user32            = syscall.NewLazyDLL("user32.dll")
-	procGetWindowLong = user32.NewProc("GetWindowLongW")
-	procSetWindowLong = user32.NewProc("SetWindowLongW")
-	procFindWindow    = user32.NewProc("FindWindowW")
+	user32                       = syscall.NewLazyDLL("user32.dll")
+	procGetWindowLong            = user32.NewProc("GetWindowLongW")
+	procSetWindowLong            = user32.NewProc("SetWindowLongW")
+	procSetWindowLongPtr         = user32.NewProc("SetWindowLongPtrW")
+	procCallWindowProc           = user32.NewProc("CallWindowProcW")
+	procFindWindow               = user32.NewProc("FindWindowW")
+	procEnumChildWindows         = user32.NewProc("EnumChildWindows")
+	procGetDesktopWindow         = user32.NewProc("GetDesktopWindow")
+	procGetWindow                = user32.NewProc("GetWindow")
+	procGetWindowThreadProcessID = user32.NewProc("GetWindowThreadProcessId")
+	procGetClassName             = user32.NewProc("GetClassNameW")
+	procSetWinEventHook          = user32.NewProc("SetWinEventHook")
+	procEnumWindows              = user32.NewProc("EnumWindows")
 
 	gdi32                  = syscall.NewLazyDLL("gdi32.dll")
 	procCreateRoundRectRgn = gdi32.NewProc("CreateRoundRectRgn")
@@ -35,6 +45,20 @@ const (
 	//nolint:revive // Windows API constants
 	GWL_EXSTYLE = -20
 	//nolint:revive // Windows API constants
+	GWLP_WNDPROC = -4
+	//nolint:revive // Windows API constants
+	WM_ACTIVATE = 0x0006
+	//nolint:revive // Windows API constants
+	WM_MOUSEACTIVATE = 0x0021
+	//nolint:revive // Windows API constants
+	WM_NCACTIVATE = 0x0086
+	//nolint:revive // Windows API constants
+	WM_PARENTNOTIFY = 0x0210
+	//nolint:revive // Windows API constants
+	MA_NOACTIVATE = 3
+	//nolint:revive // Windows API constants
+	WS_EX_TOPMOST = 0x00000008
+	//nolint:revive // Windows API constants
 	WS_EX_LAYERED = 0x00080000
 	//nolint:revive // Windows API constants
 	WS_EX_APPWINDOW = 0x00040000
@@ -44,7 +68,227 @@ const (
 	WS_EX_NOACTIVATE = 0x08000000
 	OutsidePadding   = 15
 	rgnOr            = 2
+
+	//nolint:revive // Windows API constants
+	GW_CHILD = 5
+	//nolint:revive // Windows API constants
+	GW_HWNDNEXT = 2
+	//nolint:revive // Windows API constants
+	EVENT_SYSTEM_FOREGROUND = 0x0003
+	//nolint:revive // Windows API constants
+	WINEVENT_OUTOFCONTEXT = 0x0000
 )
+
+func getMyWindowHwnd() uintptr {
+	titlePtr, _ := syscall.UTF16PtrFromString("Vinta")
+	hwnd, _, _ := procFindWindow.Call(0, uintptr(unsafe.Pointer(titlePtr)))
+	if hwnd != 0 {
+		return hwnd
+	}
+
+	myPid := uint32(os.Getpid())
+	var targetHwnd uintptr
+	cb := syscall.NewCallback(func(h uintptr, _ uintptr) uintptr {
+		var pid uint32
+		_, _, _ = procGetWindowThreadProcessID.Call(h, uintptr(unsafe.Pointer(&pid)))
+		if pid == myPid {
+			var classBuf [256]uint16
+			_, _, _ = procGetClassName.Call(h, uintptr(unsafe.Pointer(&classBuf[0])), 256)
+			className := syscall.UTF16ToString(classBuf[:])
+			if className != "IME" && className != "MSCTFIME UI" && className != "Chrome_WidgetWin_0" && className != "Intermediate D3D Window" {
+				targetHwnd = h
+				return 0
+			}
+		}
+		return 1
+	})
+	_, _, _ = procEnumWindows.Call(cb, 0)
+	if targetHwnd != 0 {
+		return targetHwnd
+	}
+
+	desktop, _, _ := procGetDesktopWindow.Call()
+	child, _, _ := procGetWindow.Call(desktop, uintptr(GW_CHILD))
+	for child != 0 {
+		var pid uint32
+		_, _, _ = procGetWindowThreadProcessID.Call(child, uintptr(unsafe.Pointer(&pid)))
+		if pid == myPid {
+			var classBuf [256]uint16
+			_, _, _ = procGetClassName.Call(child, uintptr(unsafe.Pointer(&classBuf[0])), 256)
+			className := syscall.UTF16ToString(classBuf[:])
+			if className != "IME" && className != "MSCTFIME UI" {
+				return child
+			}
+		}
+		child, _, _ = procGetWindow.Call(child, uintptr(GW_HWNDNEXT))
+	}
+	return 0
+}
+
+var (
+	wndProcCallback uintptr
+	subclassedMap   = make(map[uintptr]uintptr)
+)
+
+// setupForegroundEventHook registers a WinEvent hook on a dedicated OS-locked thread
+// with a Win32 message pump to maintain topmost Z-order on window changes without
+// stealing focus or causing fullscreen games to minimize.
+func setupForegroundEventHook(vintaHwnd uintptr) {
+	if vintaHwnd == 0 {
+		return
+	}
+
+	procSetWindowPos := user32.NewProc("SetWindowPos")
+	procGetMessage := user32.NewProc("GetMessageW")
+	procDispatchMessage := user32.NewProc("DispatchMessageW")
+	procTranslateMessage := user32.NewProc("TranslateMessage")
+	procUnhookWinEvent := user32.NewProc("UnhookWinEvent")
+
+	type MSG struct {
+		Hwnd    uintptr
+		Message uint32
+		WParam  uintptr
+		LParam  uintptr
+		Time    uint32
+		Pt      [2]int32
+	}
+
+	reassertTopmost := func() {
+		// HWND_TOPMOST = ^uintptr(0), SWP_NOSIZE (0x0001) | SWP_NOMOVE (0x0002) | SWP_NOACTIVATE (0x0010) | SWP_NOOWNERZORDER (0x0200) | SWP_NOSENDCHANGING (0x0400)
+		_, _, _ = procSetWindowPos.Call(
+			vintaHwnd,
+			uintptr(^uintptr(0)),
+			0, 0, 0, 0,
+			0x0001|0x0002|0x0010|0x0200|0x0400,
+		)
+	}
+
+	go func() {
+		goruntime.LockOSThread()
+
+		cb := syscall.NewCallback(func(_ uintptr, event uint32, fgHwnd uintptr, _ int32, _ int32, _ uint32, _ uint32) uintptr {
+			if event == EVENT_SYSTEM_FOREGROUND && fgHwnd != 0 && fgHwnd != vintaHwnd {
+				// Only re-assert if foreground window is not a fullscreen exclusive game to avoid minimizing games
+				if !isAnyFullscreenForegroundWindow(fgHwnd) {
+					reassertTopmost()
+				}
+			}
+			return 0
+		})
+
+		hHook, _, _ := procSetWinEventHook.Call(
+			uintptr(EVENT_SYSTEM_FOREGROUND),
+			uintptr(EVENT_SYSTEM_FOREGROUND),
+			0,
+			cb,
+			0,
+			0,
+			uintptr(WINEVENT_OUTOFCONTEXT),
+		)
+
+		var msg MSG
+		for {
+			ret, _, _ := procGetMessage.Call(uintptr(unsafe.Pointer(&msg)), 0, 0, 0)
+			if ret == 0 || ret == ^uintptr(0) {
+				break
+			}
+			_, _, _ = procTranslateMessage.Call(uintptr(unsafe.Pointer(&msg)))
+			_, _, _ = procDispatchMessage.Call(uintptr(unsafe.Pointer(&msg)))
+		}
+
+		if hHook != 0 {
+			_, _, _ = procUnhookWinEvent.Call(hHook)
+		}
+	}()
+}
+
+func isAnyFullscreenForegroundWindow(fgHwnd uintptr) bool {
+	if fgHwnd == 0 {
+		return false
+	}
+	procGetClassName := user32.NewProc("GetClassNameW")
+	procGetWindowRect := user32.NewProc("GetWindowRect")
+	procGetSystemMetrics := user32.NewProc("GetSystemMetrics")
+
+	var classBuf [256]uint16
+	_, _, _ = procGetClassName.Call(fgHwnd, uintptr(unsafe.Pointer(&classBuf[0])), 256)
+	className := syscall.UTF16ToString(classBuf[:])
+	if className == "Progman" || className == "WorkerW" || className == "Shell_TrayWnd" || className == "Windows.UI.Core.CoreWindow" {
+		return false
+	}
+
+	smwVal, _, _ := procGetSystemMetrics.Call(0) // SM_CXSCREEN
+	smhVal, _, _ := procGetSystemMetrics.Call(1) // SM_CYSCREEN
+	smw := int32(smwVal)
+	smh := int32(smhVal)
+	if smw == 0 || smh == 0 {
+		smw = int32(screenWidth)
+		smh = int32(screenHeight)
+	}
+
+	type RECT struct {
+		Left, Top, Right, Bottom int32
+	}
+	var rect RECT
+	_, _, _ = procGetWindowRect.Call(fgHwnd, uintptr(unsafe.Pointer(&rect)))
+	width := rect.Right - rect.Left
+	height := rect.Bottom - rect.Top
+	return rect.Left <= 0 && rect.Top <= 0 && width >= (smw-15) && height >= (smh-15)
+}
+
+func setWindowLongPtr(hwnd uintptr, index int32, value uintptr) uintptr {
+	if procSetWindowLongPtr.Find() == nil {
+		res, _, _ := procSetWindowLongPtr.Call(hwnd, uintptr(index), value)
+		return res
+	}
+	res, _, _ := procSetWindowLong.Call(hwnd, uintptr(index), value)
+	return res
+}
+
+func initNoActivateHook(hwnd uintptr) {
+	if wndProcCallback == 0 {
+		wndProcCallback = syscall.NewCallback(func(h uintptr, msg uint32, wParam uintptr, lParam uintptr) uintptr {
+			switch msg {
+			case WM_MOUSEACTIVATE:
+				return MA_NOACTIVATE
+			case WM_PARENTNOTIFY:
+				if (wParam & 0xFFFF) == 1 { // WM_CREATE
+					if lParam != 0 {
+						subclassWindow(lParam)
+					}
+				}
+			}
+
+			oldProc := subclassedMap[h]
+			if oldProc != 0 {
+				res, _, _ := procCallWindowProc.Call(oldProc, h, uintptr(msg), wParam, lParam)
+				return res
+			}
+			res, _, _ := user32.NewProc("DefWindowProcW").Call(h, uintptr(msg), wParam, lParam)
+			return res
+		})
+	}
+
+	subclassWindow(hwnd)
+
+	enumCb := syscall.NewCallback(func(childHwnd uintptr, _ uintptr) uintptr {
+		subclassWindow(childHwnd)
+		return 1
+	})
+	_, _, _ = procEnumChildWindows.Call(hwnd, enumCb, 0)
+}
+
+func subclassWindow(h uintptr) {
+	if h == 0 {
+		return
+	}
+	if _, exists := subclassedMap[h]; !exists {
+		old := setWindowLongPtr(h, GWLP_WNDPROC, wndProcCallback)
+		if old != 0 && old != wndProcCallback {
+			subclassedMap[h] = old
+		}
+	}
+}
 
 // screenWidth and screenHeight cache the screen dimensions so SetWidgetBounds can center regions correctly.
 var screenWidth, screenHeight int
@@ -75,10 +319,6 @@ func NewApp(icon []byte) *App {
 func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
 
-	// Expand the window to fill the entire screen so CSS has full real estate.
-	// SetWindowRgn is used to define the interactive region — only the pill
-	// area (plus GlowPadding) receives mouse events; everything else is
-	// click-through. The extra padding lets glows and borders render freely.
 	screens, _ := runtime.ScreenGetAll(ctx)
 	if len(screens) > 0 {
 		screen := screens[0]
@@ -90,45 +330,58 @@ func (a *App) Startup(ctx context.Context) {
 		}
 		screenWidth = screen.Size.Width
 		screenHeight = screen.Size.Height
-		// DO NOT REMOVE -1 HERE. IT PREVENTS STREAMER MODE FROM OTHER APPS TO BE TRIGGERED BY VINTA
-		runtime.WindowSetSize(ctx, screen.Size.Width, screen.Size.Height-1)
-		runtime.WindowSetPosition(ctx, 0, 0)
 	}
 
-	// Hide the window from the Windows taskbar by setting the ToolWindow extended style.
-	// Also initialise the click region to empty until Svelte calls SetWidgetBounds.
-	titlePtr, _ := syscall.UTF16PtrFromString("Vinta")
-	hwnd, _, _ := procFindWindow.Call(0, uintptr(unsafe.Pointer(titlePtr)))
-	if hwnd != 0 {
-		gwl := int32(GWL_EXSTYLE)
-		style, _, _ := procGetWindowLong.Call(hwnd, uintptr(gwl))
-		style = style | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE
-		style = style &^ WS_EX_APPWINDOW
-		_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwl), style)
-
-		// Start native services interceptor (Notifications + Media controls)
-		go services.StartServicesListener(ctx)
-
-		// Start fully click-through; Svelte will call SetWidgetBounds on mount.
-		a.updateWindowRegion()
-	}
-
-	// Launch background loop to re-assert AlwaysOnTop.
-	// This ensures Vinta stays above games running in Borderless Windowed mode
-	// that might launch after Vinta and steal the Topmost z-band.
 	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			default:
-				runtime.WindowSetAlwaysOnTop(ctx, true)
-				time.Sleep(2 * time.Second)
+		var hwnd uintptr
+		for i := 0; i < 30; i++ {
+			hwnd = getMyWindowHwnd()
+			if hwnd != 0 {
+				break
 			}
+			time.Sleep(100 * time.Millisecond)
+		}
+
+		if hwnd != 0 {
+			gwl := int32(GWL_EXSTYLE)
+			style, _, _ := procGetWindowLong.Call(hwnd, uintptr(gwl))
+			style = style | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_TOPMOST
+			style = style &^ WS_EX_APPWINDOW
+			_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwl), style)
+
+			initNoActivateHook(hwnd)
+
+			setupForegroundEventHook(hwnd)
+
+			time.AfterFunc(1500*time.Millisecond, func() {
+				initNoActivateHook(hwnd)
+			})
+			time.AfterFunc(3000*time.Millisecond, func() {
+				initNoActivateHook(hwnd)
+			})
+
+			procSetWindowPos := user32.NewProc("SetWindowPos")
+			// HWND_TOPMOST = ^uintptr(0), SWP_NOACTIVATE (0x0010) | SWP_FRAMECHANGED (0x0020) | SWP_SHOWWINDOW (0x0040)
+			overlayHeight := 400
+			if screenHeight > 0 && overlayHeight > screenHeight {
+				overlayHeight = screenHeight
+			}
+			if screenWidth > 0 {
+				_, _, _ = procSetWindowPos.Call(
+					hwnd,
+					uintptr(^uintptr(0)),
+					0, 0,
+					uintptr(screenWidth), uintptr(overlayHeight),
+					0x0010|0x0020|0x0040,
+				)
+			}
+
+			go services.StartServicesListener(ctx)
+
+			a.updateWindowRegion()
 		}
 	}()
 
-	// Launch the system tray
 	go systray.Run(a.onReady, a.onExit)
 }
 
@@ -257,43 +510,29 @@ func (a *App) FocusWindow() {
 		return
 	}
 
-	// If any fullscreen game (League of Legends, EVE Online, CS2, Valorant) is active/visible, DO NOT grab focus to prevent tab-outs!
+	// If any fullscreen game or application is active/visible, DO NOT grab focus to prevent tab-outs!
 	if a.isAnyFullscreenGameRunning() {
 		return
 	}
 
+	// Do NOT grab focus if the current active foreground window is an external application
+	procGetForegroundWindow := user32.NewProc("GetForegroundWindow")
+	procGetClassName := user32.NewProc("GetClassNameW")
+	foreHwnd, _, _ := procGetForegroundWindow.Call()
+	if foreHwnd != 0 {
+		var classBuf [256]uint16
+		_, _, _ = procGetClassName.Call(foreHwnd, uintptr(unsafe.Pointer(&classBuf[0])), 256)
+		className := syscall.UTF16ToString(classBuf[:])
+		titlePtr, _ := syscall.UTF16PtrFromString("Vinta")
+		hwnd, _, _ := procFindWindow.Call(0, uintptr(unsafe.Pointer(titlePtr)))
+
+		if foreHwnd != hwnd && className != "Progman" && className != "WorkerW" && className != "Shell_TrayWnd" {
+			return
+		}
+	}
+
 	runtime.WindowShow(a.ctx)
 	runtime.WindowUnminimise(a.ctx)
-	runtime.WindowSetAlwaysOnTop(a.ctx, true)
-
-	titlePtr, _ := syscall.UTF16PtrFromString("Vinta")
-	hwnd, _, _ := procFindWindow.Call(0, uintptr(unsafe.Pointer(titlePtr)))
-	if hwnd != 0 {
-		procGetForegroundWindow := user32.NewProc("GetForegroundWindow")
-		procGetWindowThreadProcessID := user32.NewProc("GetWindowThreadProcessId")
-		procAttachThreadInput := user32.NewProc("AttachThreadInput")
-		procSetForegroundWindow := user32.NewProc("SetForegroundWindow")
-		procSetActiveWindow := user32.NewProc("SetActiveWindow")
-		procSetFocus := user32.NewProc("SetFocus")
-
-		foreHwnd, _, _ := procGetForegroundWindow.Call()
-		if foreHwnd != 0 && foreHwnd != hwnd {
-			foreThread, _, _ := procGetWindowThreadProcessID.Call(foreHwnd, 0)
-			appThread, _, _ := procGetWindowThreadProcessID.Call(hwnd, 0)
-
-			if foreThread != appThread {
-				_, _, _ = procAttachThreadInput.Call(foreThread, appThread, 1)
-				_, _, _ = procSetForegroundWindow.Call(hwnd)
-				_, _, _ = procSetActiveWindow.Call(hwnd)
-				_, _, _ = procSetFocus.Call(hwnd)
-				_, _, _ = procAttachThreadInput.Call(foreThread, appThread, 0)
-				return
-			}
-		}
-		_, _, _ = procSetForegroundWindow.Call(hwnd)
-		_, _, _ = procSetActiveWindow.Call(hwnd)
-		_, _, _ = procSetFocus.Call(hwnd)
-	}
 }
 
 func (a *App) isAnyFullscreenGameRunning() bool {
@@ -301,19 +540,53 @@ func (a *App) isAnyFullscreenGameRunning() bool {
 	procIsWindowVisible := user32.NewProc("IsWindowVisible")
 	procGetWindowRect := user32.NewProc("GetWindowRect")
 	procGetClassName := user32.NewProc("GetClassNameW")
+	procGetSystemMetrics := user32.NewProc("GetSystemMetrics")
+	procGetForegroundWindow := user32.NewProc("GetForegroundWindow")
+	procGetWindowThreadProcessID := user32.NewProc("GetWindowThreadProcessId")
 
-	titlePtr, _ := syscall.UTF16PtrFromString("Vinta")
-	vintaHwnd, _, _ := procFindWindow.Call(0, uintptr(unsafe.Pointer(titlePtr)))
+	myPid := uint32(os.Getpid())
 
-	var foundFullscreenGame bool
+	smwVal, _, _ := procGetSystemMetrics.Call(0) // SM_CXSCREEN
+	smhVal, _, _ := procGetSystemMetrics.Call(1) // SM_CYSCREEN
+	smw := int32(smwVal)
+	smh := int32(smhVal)
+	if smw == 0 || smh == 0 {
+		smw = int32(screenWidth)
+		smh = int32(screenHeight)
+	}
 
 	type RECT struct {
 		Left, Top, Right, Bottom int32
 	}
 
+	// 1. Check if active foreground window is an external fullscreen application
+	foreHwnd, _, _ := procGetForegroundWindow.Call()
+	if foreHwnd != 0 {
+		var forePid uint32
+		_, _, _ = procGetWindowThreadProcessID.Call(foreHwnd, uintptr(unsafe.Pointer(&forePid)))
+		if forePid != myPid {
+			var classBuf [256]uint16
+			_, _, _ = procGetClassName.Call(foreHwnd, uintptr(unsafe.Pointer(&classBuf[0])), 256)
+			className := syscall.UTF16ToString(classBuf[:])
+			if className != "Progman" && className != "WorkerW" && className != "Shell_TrayWnd" && className != "Windows.UI.Core.CoreWindow" {
+				var rect RECT
+				_, _, _ = procGetWindowRect.Call(foreHwnd, uintptr(unsafe.Pointer(&rect)))
+				width := rect.Right - rect.Left
+				height := rect.Bottom - rect.Top
+				if rect.Left <= 0 && rect.Top <= 0 && width >= (smw-15) && height >= (smh-15) {
+					return true
+				}
+			}
+		}
+	}
+
+	// 2. Check if any top-level visible window (excluding Vinta's own windows) covers full screen bounds
+	var foundFullscreenGame bool
 	cb := syscall.NewCallback(func(hwnd uintptr, _ uintptr) uintptr {
-		if hwnd == vintaHwnd {
-			return 1 // continue
+		var pid uint32
+		_, _, _ = procGetWindowThreadProcessID.Call(hwnd, uintptr(unsafe.Pointer(&pid)))
+		if pid == myPid {
+			return 1 // ignore Vinta's own process windows
 		}
 
 		vis, _, _ := procIsWindowVisible.Call(hwnd)
@@ -325,7 +598,6 @@ func (a *App) isAnyFullscreenGameRunning() bool {
 		_, _, _ = procGetClassName.Call(hwnd, uintptr(unsafe.Pointer(&classBuf[0])), 256)
 		className := syscall.UTF16ToString(classBuf[:])
 
-		// Ignore Windows system desktop/shell windows
 		if className == "Progman" || className == "WorkerW" || className == "Shell_TrayWnd" || className == "Windows.UI.Core.CoreWindow" {
 			return 1
 		}
@@ -336,18 +608,7 @@ func (a *App) isAnyFullscreenGameRunning() bool {
 		width := rect.Right - rect.Left
 		height := rect.Bottom - rect.Top
 
-		scaleInt := func(v int) int {
-			if a.scale <= 0 {
-				return v
-			}
-			return int(float64(v) * a.scale)
-		}
-
-		sw := int32(scaleInt(screenWidth))
-		sh := int32(scaleInt(screenHeight))
-
-		// Check if window covers screen bounds (exclusive or borderless fullscreen game)
-		if rect.Left <= 0 && rect.Top <= 0 && width >= sw && height >= (sh-10) {
+		if rect.Left <= 0 && rect.Top <= 0 && width >= (smw-15) && height >= (smh-15) {
 			foundFullscreenGame = true
 			return 0 // stop enumeration
 		}
@@ -371,8 +632,7 @@ func (a *App) SetDevPillBounds(width int, height int, extraH int, scale float64)
 }
 
 func (a *App) updateWindowRegion() {
-	titlePtr, _ := syscall.UTF16PtrFromString("Vinta")
-	hwnd, _, _ := procFindWindow.Call(0, uintptr(unsafe.Pointer(titlePtr)))
+	hwnd := getMyWindowHwnd()
 	if hwnd != 0 {
 		padding := OutsidePadding
 		// Use tight padding (8px) when hidden to allow ambient glow and smooth drag without clipping
@@ -380,6 +640,14 @@ func (a *App) updateWindowRegion() {
 			padding = 8
 		}
 		setClickRegion(hwnd, a.pillW, a.pillH, a.pillR, a.offsetX, a.devW, a.devH, a.devExtra, padding, a.scale)
+
+		procSetWindowPos := user32.NewProc("SetWindowPos")
+		_, _, _ = procSetWindowPos.Call(
+			hwnd,
+			uintptr(^uintptr(0)),
+			0, 0, 0, 0,
+			0x0001|0x0002|0x0010|0x0200|0x0400,
+		)
 	}
 }
 

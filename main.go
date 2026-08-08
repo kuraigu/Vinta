@@ -26,10 +26,11 @@ func main() {
 	cache := backend.NewCache()
 
 	// Create application with options
+	// NOTE: AlwaysOnTop must be false to not affect our custom AlwaysOnTop code -Innoh Reloza (20260808)
 	err := wails.Run(&options.App{
 		Title:         "Vinta",
 		Frameless:     true,
-		AlwaysOnTop:   true,
+		AlwaysOnTop:   false,
 		DisableResize: true,
 		SingleInstanceLock: &options.SingleInstanceLock{
 			UniqueId: "vinta-dynamic-island",

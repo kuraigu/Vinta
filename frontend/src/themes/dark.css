@@ -61,4 +61,10 @@
 
   /* MEDIA SCRIM — bottom legibility gradient over album artwork */
   --c-scrim: rgba(0, 0, 0, 0.72);
+
+  /* MEDIA CONTROL TOKENS */
+  --c-media-btn-active-bg: #ffffff;
+  --c-media-btn-active-text: #000000;
+  --c-media-btn-active-border: rgba(255, 255, 255, 0.6);
+  --c-media-btn-active-glow: 0 0 10px rgba(255, 255, 255, 0.6);
 }

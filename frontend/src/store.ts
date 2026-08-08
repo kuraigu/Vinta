@@ -211,3 +211,5 @@ export const globalMediaStore = writable<MediaData>({
   isShuffleActive: false,
   autoRepeatMode: 0
 })
+
+export const audioPeakStore = writable<number>(0)

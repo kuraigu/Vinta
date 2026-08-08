@@ -4,7 +4,6 @@
   import { cubicOut } from 'svelte/easing'
   import {
     Bell,
-    BellOff,
     MessageSquareDot,
     Trash2,
     X,
@@ -136,9 +135,11 @@
     img.src = url
   }
 
-  let groupedNotifications = $derived.by(() => {
-    const groups: Record<string, NotificationGroup> = {}
-    for (const notif of filteredNotifications) {
+  let processedNotifications = $derived.by(() => {
+    const items = filteredNotifications.map((n) => ({ ...n }))
+    const senderAvatars: Record<string, string> = {}
+
+    for (const notif of items) {
       if (notif.heroImage && isImageUrl(notif.heroImage)) {
         const sizing = imageSizingCache.get(notif.heroImage)
         if (sizing === 'avatar') {
@@ -149,6 +150,31 @@
         }
       }
 
+      const senderKey = (notif.title || '').trim().toLowerCase()
+      if (senderKey && notif.icon && isImageUrl(notif.icon)) {
+        if (!senderAvatars[senderKey]) {
+          senderAvatars[senderKey] = notif.icon
+        }
+      }
+    }
+
+    for (const notif of items) {
+      const senderKey = (notif.title || '').trim().toLowerCase()
+      if (
+        senderKey &&
+        senderAvatars[senderKey] &&
+        (!notif.icon || !isImageUrl(notif.icon))
+      ) {
+        notif.icon = senderAvatars[senderKey]
+      }
+    }
+
+    return items
+  })
+
+  let groupedNotifications = $derived.by(() => {
+    const groups: Record<string, NotificationGroup> = {}
+    for (const notif of processedNotifications) {
       const brand = getDisplayBrand(notif)
       const groupKey = brand.name
       if (!groups[groupKey]) {
@@ -168,28 +194,6 @@
       }
     }
 
-    // Backfill avatar icons per sender (by title/sender handle) so rapid notifications inherit their own valid avatar
-    for (const group of Object.values(groups)) {
-      const senderAvatars: Record<string, string> = {}
-      for (const item of group.items) {
-        const senderKey = (item.title || '').trim().toLowerCase()
-        if (senderKey && item.icon && isImageUrl(item.icon)) {
-          if (!senderAvatars[senderKey]) {
-            senderAvatars[senderKey] = item.icon
-          }
-        }
-      }
-
-      for (const item of group.items) {
-        const senderKey = (item.title || '').trim().toLowerCase()
-        if (senderKey && senderAvatars[senderKey]) {
-          if (!item.icon || !isImageUrl(item.icon)) {
-            item.icon = senderAvatars[senderKey]
-          }
-        }
-      }
-    }
-
     return Object.values(groups).sort(
       (a, b) => b.latestTimestamp - a.latestTimestamp
     )
@@ -200,12 +204,12 @@
   // notifications — this prevents the pill from flashing "Notification" for the ~50s
   // gap before the WPN copy arrives from dual-channel apps like Rise of Kingdoms.
   let latest = $derived.by(() => {
-    const identified = filteredNotifications.find(
+    const identified = processedNotifications.find(
       (n) =>
         (n.appName && n.appName !== 'Notification') ||
         getDisplayBrand(n).name !== 'Notification'
     )
-    const fallback = filteredNotifications[0]
+    const fallback = processedNotifications[0]
     return (
       identified ||
       fallback ||
@@ -441,7 +445,10 @@
             aria-label="Toggle Do Not Disturb"
           >
             {#if $dndStore}
-              <BellOff size={14} />
+              <div class="dnd-zzz-icon">
+                <Bell size={14} />
+                <span class="zzz-badge">z<sup>Z</sup></span>
+              </div>
             {:else}
               <Bell size={14} />
             {/if}
@@ -489,7 +496,8 @@
             : 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)'};"
           use:swipe={{
             enableSwipe: true,
-            ignoreSelector: 'button, .notif-actions, .expand-indicator',
+            ignoreSelector:
+              '.notif-actions, .expand-indicator, input, textarea, .no-swipe',
             onDragMove: (offset) => {
               itemDragOffsets.set(`item-${notif.id}`, offset.x)
             },
@@ -688,7 +696,8 @@
                   : 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)'};"
                 use:swipe={{
                   enableSwipe: true,
-                  ignoreSelector: 'button, .notif-actions, .expand-indicator',
+                  ignoreSelector:
+                    '.notif-actions, .expand-indicator, input, textarea, .no-swipe',
                   onDragMove: (offset) => {
                     itemDragOffsets.set(`group-${group.brandName}`, offset.x)
                   },
@@ -1094,6 +1103,34 @@
     color: var(--c-dnd-active-text);
     background: var(--c-dnd-active-bg);
     box-shadow: var(--c-dnd-active-border);
+  }
+
+  .dnd-zzz-icon {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .zzz-badge {
+    position: absolute;
+    top: -4px;
+    right: -7px;
+    font-size: 8px;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--c-dnd-active-text);
+    letter-spacing: -0.5px;
+    pointer-events: none;
+    font-family:
+      system-ui,
+      -apple-system,
+      sans-serif;
+  }
+
+  .zzz-badge sup {
+    font-size: 6px;
+    vertical-align: super;
   }
 
   .dnd-btn.dnd-active:hover {
