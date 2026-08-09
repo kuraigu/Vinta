@@ -1,0 +1,190 @@
+name: Multipurpose Issue & Claim Triage
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # Runs every 6 hours
+  issues:
+    types: [opened, assigned, unassigned, reopened]
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: read
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Triage Issue Labels and Inactive Claims
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { owner, repo } = context.repo;
+
+            // Helper to automatically create label if missing in repository
+            async function ensureLabel(name, color, description) {
+              try {
+                await github.rest.issues.getLabel({ owner, repo, name });
+              } catch (err) {
+                if (err.status === 404) {
+                  await github.rest.issues.createLabel({
+                    owner,
+                    repo,
+                    name,
+                    color,
+                    description
+                  }).catch(() => {});
+                }
+              }
+            }
+
+            // Ensure required workflow labels exist automatically
+            await ensureLabel('available', '0e8a16', 'Open for contributors to claim');
+            await ensureLabel('stale-claim', 'e99695', 'Assigned claim inactive for 5+ days');
+
+            // 1. Fetch all open issues in the repository
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: 'open',
+              per_page: 100
+            });
+
+            const now = Date.now();
+            const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
+            const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+
+            for (const issue of issues) {
+              // Skip pull requests
+              if (issue.pull_request) continue;
+
+              const assignees = issue.assignees || [];
+              const labels = (issue.labels || []).map(l => l.name);
+              const isAssigned = assignees.length > 0;
+              const hasAvailableLabel = labels.includes('available');
+              const hasStaleLabel = labels.includes('stale-claim');
+
+              // A. Unclaimed Issue Handling: Ensure 'available' label is present when unassigned
+              if (!isAssigned) {
+                if (!hasAvailableLabel) {
+                  await github.rest.issues.addLabels({
+                    owner,
+                    repo,
+                    issue_number: issue.number,
+                    labels: ['available']
+                  });
+                }
+                if (hasStaleLabel) {
+                  await github.rest.issues.removeLabel({
+                    owner,
+                    repo,
+                    issue_number: issue.number,
+                    name: 'stale-claim'
+                  }).catch(() => {});
+                }
+                continue;
+              }
+
+              // B. Claimed Issue Handling: Remove 'available' label once assigned
+              if (hasAvailableLabel) {
+                await github.rest.issues.removeLabel({
+                  owner,
+                  repo,
+                  issue_number: issue.number,
+                  name: 'available'
+                }).catch(() => {});
+              }
+
+              // C. Activity Calculation for Assignees
+              const assigneeLogins = new Set(assignees.map(a => a.login));
+              let lastActivityTime = new Date(issue.updated_at).getTime();
+
+              // Fetch comments to find latest comment timestamp by an assignee
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                owner,
+                repo,
+                issue_number: issue.number,
+                per_page: 100
+              }).catch(() => []);
+
+              for (const comment of comments) {
+                if (comment.user && assigneeLogins.has(comment.user.login)) {
+                  const commentTime = new Date(comment.created_at).getTime();
+                  if (commentTime > lastActivityTime) {
+                    lastActivityTime = commentTime;
+                  }
+                }
+              }
+
+              // Fetch timeline events to account for commits / cross-reference PR activity by assignees
+              const timelineEvents = await github.paginate(github.rest.issues.listEventsForTimeline, {
+                owner,
+                repo,
+                issue_number: issue.number,
+                per_page: 100
+              }).catch(() => []);
+
+              for (const event of timelineEvents) {
+                const actor = event.actor || event.user;
+                if (actor && assigneeLogins.has(actor.login)) {
+                  const eventTime = new Date(event.created_at || event.submitted_at).getTime();
+                  if (eventTime > lastActivityTime) {
+                    lastActivityTime = eventTime;
+                  }
+                }
+              }
+
+              const timeSinceActivity = now - lastActivityTime;
+
+              // 7-Day Rule: Auto-unassign and mark as 'available'
+              if (timeSinceActivity >= SEVEN_DAYS_MS) {
+                await github.rest.issues.removeAssignees({
+                  owner,
+                  repo,
+                  issue_number: issue.number,
+                  assignees: Array.from(assigneeLogins)
+                });
+
+                if (hasStaleLabel) {
+                  await github.rest.issues.removeLabel({
+                    owner,
+                    repo,
+                    issue_number: issue.number,
+                    name: 'stale-claim'
+                  }).catch(() => {});
+                }
+
+                await github.rest.issues.addLabels({
+                  owner,
+                  repo,
+                  issue_number: issue.number,
+                  labels: ['available']
+                });
+
+                await github.rest.issues.createComment({
+                  owner,
+                  repo,
+                  issue_number: issue.number,
+                  body: 'This issue has been automatically unassigned due to 7 days of assignee inactivity and is once again **available** for anyone to claim!'
+                });
+
+              // 5-Day Rule: Post friendly reminder comment and add 'stale-claim' label
+              } else if (timeSinceActivity >= FIVE_DAYS_MS) {
+                if (!hasStaleLabel) {
+                  await github.rest.issues.addLabels({
+                    owner,
+                    repo,
+                    issue_number: issue.number,
+                    labels: ['stale-claim']
+                  });
+
+                  await github.rest.issues.createComment({
+                    owner,
+                    repo,
+                    issue_number: issue.number,
+                    body: 'Friendly reminder: This issue was assigned 5 days ago with no recent updates. Please post a status update, commit, or progress comment if you are still working on it!'
+                  });
+                }
+              }
+            }
