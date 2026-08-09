@@ -31,7 +31,7 @@ jobs:
 
       - name: Close PR if Peer Dependencies Conflict
         if: steps.npm_check.outcome == 'failure'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const issue_number = context.issue.number;
