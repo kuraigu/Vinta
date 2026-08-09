@@ -1,40 +1,45 @@
 {
-	"projectName": "Vinta",
-	"projectOwner": "kuraigu",
-	"repoType": "github",
-	"repoHost": "https://github.com",
-	"files": ["docs/CONTRIBUTORS.md"],
-	"imageSize": 48,
-	"commit": false,
-	"contributorsPerLine": 5,
-	"badgeTemplate": "[![All Contributors](https://img.shields.io/badge/all_contributors-1-orange.svg?style=flat-square)](#contributors)",
-	"contributorTemplate": "<a href=\"<%= contributor.profile %>\"><img src=\"<%= contributor.avatar_url %>\" width=\"<%= options.imageSize %>px;\" alt=\"<%= contributor.name %>\"/><br /><sub><b><%= contributor.name %></b></sub></a><br /><%= contributor.contributions %>",
-	"types": {
-		"founder": {
-			"symbol": "Founder & Project Lead",
-			"description": "Founder & Project Lead"
-		},
-		"maintainer": {
-			"symbol": "Maintainer",
-			"description": "Maintainer"
-		},
-		"contributor": {
-			"symbol": "Contributor",
-			"description": "Code"
-		},
-		"tester": {
-			"symbol": "Tester",
-			"description": "Tester"
-		}
-	},
-	"contributors": [
-		{
-			"login": "kuraigu",
-			"name": "Innoh Reloza (DippedInSoju)",
-			"avatar_url": "https://github.com/kuraigu.png",
-			"profile": "https://github.com/kuraigu",
-			"contributions": ["founder"]
-		}
-	],
-	"commitConvention": "angular"
+  "projectName": "Vinta",
+  "projectOwner": "kuraigu",
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "files": [
+    "docs/CONTRIBUTORS.md"
+  ],
+  "imageSize": 48,
+  "commit": false,
+  "contributorsPerLine": 5,
+  "badgeTemplate": "[![All Contributors](https://img.shields.io/badge/all_contributors-1-orange.svg?style=flat-square)](#contributors)",
+  "contributorTemplate": "<a href=\"<%= contributor.profile %>\"><img src=\"<%= contributor.avatar_url %>\" width=\"<%= options.imageSize %>px;\" alt=\"<%= contributor.name %>\"/><br /><sub><b><%= contributor.name %></b></sub></a><br /><%= contributor.contributions %>",
+  "types": {
+    "founder": {
+      "symbol": "Founder & Project Lead",
+      "description": "Founder & Project Lead"
+    },
+    "maintainer": {
+      "symbol": "Maintainer",
+      "description": "Maintainer"
+    },
+    "contributor": {
+      "symbol": "Contributor",
+      "description": "Code"
+    },
+    "tester": {
+      "symbol": "Tester",
+      "description": "Tester"
+    }
+  },
+  "contributors": [
+    {
+      "login": "kuraigu",
+      "name": "Innoh Reloza (DippedInSoju)",
+      "avatar_url": "https://github.com/kuraigu.png",
+      "profile": "https://github.com/kuraigu",
+      "contributions": [
+        "founder",
+        "contributor"
+      ]
+    }
+  ],
+  "commitConvention": "angular"
 }
