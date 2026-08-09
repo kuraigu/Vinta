@@ -362,7 +362,7 @@ func (a *App) Startup(ctx context.Context) {
 
 			procSetWindowPos := user32.NewProc("SetWindowPos")
 			// HWND_TOPMOST = ^uintptr(0), SWP_NOACTIVATE (0x0010) | SWP_FRAMECHANGED (0x0020) | SWP_SHOWWINDOW (0x0040)
-			overlayHeight := 400
+			overlayHeight := 500
 			if screenHeight > 0 && overlayHeight > screenHeight {
 				overlayHeight = screenHeight
 			}
@@ -641,12 +641,37 @@ func (a *App) updateWindowRegion() {
 		}
 		setClickRegion(hwnd, a.pillW, a.pillH, a.pillR, a.offsetX, a.devW, a.devH, a.devExtra, padding, a.scale)
 
+		scale := a.scale
+		if scale <= 0 {
+			scale = 1.0
+		}
+		scaleInt := func(v int) int {
+			return int(float64(v) * scale)
+		}
+
+		// Dynamically calculate exact required OS window height based on active widget & dropdown dimensions
+		neededH := scaleInt(5) + scaleInt(a.pillH) + padding*2
+		if a.devH > 0 {
+			neededH += scaleInt(15) + scaleInt(a.devH) + scaleInt(a.devExtra)
+		}
+
+		smwVal, _, _ := user32.NewProc("GetSystemMetrics").Call(0) // SM_CXSCREEN
+		winW := int(smwVal)
+		if winW <= 0 {
+			winW = screenWidth
+		}
+		if winW > 0 {
+			winW = scaleInt(winW)
+		}
+
 		procSetWindowPos := user32.NewProc("SetWindowPos")
+		// SWP_NOMOVE (0x0002) | SWP_NOACTIVATE (0x0010) | SWP_NOOWNERZORDER (0x0200) | SWP_NOSENDCHANGING (0x0400)
 		_, _, _ = procSetWindowPos.Call(
 			hwnd,
 			uintptr(^uintptr(0)),
-			0, 0, 0, 0,
-			0x0001|0x0002|0x0010|0x0200|0x0400,
+			0, 0,
+			uintptr(winW), uintptr(neededH),
+			0x0002|0x0010|0x0200|0x0400,
 		)
 	}
 }
