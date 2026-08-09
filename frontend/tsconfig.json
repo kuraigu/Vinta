@@ -7,6 +7,7 @@
     "baseUrl": ".",
     "allowJs": true,
     "checkJs": true,
+    "noEmit": true,
     "isolatedModules": true,
     "moduleResolution": "bundler",
     "sourceMap": true,
@@ -20,7 +21,10 @@
     "src/**/*.ts",
     "src/**/*.js",
     "src/**/*.svelte",
-    "scripts/**/*.ts"
+    "scripts/**/*.ts",
+    "wailsjs/**/*.d.ts",
+    "wailsjs/**/*.ts",
+    "wailsjs/**/*.js"
   ],
   "references": [
     {

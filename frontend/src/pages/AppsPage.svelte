@@ -19,7 +19,7 @@
   import MediaPage, { config as mediaConfig } from './MediaPage.svelte'
   import SettingsPage, { config as settingsConfig } from './SettingsPage.svelte'
   import ScrollView from '../components/ScrollView.svelte'
-  import { notifData } from '../store'
+  import { notifData, activeSettingsTabStore } from '../store'
 
   const navigate =
     getContext<
@@ -64,15 +64,21 @@
       desc: 'Customization',
       icon: Settings,
       color: 'gradient-dark',
-      action: () => openApp(SettingsPage, settingsConfig)
+      action: () => {
+        activeSettingsTabStore.set('appearance')
+        openApp(SettingsPage, settingsConfig)
+      }
     },
     {
       id: 'about',
       name: 'About',
-      desc: 'Vinta Island v1.0',
+      desc: 'Vinta Island v0.1.0',
       icon: Info,
-      color: 'gradient-dark',
-      action: () => {}
+      color: 'gradient-purple',
+      action: () => {
+        activeSettingsTabStore.set('about')
+        openApp(SettingsPage, settingsConfig)
+      }
     }
   ]
 

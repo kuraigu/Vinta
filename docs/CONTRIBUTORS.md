@@ -6,9 +6,9 @@ All contributors are recognized here and credited directly inside the Vinta desk
 
 ## Core Team
 
-|                                             Avatar                                             | Contributor                                                 | Role                   |
-| :--------------------------------------------------------------------------------------------: | :---------------------------------------------------------- | :--------------------- |
-| <img src="https://github.com/kuraigu.png" width="48" height="48" style="border-radius: 50%" /> | **Innoh Reloza**<br/>[@kuraigu](https://github.com/kuraigu) | Founder & Project Lead |
+|                                             Avatar                                             | Contributor                                                                | Role                   |
+| :--------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------- | :--------------------- |
+| <img src="https://github.com/kuraigu.png" width="48" height="48" style="border-radius: 50%" /> | **Innoh Reloza (DippedInSoju)**<br/>[@kuraigu](https://github.com/kuraigu) | Founder & Project Lead |
 
 ## All Contributors & Testers
 
@@ -18,7 +18,7 @@ All contributors are recognized here and credited directly inside the Vinta desk
 <table>
   <tbody>
     <tr>
-      <td align="center" valign="top" width="20%"><a href="https://github.com/kuraigu"><img src="https://github.com/kuraigu.png" width="48px;" alt="Innoh Reloza"/><br /><sub><b>Innoh Reloza</b></sub></a><br />founder</td>
+      <td align="center" valign="top" width="20%"><a href="https://github.com/kuraigu"><img src="https://github.com/kuraigu.png" width="48px;" alt="Innoh Reloza (DippedInSoju)"/><br /><sub><b>Innoh Reloza (DippedInSoju)</b></sub></a><br />founder</td>
     </tr>
   </tbody>
 </table>
