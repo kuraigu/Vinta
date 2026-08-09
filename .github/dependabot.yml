@@ -10,9 +10,31 @@ updates:
     allow:
       - dependency-type: "all"
     groups:
-      frontend-dependencies:
+      svelte-and-vite:
         patterns:
-          - "*"
+          - "svelte*"
+          - "@sveltejs/*"
+          - "vite*"
+        update-types:
+          - "minor"
+          - "patch"
+      eslint-and-prettier:
+        patterns:
+          - "*eslint*"
+          - "prettier*"
+        update-types:
+          - "minor"
+          - "patch"
+      types-and-utilities:
+        patterns:
+          - "@types/*"
+          - "@tsconfig/*"
+          - "tslib"
+          - "globals"
+          - "lucide-svelte"
+        update-types:
+          - "minor"
+          - "patch"
     labels:
       - "deps"
 
