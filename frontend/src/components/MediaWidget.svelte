@@ -801,12 +801,24 @@
     overflow: hidden;
   }
 
+  .card-bg-wrapper::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 1px var(--c-border, rgba(255, 255, 255, 0.12));
+    pointer-events: none;
+    z-index: 1;
+  }
+
   .card-bg-image {
     width: 100%;
     height: 100%;
     object-fit: cover;
     opacity: 0.65;
     filter: brightness(0.42);
+    position: relative;
+    z-index: 0;
   }
 
   .card-bg-overlay {

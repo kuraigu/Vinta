@@ -10,6 +10,7 @@
 </script>
 
 <script lang="ts">
+  import { onMount } from 'svelte'
   import {
     themeStore,
     shapeStore,
@@ -37,6 +38,7 @@
     notifVolumeStore,
     glowIntensityStore,
     autostartStore,
+    activeSettingsTabStore,
     getInitialTimezone
   } from '../store'
   import ScrollView from '../components/ScrollView.svelte'
@@ -65,7 +67,13 @@
     RotateCcw,
     Power,
     Database,
-    Check
+    Check,
+    Info,
+    ExternalLink,
+    Code,
+    Heart,
+    ShieldCheck,
+    Layers
   } from 'lucide-svelte'
 
   import { searchCities } from '../services/weatherService'
@@ -203,8 +211,63 @@
 
   import {
     SetAutostart,
-    SetHardwareAcceleration
+    SetHardwareAcceleration,
+    GetAppInfo,
+    GetContributors
   } from '../../wailsjs/go/backend/App.js'
+
+  interface AppInfoData {
+    name: string
+    version: string
+    gitCommit: string
+    buildType: string
+    buildTime: string
+    isOfficialBuild: boolean
+    goVersion: string
+    arch: string
+    os: string
+    wailsVersion: string
+    repoUrl: string
+  }
+
+  let appInfo = $state<AppInfoData>({
+    name: 'Vinta',
+    version: '0.1.0',
+    gitCommit: 'dev',
+    buildType: 'Development',
+    buildTime: '',
+    isOfficialBuild: false,
+    goVersion: 'go1.23',
+    arch: 'amd64',
+    os: 'windows',
+    wailsVersion: 'v2.13.0',
+    repoUrl: 'https://github.com/kuraigu/Vinta'
+  })
+
+  interface ContributorItem {
+    name: string
+    handle: string
+    role: string
+    avatar: string
+    url: string
+  }
+
+  let contributors = $state<ContributorItem[]>([])
+
+  onMount(() => {
+    GetAppInfo()
+      .then((info) => {
+        if (info) appInfo = info as AppInfoData
+      })
+      .catch(() => {})
+    GetContributors()
+      .then((list) => {
+        if (list && Array.isArray(list) && list.length > 0) {
+          contributors = list as ContributorItem[]
+        }
+      })
+      .catch(() => {})
+  })
 
   const themeOptions = [{ label: 'OLED Dark', value: 'dark' }]
 
@@ -354,10 +417,11 @@
     { id: 'notifications', name: 'Notifications', icon: Bell },
     { id: 'clock', name: 'Clock & Date', icon: Clock },
     { id: 'weather', name: 'Weather', icon: CloudSun },
-    { id: 'system', name: 'System', icon: Cpu }
+    { id: 'system', name: 'System', icon: Cpu },
+    { id: 'about', name: 'About', icon: Info }
   ]
 
-  let activeTab = $state('appearance')
+  let activeTab = $derived($activeSettingsTabStore)
 </script>
 
 {#snippet appearanceSection()}
@@ -795,6 +859,119 @@
   </div>
 {/snippet}
 
+{#snippet aboutSection()}
+  <div class="setting-group about-group">
+    <!-- Brand Header Banner Card -->
+    <div class="about-hero-card">
+      <div class="about-logo-wrapper">
+        <Sparkles size={22} class="about-logo-icon" />
+      </div>
+      <div class="about-hero-text">
+        <div class="about-brand-row">
+          <span class="about-brand-title">{appInfo.name}</span>
+          <span class="about-version-tag">v{appInfo.version}</span>
+          {#if appInfo.isOfficialBuild}
+            <span class="build-badge official">
+              <ShieldCheck size={11} />
+              <span>Verified Build</span>
+            </span>
+          {:else}
+            <span class="build-badge dev">
+              <Code size={11} />
+              <span>Dev ({appInfo.gitCommit || 'custom'})</span>
+            </span>
+          {/if}
+        </div>
+        <span class="about-tagline">Dynamic Island for Windows</span>
+      </div>
+    </div>
+
+    <!-- Technical Architecture Grid (2x2) -->
+    <div class="about-info-grid">
+      <div class="about-info-tile">
+        <div class="tile-label">Architecture</div>
+        <div class="tile-value">{appInfo.os}/{appInfo.arch}</div>
+      </div>
+      <div class="about-info-tile">
+        <div class="tile-label">Build</div>
+        <div class="tile-value">{appInfo.buildTime || 'Development'}</div>
+      </div>
+      <div class="about-info-tile">
+        <div class="tile-label">Go Runtime</div>
+        <div class="tile-value">{appInfo.goVersion}</div>
+      </div>
+      <div class="about-info-tile">
+        <div class="tile-label">Wails Version</div>
+        <div class="tile-value">{appInfo.wailsVersion}</div>
+      </div>
+    </div>
+
+    <!-- Repository Action Buttons -->
+    <div class="about-actions-row">
+      <a
+        href={appInfo.repoUrl}
+        target="_blank"
+        rel="noreferrer"
+        class="action-btn"
+        onclick={(e) => e.stopPropagation()}
+      >
+        <Code size={14} />
+        <span>GitHub Repository</span>
+        <ExternalLink size={12} class="link-icon" />
+      </a>
+      <a
+        href="{appInfo.repoUrl}/releases"
+        target="_blank"
+        rel="noreferrer"
+        class="action-btn"
+        onclick={(e) => e.stopPropagation()}
+      >
+        <Sparkles size={14} />
+        <span>Release Notes</span>
+        <ExternalLink size={12} class="link-icon" />
+      </a>
+    </div>
+
+    <!-- In-App Contributor Recognition Cards Section -->
+    <div class="about-section-box">
+      <div class="about-box-title">
+        <Heart size={13} class="box-icon" />
+        <span>Project Contributors</span>
+      </div>
+
+      <div class="contributors-grid">
+        {#each contributors as contributor (contributor.handle)}
+          <a
+            href={contributor.url}
+            target="_blank"
+            rel="noreferrer"
+            class="contributor-card"
+            onclick={(e) => e.stopPropagation()}
+          >
+            <div class="contributor-meta">
+              <span class="contributor-name">{contributor.name}</span>
+              <span class="contributor-handle">{contributor.handle}</span>
+            </div>
+            <span class="role-pill">{contributor.role}</span>
+          </a>
+        {/each}
+      </div>
+
+      <a
+        href="https://github.com/kuraigu/Vinta/blob/main/docs/CONTRIBUTORS.md"
+        target="_blank"
+        rel="noreferrer"
+        class="contributor-link-btn"
+        onclick={(e) => e.stopPropagation()}
+      >
+        <Layers size={12} />
+        <span>View Full Contributor List (docs/CONTRIBUTORS.md)</span>
+        <ExternalLink size={11} class="link-icon" />
+      </a>
+    </div>
+  </div>
+{/snippet}
+
 <div class="settings-page">
   <div class="header">
     <div class="title">Settings</div>
@@ -809,7 +986,7 @@
           class:active={activeTab === cat.id}
           onclick={(e) => {
             e.stopPropagation()
-            activeTab = cat.id
+            $activeSettingsTabStore = cat.id
           }}
         >
           <cat.icon size={15} class="tab-icon" />
@@ -833,6 +1010,8 @@
           {@render weatherSection()}
         {:else if activeTab === 'system'}
           {@render systemSection()}
+        {:else if activeTab === 'about'}
+          {@render aboutSection()}
         {/if}
       </ScrollView>
     </div>
@@ -1135,5 +1314,240 @@
 
   .zzz-badge-small sup {
     font-size: 5px;
+  }
+
+  /* About Section Styles */
+  .about-hero-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: var(--c-item-bg, rgba(255, 255, 255, 0.06));
+    border: 1px solid var(--c-border);
+  }
+
+  .about-logo-wrapper {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--c-primary), var(--c-purple));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    flex-shrink: 0;
+  }
+
+  .about-hero-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .about-brand-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .about-brand-title {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  .about-version-tag {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 8px;
+    background: var(--c-primary);
+    color: #ffffff;
+  }
+
+  .about-tagline {
+    font-size: 10px;
+    color: var(--c-text-muted);
+  }
+
+  .about-info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+  }
+
+  .build-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 8px;
+  }
+
+  .build-badge.official {
+    background: rgba(52, 199, 89, 0.15);
+    color: var(--c-success);
+    border: 1px solid rgba(52, 199, 89, 0.3);
+  }
+
+  .build-badge.dev {
+    background: rgba(255, 149, 0, 0.15);
+    color: var(--c-warning, #ff9500);
+    border: 1px solid rgba(255, 149, 0, 0.3);
+  }
+
+  .contributors-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 4px;
+    width: 100%;
+  }
+
+  .contributor-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    border-radius: 10px;
+    background: var(--c-hover);
+    border: 1px solid var(--c-border);
+    text-decoration: none;
+    color: var(--c-text-primary);
+    transition: all 0.15s ease;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .contributor-card:hover {
+    background: var(--c-item-bg);
+    border-color: var(--c-primary);
+    transform: translateY(-1px);
+  }
+
+  .contributor-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    margin-right: 8px;
+  }
+
+  .contributor-name {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--c-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    flex-shrink: 1;
+  }
+
+  .contributor-handle {
+    font-size: 10px;
+    color: var(--c-text-muted);
+    font-weight: 500;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .role-pill {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 6px;
+    background: var(--c-primary);
+    color: #ffffff;
+    flex-shrink: 0;
+  }
+
+  .about-info-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: var(--c-item-bg);
+    border: 1px solid var(--c-border);
+    text-align: center;
+  }
+
+  .tile-label {
+    font-size: 9px;
+    color: var(--c-text-muted);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    text-align: center;
+    width: 100%;
+  }
+
+  .tile-value {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--c-text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    text-align: center;
+    width: 100%;
+  }
+
+  .about-section-box {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: var(--c-item-bg);
+    border: 1px solid var(--c-border);
+  }
+
+  .about-box-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--c-text-primary);
+  }
+
+  .contributor-link-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--c-primary);
+    text-decoration: none;
+    padding: 4px 8px;
+    border-radius: 8px;
+    background: var(--c-hover);
+    transition: all 0.15s ease;
+    margin-top: 4px;
+  }
+
+  .contributor-link-btn:hover {
+    background: var(--c-item-bg);
+    color: var(--c-text-primary);
+  }
+
+  .about-actions-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .about-actions-row .action-btn {
+    text-decoration: none;
+    box-sizing: border-box;
   }
 </style>

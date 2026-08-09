@@ -1,6 +1,7 @@
 import { writable, get } from 'svelte/store'
 
 export const devTestingStore = writable<boolean>(false)
+export const activeSettingsTabStore = writable<string>('appearance')
 
 function persistentWritable<T>(key: string, initialValue: T) {
   const stored = localStorage.getItem(key)

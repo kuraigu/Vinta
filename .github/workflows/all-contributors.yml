@@ -30,8 +30,35 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Update Contributors List
+      - name: Parse Merged PR Details and Sync Preferred Name
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            # Extract latest merged PR details using GitHub CLI
+            PR_JSON=$(gh pr list --state merged --limit 1 --json number,body,author 2>/dev/null || echo "[]")
+            PR_NUM=$(echo "$PR_JSON" | jq -r '.[0].number // empty')
+            PR_AUTHOR=$(echo "$PR_JSON" | jq -r '.[0].author.login // empty')
+            BODY_TEXT=$(echo "$PR_JSON" | jq -r '.[0].body // empty')
+
+            if [ -n "$PR_NUM" ] && [ -n "$PR_AUTHOR" ]; then
+              # Check if contributor requested anonymity / opt-out
+              if echo "$BODY_TEXT" | grep -qi "\[x\] I prefer to remain anonymous"; then
+                echo "Contributor $PR_AUTHOR opted out of public recognition."
+              else
+                # Extract Preferred Display Name if specified in PR template
+                PREFERRED_NAME=$(echo "$BODY_TEXT" | grep -i "Preferred Display Name:" | sed -E 's/.*Preferred Display Name:[[:space:]]*//I' | sed 's/\[Leave blank to use your GitHub display name\]//g' | xargs)
+
+                if [ -n "$PREFERRED_NAME" ]; then
+                  echo "Syncing $PR_AUTHOR with preferred display name: $PREFERRED_NAME"
+                  npx all-contributors-cli add "$PR_AUTHOR" contributor --name "$PREFERRED_NAME" || true
+                else
+                  echo "Syncing $PR_AUTHOR with default GitHub profile name"
+                  npx all-contributors-cli add "$PR_AUTHOR" contributor || true
+                fi
+              fi
+            fi
+          fi
           npx all-contributors-cli generate
 
       - name: Get Last Commit Info

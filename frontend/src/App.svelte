@@ -878,6 +878,7 @@
     pointer-events: none;
     opacity: 0;
     filter: drop-shadow(0 0 5px var(--island-glow-color));
+    z-index: 10;
   }
 
   .island.is-transition-glow::before {
