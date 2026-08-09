@@ -110,14 +110,16 @@ Use `.\scripts.bat` in your terminal for common tasks:
 
 Please remember to run `.\scripts.bat lint` before opening a Pull Request.
 
-## Working on Issues
+## Working on Issues & Claim Workflow
 
-To keep development organized and avoid double work:
+To keep development organized, prevent duplicated effort, and ensure fair opportunities for contributors:
 
-1. **Check or open an issue first:** Before starting a big feature or fix, leave a comment on the issue saying you would like to work on it.
-2. **Assigning:** Maintainers will assign the issue to you once you leave a comment.
-3. **Staying active:** Any update counts, including a progress comment, status update, or draft PR link. You do not need to push a finished code commit every week.
-4. **Inactivity policy:** If an assigned issue has no update for 7 days, a maintainer will send a friendly ping. If there is no response within 48 hours after the ping, the issue will be unassigned so someone else can work on it.
+1. **Claim before you code:** Before starting work or opening a Pull Request, comment on the issue asking to be assigned (e.g. "I'd like to work on this"). A maintainer will assign the issue to you once confirmed. Please do not open a PR for an issue you have not been assigned to first to avoid duplicating someone else's in-progress work.
+2. **`available` Label & One Assignee at a Time:** Unclaimed issues are automatically tagged with the `available` label. Once assigned, the `available` label is removed and the issue is considered claimed. If you are interested in an already-assigned issue, comment to queue up as next in line if it reopens.
+3. **Inactivity Counting & Auto-Avail (5 & 7-Day Policy):** Assigned issues require active progress. Inactivity is tracked using the latest assignee comment, commit reference, or status update:
+   - **5 Days Inactive:** An automated reminder comment is posted on the issue and tagged `stale-claim`.
+   - **7 Days Inactive:** The issue claim expires. It is automatically unassigned, tagged `available`, and reopened for anyone to claim.
+4. **Unclaimed Issues:** Issues labeled `available` (or with no assignees) are open for anyone to claim, first-come first-served via an issue comment.
 
 ## Testing and Bug Reporting
 
