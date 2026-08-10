@@ -18,16 +18,6 @@
   {#if !expanded}
     <MediaWidget expanded={false} />
   {:else}
-    <div class="header">
-      <div class="header-side left">
-        <div class="title">Now Playing</div>
-      </div>
-      <div class="header-side right">
-        <div class="clock-wrapper">
-          <Clock expanded={false} />
-        </div>
-      </div>
-    </div>
     <div class="expanded-content">
       <MediaWidget expanded={true} />
     </div>
@@ -49,45 +39,6 @@
     padding-bottom: 54px; /* Integrated space above Dock */
   }
 
-  .header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 14px 16px 0 16px;
-    margin-bottom: 6px;
-    z-index: 2;
-    pointer-events: none;
-    width: 100%;
-    box-sizing: border-box;
-    flex-shrink: 0;
-  }
-
-  .header-side {
-    flex: 1 1 0;
-    display: flex;
-    align-items: center;
-    min-width: 0;
-  }
-
-  .header-side.right {
-    justify-content: flex-end;
-  }
-
-  .title {
-    font-size: 15px;
-    font-weight: 700;
-    letter-spacing: -0.01em;
-    color: var(--c-text-primary);
-    text-align: left;
-  }
-
-  .clock-wrapper {
-    font-size: 12px;
-    font-weight: 500;
-    opacity: 0.65;
-    font-feature-settings: 'tnum';
-  }
-
   .expanded-content {
     flex: 1;
     display: flex;
@@ -97,7 +48,7 @@
     width: 100%;
     height: 100%;
     min-height: 0;
-    padding: 0 0 4px 0;
+    padding: 0;
     box-sizing: border-box;
   }
 </style>
