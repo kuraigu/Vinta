@@ -9,7 +9,6 @@
 
 <script lang="ts">
   import MediaWidget from '../components/MediaWidget.svelte'
-  import Clock from '../components/Clock.svelte'
 
   let { expanded = false }: { expanded?: boolean } = $props()
 </script>

@@ -57,6 +57,10 @@ function optimizeLucideImports(): Plugin {
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [optimizeLucideImports(), svelte()],
+  optimizeDeps: {
+    include: ['svelte', 'svelte/internal', 'svelte/transition', 'svelte/store'],
+    exclude: ['lucide-svelte']
+  },
   resolve: {
     alias: {
       'lucide-svelte/icons': path.resolve(

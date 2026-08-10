@@ -252,11 +252,11 @@
     $themeStore = 'dark'
     document.documentElement.setAttribute('data-theme', 'dark')
 
-    // Preload SVG caches in the background after first frame render
+    // Preload SVG caches in the background after initial UI has rendered and settled
     if (typeof window.requestIdleCallback === 'function') {
-      window.requestIdleCallback(() => preloadIcons())
+      window.requestIdleCallback(() => preloadIcons(), { timeout: 3000 })
     } else {
-      window.setTimeout(() => preloadIcons(), 500)
+      window.setTimeout(() => preloadIcons(), 2000)
     }
 
     // Check if launched via `scripts.bat test`
