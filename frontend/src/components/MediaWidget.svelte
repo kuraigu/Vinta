@@ -98,6 +98,10 @@
 
   let lastSeekTimestamp = $state(0)
 
+  function handleImgError() {
+    globalMediaStore.update((m) => ({ ...m, albumArt: '' }))
+  }
+
   // Throttled local timeline progression — rAF runs display-rate interpolation locally,
   // but only mutates Svelte 5 $state at ~10 FPS (100ms intervals) to eliminate reactive signal thrashing.
   $effect(() => {
@@ -268,7 +272,12 @@
       >
         <div class="vinyl-groove">
           {#if media.albumArt}
-            <img src={media.albumArt} alt={media.title} class="vinyl-art" />
+            <img
+              src={media.albumArt}
+              alt={media.title}
+              class="vinyl-art"
+              onerror={handleImgError}
+            />
           {:else}
             <div class="vinyl-placeholder">
               <svg
@@ -341,7 +350,12 @@
     <!-- Full-Card Background Image -->
     <div class="card-bg-wrapper">
       {#if media.albumArt}
-        <img src={media.albumArt} alt={media.title} class="card-bg-image" />
+        <img
+          src={media.albumArt}
+          alt={media.title}
+          class="card-bg-image"
+          onerror={handleImgError}
+        />
       {/if}
       <div class="card-bg-overlay"></div>
       <!-- Bottom legibility scrim: fades from --c-scrim to transparent -->
