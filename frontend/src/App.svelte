@@ -312,8 +312,16 @@
           const isLocked = Boolean(
             (m as unknown as Record<string, unknown>)._isPlayStateLocked
           )
+          const incomingArt = (data.albumArt as string) || ''
+          const isSameTrack = data.title === m.title && data.artist === m.artist
+          const resolvedAlbumArt = incomingArt
+            ? incomingArt
+            : isSameTrack && m.albumArt
+              ? m.albumArt
+              : ''
           return {
             ...(data as unknown as MediaData),
+            albumArt: resolvedAlbumArt,
             isPlaying: isLocked ? m.isPlaying : Boolean(data.isPlaying),
             _isPlayStateLocked: isLocked
           }

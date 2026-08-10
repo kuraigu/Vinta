@@ -3,7 +3,10 @@
 
 #include <mmdeviceapi.h>
 #include <endpointvolume.h>
+#include <audiopolicy.h>
+#include <psapi.h>
 #include <winrt/Windows.Media.Control.h>
+#include <algorithm>
 
 #include <atomic>
 #include <mutex>
@@ -30,32 +33,10 @@ static std::atomic<bool> g_emitPending{false};
 
 static std::string g_cachedTrackKey;
 static std::string g_cachedAlbumArt;
+static int g_artFetchCount = 0;
 static std::mutex g_artCacheMutex;
 
-// Cached Audio Endpoint Volume COM interfaces to avoid audiosrv RPC thrashing
-static IAudioEndpointVolume* g_pCachedEndpointVolume = nullptr;
-static IMMDevice* g_pCachedAudioDevice = nullptr;
-static IMMDeviceEnumerator* g_pCachedEnumerator = nullptr;
 static std::mutex g_audioVolMutex;
-
-static void EnsureAudioEndpointVolume() {
-    if (g_pCachedEndpointVolume) return;
-    if (!g_pCachedEnumerator) {
-        HRESULT hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), NULL, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void**)&g_pCachedEnumerator);
-        if (FAILED(hr) || !g_pCachedEnumerator) return;
-    }
-    if (!g_pCachedAudioDevice) {
-        HRESULT hr = g_pCachedEnumerator->GetDefaultAudioEndpoint(eRender, eMultimedia, &g_pCachedAudioDevice);
-        if (FAILED(hr) || !g_pCachedAudioDevice) return;
-    }
-    g_pCachedAudioDevice->Activate(__uuidof(IAudioEndpointVolume), CLSCTX_ALL, NULL, (void**)&g_pCachedEndpointVolume);
-}
-
-static void ReleaseAudioEndpointVolume() {
-    if (g_pCachedEndpointVolume) { g_pCachedEndpointVolume->Release(); g_pCachedEndpointVolume = nullptr; }
-    if (g_pCachedAudioDevice) { g_pCachedAudioDevice->Release(); g_pCachedAudioDevice = nullptr; }
-    if (g_pCachedEnumerator) { g_pCachedEnumerator->Release(); g_pCachedEnumerator = nullptr; }
-}
 
 static void UpdateCurrentSession();
 static void EmitMediaState(bool includeVolume = true);
@@ -63,6 +44,9 @@ static void ScheduleEmit();
 static std::pair<float, bool> GetMasterAudioVolumeAndMute();
 static void SetMasterAudioVolume(float percent);
 static void ToggleMasterAudioMute();
+static std::pair<float, bool> GetMediaAudioVolumeAndMute(const std::string& sourceApp);
+static void SetMediaAudioVolume(const std::string& sourceApp, float percent);
+static void ToggleMediaAudioMute(const std::string& sourceApp);
 static void SendVolumeKey(BYTE vk);
 
 bool IsMediaPlayingState() {
@@ -177,21 +161,31 @@ static void EmitMediaState(bool includeVolume) {
             album = Utf16ToUtf8(props.AlbumTitle().c_str());
 
             std::string trackKey = title + "_" + artist;
+            bool shouldFetchArt = false;
             {
                 std::lock_guard<std::mutex> artLock(g_artCacheMutex);
-                if (!trackKey.empty() && trackKey == g_cachedTrackKey && !g_cachedAlbumArt.empty()) {
+                if (!trackKey.empty() && trackKey != g_cachedTrackKey) {
+                    g_cachedTrackKey = trackKey;
+                    g_cachedAlbumArt = "";
+                    g_artFetchCount = 0;
+                }
+
+                if (!g_cachedAlbumArt.empty()) {
                     albumArt = g_cachedAlbumArt;
+                } else if (g_artFetchCount < 5) {
+                    shouldFetchArt = true;
+                    g_artFetchCount++;
                 }
             }
 
-            if (albumArt.empty() && props.Thumbnail()) {
+            if (shouldFetchArt && props.Thumbnail()) {
                 try {
                     auto stream = props.Thumbnail().OpenReadAsync().get();
-                    albumArt = StreamToBase64(stream);
-                    if (!albumArt.empty() && !trackKey.empty()) {
+                    std::string fetchedArt = StreamToBase64(stream);
+                    if (!fetchedArt.empty()) {
+                        albumArt = fetchedArt;
                         std::lock_guard<std::mutex> artLock(g_artCacheMutex);
-                        g_cachedTrackKey = trackKey;
-                        g_cachedAlbumArt = albumArt;
+                        g_cachedAlbumArt = fetchedArt;
                     }
                 } catch (...) {}
             }
@@ -241,7 +235,7 @@ static void EmitMediaState(bool includeVolume) {
         }
     } catch (...) {}
 
-    auto [volume, isMuted] = GetMasterAudioVolumeAndMute();
+    auto [volume, isMuted] = GetMediaAudioVolumeAndMute(sourceApp);
 
     std::ostringstream json;
     json << "{\"type\":\"media\","
@@ -269,52 +263,197 @@ static void EmitMediaState(bool includeVolume) {
     g_mediaCb(json.str().c_str());
 }
 
-static std::pair<float, bool> GetMasterAudioVolumeAndMute() {
-    float vol = 50.0f;
-    bool muted = false;
+static float g_mediaVolumeStore = 100.0f;
+static bool g_mediaMuteStore = false;
+static std::mutex g_mediaVolStateMutex;
 
-    std::lock_guard<std::mutex> lock(g_audioVolMutex);
-    ComInitScope com;
-    EnsureAudioEndpointVolume();
+static bool GetAppSessionSimpleAudioVolume(const std::string& sourceApp, ISimpleAudioVolume** ppSessionVolume) {
+    if (!ppSessionVolume) return false;
+    *ppSessionVolume = nullptr;
 
-    if (g_pCachedEndpointVolume) {
-        float scalar = 0.5f;
-        BOOL isMuted = FALSE;
-        if (FAILED(g_pCachedEndpointVolume->GetMasterVolumeLevelScalar(&scalar))) {
-            ReleaseAudioEndpointVolume();
-            EnsureAudioEndpointVolume();
-            if (g_pCachedEndpointVolume) {
-                g_pCachedEndpointVolume->GetMasterVolumeLevelScalar(&scalar);
+    IMMDeviceEnumerator* pEnumerator = nullptr;
+    if (FAILED(CoCreateInstance(__uuidof(MMDeviceEnumerator), NULL, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void**)&pEnumerator)) || !pEnumerator) return false;
+
+    IMMDevice* pDevice = nullptr;
+    HRESULT hr = pEnumerator->GetDefaultAudioEndpoint(eRender, eMultimedia, &pDevice);
+    pEnumerator->Release();
+    if (FAILED(hr) || !pDevice) return false;
+
+    IAudioSessionManager2* pSessionManager2 = nullptr;
+    hr = pDevice->Activate(__uuidof(IAudioSessionManager2), CLSCTX_ALL, NULL, (void**)&pSessionManager2);
+    pDevice->Release();
+    if (FAILED(hr) || !pSessionManager2) return false;
+
+    IAudioSessionEnumerator* pSessionEnum = nullptr;
+    hr = pSessionManager2->GetSessionEnumerator(&pSessionEnum);
+    pSessionManager2->Release();
+    if (FAILED(hr) || !pSessionEnum) return false;
+
+    int count = 0;
+    pSessionEnum->GetCount(&count);
+
+    ISimpleAudioVolume* pMatchedVolume = nullptr;
+    ISimpleAudioVolume* pFallbackActiveVolume = nullptr;
+
+    std::string appLower = sourceApp;
+    std::transform(appLower.begin(), appLower.end(), appLower.begin(), ::tolower);
+
+    for (int i = 0; i < count; ++i) {
+        IAudioSessionControl* pSessionControl = nullptr;
+        if (SUCCEEDED(pSessionEnum->GetSession(i, &pSessionControl)) && pSessionControl) {
+            IAudioSessionControl2* pControl2 = nullptr;
+            if (SUCCEEDED(pSessionControl->QueryInterface(__uuidof(IAudioSessionControl2), (void**)&pControl2)) && pControl2) {
+                if (pControl2->IsSystemSoundsSession() == S_OK) {
+                    pControl2->Release();
+                    pSessionControl->Release();
+                    continue;
+                }
+
+                bool isMatch = false;
+
+                // 1. Match Session Identifier & Display Name
+                LPWSTR pswSessionId = nullptr;
+                if (SUCCEEDED(pControl2->GetSessionIdentifier(&pswSessionId)) && pswSessionId) {
+                    std::string sessId = Utf16ToUtf8(pswSessionId);
+                    CoTaskMemFree(pswSessionId);
+                    std::transform(sessId.begin(), sessId.end(), sessId.begin(), ::tolower);
+                    if (!appLower.empty() && sessId.find(appLower) != std::string::npos) {
+                        isMatch = true;
+                    }
+                }
+
+                if (!isMatch) {
+                    LPWSTR pswDisplayName = nullptr;
+                    if (SUCCEEDED(pControl2->GetDisplayName(&pswDisplayName)) && pswDisplayName) {
+                        std::string dispName = Utf16ToUtf8(pswDisplayName);
+                        CoTaskMemFree(pswDisplayName);
+                        std::transform(dispName.begin(), dispName.end(), dispName.begin(), ::tolower);
+                        if (!appLower.empty() && !dispName.empty() && (appLower.find(dispName) != std::string::npos || dispName.find(appLower) != std::string::npos)) {
+                            isMatch = true;
+                        }
+                    }
+                }
+
+                // 2. Match Process Executable Name
+                if (!isMatch) {
+                    DWORD pid = 0;
+                    pControl2->GetProcessId(&pid);
+                    if (pid != 0) {
+                        HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
+                        if (hProcess) {
+                            char procPath[MAX_PATH] = {0};
+                            DWORD dwSize = MAX_PATH;
+                            if (QueryFullProcessImageNameA(hProcess, 0, procPath, &dwSize)) {
+                                std::string procName = procPath;
+                                size_t lastSlash = procName.find_last_of("\\/");
+                                if (lastSlash != std::string::npos) procName = procName.substr(lastSlash + 1);
+                                std::transform(procName.begin(), procName.end(), procName.begin(), ::tolower);
+                                size_t pExe = procName.find(".exe");
+                                if (pExe != std::string::npos) procName = procName.substr(0, pExe);
+
+                                if (!appLower.empty() && !procName.empty()) {
+                                    if (appLower.find(procName) != std::string::npos || procName.find(appLower) != std::string::npos) {
+                                        isMatch = true;
+                                    }
+                                }
+                            }
+                            CloseHandle(hProcess);
+                        }
+                    }
+                }
+
+                if (isMatch) {
+                    pControl2->QueryInterface(__uuidof(ISimpleAudioVolume), (void**)&pMatchedVolume);
+                    pControl2->Release();
+                    pSessionControl->Release();
+                    break;
+                }
+
+                if (!pFallbackActiveVolume) {
+                    AudioSessionState state;
+                    if (SUCCEEDED(pControl2->GetState(&state)) && state == AudioSessionStateActive) {
+                        pControl2->QueryInterface(__uuidof(ISimpleAudioVolume), (void**)&pFallbackActiveVolume);
+                    }
+                }
+
+                pControl2->Release();
             }
-        }
-        vol = scalar * 100.0f;
-        if (g_pCachedEndpointVolume && SUCCEEDED(g_pCachedEndpointVolume->GetMute(&isMuted))) {
-            muted = (isMuted == TRUE);
+            pSessionControl->Release();
         }
     }
 
-    return {vol, muted};
+    pSessionEnum->Release();
+
+    if (pMatchedVolume) {
+        if (pFallbackActiveVolume) pFallbackActiveVolume->Release();
+        *ppSessionVolume = pMatchedVolume;
+        return true;
+    }
+
+    if (pFallbackActiveVolume) {
+        *ppSessionVolume = pFallbackActiveVolume;
+        return true;
+    }
+
+    return false;
 }
 
-static void SetMasterAudioVolume(float percent) {
+static std::pair<float, bool> GetMediaAudioVolumeAndMute(const std::string& sourceApp) {
+    std::lock_guard<std::mutex> lock(g_audioVolMutex);
+    ComInitScope com;
+
+    ISimpleAudioVolume* pAppVolume = nullptr;
+    if (GetAppSessionSimpleAudioVolume(sourceApp, &pAppVolume) && pAppVolume) {
+        float vol = 1.0f;
+        BOOL muted = FALSE;
+        pAppVolume->GetMasterVolume(&vol);
+        pAppVolume->GetMute(&muted);
+        pAppVolume->Release();
+        float volPercent = vol * 100.0f;
+        {
+            std::lock_guard<std::mutex> stLock(g_mediaVolStateMutex);
+            g_mediaVolumeStore = volPercent;
+            g_mediaMuteStore = (muted == TRUE);
+        }
+        return {volPercent, (muted == TRUE)};
+    }
+
+    std::lock_guard<std::mutex> stLock(g_mediaVolStateMutex);
+    return {g_mediaVolumeStore, g_mediaMuteStore};
+}
+
+static void SetMediaAudioVolume(const std::string& sourceApp, float percent) {
     float clamped = std::max(0.0f, std::min(100.0f, percent));
+    {
+        std::lock_guard<std::mutex> stLock(g_mediaVolStateMutex);
+        g_mediaVolumeStore = clamped;
+    }
+
     std::lock_guard<std::mutex> lock(g_audioVolMutex);
     ComInitScope com;
-    EnsureAudioEndpointVolume();
-    if (g_pCachedEndpointVolume) {
-        g_pCachedEndpointVolume->SetMasterVolumeLevelScalar(clamped / 100.0f, NULL);
+
+    ISimpleAudioVolume* pAppVolume = nullptr;
+    if (GetAppSessionSimpleAudioVolume(sourceApp, &pAppVolume) && pAppVolume) {
+        pAppVolume->SetMasterVolume(clamped / 100.0f, NULL);
+        pAppVolume->Release();
     }
 }
 
-static void ToggleMasterAudioMute() {
+static void ToggleMediaAudioMute(const std::string& sourceApp) {
+    bool nextMute = false;
+    {
+        std::lock_guard<std::mutex> stLock(g_mediaVolStateMutex);
+        g_mediaMuteStore = !g_mediaMuteStore;
+        nextMute = g_mediaMuteStore;
+    }
+
     std::lock_guard<std::mutex> lock(g_audioVolMutex);
     ComInitScope com;
-    EnsureAudioEndpointVolume();
-    if (g_pCachedEndpointVolume) {
-        BOOL isMuted = FALSE;
-        if (SUCCEEDED(g_pCachedEndpointVolume->GetMute(&isMuted))) {
-            g_pCachedEndpointVolume->SetMute(!isMuted, NULL);
-        }
+
+    ISimpleAudioVolume* pAppVolume = nullptr;
+    if (GetAppSessionSimpleAudioVolume(sourceApp, &pAppVolume) && pAppVolume) {
+        pAppVolume->SetMute(nextMute ? TRUE : FALSE, NULL);
+        pAppVolume->Release();
     }
 }
 
@@ -346,6 +485,17 @@ void StartMediaService(NativeMediaCallback cb) {
 
         UpdateCurrentSession();
 
+        // Warmup retries to ensure media properties and album art are populated during application startup
+        std::thread([]() {
+            ApartmentScope apt;
+            std::this_thread::sleep_for(std::chrono::milliseconds(250));
+            if (g_mediaRunning) UpdateCurrentSession();
+            std::this_thread::sleep_for(std::chrono::milliseconds(350));
+            if (g_mediaRunning) UpdateCurrentSession();
+            std::this_thread::sleep_for(std::chrono::milliseconds(600));
+            if (g_mediaRunning) UpdateCurrentSession();
+        }).detach();
+
         while (g_mediaRunning) {
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
             if (g_mediaRunning) {
@@ -375,36 +525,40 @@ void StopMediaService() {
         }
         g_sessionManager = nullptr;
     }
-
-    {
-        std::lock_guard<std::mutex> lock(g_audioVolMutex);
-        ReleaseAudioEndpointVolume();
-    }
 }
 
 int ExecuteMediaCommand(const char* command) {
     if (!command) return 0;
     std::string cmd(command);
 
+    std::string sourceApp;
+    {
+        std::lock_guard<std::recursive_mutex> lock(g_sessionMutex);
+        if (g_currentSession) {
+            try { sourceApp = Utf16ToUtf8(g_currentSession.SourceAppUserModelId().c_str()); } catch (...) {}
+        }
+    }
+
     if (cmd.rfind("set_volume:", 0) == 0) {
         float vol = std::stof(cmd.substr(11));
-        SetMasterAudioVolume(vol);
+        SetMediaAudioVolume(sourceApp, vol);
         EmitMediaState(true);
         return 1;
     }
     if (cmd == "volume_up") {
-        SendVolumeKey(VK_VOLUME_UP);
+        auto [curVol, _] = GetMediaAudioVolumeAndMute(sourceApp);
+        SetMediaAudioVolume(sourceApp, curVol + 5.0f);
         EmitMediaState(true);
         return 1;
     }
     if (cmd == "volume_down") {
-        SendVolumeKey(VK_VOLUME_DOWN);
+        auto [curVol, _] = GetMediaAudioVolumeAndMute(sourceApp);
+        SetMediaAudioVolume(sourceApp, curVol - 5.0f);
         EmitMediaState(true);
         return 1;
     }
     if (cmd == "mute") {
-        ToggleMasterAudioMute();
-        SendVolumeKey(VK_VOLUME_MUTE);
+        ToggleMediaAudioMute(sourceApp);
         EmitMediaState(true);
         return 1;
     }
