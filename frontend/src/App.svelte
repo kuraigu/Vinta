@@ -308,7 +308,16 @@
     let prevIsPlaying = false
     EventsOn('media-update', (data: Record<string, unknown>) => {
       if (data) {
-        globalMediaStore.set(data as unknown as MediaData)
+        globalMediaStore.update((m) => {
+          const isLocked = Boolean(
+            (m as unknown as Record<string, unknown>)._isPlayStateLocked
+          )
+          return {
+            ...(data as unknown as MediaData),
+            isPlaying: isLocked ? m.isPlaying : Boolean(data.isPlaying),
+            _isPlayStateLocked: isLocked
+          }
+        })
         const isPlaying = Boolean(data.isPlaying)
         if (
           isPlaying &&

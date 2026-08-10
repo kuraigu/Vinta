@@ -67,23 +67,22 @@
   let isSeekingLocked = $state(false)
   let seekLockTimer: ReturnType<typeof setTimeout> | null = null
 
+  let playLockTimer: ReturnType<typeof setTimeout> | null = null
+
   // Sync with incoming media store updates when track changes, play state changes, or external seek occurs
   let prevTitle = $state('')
   let prevArtist = $state('')
-  let prevIsPlaying = $state(false)
 
   $effect(() => {
     const curTitle = media.title || ''
     const curArtist = media.artist || ''
-    const curPlaying = media.isPlaying || false
     const backendPos = media.positionMs || 0
 
     const isTrackChanged = curTitle !== prevTitle || curArtist !== prevArtist
-    const isPlayStateChanged = curPlaying !== prevIsPlaying
 
     // Ignore backend position updates while dragging or during post-seek stabilization lock (1800ms)
     if (!isDraggingSeek && !isSeekingLocked) {
-      if (isTrackChanged || isPlayStateChanged) {
+      if (isTrackChanged) {
         localPosMs = backendPos
         seekVal = backendPos
       }
@@ -91,7 +90,6 @@
 
     prevTitle = curTitle
     prevArtist = curArtist
-    prevIsPlaying = curPlaying
 
     if (!isDraggingVol && media.volume !== undefined) {
       volVal = media.volume
@@ -135,21 +133,38 @@
 
   function handleControl(action: string, e?: MouseEvent) {
     if (e) e.stopPropagation()
-    if (action === 'play_pause') {
+    if (action === 'play_pause' || action === 'play' || action === 'pause') {
+      const nextPlaying =
+        action === 'play_pause'
+          ? !media.isPlaying
+          : action === 'play'
+            ? true
+            : false
+
+      if (playLockTimer) clearTimeout(playLockTimer)
+      playLockTimer = setTimeout(() => {
+        globalMediaStore.update((m) => ({
+          ...m,
+          _isPlayStateLocked: false
+        }))
+        playLockTimer = null
+      }, 1200)
+
       globalMediaStore.update((m) => ({
         ...m,
-        isPlaying: !m.isPlaying
+        isPlaying: nextPlaying,
+        _isPlayStateLocked: true
       }))
-    } else if (action === 'play') {
-      globalMediaStore.update((m) => ({
-        ...m,
-        isPlaying: true
-      }))
-    } else if (action === 'pause') {
-      globalMediaStore.update((m) => ({
-        ...m,
-        isPlaying: false
-      }))
+    } else if (action === 'prev' || action === 'previous') {
+      localPosMs = 0
+      seekVal = 0
+      isSeekingLocked = true
+      lastSeekTimestamp = performance.now()
+      if (seekLockTimer) clearTimeout(seekLockTimer)
+      seekLockTimer = setTimeout(() => {
+        isSeekingLocked = false
+        seekLockTimer = null
+      }, 1800)
     } else if (action === 'shuffle') {
       globalMediaStore.update((m) => ({
         ...m,
@@ -335,7 +350,7 @@
 
     <!-- Expanded Player Content -->
     <div class="expanded-card">
-      <!-- Top Bar: Dynamic App Icon & App Name -->
+      <!-- Top Bar: Glass Header Backdrop with Dynamic App Icon, Center Clock, Device Badge -->
       <div class="top-meta-bar">
         <div class="app-brand">
           {#if media.appIcon}
@@ -346,13 +361,17 @@
           <span class="app-name-text">{media.appName || 'Media Player'}</span>
         </div>
 
+        <div class="top-clock-wrapper">
+          <Clock expanded={false} />
+        </div>
+
         <div class="device-badge">
           <Laptop size={11} />
           <span>System Audio</span>
         </div>
       </div>
 
-      <!-- Middle Row: Centered Track Title/Artist + Play/Pause Button -->
+      <!-- Middle Row: Centered Track Title/Artist + Hero Play/Pause Button -->
       <div class="middle-section">
         <div class="middle-left-spacer"></div>
         <div class="track-details">
@@ -425,19 +444,21 @@
       <!-- Bottom Controls Row: Shuffle, Prev, Next, Repeat, Volume Slider -->
       <div class="bottom-controls-row">
         <div class="nav-controls">
-          <button
-            class="action-btn"
-            class:is-active={media.isShuffleActive}
-            disabled={media.isShuffleActive === undefined}
-            title={media.isShuffleActive === undefined
-              ? 'Shuffle: Not supported by current playback'
-              : media.isShuffleActive
-                ? 'Shuffle: On'
-                : 'Shuffle: Off'}
-            onclick={(e) => handleControl('shuffle', e)}
-          >
-            <Shuffle size={13} />
-          </button>
+          {#if media.isShuffleEnabled !== false && media.isShuffleActive !== undefined}
+            <button
+              class="action-btn"
+              class:is-active={media.isShuffleActive}
+              disabled={media.isShuffleActive === undefined}
+              title={media.isShuffleActive === undefined
+                ? 'Shuffle: Not supported by current playback'
+                : media.isShuffleActive
+                  ? 'Shuffle: On'
+                  : 'Shuffle: Off'}
+              onclick={(e) => handleControl('shuffle', e)}
+            >
+              <Shuffle size={13} />
+            </button>
+          {/if}
 
           <button
             class="action-btn"
@@ -462,25 +483,27 @@
             </svg>
           </button>
 
-          <button
-            class="action-btn"
-            class:is-active={media.autoRepeatMode && media.autoRepeatMode > 0}
-            disabled={media.autoRepeatMode === undefined}
-            title={media.autoRepeatMode === undefined
-              ? 'Repeat: Not supported by current playback'
-              : media.autoRepeatMode === 1
-                ? 'Repeat: One Track'
-                : media.autoRepeatMode === 2
-                  ? 'Repeat: All Tracks'
-                  : 'Repeat: Off'}
-            onclick={(e) => handleControl('repeat', e)}
-          >
-            {#if media.autoRepeatMode === 1}
-              <Repeat1 size={13} />
-            {:else}
-              <Repeat size={13} />
-            {/if}
-          </button>
+          {#if media.isRepeatEnabled !== false && media.autoRepeatMode !== undefined}
+            <button
+              class="action-btn"
+              class:is-active={media.autoRepeatMode && media.autoRepeatMode > 0}
+              disabled={media.autoRepeatMode === undefined}
+              title={media.autoRepeatMode === undefined
+                ? 'Repeat: Not supported by current playback'
+                : media.autoRepeatMode === 1
+                  ? 'Repeat: One Track'
+                  : media.autoRepeatMode === 2
+                    ? 'Repeat: All Tracks'
+                    : 'Repeat: Off'}
+              onclick={(e) => handleControl('repeat', e)}
+            >
+              {#if media.autoRepeatMode === 1}
+                <Repeat1 size={13} />
+              {:else}
+                <Repeat size={13} />
+              {/if}
+            </button>
+          {/if}
         </div>
 
         <!-- Volume Slider Control -->
@@ -864,6 +887,23 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    padding: 10px 14px;
+    margin: -10px -14px 6px -14px;
+    border-radius: 20px 20px 0 0;
+    background: rgba(255, 255, 255, 0.02);
+    backdrop-filter: blur(2px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+  }
+
+  .top-clock-wrapper {
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--c-text-primary, #ffffff);
+    opacity: 0.95;
+    font-feature-settings: 'tnum';
+    text-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
   }
 
   .app-brand {
@@ -902,7 +942,8 @@
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    margin-top: 2px;
+    margin-top: 4px;
+    width: 100%;
   }
 
   .middle-left-spacer {

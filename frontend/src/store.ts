@@ -190,6 +190,8 @@ export interface MediaData {
   canGoPrev: boolean
   isShuffleActive?: boolean
   autoRepeatMode?: number // 0: None, 1: Track, 2: List
+  isShuffleEnabled?: boolean
+  isRepeatEnabled?: boolean
 }
 
 export const globalMediaStore = writable<MediaData>({
