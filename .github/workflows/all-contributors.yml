@@ -28,7 +28,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Parse Merged PR Details and Sync Preferred Name
         env:
@@ -49,12 +49,25 @@ jobs:
                 # Extract Preferred Display Name if specified in PR template
                 PREFERRED_NAME=$(echo "$BODY_TEXT" | grep -i "Preferred Display Name:" | sed -E 's/.*Preferred Display Name:[[:space:]]*//I' | sed 's/\[Leave blank to use your GitHub display name\]//g' | xargs)
 
-                if [ -n "$PREFERRED_NAME" ]; then
-                  echo "Syncing $PR_AUTHOR with preferred display name: $PREFERRED_NAME"
-                  npx all-contributors-cli add "$PR_AUTHOR" contributor --name "$PREFERRED_NAME" || true
+                # Dynamically look up existing roles for PR author in .all-contributorsrc
+                EXISTING_ROLES=$(jq -r ".contributors[]? | select(.login == \"$PR_AUTHOR\") | .contributions | join(\",\")" .all-contributorsrc 2>/dev/null || echo "")
+
+                if [ -n "$EXISTING_ROLES" ]; then
+                  if echo "$EXISTING_ROLES" | grep -q "contributor"; then
+                    ROLES="$EXISTING_ROLES"
+                  else
+                    ROLES="$EXISTING_ROLES,contributor"
+                  fi
                 else
-                  echo "Syncing $PR_AUTHOR with default GitHub profile name"
-                  npx all-contributors-cli add "$PR_AUTHOR" contributor || true
+                  ROLES="contributor"
+                fi
+
+                if [ -n "$PREFERRED_NAME" ]; then
+                  echo "Syncing $PR_AUTHOR ($ROLES) with preferred display name: $PREFERRED_NAME"
+                  npx all-contributors-cli add "$PR_AUTHOR" "$ROLES" --name "$PREFERRED_NAME" || true
+                else
+                  echo "Syncing $PR_AUTHOR ($ROLES) with default GitHub profile name"
+                  npx all-contributors-cli add "$PR_AUTHOR" "$ROLES" || true
                 fi
               fi
             fi

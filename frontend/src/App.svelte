@@ -4,6 +4,7 @@
   import {
     SetWidgetBounds,
     IsTestMode,
+    FocusWindow,
     Quit
   } from '../wailsjs/go/backend/App.js'
   import { EventsOn, LogFatal, LogInfo } from '../wailsjs/runtime/runtime.js'
@@ -140,6 +141,24 @@
     isHidden = true
   }
 
+  // Global reactive fallback sync effect when island is minimized
+  $effect(() => {
+    const mediaState = $globalMediaStore
+    const hasConnectedMedia =
+      mediaState.isAvailable ||
+      (!!mediaState.title && mediaState.title.trim().length > 0) ||
+      mediaState.isPlaying
+
+    if (!expanded && !isHidden) {
+      if (activePage === MediaPage || activePage === HomePage) {
+        const fallback = AppControls.getFallbackPage()
+        if (activePage !== fallback.page) {
+          navigateTo(fallback.page as Component, fallback.config, false)
+        }
+      }
+    }
+  })
+
   function showWidget() {
     if (!isHidden) return
     islandAnim = '0.5s cubic-bezier(0.16, 1, 0.3, 1)'
@@ -174,15 +193,8 @@
 
   function applyBounds(w: number, h: number, r: number) {
     targetPendingBounds = { w, h, r }
-    if (w >= currentOSBounds.w && h >= currentOSBounds.h) {
-      updateBounds(w, h, r)
-      currentOSBounds = { w, h, r }
-    } else {
-      const maxW = Math.max(currentOSBounds.w, w)
-      const maxH = Math.max(currentOSBounds.h, h)
-      const maxR = Math.max(currentOSBounds.r, r)
-      updateBounds(maxW, maxH, maxR)
-    }
+    updateBounds(w, h, r)
+    currentOSBounds = { w, h, r }
   }
 
   function handleIslandTransitionEnd(e: TransitionEvent) {
@@ -216,6 +228,7 @@
   )
 
   let extraDropdownH = $state(0)
+  let extraDropdownW = $state(0)
   let isQuitting = $state(false)
 
   function navigateTo(
@@ -279,9 +292,19 @@
     }
     updateBounds(currentOSBounds.w, currentOSBounds.h, currentOSBounds.r)
 
-    const handleDropdownToggle = (e: Event) => {
-      const open = (e as CustomEvent).detail
-      extraDropdownH = open ? 220 : 0
+    const handleOverlayChange = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { open: boolean; x?: number; y?: number; w?: number; h?: number } | undefined
+      if (!detail?.open) {
+        extraDropdownH = 0
+        extraDropdownW = 0
+        return
+      }
+      // Compute how much the overlay rect extends beyond the viewport edges.
+      // The island window expands by this overhang so nothing is clipped.
+      const { x = 0, y = 0, w = 0, h = 0 } = detail
+      const margin = 8
+      extraDropdownW = Math.max(0, x + w - window.innerWidth + margin)
+      extraDropdownH = Math.max(0, y + h - window.innerHeight + margin)
     }
     const handleQuit = () => {
       isQuitting = true
@@ -293,7 +316,7 @@
       }, 350)
     }
 
-    window.addEventListener('dev-dropdown-toggle', handleDropdownToggle)
+    window.addEventListener('vinta-overlay', handleOverlayChange)
     window.addEventListener('vinta-quit', handleQuit)
 
     // Listen to systray events
@@ -397,7 +420,7 @@
 
     return () => {
       window.removeEventListener('contextmenu', disableGlobalContextMenu)
-      window.removeEventListener('dev-dropdown-toggle', handleDropdownToggle)
+      window.removeEventListener('vinta-overlay', handleOverlayChange)
       window.removeEventListener('vinta-quit', handleQuit)
     }
   })
@@ -420,7 +443,7 @@
         ? islandConfig.expanded.h
         : islandConfig.minimal.h
 
-    const targetW = baseW
+    const targetW = baseW + extraDropdownW
     const targetH = baseH + extraDropdownH
 
     const r = isHidden
@@ -530,22 +553,42 @@
   function handleMouseLeave() {
     isHovering = false
     clearTimeout(hoverShowTimeout)
-    if (shouldCurrentPageAutoHide && !expanded && !isHidden) {
-      const delayMs = ($autoHideDelayStore || 10) * 1000
-      hideTimeout = window.setTimeout(hideWidget, delayMs)
+    hideTrigger++
+  }
+
+  function handleFocusIn(e: FocusEvent) {
+    const target = e.target as HTMLElement
+    if (
+      target &&
+      (target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable)
+    ) {
+      FocusWindow().catch(() => {})
     }
+  }
+
+  function handleGlobalPointerDown() {
+    FocusWindow().catch(() => {})
   }
 </script>
 
 <!-- ISLAND DIV HERE -->
-<div class="island-container" role="application">
+<div
+  class="island-container"
+  role="application"
+  onfocusin={handleFocusIn}
+  onpointerdown={handleGlobalPointerDown}
+>
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
     bind:this={islandNode}
     class="island {expanded ? 'expanded' : ''} {isTransitionGlow
       ? 'is-transition-glow'
-      : ''} {isHidden ? 'is-hidden' : ''} {isQuitting ? 'is-quitting' : ''}"
+      : ''} {isHidden ? 'is-hidden' : ''} {isQuitting
+      ? 'is-quitting'
+      : ''}"
     onmouseenter={handleMouseEnter}
     onmouseleave={handleMouseLeave}
     onpointerdown={handleHiddenPointerDown}
@@ -728,7 +771,10 @@
 
     transform: translateZ(0);
     -webkit-transform: translateZ(0);
+  }
 
+
+  .island {
     will-change: width, height, border-radius;
 
     contain: layout style;

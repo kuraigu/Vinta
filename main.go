@@ -20,6 +20,8 @@ var assets embed.FS
 var icon []byte
 
 func main() {
+	defer backend.SetupPanicRecovery()
+
 	// Create an instance of the app structure
 	app := backend.NewApp(icon)
 	devTools := devtest.NewDevTest()

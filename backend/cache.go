@@ -18,14 +18,7 @@ type Cache struct {
 
 // NewCache initializes a new Cache instance and ensures the cache directory exists.
 func NewCache() *Cache {
-	localAppData := os.Getenv("LOCALAPPDATA")
-	var cacheDir string
-	if localAppData != "" {
-		cacheDir = filepath.Join(localAppData, "Vinta", "cache")
-	} else {
-		cacheDir = filepath.Join(os.TempDir(), "Vinta", "cache")
-	}
-
+	cacheDir := filepath.Join(GetAppDataDir(), "cache")
 	_ = os.MkdirAll(cacheDir, 0755)
 
 	return &Cache{

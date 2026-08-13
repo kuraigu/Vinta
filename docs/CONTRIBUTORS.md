@@ -18,7 +18,7 @@ All contributors are recognized here and credited directly inside the Vinta desk
 <table>
   <tbody>
     <tr>
-      <td align="center" valign="top" width="20%"><a href="https://github.com/kuraigu"><img src="https://github.com/kuraigu.png" width="48px;" alt="Innoh Reloza (DippedInSoju)"/><br /><sub><b>Innoh Reloza (DippedInSoju)</b></sub></a><br />contributor</td>
+      <td align="center" valign="top" width="20%"><a href="https://github.com/kuraigu"><img src="https://github.com/kuraigu.png" width="48px;" alt="Innoh Reloza (DippedInSoju)"/><br /><sub><b>Innoh Reloza (DippedInSoju)</b></sub></a><br />Founder</td>
     </tr>
   </tbody>
 </table>
