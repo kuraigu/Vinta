@@ -69,7 +69,9 @@
       }, 50)
     }
     isOpen = !isOpen
-    triggerBoundsUpdate(isOpen)
+    if (!isOpen) {
+      notifyOverlay(false)
+    }
   }
 
   function select(
@@ -83,11 +85,18 @@
       onSelectPayload(opt.payload)
     }
     isOpen = false
-    triggerBoundsUpdate(false)
+    notifyOverlay(false)
   }
 
-  function notifyOverlay(open: boolean, rect?: { x: number; y: number; w: number; h: number }) {
-    window.dispatchEvent(new CustomEvent('vinta-overlay', { detail: open ? { open, ...rect } : { open } }))
+  function notifyOverlay(
+    open: boolean,
+    rect?: { x: number; y: number; w: number; h: number }
+  ) {
+    window.dispatchEvent(
+      new CustomEvent('vinta-overlay', {
+        detail: open ? { open, ...rect } : { open }
+      })
+    )
   }
 
   let selectedLabel = $derived(

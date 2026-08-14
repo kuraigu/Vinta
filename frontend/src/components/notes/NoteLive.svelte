@@ -1,10 +1,15 @@
 <script lang="ts">
-  import { slide } from 'svelte/transition'
   import ScrollView from '../ScrollView.svelte'
   import ContextMenu, { type ContextMenuItem } from '../ContextMenu.svelte'
 
+  import type { FormatType } from './NoteToolbar.svelte'
+
   interface EditorApi {
-    insertAtCursor: (prefix: string, suffix: string) => void
+    insertFormatting: (
+      type: FormatType,
+      prefix: string,
+      suffix?: string
+    ) => void
     selectAll: () => void
   }
 
@@ -104,7 +109,43 @@
     return h
   }
 
+  export interface CodeBlockInfo {
+    start: number
+    end: number
+    lang: string
+    code: string
+  }
 
+  export function findCodeBlocks(docLines: string[]): CodeBlockInfo[] {
+    const blocks: CodeBlockInfo[] = []
+    let currentStart = -1
+    let currentLang = ''
+
+    for (let i = 0; i < docLines.length; i++) {
+      const line = docLines[i] ?? ''
+      const openMatch = line.match(/^[ ]{0,3}```(\S*)/)
+      if (openMatch) {
+        if (currentStart === -1) {
+          currentStart = i
+          currentLang = openMatch[1] || ''
+        } else {
+          if (/^[ ]{0,3}```\s*$/.test(line)) {
+            const innerCode = docLines.slice(currentStart + 1, i).join('\n')
+            blocks.push({
+              start: currentStart,
+              end: i,
+              lang: currentLang,
+              code: innerCode
+            })
+            currentStart = -1
+            currentLang = ''
+          }
+        }
+      }
+    }
+
+    return blocks
+  }
 
   interface LinePrefixInfo {
     type: 'checkbox' | 'bullet' | 'none'
@@ -130,16 +171,50 @@
   }
 
   // renderLine returns the class to put on the .nl-line container itself
-  // (instead of a nested <div>) plus the inner HTML. Keeping everything at
-  // ONE div-per-line (no nested block divs) matters: nested block elements
-  // cause browsers to insert extra newlines when converting a selection to
-  // plain text on copy, which is what was breaking Select All.
+  // (instead of a nested <div>) plus the inner HTML.
   interface LineRender {
     cls: string
     html: string
   }
 
-  function renderLine(line: string): LineRender {
+  function renderLine(
+    line: string,
+    i: number,
+    activeLine: number,
+    blocks: CodeBlockInfo[]
+  ): LineRender {
+    const block = blocks.find((b) => i >= b.start && i <= b.end)
+
+    if (block) {
+      const isBlockActive = activeLine >= block.start && activeLine <= block.end
+
+      if (isBlockActive) {
+        // While typing cursor is inside this code block, look completely normal!
+        return {
+          cls: '',
+          html: `<span>${escapeHtml(line) || '<br/>'}</span>`
+        }
+      } else {
+        // Formatted code block card with Header & Copy button when cursor is outside
+        if (i === block.start) {
+          const langDisplay = block.lang.trim().toUpperCase() || 'CODE'
+          return {
+            cls: 'nl-cb-header-line',
+            html: `<div class="nl-cb-header" contenteditable="false"><div class="nl-cb-lang"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg><span>${escapeHtml(langDisplay)}</span></div><button class="nl-cb-copy-btn" data-cb-start="${block.start}" contenteditable="false" type="button"><svg class="nl-cb-copy-icon" viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span class="nl-cb-copy-label">Copy</span></button></div>`
+          }
+        }
+        if (i === block.end) {
+          return {
+            cls: 'nl-cb-footer-line',
+            html: `<div class="nl-cb-footer" contenteditable="false"></div>`
+          }
+        }
+        return {
+          cls: 'nl-code-line',
+          html: `<span class="nl-code-text">${escapeHtml(line) || '<br/>'}</span>`
+        }
+      }
+    }
 
     const t = line.trim()
     if (t.startsWith('# '))
@@ -192,8 +267,16 @@
     let internalChange = false
     let isComposing = false
 
-    const undoStack: string[] = [lines.join('\n')]
-    const redoStack: string[] = []
+    interface EditorSnapshot {
+      content: string
+      line: number
+      offset: number
+    }
+
+    const undoStack: EditorSnapshot[] = [
+      { content: lines.join('\n'), line: 0, offset: 0 }
+    ]
+    const redoStack: EditorSnapshot[] = []
 
     // ── DOM helpers ──
 
@@ -229,31 +312,28 @@
 
       let charCount = 0
       const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT)
-      let node: Node | null = walker.nextNode()
+      let textChild: Node | null = walker.nextNode()
 
-      while (node) {
-        if (node === range.startContainer) {
+      while (textChild) {
+        if (textChild === range.startContainer) {
           charCount += range.startOffset
           break
         }
-        charCount += node.textContent?.length ?? 0
-        node = walker.nextNode()
-      }
-
-      if (container.classList.contains('nl-task')) {
-        charCount += 6
-      } else if (container.classList.contains('nl-bullet')) {
-        charCount += 2
+        charCount += textChild.textContent?.length ?? 0
+        textChild = walker.nextNode()
       }
 
       return charCount
     }
 
     function placeCaret(el: HTMLDivElement, offset: number) {
-      let target: Node = el
-      const contentHolder = el.querySelector('.nl-task-text, .nl-bullet-text')
-      const root = contentHolder || el
-      const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      if (!el) return
+      node.focus()
+      const sel = window.getSelection()
+      if (!sel) return
+      const range = document.createRange()
+
+      const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, {
         acceptNode(n) {
           if (n.parentElement?.closest('[contenteditable="false"]')) {
             return NodeFilter.FILTER_REJECT
@@ -261,33 +341,78 @@
           return NodeFilter.FILTER_ACCEPT
         }
       })
-      const first = walk.nextNode()
-      if (first) target = first
-      const max = target.textContent?.length ?? 0
-      const range = document.createRange()
-      try {
-        range.setStart(target, Math.min(offset, max))
+      const textNode = walk.nextNode()
+
+      if (textNode) {
+        const max = textNode.textContent?.length ?? 0
+        const pos = Math.min(Math.max(0, offset), max)
+        range.setStart(textNode, pos)
         range.collapse(true)
-        const sel = window.getSelection()
-        sel?.removeAllRanges()
-        sel?.addRange(range)
+      } else {
+        range.setStart(el, 0)
+        range.collapse(true)
+      }
+
+      try {
+        sel.removeAllRanges()
+        sel.addRange(range)
       } catch {
         try {
           el.focus()
-        } catch {}
+        } catch (err) {
+          void err
+        }
       }
     }
 
     // ── Rendering ──
 
+    function setLineRaw(i: number) {
+      const el = getLineEl(i)
+      if (el) {
+        el.className = 'nl-line'
+        const text = lines[i] ?? ''
+        if (text === '') {
+          el.innerHTML = '<br>'
+        } else {
+          el.textContent = text
+        }
+      }
+    }
+
+    function formatLine(i: number) {
+      const el = getLineEl(i)
+      if (el) {
+        if (i === activeLine) {
+          setLineRaw(i)
+          return
+        }
+        const blocks = findCodeBlocks(lines)
+        const { cls, html } = renderLine(lines[i] ?? '', i, activeLine, blocks)
+        el.className = cls ? `nl-line ${cls}` : 'nl-line'
+        el.innerHTML = html
+      }
+    }
+
     function buildDOM() {
       node.innerHTML = ''
+      const blocks = findCodeBlocks(lines)
       for (let i = 0; i < lines.length; i++) {
         const div = document.createElement('div')
         div.dataset.nlLine = String(i)
-        const { cls, html } = renderLine(lines[i])
-        div.className = cls ? `nl-line ${cls}` : 'nl-line'
-        div.innerHTML = html
+        if (i === activeLine) {
+          div.className = 'nl-line'
+          const text = lines[i] ?? ''
+          if (text === '') {
+            div.innerHTML = '<br>'
+          } else {
+            div.textContent = text
+          }
+        } else {
+          const { cls, html } = renderLine(lines[i], i, activeLine, blocks)
+          div.className = cls ? `nl-line ${cls}` : 'nl-line'
+          div.innerHTML = html
+        }
         node.appendChild(div)
       }
     }
@@ -300,18 +425,26 @@
 
     // ── Undo / Redo ──
 
-    function applySnapshot(snapshot: string) {
-      lines = snapshot.split('\n')
-      activeLine = Math.min(activeLine, lines.length - 1)
+    function applySnapshot(snap: EditorSnapshot) {
+      lines = snap.content.split('\n')
+      activeLine = Math.max(0, Math.min(snap.line, lines.length - 1))
       buildDOM()
+      const el = getLineEl(activeLine)
+      if (el) {
+        const off = Math.min(snap.offset, lines[activeLine]?.length ?? 0)
+        placeCaret(el, off)
+      }
       internalChange = true
-      onchange(snapshot)
+      onchange(snap.content)
     }
 
     function emitChange() {
       const snapshot = lines.join('\n')
-      if (undoStack[undoStack.length - 1] !== snapshot) {
-        undoStack.push(snapshot)
+      const el = getLineEl(activeLine)
+      const off = caretOffset(el)
+
+      if (undoStack[undoStack.length - 1]?.content !== snapshot) {
+        undoStack.push({ content: snapshot, line: activeLine, offset: off })
         if (undoStack.length > 200) undoStack.shift()
         redoStack.length = 0
       }
@@ -326,65 +459,53 @@
       const oldActive = activeLine
       activeLine = newLine
 
-      if (oldActive !== newLine) {
+      const domLineCount = node.querySelectorAll('.nl-line').length
+      if (domLineCount !== lines.length) {
         buildDOM()
+      } else if (oldActive !== newLine) {
+        formatLine(oldActive)
+        setLineRaw(newLine)
       }
 
       const el = getLineEl(newLine)
       if (el) {
         const pos = caret ?? lines[newLine]?.length ?? 0
-        node.focus()
         placeCaret(el, pos)
       }
     }
 
     // ── Event handlers ──
 
-    function syncLinesFromDOM() {
-      const lineEls = Array.from(
-        node.querySelectorAll<HTMLDivElement>('.nl-line')
-      )
-      if (lineEls.length === 0) {
-        // If user selected all and deleted (or container was cleared)
-        const emptyDiv = document.createElement('div')
-        emptyDiv.className = 'nl-line'
-        emptyDiv.dataset.nlLine = '0'
-        emptyDiv.innerHTML = '<br>'
-        node.appendChild(emptyDiv)
-        lines = ['']
-        activeLine = 0
-      } else {
-        lines = lineEls.map((el) => {
-          if (el.classList.contains('nl-task')) {
-            const isChecked = el.classList.contains('checked')
-            const textEl = el.querySelector('.nl-task-text')
-            const text = textEl ? (textEl.textContent ?? '') : ''
-            return (isChecked ? '- [x] ' : '- [ ] ') + text
-          }
-          if (el.classList.contains('nl-bullet')) {
-            const textEl = el.querySelector('span:not(.nl-dot)')
-            const text = textEl ? (textEl.textContent ?? '') : ''
-            return '- ' + text
-          }
-          return el.textContent ?? ''
-        })
-        reindexLines()
-        if (activeLine >= lines.length) {
-          activeLine = lines.length - 1
-        }
-      }
-    }
-
     function onInput() {
       if (isComposing) return
-      syncLinesFromDOM()
-      const newLine = caretLineIndex()
 
+      if (node.children.length === 0 || !node.querySelector('.nl-line')) {
+        node.innerHTML = '<div class="nl-line" data-nl-line="0"><br></div>'
+        lines = ['']
+        activeLine = 0
+        const first = getLineEl(0)
+        if (first) {
+          placeCaret(first, 0)
+        }
+        emitChange()
+        return
+      }
+
+      const el = getLineEl(activeLine)
+      if (el) {
+        lines[activeLine] = el.textContent ?? ''
+      }
+
+      const newLine = caretLineIndex()
       if (newLine !== activeLine) {
         switchToLine(newLine, caretOffset())
       }
 
       emitChange()
+    }
+
+    function wrapFormatting(prefix: string, suffix: string) {
+      insertFormatting('inline', prefix, suffix)
     }
 
     function onKeydown(e: KeyboardEvent) {
@@ -483,16 +604,12 @@
         let shouldPair = false
 
         if (openChar === '(' || openChar === '[' || openChar === '{') {
-          // Brackets: pair if after is empty, space, or closing bracket/punctuation
-          shouldPair = after === '' || /^[\s\)\]\},.;:]/.test(after)
+          shouldPair = after === '' || /^[\s)\]},.;:]/.test(after)
         } else if (openChar === '*' || openChar === '_' || openChar === '~') {
-          // Formatting markers: pair if before is empty or ends with whitespace
           shouldPair = before === '' || /\s$/.test(before)
         } else if (openChar === '"' || openChar === "'") {
-          // Quotes: pair if before does not end with word char
           shouldPair = before === '' || !/\w$/.test(before)
         } else if (openChar === '`') {
-          // Backtick: pair if before does not end with word char
           shouldPair = before === '' || !/\w$/.test(before)
         }
 
@@ -520,49 +637,45 @@
         const after = text.slice(off)
 
         const prefixInfo = getLinePrefix(rawLine)
-          if (prefixInfo.type === 'checkbox') {
-            if (prefixInfo.isMarkerOnly || prefixInfo.content.trim() === '') {
-              // Enter on empty checkbox exits the list completely
-              lines[activeLine] = ''
-              buildDOM()
-              const target = getLineEl(activeLine)
-              if (target) {
-                node.focus()
-                placeCaret(target, 0)
-              }
-              emitChange()
-              return
+        if (prefixInfo.type === 'checkbox') {
+          if (prefixInfo.isMarkerOnly || prefixInfo.content.trim() === '') {
+            lines[activeLine] = ''
+            buildDOM()
+            const target = getLineEl(activeLine)
+            if (target) {
+              node.focus()
+              placeCaret(target, 0)
             }
-
-            // Non-empty checkbox: create a normal line break below (do NOT auto-spawn another checkbox)
-            lines[activeLine] = rawLine.slice(0, Math.max(7, off))
-            lines.splice(activeLine + 1, 0, after)
-            switchToLine(activeLine + 1, 0)
             emitChange()
             return
           }
 
-          if (prefixInfo.type === 'bullet') {
-            if (prefixInfo.isMarkerOnly || prefixInfo.content.trim() === '') {
-              // Enter on empty bullet exits the list completely
-              lines[activeLine] = ''
-              buildDOM()
-              const target = getLineEl(activeLine)
-              if (target) {
-                node.focus()
-                placeCaret(target, 0)
-              }
-              emitChange()
-              return
-            }
+          lines[activeLine] = rawLine.slice(0, Math.max(7, off))
+          lines.splice(activeLine + 1, 0, after)
+          switchToLine(activeLine + 1, 0)
+          emitChange()
+          return
+        }
 
-            const prefix = prefixInfo.prefix
-            lines[activeLine] = rawLine.slice(0, Math.max(prefix.length, off))
-            lines.splice(activeLine + 1, 0, prefix + after)
-            switchToLine(activeLine + 1, prefix.length)
+        if (prefixInfo.type === 'bullet') {
+          if (prefixInfo.isMarkerOnly || prefixInfo.content.trim() === '') {
+            lines[activeLine] = ''
+            buildDOM()
+            const target = getLineEl(activeLine)
+            if (target) {
+              node.focus()
+              placeCaret(target, 0)
+            }
             emitChange()
             return
           }
+
+          const prefix = prefixInfo.prefix
+          lines[activeLine] = rawLine.slice(0, Math.max(prefix.length, off))
+          lines.splice(activeLine + 1, 0, prefix + after)
+          switchToLine(activeLine + 1, prefix.length)
+          emitChange()
+          return
         }
 
         lines[activeLine] = before
@@ -576,17 +689,18 @@
       if (e.key === 'Backspace' || e.key === 'Delete') {
         const sel = window.getSelection()
         if (sel && !sel.isCollapsed && sel.toString().length > 0) {
-          const text = sel.toString()
-          // Check if selection covers the full document or multiple lines
+          const range = sel.getRangeAt(0)
+          const startEl = lineElFromNode(range.startContainer)
+          const endEl = lineElFromNode(range.endContainer)
           if (
-            text.replace(/\s+/g, '') === lines.join('').replace(/\s+/g, '') ||
-            text.includes('\n')
+            (startEl && endEl && startEl !== endEl) ||
+            range.commonAncestorContainer === node ||
+            sel.toString().length >= lines.join('\n').length - 1
           ) {
             e.preventDefault()
             lines = ['']
             activeLine = 0
             buildDOM()
-            node.focus()
             const first = getLineEl(0)
             if (first) placeCaret(first, 0)
             emitChange()
@@ -601,7 +715,6 @@
         const off = caretOffset(el)
         const text = el.textContent ?? ''
 
-        // Delete empty pair when caret is between them (e.g. *|*, (|), [|])
         if (off > 0 && off < text.length) {
           const charBefore = text[off - 1]
           const charAfter = text[off]
@@ -650,28 +763,38 @@
         }
       }
 
-      // ── Arrow keys ──
-      if (e.key === 'ArrowUp' && activeLine > 0) {
-        const off = caretOffset()
-        if (off === 0) {
-          e.preventDefault()
-          switchToLine(activeLine - 1, lines[activeLine - 1]?.length ?? 0)
-        }
+      // ── Ctrl shortcuts ──
+      if (ctrl && (e.key === 'b' || e.key === 'B')) {
+        e.preventDefault()
+        wrapFormatting('**', '**')
+        return
       }
-      if (e.key === 'ArrowDown' && activeLine < lines.length - 1) {
-        const el = getLineEl(activeLine)
-        const off = caretOffset()
-        if (el && off >= (el.textContent?.length ?? 0)) {
-          e.preventDefault()
-          const nextLine = activeLine + 1
-          const codeMapNow = computeCodeMap(lines)
-          const isCloseFence = codeMapNow[nextLine] === 'close'
-          const caretPos = isCloseFence ? (lines[nextLine]?.length ?? 3) : 0
-          switchToLine(nextLine, caretPos)
-        }
+      if (ctrl && (e.key === 'i' || e.key === 'I')) {
+        e.preventDefault()
+        wrapFormatting('*', '*')
+        return
+      }
+      if (ctrl && (e.key === 'k' || e.key === 'K')) {
+        e.preventDefault()
+        wrapFormatting('[', '](url)')
+        return
+      }
+      if (ctrl && (e.key === '`' || e.key === 'e' || e.key === 'E')) {
+        e.preventDefault()
+        wrapFormatting('`', '`')
+        return
+      }
+      if (
+        ctrl &&
+        (e.key === 'd' ||
+          e.key === 'D' ||
+          (e.shiftKey && (e.key === 'X' || e.key === 'x')))
+      ) {
+        e.preventDefault()
+        wrapFormatting('~~', '~~')
+        return
       }
 
-      // ── Ctrl shortcuts ──
       if (ctrl && (e.key === 's' || e.key === 'S')) {
         e.preventDefault()
         onSave?.()
@@ -680,14 +803,15 @@
 
       if (ctrl && (e.key === 'a' || e.key === 'A')) {
         e.preventDefault()
-        selectAllRaw()
+        selectAll()
         return
       }
 
       if (ctrl && e.key === 'z') {
         e.preventDefault()
         if (undoStack.length > 1) {
-          redoStack.push(undoStack.pop()!)
+          const current = undoStack.pop()!
+          redoStack.push(current)
           applySnapshot(undoStack[undoStack.length - 1])
         }
         return
@@ -707,22 +831,47 @@
           e.preventDefault()
           const text = sel.toString()
           navigator.clipboard.writeText(text).catch(() => {})
-          try {
-            document.execCommand('cut')
-          } catch {
+          const el = getLineEl(activeLine)
+          if (el) {
             document.execCommand('delete')
+            lines[activeLine] = el.textContent ?? ''
           }
-          syncLinesFromDOM()
           emitChange()
         }
         return
+      }
+
+      // ── Arrow navigation across lines (Obsidian column-preservation behavior) ──
+      if (e.key === 'ArrowDown' && !e.shiftKey && !e.altKey && !ctrl) {
+        if (activeLine < lines.length - 1) {
+          e.preventDefault()
+          const el = getLineEl(activeLine)
+          const off = caretOffset(el)
+          const nextIdx = activeLine + 1
+          const nextLen = lines[nextIdx]?.length ?? 0
+          const targetOffset = Math.min(off, nextLen)
+          switchToLine(nextIdx, targetOffset)
+          return
+        }
+      }
+
+      if (e.key === 'ArrowUp' && !e.shiftKey && !e.altKey && !ctrl) {
+        if (activeLine > 0) {
+          e.preventDefault()
+          const el = getLineEl(activeLine)
+          const off = caretOffset(el)
+          const prevIdx = activeLine - 1
+          const prevLen = lines[prevIdx]?.length ?? 0
+          const targetOffset = Math.min(off, prevLen)
+          switchToLine(prevIdx, targetOffset)
+          return
+        }
       }
     }
 
     function onSelectionChange() {
       if (document.activeElement !== node) return
       const sel = window.getSelection()
-      // Skip line switching if user has highlighted text range across elements
       if (sel && !sel.isCollapsed && sel.toString().length > 0) return
 
       const newLine = caretLineIndex()
@@ -731,9 +880,34 @@
       }
     }
 
-    // ── Click: checkbox toggle, link click, line selection & virtual space ──
+    // ── Click: checkbox toggle, copy button, link click, line selection & virtual space ──
     function onClick(e: MouseEvent) {
       const target = e.target as HTMLElement
+
+      const copyBtn = target.closest(
+        '.nl-cb-copy-btn'
+      ) as HTMLButtonElement | null
+      if (copyBtn) {
+        e.preventDefault()
+        e.stopPropagation()
+        const startIdx = parseInt(copyBtn.dataset.cbStart ?? '-1', 10)
+        const blocks = findCodeBlocks(lines)
+        const block = blocks.find((b) => b.start === startIdx)
+        if (block) {
+          navigator.clipboard.writeText(block.code).catch(() => {})
+          const label = copyBtn.querySelector('.nl-cb-copy-label')
+          if (label) {
+            label.textContent = 'Copied!'
+            copyBtn.classList.add('copied')
+            setTimeout(() => {
+              label.textContent = 'Copy'
+              copyBtn.classList.remove('copied')
+            }, 2000)
+          }
+        }
+        return
+      }
+
       const link = target.closest('.nl-link') as HTMLAnchorElement | null
       if (link) {
         e.preventDefault()
@@ -741,7 +915,9 @@
         if (href) {
           try {
             window.open(href, '_blank', 'noopener,noreferrer')
-          } catch {}
+          } catch (err) {
+            void err
+          }
         }
         return
       }
@@ -763,6 +939,12 @@
         return
       }
 
+      const sel = window.getSelection()
+      if (sel && !sel.isCollapsed) {
+        // User has an active text selection/highlight. Do not collapse it!
+        return
+      }
+
       const lineEl = lineElFromNode(target)
       if (lineEl && lineEl.dataset.nlLine !== undefined) {
         const clickedIdx = parseInt(lineEl.dataset.nlLine, 10)
@@ -775,73 +957,352 @@
       switchToLine(lastIdx, lines[lastIdx]?.length ?? 0)
     }
 
-    // ── Toolbar API ──
-    function insertAtCursor(prefix: string, suffix: string) {
-      node.focus()
-      const el = getLineEl(activeLine)
-      if (!el) return
+    function getNodeCharOffset(
+      container: HTMLElement,
+      targetNode: Node,
+      targetOffset: number
+    ): number {
+      let charCount = 0
+      const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT)
+      let textChild: Node | null = walker.nextNode()
+
+      while (textChild) {
+        if (textChild === targetNode) {
+          charCount += targetOffset
+          return charCount
+        }
+        charCount += textChild.textContent?.length ?? 0
+        textChild = walker.nextNode()
+      }
+      return charCount
+    }
+
+    function getSelectionRange(): {
+      startLine: number
+      startOffset: number
+      endLine: number
+      endOffset: number
+      isCollapsed: boolean
+    } {
       const sel = window.getSelection()
-      if (!sel || !sel.rangeCount) return
+      if (!sel || !sel.rangeCount) {
+        return {
+          startLine: activeLine,
+          startOffset: lines[activeLine]?.length ?? 0,
+          endLine: activeLine,
+          endOffset: lines[activeLine]?.length ?? 0,
+          isCollapsed: true
+        }
+      }
+
       const range = sel.getRangeAt(0)
-      const text = el.textContent ?? ''
-      const start = range.startOffset
-      const end = range.endOffset
-      const selected = text.slice(start, end)
-      const replacement = `${prefix}${selected || (suffix ? 'text' : '')}${suffix}`
-      const fullText = text.slice(0, start) + replacement + text.slice(end)
+      if (range.collapsed) {
+        const lineIdx = caretLineIndex()
+        const lineEl = getLineEl(lineIdx)
+        const off = lineEl ? caretOffset(lineEl) : (lines[lineIdx]?.length ?? 0)
+        return {
+          startLine: lineIdx,
+          startOffset: off,
+          endLine: lineIdx,
+          endOffset: off,
+          isCollapsed: true
+        }
+      }
 
-      if (fullText.includes('\n')) {
-        const newLines = fullText.split('\n')
-        lines.splice(activeLine, 1, ...newLines)
+      const startEl = lineElFromNode(range.startContainer)
+      const endEl = lineElFromNode(range.endContainer)
 
-        const prefixLines = prefix.split('\n')
-        const targetLine = activeLine + prefixLines.length - 1
-        const lastPrefixLine = prefixLines[prefixLines.length - 1]
-        const caretPos = selected
-          ? lastPrefixLine.length + selected.length
-          : suffix
-            ? lastPrefixLine.length + (suffix.startsWith('\n') ? 0 : 4)
-            : lastPrefixLine.length
+      let startLineIdx =
+        startEl && startEl.dataset.nlLine !== undefined
+          ? parseInt(startEl.dataset.nlLine, 10)
+          : activeLine
+      let endLineIdx =
+        endEl && endEl.dataset.nlLine !== undefined
+          ? parseInt(endEl.dataset.nlLine, 10)
+          : startLineIdx
 
-        activeLine = targetLine
+      let startOffset = startEl
+        ? getNodeCharOffset(startEl, range.startContainer, range.startOffset)
+        : range.startOffset
+
+      let endOffset = endEl
+        ? getNodeCharOffset(endEl, range.endContainer, range.endOffset)
+        : range.endOffset
+
+      // Normalize if selection was made backwards
+      if (
+        startLineIdx > endLineIdx ||
+        (startLineIdx === endLineIdx && startOffset > endOffset)
+      ) {
+        const tmpL = startLineIdx
+        const tmpO = startOffset
+        startLineIdx = endLineIdx
+        startOffset = endOffset
+        endLineIdx = tmpL
+        endOffset = tmpO
+      }
+
+      return {
+        startLine: startLineIdx,
+        startOffset,
+        endLine: endLineIdx,
+        endOffset,
+        isCollapsed: false
+      }
+    }
+
+    // ── Toolbar API ──
+    function insertFormatting(
+      type: FormatType,
+      prefix: string,
+      suffix: string = ''
+    ) {
+      node.focus()
+      const selRange = getSelectionRange()
+      const { startLine, startOffset, endLine, endOffset, isCollapsed } =
+        selRange
+
+      if (type === 'codeblock') {
+        if (!isCollapsed) {
+          if (startLine === endLine) {
+            const lineText = lines[startLine] ?? ''
+            const before = lineText.slice(0, startOffset)
+            const selected = lineText.slice(startOffset, endOffset)
+            const after = lineText.slice(endOffset)
+            const newSlice: string[] = []
+            if (before) newSlice.push(before)
+            newSlice.push('```', selected, '```')
+            if (after) newSlice.push(after)
+            lines.splice(startLine, 1, ...newSlice)
+            activeLine = startLine + (before ? 2 : 1)
+          } else {
+            const firstLine = lines[startLine] ?? ''
+            const lastLine = lines[endLine] ?? ''
+            const before = firstLine.slice(0, startOffset)
+            const selectedFirst = firstLine.slice(startOffset)
+            const middleLines = lines.slice(startLine + 1, endLine)
+            const selectedLast = lastLine.slice(0, endOffset)
+            const after = lastLine.slice(endOffset)
+
+            const selectedBlock = [selectedFirst, ...middleLines, selectedLast]
+            const newSlice: string[] = []
+            if (before) newSlice.push(before)
+            newSlice.push('```', ...selectedBlock, '```')
+            if (after) newSlice.push(after)
+
+            lines.splice(startLine, endLine - startLine + 1, ...newSlice)
+            activeLine = startLine + (before ? 2 : 1)
+          }
+          buildDOM()
+          const targetEl = getLineEl(activeLine)
+          if (targetEl) {
+            placeCaret(targetEl, 0)
+          }
+        } else {
+          // No selection
+          const lineText = lines[startLine] ?? ''
+          if (lineText.trim() === '') {
+            lines.splice(startLine, 1, '```', '', '```')
+            activeLine = startLine + 1
+          } else {
+            const before = lineText.slice(0, startOffset)
+            const after = lineText.slice(startOffset)
+            const newSlice: string[] = []
+            if (before) newSlice.push(before)
+            newSlice.push('```', '', '```')
+            if (after) newSlice.push(after)
+            lines.splice(startLine, 1, ...newSlice)
+            activeLine = startLine + (before ? 2 : 1)
+          }
+          buildDOM()
+          const targetEl = getLineEl(activeLine)
+          if (targetEl) {
+            placeCaret(targetEl, 0)
+          }
+        }
+      } else if (type === 'line') {
+        // Apply prefix across all selected lines
+        for (let l = startLine; l <= endLine; l++) {
+          const currentLineText = lines[l] ?? ''
+          const existingPrefixMatch = currentLineText.match(
+            /^(\s*)(#{1,6}\s+|- \[[ xX]\]\s+|- \s+|\*\s+|>\s*)/
+          )
+          const rawContent = existingPrefixMatch
+            ? currentLineText.slice(existingPrefixMatch[0].length)
+            : currentLineText.trimStart()
+          const existingPrefix = existingPrefixMatch
+            ? existingPrefixMatch[2]
+            : ''
+
+          const newLine =
+            existingPrefix === prefix ||
+            (prefix === '- ' &&
+              (existingPrefix === '- ' || existingPrefix === '* '))
+              ? rawContent
+              : `${prefix}${rawContent}`
+          lines[l] = newLine
+        }
         buildDOM()
-        const targetEl = getLineEl(targetLine)
+        activeLine = endLine
+        const targetEl = getLineEl(activeLine)
         if (targetEl) {
-          node.focus()
-          placeCaret(targetEl, caretPos)
+          placeCaret(targetEl, lines[activeLine]?.length ?? 0)
+        }
+      } else if (type === 'link') {
+        if (startLine === endLine) {
+          const lineText = lines[startLine] ?? ''
+          const selected = isCollapsed
+            ? ''
+            : lineText.slice(startOffset, endOffset)
+          const replacement = selected
+            ? `[${selected}](https://)`
+            : `[](https://)`
+          const newText =
+            lineText.slice(0, startOffset) +
+            replacement +
+            lineText.slice(endOffset)
+          lines[startLine] = newText
+          activeLine = startLine
+          setLineRaw(startLine)
+          const el = getLineEl(startLine)
+          if (el) {
+            const newCaret = selected
+              ? startOffset + selected.length + 3
+              : startOffset + 1
+            placeCaret(el, newCaret)
+          }
         }
       } else {
-        el.textContent = fullText
-        lines[activeLine] = fullText
-        const newCaret =
-          start + prefix.length + (selected ? selected.length : suffix ? 4 : 0)
-        placeCaret(el, newCaret)
+        // Inline: bold (**), italic (*), strikethrough (~~)
+        if (startLine === endLine) {
+          const lineText = lines[startLine] ?? ''
+          if (!isCollapsed) {
+            const selected = lineText.slice(startOffset, endOffset)
+            const replacement = `${prefix}${selected}${suffix}`
+            const newText =
+              lineText.slice(0, startOffset) +
+              replacement +
+              lineText.slice(endOffset)
+            lines[startLine] = newText
+            activeLine = startLine
+            setLineRaw(startLine)
+            const el = getLineEl(startLine)
+            if (el) {
+              placeCaret(el, startOffset + replacement.length)
+            }
+          } else {
+            // No selection: insert tokens, place caret right between prefix & suffix
+            const replacement = `${prefix}${suffix}`
+            const newText =
+              lineText.slice(0, startOffset) +
+              replacement +
+              lineText.slice(startOffset)
+            lines[startLine] = newText
+            activeLine = startLine
+            setLineRaw(startLine)
+            const el = getLineEl(startLine)
+            if (el) {
+              placeCaret(el, startOffset + prefix.length)
+            }
+          }
+        } else {
+          // Multi-line selection: wrap each line's selected portion with the tokens
+          for (let l = startLine; l <= endLine; l++) {
+            const lineText = lines[l] ?? ''
+            if (l === startLine) {
+              const before = lineText.slice(0, startOffset)
+              const selText = lineText.slice(startOffset)
+              lines[l] =
+                before + (selText ? `${prefix}${selText}${suffix}` : '')
+            } else if (l === endLine) {
+              const selText = lineText.slice(0, endOffset)
+              const after = lineText.slice(endOffset)
+              lines[l] = (selText ? `${prefix}${selText}${suffix}` : '') + after
+            } else {
+              lines[l] = lineText ? `${prefix}${lineText}${suffix}` : ''
+            }
+          }
+          buildDOM()
+          activeLine = endLine
+          const el = getLineEl(endLine)
+          if (el) {
+            placeCaret(el, endOffset + prefix.length + suffix.length)
+          }
+        }
       }
       emitChange()
     }
 
-    // Select-all that operates on the raw markdown source (not the rendered
-    // HTML), so what gets copied is real text with real linebreaks — used
-    // by both Ctrl+A and the context menu's "Select All".
-    function selectAllRaw() {
-      for (let i = 0; i < lines.length; i++) {
-        setLineRaw(i)
-      }
+    function selectAll() {
       node.focus()
-      setTimeout(() => {
-        const sel = window.getSelection()
-        const range = document.createRange()
-        range.selectNodeContents(node)
-        sel?.removeAllRanges()
-        sel?.addRange(range)
-      }, 0)
+      const sel = window.getSelection()
+      if (!sel) return
+      const range = document.createRange()
+      range.selectNodeContents(node)
+      sel.removeAllRanges()
+      sel.addRange(range)
     }
 
-    const api: EditorApi = { insertAtCursor, selectAll: selectAllRaw }
+    const api: EditorApi = { insertFormatting, selectAll }
 
     function notifyReady() {
       editorApi = api
       onReady?.(api)
+    }
+
+    function onPaste(e: ClipboardEvent) {
+      e.preventDefault()
+      const text = e.clipboardData?.getData('text/plain') ?? ''
+      if (!text) return
+
+      const el = getLineEl(activeLine)
+      const currentLineText = el
+        ? (el.textContent ?? '')
+        : (lines[activeLine] ?? '')
+      const off = caretOffset(el)
+      const before = currentLineText.slice(0, off)
+      const after = currentLineText.slice(off)
+
+      const pastedLines = text
+        .replace(/\r\n/g, '\n')
+        .replace(/\r/g, '\n')
+        .split('\n')
+
+      if (pastedLines.length === 1) {
+        const merged = before + pastedLines[0] + after
+        lines[activeLine] = merged
+        if (el) {
+          el.textContent = merged
+          placeCaret(el, off + pastedLines[0].length)
+        }
+      } else {
+        const firstLine = before + pastedLines[0]
+        const lastLine = pastedLines[pastedLines.length - 1] + after
+        const middleLines = pastedLines.slice(1, -1)
+        const newSlice = [firstLine, ...middleLines, lastLine]
+
+        lines.splice(activeLine, 1, ...newSlice)
+        activeLine = activeLine + newSlice.length - 1
+        buildDOM()
+        const targetEl = getLineEl(activeLine)
+        if (targetEl) {
+          placeCaret(targetEl, pastedLines[pastedLines.length - 1].length)
+        }
+      }
+      emitChange()
+    }
+
+    function onCopy(e: ClipboardEvent) {
+      const sel = window.getSelection()
+      if (!sel || sel.isCollapsed) return
+      const range = sel.getRangeAt(0)
+      if (
+        range.commonAncestorContainer === node ||
+        sel.toString().length >= lines.join('\n').length - 2
+      ) {
+        e.preventDefault()
+        e.clipboardData?.setData('text/plain', lines.join('\n'))
+      }
     }
 
     // ── Mount ──
@@ -851,6 +1312,8 @@
     node.addEventListener('input', onInput)
     node.addEventListener('keydown', onKeydown)
     node.addEventListener('click', onClick)
+    node.addEventListener('paste', onPaste)
+    node.addEventListener('copy', onCopy)
     document.addEventListener('selectionchange', onSelectionChange)
     node.addEventListener('compositionstart', () => {
       isComposing = true
@@ -877,6 +1340,8 @@
         node.removeEventListener('input', onInput)
         node.removeEventListener('keydown', onKeydown)
         node.removeEventListener('click', onClick)
+        node.removeEventListener('paste', onPaste)
+        node.removeEventListener('copy', onCopy)
         document.removeEventListener('selectionchange', onSelectionChange)
       }
     }
@@ -885,15 +1350,40 @@
 
 {#if isLocked}
   {@const lockedLines = content.split('\n')}
-  {@const lockedCodeMap = computeCodeMap(lockedLines)}
+  {@const lockedBlocks = findCodeBlocks(lockedLines)}
   <ScrollView class="nl-scroll">
-    <div class="nl-doc locked">
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+      class="nl-doc locked"
+      onclick={(e) => {
+        const copyBtn = (e.target as HTMLElement)?.closest(
+          '.nl-cb-copy-btn'
+        ) as HTMLButtonElement | null
+        if (copyBtn) {
+          e.preventDefault()
+          e.stopPropagation()
+          const startIdx = parseInt(copyBtn.dataset.cbStart ?? '-1', 10)
+          const block = lockedBlocks.find((b) => b.start === startIdx)
+          if (block) {
+            navigator.clipboard.writeText(block.code).catch(() => {})
+            const label = copyBtn.querySelector('.nl-cb-copy-label')
+            if (label) {
+              label.textContent = 'Copied!'
+              copyBtn.classList.add('copied')
+              setTimeout(() => {
+                label.textContent = 'Copy'
+                copyBtn.classList.remove('copied')
+              }, 2000)
+            }
+          }
+        }
+      }}
+    >
       {#each lockedLines as line, i (i)}
-        {@const r = renderLine(line, lockedCodeMap[i])}
-        <div
-          class="nl-line {r.cls}"
-          data-code-ctx={lockedCodeMap[i] ?? undefined}
-        >
+        {@const r = renderLine(line, i, -1, lockedBlocks)}
+        <div class="nl-line {r.cls}">
+          <!-- eslint-disable-next-line svelte/no-at-html-tags -->
           {@html r.html}
         </div>
       {/each}
@@ -1054,6 +1544,84 @@
     color: #f43f5e;
   }
 
+  /* ── Code Block Card Header, Body & Footer ── */
+  .nl-doc :global(.nl-cb-header-line) {
+    margin-top: 6px;
+    user-select: none;
+  }
+
+  .nl-doc :global(.nl-cb-header) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--c-border);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 8px 8px 0 0;
+  }
+
+  .nl-doc :global(.nl-cb-lang) {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--c-primary, #6366f1);
+  }
+
+  .nl-doc :global(.nl-cb-copy-btn) {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid var(--c-border);
+    border-radius: 5px;
+    padding: 3px 8px;
+    font-size: 10.5px;
+    font-weight: 500;
+    color: var(--c-text-secondary, #94a3b8);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .nl-doc :global(.nl-cb-copy-btn:hover) {
+    background: rgba(255, 255, 255, 0.14);
+    color: var(--c-text-primary, #ffffff);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+  .nl-doc :global(.nl-cb-copy-btn.copied) {
+    background: rgba(16, 185, 129, 0.2);
+    border-color: rgba(16, 185, 129, 0.4);
+    color: #34d399;
+  }
+
+  .nl-doc :global(.nl-code-line) {
+    font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    background: rgba(0, 0, 0, 0.25);
+    padding: 2px 12px;
+    color: #f1f5f9;
+    white-space: pre-wrap;
+    border-left: 1px solid var(--c-border);
+    border-right: 1px solid var(--c-border);
+  }
+
+  .nl-doc :global(.nl-cb-footer-line) {
+    margin-bottom: 6px;
+    user-select: none;
+  }
+
+  .nl-doc :global(.nl-cb-footer) {
+    height: 6px;
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid var(--c-border);
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+  }
+
   .nl-doc :global(.nl-link) {
     color: var(--c-primary, #6366f1);
     text-decoration: underline;
@@ -1065,14 +1633,8 @@
     opacity: 0.75;
   }
 
-
   .nl-doc :global(.nl-line.nl-bullet-editing),
   .nl-doc :global(.nl-line.nl-task-editing) {
     padding-left: 12px;
-  }
-  .nl-doc :global(.nl-link) {
-    color: var(--c-primary, #6366f1);
-    text-decoration: underline;
-    cursor: pointer;
   }
 </style>

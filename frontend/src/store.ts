@@ -4,7 +4,7 @@ import { GetSettings, SaveSettings } from '../wailsjs/go/backend/App.js'
 export const devTestingStore = writable<boolean>(false)
 export const activeSettingsTabStore = writable<string>('appearance')
 
-const allSettingsCache: Record<string, any> = {}
+const allSettingsCache: Record<string, unknown> = {}
 let saveSettingsTimeout: ReturnType<typeof setTimeout> | null = null
 
 function syncSettingsToDisk() {
@@ -14,12 +14,18 @@ function syncSettingsToDisk() {
       if (typeof SaveSettings === 'function') {
         SaveSettings(JSON.stringify(allSettingsCache)).catch(() => {})
       }
-    } catch {}
+    } catch {
+      // Ignore disk write failure
+    }
   }, 300)
 }
 
 // Registry of stores for initial loading from disk
-const registeredStores: Array<{ key: string; store: any; initialValue: any }> = []
+const registeredStores: Array<{
+  key: string
+  store: { set: (v: unknown) => void }
+  initialValue: unknown
+}> = []
 
 function persistentWritable<T>(key: string, initialValue: T) {
   const stored = localStorage.getItem(key)
@@ -27,14 +33,20 @@ function persistentWritable<T>(key: string, initialValue: T) {
   allSettingsCache[key] = initial
   const store = writable<T>(initial)
 
-  registeredStores.push({ key, store, initialValue })
+  registeredStores.push({
+    key,
+    store: store as unknown as { set: (v: unknown) => void },
+    initialValue
+  })
 
   store.subscribe((value) => {
     allSettingsCache[key] = value
     if (!get(devTestingStore)) {
       try {
         localStorage.setItem(key, JSON.stringify(value))
-      } catch {}
+      } catch {
+        // Ignore storage write error
+      }
       syncSettingsToDisk()
     }
   })
@@ -58,10 +70,11 @@ if (typeof window !== 'undefined') {
           }
         }
       }
-    } catch {}
+    } catch {
+      // Ignore disk load error
+    }
   }, 0)
 }
-
 
 export type AppTheme = 'dark' | 'light'
 export type IslandShape = 'pill' | 'box'
@@ -92,7 +105,7 @@ export const hiddenPillOffsetXStore = persistentWritable<number>(
 )
 export const allowDragPositionStore = persistentWritable<boolean>(
   'vinta_allow_drag_position',
-  false
+  true
 )
 export const hardwareAccelStore = persistentWritable<boolean>(
   'vinta_hardware_accel',
@@ -116,10 +129,7 @@ export const autostartStore = persistentWritable<boolean>(
   'vinta_autostart',
   false
 )
-export const autoHideStore = persistentWritable<boolean>(
-  'vinta_autohide',
-  true
-)
+export const autoHideStore = persistentWritable<boolean>('vinta_autohide', true)
 export const homeAutoHideStore = persistentWritable<boolean>(
   'vinta_home_autohide',
   true

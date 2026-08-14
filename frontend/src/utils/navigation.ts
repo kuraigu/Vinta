@@ -22,11 +22,7 @@ export function getFallbackPage(): {
   config: IslandConfig
 } {
   const mediaState = get(globalMediaStore)
-  const hasConnectedMedia =
-    mediaState.isAvailable ||
-    (!!mediaState.title && mediaState.title.trim().length > 0) ||
-    mediaState.isPlaying
-  if (hasConnectedMedia) {
+  if (mediaState.isAvailable) {
     return { page: MediaPage, config: mediaConfig }
   }
   return { page: HomePage, config: homeConfig }

@@ -20,45 +20,59 @@
   let adjustedX = $state(x)
   let adjustedY = $state(y)
 
-  function notifyOverlay(open: boolean, rect?: { x: number; y: number; w: number; h: number }) {
-    window.dispatchEvent(new CustomEvent('vinta-overlay', { detail: open ? { open, ...rect } : { open } }))
-  }
-
   function portal(node: HTMLElement) {
     document.body.appendChild(node)
 
-    // Position after the browser has painted so scrollWidth/scrollHeight
-    // reflect the true content size (not 0 from the slide transition start).
+    // Position dynamically inside the island container so it never clips
+    // right or bottom and never causes out-of-bounds window expansion.
     requestAnimationFrame(() => {
       const margin = 8
-      const naturalW = node.scrollWidth
-      const naturalH = node.scrollHeight
+      const naturalW = node.offsetWidth || node.scrollWidth || 150
+      const naturalH = node.offsetHeight || node.scrollHeight || 160
+
+      const islandEl = document.querySelector('.island')
+      const bounds = islandEl
+        ? islandEl.getBoundingClientRect()
+        : {
+            left: 0,
+            top: 0,
+            right: window.innerWidth,
+            bottom: window.innerHeight
+          }
 
       let finalX = x
       let finalY = y
-      if (finalX + naturalW > window.innerWidth - margin) {
-        finalX = x - naturalW
+
+      // If clipping right of island, flip/shift left
+      if (finalX + naturalW > bounds.right - margin) {
+        finalX = Math.max(
+          bounds.left + margin,
+          bounds.right - naturalW - margin
+        )
       }
-      if (finalY + naturalH > window.innerHeight - margin) {
-        finalY = y - naturalH
+
+      // If clipping bottom of island, flip/shift up
+      if (finalY + naturalH > bounds.bottom - margin) {
+        finalY = Math.max(
+          bounds.top + margin,
+          bounds.bottom - naturalH - margin
+        )
       }
-      finalX = Math.min(Math.max(margin, finalX), Math.max(margin, window.innerWidth - naturalW - margin))
-      finalY = Math.min(Math.max(margin, finalY), Math.max(margin, window.innerHeight - naturalH - margin))
+
+      // Ensure clamped to top/left bounds
+      finalX = Math.max(bounds.left + margin, finalX)
+      finalY = Math.max(bounds.top + margin, finalY)
 
       adjustedX = finalX
       adjustedY = finalY
-
-      notifyOverlay(true, { x: finalX, y: finalY, w: naturalW, h: naturalH })
     })
 
     return {
       destroy() {
-        notifyOverlay(false)
         if (node.parentElement) node.parentElement.removeChild(node)
       }
     }
   }
-
 
   function clickOutside(node: HTMLElement) {
     const handle = (e: MouseEvent) => {
@@ -92,6 +106,7 @@
   transition:slide={{ duration: 100, axis: 'y' }}
   onmousedown={stopPropagation}
   role="menu"
+  tabindex="-1"
 >
   {#each items as item (item.label)}
     {#if item.divider}

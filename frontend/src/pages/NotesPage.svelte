@@ -15,7 +15,6 @@
   import SidebarLayout from '../components/SidebarLayout.svelte'
   import NoteSidebar from '../components/notes/NoteSidebar.svelte'
   import NoteToolbar from '../components/notes/NoteToolbar.svelte'
-  import NotePreview from '../components/notes/NotePreview.svelte'
   import NoteLive from '../components/notes/NoteLive.svelte'
   import {
     ListNotes,
@@ -41,7 +40,14 @@
   let isDirty = $state<boolean>(false)
   let saveStatus = $state<string>('')
   let saveTimeout: ReturnType<typeof setTimeout> | null = null
-  let noteLiveApi = $state<{ insertAtCursor: (prefix: string, suffix: string) => void } | null>(null)
+  let noteLiveApi = $state<{
+    insertFormatting: (
+      type: FormatType,
+      prefix: string,
+      suffix?: string
+    ) => void
+    selectAll: () => void
+  } | null>(null)
 
   // Active note binding helpers
   let activeIndex = $derived(notes.findIndex((n) => n.id === selectedNoteId))
@@ -106,7 +112,11 @@
     let newTitle = 'Untitled'
     if (existingTitles.has('Untitled') || existingTitles.has('untitled')) {
       let n = 2
-      while (existingTitles.has(`Untitled (${n})`) || existingTitles.has(`untitled (${n})`)) n++
+      while (
+        existingTitles.has(`Untitled (${n})`) ||
+        existingTitles.has(`untitled (${n})`)
+      )
+        n++
       newTitle = `Untitled (${n})`
     }
     const newFileName = `${newTitle}.md`
@@ -168,7 +178,7 @@
 
   function handleTitleChange() {
     if (activeIndex === -1) return
-    triggerSaveIndicator()
+    saveStatus = 'saving'
     if (saveTimeout) clearTimeout(saveTimeout)
     saveTimeout = setTimeout(async () => {
       if (activeIndex === -1 || !notes[activeIndex]) return
@@ -189,7 +199,6 @@
       persistNote(notes[activeIndex])
     }, 600)
   }
-
 
   async function deleteSelectedNote(e: Event, id: string) {
     e.stopPropagation()
@@ -227,10 +236,16 @@
     }
   }
 
-  function insertFormatting(prefix: string, suffix: string = '') {
+  import type { FormatType } from '../components/notes/NoteToolbar.svelte'
+
+  function insertFormatting(
+    type: FormatType,
+    prefix: string,
+    suffix: string = ''
+  ) {
     if (activeIndex === -1 || !notes[activeIndex]) return
     if (noteLiveApi) {
-      noteLiveApi.insertAtCursor(prefix, suffix)
+      noteLiveApi.insertFormatting(type, prefix, suffix)
     }
   }
 
@@ -314,7 +329,7 @@
       <div class="editor-body">
         <NoteLive
           content={notes[activeIndex].content}
-          isLocked={isLocked}
+          {isLocked}
           onchange={(newContent) => {
             if (activeIndex !== -1 && notes[activeIndex]) {
               notes[activeIndex].content = newContent
@@ -322,7 +337,9 @@
             }
           }}
           onSave={saveActiveNote}
-          onReady={(api) => { noteLiveApi = api }}
+          onReady={(api) => {
+            noteLiveApi = api
+          }}
         />
       </div>
     {:else}
@@ -453,37 +470,6 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
-  }
-
-  .note-textarea {
-    width: 100%;
-    height: 100%;
-    background: transparent;
-    border: none;
-    color: var(--c-text-primary);
-    font-family: inherit;
-    font-size: 12px;
-    line-height: 1.6;
-    resize: none;
-    outline: none;
-    padding: 0;
-    margin: 0;
-    box-sizing: border-box;
-    overscroll-behavior-y: contain;
-  }
-
-  /* Custom Translucent Scrollbar to replace ugly Windows native scrollbar */
-  .note-textarea::-webkit-scrollbar {
-    width: 4px;
-  }
-
-  .note-textarea::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  .note-textarea::-webkit-scrollbar-thumb {
-    background: var(--c-scrollbar-thumb, rgba(100, 100, 100, 0.4));
-    border-radius: 4px;
   }
 
   .empty-editor {

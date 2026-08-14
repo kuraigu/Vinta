@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, setContext, type Component } from 'svelte'
+  import { get } from 'svelte/store'
   import { fade } from 'svelte/transition'
   import {
     SetWidgetBounds,
@@ -105,6 +106,15 @@
     return $autoHideStore
   })
 
+  let screenWidth = $state(
+    typeof window !== 'undefined'
+      ? window.screen?.width || window.innerWidth || 1920
+      : 1920
+  )
+  let maxOffsetX = $derived(
+    Math.max(200, Math.floor((screenWidth - 340) / 2 - 12))
+  )
+
   let hideTrigger = $state(0)
 
   $effect(() => {
@@ -142,19 +152,42 @@
   }
 
   // Global reactive fallback sync effect when island is minimized
+  let mediaIdleTimeout: number | undefined
+
   $effect(() => {
     const mediaState = $globalMediaStore
-    const hasConnectedMedia =
-      mediaState.isAvailable ||
-      (!!mediaState.title && mediaState.title.trim().length > 0) ||
-      mediaState.isPlaying
+    const isMediaConnected = mediaState.isAvailable
 
     if (!expanded && !isHidden) {
-      if (activePage === MediaPage || activePage === HomePage) {
-        const fallback = AppControls.getFallbackPage()
-        if (activePage !== fallback.page) {
-          navigateTo(fallback.page as Component, fallback.config, false)
+      if (isMediaConnected) {
+        if (mediaIdleTimeout) {
+          clearTimeout(mediaIdleTimeout)
+          mediaIdleTimeout = undefined
         }
+        if (activePage === HomePage && mediaState.isPlaying) {
+          navigateTo(MediaPage, mediaConfig, false)
+        }
+      } else {
+        // Media has disconnected or stopped - keep last track metadata shown in paused state for 3s before transitioning to HomePage
+        if (activePage === MediaPage && !mediaIdleTimeout) {
+          mediaIdleTimeout = window.setTimeout(() => {
+            mediaIdleTimeout = undefined
+            const currentMedia = get(globalMediaStore)
+            if (
+              !currentMedia.isAvailable &&
+              !expanded &&
+              !isHidden &&
+              activePage === MediaPage
+            ) {
+              navigateTo(HomePage, homeConfig, false)
+            }
+          }, 3000)
+        }
+      }
+    } else {
+      if (mediaIdleTimeout) {
+        clearTimeout(mediaIdleTimeout)
+        mediaIdleTimeout = undefined
       }
     }
   })
@@ -184,17 +217,38 @@
   function updateBounds(w: number, h: number, r: number) {
     const computedR = $shapeStore === 'box' ? 12 : r
     const scale = window.devicePixelRatio || 1
-    SetWidgetBounds(w, h, computedR, scale, $hiddenPillOffsetXStore)
+    SetWidgetBounds(w, h, computedR, scale, clampedOffsetX)
   }
 
   // --- Centralized OS Bounds Manager ---
   let currentOSBounds = { w: 0, h: 0, r: 0 }
   let targetPendingBounds = { w: 0, h: 0, r: 0 }
+  let boundsTransitionTimeout: number | undefined
 
   function applyBounds(w: number, h: number, r: number) {
     targetPendingBounds = { w, h, r }
-    updateBounds(w, h, r)
-    currentOSBounds = { w, h, r }
+    clearTimeout(boundsTransitionTimeout)
+    if (w >= currentOSBounds.w && h >= currentOSBounds.h) {
+      updateBounds(w, h, r)
+      currentOSBounds = { w, h, r }
+    } else {
+      const maxW = Math.max(currentOSBounds.w, w)
+      const maxH = Math.max(currentOSBounds.h, h)
+      const maxR = Math.max(currentOSBounds.r, r)
+      updateBounds(maxW, maxH, maxR)
+
+      // Fallback in case transitionend event is dropped or interrupted
+      boundsTransitionTimeout = window.setTimeout(() => {
+        if (targetPendingBounds.w > 0 && targetPendingBounds.h > 0) {
+          updateBounds(
+            targetPendingBounds.w,
+            targetPendingBounds.h,
+            targetPendingBounds.r
+          )
+          currentOSBounds = { ...targetPendingBounds }
+        }
+      }, 500)
+    }
   }
 
   function handleIslandTransitionEnd(e: TransitionEvent) {
@@ -202,6 +256,7 @@
       e.target === e.currentTarget &&
       (e.propertyName === 'width' || e.propertyName === 'height')
     ) {
+      clearTimeout(boundsTransitionTimeout)
       if (targetPendingBounds.w > 0 && targetPendingBounds.h > 0) {
         updateBounds(
           targetPendingBounds.w,
@@ -217,6 +272,23 @@
     $autoHideDisplayStore === 'clock'
       ? { w: 105, h: 24, r: 12 }
       : { w: 60, h: 8, r: 4 }
+  )
+
+  let currentIslandW = $derived(
+    isHidden
+      ? hiddenBounds.w
+      : cssExpanded
+        ? islandConfig.expanded.w
+        : islandConfig.minimal.w
+  )
+  let maxAllowedOffsetForCurrentW = $derived(
+    Math.max(0, Math.floor((screenWidth - currentIslandW) / 2 - 12))
+  )
+  let clampedOffsetX = $derived(
+    Math.max(
+      -maxAllowedOffsetForCurrentW,
+      Math.min(maxAllowedOffsetForCurrentW, $hiddenPillOffsetXStore)
+    )
   )
 
   let glowOpacity = $derived(
@@ -245,11 +317,15 @@
     activePage = page
     islandConfig = pageConfig
 
-    // Batch the expanded state mutation onto the next visual frame so the browser
-    // parses new DOM nodes before starting the container size transition.
-    requestAnimationFrame(() => {
-      expanded = expand
-    })
+    if (expand) {
+      // Batch the expanded state mutation onto the next visual frame so the browser
+      // parses new DOM nodes before starting the container size transition.
+      requestAnimationFrame(() => {
+        expanded = true
+      })
+    } else {
+      expanded = false
+    }
     triggerGlow()
   }
 
@@ -293,7 +369,9 @@
     updateBounds(currentOSBounds.w, currentOSBounds.h, currentOSBounds.r)
 
     const handleOverlayChange = (e: Event) => {
-      const detail = (e as CustomEvent).detail as { open: boolean; x?: number; y?: number; w?: number; h?: number } | undefined
+      const detail = (e as CustomEvent).detail as
+        | { open: boolean; x?: number; y?: number; w?: number; h?: number }
+        | undefined
       if (!detail?.open) {
         extraDropdownH = 0
         extraDropdownW = 0
@@ -335,13 +413,28 @@
           const isLocked = Boolean(
             (m as unknown as Record<string, unknown>)._isPlayStateLocked
           )
+          const isIncomingAvailable = data.isAvailable !== false
+          const incomingTitle = (data.title as string) || ''
           const incomingArt = (data.albumArt as string) || ''
-          const isSameTrack = data.title === m.title && data.artist === m.artist
+          const isSameTrack =
+            incomingTitle === m.title && data.artist === m.artist
           const resolvedAlbumArt = incomingArt
             ? incomingArt
             : isSameTrack && m.albumArt
               ? m.albumArt
               : ''
+
+          if (!isIncomingAvailable) {
+            // Media closed or disconnected: preserve last played metadata in paused state
+            // during the grace period before transitioning back to HomePage.
+            return {
+              ...m,
+              isAvailable: false,
+              isPlaying: false,
+              _isPlayStateLocked: false
+            }
+          }
+
           return {
             ...(data as unknown as MediaData),
             albumArt: resolvedAlbumArt,
@@ -418,10 +511,33 @@
       navigateTo(NotificationPage, notifConfig, true)
     })
 
+    const handleResize = () => {
+      screenWidth = window.screen?.width || window.innerWidth || 1920
+    }
+    const handleGlobalPointerCancel = () => {
+      if (isDraggingHidden) {
+        isDraggingHidden = false
+        if (hasDraggedHidden) {
+          clearTimeout(dragResetTimeout)
+          dragResetTimeout = window.setTimeout(() => {
+            hasDraggedHidden = false
+          }, 80)
+        }
+      }
+    }
+    window.addEventListener('resize', handleResize)
+    window.addEventListener('pointerup', handleGlobalPointerCancel)
+    window.addEventListener('pointercancel', handleGlobalPointerCancel)
+    window.addEventListener('blur', handleGlobalPointerCancel)
+
     return () => {
       window.removeEventListener('contextmenu', disableGlobalContextMenu)
       window.removeEventListener('vinta-overlay', handleOverlayChange)
       window.removeEventListener('vinta-quit', handleQuit)
+      window.removeEventListener('resize', handleResize)
+      window.removeEventListener('pointerup', handleGlobalPointerCancel)
+      window.removeEventListener('pointercancel', handleGlobalPointerCancel)
+      window.removeEventListener('blur', handleGlobalPointerCancel)
     }
   })
 
@@ -429,7 +545,7 @@
     if (!islandNode) return
 
     // Track offset changes for horizontal dragging
-    void $hiddenPillOffsetXStore
+    void clampedOffsetX
 
     const baseW = isHidden
       ? hiddenBounds.w
@@ -459,14 +575,26 @@
 
   // Universal horizontal dragging across all island states
   let isDraggingHidden = $state(false)
+  let hasDraggedHidden = false
+  let dragResetTimeout: number | undefined
   let hiddenDragStartX = 0
   let hiddenDragStartOffset = 0
 
   function handleHiddenPointerDown(e: PointerEvent) {
-    if (!$allowDragPositionStore || expanded) return
+    if (e.button !== 0) return // Only primary (left) button can initiate dragging
+    if (!$allowDragPositionStore) return
 
     const target = e.target as HTMLElement
+    const isDragHandle = Boolean(
+      target.closest('.island-drag-handle, .dock-drag-handle')
+    )
+    const isAltDrag = e.altKey
+
+    // When expanded, only allow dragging via the top drag handle, dock handle, or Alt+drag
+    if (expanded && !isDragHandle && !isAltDrag) return
+
     if (
+      !isDragHandle &&
       target.closest(
         'button, input, select, textarea, a, .custom-select, .no-drag, [role="button"]'
       )
@@ -474,6 +602,8 @@
       return
     }
     isDraggingHidden = true
+    hasDraggedHidden = false
+    clearTimeout(dragResetTimeout)
     hiddenDragStartX = e.clientX
     hiddenDragStartOffset = $hiddenPillOffsetXStore
     try {
@@ -485,10 +615,18 @@
 
   function handleHiddenPointerMove(e: PointerEvent) {
     if (!isDraggingHidden) return
+    // If no mouse buttons are pressed (e.g. released outside/interrupted), cancel drag
+    if (e.buttons === 0) {
+      handleHiddenPointerUp(e)
+      return
+    }
     const dx = e.clientX - hiddenDragStartX
+    if (Math.abs(dx) > 3) {
+      hasDraggedHidden = true
+    }
     $hiddenPillOffsetXStore = Math.max(
-      -600,
-      Math.min(600, hiddenDragStartOffset + dx)
+      -maxOffsetX,
+      Math.min(maxOffsetX, hiddenDragStartOffset + dx)
     )
   }
 
@@ -500,9 +638,22 @@
     } catch {
       // Ignore
     }
+    if (hasDraggedHidden) {
+      clearTimeout(dragResetTimeout)
+      dragResetTimeout = window.setTimeout(() => {
+        hasDraggedHidden = false
+      }, 80)
+    }
   }
 
   function handleContextMenu(e: MouseEvent) {
+    if (isDraggingHidden || hasDraggedHidden) {
+      isDraggingHidden = false
+      hasDraggedHidden = false
+      e.preventDefault()
+      e.stopPropagation()
+      return
+    }
     if (expanded) return
 
     const target = e.target as HTMLElement
@@ -529,6 +680,10 @@
   }
 
   function handleIslandClick() {
+    if (hasDraggedHidden) {
+      hasDraggedHidden = false
+      return
+    }
     islandAnim = '0.4s cubic-bezier(0.22, 1, 0.36, 1)'
 
     if (isHidden) {
@@ -586,9 +741,7 @@
     bind:this={islandNode}
     class="island {expanded ? 'expanded' : ''} {isTransitionGlow
       ? 'is-transition-glow'
-      : ''} {isHidden ? 'is-hidden' : ''} {isQuitting
-      ? 'is-quitting'
-      : ''}"
+      : ''} {isHidden ? 'is-hidden' : ''} {isQuitting ? 'is-quitting' : ''}"
     onmouseenter={handleMouseEnter}
     onmouseleave={handleMouseLeave}
     onpointerdown={handleHiddenPointerDown}
@@ -607,7 +760,7 @@
       }
     }}
     style="
-      transform: translateX({$hiddenPillOffsetXStore}px) {isQuitting
+      transform: translateX({clampedOffsetX}px) {isQuitting
       ? 'scale(0.6) translateY(-20px)'
       : ''};
       opacity: {isQuitting ? 0 : activeOpacity};
@@ -653,6 +806,19 @@
       {:else}
         <div class="hidden-dash" in:fade={{ duration: 200 }}></div>
       {/if}
+    {/if}
+
+    {#if expanded && $allowDragPositionStore}
+      <div
+        class="island-drag-handle"
+        title="Drag to reposition • Double-click to center (or Alt + Drag)"
+        ondblclick={(e) => {
+          e.stopPropagation()
+          $hiddenPillOffsetXStore = 0
+        }}
+      >
+        <div class="drag-pill-bar"></div>
+      </div>
     {/if}
 
     <div
@@ -773,7 +939,6 @@
     -webkit-transform: translateZ(0);
   }
 
-
   .island {
     will-change: width, height, border-radius;
 
@@ -811,6 +976,45 @@
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     background-color: var(--c-bg);
+  }
+
+  .island-drag-handle {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 12px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 120;
+    cursor: grab;
+    pointer-events: auto;
+  }
+
+  .island-drag-handle:active {
+    cursor: grabbing;
+  }
+
+  .drag-pill-bar {
+    width: 28px;
+    height: 3px;
+    border-radius: 9999px;
+    background: var(--c-text-primary, #ffffff);
+    opacity: 0.18;
+    transition:
+      opacity 0.2s ease,
+      width 0.2s ease;
+  }
+
+  .island-drag-handle:hover .drag-pill-bar {
+    width: 36px;
+    opacity: 0.45;
+    background: var(--c-text-primary, #ffffff);
+  }
+
+  .island-drag-handle:active .drag-pill-bar {
+    opacity: 0.6;
   }
 
   .hidden-widget-pill {

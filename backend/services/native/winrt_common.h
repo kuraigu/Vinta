@@ -369,7 +369,10 @@ inline std::string StreamToBase64(winrt_storage::IRandomAccessStreamWithContentT
         std::vector<uint8_t> bytes(static_cast<size_t>(size));
         dataReader.ReadBytes(bytes);
 
-        return "data:image/png;base64," + Base64Encode(bytes.data(), bytes.size());
+        std::string mime = Utf16ToUtf8(stream.ContentType().c_str());
+        if (mime.empty()) mime = "image/png";
+
+        return "data:" + mime + ";base64," + Base64Encode(bytes.data(), bytes.size());
     } catch (...) {
         return "";
     }

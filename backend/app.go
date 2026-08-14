@@ -236,16 +236,18 @@ var screenWidth, screenHeight int
 
 // App struct
 type App struct {
-	ctx      context.Context
-	icon     []byte
-	pillW    int
-	pillH    int
-	pillR    int
-	offsetX  int
-	devW     int
-	devH     int
-	devExtra int
-	scale    float64
+	ctx         context.Context
+	icon        []byte
+	pillW       int
+	pillH       int
+	pillR       int
+	offsetX     int
+	devW        int
+	devH        int
+	devExtra    int
+	scale       float64
+	lastWinW    int
+	lastNeededH int
 }
 
 // NewApp creates a new App application struct
@@ -586,15 +588,19 @@ func (a *App) updateWindowRegion() {
 			winW = scaleInt(winW)
 		}
 
-		procSetWindowPos := user32.NewProc("SetWindowPos")
-		// SWP_NOMOVE (0x0002) | SWP_NOACTIVATE (0x0010) | SWP_NOOWNERZORDER (0x0200) | SWP_NOSENDCHANGING (0x0400)
-		_, _, _ = procSetWindowPos.Call(
-			hwnd,
-			uintptr(^uintptr(0)),
-			0, 0,
-			uintptr(winW), uintptr(neededH),
-			0x0002|0x0010|0x0200|0x0400,
-		)
+		if winW != a.lastWinW || neededH != a.lastNeededH {
+			a.lastWinW = winW
+			a.lastNeededH = neededH
+			procSetWindowPos := user32.NewProc("SetWindowPos")
+			// SWP_NOMOVE (0x0002) | SWP_NOACTIVATE (0x0010) | SWP_NOOWNERZORDER (0x0200) | SWP_NOSENDCHANGING (0x0400)
+			_, _, _ = procSetWindowPos.Call(
+				hwnd,
+				uintptr(^uintptr(0)),
+				0, 0,
+				uintptr(winW), uintptr(neededH),
+				0x0002|0x0010|0x0200|0x0400,
+			)
+		}
 	}
 }
 
@@ -785,7 +791,6 @@ func (a *App) ListNotes() ([]NoteFileInfo, error) {
 	return notes, nil
 }
 
-
 // ReadNote reads and returns the text content of a note file.
 func (a *App) ReadNote(fileName string) (string, error) {
 	dir, err := getNotesDir()
@@ -906,4 +911,3 @@ func (a *App) SaveSettings(settingsJSON string) error {
 	filePath := filepath.Join(dir, "settings.json")
 	return os.WriteFile(filePath, []byte(settingsJSON), 0644)
 }
-

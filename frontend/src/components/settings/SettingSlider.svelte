@@ -17,8 +17,6 @@
     onchange
   }: Props = $props()
 
-
-
   function clamp(val: number): number {
     if (isNaN(val)) return min
     return Math.min(max, Math.max(min, val))

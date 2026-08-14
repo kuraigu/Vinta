@@ -72,6 +72,7 @@
   // Sync with incoming media store updates when track changes, play state changes, or external seek occurs
   let prevTitle = $state('')
   let prevArtist = $state('')
+  let prevBackendPos = $state(0)
 
   $effect(() => {
     const curTitle = media.title || ''
@@ -79,10 +80,13 @@
     const backendPos = media.positionMs || 0
 
     const isTrackChanged = curTitle !== prevTitle || curArtist !== prevArtist
+    const isExternalSeek = Math.abs(backendPos - prevBackendPos) > 3000
 
-    // Ignore backend position updates while dragging or during post-seek stabilization lock (1800ms)
     if (!isDraggingSeek && !isSeekingLocked) {
-      if (isTrackChanged) {
+      if (isTrackChanged || !media.isPlaying || isExternalSeek) {
+        localPosMs = backendPos
+        seekVal = backendPos
+      } else if (Math.abs(localPosMs - backendPos) > 1500) {
         localPosMs = backendPos
         seekVal = backendPos
       }
@@ -90,6 +94,7 @@
 
     prevTitle = curTitle
     prevArtist = curArtist
+    prevBackendPos = backendPos
 
     if (!isDraggingVol && media.volume !== undefined) {
       volVal = media.volume
@@ -102,13 +107,11 @@
     globalMediaStore.update((m) => ({ ...m, albumArt: '' }))
   }
 
-  // Throttled local timeline progression — rAF runs display-rate interpolation locally,
-  // but only mutates Svelte 5 $state at ~10 FPS (100ms intervals) to eliminate reactive signal thrashing.
+  // Smooth local timeline progression between backend SMTC updates
   $effect(() => {
     if (!media.isPlaying || isDraggingSeek) return
 
     let lastTick = performance.now()
-    let lastStateUpdate = performance.now()
     let rafId: number
 
     const tick = () => {
@@ -116,15 +119,17 @@
       const elapsed = now - lastTick
       lastTick = now
 
-      // Hold local timeline steady for 500ms after seek to match Spotify native audio decoder lag
       const isSettlingAfterSeek = now - lastSeekTimestamp < 500
 
-      if (!isDraggingSeek && !isSettlingAfterSeek && media.durationMs > 0) {
+      if (
+        !isDraggingSeek &&
+        !isSettlingAfterSeek &&
+        !isSeekingLocked &&
+        media.durationMs > 0 &&
+        media.isPlaying
+      ) {
         localPosMs = Math.min(media.durationMs, localPosMs + elapsed)
-        if (now - lastStateUpdate >= 100) {
-          seekVal = localPosMs
-          lastStateUpdate = now
-        }
+        seekVal = localPosMs
       }
 
       rafId = requestAnimationFrame(tick)
@@ -301,9 +306,11 @@
       <div class="track-info-minimal">
         <span class="track-title-mini">{media.title || 'No Media Playing'}</span
         >
-        <span class="artist-name-mini"
-          >{media.artist || 'Connect Media Player'}</span
-        >
+        {#if media.artist}
+          <span class="artist-name-mini">{media.artist}</span>
+        {:else if !media.title}
+          <span class="artist-name-mini">Connect Media Player</span>
+        {/if}
       </div>
 
       <!-- Minimal Re-used <Clock>, Bouncing Equalizer & Subtle Notification Indicator -->
@@ -390,9 +397,11 @@
         <div class="middle-left-spacer"></div>
         <div class="track-details">
           <div class="track-title">{media.title || 'No Media Playing'}</div>
-          <div class="artist-name">
-            {media.artist || 'Connect Media Player'}
-          </div>
+          {#if media.artist}
+            <div class="artist-name">{media.artist}</div>
+          {:else if !media.title}
+            <div class="artist-name">Connect Media Player</div>
+          {/if}
           {#if media.album}
             <div class="album-name">{media.album}</div>
           {/if}
@@ -904,10 +913,11 @@
     padding: 10px 14px;
     margin: -10px -14px 6px -14px;
     border-radius: 20px 20px 0 0;
-    background: rgba(255, 255, 255, 0.02);
-    backdrop-filter: blur(2px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+    background: rgba(50, 50, 50, 0.06);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
   }
 
   .top-clock-wrapper {

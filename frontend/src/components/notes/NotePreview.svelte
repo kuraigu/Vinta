@@ -90,22 +90,27 @@
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]
       const trimmed = line.trim()
+      const matchFence = line.match(/^[ ]{0,3}```(\S*)/)
 
-      if (trimmed.startsWith('```')) {
+      if (matchFence) {
         if (!inCodeBlock) {
           inCodeBlock = true
-          currentCodeLang = trimmed.slice(3).trim()
+          currentCodeLang = matchFence[1] || ''
           currentCodeLines = []
         } else {
-          inCodeBlock = false
-          const idx = codeBlocks.length
-          const rawCode = currentCodeLines.join('\n')
-          codeBlocks.push({
-            lang: currentCodeLang.toLowerCase() || 'code',
-            code: rawCode,
-            highlightedHtml: highlightSyntax(rawCode)
-          })
-          resultLines.push(`<!--CODEBLOCK_${idx}-->`)
+          if (/^[ ]{0,3}```\s*$/.test(line)) {
+            inCodeBlock = false
+            const idx = codeBlocks.length
+            const rawCode = currentCodeLines.join('\n')
+            codeBlocks.push({
+              lang: currentCodeLang.toLowerCase() || 'code',
+              code: rawCode,
+              highlightedHtml: highlightSyntax(rawCode)
+            })
+            resultLines.push(`<!--CODEBLOCK_${idx}-->`)
+          } else {
+            currentCodeLines.push(line)
+          }
         }
         continue
       }

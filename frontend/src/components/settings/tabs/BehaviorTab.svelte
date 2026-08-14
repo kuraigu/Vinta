@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Layout, EyeOff, Timer, MousePointer, Sliders } from 'lucide-svelte'
+  import { Layout, EyeOff, Timer, MousePointer, RotateCcw } from 'lucide-svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingSlider from '../SettingSlider.svelte'
   import CustomSelect from '../../CustomSelect.svelte'
@@ -18,6 +18,15 @@
     { label: 'Compact Dashboard', value: 'dash' },
     { label: 'Compact Clock', value: 'clock' }
   ]
+
+  let isResettingOffset = $state(false)
+  function handleResetOffset() {
+    $hiddenPillOffsetXStore = 0
+    isResettingOffset = true
+    setTimeout(() => {
+      isResettingOffset = false
+    }, 1200)
+  }
 </script>
 
 <div class="setting-group">
@@ -74,21 +83,17 @@
     </div>
   </SettingItem>
 
-  <SettingItem label="Island Position Offset X" icon={Sliders} flexCol={true}>
-    <SettingSlider
-      min={-500}
-      max={500}
-      step={5}
-      unit="px"
-      bind:value={$hiddenPillOffsetXStore}
-    />
-  </SettingItem>
-
   <SettingItem label="Allow Dragging Position" icon={MousePointer}>
     <label class="toggle-switch">
       <input type="checkbox" bind:checked={$allowDragPositionStore} />
       <span class="slider"></span>
     </label>
+  </SettingItem>
+
+  <SettingItem label="Center Island Position" icon={RotateCcw}>
+    <button class="action-btn" onclick={handleResetOffset}>
+      {isResettingOffset ? 'Centered' : 'Reset Offset'}
+    </button>
   </SettingItem>
 </div>
 
@@ -165,5 +170,21 @@
     background: rgba(255, 255, 255, 0.12);
     color: var(--c-text-primary);
     font-weight: 600;
+  }
+
+  .action-btn {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--c-border);
+    color: var(--c-text-primary);
+    padding: 4px 12px;
+    font-size: 11.5px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .action-btn:hover {
+    background: rgba(255, 255, 255, 0.14);
+    border-color: var(--c-primary, #6366f1);
   }
 </style>

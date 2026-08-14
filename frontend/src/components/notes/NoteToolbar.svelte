@@ -13,8 +13,14 @@
     Quote
   } from 'lucide-svelte'
 
+  export type FormatType = 'inline' | 'line' | 'link' | 'codeblock'
+
   interface Props {
-    onInsertFormatting: (prefix: string, suffix?: string) => void
+    onInsertFormatting: (
+      type: FormatType,
+      prefix: string,
+      suffix?: string
+    ) => void
   }
 
   let { onInsertFormatting }: Props = $props()
@@ -24,21 +30,24 @@
   <button
     class="tool-btn"
     title="Bold (**text**)"
-    onclick={() => onInsertFormatting('**', '**')}
+    onmousedown={(e) => e.preventDefault()}
+    onclick={() => onInsertFormatting('inline', '**', '**')}
   >
     <Bold size={13} />
   </button>
   <button
     class="tool-btn"
     title="Italic (*text*)"
-    onclick={() => onInsertFormatting('*', '*')}
+    onmousedown={(e) => e.preventDefault()}
+    onclick={() => onInsertFormatting('inline', '*', '*')}
   >
     <Italic size={13} />
   </button>
   <button
     class="tool-btn"
     title="Strikethrough (~~text~~)"
-    onclick={() => onInsertFormatting('~~', '~~')}
+    onmousedown={(e) => e.preventDefault()}
+    onclick={() => onInsertFormatting('inline', '~~', '~~')}
   >
     <Strikethrough size={13} />
   </button>
@@ -48,21 +57,24 @@
   <button
     class="tool-btn"
     title="Heading 1 (# H1)"
-    onclick={() => onInsertFormatting('# ')}
+    onmousedown={(e) => e.preventDefault()}
+    onclick={() => onInsertFormatting('line', '# ')}
   >
     <Heading1 size={13} />
   </button>
   <button
     class="tool-btn"
     title="Heading 2 (## H2)"
-    onclick={() => onInsertFormatting('## ')}
+    onmousedown={(e) => e.preventDefault()}
+    onclick={() => onInsertFormatting('line', '## ')}
   >
     <Heading2 size={13} />
   </button>
   <button
     class="tool-btn"
     title="Heading 3 (### H3)"
-    onclick={() => onInsertFormatting('### ')}
+    onmousedown={(e) => e.preventDefault()}
+    onclick={() => onInsertFormatting('line', '### ')}
   >
     <Heading3 size={13} />
   </button>
@@ -72,35 +84,40 @@
   <button
     class="tool-btn"
     title="Bullet List (- Item)"
-    onclick={() => onInsertFormatting('- ')}
+    onmousedown={(e) => e.preventDefault()}
+    onclick={() => onInsertFormatting('line', '- ')}
   >
     <List size={13} />
   </button>
   <button
     class="tool-btn"
     title="Checklist (- [ ] Task)"
-    onclick={() => onInsertFormatting('- [ ] ')}
+    onmousedown={(e) => e.preventDefault()}
+    onclick={() => onInsertFormatting('line', '- [ ] ')}
   >
     <CheckSquare size={13} />
   </button>
   <button
     class="tool-btn"
-    title="Link ([text](url))"
-    onclick={() => onInsertFormatting('[', '](https://)')}
-  >
-    <Link size={13} />
-  </button>
-  <button
-    class="tool-btn"
     title="Quote (> Quote)"
-    onclick={() => onInsertFormatting('> ')}
+    onmousedown={(e) => e.preventDefault()}
+    onclick={() => onInsertFormatting('line', '> ')}
   >
     <Quote size={13} />
   </button>
   <button
     class="tool-btn"
+    title="Link ([text](url))"
+    onmousedown={(e) => e.preventDefault()}
+    onclick={() => onInsertFormatting('link', '[', '](https://)')}
+  >
+    <Link size={13} />
+  </button>
+  <button
+    class="tool-btn"
     title="Code Block (```lang\ncode\n```)"
-    onclick={() => onInsertFormatting('```\n', '\n```')}
+    onmousedown={(e) => e.preventDefault()}
+    onclick={() => onInsertFormatting('codeblock', '```\n', '\n```')}
   >
     <Code size={13} />
   </button>
