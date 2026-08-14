@@ -69,7 +69,9 @@
       }, 50)
     }
     isOpen = !isOpen
-    triggerBoundsUpdate(isOpen)
+    if (!isOpen) {
+      notifyOverlay(false)
+    }
   }
 
   function select(
@@ -83,12 +85,18 @@
       onSelectPayload(opt.payload)
     }
     isOpen = false
-    triggerBoundsUpdate(false)
+    notifyOverlay(false)
   }
 
-  function triggerBoundsUpdate(open: boolean) {
-    const event = new CustomEvent('dev-dropdown-toggle', { detail: open })
-    window.dispatchEvent(event)
+  function notifyOverlay(
+    open: boolean,
+    rect?: { x: number; y: number; w: number; h: number }
+  ) {
+    window.dispatchEvent(
+      new CustomEvent('vinta-overlay', {
+        detail: open ? { open, ...rect } : { open }
+      })
+    )
   }
 
   let selectedLabel = $derived(
@@ -97,8 +105,13 @@
 
   function portal(node: HTMLElement) {
     document.body.appendChild(node)
+    updateRect()
+    // Read the actual rendered position+size of the dropdown and tell App.svelte
+    const r = node.getBoundingClientRect()
+    notifyOverlay(true, { x: r.left, y: r.top, w: r.width, h: r.height })
     return {
       destroy() {
+        notifyOverlay(false)
         if (node.parentElement) {
           node.parentElement.removeChild(node)
         }
@@ -107,35 +120,45 @@
   }
 
   function clickOutside(node: HTMLElement) {
+    let listenerBound = false
+
     const handleClick = (e: MouseEvent) => {
       const target = e.target as Node
       const dropdownEl = document.querySelector('.select-dropdown.portaled')
       if (
         node.contains(target) ||
+        (wrapperNode && wrapperNode.contains(target)) ||
         (dropdownEl && dropdownEl.contains(target))
       ) {
         return
       }
       if (isOpen) {
         isOpen = false
-        triggerBoundsUpdate(false)
+        notifyOverlay(false)
       }
     }
 
     const handleResize = () => {
       if (isOpen) {
         isOpen = false
-        triggerBoundsUpdate(false)
+        notifyOverlay(false)
       }
     }
 
-    document.addEventListener('click', handleClick, false)
-    window.addEventListener('resize', handleResize, true)
+    // Bind event listeners on next tick after opening so the opening click event doesn't immediately close it
+    const timer = setTimeout(() => {
+      document.addEventListener('pointerdown', handleClick, true)
+      window.addEventListener('resize', handleResize, true)
+      listenerBound = true
+    }, 50)
 
     return {
       destroy() {
-        document.removeEventListener('click', handleClick, false)
-        window.removeEventListener('resize', handleResize, true)
+        clearTimeout(timer)
+        if (listenerBound) {
+          document.removeEventListener('pointerdown', handleClick, true)
+          window.removeEventListener('resize', handleResize, true)
+        }
       }
     }
   }
@@ -149,7 +172,6 @@
   bind:this={wrapperNode}
   class="custom-select-wrapper"
   class:full-width={fullWidth}
-  use:clickOutside
 >
   <button
     class="select-trigger"
@@ -164,6 +186,7 @@
   {#if isOpen}
     <div
       use:portal
+      use:clickOutside
       class="select-dropdown portaled no-swipe"
       transition:slide={{ duration: 120 }}
       style="

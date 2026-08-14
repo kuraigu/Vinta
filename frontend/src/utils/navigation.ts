@@ -7,6 +7,7 @@ import MediaPage, { config as mediaConfig } from '../pages/MediaPage.svelte'
 import NotificationPage, {
   config as notifConfig
 } from '../pages/NotificationPage.svelte'
+import NotesPage, { config as notesConfig } from '../pages/NotesPage.svelte'
 import { globalMediaStore, type IslandConfig } from '../store'
 import { get } from 'svelte/store'
 
@@ -21,7 +22,7 @@ export function getFallbackPage(): {
   config: IslandConfig
 } {
   const mediaState = get(globalMediaStore)
-  if (mediaState.isPlaying) {
+  if (mediaState.isAvailable) {
     return { page: MediaPage, config: mediaConfig }
   }
   return { page: HomePage, config: homeConfig }
@@ -52,6 +53,11 @@ export const AppControls = {
   goSettings: (navigate: NavFn, e?: Event) => {
     if (e) e.stopPropagation()
     navigate(SettingsPage, settingsConfig, true)
+  },
+
+  goNotes: (navigate: NavFn, e?: Event) => {
+    if (e) e.stopPropagation()
+    navigate(NotesPage, notesConfig, true)
   },
 
   doMinimize: (navigate: NavFn, e?: Event) => {

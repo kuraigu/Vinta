@@ -1,0 +1,179 @@
+<script lang="ts">
+  import { slide } from 'svelte/transition'
+
+  export interface ContextMenuItem {
+    label: string
+    action: () => void
+    divider?: boolean
+    disabled?: boolean
+  }
+
+  interface Props {
+    x: number
+    y: number
+    items: ContextMenuItem[]
+    onclose: () => void
+  }
+
+  let { x, y, items, onclose }: Props = $props()
+
+  let adjustedX = $state(x)
+  let adjustedY = $state(y)
+
+  function portal(node: HTMLElement) {
+    document.body.appendChild(node)
+
+    // Position dynamically inside the island container so it never clips
+    // right or bottom and never causes out-of-bounds window expansion.
+    requestAnimationFrame(() => {
+      const margin = 8
+      const naturalW = node.offsetWidth || node.scrollWidth || 150
+      const naturalH = node.offsetHeight || node.scrollHeight || 160
+
+      const islandEl = document.querySelector('.island')
+      const bounds = islandEl
+        ? islandEl.getBoundingClientRect()
+        : {
+            left: 0,
+            top: 0,
+            right: window.innerWidth,
+            bottom: window.innerHeight
+          }
+
+      let finalX = x
+      let finalY = y
+
+      // If clipping right of island, flip/shift left
+      if (finalX + naturalW > bounds.right - margin) {
+        finalX = Math.max(
+          bounds.left + margin,
+          bounds.right - naturalW - margin
+        )
+      }
+
+      // If clipping bottom of island, flip/shift up
+      if (finalY + naturalH > bounds.bottom - margin) {
+        finalY = Math.max(
+          bounds.top + margin,
+          bounds.bottom - naturalH - margin
+        )
+      }
+
+      // Ensure clamped to top/left bounds
+      finalX = Math.max(bounds.left + margin, finalX)
+      finalY = Math.max(bounds.top + margin, finalY)
+
+      adjustedX = finalX
+      adjustedY = finalY
+    })
+
+    return {
+      destroy() {
+        if (node.parentElement) node.parentElement.removeChild(node)
+      }
+    }
+  }
+
+  function clickOutside(node: HTMLElement) {
+    const handle = (e: MouseEvent) => {
+      if (!node.contains(e.target as Node)) onclose()
+    }
+    // Delay so the triggering click doesn't immediately close it
+    setTimeout(() => document.addEventListener('mousedown', handle), 0)
+    return {
+      destroy() {
+        document.removeEventListener('mousedown', handle)
+      }
+    }
+  }
+
+  function handleItemClick(item: ContextMenuItem) {
+    if (item.disabled) return
+    onclose()
+    item.action()
+  }
+
+  function stopPropagation(e: Event) {
+    e.stopPropagation()
+  }
+</script>
+
+<div
+  use:portal
+  use:clickOutside
+  class="ctx-menu no-swipe"
+  style="left: {adjustedX}px; top: {adjustedY}px;"
+  transition:slide={{ duration: 100, axis: 'y' }}
+  onmousedown={stopPropagation}
+  role="menu"
+  tabindex="-1"
+>
+  {#each items as item (item.label)}
+    {#if item.divider}
+      <div class="ctx-divider"></div>
+    {:else}
+      <button
+        class="ctx-item"
+        class:disabled={item.disabled}
+        role="menuitem"
+        onmousedown={(e) => {
+          e.preventDefault()
+          handleItemClick(item)
+        }}
+        tabindex="-1"
+      >
+        {item.label}
+      </button>
+    {/if}
+  {/each}
+</div>
+
+<style>
+  .ctx-menu {
+    position: fixed;
+    z-index: 999999;
+    background: var(--c-bg);
+    border: 1px solid var(--c-border);
+    border-radius: 8px;
+    padding: 4px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+    min-width: 148px;
+    pointer-events: auto;
+    user-select: none;
+  }
+
+  .ctx-item {
+    display: block;
+    width: 100%;
+    background: none;
+    border: none;
+    padding: 6px 12px;
+    text-align: left;
+    font-size: 12.5px;
+    font-family: inherit;
+    color: var(--c-text-secondary);
+    cursor: pointer;
+    border-radius: 5px;
+    transition:
+      background 0.1s,
+      color 0.1s;
+    pointer-events: auto;
+  }
+
+  .ctx-item:hover {
+    background: var(--c-hover);
+    color: var(--c-text-primary);
+  }
+
+  .ctx-item.disabled {
+    opacity: 0.4;
+    cursor: default;
+    pointer-events: none;
+  }
+
+  .ctx-divider {
+    height: 1px;
+    background: var(--c-border);
+    margin: 4px 6px;
+  }
+</style>

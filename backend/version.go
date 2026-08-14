@@ -104,7 +104,7 @@ func (a *App) GetContributors() []Contributor {
 				avatar := strings.TrimSpace(match[2])
 				name := strings.TrimSpace(match[4])
 				rawRole := strings.TrimSpace(match[5])
-				handle := "@" + filepath.Base(url)
+				handle := strings.TrimPrefix(filepath.Base(url), "@")
 
 				// Clean HTML tags from role string
 				stripHTML := regexp.MustCompile(`<[^>]*>`)

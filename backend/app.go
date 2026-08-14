@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	goruntime "runtime"
 	"strings"
@@ -23,10 +24,7 @@ var (
 	user32                       = syscall.NewLazyDLL("user32.dll")
 	procGetWindowLong            = user32.NewProc("GetWindowLongW")
 	procSetWindowLong            = user32.NewProc("SetWindowLongW")
-	procSetWindowLongPtr         = user32.NewProc("SetWindowLongPtrW")
-	procCallWindowProc           = user32.NewProc("CallWindowProcW")
 	procFindWindow               = user32.NewProc("FindWindowW")
-	procEnumChildWindows         = user32.NewProc("EnumChildWindows")
 	procGetDesktopWindow         = user32.NewProc("GetDesktopWindow")
 	procGetWindow                = user32.NewProc("GetWindow")
 	procGetWindowThreadProcessID = user32.NewProc("GetWindowThreadProcessId")
@@ -54,6 +52,8 @@ const (
 	WM_NCACTIVATE = 0x0086
 	//nolint:revive // Windows API constants
 	WM_PARENTNOTIFY = 0x0210
+	//nolint:revive // Windows API constants
+	MA_ACTIVATE = 1
 	//nolint:revive // Windows API constants
 	MA_NOACTIVATE = 3
 	//nolint:revive // Windows API constants
@@ -124,11 +124,6 @@ func getMyWindowHwnd() uintptr {
 	}
 	return 0
 }
-
-var (
-	wndProcCallback uintptr
-	subclassedMap   = make(map[uintptr]uintptr)
-)
 
 // setupForegroundEventHook registers a WinEvent hook on a dedicated OS-locked thread
 // with a Win32 message pump to maintain topmost Z-order on window changes without
@@ -236,75 +231,23 @@ func isAnyFullscreenForegroundWindow(fgHwnd uintptr) bool {
 	return rect.Left <= 0 && rect.Top <= 0 && width >= (smw-15) && height >= (smh-15)
 }
 
-func setWindowLongPtr(hwnd uintptr, index int32, value uintptr) uintptr {
-	if procSetWindowLongPtr.Find() == nil {
-		res, _, _ := procSetWindowLongPtr.Call(hwnd, uintptr(index), value)
-		return res
-	}
-	res, _, _ := procSetWindowLong.Call(hwnd, uintptr(index), value)
-	return res
-}
-
-func initNoActivateHook(hwnd uintptr) {
-	if wndProcCallback == 0 {
-		wndProcCallback = syscall.NewCallback(func(h uintptr, msg uint32, wParam uintptr, lParam uintptr) uintptr {
-			switch msg {
-			case WM_MOUSEACTIVATE:
-				return MA_NOACTIVATE
-			case WM_PARENTNOTIFY:
-				if (wParam & 0xFFFF) == 1 { // WM_CREATE
-					if lParam != 0 {
-						subclassWindow(lParam)
-					}
-				}
-			}
-
-			oldProc := subclassedMap[h]
-			if oldProc != 0 {
-				res, _, _ := procCallWindowProc.Call(oldProc, h, uintptr(msg), wParam, lParam)
-				return res
-			}
-			res, _, _ := user32.NewProc("DefWindowProcW").Call(h, uintptr(msg), wParam, lParam)
-			return res
-		})
-	}
-
-	subclassWindow(hwnd)
-
-	enumCb := syscall.NewCallback(func(childHwnd uintptr, _ uintptr) uintptr {
-		subclassWindow(childHwnd)
-		return 1
-	})
-	_, _, _ = procEnumChildWindows.Call(hwnd, enumCb, 0)
-}
-
-func subclassWindow(h uintptr) {
-	if h == 0 {
-		return
-	}
-	if _, exists := subclassedMap[h]; !exists {
-		old := setWindowLongPtr(h, GWLP_WNDPROC, wndProcCallback)
-		if old != 0 && old != wndProcCallback {
-			subclassedMap[h] = old
-		}
-	}
-}
-
 // screenWidth and screenHeight cache the screen dimensions so SetWidgetBounds can center regions correctly.
 var screenWidth, screenHeight int
 
 // App struct
 type App struct {
-	ctx      context.Context
-	icon     []byte
-	pillW    int
-	pillH    int
-	pillR    int
-	offsetX  int
-	devW     int
-	devH     int
-	devExtra int
-	scale    float64
+	ctx         context.Context
+	icon        []byte
+	pillW       int
+	pillH       int
+	pillR       int
+	offsetX     int
+	devW        int
+	devH        int
+	devExtra    int
+	scale       float64
+	lastWinW    int
+	lastNeededH int
 }
 
 // NewApp creates a new App application struct
@@ -317,6 +260,7 @@ func NewApp(icon []byte) *App {
 // Startup is called when the app starts. The context is saved
 // so we can call the runtime methods
 func (a *App) Startup(ctx context.Context) {
+	defer SetupPanicRecovery()
 	a.ctx = ctx
 
 	screens, _ := runtime.ScreenGetAll(ctx)
@@ -345,20 +289,10 @@ func (a *App) Startup(ctx context.Context) {
 		if hwnd != 0 {
 			gwl := int32(GWL_EXSTYLE)
 			style, _, _ := procGetWindowLong.Call(hwnd, uintptr(gwl))
-			style = style | WS_EX_TOOLWINDOW | WS_EX_NOACTIVATE | WS_EX_TOPMOST
-			style = style &^ WS_EX_APPWINDOW
+			style = (style | WS_EX_TOOLWINDOW | WS_EX_TOPMOST) &^ WS_EX_NOACTIVATE &^ WS_EX_APPWINDOW
 			_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwl), style)
 
-			initNoActivateHook(hwnd)
-
 			setupForegroundEventHook(hwnd)
-
-			time.AfterFunc(1500*time.Millisecond, func() {
-				initNoActivateHook(hwnd)
-			})
-			time.AfterFunc(3000*time.Millisecond, func() {
-				initNoActivateHook(hwnd)
-			})
 
 			procSetWindowPos := user32.NewProc("SetWindowPos")
 			// HWND_TOPMOST = ^uintptr(0), SWP_NOACTIVATE (0x0010) | SWP_FRAMECHANGED (0x0020) | SWP_SHOWWINDOW (0x0040)
@@ -504,31 +438,21 @@ func (a *App) Quit() {
 	}
 }
 
-// FocusWindow requests OS input focus so mouse wheel scroll events work immediately on hover
+// FocusWindow requests OS input focus so typing and keyboard events work immediately on click/focus
 func (a *App) FocusWindow() {
 	if a.ctx == nil {
 		return
 	}
 
-	// If any fullscreen game or application is active/visible, DO NOT grab focus to prevent tab-outs!
+	// If any fullscreen game is active/visible, DO NOT grab focus to prevent tab-outs
 	if a.isAnyFullscreenGameRunning() {
 		return
 	}
 
-	// Do NOT grab focus if the current active foreground window is an external application
-	procGetForegroundWindow := user32.NewProc("GetForegroundWindow")
-	procGetClassName := user32.NewProc("GetClassNameW")
-	foreHwnd, _, _ := procGetForegroundWindow.Call()
-	if foreHwnd != 0 {
-		var classBuf [256]uint16
-		_, _, _ = procGetClassName.Call(foreHwnd, uintptr(unsafe.Pointer(&classBuf[0])), 256)
-		className := syscall.UTF16ToString(classBuf[:])
-		titlePtr, _ := syscall.UTF16PtrFromString("Vinta")
-		hwnd, _, _ := procFindWindow.Call(0, uintptr(unsafe.Pointer(titlePtr)))
-
-		if foreHwnd != hwnd && className != "Progman" && className != "WorkerW" && className != "Shell_TrayWnd" {
-			return
-		}
+	hwnd := getMyWindowHwnd()
+	if hwnd != 0 {
+		procSetForegroundWindow := user32.NewProc("SetForegroundWindow")
+		_, _, _ = procSetForegroundWindow.Call(hwnd)
 	}
 
 	runtime.WindowShow(a.ctx)
@@ -664,15 +588,19 @@ func (a *App) updateWindowRegion() {
 			winW = scaleInt(winW)
 		}
 
-		procSetWindowPos := user32.NewProc("SetWindowPos")
-		// SWP_NOMOVE (0x0002) | SWP_NOACTIVATE (0x0010) | SWP_NOOWNERZORDER (0x0200) | SWP_NOSENDCHANGING (0x0400)
-		_, _, _ = procSetWindowPos.Call(
-			hwnd,
-			uintptr(^uintptr(0)),
-			0, 0,
-			uintptr(winW), uintptr(neededH),
-			0x0002|0x0010|0x0200|0x0400,
-		)
+		if winW != a.lastWinW || neededH != a.lastNeededH {
+			a.lastWinW = winW
+			a.lastNeededH = neededH
+			procSetWindowPos := user32.NewProc("SetWindowPos")
+			// SWP_NOMOVE (0x0002) | SWP_NOACTIVATE (0x0010) | SWP_NOOWNERZORDER (0x0200) | SWP_NOSENDCHANGING (0x0400)
+			_, _, _ = procSetWindowPos.Call(
+				hwnd,
+				uintptr(^uintptr(0)),
+				0, 0,
+				uintptr(winW), uintptr(neededH),
+				0x0002|0x0010|0x0200|0x0400,
+			)
+		}
 	}
 }
 
@@ -812,4 +740,174 @@ func (a *App) SetHardwareAcceleration(enabled bool) error {
 		val = "false"
 	}
 	return os.WriteFile(filePath, []byte(val), 0644)
+}
+
+// NoteFileInfo describes a saved markdown note file.
+type NoteFileInfo struct {
+	ID       string `json:"id"`
+	Title    string `json:"title"`
+	FileName string `json:"fileName"`
+	ModTime  int64  `json:"modTime"`
+	Size     int64  `json:"size"`
+}
+
+func getNotesDir() (string, error) {
+	notesDir := filepath.Join(GetAppDataDir(), "notes")
+	if err := os.MkdirAll(notesDir, 0755); err != nil {
+		return "", err
+	}
+	return notesDir, nil
+}
+
+// ListNotes scans the notes directory and returns all markdown note files metadata.
+func (a *App) ListNotes() ([]NoteFileInfo, error) {
+	dir, err := getNotesDir()
+	if err != nil {
+		return nil, err
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+	var notes []NoteFileInfo
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(strings.ToLower(entry.Name()), ".md") {
+			continue
+		}
+		info, err := entry.Info()
+		if err != nil {
+			continue
+		}
+		fileName := entry.Name()
+		id := strings.TrimSuffix(fileName, filepath.Ext(fileName))
+		notes = append(notes, NoteFileInfo{
+			ID:       id,
+			Title:    id,
+			FileName: fileName,
+			ModTime:  info.ModTime().UnixMilli(),
+			Size:     info.Size(),
+		})
+	}
+	return notes, nil
+}
+
+// ReadNote reads and returns the text content of a note file.
+func (a *App) ReadNote(fileName string) (string, error) {
+	dir, err := getNotesDir()
+	if err != nil {
+		return "", err
+	}
+	cleanName := filepath.Base(fileName)
+	if !strings.HasSuffix(strings.ToLower(cleanName), ".md") {
+		cleanName += ".md"
+	}
+	filePath := filepath.Join(dir, cleanName)
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+// SaveNote writes or updates a markdown note file.
+func (a *App) SaveNote(fileName string, content string) error {
+	dir, err := getNotesDir()
+	if err != nil {
+		return err
+	}
+	cleanName := filepath.Base(fileName)
+	if !strings.HasSuffix(strings.ToLower(cleanName), ".md") {
+		cleanName += ".md"
+	}
+	filePath := filepath.Join(dir, cleanName)
+	return os.WriteFile(filePath, []byte(content), 0644)
+}
+
+// RenameNote renames an existing note file using the new title as the filename.
+// Returns the new filename on success.
+func (a *App) RenameNote(oldFileName string, newTitle string) (string, error) {
+	dir, err := getNotesDir()
+	if err != nil {
+		return "", err
+	}
+	// Sanitize the new title into a safe filename
+	sanitized := strings.NewReplacer(
+		"/", "-", "\\", "-", ":", "-", "*", "-",
+		"?", "-", "\"", "-", "<", "-", ">", "-", "|", "-",
+	).Replace(strings.TrimSpace(newTitle))
+	if sanitized == "" {
+		sanitized = "untitled"
+	}
+	newFileName := sanitized + ".md"
+
+	oldClean := filepath.Base(oldFileName)
+	if !strings.HasSuffix(strings.ToLower(oldClean), ".md") {
+		oldClean += ".md"
+	}
+
+	oldPath := filepath.Join(dir, oldClean)
+	newPath := filepath.Join(dir, newFileName)
+
+	// Avoid clobbering a different existing file
+	if !strings.EqualFold(oldPath, newPath) {
+		if _, statErr := os.Stat(newPath); statErr == nil {
+			// Target exists — append a counter to make it unique
+			base := strings.TrimSuffix(newFileName, ".md")
+			for n := 2; ; n++ {
+				candidate := fmt.Sprintf("%s (%d).md", base, n)
+				if _, e := os.Stat(filepath.Join(dir, candidate)); os.IsNotExist(e) {
+					newFileName = candidate
+					newPath = filepath.Join(dir, newFileName)
+					break
+				}
+			}
+		}
+		if err := os.Rename(oldPath, newPath); err != nil {
+			return "", err
+		}
+	}
+	return newFileName, nil
+}
+
+// DeleteNote deletes a markdown note file from disk.
+func (a *App) DeleteNote(fileName string) error {
+	dir, err := getNotesDir()
+	if err != nil {
+		return err
+	}
+	cleanName := filepath.Base(fileName)
+	if !strings.HasSuffix(strings.ToLower(cleanName), ".md") {
+		cleanName += ".md"
+	}
+	filePath := filepath.Join(dir, cleanName)
+	return os.Remove(filePath)
+}
+
+// OpenNotesFolder opens the Vinta notes directory in Windows File Explorer.
+func (a *App) OpenNotesFolder() error {
+	dir, err := getNotesDir()
+	if err != nil {
+		return err
+	}
+	return exec.Command("explorer.exe", dir).Start()
+}
+
+// GetSettings reads settings.json from %APPDATA%/FreeMatrix Studios/Vinta.
+func (a *App) GetSettings() (string, error) {
+	filePath := filepath.Join(GetAppDataDir(), "settings.json")
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return "{}", nil
+	}
+	return string(data), nil
+}
+
+// SaveSettings writes settings.json to %APPDATA%/FreeMatrix Studios/Vinta.
+func (a *App) SaveSettings(settingsJSON string) error {
+	dir := GetAppDataDir()
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+	filePath := filepath.Join(dir, "settings.json")
+	return os.WriteFile(filePath, []byte(settingsJSON), 0644)
 }

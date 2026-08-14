@@ -11,13 +11,22 @@
 
 <script lang="ts">
   import { getContext } from 'svelte'
-  import { House, Bell, Music, Settings, Info, Search } from 'lucide-svelte'
+  import {
+    House,
+    Bell,
+    Music,
+    Settings,
+    Info,
+    Search,
+    FileText
+  } from 'lucide-svelte'
   import HomePage, { config as homeConfig } from './HomePage.svelte'
   import NotificationPage, {
     config as notifConfig
   } from './NotificationPage.svelte'
   import MediaPage, { config as mediaConfig } from './MediaPage.svelte'
   import SettingsPage, { config as settingsConfig } from './SettingsPage.svelte'
+  import NotesPage, { config as notesConfig } from './NotesPage.svelte'
   import ScrollView from '../components/ScrollView.svelte'
   import { notifData, activeSettingsTabStore } from '../store'
 
@@ -40,6 +49,14 @@
       icon: House,
       color: 'gradient-green',
       action: () => openApp(HomePage, homeConfig)
+    },
+    {
+      id: 'notes',
+      name: 'Quick Notes',
+      desc: 'Scratchpad & Notes',
+      icon: FileText,
+      color: 'gradient-amber',
+      action: () => openApp(NotesPage, notesConfig)
     },
     {
       id: 'media',
@@ -246,6 +263,10 @@
       var(--c-success),
       var(--c-island-border-idle)
     );
+  }
+
+  .bento-app-card.gradient-amber .card-icon-wrapper {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
   }
 
   .bento-app-card.gradient-pink .card-icon-wrapper {

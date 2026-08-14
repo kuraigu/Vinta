@@ -1,19 +1,79 @@
 import { writable, get } from 'svelte/store'
+import { GetSettings, SaveSettings } from '../wailsjs/go/backend/App.js'
 
 export const devTestingStore = writable<boolean>(false)
 export const activeSettingsTabStore = writable<string>('appearance')
 
+const allSettingsCache: Record<string, unknown> = {}
+let saveSettingsTimeout: ReturnType<typeof setTimeout> | null = null
+
+function syncSettingsToDisk() {
+  if (saveSettingsTimeout) clearTimeout(saveSettingsTimeout)
+  saveSettingsTimeout = setTimeout(() => {
+    try {
+      if (typeof SaveSettings === 'function') {
+        SaveSettings(JSON.stringify(allSettingsCache)).catch(() => {})
+      }
+    } catch {
+      // Ignore disk write failure
+    }
+  }, 300)
+}
+
+// Registry of stores for initial loading from disk
+const registeredStores: Array<{
+  key: string
+  store: { set: (v: unknown) => void }
+  initialValue: unknown
+}> = []
+
 function persistentWritable<T>(key: string, initialValue: T) {
   const stored = localStorage.getItem(key)
   const initial = stored ? JSON.parse(stored) : initialValue
+  allSettingsCache[key] = initial
   const store = writable<T>(initial)
+
+  registeredStores.push({
+    key,
+    store: store as unknown as { set: (v: unknown) => void },
+    initialValue
+  })
+
   store.subscribe((value) => {
-    // Only persist to localStorage if NOT currently in DevTest testing mode
+    allSettingsCache[key] = value
     if (!get(devTestingStore)) {
-      localStorage.setItem(key, JSON.stringify(value))
+      try {
+        localStorage.setItem(key, JSON.stringify(value))
+      } catch {
+        // Ignore storage write error
+      }
+      syncSettingsToDisk()
     }
   })
   return store
+}
+
+// Load disk settings on startup and update stores
+if (typeof window !== 'undefined') {
+  setTimeout(async () => {
+    try {
+      if (typeof GetSettings === 'function') {
+        const json = await GetSettings()
+        if (json && json !== '{}') {
+          const parsed = JSON.parse(json)
+          for (const item of registeredStores) {
+            if (item.key in parsed) {
+              const diskVal = parsed[item.key]
+              localStorage.setItem(item.key, JSON.stringify(diskVal))
+              item.store.set(diskVal)
+            }
+          }
+        }
+      }
+    } catch {
+      // Ignore disk load error
+    }
+  }, 0)
 }
 
 export type AppTheme = 'dark' | 'light'
@@ -45,7 +105,7 @@ export const hiddenPillOffsetXStore = persistentWritable<number>(
 )
 export const allowDragPositionStore = persistentWritable<boolean>(
   'vinta_allow_drag_position',
-  false
+  true
 )
 export const hardwareAccelStore = persistentWritable<boolean>(
   'vinta_hardware_accel',
@@ -69,13 +129,10 @@ export const autostartStore = persistentWritable<boolean>(
   'vinta_autostart',
   false
 )
-export const autoHideStore = persistentWritable<boolean>(
-  'vinta_autohide',
-  false
-)
+export const autoHideStore = persistentWritable<boolean>('vinta_autohide', true)
 export const homeAutoHideStore = persistentWritable<boolean>(
   'vinta_home_autohide',
-  false
+  true
 )
 export const mediaAutoHideStore = persistentWritable<boolean>(
   'vinta_media_autohide',
@@ -85,8 +142,7 @@ export const notifAutoHideStore = persistentWritable<boolean>(
   'vinta_notif_autohide',
   false
 )
-export type AutoHideDelay = 5 | 10 | 20
-export const autoHideDelayStore = persistentWritable<AutoHideDelay>(
+export const autoHideDelayStore = persistentWritable<number>(
   'vinta_autohide_delay',
   10
 )
@@ -95,6 +151,12 @@ export type AutoHideDisplayWidget = 'dash' | 'clock'
 export const autoHideDisplayStore = persistentWritable<AutoHideDisplayWidget>(
   'vinta_autohide_display',
   'dash'
+)
+
+export type HiddenPillPosition = 'center' | 'top-left' | 'top-right'
+export const hiddenPillPositionStore = persistentWritable<HiddenPillPosition>(
+  'vinta_hidden_pill_position',
+  'center'
 )
 
 export const wakeMethodStore = persistentWritable<'hover' | 'click'>(

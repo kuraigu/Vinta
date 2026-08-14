@@ -35,14 +35,14 @@
     devTestingStore.set(true)
     const handleToggle = (e: Event) => {
       const detail = (e as CustomEvent).detail
-      extraH = detail ? 250 : 0
+      extraH = detail?.open ? 250 : 0
     }
-    window.addEventListener('dev-dropdown-toggle', handleToggle)
+    window.addEventListener('vinta-overlay', handleToggle)
     return () => {
       devTestingStore.set(false)
       const scale = window.devicePixelRatio || 1
       SetDevPillBounds(0, 0, 0, scale)
-      window.removeEventListener('dev-dropdown-toggle', handleToggle)
+      window.removeEventListener('vinta-overlay', handleToggle)
     }
   })
 

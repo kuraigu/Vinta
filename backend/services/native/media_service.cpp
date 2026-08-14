@@ -58,9 +58,9 @@ static void ScheduleEmit() {
     if (g_emitPending.compare_exchange_strong(expected, true)) {
         std::thread([]() {
             ApartmentScope apt;
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
             g_emitPending.store(false);
-            EmitMediaState(true);
+            UpdateCurrentSession();
         }).detach();
     }
 }
@@ -71,11 +71,28 @@ static void UpdateCurrentSession() {
 
     try {
         winrt_media::GlobalSystemMediaTransportControlsSession targetSession{nullptr};
+
+        // 1. Get focused session
+        winrt_media::GlobalSystemMediaTransportControlsSession focusedSession{nullptr};
         try {
-            targetSession = g_sessionManager.GetCurrentSession();
+            focusedSession = g_sessionManager.GetCurrentSession();
         } catch (...) {}
 
-        if (!targetSession) {
+        // 2. Check if focused session is actively playing
+        bool focusedIsPlaying = false;
+        if (focusedSession) {
+            try {
+                auto info = focusedSession.GetPlaybackInfo();
+                if (info && info.PlaybackStatus() == winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing) {
+                    focusedIsPlaying = true;
+                }
+            } catch (...) {}
+        }
+
+        if (focusedIsPlaying) {
+            targetSession = focusedSession;
+        } else {
+            // Focused session is not playing (or null). Check if ANY other session is actively Playing
             try {
                 auto sessions = g_sessionManager.GetSessions();
                 for (auto const& s : sessions) {
@@ -87,13 +104,27 @@ static void UpdateCurrentSession() {
                         }
                     } catch (...) {}
                 }
-                if (!targetSession && sessions.Size() > 0) {
-                    targetSession = sessions.GetAt(0);
-                }
             } catch (...) {}
+
+            // If no session is actively playing, fallback to focusedSession (paused), or first available session
+            if (!targetSession) {
+                if (focusedSession) {
+                    targetSession = focusedSession;
+                } else {
+                    try {
+                        auto sessions = g_sessionManager.GetSessions();
+                        for (auto const& s : sessions) {
+                            targetSession = s;
+                            break;
+                        }
+                    } catch (...) {}
+                }
+            }
         }
 
-        if (g_currentSession != targetSession) {
+        bool sessionChanged = (g_currentSession != targetSession);
+
+        if (sessionChanged) {
             if (g_currentSession) {
                 try { g_currentSession.MediaPropertiesChanged(g_mediaPropsChangedToken); } catch (...) {}
                 try { g_currentSession.PlaybackInfoChanged(g_playbackInfoChangedToken); } catch (...) {}
@@ -164,30 +195,41 @@ static void EmitMediaState(bool includeVolume) {
             bool shouldFetchArt = false;
             {
                 std::lock_guard<std::mutex> artLock(g_artCacheMutex);
-                if (!trackKey.empty() && trackKey != g_cachedTrackKey) {
+                if (trackKey != g_cachedTrackKey) {
                     g_cachedTrackKey = trackKey;
                     g_cachedAlbumArt = "";
                     g_artFetchCount = 0;
                 }
 
-                if (!g_cachedAlbumArt.empty()) {
-                    albumArt = g_cachedAlbumArt;
-                } else if (g_artFetchCount < 5) {
+                if (props.Thumbnail() != nullptr && (g_cachedAlbumArt.empty() || g_artFetchCount < 6)) {
                     shouldFetchArt = true;
                     g_artFetchCount++;
+                } else if (!g_cachedAlbumArt.empty()) {
+                    albumArt = g_cachedAlbumArt;
                 }
             }
 
             if (shouldFetchArt && props.Thumbnail()) {
                 try {
                     auto stream = props.Thumbnail().OpenReadAsync().get();
-                    std::string fetchedArt = StreamToBase64(stream);
-                    if (!fetchedArt.empty()) {
-                        albumArt = fetchedArt;
-                        std::lock_guard<std::mutex> artLock(g_artCacheMutex);
-                        g_cachedAlbumArt = fetchedArt;
+                    if (stream) {
+                        std::string fetchedArt = StreamToBase64(stream);
+                        if (!fetchedArt.empty()) {
+                            std::lock_guard<std::mutex> artLock(g_artCacheMutex);
+                            if (g_cachedTrackKey == trackKey) {
+                                g_cachedAlbumArt = fetchedArt;
+                                albumArt = fetchedArt;
+                            }
+                        }
                     }
                 } catch (...) {}
+            }
+
+            if (albumArt.empty()) {
+                std::lock_guard<std::mutex> artLock(g_artCacheMutex);
+                if (g_cachedTrackKey == trackKey && !g_cachedAlbumArt.empty()) {
+                    albumArt = g_cachedAlbumArt;
+                }
             }
         }
     } catch (...) {}
@@ -230,8 +272,20 @@ static void EmitMediaState(bool includeVolume) {
     try {
         auto timeline = session.GetTimelineProperties();
         if (timeline) {
-            posMs = std::chrono::duration<double, std::milli>(timeline.Position()).count();
+            double rawPosMs = std::chrono::duration<double, std::milli>(timeline.Position()).count();
             durMs = std::chrono::duration<double, std::milli>(timeline.EndTime()).count();
+            posMs = rawPosMs;
+
+            if (isPlaying && durMs > 0) {
+                auto lastUpdated = timeline.LastUpdatedTime();
+                auto now = winrt::clock::now();
+                if (now > lastUpdated) {
+                    double elapsedSinceUpdate = std::chrono::duration<double, std::milli>(now - lastUpdated).count();
+                    if (elapsedSinceUpdate > 0 && elapsedSinceUpdate < 600000) {
+                        posMs = std::min(durMs, rawPosMs + elapsedSinceUpdate);
+                    }
+                }
+            }
         }
     } catch (...) {}
 
@@ -484,17 +538,6 @@ void StartMediaService(NativeMediaCallback cb) {
         } catch (...) {}
 
         UpdateCurrentSession();
-
-        // Warmup retries to ensure media properties and album art are populated during application startup
-        std::thread([]() {
-            ApartmentScope apt;
-            std::this_thread::sleep_for(std::chrono::milliseconds(250));
-            if (g_mediaRunning) UpdateCurrentSession();
-            std::this_thread::sleep_for(std::chrono::milliseconds(350));
-            if (g_mediaRunning) UpdateCurrentSession();
-            std::this_thread::sleep_for(std::chrono::milliseconds(600));
-            if (g_mediaRunning) UpdateCurrentSession();
-        }).detach();
 
         while (g_mediaRunning) {
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
