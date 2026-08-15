@@ -8,7 +8,11 @@ import NotificationPage, {
   config as notifConfig
 } from '../pages/NotificationPage.svelte'
 import NotesPage, { config as notesConfig } from '../pages/NotesPage.svelte'
-import { globalMediaStore, type IslandConfig } from '../store'
+import {
+  globalMediaStore,
+  pageVisibilityStore,
+  type IslandConfig
+} from '../store'
 import { get } from 'svelte/store'
 
 export type NavFn = (
@@ -22,7 +26,8 @@ export function getFallbackPage(): {
   config: IslandConfig
 } {
   const mediaState = get(globalMediaStore)
-  if (mediaState.isAvailable) {
+  const isMediaEnabled = get(pageVisibilityStore).media
+  if (mediaState.isAvailable && isMediaEnabled) {
     return { page: MediaPage, config: mediaConfig }
   }
   return { page: HomePage, config: homeConfig }

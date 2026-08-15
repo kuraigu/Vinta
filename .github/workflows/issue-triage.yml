@@ -5,6 +5,8 @@ on:
     - cron: '0 */6 * * *' # Runs every 6 hours
   issues:
     types: [opened, assigned, unassigned, reopened]
+  issue_comment:
+    types: [created]
   workflow_dispatch:
 
 permissions:
@@ -185,6 +187,16 @@ jobs:
                     issue_number: issue.number,
                     body: 'Friendly reminder: This issue was assigned 5 days ago with no recent updates. Please post a status update, commit, or progress comment if you are still working on it!'
                   });
+                }
+              // Active Rule: Remove 'stale-claim' if activity was refreshed by assignee
+              } else {
+                if (hasStaleLabel) {
+                  await github.rest.issues.removeLabel({
+                    owner,
+                    repo,
+                    issue_number: issue.number,
+                    name: 'stale-claim'
+                  }).catch(() => {});
                 }
               }
             }

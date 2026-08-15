@@ -1,6 +1,7 @@
 <script lang="ts">
   import {
     Palette,
+    Layers,
     Sliders,
     Bell,
     Clock,
@@ -12,6 +13,7 @@
 
   const categories = [
     { id: 'appearance', name: 'Appearance', icon: Palette },
+    { id: 'modules', name: 'Apps & Modules', icon: Layers },
     { id: 'behavior', name: 'Behavior', icon: Sliders },
     { id: 'notifications', name: 'Notifications', icon: Bell },
     { id: 'clock', name: 'Clock & Date', icon: Clock },

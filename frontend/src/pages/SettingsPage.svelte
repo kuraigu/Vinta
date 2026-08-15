@@ -14,6 +14,7 @@
   import ScrollView from '../components/ScrollView.svelte'
   import SettingsSidebar from '../components/settings/SettingsSidebar.svelte'
   import AppearanceTab from '../components/settings/tabs/AppearanceTab.svelte'
+  import AppsModulesTab from '../components/settings/tabs/AppsModulesTab.svelte'
   import BehaviorTab from '../components/settings/tabs/BehaviorTab.svelte'
   import NotificationsTab from '../components/settings/tabs/NotificationsTab.svelte'
   import ClockTab from '../components/settings/tabs/ClockTab.svelte'
@@ -35,6 +36,8 @@
       <div class="tab-content">
         {#if activeTab === 'appearance'}
           <AppearanceTab />
+        {:else if activeTab === 'modules'}
+          <AppsModulesTab />
         {:else if activeTab === 'behavior'}
           <BehaviorTab />
         {:else if activeTab === 'notifications'}
