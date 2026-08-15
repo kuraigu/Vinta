@@ -236,16 +236,18 @@ var screenWidth, screenHeight int
 
 // App struct
 type App struct {
-	ctx      context.Context
-	icon     []byte
-	pillW    int
-	pillH    int
-	pillR    int
-	offsetX  int
-	devW     int
-	devH     int
-	devExtra int
-	scale    float64
+	ctx         context.Context
+	icon        []byte
+	pillW       int
+	pillH       int
+	pillR       int
+	offsetX     int
+	devW        int
+	devH        int
+	devExtra    int
+	scale       float64
+	lastWinW    int
+	lastNeededH int
 }
 
 // NewApp creates a new App application struct
