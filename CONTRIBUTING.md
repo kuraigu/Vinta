@@ -97,16 +97,24 @@ Vinta uses a tokenized CSS variable system so that all UI components adapt clean
 4. **Register Theme Option**: Add your theme definition to `AppTheme` in `frontend/src/store.ts` and append `{ label: 'My Theme', value: 'mytheme' }` to `themeOptions` in `frontend/src/pages/SettingsPage.svelte`.
 5. **Verify Design Guidelines**: Ensure components consume `var(--c-token)` variables without hardcoded hex values (see [docs/DESIGN.md](docs/DESIGN.md)).
 
-## Helper Scripts
+## Helper Scripts & Debugging
 
-Use `.\scripts.bat` in your terminal for common tasks:
+Use `.\scripts.bat` in your terminal for development, testing, and debugging workflows:
 
-- `.\scripts.bat dev`: Runs the live development server with hot reloading.
-- `.\scripts.bat run`: Builds the application and launches `Vinta.exe`.
-- `.\scripts.bat run no_build`: Launches pre-built `Vinta.exe` directly without re-building.
-- `.\scripts.bat build`: Compiles the final release binary.
-- `.\scripts.bat lint`: Runs Go and frontend linters to check your code.
-- `.\scripts.bat test`: Runs test suite checks.
+- `.\scripts.bat dev`: Runs the live development server with hot reloading and developer debug tools automatically enabled.
+- `.\scripts.bat run`: Builds the application and launches `Vinta.exe` in standard production mode.
+- `.\scripts.bat run debug`: Builds and launches `Vinta.exe` with developer debug tools and hotkeys enabled.
+- `.\scripts.bat run no_build`: Launches the pre-built `Vinta.exe` directly without rebuilding.
+- `.\scripts.bat run no_build debug`: Launches the pre-built executable with debug mode enabled.
+- `.\scripts.bat build`: Compiles the release binary to `build/bin/Vinta.exe`.
+- `.\scripts.bat test`: Runs test suite checks with the DevTest panel.
+- `.\scripts.bat lint`: Runs Go formatting, `golangci-lint`, and frontend type-checking/linters.
+
+### Developer Debug Hotkeys
+
+When running in `dev` mode or launched via `.\scripts.bat run debug`:
+- **`Ctrl + Shift + D`** (or **`Ctrl + Alt + B`**): Toggles the physical Win32 window clipping region (`SetWindowRgn`) highlight overlay in real-time.
+- **`Ctrl + Shift + L`** (or **`Ctrl + Alt + L`**): Toggles verbose console logging for window bounds and IPC communication.
 
 Please remember to run `.\scripts.bat lint` before opening a Pull Request.
 

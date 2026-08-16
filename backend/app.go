@@ -31,8 +31,10 @@ var (
 	procGetClassName             = user32.NewProc("GetClassNameW")
 	procSetWinEventHook          = user32.NewProc("SetWinEventHook")
 	procEnumWindows              = user32.NewProc("EnumWindows")
+	procGetClientRect            = user32.NewProc("GetClientRect")
 
 	gdi32                  = syscall.NewLazyDLL("gdi32.dll")
+	procCreateRectRgn      = gdi32.NewProc("CreateRectRgn")
 	procCreateRoundRectRgn = gdi32.NewProc("CreateRoundRectRgn")
 	procCombineRgn         = gdi32.NewProc("CombineRgn")
 	procSetWindowRgn       = user32.NewProc("SetWindowRgn")
@@ -66,7 +68,7 @@ const (
 	WS_EX_TOOLWINDOW = 0x00000080
 	//nolint:revive // Windows API constants
 	WS_EX_NOACTIVATE = 0x08000000
-	OutsidePadding   = 15
+	OutsidePadding   = 4
 	rgnOr            = 2
 
 	//nolint:revive // Windows API constants
@@ -574,9 +576,9 @@ func (a *App) updateWindowRegion() {
 	hwnd := getMyWindowHwnd()
 	if hwnd != 0 {
 		padding := OutsidePadding
-		// Use tight padding (8px) when hidden to allow ambient glow and smooth drag without clipping
+		// Use tight padding (2px) when hidden to allow ambient glow and smooth drag without clipping
 		if a.pillW <= 110 && a.pillH <= 30 {
-			padding = 8
+			padding = 2
 		}
 		setClickRegion(hwnd, a.pillW, a.pillH, a.pillR, a.offsetX, a.devW, a.devH, a.devExtra, padding, a.scale)
 	}
@@ -596,24 +598,42 @@ func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, dw int, dh i
 		return int(float64(v) * scale)
 	}
 
-	sw := screenWidth
+	type winRect struct {
+		Left, Top, Right, Bottom int32
+	}
+	var cr winRect
+	if hwnd != 0 {
+		_, _, _ = procGetClientRect.Call(hwnd, uintptr(unsafe.Pointer(&cr)))
+	}
+
+	sw := int(cr.Right - cr.Left)
 	if sw <= 0 {
-		smwVal, _, _ := user32.NewProc("GetSystemMetrics").Call(0)
-		if smwVal > 0 {
-			sw = int(smwVal)
-			screenWidth = sw
-		} else {
+		sw = screenWidth
+		if sw <= 0 {
 			sw = 1920
 		}
 	}
 
 	// 1. Create main pill region
-	if w > 0 && h > 0 {
+	if w == -1 && h > 0 {
+		visualTop := scaleInt(5)
+		ph := scaleInt(h)
+		top := visualTop - padding
+		if top < 0 {
+			top = 0
+		}
+		bottom := visualTop + ph + padding
+
+		// In-flight full-width rectangular glide track: allows smooth 120 FPS glide across screen with zero edge clipping
+		hrgnMain, _, _ = procCreateRectRgn.Call(
+			0, uintptr(top),
+			uintptr(sw), uintptr(bottom),
+		)
+	} else if w > 0 && h > 0 {
 		visualTop := scaleInt(5)
 		physicalCenterX := (sw / 2) + scaleInt(offsetX)
 		pw := scaleInt(w)
 		ph := scaleInt(h)
-
 		left := physicalCenterX - (pw / 2) - padding
 		if left < 0 {
 			left = 0
@@ -624,9 +644,12 @@ func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, dw int, dh i
 			top = 0
 		}
 		bottom := visualTop + ph + padding
-		ellipseSize := (scaleInt(r) + padding) * 2
-		if maxH := bottom - top; ellipseSize > maxH {
-			ellipseSize = maxH
+		ellipseSize := scaleInt(r) * 2
+		if hLimit := bottom - top; ellipseSize > hLimit {
+			ellipseSize = hLimit
+		}
+		if wLimit := right - left; ellipseSize > wLimit {
+			ellipseSize = wLimit
 		}
 
 		hrgnMain, _, _ = procCreateRoundRectRgn.Call(
@@ -701,7 +724,7 @@ func (a *App) IsTestMode() bool {
 
 func isTestModeSync() bool {
 	for _, arg := range os.Args {
-		if arg == "-test" {
+		if arg == "-test" || arg == "-debug" || arg == "--debug" {
 			return true
 		}
 	}
