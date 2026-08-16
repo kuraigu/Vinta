@@ -293,7 +293,6 @@
       const maxR = Math.max(currentOSBounds.r, r)
       updateBounds(maxW, maxH, maxR)
 
-      // Fallback in case transitionend event is dropped or interrupted
       boundsTransitionTimeout = window.setTimeout(() => {
         if (targetPendingBounds.w > 0 && targetPendingBounds.h > 0) {
           updateBounds(
@@ -303,7 +302,7 @@
           )
           currentOSBounds = { ...targetPendingBounds }
         }
-      }, 500)
+      }, 350)
     }
   }
 
