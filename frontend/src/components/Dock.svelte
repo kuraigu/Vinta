@@ -18,7 +18,7 @@
   import MediaPage from '../pages/MediaPage.svelte'
   import SettingsPage from '../pages/SettingsPage.svelte'
   import type { IslandConfig } from '../store'
-  import { notifData } from '../store'
+  import { notifData, pageVisibilityStore } from '../store'
 
   const navigate =
     getContext<
@@ -51,26 +51,30 @@
       <House size={18} />
     </DockButton>
 
-    <div class="divider"></div>
+    {#if $pageVisibilityStore.media}
+      <div class="divider"></div>
 
-    <DockButton
-      tooltip="Now Playing"
-      active={activePage === MediaPage}
-      onclick={(e: MouseEvent) => AppControls.goMedia(navigate, e)}
-    >
-      <Music size={18} />
-    </DockButton>
+      <DockButton
+        tooltip="Now Playing"
+        active={activePage === MediaPage}
+        onclick={(e: MouseEvent) => AppControls.goMedia(navigate, e)}
+      >
+        <Music size={18} />
+      </DockButton>
+    {/if}
 
-    <div class="divider"></div>
+    {#if $pageVisibilityStore.notifications}
+      <div class="divider"></div>
 
-    <DockButton
-      tooltip="Notifications"
-      active={activePage === NotificationPage}
-      badge={$notifData.length > 0 ? $notifData.length : undefined}
-      onclick={(e: MouseEvent) => AppControls.goNotif(navigate, e)}
-    >
-      <Bell size={18} />
-    </DockButton>
+      <DockButton
+        tooltip="Notifications"
+        active={activePage === NotificationPage}
+        badge={$notifData.length > 0 ? $notifData.length : undefined}
+        onclick={(e: MouseEvent) => AppControls.goNotif(navigate, e)}
+      >
+        <Bell size={18} />
+      </DockButton>
+    {/if}
 
     <div class="divider"></div>
 

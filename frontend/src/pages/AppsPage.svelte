@@ -28,7 +28,12 @@
   import SettingsPage, { config as settingsConfig } from './SettingsPage.svelte'
   import NotesPage, { config as notesConfig } from './NotesPage.svelte'
   import ScrollView from '../components/ScrollView.svelte'
-  import { notifData, activeSettingsTabStore } from '../store'
+  import {
+    notifData,
+    activeSettingsTabStore,
+    pageVisibilityStore,
+    type PageVisibility
+  } from '../store'
 
   const navigate =
     getContext<
@@ -41,7 +46,19 @@
 
   let searchQuery = $state('')
 
-  const allApps = [
+  interface AppItem {
+    id: string
+    name: string
+    desc: string
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    icon: any
+    color: string
+    badge?: boolean
+    visibilityKey?: keyof PageVisibility
+    action: () => void
+  }
+
+  const allApps: AppItem[] = [
     {
       id: 'home',
       name: 'Home',
@@ -56,6 +73,7 @@
       desc: 'Scratchpad & Notes',
       icon: FileText,
       color: 'gradient-amber',
+      visibilityKey: 'notes',
       action: () => openApp(NotesPage, notesConfig)
     },
     {
@@ -64,6 +82,7 @@
       desc: 'Now Playing',
       icon: Music,
       color: 'gradient-pink',
+      visibilityKey: 'media',
       action: () => openApp(MediaPage, mediaConfig)
     },
     {
@@ -73,6 +92,7 @@
       icon: Bell,
       color: 'gradient-blue',
       badge: true,
+      visibilityKey: 'notifications',
       action: () => openApp(NotificationPage, notifConfig)
     },
     {
@@ -129,16 +149,22 @@
     {:else}
       <div class="bento-grid">
         {#each filteredApps as app (app.id)}
+          {@const isEnabled =
+            !app.visibilityKey || $pageVisibilityStore[app.visibilityKey]}
           <button
             class="bento-app-card {app.color}"
+            class:is-disabled={!isEnabled}
+            title={!isEnabled ? `${app.name} (Disabled in Settings)` : app.name}
             onclick={(e) => {
               e.stopPropagation()
-              app.action()
+              if (isEnabled) {
+                app.action()
+              }
             }}
           >
             <div class="card-icon-wrapper">
-              <app.icon size={20} />
-              {#if app.badge && $notifData.length > 0}
+              <app.icon size={19} />
+              {#if isEnabled && app.badge && $notifData.length > 0}
                 <span class="card-badge">
                   {$notifData.length > 9 ? '9+' : $notifData.length}
                 </span>
@@ -146,7 +172,7 @@
             </div>
             <div class="card-text">
               <span class="card-title">{app.name}</span>
-              <span class="card-desc">{app.desc}</span>
+              <span class="card-desc">{isEnabled ? app.desc : 'Disabled'}</span>
             </div>
           </button>
         {/each}
@@ -161,8 +187,9 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    padding: 14px 16px 58px 16px;
+    padding: 14px 14px 58px 14px;
     box-sizing: border-box;
+    overflow: hidden;
   }
 
   .header {
@@ -215,21 +242,24 @@
   .bento-container {
     flex: 1;
     min-height: 0;
+    width: 100%;
   }
 
   .bento-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
-    padding: 10px 4px 10px 4px;
+    padding: 6px 2px 10px 2px;
+    width: 100%;
     box-sizing: border-box;
   }
 
   .bento-app-card {
+    position: relative;
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 10px 12px;
+    gap: 8px;
+    padding: 9px 10px;
     border-radius: 14px;
     background: var(--c-item-bg, rgba(255, 255, 255, 0.06));
     border: 1px solid var(--c-border, rgba(255, 255, 255, 0.1));
@@ -237,6 +267,10 @@
     cursor: pointer;
     text-align: left;
     transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
   }
 
   .bento-app-card:hover {
@@ -245,6 +279,19 @@
     border-color: var(--c-primary, #6366f1);
   }
 
+  .bento-app-card.is-disabled {
+    opacity: 0.42;
+    filter: grayscale(0.65);
+    cursor: not-allowed;
+  }
+
+  .bento-app-card.is-disabled:hover {
+    transform: none;
+    background: var(--c-item-bg, rgba(255, 255, 255, 0.06));
+    border-color: var(--c-border, rgba(255, 255, 255, 0.1));
+  }
+
+  /* Tactile squircle app icons with top gloss highlight and bottom drop shadow */
   .card-icon-wrapper {
     position: relative;
     width: 34px;
@@ -255,6 +302,10 @@
     justify-content: center;
     flex-shrink: 0;
     color: var(--c-text-primary);
+    box-shadow:
+      inset 0 1px 1px rgba(255, 255, 255, 0.45),
+      0 3px 8px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.16);
   }
 
   .bento-app-card.gradient-green .card-icon-wrapper {
@@ -307,6 +358,8 @@
     display: flex;
     flex-direction: column;
     min-width: 0;
+    flex: 1 1 0;
+    overflow: hidden;
   }
 
   .card-title {
@@ -315,6 +368,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    min-width: 0;
   }
 
   .card-desc {
@@ -323,6 +377,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    min-width: 0;
   }
 
   .empty-state {

@@ -14,6 +14,7 @@
   } from './pages/NotificationPage.svelte'
   import HomePage, { config as homeConfig } from './pages/HomePage.svelte'
   import MediaPage, { config as mediaConfig } from './pages/MediaPage.svelte'
+  import NotesPage from './pages/NotesPage.svelte'
   import Dock from './components/Dock.svelte'
   import Clock from './components/Clock.svelte'
   import DevPill from './devtest/DevPill.svelte'
@@ -44,7 +45,10 @@
     notifSoundStore,
     notifVolumeStore,
     glowIntensityStore,
-    type IslandConfig
+    type IslandConfig,
+    homeWidgetsVisibilityStore,
+    pageVisibilityStore,
+    calculateHomeMinimalWidth
   } from './store'
   import { preloadIcons, findAppIconConflicts } from './appIcons'
 
@@ -53,8 +57,6 @@
   let islandConfig = $state<IslandConfig>(homeConfig)
 
   let expanded = $state(false)
-  // eslint-disable-next-line svelte/prefer-writable-derived
-  let cssExpanded = $state(false)
   let isBlinking = $state(false)
 
   function triggerBlink() {
@@ -64,9 +66,6 @@
     }, 100)
   }
 
-  $effect(() => {
-    cssExpanded = expanded
-  })
   let isHidden = $state(false)
 
   let activeOpacity = $derived(
@@ -86,7 +85,7 @@
   let isTransitionGlow = $state(true)
   let glowTimeout: number
 
-  let islandAnim = $state('0.4s cubic-bezier(0.22, 1, 0.36, 1)')
+  let islandAnim = $state('0.32s cubic-bezier(0.2, 0.8, 0.2, 1)')
 
   function triggerGlow() {
     isTransitionGlow = true
@@ -111,14 +110,10 @@
       ? window.screen?.width || window.innerWidth || 1920
       : 1920
   )
-  let maxOffsetX = $derived(
-    Math.max(200, Math.floor((screenWidth - 340) / 2 - 12))
-  )
 
   let hideTrigger = $state(0)
 
-  $effect(() => {
-    // Auto-hide and auto-revert logic effect
+  function handleAutoHideAndRevert() {
     void hideTrigger
     clearTimeout(hideTimeout)
     isTimeoutActive = false
@@ -129,7 +124,7 @@
         (activePage !== HomePage && activePage !== MediaPage)
       ) {
         isTimeoutActive = true
-        const delayMs = ($autoHideDelayStore || 10) * 1000
+        const delayMs = ($autoHideDelayStore || 5) * 1000
         hideTimeout = window.setTimeout(() => {
           isTimeoutActive = false
           if (shouldCurrentPageAutoHide) {
@@ -142,21 +137,39 @@
         }, delayMs)
       }
     }
-  })
+  }
+
+  $effect(handleAutoHideAndRevert)
 
   // Manage OS bounds when hiding/unhiding
   function hideWidget() {
     if (isHidden) return
-    islandAnim = '0.5s cubic-bezier(0.16, 1, 0.3, 1)'
+    islandAnim = '0.35s cubic-bezier(0.2, 0.8, 0.2, 1)'
     isHidden = true
   }
 
   // Global reactive fallback sync effect when island is minimized
   let mediaIdleTimeout: number | undefined
 
-  $effect(() => {
+  function handlePageVisibilityFallback() {
+    const pageVis = $pageVisibilityStore
+    if (!pageVis.media && activePage === MediaPage) {
+      navigateTo(HomePage, homeConfig, false)
+    }
+    if (!pageVis.notifications && activePage === NotificationPage) {
+      navigateTo(HomePage, homeConfig, false)
+    }
+    if (!pageVis.notes && activePage === NotesPage) {
+      navigateTo(HomePage, homeConfig, false)
+    }
+  }
+
+  $effect(handlePageVisibilityFallback)
+
+  function handleMediaIdleTransition() {
     const mediaState = $globalMediaStore
-    const isMediaConnected = mediaState.isAvailable
+    const isMediaEnabled = $pageVisibilityStore.media
+    const isMediaConnected = mediaState.isAvailable && isMediaEnabled
 
     if (!expanded && !isHidden) {
       if (isMediaConnected) {
@@ -168,13 +181,14 @@
           navigateTo(MediaPage, mediaConfig, false)
         }
       } else {
-        // Media has disconnected or stopped - keep last track metadata shown in paused state for 3s before transitioning to HomePage
+        // Media has disconnected, stopped, or disabled - transition to HomePage
         if (activePage === MediaPage && !mediaIdleTimeout) {
           mediaIdleTimeout = window.setTimeout(() => {
             mediaIdleTimeout = undefined
             const currentMedia = get(globalMediaStore)
+            const currentMediaEnabled = get(pageVisibilityStore).media
             if (
-              !currentMedia.isAvailable &&
+              (!currentMedia.isAvailable || !currentMediaEnabled) &&
               !expanded &&
               !isHidden &&
               activePage === MediaPage
@@ -190,13 +204,20 @@
         mediaIdleTimeout = undefined
       }
     }
-  })
+  }
+
+  $effect(handleMediaIdleTransition)
 
   function showWidget() {
     if (!isHidden) return
-    islandAnim = '0.5s cubic-bezier(0.16, 1, 0.3, 1)'
+    islandAnim = '0.32s cubic-bezier(0.2, 0.8, 0.2, 1)'
     isHidden = false
-    if ($globalMediaStore.isPlaying && activePage === HomePage && !expanded) {
+    if (
+      $globalMediaStore.isPlaying &&
+      $pageVisibilityStore.media &&
+      activePage === HomePage &&
+      !expanded
+    ) {
       navigateTo(MediaPage, mediaConfig, false)
     }
     triggerGlow()
@@ -214,10 +235,45 @@
   // Expose manual wake up for components
   setContext('wakeupPill', showWidget)
 
-  function updateBounds(w: number, h: number, r: number) {
+  let isBoundsIpcPending = false
+  let pendingBoundsArgs: {
+    w: number
+    h: number
+    r: number
+    offset?: number
+  } | null = null
+
+  function updateBounds(
+    w: number,
+    h: number,
+    r: number,
+    explicitOffset?: number
+  ) {
     const computedR = $shapeStore === 'box' ? 12 : r
     const scale = window.devicePixelRatio || 1
-    SetWidgetBounds(w, h, computedR, scale, clampedOffsetX)
+    const offset =
+      explicitOffset !== undefined
+        ? explicitOffset
+        : isNaN(clampedOffsetX)
+          ? 0
+          : clampedOffsetX
+
+    if (isBoundsIpcPending) {
+      pendingBoundsArgs = { w, h, r, offset }
+      return
+    }
+
+    isBoundsIpcPending = true
+    Promise.resolve(SetWidgetBounds(w, h, computedR, scale, offset))
+      .catch(() => {})
+      .finally(() => {
+        isBoundsIpcPending = false
+        if (pendingBoundsArgs) {
+          const next = pendingBoundsArgs
+          pendingBoundsArgs = null
+          updateBounds(next.w, next.h, next.r, next.offset)
+        }
+      })
   }
 
   // --- Centralized OS Bounds Manager ---
@@ -274,12 +330,18 @@
       : { w: 60, h: 8, r: 4 }
   )
 
+  let currentMinimalW = $derived(
+    activePage === HomePage
+      ? calculateHomeMinimalWidth($homeWidgetsVisibilityStore)
+      : islandConfig.minimal.w
+  )
+
   let currentIslandW = $derived(
     isHidden
       ? hiddenBounds.w
-      : cssExpanded
+      : expanded
         ? islandConfig.expanded.w
-        : islandConfig.minimal.w
+        : currentMinimalW
   )
   let maxAllowedOffsetForCurrentW = $derived(
     Math.max(0, Math.floor((screenWidth - currentIslandW) / 2 - 12))
@@ -312,7 +374,7 @@
       triggerBlink()
     }
     if (expanded !== expand) {
-      islandAnim = '0.4s cubic-bezier(0.22, 1, 0.36, 1)'
+      islandAnim = '0.32s cubic-bezier(0.2, 0.8, 0.2, 1)'
     }
     activePage = page
     islandConfig = pageConfig
@@ -447,7 +509,8 @@
           isPlaying &&
           !prevIsPlaying &&
           !expanded &&
-          activePage === HomePage
+          activePage === HomePage &&
+          get(pageVisibilityStore).media
         ) {
           navigateTo(MediaPage, mediaConfig, false)
         }
@@ -489,69 +552,79 @@
         })
 
         // Auto-wake & navigate to notification page when notification arrives
+        const isNotifEnabled = get(pageVisibilityStore).notifications
         const mediaIsActive =
           activePage === MediaPage && $globalMediaStore.isPlaying
-        if (!$dndStore && $notifAutoWakeStore && !expanded && !mediaIsActive) {
+        if (
+          !$dndStore &&
+          $notifAutoWakeStore &&
+          isNotifEnabled &&
+          !expanded &&
+          !mediaIsActive
+        ) {
           showWidget()
           navigateTo(NotificationPage, notifConfig, false)
           triggerGlow()
         }
 
-        if ($notifSoundStore && !$dndStore) {
+        if ($notifSoundStore && !$dndStore && isNotifEnabled) {
           playNotifChime($notifVolumeStore)
         }
-        showWidget()
-        hideTrigger++
+        if (isNotifEnabled) {
+          showWidget()
+          hideTrigger++
+        }
       }
     )
 
     EventsOn('notification_permission_denied', () => {
       notificationPermissionDenied.set(true)
-      showWidget()
-      navigateTo(NotificationPage, notifConfig, true)
+      if (get(pageVisibilityStore).notifications) {
+        showWidget()
+        navigateTo(NotificationPage, notifConfig, true)
+      }
     })
 
     const handleResize = () => {
       screenWidth = window.screen?.width || window.innerWidth || 1920
     }
-    const handleGlobalPointerCancel = () => {
+    const handleGlobalBlur = () => {
       if (isDraggingHidden) {
         isDraggingHidden = false
-        if (hasDraggedHidden) {
-          clearTimeout(dragResetTimeout)
-          dragResetTimeout = window.setTimeout(() => {
-            hasDraggedHidden = false
-          }, 80)
-        }
+        commitRestingBounds()
       }
     }
     window.addEventListener('resize', handleResize)
-    window.addEventListener('pointerup', handleGlobalPointerCancel)
-    window.addEventListener('pointercancel', handleGlobalPointerCancel)
-    window.addEventListener('blur', handleGlobalPointerCancel)
+    window.addEventListener('blur', handleGlobalBlur)
 
     return () => {
+      commitRestingBounds()
       window.removeEventListener('contextmenu', disableGlobalContextMenu)
       window.removeEventListener('vinta-overlay', handleOverlayChange)
       window.removeEventListener('vinta-quit', handleQuit)
       window.removeEventListener('resize', handleResize)
-      window.removeEventListener('pointerup', handleGlobalPointerCancel)
-      window.removeEventListener('pointercancel', handleGlobalPointerCancel)
-      window.removeEventListener('blur', handleGlobalPointerCancel)
+      window.removeEventListener('blur', handleGlobalBlur)
     }
   })
 
-  $effect(() => {
-    if (!islandNode) return
+  // Universal horizontal dragging
+  let isDraggingHidden = $state(false)
+  let hiddenDragStartX = 0
+  let hiddenDragStartOffset = 0
+  let dragMovedDistance = 0
+  let dragResetTimeout: number | undefined
 
-    // Track offset changes for horizontal dragging
-    void clampedOffsetX
+  /**
+   * Synchronizes OS window bounds when island state changes.
+   */
+  function syncOSBoundsOnStateChange() {
+    if (!islandNode) return
 
     const baseW = isHidden
       ? hiddenBounds.w
       : expanded
         ? islandConfig.expanded.w
-        : islandConfig.minimal.w
+        : currentMinimalW
 
     const baseH = isHidden
       ? hiddenBounds.h
@@ -571,14 +644,35 @@
           : islandConfig.minimal.r
 
     applyBounds(targetW, targetH, r)
-  })
+  }
 
-  // Universal horizontal dragging across all island states
-  let isDraggingHidden = $state(false)
-  let hasDraggedHidden = false
-  let dragResetTimeout: number | undefined
-  let hiddenDragStartX = 0
-  let hiddenDragStartOffset = 0
+  $effect(syncOSBoundsOnStateChange)
+
+  function commitRestingBounds() {
+    const baseW = isHidden
+      ? hiddenBounds.w
+      : expanded
+        ? islandConfig.expanded.w
+        : currentMinimalW
+    const baseH = isHidden
+      ? hiddenBounds.h
+      : expanded
+        ? islandConfig.expanded.h
+        : islandConfig.minimal.h
+    const targetW = baseW + extraDropdownW
+    const targetH = baseH + extraDropdownH
+    const r = isHidden
+      ? hiddenBounds.r
+      : $shapeStore === 'box'
+        ? 12
+        : expanded
+          ? islandConfig.expanded.r
+          : islandConfig.minimal.r
+
+    const finalOffset = get(hiddenPillOffsetXStore) || 0
+    updateBounds(targetW, targetH, r, finalOffset)
+    currentOSBounds = { w: targetW, h: targetH, r }
+  }
 
   function handleHiddenPointerDown(e: PointerEvent) {
     if (e.button !== 0) return // Only primary (left) button can initiate dragging
@@ -601,10 +695,11 @@
     ) {
       return
     }
+
     isDraggingHidden = true
-    hasDraggedHidden = false
+    dragMovedDistance = 0
     clearTimeout(dragResetTimeout)
-    hiddenDragStartX = e.clientX
+    hiddenDragStartX = e.screenX
     hiddenDragStartOffset = $hiddenPillOffsetXStore
     try {
       ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
@@ -620,14 +715,15 @@
       handleHiddenPointerUp(e)
       return
     }
-    const dx = e.clientX - hiddenDragStartX
-    if (Math.abs(dx) > 3) {
-      hasDraggedHidden = true
+
+    const dx = e.screenX - hiddenDragStartX
+    dragMovedDistance = Math.abs(dx)
+    if (dragMovedDistance > 3) {
+      $hiddenPillOffsetXStore = Math.max(
+        -maxAllowedOffsetForCurrentW,
+        Math.min(maxAllowedOffsetForCurrentW, hiddenDragStartOffset + dx)
+      )
     }
-    $hiddenPillOffsetXStore = Math.max(
-      -maxOffsetX,
-      Math.min(maxOffsetX, hiddenDragStartOffset + dx)
-    )
   }
 
   function handleHiddenPointerUp(e: PointerEvent) {
@@ -638,18 +734,20 @@
     } catch {
       // Ignore
     }
-    if (hasDraggedHidden) {
+
+    if (dragMovedDistance > 3) {
+      commitRestingBounds()
       clearTimeout(dragResetTimeout)
       dragResetTimeout = window.setTimeout(() => {
-        hasDraggedHidden = false
-      }, 80)
+        dragMovedDistance = 0
+      }, 150)
     }
   }
 
   function handleContextMenu(e: MouseEvent) {
-    if (isDraggingHidden || hasDraggedHidden) {
+    if (isDraggingHidden || dragMovedDistance > 3) {
       isDraggingHidden = false
-      hasDraggedHidden = false
+      dragMovedDistance = 0
       e.preventDefault()
       e.stopPropagation()
       return
@@ -675,16 +773,18 @@
   function handleExpand() {
     if (expanded) return
     triggerBlink()
-    islandAnim = '0.4s cubic-bezier(0.22, 1, 0.36, 1)'
+    islandAnim = '0.32s cubic-bezier(0.2, 0.8, 0.2, 1)'
     expanded = true
   }
 
-  function handleIslandClick() {
-    if (hasDraggedHidden) {
-      hasDraggedHidden = false
+  function handleIslandClick(e: MouseEvent) {
+    if (dragMovedDistance > 3) {
+      dragMovedDistance = 0
+      e.preventDefault()
+      e.stopPropagation()
       return
     }
-    islandAnim = '0.4s cubic-bezier(0.22, 1, 0.36, 1)'
+    islandAnim = '0.32s cubic-bezier(0.2, 0.8, 0.2, 1)'
 
     if (isHidden) {
       showWidget()
@@ -767,19 +867,19 @@
       filter: {isQuitting ? 'blur(12px)' : 'none'};
       width: {isHidden
       ? hiddenBounds.w
-      : cssExpanded
+      : expanded
         ? islandConfig.expanded.w
-        : islandConfig.minimal.w}px;
+        : currentMinimalW}px;
       height: {isHidden
       ? hiddenBounds.h
-      : cssExpanded
+      : expanded
         ? islandConfig.expanded.h
         : islandConfig.minimal.h}px;
       --island-r: {isHidden
       ? hiddenBounds.r
       : $shapeStore === 'box'
         ? 12
-        : cssExpanded
+        : expanded
           ? islandConfig.expanded.r
           : islandConfig.minimal.r}px;
       border-radius: var(--island-r);
@@ -831,9 +931,9 @@
         {@const ActivePage = activePage}
         <div
           class="view"
-          style="width: {cssExpanded
+          style="width: {expanded
             ? islandConfig.expanded.w
-            : islandConfig.minimal.w}px; height: {cssExpanded
+            : currentMinimalW}px; height: {expanded
             ? islandConfig.expanded.h
             : islandConfig.minimal.h}px;"
         >

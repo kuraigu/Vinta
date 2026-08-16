@@ -60,7 +60,9 @@
         'vinta_hw_accel',
         'vinta_notif_sound',
         'vinta_notif_volume',
-        'vinta_autostart'
+        'vinta_autostart',
+        'vinta_home_widgets_visibility',
+        'vinta_page_visibility'
       ])
 
       for (let i = 0; i < localStorage.length; i++) {
@@ -108,7 +110,9 @@
         'vinta_hw_accel',
         'vinta_notif_sound',
         'vinta_notif_volume',
-        'vinta_autostart'
+        'vinta_autostart',
+        'vinta_home_widgets_visibility',
+        'vinta_page_visibility'
       ])
       for (let i = localStorage.length - 1; i >= 0; i--) {
         const key = localStorage.key(i)

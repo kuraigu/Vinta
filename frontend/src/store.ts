@@ -29,7 +29,26 @@ const registeredStores: Array<{
 
 function persistentWritable<T>(key: string, initialValue: T) {
   const stored = localStorage.getItem(key)
-  const initial = stored ? JSON.parse(stored) : initialValue
+  let initial: T = initialValue
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored)
+      if (
+        typeof initialValue === 'object' &&
+        initialValue !== null &&
+        !Array.isArray(initialValue) &&
+        typeof parsed === 'object' &&
+        parsed !== null &&
+        !Array.isArray(parsed)
+      ) {
+        initial = { ...initialValue, ...parsed }
+      } else {
+        initial = parsed
+      }
+    } catch {
+      initial = initialValue
+    }
+  }
   allSettingsCache[key] = initial
   const store = writable<T>(initial)
 
@@ -63,7 +82,20 @@ if (typeof window !== 'undefined') {
           const parsed = JSON.parse(json)
           for (const item of registeredStores) {
             if (item.key in parsed) {
-              const diskVal = parsed[item.key]
+              let diskVal = parsed[item.key]
+              if (
+                typeof item.initialValue === 'object' &&
+                item.initialValue !== null &&
+                !Array.isArray(item.initialValue) &&
+                typeof diskVal === 'object' &&
+                diskVal !== null &&
+                !Array.isArray(diskVal)
+              ) {
+                diskVal = {
+                  ...(item.initialValue as Record<string, unknown>),
+                  ...diskVal
+                }
+              }
               localStorage.setItem(item.key, JSON.stringify(diskVal))
               item.store.set(diskVal)
             }
@@ -278,3 +310,57 @@ export const globalMediaStore = writable<MediaData>({
 })
 
 export const audioPeakStore = writable<number>(0)
+
+export interface HomeWidgetsVisibility {
+  clock: boolean
+  calendar: boolean
+  weather: boolean
+}
+
+export const defaultHomeWidgetsVisibility: HomeWidgetsVisibility = {
+  clock: true,
+  calendar: true,
+  weather: true
+}
+
+export const homeWidgetsVisibilityStore =
+  persistentWritable<HomeWidgetsVisibility>(
+    'vinta_home_widgets_visibility',
+    defaultHomeWidgetsVisibility
+  )
+
+export interface PageVisibility {
+  notes: boolean
+  media: boolean
+  notifications: boolean
+}
+
+export const defaultPageVisibility: PageVisibility = {
+  notes: true,
+  media: true,
+  notifications: true
+}
+
+export const pageVisibilityStore = persistentWritable<PageVisibility>(
+  'vinta_page_visibility',
+  defaultPageVisibility
+)
+
+export function calculateHomeMinimalWidth(
+  visibility: HomeWidgetsVisibility
+): number {
+  const WIDGET_WIDTHS: Record<keyof HomeWidgetsVisibility, number> = {
+    clock: 82,
+    weather: 72,
+    calendar: 102
+  }
+  const PADDING = 36 // 18px left + 18px right
+  const GAP = 18
+  const activeKeys = (
+    Object.keys(WIDGET_WIDTHS) as Array<keyof HomeWidgetsVisibility>
+  ).filter((k) => visibility[k])
+  if (activeKeys.length === 0) return 130
+  const contentW = activeKeys.reduce((sum, k) => sum + WIDGET_WIDTHS[k], 0)
+  const gapsW = Math.max(0, activeKeys.length - 1) * GAP
+  return Math.max(130, PADDING + contentW + gapsW)
+}

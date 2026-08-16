@@ -12,14 +12,37 @@
   import Calendar from '../components/Calendar.svelte'
   import Weather from '../components/Weather.svelte'
   import ComponentGallery from '../components/ComponentGallery.svelte'
+  import { homeWidgetsVisibilityStore } from '../store'
 
   let { expanded = false } = $props<{ expanded?: boolean }>()
 
-  const slideTitles = ['Clock', 'Calendar', 'Weather']
-  let activeSlideTitle = $state(slideTitles[0])
+  let availableSlides = $derived.by(() => {
+    const list = []
+    if ($homeWidgetsVisibilityStore.clock) {
+      list.push({ id: 'clock', snippet: clockSlide, title: 'Clock' })
+    }
+    if ($homeWidgetsVisibilityStore.calendar) {
+      list.push({ id: 'calendar', snippet: calendarSlide, title: 'Calendar' })
+    }
+    if ($homeWidgetsVisibilityStore.weather) {
+      list.push({ id: 'weather', snippet: weatherSlide, title: 'Weather' })
+    }
+    return list
+  })
+
+  let activeSlideTitle = $state('Home')
+
+  $effect(() => {
+    if (
+      availableSlides.length > 0 &&
+      !availableSlides.some((s) => s.title === activeSlideTitle)
+    ) {
+      activeSlideTitle = availableSlides[0].title
+    }
+  })
 
   function handleSlideChange(index: number) {
-    activeSlideTitle = slideTitles[index] || 'Home'
+    activeSlideTitle = availableSlides[index]?.title || 'Home'
   }
 </script>
 
@@ -44,15 +67,21 @@
 <div class="page-container">
   {#if !expanded}
     <div class="minimal-view">
-      <div class="side left">
-        <Clock expanded={false} />
-      </div>
-      <div class="center">
-        <Weather expanded={false} />
-      </div>
-      <div class="side right">
-        <Calendar expanded={false} />
-      </div>
+      {#if $homeWidgetsVisibilityStore.clock}
+        <div class="minimal-slot">
+          <Clock expanded={false} />
+        </div>
+      {/if}
+      {#if $homeWidgetsVisibilityStore.weather}
+        <div class="minimal-slot">
+          <Weather expanded={false} />
+        </div>
+      {/if}
+      {#if $homeWidgetsVisibilityStore.calendar}
+        <div class="minimal-slot">
+          <Calendar expanded={false} />
+        </div>
+      {/if}
     </div>
   {:else}
     <div class="expanded-view">
@@ -65,11 +94,7 @@
       </div>
       <div class="gallery-wrapper">
         <ComponentGallery
-          slides={[
-            { id: 'clock', snippet: clockSlide },
-            { id: 'calendar', snippet: calendarSlide },
-            { id: 'weather', snippet: weatherSlide }
-          ]}
+          slides={availableSlides}
           onSlideChange={handleSlideChange}
         />
       </div>
@@ -89,43 +114,24 @@
     box-sizing: border-box;
   }
 
-  /* Minimal View */
+  /* Minimal View - Dynamic flexbox */
   .minimal-view {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
+    gap: 18px;
     width: 100%;
-    max-width: 100%;
     height: 100%;
-    padding: 0 16px;
+    padding: 0 18px;
     box-sizing: border-box;
   }
 
-  .side.left {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    flex: 1 1 0;
-    min-width: 0;
-    white-space: nowrap;
-  }
-
-  .center {
+  .minimal-slot {
     display: flex;
     align-items: center;
     justify-content: center;
-    flex: 1 1 0;
-    min-width: 0;
     white-space: nowrap;
-  }
-
-  .side.right {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    flex: 1 1 0;
-    min-width: 0;
-    white-space: nowrap;
+    flex-shrink: 0;
   }
 
   /* Expanded View - Integrated footer padding for Dock */
@@ -195,7 +201,6 @@
   /*
    * Each slide card provides its own background so it bleeds cleanly
    * to the outer viewport's border-radius: 16px clip boundary.
-   * No BentoItem wrapper needed — the viewport handles clipping.
    */
   .slide-bleed-card {
     width: 100%;
@@ -204,7 +209,6 @@
     flex-direction: column;
     box-sizing: border-box;
     background: var(--c-item-bg);
-    /* Subtle inset highlight for depth, matching old BentoItem border treatment */
     box-shadow: inset 0 1px 0 var(--c-border);
     overflow: hidden;
   }

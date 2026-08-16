@@ -236,24 +236,39 @@ var screenWidth, screenHeight int
 
 // App struct
 type App struct {
-	ctx         context.Context
-	icon        []byte
-	pillW       int
-	pillH       int
-	pillR       int
-	offsetX     int
-	devW        int
-	devH        int
-	devExtra    int
-	scale       float64
-	lastWinW    int
-	lastNeededH int
+	ctx      context.Context
+	icon     []byte
+	pillW    int
+	pillH    int
+	pillR    int
+	offsetX  int
+	devW     int
+	devH     int
+	devExtra int
+	scale    float64
 }
 
 // NewApp creates a new App application struct
 func NewApp(icon []byte) *App {
+	smwVal, _, _ := user32.NewProc("GetSystemMetrics").Call(0)
+	smhVal, _, _ := user32.NewProc("GetSystemMetrics").Call(1)
+	sw := int(smwVal)
+	sh := int(smhVal)
+	if sw <= 0 {
+		sw = 1920
+	}
+	if sh <= 0 {
+		sh = 1080
+	}
+	screenWidth = sw
+	screenHeight = sh
+
 	return &App{
-		icon: icon,
+		icon:  icon,
+		pillW: 340,
+		pillH: 34,
+		pillR: 24,
+		scale: 1.0,
 	}
 }
 
@@ -263,17 +278,17 @@ func (a *App) Startup(ctx context.Context) {
 	defer SetupPanicRecovery()
 	a.ctx = ctx
 
-	screens, _ := runtime.ScreenGetAll(ctx)
-	if len(screens) > 0 {
-		screen := screens[0]
-		for _, s := range screens {
-			if s.IsCurrent {
-				screen = s
-				break
-			}
-		}
-		screenWidth = screen.Size.Width
-		screenHeight = screen.Size.Height
+	smwVal, _, _ := user32.NewProc("GetSystemMetrics").Call(0)
+	smhVal, _, _ := user32.NewProc("GetSystemMetrics").Call(1)
+	if smwVal > 0 {
+		screenWidth = int(smwVal)
+	} else if screenWidth <= 0 {
+		screenWidth = 1920
+	}
+	if smhVal > 0 {
+		screenHeight = int(smhVal)
+	} else if screenHeight <= 0 {
+		screenHeight = 1080
 	}
 
 	go func() {
@@ -296,7 +311,7 @@ func (a *App) Startup(ctx context.Context) {
 
 			procSetWindowPos := user32.NewProc("SetWindowPos")
 			// HWND_TOPMOST = ^uintptr(0), SWP_NOACTIVATE (0x0010) | SWP_FRAMECHANGED (0x0020) | SWP_SHOWWINDOW (0x0040)
-			overlayHeight := 500
+			overlayHeight := 650
 			if screenHeight > 0 && overlayHeight > screenHeight {
 				overlayHeight = screenHeight
 			}
@@ -564,43 +579,6 @@ func (a *App) updateWindowRegion() {
 			padding = 8
 		}
 		setClickRegion(hwnd, a.pillW, a.pillH, a.pillR, a.offsetX, a.devW, a.devH, a.devExtra, padding, a.scale)
-
-		scale := a.scale
-		if scale <= 0 {
-			scale = 1.0
-		}
-		scaleInt := func(v int) int {
-			return int(float64(v) * scale)
-		}
-
-		// Dynamically calculate exact required OS window height based on active widget & dropdown dimensions
-		neededH := scaleInt(5) + scaleInt(a.pillH) + padding*2
-		if a.devH > 0 {
-			neededH += scaleInt(15) + scaleInt(a.devH) + scaleInt(a.devExtra)
-		}
-
-		smwVal, _, _ := user32.NewProc("GetSystemMetrics").Call(0) // SM_CXSCREEN
-		winW := int(smwVal)
-		if winW <= 0 {
-			winW = screenWidth
-		}
-		if winW > 0 {
-			winW = scaleInt(winW)
-		}
-
-		if winW != a.lastWinW || neededH != a.lastNeededH {
-			a.lastWinW = winW
-			a.lastNeededH = neededH
-			procSetWindowPos := user32.NewProc("SetWindowPos")
-			// SWP_NOMOVE (0x0002) | SWP_NOACTIVATE (0x0010) | SWP_NOOWNERZORDER (0x0200) | SWP_NOSENDCHANGING (0x0400)
-			_, _, _ = procSetWindowPos.Call(
-				hwnd,
-				uintptr(^uintptr(0)),
-				0, 0,
-				uintptr(winW), uintptr(neededH),
-				0x0002|0x0010|0x0200|0x0400,
-			)
-		}
 	}
 }
 
@@ -618,18 +596,38 @@ func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, dw int, dh i
 		return int(float64(v) * scale)
 	}
 
+	sw := screenWidth
+	if sw <= 0 {
+		smwVal, _, _ := user32.NewProc("GetSystemMetrics").Call(0)
+		if smwVal > 0 {
+			sw = int(smwVal)
+			screenWidth = sw
+		} else {
+			sw = 1920
+		}
+	}
+
 	// 1. Create main pill region
 	if w > 0 && h > 0 {
 		visualTop := scaleInt(5)
-		physicalCenterX := (scaleInt(screenWidth) / 2) + scaleInt(offsetX)
+		physicalCenterX := (sw / 2) + scaleInt(offsetX)
 		pw := scaleInt(w)
 		ph := scaleInt(h)
 
 		left := physicalCenterX - (pw / 2) - padding
+		if left < 0 {
+			left = 0
+		}
 		right := physicalCenterX + (pw / 2) + padding
 		top := visualTop - padding
+		if top < 0 {
+			top = 0
+		}
 		bottom := visualTop + ph + padding
 		ellipseSize := (scaleInt(r) + padding) * 2
+		if maxH := bottom - top; ellipseSize > maxH {
+			ellipseSize = maxH
+		}
 
 		hrgnMain, _, _ = procCreateRoundRectRgn.Call(
 			uintptr(left), uintptr(top),
@@ -652,13 +650,19 @@ func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, dw int, dh i
 
 		devPadding := 6
 		extraMargin := scaleInt(extraH) // ONLY expand region when a dropdown is actively open!
-		physicalCenterX := scaleInt(screenWidth) / 2
+		physicalCenterX := sw / 2
 		pdw := scaleInt(dw)
 		pdh := scaleInt(dh)
 
 		devLeft := physicalCenterX - (pdw / 2) - devPadding
+		if devLeft < 0 {
+			devLeft = 0
+		}
 		devRight := physicalCenterX + (pdw / 2) + devPadding
 		devTop := devTopOffset - devPadding - extraMargin
+		if devTop < 0 {
+			devTop = 0
+		}
 		devBottom := devTopOffset + pdh + devPadding + extraMargin
 
 		hrgnDev, _, _ = procCreateRoundRectRgn.Call(
@@ -682,10 +686,7 @@ func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, dw int, dh i
 		hrgnFinal = 0 // fully transparent
 	}
 
-	oldRgn, _, _ := procSetWindowRgn.Call(hwnd, hrgnFinal, 0)
-	if oldRgn != 0 {
-		_, _, _ = procDeleteObject.Call(oldRgn)
-	}
+	_, _, _ = procSetWindowRgn.Call(hwnd, hrgnFinal, 1)
 }
 
 // Greet returns a greeting for the given name
