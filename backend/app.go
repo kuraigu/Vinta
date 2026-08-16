@@ -33,6 +33,7 @@ var (
 	procEnumWindows              = user32.NewProc("EnumWindows")
 
 	gdi32                  = syscall.NewLazyDLL("gdi32.dll")
+	procCreateRectRgn      = gdi32.NewProc("CreateRectRgn")
 	procCreateRoundRectRgn = gdi32.NewProc("CreateRoundRectRgn")
 	procCombineRgn         = gdi32.NewProc("CombineRgn")
 	procSetWindowRgn       = user32.NewProc("SetWindowRgn")
@@ -608,7 +609,21 @@ func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, dw int, dh i
 	}
 
 	// 1. Create main pill region
-	if w > 0 && h > 0 {
+	if w == -1 && h > 0 {
+		visualTop := scaleInt(5)
+		ph := scaleInt(h)
+		top := visualTop - padding
+		if top < 0 {
+			top = 0
+		}
+		bottom := visualTop + ph + padding
+
+		// In-flight full-width rectangular glide track: allows smooth 120 FPS glide across screen with zero edge clipping
+		hrgnMain, _, _ = procCreateRectRgn.Call(
+			0, uintptr(top),
+			uintptr(sw), uintptr(bottom),
+		)
+	} else if w > 0 && h > 0 {
 		visualTop := scaleInt(5)
 		physicalCenterX := (sw / 2) + scaleInt(offsetX)
 		pw := scaleInt(w)

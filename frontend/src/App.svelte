@@ -346,10 +346,22 @@
   let maxAllowedOffsetForCurrentW = $derived(
     Math.max(0, Math.floor((screenWidth - currentIslandW) / 2 - 12))
   )
+  let currentLiveOffsetX = $state(0)
+
+  // Sync store updates into live offset when not actively in flight
+  function syncStoreOffsetToLive(val: number) {
+    if (!isInFlight && !isDraggingHidden) {
+      currentLiveOffsetX = val
+    }
+  }
+  $effect(() => {
+    syncStoreOffsetToLive($hiddenPillOffsetXStore)
+  })
+
   let clampedOffsetX = $derived(
     Math.max(
       -maxAllowedOffsetForCurrentW,
-      Math.min(maxAllowedOffsetForCurrentW, $hiddenPillOffsetXStore)
+      Math.min(maxAllowedOffsetForCurrentW, currentLiveOffsetX)
     )
   )
 
@@ -591,14 +603,14 @@
     const handleGlobalBlur = () => {
       if (isDraggingHidden) {
         isDraggingHidden = false
-        commitRestingBounds()
+        stopInertia()
       }
     }
     window.addEventListener('resize', handleResize)
     window.addEventListener('blur', handleGlobalBlur)
 
     return () => {
-      commitRestingBounds()
+      stopInertia()
       window.removeEventListener('contextmenu', disableGlobalContextMenu)
       window.removeEventListener('vinta-overlay', handleOverlayChange)
       window.removeEventListener('vinta-quit', handleQuit)
@@ -607,18 +619,23 @@
     }
   })
 
-  // Universal horizontal dragging
+  // Universal horizontal dragging and inertia state
   let isDraggingHidden = $state(false)
+  let isInFlight = $state(false)
   let hiddenDragStartX = 0
   let hiddenDragStartOffset = 0
   let dragMovedDistance = 0
   let dragResetTimeout: number | undefined
+  let inertiaSafetyTimeout: number | undefined
+  let inertiaAnimFrame: number | undefined
+  let dragHistory: Array<{ x: number; time: number }> = []
 
   /**
    * Synchronizes OS window bounds when island state changes.
+   * Does not run while in flight (dragging or gliding) to protect in-flight bounds.
    */
   function syncOSBoundsOnStateChange() {
-    if (!islandNode) return
+    if (!islandNode || isInFlight) return
 
     const baseW = isHidden
       ? hiddenBounds.w
@@ -648,7 +665,20 @@
 
   $effect(syncOSBoundsOnStateChange)
 
-  function commitRestingBounds() {
+  function stopInertia() {
+    if (inertiaAnimFrame) {
+      cancelAnimationFrame(inertiaAnimFrame)
+      inertiaAnimFrame = undefined
+    }
+    clearTimeout(inertiaSafetyTimeout)
+    inertiaSafetyTimeout = undefined
+    isInFlight = false
+    dragHistory = []
+
+    // Persist final resting offset to store once motion is fully settled
+    $hiddenPillOffsetXStore = currentLiveOffsetX
+
+    // Commit final exact tight OS window bounds at resting position
     const baseW = isHidden
       ? hiddenBounds.w
       : expanded
@@ -669,8 +699,7 @@
           ? islandConfig.expanded.r
           : islandConfig.minimal.r
 
-    const finalOffset = get(hiddenPillOffsetXStore) || 0
-    updateBounds(targetW, targetH, r, finalOffset)
+    updateBounds(targetW, targetH, r, currentLiveOffsetX)
     currentOSBounds = { w: targetW, h: targetH, r }
   }
 
@@ -696,11 +725,15 @@
       return
     }
 
+    if (inertiaAnimFrame) {
+      stopInertia()
+    }
     isDraggingHidden = true
     dragMovedDistance = 0
     clearTimeout(dragResetTimeout)
     hiddenDragStartX = e.screenX
-    hiddenDragStartOffset = $hiddenPillOffsetXStore
+    hiddenDragStartOffset = currentLiveOffsetX
+    dragHistory = [{ x: e.screenX, time: performance.now() }]
     try {
       ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
     } catch {
@@ -716,10 +749,26 @@
       return
     }
 
+    const now = performance.now()
+    dragHistory.push({ x: e.screenX, time: now })
+    if (dragHistory.length > 25) {
+      dragHistory.shift()
+    }
+
     const dx = e.screenX - hiddenDragStartX
     dragMovedDistance = Math.abs(dx)
     if (dragMovedDistance > 3) {
-      $hiddenPillOffsetXStore = Math.max(
+      if (!isInFlight) {
+        isInFlight = true
+        // Open in-flight full-width region once so zero clipping occurs during movement
+        const baseH = isHidden
+          ? hiddenBounds.h
+          : expanded
+            ? islandConfig.expanded.h
+            : islandConfig.minimal.h
+        updateBounds(-1, baseH + extraDropdownH, 0, 0)
+      }
+      currentLiveOffsetX = Math.max(
         -maxAllowedOffsetForCurrentW,
         Math.min(maxAllowedOffsetForCurrentW, hiddenDragStartOffset + dx)
       )
@@ -736,18 +785,96 @@
     }
 
     if (dragMovedDistance > 3) {
-      commitRestingBounds()
+      const now = performance.now()
+      dragHistory.push({ x: e.screenX, time: now })
+
+      // Sample points within the last 150ms of release
+      const recent = dragHistory.filter((p) => now - p.time <= 150)
+      let velocity = 0
+
+      if (recent.length >= 2) {
+        const oldest = recent[0]
+        const newest = recent[recent.length - 1]
+        const dt = newest.time - oldest.time
+        const dx = newest.x - oldest.x
+        if (dt > 15) {
+          velocity = dx / dt // true px/ms
+        }
+      }
+
+      if (Math.abs(velocity) >= 0.015) {
+        const maxVelocity = 3.0 // px/ms
+        velocity = Math.max(-maxVelocity, Math.min(maxVelocity, velocity))
+        isInFlight = true
+
+        const baseH = isHidden
+          ? hiddenBounds.h
+          : expanded
+            ? islandConfig.expanded.h
+            : islandConfig.minimal.h
+        updateBounds(-1, baseH + extraDropdownH, 0, 0)
+
+        clearTimeout(inertiaSafetyTimeout)
+        inertiaSafetyTimeout = window.setTimeout(stopInertia, 2000)
+
+        let lastFrameTime = performance.now()
+        const friction = 0.0018 // Natural friction deceleration
+
+        function runInertiaStep(currentTime: number) {
+          const frameDt = Math.min(32, currentTime - lastFrameTime)
+          lastFrameTime = currentTime
+
+          if (frameDt > 0) {
+            const newOffset = currentLiveOffsetX + velocity * frameDt
+            const clamped = Math.max(
+              -maxAllowedOffsetForCurrentW,
+              Math.min(maxAllowedOffsetForCurrentW, newOffset)
+            )
+
+            currentLiveOffsetX = clamped
+
+            // Stop immediately if hitting screen edge boundary
+            if (
+              clamped <= -maxAllowedOffsetForCurrentW ||
+              clamped >= maxAllowedOffsetForCurrentW
+            ) {
+              stopInertia()
+              return
+            }
+
+            // Decelerate velocity dynamically based on time delta
+            const decay = Math.exp(-friction * frameDt)
+            velocity *= decay
+
+            // Snap to rest and restore tight OS click region the moment motion settles
+            if (Math.abs(velocity) < 0.005) {
+              stopInertia()
+              return
+            }
+          }
+
+          inertiaAnimFrame = requestAnimationFrame(runInertiaStep)
+        }
+
+        inertiaAnimFrame = requestAnimationFrame(runInertiaStep)
+      } else {
+        stopInertia()
+      }
+
       clearTimeout(dragResetTimeout)
       dragResetTimeout = window.setTimeout(() => {
         dragMovedDistance = 0
       }, 150)
+    } else {
+      stopInertia()
     }
   }
 
   function handleContextMenu(e: MouseEvent) {
-    if (isDraggingHidden || dragMovedDistance > 3) {
+    if (isDraggingHidden || dragMovedDistance > 3 || isInFlight) {
       isDraggingHidden = false
       dragMovedDistance = 0
+      stopInertia()
       e.preventDefault()
       e.stopPropagation()
       return
@@ -778,7 +905,7 @@
   }
 
   function handleIslandClick(e: MouseEvent) {
-    if (dragMovedDistance > 3) {
+    if (dragMovedDistance > 3 || isInFlight) {
       dragMovedDistance = 0
       e.preventDefault()
       e.stopPropagation()
@@ -849,16 +976,6 @@
     onpointerup={handleHiddenPointerUp}
     onpointercancel={handleHiddenPointerUp}
     oncontextmenu={handleContextMenu}
-    ondblclick={(e) => {
-      const target = e.target as HTMLElement
-      if (
-        !target.closest(
-          'button, input, select, textarea, a, .custom-select, [role="button"]'
-        )
-      ) {
-        $hiddenPillOffsetXStore = 0
-      }
-    }}
     style="
       transform: translateX({clampedOffsetX}px) {isQuitting
       ? 'scale(0.6) translateY(-20px)'
@@ -911,11 +1028,7 @@
     {#if expanded && $allowDragPositionStore}
       <div
         class="island-drag-handle"
-        title="Drag to reposition • Double-click to center (or Alt + Drag)"
-        ondblclick={(e) => {
-          e.stopPropagation()
-          $hiddenPillOffsetXStore = 0
-        }}
+        title="Drag to reposition (or Alt + Drag)"
       >
         <div class="drag-pill-bar"></div>
       </div>
