@@ -13,6 +13,7 @@
   import type { Component } from 'svelte'
   import type { IslandConfig } from '../store'
   import { themeStore, shapeStore, devTestingStore } from '../store'
+  import { debugBoundsOverlay, debugLogs } from './debugConfig'
 
   let devW = $state(0)
   let devH = $state(0)
@@ -103,6 +104,22 @@
     </div>
 
     <div class="quick-toggles">
+      <button
+        class="icon-btn {$debugBoundsOverlay ? 'active' : ''}"
+        onclick={() => ($debugBoundsOverlay = !$debugBoundsOverlay)}
+        title={$debugBoundsOverlay
+          ? 'Hide Bounds Overlay'
+          : 'Show Bounds Overlay'}
+      >
+        🎯
+      </button>
+      <button
+        class="icon-btn {$debugLogs ? 'active' : ''}"
+        onclick={() => ($debugLogs = !$debugLogs)}
+        title={$debugLogs ? 'Disable Verbose Logs' : 'Enable Verbose Logs'}
+      >
+        🪵
+      </button>
       <button
         class="icon-btn"
         onclick={() =>

@@ -35,3 +35,8 @@ body {
   text-align: center;
   pointer-events: none;
 }
+
+body.debug-bounds-overlay,
+#app.debug-bounds-overlay {
+  background-color: rgba(255, 0, 100, 0.25) !important;
+}

@@ -131,10 +131,7 @@ export const opacityHiddenStore = persistentWritable<number>(
   'vinta_opacity_hidden',
   1.0
 )
-export const hiddenPillOffsetXStore = persistentWritable<number>(
-  'vinta_hidden_pill_offset_x',
-  0
-)
+export const hiddenPillOffsetXStore = writable<number>(0)
 export const allowDragPositionStore = persistentWritable<boolean>(
   'vinta_allow_drag_position',
   true

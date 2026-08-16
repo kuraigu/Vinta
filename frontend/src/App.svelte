@@ -51,6 +51,20 @@
     calculateHomeMinimalWidth
   } from './store'
   import { preloadIcons, findAppIconConflicts } from './appIcons'
+  import { debugBoundsOverlay, debugLogs } from './devtest/debugConfig'
+
+  function syncDebugBoundsOverlay(enabled: boolean) {
+    if (typeof document !== 'undefined') {
+      if (enabled) {
+        document.body.classList.add('debug-bounds-overlay')
+      } else {
+        document.body.classList.remove('debug-bounds-overlay')
+      }
+    }
+  }
+  $effect(() => {
+    syncDebugBoundsOverlay($debugBoundsOverlay)
+  })
 
   // Dynamic Routing: The active app that the island is displaying
   let activePage = $state<Component>(HomePage)
@@ -78,6 +92,16 @@
   let isHovering = $state(false)
   let hideTimeout: number
   let hoverShowTimeout: number
+
+  let isDraggingHidden = $state(false)
+  let isInFlight = $state(false)
+  let hiddenDragStartX = 0
+  let hiddenDragStartOffset = 0
+  let dragMovedDistance = 0
+  let dragResetTimeout: number | undefined
+  let inertiaSafetyTimeout: number | undefined
+  let inertiaAnimFrame: number | undefined
+  let dragHistory: Array<{ x: number; time: number }> = []
 
   let islandNode = $state<HTMLElement>()
   let isTestMode = $state(false)
@@ -146,6 +170,9 @@
     if (isHidden) return
     islandAnim = '0.35s cubic-bezier(0.2, 0.8, 0.2, 1)'
     isHidden = true
+    stopInertia()
+    const { w, h, r } = getBoundsForState(islandConfig, expanded, true)
+    applyBounds(w, h, r)
   }
 
   // Global reactive fallback sync effect when island is minimized
@@ -212,6 +239,9 @@
     if (!isHidden) return
     islandAnim = '0.32s cubic-bezier(0.2, 0.8, 0.2, 1)'
     isHidden = false
+    stopInertia()
+    const { w, h, r } = getBoundsForState(islandConfig, expanded, false)
+    applyBounds(w, h, r)
     if (
       $globalMediaStore.isPlaying &&
       $pageVisibilityStore.media &&
@@ -249,23 +279,42 @@
     r: number,
     explicitOffset?: number
   ) {
-    const computedR = $shapeStore === 'box' ? 12 : r
+    const computedW = Math.round(w)
+    const computedH = Math.round(h)
+    const computedR = Math.round($shapeStore === 'box' ? 12 : r)
     const scale = window.devicePixelRatio || 1
-    const offset =
+    const rawOffset =
       explicitOffset !== undefined
         ? explicitOffset
         : isNaN(clampedOffsetX)
           ? 0
           : clampedOffsetX
+    const offset = Math.round(rawOffset)
 
     if (isBoundsIpcPending) {
-      pendingBoundsArgs = { w, h, r, offset }
+      pendingBoundsArgs = { w: computedW, h: computedH, r: computedR, offset }
       return
     }
 
+    if (get(debugLogs)) {
+      console.log('[Vinta:Bounds]', {
+        w: computedW,
+        h: computedH,
+        r: computedR,
+        scale,
+        offset
+      })
+    }
+
     isBoundsIpcPending = true
-    Promise.resolve(SetWidgetBounds(w, h, computedR, scale, offset))
-      .catch(() => {})
+    Promise.resolve(
+      SetWidgetBounds(computedW, computedH, computedR, scale, offset)
+    )
+      .catch((err) => {
+        if (get(debugLogs)) {
+          console.error('[Vinta:BoundsError]', err)
+        }
+      })
       .finally(() => {
         isBoundsIpcPending = false
         if (pendingBoundsArgs) {
@@ -282,28 +331,8 @@
   let boundsTransitionTimeout: number | undefined
 
   function applyBounds(w: number, h: number, r: number) {
-    targetPendingBounds = { w, h, r }
-    clearTimeout(boundsTransitionTimeout)
-    if (w >= currentOSBounds.w && h >= currentOSBounds.h) {
-      updateBounds(w, h, r)
-      currentOSBounds = { w, h, r }
-    } else {
-      const maxW = Math.max(currentOSBounds.w, w)
-      const maxH = Math.max(currentOSBounds.h, h)
-      const maxR = Math.max(currentOSBounds.r, r)
-      updateBounds(maxW, maxH, maxR)
-
-      boundsTransitionTimeout = window.setTimeout(() => {
-        if (targetPendingBounds.w > 0 && targetPendingBounds.h > 0) {
-          updateBounds(
-            targetPendingBounds.w,
-            targetPendingBounds.h,
-            targetPendingBounds.r
-          )
-          currentOSBounds = { ...targetPendingBounds }
-        }
-      }, 350)
-    }
+    currentOSBounds = { w, h, r }
+    updateBounds(w, h, r, clampedOffsetX)
   }
 
   function handleIslandTransitionEnd(e: TransitionEvent) {
@@ -357,11 +386,55 @@
     syncStoreOffsetToLive($hiddenPillOffsetXStore)
   })
 
-  let clampedOffsetX = $derived(
-    Math.max(
+  let clampedOffsetX = $derived.by(() => {
+    if (Math.abs(currentLiveOffsetX) < 3) return 0
+    return Math.max(
       -maxAllowedOffsetForCurrentW,
       Math.min(maxAllowedOffsetForCurrentW, currentLiveOffsetX)
     )
+  })
+
+  // Elastic liquid remnant ghosting effect
+  let remnantOffsetX = $state(0)
+  let remnantAnimFrame: number | undefined
+
+  function updateRemnantStep() {
+    if (isDraggingHidden || isInFlight) {
+      const diff = currentLiveOffsetX - remnantOffsetX
+      remnantOffsetX += diff * 0.22
+      remnantAnimFrame = requestAnimationFrame(updateRemnantStep)
+    } else {
+      remnantOffsetX = currentLiveOffsetX
+      remnantAnimFrame = undefined
+    }
+  }
+
+  function startRemnantTracking() {
+    if (!remnantAnimFrame) {
+      remnantAnimFrame = requestAnimationFrame(updateRemnantStep)
+    }
+  }
+
+  function stopRemnantTracking() {
+    if (remnantAnimFrame) {
+      cancelAnimationFrame(remnantAnimFrame)
+      remnantAnimFrame = undefined
+    }
+    remnantOffsetX = currentLiveOffsetX
+  }
+
+  let remnantLag = $derived(currentLiveOffsetX - remnantOffsetX)
+  let isRemnantActive = $derived(
+    (isDraggingHidden || isInFlight) && Math.abs(remnantLag) > 2.5
+  )
+  let remnantOpacity = $derived(
+    isRemnantActive ? Math.min(0.45, Math.abs(remnantLag) / 35) : 0
+  )
+  let remnantScaleX = $derived(
+    isRemnantActive ? 1 + Math.min(0.18, Math.abs(remnantLag) / 160) : 1
+  )
+  let remnantSkewX = $derived(
+    isRemnantActive ? Math.max(-10, Math.min(10, -remnantLag * 0.1)) : 0
   )
 
   let glowOpacity = $derived(
@@ -375,6 +448,36 @@
   let extraDropdownH = $state(0)
   let extraDropdownW = $state(0)
   let isQuitting = $state(false)
+
+  function getBoundsForState(
+    config: IslandConfig = islandConfig,
+    isExp: boolean = expanded,
+    isHid: boolean = isHidden
+  ) {
+    const baseW = isHid
+      ? hiddenBounds.w
+      : isExp
+        ? config.expanded.w
+        : currentMinimalW
+
+    const baseH = isHid
+      ? hiddenBounds.h
+      : isExp
+        ? config.expanded.h
+        : config.minimal.h
+
+    const w = baseW + extraDropdownW
+    const h = baseH + extraDropdownH
+    const r = isHid
+      ? hiddenBounds.r
+      : $shapeStore === 'box'
+        ? 12
+        : isExp
+          ? config.expanded.r
+          : config.minimal.r
+
+    return { w, h, r }
+  }
 
   function navigateTo(
     page: Component,
@@ -391,8 +494,9 @@
     islandConfig = pageConfig
 
     if (expand) {
-      // Batch the expanded state mutation onto the next visual frame so the browser
-      // parses new DOM nodes before starting the container size transition.
+      const { w, h, r } = getBoundsForState(pageConfig, true, false)
+      applyBounds(w, h, r)
+
       requestAnimationFrame(() => {
         expanded = true
       })
@@ -434,12 +538,12 @@
       }
     })
 
-    currentOSBounds = {
-      w: islandConfig.minimal.w,
-      h: islandConfig.minimal.h,
-      r: islandConfig.minimal.r
-    }
-    updateBounds(currentOSBounds.w, currentOSBounds.h, currentOSBounds.r)
+    // Reset offset to 0 on launch
+    $hiddenPillOffsetXStore = 0
+    currentLiveOffsetX = 0
+    const { w, h, r } = getBoundsForState()
+    currentOSBounds = { w, h, r }
+    updateBounds(w, h, r, 0)
 
     const handleOverlayChange = (e: Event) => {
       const detail = (e as CustomEvent).detail as
@@ -618,48 +722,34 @@
     }
   })
 
-  // Universal horizontal dragging and inertia state
-  let isDraggingHidden = $state(false)
-  let isInFlight = $state(false)
-  let hiddenDragStartX = 0
-  let hiddenDragStartOffset = 0
-  let dragMovedDistance = 0
-  let dragResetTimeout: number | undefined
-  let inertiaSafetyTimeout: number | undefined
-  let inertiaAnimFrame: number | undefined
-  let dragHistory: Array<{ x: number; time: number }> = []
-
   /**
    * Synchronizes OS window bounds when island state changes.
-   * Does not run while in flight (dragging or gliding) to protect in-flight bounds.
+   * In-flight drags skip this to prevent fighting the full-width track region,
+   * but the drag handlers call stopInertia() before any state changes.
    */
   function syncOSBoundsOnStateChange() {
-    if (!islandNode || isInFlight) return
+    if (isInFlight) return
+    const target = getBoundsForState()
 
-    const baseW = isHidden
-      ? hiddenBounds.w
-      : expanded
-        ? islandConfig.expanded.w
-        : currentMinimalW
-
-    const baseH = isHidden
-      ? hiddenBounds.h
-      : expanded
-        ? islandConfig.expanded.h
-        : islandConfig.minimal.h
-
-    const targetW = baseW + extraDropdownW
-    const targetH = baseH + extraDropdownH
-
-    const r = isHidden
-      ? hiddenBounds.r
-      : $shapeStore === 'box'
-        ? 12
-        : expanded
-          ? islandConfig.expanded.r
-          : islandConfig.minimal.r
-
-    applyBounds(targetW, targetH, r)
+    // When shrinking (e.g. collapsing/minimizing from expanded), hold window bounds until CSS transition finishes
+    if (currentOSBounds.h > target.h || currentOSBounds.w > target.w) {
+      targetPendingBounds = target
+      clearTimeout(boundsTransitionTimeout)
+      boundsTransitionTimeout = window.setTimeout(() => {
+        if (targetPendingBounds.w > 0 && targetPendingBounds.h > 0) {
+          applyBounds(
+            targetPendingBounds.w,
+            targetPendingBounds.h,
+            targetPendingBounds.r
+          )
+          targetPendingBounds = { w: 0, h: 0, r: 0 }
+        }
+      }, 340)
+    } else {
+      clearTimeout(boundsTransitionTimeout)
+      targetPendingBounds = { w: 0, h: 0, r: 0 }
+      applyBounds(target.w, target.h, target.r)
+    }
   }
 
   $effect(syncOSBoundsOnStateChange)
@@ -673,33 +763,15 @@
     inertiaSafetyTimeout = undefined
     isInFlight = false
     dragHistory = []
+    stopRemnantTracking()
 
     // Persist final resting offset to store once motion is fully settled
-    $hiddenPillOffsetXStore = currentLiveOffsetX
+    $hiddenPillOffsetXStore = clampedOffsetX
 
     // Commit final exact tight OS window bounds at resting position
-    const baseW = isHidden
-      ? hiddenBounds.w
-      : expanded
-        ? islandConfig.expanded.w
-        : currentMinimalW
-    const baseH = isHidden
-      ? hiddenBounds.h
-      : expanded
-        ? islandConfig.expanded.h
-        : islandConfig.minimal.h
-    const targetW = baseW + extraDropdownW
-    const targetH = baseH + extraDropdownH
-    const r = isHidden
-      ? hiddenBounds.r
-      : $shapeStore === 'box'
-        ? 12
-        : expanded
-          ? islandConfig.expanded.r
-          : islandConfig.minimal.r
-
-    updateBounds(targetW, targetH, r, currentLiveOffsetX)
-    currentOSBounds = { w: targetW, h: targetH, r }
+    const { w, h, r } = getBoundsForState()
+    updateBounds(w, h, r, clampedOffsetX)
+    currentOSBounds = { w, h, r }
   }
 
   function handleHiddenPointerDown(e: PointerEvent) {
@@ -733,6 +805,7 @@
     hiddenDragStartX = e.screenX
     hiddenDragStartOffset = currentLiveOffsetX
     dragHistory = [{ x: e.screenX, time: performance.now() }]
+    startRemnantTracking()
     try {
       ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
     } catch {
@@ -756,21 +829,17 @@
 
     const dx = e.screenX - hiddenDragStartX
     dragMovedDistance = Math.abs(dx)
-    if (dragMovedDistance > 3) {
-      if (!isInFlight) {
-        isInFlight = true
-        // Open in-flight full-width region once so zero clipping occurs during movement
-        const baseH = isHidden
-          ? hiddenBounds.h
-          : expanded
-            ? islandConfig.expanded.h
-            : islandConfig.minimal.h
-        updateBounds(-1, baseH + extraDropdownH, 0, 0)
-      }
+    if (dragMovedDistance > 6) {
+      const rawOffset = hiddenDragStartOffset + dx
+      // Hard clamp: No rubberband past the edge
       currentLiveOffsetX = Math.max(
         -maxAllowedOffsetForCurrentW,
-        Math.min(maxAllowedOffsetForCurrentW, hiddenDragStartOffset + dx)
+        Math.min(maxAllowedOffsetForCurrentW, rawOffset)
       )
+
+      // Keep OS click region tightly aligned around current drag position
+      const { w, h, r } = getBoundsForState()
+      updateBounds(w, h, r, currentLiveOffsetX)
     }
   }
 
@@ -783,7 +852,7 @@
       // Ignore
     }
 
-    if (dragMovedDistance > 3) {
+    if (dragMovedDistance > 6) {
       const now = performance.now()
       dragHistory.push({ x: e.screenX, time: now })
 
@@ -801,55 +870,60 @@
         }
       }
 
-      if (Math.abs(velocity) >= 0.015) {
-        const maxVelocity = 3.0 // px/ms
+      if (Math.abs(velocity) >= 0.08) {
+        const maxVelocity = 2.2 // px/ms
         velocity = Math.max(-maxVelocity, Math.min(maxVelocity, velocity))
         isInFlight = true
 
-        const baseH = isHidden
-          ? hiddenBounds.h
-          : expanded
-            ? islandConfig.expanded.h
-            : islandConfig.minimal.h
-        updateBounds(-1, baseH + extraDropdownH, 0, 0)
+        const { w: islandW, h, r } = getBoundsForState()
+        const friction = 0.0035
+
+        // Initial glide corridor with 70px comfort padding
+        const initialLead = Math.max(-30, Math.min(30, velocity * 20))
+        updateBounds(
+          islandW + Math.abs(initialLead) + 70,
+          h,
+          r,
+          currentLiveOffsetX + initialLead / 2
+        )
 
         clearTimeout(inertiaSafetyTimeout)
-        inertiaSafetyTimeout = window.setTimeout(stopInertia, 2000)
+        inertiaSafetyTimeout = window.setTimeout(stopInertia, 1200)
 
         let lastFrameTime = performance.now()
-        const friction = 0.0018 // Natural friction deceleration
 
         function runInertiaStep(currentTime: number) {
           const frameDt = Math.min(32, currentTime - lastFrameTime)
           lastFrameTime = currentTime
 
           if (frameDt > 0) {
-            const newOffset = currentLiveOffsetX + velocity * frameDt
-            const clamped = Math.max(
-              -maxAllowedOffsetForCurrentW,
-              Math.min(maxAllowedOffsetForCurrentW, newOffset)
-            )
-
-            currentLiveOffsetX = clamped
-
-            // Stop immediately if hitting screen edge boundary
-            if (
-              clamped <= -maxAllowedOffsetForCurrentW ||
-              clamped >= maxAllowedOffsetForCurrentW
-            ) {
-              stopInertia()
-              return
-            }
-
-            // Decelerate velocity dynamically based on time delta
             const decay = Math.exp(-friction * frameDt)
             velocity *= decay
+            currentLiveOffsetX += velocity * frameDt
 
-            // Snap to rest and restore tight OS click region the moment motion settles
-            if (Math.abs(velocity) < 0.005) {
+            // Edge reached: hard clamp with zero bounce and immediately stop
+            if (currentLiveOffsetX >= maxAllowedOffsetForCurrentW) {
+              currentLiveOffsetX = maxAllowedOffsetForCurrentW
               stopInertia()
               return
             }
+            if (currentLiveOffsetX <= -maxAllowedOffsetForCurrentW) {
+              currentLiveOffsetX = -maxAllowedOffsetForCurrentW
+              stopInertia()
+              return
+            }
+
+            // Snap to rest when velocity decays
+            if (Math.abs(velocity) < 0.035) {
+              stopInertia()
+              return
+            }
+
+            // Dynamic corridor: island width + lead buffer + 70px comfort width padding to prevent clipping
+            const lead = Math.max(-30, Math.min(30, velocity * 20))
+            const dynamicW = islandW + Math.abs(lead) + 70
+            const dynamicOffset = currentLiveOffsetX + lead / 2
+            updateBounds(dynamicW, h, r, dynamicOffset)
           }
 
           inertiaAnimFrame = requestAnimationFrame(runInertiaStep)
@@ -898,9 +972,15 @@
 
   function handleExpand() {
     if (expanded) return
+    // Cancel any active drag/inertia first so the OS region update isn't blocked
+    if (isInFlight || isDraggingHidden) stopInertia()
     triggerBlink()
     islandAnim = '0.32s cubic-bezier(0.2, 0.8, 0.2, 1)'
     expanded = true
+
+    // Immediately open expanded OS bounds synchronously on first expand so zero clipping occurs
+    const { w, h, r } = getBoundsForState(islandConfig, true, isHidden)
+    applyBounds(w, h, r)
   }
 
   function handleIslandClick(e: MouseEvent) {
@@ -961,6 +1041,33 @@
   onfocusin={handleFocusIn}
   onpointerdown={handleGlobalPointerDown}
 >
+  {#if isRemnantActive}
+    <div
+      class="island-remnant"
+      style="
+        transform: translateX({remnantOffsetX}px) scaleX({remnantScaleX}) skewX({remnantSkewX}deg);
+        opacity: {remnantOpacity};
+        width: {isHidden
+        ? hiddenBounds.w
+        : expanded
+          ? islandConfig.expanded.w
+          : currentMinimalW}px;
+        height: {isHidden
+        ? hiddenBounds.h
+        : expanded
+          ? islandConfig.expanded.h
+          : islandConfig.minimal.h}px;
+        border-radius: {isHidden
+        ? hiddenBounds.r
+        : $shapeStore === 'box'
+          ? 12
+          : expanded
+            ? islandConfig.expanded.r
+            : islandConfig.minimal.r}px;
+      "
+    ></div>
+  {/if}
+
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
@@ -1108,6 +1215,19 @@
     flex-direction: column;
     align-items: center;
     gap: 15px;
+    position: relative;
+  }
+
+  .island-remnant {
+    position: absolute;
+    top: 5px;
+    pointer-events: none;
+    background: var(--c-bg);
+    filter: blur(4px) brightness(1.2);
+    border: 1px solid var(--c-border);
+    box-shadow: 0 0 16px var(--island-glow-color, var(--c-accent-glow));
+    transition: opacity 0.12s ease;
+    z-index: 0;
   }
 
   .island {

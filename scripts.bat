@@ -1,51 +1,110 @@
 @echo off
-setlocal
+setlocal enabledelayedexpansion
 
-if "%1"=="dev" (
-    call :build_native
-    if errorlevel 1 exit /b %ERRORLEVEL%
-    wails dev
-    if errorlevel 1 exit /b %ERRORLEVEL%
-) else if "%1"=="build" (
-    call :build_native_force
-    if errorlevel 1 exit /b %ERRORLEVEL%
-    wails build
-    if errorlevel 1 exit /b %ERRORLEVEL%
-) else if "%1"=="run" (
-    taskkill /IM Vinta.exe /F 2>nul
-    if "%2" NEQ "no_build" (
-        call :build_native
-        if errorlevel 1 exit /b %ERRORLEVEL%
-        wails build
-        if errorlevel 1 exit /b %ERRORLEVEL%
+if "%~1"=="" goto usage
+
+if "%~1"=="dev" (
+    if "%~2" NEQ "" (
+        echo Error: 'dev' does not take extra arguments.
+        exit /b 1
     )
-    start "" "build\bin\Vinta.exe"
-) else if "%1"=="test" (
+    call :build_native
+    if errorlevel 1 exit /b !ERRORLEVEL!
+    wails dev
+    if errorlevel 1 exit /b !ERRORLEVEL!
+    exit /b 0
+)
+
+if "%~1"=="build" (
+    if "%~2" NEQ "" (
+        echo Error: 'build' does not take extra arguments.
+        exit /b 1
+    )
+    call :build_native_force
+    if errorlevel 1 exit /b !ERRORLEVEL!
+    wails build
+    if errorlevel 1 exit /b !ERRORLEVEL!
+    exit /b 0
+)
+
+if "%~1"=="run" (
+    set "DO_BUILD=1"
+    set "DEBUG_FLAG="
+
+    for %%A in (%2 %3 %4) do (
+        if "%%~A"=="no_build" (
+            set "DO_BUILD=0"
+        ) else if "%%~A"=="debug" (
+            set "DEBUG_FLAG=-debug"
+        ) else (
+            echo Error: Unknown argument '%%~A' for 'run'.
+            echo Allowed options for 'run': [no_build] [debug]
+            exit /b 1
+        )
+    )
+
+    taskkill /IM Vinta.exe /F 2>nul
+    if "!DO_BUILD!"=="1" (
+        call :build_native
+        if errorlevel 1 exit /b !ERRORLEVEL!
+        wails build
+        if errorlevel 1 exit /b !ERRORLEVEL!
+    )
+    if defined DEBUG_FLAG (
+        start "" "build\bin\Vinta.exe" !DEBUG_FLAG!
+    ) else (
+        start "" "build\bin\Vinta.exe"
+    )
+    exit /b 0
+)
+
+if "%~1"=="test" (
+    if "%~2" NEQ "" (
+        echo Error: 'test' does not take extra arguments.
+        exit /b 1
+    )
     taskkill /IM Vinta.exe /F 2>nul
     call :build_native
-    if errorlevel 1 exit /b %ERRORLEVEL%
+    if errorlevel 1 exit /b !ERRORLEVEL!
     wails build
-    if errorlevel 1 exit /b %ERRORLEVEL%
+    if errorlevel 1 exit /b !ERRORLEVEL!
     start "" "build\bin\Vinta.exe" -test
-) else if "%1"=="lint" (
+    exit /b 0
+)
+
+if "%~1"=="lint" (
+    if "%~2" NEQ "" (
+        echo Error: 'lint' does not take extra arguments.
+        exit /b 1
+    )
     echo Running Go Lint...
     gofmt -w .
-    if errorlevel 1 exit /b %ERRORLEVEL%
+    if errorlevel 1 exit /b !ERRORLEVEL!
     golangci-lint run
-    if errorlevel 1 exit /b %ERRORLEVEL%
+    if errorlevel 1 exit /b !ERRORLEVEL!
     echo Running Frontend Lint...
     cd frontend
     call npm run check
-    if errorlevel 1 ( cd .. & exit /b %ERRORLEVEL% )
+    if errorlevel 1 ( cd .. & exit /b !ERRORLEVEL! )
     call npm run lint
-    if errorlevel 1 ( cd .. & exit /b %ERRORLEVEL% )
+    if errorlevel 1 ( cd .. & exit /b !ERRORLEVEL! )
     call npm run format
-    if errorlevel 1 ( cd .. & exit /b %ERRORLEVEL% )
+    if errorlevel 1 ( cd .. & exit /b !ERRORLEVEL! )
     cd ..
-) else (
-    echo Usage: scripts.bat [dev^|build^|run^|test^|lint]
+    exit /b 0
 )
-exit /b %ERRORLEVEL%
+
+echo Error: Unknown command '%~1'.
+:usage
+echo Usage: scripts.bat ^<command^> [options]
+echo.
+echo Commands:
+echo   dev                      Runs Vite / Wails live development server with debug enabled
+echo   build                    Builds production binary
+echo   run [no_build] [debug]   Runs binary (optionally skip build, optionally enable debug mode)
+echo   test                     Runs test suite with DevTest panel (-test)
+echo   lint                     Runs Go and Frontend linters and formatters
+exit /b 1
 
 :build_native
 call :build_native_force
