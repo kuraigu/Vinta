@@ -7,7 +7,8 @@
     Code,
     ExternalLink,
     ShieldCheck,
-    Heart
+    Heart,
+    Crown
   } from 'lucide-svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
   import {
@@ -52,6 +53,20 @@
   })
 
   let contributors = $state<ContributorItem[]>([])
+
+  function getMaintainers() {
+    return contributors.filter(
+      (c) => c.role === 'Founder' || c.role === 'Maintainer'
+    )
+  }
+  let maintainers = $derived(getMaintainers())
+
+  function getGeneralContributors() {
+    return contributors.filter(
+      (c) => c.role !== 'Founder' && c.role !== 'Maintainer'
+    )
+  }
+  let generalContributors = $derived(getGeneralContributors())
 
   onMount(() => {
     GetAppInfo()
@@ -133,37 +148,79 @@
     </SettingActionButton>
   </div>
 
-  <div class="about-section-box">
-    <div class="about-box-title">
-      <Heart size={14} strokeWidth={2} style="color: #ef4444" />
-      <span>Project Contributors</span>
-    </div>
-    <div class="contributors-grid">
-      {#each contributors as c (c.handle)}
+  {#if maintainers.length > 0}
+    <div class="about-section-box">
+      <div class="about-box-title">
+        <Crown
+          size={14}
+          strokeWidth={2}
+          style="color: var(--c-warning, #eab308)"
+        />
+        <span>Project Maintainers</span>
+      </div>
+      <div class="contributors-grid">
+        {#each maintainers as c (c.handle)}
+          <a
+            href={c.url}
+            target="_blank"
+            rel="noreferrer"
+            class="contributor-card"
+          >
+            <div class="contributor-meta">
+              <span class="contributor-name">{c.name}</span>
+              <span class="contributor-handle">@{c.handle}</span>
+            </div>
+            <span class="role-pill">{c.role}</span>
+          </a>
+        {/each}
+      </div>
+      {#if generalContributors.length === 0}
         <a
-          href={c.url}
+          href={`${appInfo.repoUrl}/blob/main/docs/CONTRIBUTORS.md`}
           target="_blank"
           rel="noreferrer"
-          class="contributor-card"
+          class="contributor-link-btn"
         >
-          <div class="contributor-meta">
-            <span class="contributor-name">{c.name}</span>
-            <span class="contributor-handle">@{c.handle}</span>
-          </div>
-          <span class="role-pill">{c.role}</span>
+          <span>View Full Contributor List</span>
+          <ExternalLink size={11} />
         </a>
-      {/each}
+      {/if}
     </div>
-    <a
-      href={`${appInfo.repoUrl}/blob/main/docs/CONTRIBUTORS.md`}
-      target="_blank"
-      rel="noreferrer"
-      class="contributor-link-btn"
-    >
-      <span>View Full Contributor List</span>
-      <ExternalLink size={11} />
-    </a>
-  </div>
+  {/if}
+
+  {#if generalContributors.length > 0}
+    <div class="about-section-box">
+      <div class="about-box-title">
+        <Heart size={14} strokeWidth={2} style="color: #ef4444" />
+        <span>Contributors</span>
+      </div>
+      <div class="contributors-grid">
+        {#each generalContributors as c (c.handle)}
+          <a
+            href={c.url}
+            target="_blank"
+            rel="noreferrer"
+            class="contributor-card"
+          >
+            <div class="contributor-meta">
+              <span class="contributor-name">{c.name}</span>
+              <span class="contributor-handle">@{c.handle}</span>
+            </div>
+            <span class="role-pill">{c.role}</span>
+          </a>
+        {/each}
+      </div>
+      <a
+        href={`${appInfo.repoUrl}/blob/main/docs/CONTRIBUTORS.md`}
+        target="_blank"
+        rel="noreferrer"
+        class="contributor-link-btn"
+      >
+        <span>View Full Contributor List</span>
+        <ExternalLink size={11} />
+      </a>
+    </div>
+  {/if}
 </div>
 
 <style>

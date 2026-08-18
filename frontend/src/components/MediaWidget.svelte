@@ -17,7 +17,6 @@
   import {
     Volume2,
     VolumeX,
-    Laptop,
     Music,
     Bell,
     Shuffle,
@@ -28,6 +27,7 @@
   import NotificationPage, {
     config as notifConfig
   } from '../pages/NotificationPage.svelte'
+  import { resolveAppBrand } from '../appIcons'
 
   const navigate =
     getContext<
@@ -42,6 +42,46 @@
 
   let media = $derived($globalMediaStore)
 
+  function computeAppBrand() {
+    return resolveAppBrand(media.sourceApp)
+  }
+  let appBrand = $derived(computeAppBrand())
+
+  function getTrackTextureStyle(
+    title?: string,
+    artist?: string,
+    sourceApp?: string
+  ) {
+    const str = `${title || ''}-${artist || ''}-${sourceApp || ''}`.trim()
+    let hash = 0
+    for (let i = 0; i < str.length; i++) {
+      hash = str.charCodeAt(i) + ((hash << 5) - hash)
+    }
+    const h1 = Math.abs(hash % 360)
+    const h2 = (h1 + 45 + Math.abs((hash >> 3) % 90)) % 360
+    const h3 = (h1 + 180 + Math.abs((hash >> 5) % 60)) % 360
+
+    const c1 = `hsl(${h1}, 75%, 28%)`
+    const c2 = `hsl(${h2}, 80%, 20%)`
+    const c3 = `hsl(${h3}, 70%, 15%)`
+    const base = `hsl(${h1}, 40%, 12%)`
+
+    const p1x = 20 + Math.abs((hash >> 2) % 60)
+    const p1y = 20 + Math.abs((hash >> 4) % 60)
+    const p2x = 80 - Math.abs((hash >> 6) % 50)
+    const p2y = 75 - Math.abs((hash >> 8) % 45)
+
+    return {
+      background: `radial-gradient(circle at ${p1x}% ${p1y}%, ${c1} 0%, transparent 65%), radial-gradient(circle at ${p2x}% ${p2y}%, ${c2} 0%, transparent 60%), radial-gradient(circle at 50% 100%, ${c3} 0%, transparent 70%), ${base}`,
+      accentColor: c1
+    }
+  }
+
+  function computeTrackTexture() {
+    return getTrackTextureStyle(media.title, media.artist, media.sourceApp)
+  }
+  let trackTexture = $derived(computeTrackTexture())
+
   let isDraggingSeek = $state(false)
   let seekVal = $state(0)
   let localPosMs = $state(0)
@@ -52,7 +92,7 @@
   let isNewNotif = $state(false)
   let pulseTimeout: number
 
-  $effect(() => {
+  function handleNotifPulseEffect() {
     const currentCount = $notifData.length
     if (currentCount > prevNotifCount) {
       isNewNotif = true
@@ -62,7 +102,8 @@
       }, 3500)
     }
     prevNotifCount = currentCount
-  })
+  }
+  $effect(handleNotifPulseEffect)
 
   let isSeekingLocked = $state(false)
   let seekLockTimer: ReturnType<typeof setTimeout> | null = null
@@ -74,7 +115,7 @@
   let prevArtist = $state('')
   let prevBackendPos = $state(0)
 
-  $effect(() => {
+  function handleMediaSyncEffect() {
     const curTitle = media.title || ''
     const curArtist = media.artist || ''
     const backendPos = media.positionMs || 0
@@ -99,7 +140,8 @@
     if (!isDraggingVol && media.volume !== undefined) {
       volVal = media.volume
     }
-  })
+  }
+  $effect(handleMediaSyncEffect)
 
   let lastSeekTimestamp = $state(0)
 
@@ -108,7 +150,7 @@
   }
 
   // Smooth local timeline progression between backend SMTC updates
-  $effect(() => {
+  function handleTimelineProgressEffect() {
     if (!media.isPlaying || isDraggingSeek) return
 
     let lastTick = performance.now()
@@ -132,13 +174,17 @@
         seekVal = localPosMs
       }
 
-      rafId = requestAnimationFrame(tick)
+      if (media.isPlaying && !isDraggingSeek) {
+        rafId = requestAnimationFrame(tick)
+      }
     }
 
     rafId = requestAnimationFrame(tick)
-
-    return () => cancelAnimationFrame(rafId)
-  })
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId)
+    }
+  }
+  $effect(handleTimelineProgressEffect)
 
   function handleControl(action: string, e?: MouseEvent) {
     if (e) e.stopPropagation()
@@ -284,7 +330,11 @@
               onerror={handleImgError}
             />
           {:else}
-            <div class="vinyl-placeholder">
+            <div
+              class="vinyl-placeholder"
+              style="background: {trackTexture.background};"
+            >
+              <div class="vinyl-noise-ring"></div>
               <svg
                 viewBox="0 0 24 24"
                 width="12"
@@ -354,7 +404,7 @@
       </div>
     </div>
   {:else}
-    <!-- Full-Card Background Image -->
+    <!-- Full-Card Background Image / Procedural Texture -->
     <div class="card-bg-wrapper">
       {#if media.albumArt}
         <img
@@ -363,6 +413,14 @@
           class="card-bg-image"
           onerror={handleImgError}
         />
+      {:else}
+        <div
+          class="card-bg-texture"
+          style="background: {trackTexture.background};"
+        >
+          <div class="texture-grain-overlay"></div>
+          <div class="texture-wave-overlay"></div>
+        </div>
       {/if}
       <div class="card-bg-overlay"></div>
       <!-- Bottom legibility scrim: fades from --c-scrim to transparent -->
@@ -371,24 +429,27 @@
 
     <!-- Expanded Player Content -->
     <div class="expanded-card">
-      <!-- Top Bar: Glass Header Backdrop with Dynamic App Icon, Center Clock, Device Badge -->
+      <!-- Top Bar: Glass Header Backdrop with Media Player title, Center Clock, App Badge -->
       <div class="top-meta-bar">
         <div class="app-brand">
-          {#if media.appIcon}
-            <img src={media.appIcon} alt={media.appName} class="app-icon-img" />
-          {:else}
-            <Music size={16} class="brand-icon" />
-          {/if}
-          <span class="app-name-text">{media.appName || 'Media Player'}</span>
+          <span class="app-name-text">Media Player</span>
         </div>
 
         <div class="top-clock-wrapper">
           <Clock expanded={false} />
         </div>
 
-        <div class="device-badge">
-          <Laptop size={11} />
-          <span>System Audio</span>
+        <div class="device-badge" title="Source: {appBrand.name}">
+          {#if appBrand.icon}
+            <img
+              src={appBrand.icon}
+              alt={appBrand.name}
+              class="badge-app-icon"
+            />
+          {:else}
+            <Music size={10} />
+          {/if}
+          <span>{appBrand.name}</span>
         </div>
       </div>
 
@@ -652,7 +713,21 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    opacity: 0.6;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .vinyl-noise-ring {
+    position: absolute;
+    inset: 0;
+    opacity: 0.25;
+    background: radial-gradient(
+      circle,
+      transparent 30%,
+      rgba(255, 255, 255, 0.2) 50%,
+      transparent 70%
+    );
+    pointer-events: none;
   }
 
   .vinyl-hole {
@@ -936,17 +1011,46 @@
     gap: 6px;
   }
 
-  .app-icon-img {
-    width: 16px;
-    height: 16px;
-    border-radius: 3px;
-    object-fit: contain;
-  }
-
   .app-name-text {
     font-size: 0.72rem;
     font-weight: 600;
     opacity: 0.9;
+  }
+
+  .card-bg-texture {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    inset: 0;
+    opacity: 0.85;
+    filter: brightness(0.65);
+    z-index: 0;
+    transition: background 0.4s ease;
+    overflow: hidden;
+  }
+
+  .texture-grain-overlay {
+    position: absolute;
+    inset: 0;
+    opacity: 0.18;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    pointer-events: none;
+  }
+
+  .texture-wave-overlay {
+    position: absolute;
+    inset: 0;
+    opacity: 0.12;
+    mix-blend-mode: soft-light;
+    background: repeating-radial-gradient(
+      circle at 30% 40%,
+      rgba(255, 255, 255, 0.15) 0,
+      rgba(255, 255, 255, 0.15) 2px,
+      transparent 3px,
+      transparent 8px
+    );
+    pointer-events: none;
   }
 
   .device-badge {
@@ -955,10 +1059,31 @@
     gap: 4px;
     padding: 2px 7px;
     border-radius: 10px;
-    background: rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.14);
     backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     font-size: 0.62rem;
     font-weight: 600;
+    line-height: 1;
+    max-width: 125px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  }
+
+  .badge-app-icon {
+    width: 11px;
+    height: 11px;
+    border-radius: 2px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  .device-badge span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .middle-section {

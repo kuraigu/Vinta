@@ -4,12 +4,22 @@ setlocal enabledelayedexpansion
 if "%~1"=="" goto usage
 
 if "%~1"=="dev" (
-    if "%~2" NEQ "" (
-        echo Error: 'dev' does not take extra arguments.
-        exit /b 1
+    set "DO_BUILD_NATIVE=1"
+
+    for %%A in (%2 %3 %4) do (
+        if "%%~A"=="no_build" (
+            set "DO_BUILD_NATIVE=0"
+        ) else (
+            echo Error: Unknown argument '%%~A' for 'dev'.
+            echo Allowed options for 'dev': [no_build]
+            exit /b 1
+        )
     )
-    call :build_native
-    if errorlevel 1 exit /b !ERRORLEVEL!
+
+    if "!DO_BUILD_NATIVE!"=="1" (
+        call :build_native
+        if errorlevel 1 exit /b !ERRORLEVEL!
+    )
     wails dev
     if errorlevel 1 exit /b !ERRORLEVEL!
     exit /b 0
@@ -99,7 +109,7 @@ echo Error: Unknown command '%~1'.
 echo Usage: scripts.bat ^<command^> [options]
 echo.
 echo Commands:
-echo   dev                      Runs Vite / Wails live development server with debug enabled
+echo   dev [no_build]           Runs Vite / Wails live development server (optionally skip native build)
 echo   build                    Builds production binary
 echo   run [no_build] [debug]   Runs binary (optionally skip build, optionally enable debug mode)
 echo   test                     Runs test suite with DevTest panel (-test)
