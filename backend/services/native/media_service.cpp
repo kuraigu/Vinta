@@ -314,16 +314,80 @@ static void EmitMediaState(bool includeVolume) {
          << "\"canPause\":" << (canPause ? "true" : "false") << ","
          << "\"canPlay\":" << (canPlay ? "true" : "false") << "}";
 
-    g_mediaCb(json.str().c_str());
+    if (g_mediaCb) {
+        g_mediaCb(json.str().c_str());
+    }
 }
 
 static float g_mediaVolumeStore = 100.0f;
 static bool g_mediaMuteStore = false;
 static std::mutex g_mediaVolStateMutex;
 
-static bool GetAppSessionSimpleAudioVolume(const std::string& sourceApp, ISimpleAudioVolume** ppSessionVolume) {
-    if (!ppSessionVolume) return false;
-    *ppSessionVolume = nullptr;
+static std::vector<std::string> ExtractAppTokens(const std::string& sourceApp) {
+    std::vector<std::string> tokens;
+    if (sourceApp.empty()) return tokens;
+
+    std::string s = sourceApp;
+    std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+
+    // Common app aliases
+    if (s.find("308046b0af4a39cb") != std::string::npos || s.find("firefox") != std::string::npos) {
+        tokens.push_back("firefox");
+    }
+    if (s.find("spotify") != std::string::npos) {
+        tokens.push_back("spotify");
+    }
+    if (s.find("apple") != std::string::npos || s.find("applemusic") != std::string::npos) {
+        tokens.push_back("applemusic");
+        tokens.push_back("apple");
+    }
+    if (s.find("chrome") != std::string::npos) {
+        tokens.push_back("chrome");
+    }
+    if (s.find("edge") != std::string::npos || s.find("msedge") != std::string::npos) {
+        tokens.push_back("msedge");
+        tokens.push_back("edge");
+    }
+    if (s.find("vlc") != std::string::npos) {
+        tokens.push_back("vlc");
+    }
+    if (s.find("zune") != std::string::npos || s.find("microsoft.zunemusic") != std::string::npos) {
+        tokens.push_back("zune");
+        tokens.push_back("wmplayer");
+        tokens.push_back("media");
+    }
+    if (s.find("tidal") != std::string::npos) {
+        tokens.push_back("tidal");
+    }
+    if (s.find("brave") != std::string::npos) {
+        tokens.push_back("brave");
+    }
+    if (s.find("opera") != std::string::npos) {
+        tokens.push_back("opera");
+    }
+
+    // Split on delimiters
+    std::string cur;
+    for (char c : s) {
+        if (isalnum(static_cast<unsigned char>(c))) {
+            cur += c;
+        } else {
+            if (cur.length() >= 3 && cur != "exe" && cur != "app" && cur != "win" && cur != "inc") {
+                tokens.push_back(cur);
+            }
+            cur.clear();
+        }
+    }
+    if (cur.length() >= 3 && cur != "exe" && cur != "app" && cur != "win" && cur != "inc") {
+        tokens.push_back(cur);
+    }
+
+    return tokens;
+}
+
+static bool GetAllAppSessionVolumes(const std::string& sourceApp, std::vector<ISimpleAudioVolume*>& outVolumes, ISimpleAudioVolume** ppPrimaryVolume) {
+    outVolumes.clear();
+    if (ppPrimaryVolume) *ppPrimaryVolume = nullptr;
 
     IMMDeviceEnumerator* pEnumerator = nullptr;
     if (FAILED(CoCreateInstance(__uuidof(MMDeviceEnumerator), NULL, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void**)&pEnumerator)) || !pEnumerator) return false;
@@ -346,11 +410,19 @@ static bool GetAppSessionSimpleAudioVolume(const std::string& sourceApp, ISimple
     int count = 0;
     pSessionEnum->GetCount(&count);
 
-    ISimpleAudioVolume* pMatchedVolume = nullptr;
-    ISimpleAudioVolume* pFallbackActiveVolume = nullptr;
-
+    std::vector<std::string> tokens = ExtractAppTokens(sourceApp);
     std::string appLower = sourceApp;
     std::transform(appLower.begin(), appLower.end(), appLower.begin(), ::tolower);
+
+    struct SessionMatch {
+        ISimpleAudioVolume* pVol = nullptr;
+        int score = 0;
+        float peak = 0.0f;
+        bool isActive = false;
+    };
+
+    std::vector<SessionMatch> matches;
+    SessionMatch bestFallback;
 
     for (int i = 0; i < count; ++i) {
         IAudioSessionControl* pSessionControl = nullptr;
@@ -363,71 +435,101 @@ static bool GetAppSessionSimpleAudioVolume(const std::string& sourceApp, ISimple
                     continue;
                 }
 
-                bool isMatch = false;
+                int score = 0;
+                float peak = 0.0f;
+                AudioSessionState state = AudioSessionStateInactive;
+                pControl2->GetState(&state);
+                bool isActive = (state == AudioSessionStateActive);
 
-                // 1. Match Session Identifier & Display Name
+                IAudioMeterInformation* pMeter = nullptr;
+                if (SUCCEEDED(pSessionControl->QueryInterface(__uuidof(IAudioMeterInformation), (void**)&pMeter)) && pMeter) {
+                    pMeter->GetPeakValue(&peak);
+                    pMeter->Release();
+                }
+
+                // 1. Check Session Identifier & Display Name
                 LPWSTR pswSessionId = nullptr;
+                std::string sessId;
                 if (SUCCEEDED(pControl2->GetSessionIdentifier(&pswSessionId)) && pswSessionId) {
-                    std::string sessId = Utf16ToUtf8(pswSessionId);
+                    sessId = Utf16ToUtf8(pswSessionId);
                     CoTaskMemFree(pswSessionId);
                     std::transform(sessId.begin(), sessId.end(), sessId.begin(), ::tolower);
-                    if (!appLower.empty() && sessId.find(appLower) != std::string::npos) {
-                        isMatch = true;
+                }
+
+                LPWSTR pswDisplayName = nullptr;
+                std::string dispName;
+                if (SUCCEEDED(pControl2->GetDisplayName(&pswDisplayName)) && pswDisplayName) {
+                    dispName = Utf16ToUtf8(pswDisplayName);
+                    CoTaskMemFree(pswDisplayName);
+                    std::transform(dispName.begin(), dispName.end(), dispName.begin(), ::tolower);
+                }
+
+                // 2. Check Process Executable Name
+                DWORD pid = 0;
+                pControl2->GetProcessId(&pid);
+                std::string procName;
+                std::string procPath;
+                if (pid != 0) {
+                    HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
+                    if (hProcess) {
+                        char szPath[MAX_PATH] = {0};
+                        DWORD dwSize = MAX_PATH;
+                        if (QueryFullProcessImageNameA(hProcess, 0, szPath, &dwSize)) {
+                            procPath = szPath;
+                            size_t lastSlash = procPath.find_last_of("\\/");
+                            if (lastSlash != std::string::npos) procName = procPath.substr(lastSlash + 1);
+                            else procName = procPath;
+                            std::transform(procName.begin(), procName.end(), procName.begin(), ::tolower);
+                            std::transform(procPath.begin(), procPath.end(), procPath.begin(), ::tolower);
+                            size_t pExe = procName.find(".exe");
+                            if (pExe != std::string::npos) procName = procName.substr(0, pExe);
+                        }
+                        CloseHandle(hProcess);
                     }
                 }
 
-                if (!isMatch) {
-                    LPWSTR pswDisplayName = nullptr;
-                    if (SUCCEEDED(pControl2->GetDisplayName(&pswDisplayName)) && pswDisplayName) {
-                        std::string dispName = Utf16ToUtf8(pswDisplayName);
-                        CoTaskMemFree(pswDisplayName);
-                        std::transform(dispName.begin(), dispName.end(), dispName.begin(), ::tolower);
-                        if (!appLower.empty() && !dispName.empty() && (appLower.find(dispName) != std::string::npos || dispName.find(appLower) != std::string::npos)) {
-                            isMatch = true;
+                // Match against tokens & app name
+                if (!appLower.empty()) {
+                    if (!procName.empty() && (appLower.find(procName) != std::string::npos || procName.find(appLower) != std::string::npos)) {
+                        score += 100;
+                    }
+                    if (!sessId.empty() && sessId.find(appLower) != std::string::npos) {
+                        score += 80;
+                    }
+                    if (!dispName.empty() && (appLower.find(dispName) != std::string::npos || dispName.find(appLower) != std::string::npos)) {
+                        score += 70;
+                    }
+                }
+
+                for (const auto& token : tokens) {
+                    if (token.empty()) continue;
+                    if (!procName.empty() && procName.find(token) != std::string::npos) score += 60;
+                    if (!procPath.empty() && procPath.find(token) != std::string::npos) score += 40;
+                    if (!sessId.empty() && sessId.find(token) != std::string::npos) score += 40;
+                    if (!dispName.empty() && dispName.find(token) != std::string::npos) score += 30;
+                }
+
+                if (isActive) score += 20;
+                if (peak > 0.001f) score += 30;
+
+                ISimpleAudioVolume* pVol = nullptr;
+                pControl2->QueryInterface(__uuidof(ISimpleAudioVolume), (void**)&pVol);
+
+                if (pVol) {
+                    if (score >= 50) {
+                        matches.push_back({pVol, score, peak, isActive});
+                    } else {
+                        int fallbackScore = (isActive ? 20 : 0) + (peak > 0.001f ? 50 : 0);
+                        if (fallbackScore > bestFallback.score || (!bestFallback.pVol && isActive)) {
+                            if (bestFallback.pVol) bestFallback.pVol->Release();
+                            bestFallback = {pVol, fallbackScore, peak, isActive};
+                            pVol = nullptr; // ownership transferred
                         }
                     }
                 }
 
-                // 2. Match Process Executable Name
-                if (!isMatch) {
-                    DWORD pid = 0;
-                    pControl2->GetProcessId(&pid);
-                    if (pid != 0) {
-                        HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
-                        if (hProcess) {
-                            char procPath[MAX_PATH] = {0};
-                            DWORD dwSize = MAX_PATH;
-                            if (QueryFullProcessImageNameA(hProcess, 0, procPath, &dwSize)) {
-                                std::string procName = procPath;
-                                size_t lastSlash = procName.find_last_of("\\/");
-                                if (lastSlash != std::string::npos) procName = procName.substr(lastSlash + 1);
-                                std::transform(procName.begin(), procName.end(), procName.begin(), ::tolower);
-                                size_t pExe = procName.find(".exe");
-                                if (pExe != std::string::npos) procName = procName.substr(0, pExe);
-
-                                if (!appLower.empty() && !procName.empty()) {
-                                    if (appLower.find(procName) != std::string::npos || procName.find(appLower) != std::string::npos) {
-                                        isMatch = true;
-                                    }
-                                }
-                            }
-                            CloseHandle(hProcess);
-                        }
-                    }
-                }
-
-                if (isMatch) {
-                    pControl2->QueryInterface(__uuidof(ISimpleAudioVolume), (void**)&pMatchedVolume);
-                    pControl2->Release();
-                    pSessionControl->Release();
-                    break;
-                }
-
-                if (!pFallbackActiveVolume) {
-                    AudioSessionState state;
-                    if (SUCCEEDED(pControl2->GetState(&state)) && state == AudioSessionStateActive) {
-                        pControl2->QueryInterface(__uuidof(ISimpleAudioVolume), (void**)&pFallbackActiveVolume);
-                    }
+                if (pVol && score < 50) {
+                    pVol->Release();
                 }
 
                 pControl2->Release();
@@ -438,31 +540,113 @@ static bool GetAppSessionSimpleAudioVolume(const std::string& sourceApp, ISimple
 
     pSessionEnum->Release();
 
-    if (pMatchedVolume) {
-        if (pFallbackActiveVolume) pFallbackActiveVolume->Release();
-        *ppSessionVolume = pMatchedVolume;
+    if (!matches.empty()) {
+        if (bestFallback.pVol) bestFallback.pVol->Release();
+
+        // Sort by score descending, then peak descending
+        std::sort(matches.begin(), matches.end(), [](const SessionMatch& a, const SessionMatch& b) {
+            if (a.score != b.score) return a.score > b.score;
+            return a.peak > b.peak;
+        });
+
+        for (const auto& m : matches) {
+            outVolumes.push_back(m.pVol);
+        }
+
+        if (ppPrimaryVolume && !outVolumes.empty()) {
+            *ppPrimaryVolume = outVolumes[0];
+        }
         return true;
     }
 
-    if (pFallbackActiveVolume) {
-        *ppSessionVolume = pFallbackActiveVolume;
+    if (bestFallback.pVol) {
+        outVolumes.push_back(bestFallback.pVol);
+        if (ppPrimaryVolume) *ppPrimaryVolume = bestFallback.pVol;
         return true;
     }
 
     return false;
 }
 
+static std::pair<float, bool> GetMasterAudioVolumeAndMute() {
+    IMMDeviceEnumerator* pEnumerator = nullptr;
+    if (FAILED(CoCreateInstance(__uuidof(MMDeviceEnumerator), NULL, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void**)&pEnumerator)) || !pEnumerator) return {100.0f, false};
+
+    IMMDevice* pDevice = nullptr;
+    HRESULT hr = pEnumerator->GetDefaultAudioEndpoint(eRender, eMultimedia, &pDevice);
+    pEnumerator->Release();
+    if (FAILED(hr) || !pDevice) return {100.0f, false};
+
+    IAudioEndpointVolume* pEndVol = nullptr;
+    hr = pDevice->Activate(__uuidof(IAudioEndpointVolume), CLSCTX_ALL, NULL, (void**)&pEndVol);
+    pDevice->Release();
+    if (FAILED(hr) || !pEndVol) return {100.0f, false};
+
+    float vol = 1.0f;
+    BOOL muted = FALSE;
+    pEndVol->GetMasterVolumeLevelScalar(&vol);
+    pEndVol->GetMute(&muted);
+    pEndVol->Release();
+
+    return {vol * 100.0f, (muted == TRUE)};
+}
+
+static void SetMasterAudioVolume(float percent) {
+    IMMDeviceEnumerator* pEnumerator = nullptr;
+    if (FAILED(CoCreateInstance(__uuidof(MMDeviceEnumerator), NULL, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void**)&pEnumerator)) || !pEnumerator) return;
+
+    IMMDevice* pDevice = nullptr;
+    HRESULT hr = pEnumerator->GetDefaultAudioEndpoint(eRender, eMultimedia, &pDevice);
+    pEnumerator->Release();
+    if (FAILED(hr) || !pDevice) return;
+
+    IAudioEndpointVolume* pEndVol = nullptr;
+    hr = pDevice->Activate(__uuidof(IAudioEndpointVolume), CLSCTX_ALL, NULL, (void**)&pEndVol);
+    pDevice->Release();
+    if (FAILED(hr) || !pEndVol) return;
+
+    float clamped = std::max(0.0f, std::min(1.0f, percent / 100.0f));
+    pEndVol->SetMasterVolumeLevelScalar(clamped, NULL);
+    pEndVol->Release();
+}
+
+static void ToggleMasterAudioMute() {
+    IMMDeviceEnumerator* pEnumerator = nullptr;
+    if (FAILED(CoCreateInstance(__uuidof(MMDeviceEnumerator), NULL, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void**)&pEnumerator)) || !pEnumerator) return;
+
+    IMMDevice* pDevice = nullptr;
+    HRESULT hr = pEnumerator->GetDefaultAudioEndpoint(eRender, eMultimedia, &pDevice);
+    pEnumerator->Release();
+    if (FAILED(hr) || !pDevice) return;
+
+    IAudioEndpointVolume* pEndVol = nullptr;
+    hr = pDevice->Activate(__uuidof(IAudioEndpointVolume), CLSCTX_ALL, NULL, (void**)&pEndVol);
+    pDevice->Release();
+    if (FAILED(hr) || !pEndVol) return;
+
+    BOOL muted = FALSE;
+    pEndVol->GetMute(&muted);
+    pEndVol->SetMute(!muted, NULL);
+    pEndVol->Release();
+}
+
 static std::pair<float, bool> GetMediaAudioVolumeAndMute(const std::string& sourceApp) {
     std::lock_guard<std::mutex> lock(g_audioVolMutex);
     ComInitScope com;
 
-    ISimpleAudioVolume* pAppVolume = nullptr;
-    if (GetAppSessionSimpleAudioVolume(sourceApp, &pAppVolume) && pAppVolume) {
+    std::vector<ISimpleAudioVolume*> volumes;
+    ISimpleAudioVolume* pPrimary = nullptr;
+
+    if (GetAllAppSessionVolumes(sourceApp, volumes, &pPrimary) && pPrimary) {
         float vol = 1.0f;
         BOOL muted = FALSE;
-        pAppVolume->GetMasterVolume(&vol);
-        pAppVolume->GetMute(&muted);
-        pAppVolume->Release();
+        pPrimary->GetMasterVolume(&vol);
+        pPrimary->GetMute(&muted);
+
+        for (auto* v : volumes) {
+            if (v) v->Release();
+        }
+
         float volPercent = vol * 100.0f;
         {
             std::lock_guard<std::mutex> stLock(g_mediaVolStateMutex);
@@ -486,10 +670,17 @@ static void SetMediaAudioVolume(const std::string& sourceApp, float percent) {
     std::lock_guard<std::mutex> lock(g_audioVolMutex);
     ComInitScope com;
 
-    ISimpleAudioVolume* pAppVolume = nullptr;
-    if (GetAppSessionSimpleAudioVolume(sourceApp, &pAppVolume) && pAppVolume) {
-        pAppVolume->SetMasterVolume(clamped / 100.0f, NULL);
-        pAppVolume->Release();
+    std::vector<ISimpleAudioVolume*> volumes;
+    ISimpleAudioVolume* pPrimary = nullptr;
+
+    if (GetAllAppSessionVolumes(sourceApp, volumes, &pPrimary) && !volumes.empty()) {
+        float volScalar = clamped / 100.0f;
+        for (auto* pVol : volumes) {
+            if (pVol) {
+                pVol->SetMasterVolume(volScalar, NULL);
+                pVol->Release();
+            }
+        }
     }
 }
 
@@ -504,10 +695,17 @@ static void ToggleMediaAudioMute(const std::string& sourceApp) {
     std::lock_guard<std::mutex> lock(g_audioVolMutex);
     ComInitScope com;
 
-    ISimpleAudioVolume* pAppVolume = nullptr;
-    if (GetAppSessionSimpleAudioVolume(sourceApp, &pAppVolume) && pAppVolume) {
-        pAppVolume->SetMute(nextMute ? TRUE : FALSE, NULL);
-        pAppVolume->Release();
+    std::vector<ISimpleAudioVolume*> volumes;
+    ISimpleAudioVolume* pPrimary = nullptr;
+
+    if (GetAllAppSessionVolumes(sourceApp, volumes, &pPrimary) && !volumes.empty()) {
+        BOOL bMute = nextMute ? TRUE : FALSE;
+        for (auto* pVol : volumes) {
+            if (pVol) {
+                pVol->SetMute(bMute, NULL);
+                pVol->Release();
+            }
+        }
     }
 }
 

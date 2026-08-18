@@ -106,23 +106,7 @@ func (a *App) GetContributors() []Contributor {
 				rawRole := strings.TrimSpace(match[5])
 				handle := strings.TrimPrefix(filepath.Base(url), "@")
 
-				// Clean HTML tags from role string
-				stripHTML := regexp.MustCompile(`<[^>]*>`)
-				cleanRole := stripHTML.ReplaceAllString(rawRole, "")
-				cleanRole = strings.TrimSpace(cleanRole)
-
-				if cleanRole == "" {
-					cleanRole = "Contributor"
-				} else {
-					roles := strings.Split(cleanRole, ",")
-					for i, r := range roles {
-						r = strings.TrimSpace(r)
-						if len(r) > 0 {
-							roles[i] = strings.ToUpper(r[:1]) + r[1:]
-						}
-					}
-					cleanRole = strings.Join(roles, ", ")
-				}
+				cleanRole := getHighestRole(rawRole)
 
 				// Safety bounds: cap lengths to prevent memory or layout issues from long input strings
 				if len(name) > 60 {
@@ -150,4 +134,65 @@ func (a *App) GetContributors() []Contributor {
 	}
 
 	return contributors
+}
+
+// getHighestRole selects the highest priority single role according to the hierarchy:
+// Founder > Maintainer > Contributor > Tester
+func getHighestRole(rawRole string) string {
+	stripHTML := regexp.MustCompile(`<[^>]*>`)
+	cleaned := stripHTML.ReplaceAllString(rawRole, "")
+	cleaned = strings.TrimSpace(cleaned)
+	if cleaned == "" {
+		return "Contributor"
+	}
+
+	roleRank := map[string]int{
+		"founder":     100,
+		"maintainer":  80,
+		"contributor": 50,
+		"code":        50,
+		"doc":         50,
+		"design":      50,
+		"review":      50,
+		"tester":      20,
+	}
+
+	displayNames := map[string]string{
+		"founder":     "Founder",
+		"maintainer":  "Maintainer",
+		"contributor": "Contributor",
+		"code":        "Contributor",
+		"doc":         "Contributor",
+		"design":      "Contributor",
+		"review":      "Contributor",
+		"tester":      "Tester",
+	}
+
+	roles := strings.Split(cleaned, ",")
+	highestRank := -1
+	highestRole := ""
+
+	for _, r := range roles {
+		r = strings.TrimSpace(strings.ToLower(r))
+		if r == "" {
+			continue
+		}
+		rank, exists := roleRank[r]
+		if !exists {
+			rank = 30 // fallback rank for unknown custom roles
+		}
+		if rank > highestRank {
+			highestRank = rank
+			if disp, ok := displayNames[r]; ok {
+				highestRole = disp
+			} else {
+				highestRole = strings.ToUpper(r[:1]) + r[1:]
+			}
+		}
+	}
+
+	if highestRole == "" {
+		return "Contributor"
+	}
+	return highestRole
 }

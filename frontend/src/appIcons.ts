@@ -124,6 +124,14 @@ export const appIcons: AppBrand[] = [
 
   // --- MEDIA, CAPTURE & STREAMING (Clip Saved & Recording Alerts) ---
   { name: 'Spotify', icon: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/spotify/default.svg', matchers: ['spotify'], category: 'media' },
+  { name: 'Apple Music', icon: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/apple-music/default.svg', matchers: ['apple music', 'applemusic', 'appleinc.applemusic'], category: 'media' },
+  { name: 'YouTube Music', icon: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/youtube-music/default.svg', matchers: ['youtube music', 'youtubemusic'], category: 'media' },
+  { name: 'TIDAL', icon: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/tidal/default.svg', matchers: ['tidal'], category: 'media' },
+  { name: 'SoundCloud', icon: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/soundcloud/default.svg', matchers: ['soundcloud'], category: 'media' },
+  { name: 'Deezer', icon: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/deezer/default.svg', matchers: ['deezer'], category: 'media' },
+  { name: 'VLC Media Player', icon: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/vlc/default.svg', matchers: ['vlc', 'videolan'], category: 'media' },
+  { name: 'Windows Media Player', icon: '', matchers: ['windows media player', 'wmplayer', 'zunemusic', 'microsoft.zunemusic'], category: 'media' },
+  { name: 'foobar2000', icon: '', matchers: ['foobar2000'], category: 'media' },
   { name: 'OBS Studio', icon: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/obs-studio/default.svg', matchers: ['obs studio', 'obs'], category: 'media' },
   { name: 'Medal.tv', icon: '', matchers: ['medal.tv', 'medal'], category: 'media' },
   { name: 'Outplayed', icon: '', matchers: ['outplayed', 'overwolf'], category: 'media' },
@@ -229,4 +237,43 @@ export function getCachedBase64Url(url: string | undefined): string {
     if (oldestKey) imageCache.delete(oldestKey)
   }
   return url
+}
+
+export function resolveAppBrand(sourceApp?: string): {
+  name: string
+  icon: string
+} {
+  if (!sourceApp) {
+    return { name: 'Media Player', icon: '' }
+  }
+  const s = sourceApp.toLowerCase()
+  const allIcons = [...appIcons, ...gameIcons]
+
+  for (const brand of allIcons) {
+    if (brand.matchers.some((m) => s.includes(m))) {
+      return { name: brand.name, icon: brand.icon }
+    }
+  }
+
+  // Fallback: clean raw process executable or package name
+  let cleanName = sourceApp
+  const lastSlash = Math.max(
+    cleanName.lastIndexOf('/'),
+    cleanName.lastIndexOf('\\')
+  )
+  if (lastSlash >= 0) cleanName = cleanName.substring(lastSlash + 1)
+  const dotExe = cleanName.toLowerCase().indexOf('.exe')
+  if (dotExe >= 0) cleanName = cleanName.substring(0, dotExe)
+  const bang = cleanName.lastIndexOf('!')
+  if (bang >= 0) cleanName = cleanName.substring(bang + 1)
+  const underscore = cleanName.indexOf('_')
+  if (underscore >= 0) cleanName = cleanName.substring(0, underscore)
+
+  if (cleanName.length > 0) {
+    cleanName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1)
+  } else {
+    cleanName = 'Media Player'
+  }
+
+  return { name: cleanName, icon: '' }
 }

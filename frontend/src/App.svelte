@@ -341,14 +341,16 @@
       (e.propertyName === 'width' || e.propertyName === 'height')
     ) {
       clearTimeout(boundsTransitionTimeout)
-      if (targetPendingBounds.w > 0 && targetPendingBounds.h > 0) {
-        updateBounds(
-          targetPendingBounds.w,
-          targetPendingBounds.h,
-          targetPendingBounds.r
-        )
-        currentOSBounds = { ...targetPendingBounds }
-      }
+      boundsTransitionTimeout = window.setTimeout(() => {
+        if (targetPendingBounds.w > 0 && targetPendingBounds.h > 0) {
+          applyBounds(
+            targetPendingBounds.w,
+            targetPendingBounds.h,
+            targetPendingBounds.r
+          )
+          targetPendingBounds = { w: 0, h: 0, r: 0 }
+        }
+      }, 25)
     }
   }
 
@@ -382,9 +384,10 @@
       currentLiveOffsetX = val
     }
   }
-  $effect(() => {
+  function handleHiddenPillOffsetSync() {
     syncStoreOffsetToLive($hiddenPillOffsetXStore)
-  })
+  }
+  $effect(handleHiddenPillOffsetSync)
 
   let clampedOffsetX = $derived.by(() => {
     if (Math.abs(currentLiveOffsetX) < 3) return 0
@@ -393,49 +396,6 @@
       Math.min(maxAllowedOffsetForCurrentW, currentLiveOffsetX)
     )
   })
-
-  // Elastic liquid remnant ghosting effect
-  let remnantOffsetX = $state(0)
-  let remnantAnimFrame: number | undefined
-
-  function updateRemnantStep() {
-    if (isDraggingHidden || isInFlight) {
-      const diff = currentLiveOffsetX - remnantOffsetX
-      remnantOffsetX += diff * 0.22
-      remnantAnimFrame = requestAnimationFrame(updateRemnantStep)
-    } else {
-      remnantOffsetX = currentLiveOffsetX
-      remnantAnimFrame = undefined
-    }
-  }
-
-  function startRemnantTracking() {
-    if (!remnantAnimFrame) {
-      remnantAnimFrame = requestAnimationFrame(updateRemnantStep)
-    }
-  }
-
-  function stopRemnantTracking() {
-    if (remnantAnimFrame) {
-      cancelAnimationFrame(remnantAnimFrame)
-      remnantAnimFrame = undefined
-    }
-    remnantOffsetX = currentLiveOffsetX
-  }
-
-  let remnantLag = $derived(currentLiveOffsetX - remnantOffsetX)
-  let isRemnantActive = $derived(
-    (isDraggingHidden || isInFlight) && Math.abs(remnantLag) > 2.5
-  )
-  let remnantOpacity = $derived(
-    isRemnantActive ? Math.min(0.45, Math.abs(remnantLag) / 35) : 0
-  )
-  let remnantScaleX = $derived(
-    isRemnantActive ? 1 + Math.min(0.18, Math.abs(remnantLag) / 160) : 1
-  )
-  let remnantSkewX = $derived(
-    isRemnantActive ? Math.max(-10, Math.min(10, -remnantLag * 0.1)) : 0
-  )
 
   let glowOpacity = $derived(
     $glowIntensityStore === 'disabled'
@@ -763,7 +723,6 @@
     inertiaSafetyTimeout = undefined
     isInFlight = false
     dragHistory = []
-    stopRemnantTracking()
 
     // Persist final resting offset to store once motion is fully settled
     $hiddenPillOffsetXStore = clampedOffsetX
@@ -773,6 +732,8 @@
     updateBounds(w, h, r, clampedOffsetX)
     currentOSBounds = { w, h, r }
   }
+
+  let hasPointerCaptured = false
 
   function handleHiddenPointerDown(e: PointerEvent) {
     if (e.button !== 0) return // Only primary (left) button can initiate dragging
@@ -800,17 +761,12 @@
       stopInertia()
     }
     isDraggingHidden = true
+    hasPointerCaptured = false
     dragMovedDistance = 0
     clearTimeout(dragResetTimeout)
     hiddenDragStartX = e.screenX
     hiddenDragStartOffset = currentLiveOffsetX
     dragHistory = [{ x: e.screenX, time: performance.now() }]
-    startRemnantTracking()
-    try {
-      ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
-    } catch {
-      // Ignore
-    }
   }
 
   function handleHiddenPointerMove(e: PointerEvent) {
@@ -830,6 +786,14 @@
     const dx = e.screenX - hiddenDragStartX
     dragMovedDistance = Math.abs(dx)
     if (dragMovedDistance > 6) {
+      if (!hasPointerCaptured) {
+        hasPointerCaptured = true
+        try {
+          ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+        } catch {
+          // Ignore
+        }
+      }
       const rawOffset = hiddenDragStartOffset + dx
       // Hard clamp: No rubberband past the edge
       currentLiveOffsetX = Math.max(
@@ -846,10 +810,13 @@
   function handleHiddenPointerUp(e: PointerEvent) {
     if (!isDraggingHidden) return
     isDraggingHidden = false
-    try {
-      ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
-    } catch {
-      // Ignore
+    if (hasPointerCaptured) {
+      hasPointerCaptured = false
+      try {
+        ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
+      } catch {
+        // Ignore
+      }
     }
 
     if (dragMovedDistance > 6) {
@@ -878,10 +845,10 @@
         const { w: islandW, h, r } = getBoundsForState()
         const friction = 0.0035
 
-        // Initial glide corridor with 70px comfort padding
-        const initialLead = Math.max(-30, Math.min(30, velocity * 20))
+        // Initial glide corridor with compact lead comfort padding
+        const initialLead = Math.max(-20, Math.min(20, velocity * 15))
         updateBounds(
-          islandW + Math.abs(initialLead) + 70,
+          islandW + Math.abs(initialLead) + 24,
           h,
           r,
           currentLiveOffsetX + initialLead / 2
@@ -919,9 +886,9 @@
               return
             }
 
-            // Dynamic corridor: island width + lead buffer + 70px comfort width padding to prevent clipping
-            const lead = Math.max(-30, Math.min(30, velocity * 20))
-            const dynamicW = islandW + Math.abs(lead) + 70
+            // Dynamic corridor: island width + lead buffer + compact comfort width padding to prevent clipping
+            const lead = Math.max(-20, Math.min(20, velocity * 15))
+            const dynamicW = islandW + Math.abs(lead) + 24
             const dynamicOffset = currentLiveOffsetX + lead / 2
             updateBounds(dynamicW, h, r, dynamicOffset)
           }
@@ -939,12 +906,13 @@
         dragMovedDistance = 0
       }, 150)
     } else {
+      dragMovedDistance = 0
       stopInertia()
     }
   }
 
   function handleContextMenu(e: MouseEvent) {
-    if (isDraggingHidden || dragMovedDistance > 3 || isInFlight) {
+    if (isDraggingHidden || dragMovedDistance > 6 || isInFlight) {
       isDraggingHidden = false
       dragMovedDistance = 0
       stopInertia()
@@ -976,15 +944,18 @@
     if (isInFlight || isDraggingHidden) stopInertia()
     triggerBlink()
     islandAnim = '0.32s cubic-bezier(0.2, 0.8, 0.2, 1)'
-    expanded = true
 
-    // Immediately open expanded OS bounds synchronously on first expand so zero clipping occurs
+    // Immediately open expanded OS bounds synchronously before starting CSS expansion
     const { w, h, r } = getBoundsForState(islandConfig, true, isHidden)
     applyBounds(w, h, r)
+
+    requestAnimationFrame(() => {
+      expanded = true
+    })
   }
 
   function handleIslandClick(e: MouseEvent) {
-    if (dragMovedDistance > 3 || isInFlight) {
+    if (dragMovedDistance > 6 || isInFlight) {
       dragMovedDistance = 0
       e.preventDefault()
       e.stopPropagation()
@@ -1041,33 +1012,6 @@
   onfocusin={handleFocusIn}
   onpointerdown={handleGlobalPointerDown}
 >
-  {#if isRemnantActive}
-    <div
-      class="island-remnant"
-      style="
-        transform: translateX({remnantOffsetX}px) scaleX({remnantScaleX}) skewX({remnantSkewX}deg);
-        opacity: {remnantOpacity};
-        width: {isHidden
-        ? hiddenBounds.w
-        : expanded
-          ? islandConfig.expanded.w
-          : currentMinimalW}px;
-        height: {isHidden
-        ? hiddenBounds.h
-        : expanded
-          ? islandConfig.expanded.h
-          : islandConfig.minimal.h}px;
-        border-radius: {isHidden
-        ? hiddenBounds.r
-        : $shapeStore === 'box'
-          ? 12
-          : expanded
-            ? islandConfig.expanded.r
-            : islandConfig.minimal.r}px;
-      "
-    ></div>
-  {/if}
-
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
@@ -1216,18 +1160,6 @@
     align-items: center;
     gap: 15px;
     position: relative;
-  }
-
-  .island-remnant {
-    position: absolute;
-    top: 5px;
-    pointer-events: none;
-    background: var(--c-bg);
-    filter: blur(4px) brightness(1.2);
-    border: 1px solid var(--c-border);
-    box-shadow: 0 0 16px var(--island-glow-color, var(--c-accent-glow));
-    transition: opacity 0.12s ease;
-    z-index: 0;
   }
 
   .island {

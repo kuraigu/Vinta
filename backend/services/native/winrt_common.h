@@ -47,7 +47,7 @@ struct ComInitScope {
         hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
     }
     ~ComInitScope() {
-        if (SUCCEEDED(hr)) {
+        if (hr == S_OK) {
             CoUninitialize();
         }
     }

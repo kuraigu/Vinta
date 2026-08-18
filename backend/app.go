@@ -68,7 +68,7 @@ const (
 	WS_EX_TOOLWINDOW = 0x00000080
 	//nolint:revive // Windows API constants
 	WS_EX_NOACTIVATE = 0x08000000
-	OutsidePadding   = 4
+	OutsidePadding   = 10
 	rgnOr            = 2
 
 	//nolint:revive // Windows API constants
@@ -140,14 +140,25 @@ func setupForegroundEventHook(vintaHwnd uintptr) {
 	procDispatchMessage := user32.NewProc("DispatchMessageW")
 	procTranslateMessage := user32.NewProc("TranslateMessage")
 	procUnhookWinEvent := user32.NewProc("UnhookWinEvent")
+	procGetAncestor := user32.NewProc("GetAncestor")
+	procGetForegroundWindow := user32.NewProc("GetForegroundWindow")
 
-	type MSG struct {
-		Hwnd    uintptr
-		Message uint32
-		WParam  uintptr
-		LParam  uintptr
-		Time    uint32
-		Pt      [2]int32
+	myPid := uint32(os.Getpid())
+
+	isVintaForeground := func(fg uintptr) bool {
+		if fg == 0 {
+			return false
+		}
+		if fg == vintaHwnd {
+			return true
+		}
+		root, _, _ := procGetAncestor.Call(fg, 2) // GA_ROOT = 2
+		if root == vintaHwnd {
+			return true
+		}
+		var pid uint32
+		_, _, _ = procGetWindowThreadProcessID.Call(fg, uintptr(unsafe.Pointer(&pid)))
+		return pid == myPid
 	}
 
 	reassertTopmost := func() {
@@ -164,11 +175,15 @@ func setupForegroundEventHook(vintaHwnd uintptr) {
 		goruntime.LockOSThread()
 
 		cb := syscall.NewCallback(func(_ uintptr, event uint32, fgHwnd uintptr, _ int32, _ int32, _ uint32, _ uint32) uintptr {
-			if event == EVENT_SYSTEM_FOREGROUND && fgHwnd != 0 && fgHwnd != vintaHwnd {
-				// Only re-assert if foreground window is not a fullscreen exclusive game to avoid minimizing games
-				if !isAnyFullscreenForegroundWindow(fgHwnd) {
-					reassertTopmost()
-				}
+			if event == EVENT_SYSTEM_FOREGROUND && fgHwnd != 0 && !isVintaForeground(fgHwnd) {
+				// Debounce asynchronously so the external app and WebView2 cleanly finish
+				// foreground transitions before Vinta reasserts its topmost position.
+				time.AfterFunc(100*time.Millisecond, func() {
+					curFg, _, _ := procGetForegroundWindow.Call()
+					if curFg != 0 && !isVintaForeground(curFg) {
+						reassertTopmost()
+					}
+				})
 			}
 			return 0
 		})
@@ -182,6 +197,15 @@ func setupForegroundEventHook(vintaHwnd uintptr) {
 			0,
 			uintptr(WINEVENT_OUTOFCONTEXT),
 		)
+
+		type MSG struct {
+			Hwnd    uintptr
+			Message uint32
+			WParam  uintptr
+			LParam  uintptr
+			Time    uint32
+			Pt      [2]int32
+		}
 
 		var msg MSG
 		for {
@@ -197,40 +221,6 @@ func setupForegroundEventHook(vintaHwnd uintptr) {
 			_, _, _ = procUnhookWinEvent.Call(hHook)
 		}
 	}()
-}
-
-func isAnyFullscreenForegroundWindow(fgHwnd uintptr) bool {
-	if fgHwnd == 0 {
-		return false
-	}
-	procGetClassName := user32.NewProc("GetClassNameW")
-	procGetWindowRect := user32.NewProc("GetWindowRect")
-	procGetSystemMetrics := user32.NewProc("GetSystemMetrics")
-
-	var classBuf [256]uint16
-	_, _, _ = procGetClassName.Call(fgHwnd, uintptr(unsafe.Pointer(&classBuf[0])), 256)
-	className := syscall.UTF16ToString(classBuf[:])
-	if className == "Progman" || className == "WorkerW" || className == "Shell_TrayWnd" || className == "Windows.UI.Core.CoreWindow" {
-		return false
-	}
-
-	smwVal, _, _ := procGetSystemMetrics.Call(0) // SM_CXSCREEN
-	smhVal, _, _ := procGetSystemMetrics.Call(1) // SM_CYSCREEN
-	smw := int32(smwVal)
-	smh := int32(smhVal)
-	if smw == 0 || smh == 0 {
-		smw = int32(screenWidth)
-		smh = int32(screenHeight)
-	}
-
-	type RECT struct {
-		Left, Top, Right, Bottom int32
-	}
-	var rect RECT
-	_, _, _ = procGetWindowRect.Call(fgHwnd, uintptr(unsafe.Pointer(&rect)))
-	width := rect.Right - rect.Left
-	height := rect.Bottom - rect.Top
-	return rect.Left <= 0 && rect.Top <= 0 && width >= (smw-15) && height >= (smh-15)
 }
 
 // screenWidth and screenHeight cache the screen dimensions so SetWidgetBounds can center regions correctly.
@@ -457,108 +447,19 @@ func (a *App) Quit() {
 
 // FocusWindow requests OS input focus so typing and keyboard events work immediately on click/focus
 func (a *App) FocusWindow() {
-	if a.ctx == nil {
-		return
-	}
-
-	// If any fullscreen game is active/visible, DO NOT grab focus to prevent tab-outs
-	if a.isAnyFullscreenGameRunning() {
-		return
-	}
-
 	hwnd := getMyWindowHwnd()
 	if hwnd != 0 {
-		procSetForegroundWindow := user32.NewProc("SetForegroundWindow")
-		_, _, _ = procSetForegroundWindow.Call(hwnd)
-	}
-
-	runtime.WindowShow(a.ctx)
-	runtime.WindowUnminimise(a.ctx)
-}
-
-func (a *App) isAnyFullscreenGameRunning() bool {
-	procEnumWindows := user32.NewProc("EnumWindows")
-	procIsWindowVisible := user32.NewProc("IsWindowVisible")
-	procGetWindowRect := user32.NewProc("GetWindowRect")
-	procGetClassName := user32.NewProc("GetClassNameW")
-	procGetSystemMetrics := user32.NewProc("GetSystemMetrics")
-	procGetForegroundWindow := user32.NewProc("GetForegroundWindow")
-	procGetWindowThreadProcessID := user32.NewProc("GetWindowThreadProcessId")
-
-	myPid := uint32(os.Getpid())
-
-	smwVal, _, _ := procGetSystemMetrics.Call(0) // SM_CXSCREEN
-	smhVal, _, _ := procGetSystemMetrics.Call(1) // SM_CYSCREEN
-	smw := int32(smwVal)
-	smh := int32(smhVal)
-	if smw == 0 || smh == 0 {
-		smw = int32(screenWidth)
-		smh = int32(screenHeight)
-	}
-
-	type RECT struct {
-		Left, Top, Right, Bottom int32
-	}
-
-	// 1. Check if active foreground window is an external fullscreen application
-	foreHwnd, _, _ := procGetForegroundWindow.Call()
-	if foreHwnd != 0 {
-		var forePid uint32
-		_, _, _ = procGetWindowThreadProcessID.Call(foreHwnd, uintptr(unsafe.Pointer(&forePid)))
-		if forePid != myPid {
-			var classBuf [256]uint16
-			_, _, _ = procGetClassName.Call(foreHwnd, uintptr(unsafe.Pointer(&classBuf[0])), 256)
-			className := syscall.UTF16ToString(classBuf[:])
-			if className != "Progman" && className != "WorkerW" && className != "Shell_TrayWnd" && className != "Windows.UI.Core.CoreWindow" {
-				var rect RECT
-				_, _, _ = procGetWindowRect.Call(foreHwnd, uintptr(unsafe.Pointer(&rect)))
-				width := rect.Right - rect.Left
-				height := rect.Bottom - rect.Top
-				if rect.Left <= 0 && rect.Top <= 0 && width >= (smw-15) && height >= (smh-15) {
-					return true
-				}
+		procGetForegroundWindow := user32.NewProc("GetForegroundWindow")
+		curFg, _, _ := procGetForegroundWindow.Call()
+		if curFg != hwnd {
+			procGetAncestor := user32.NewProc("GetAncestor")
+			root, _, _ := procGetAncestor.Call(curFg, 2) // GA_ROOT = 2
+			if root != hwnd {
+				procSetForegroundWindow := user32.NewProc("SetForegroundWindow")
+				_, _, _ = procSetForegroundWindow.Call(hwnd)
 			}
 		}
 	}
-
-	// 2. Check if any top-level visible window (excluding Vinta's own windows) covers full screen bounds
-	var foundFullscreenGame bool
-	cb := syscall.NewCallback(func(hwnd uintptr, _ uintptr) uintptr {
-		var pid uint32
-		_, _, _ = procGetWindowThreadProcessID.Call(hwnd, uintptr(unsafe.Pointer(&pid)))
-		if pid == myPid {
-			return 1 // ignore Vinta's own process windows
-		}
-
-		vis, _, _ := procIsWindowVisible.Call(hwnd)
-		if vis == 0 {
-			return 1
-		}
-
-		var classBuf [256]uint16
-		_, _, _ = procGetClassName.Call(hwnd, uintptr(unsafe.Pointer(&classBuf[0])), 256)
-		className := syscall.UTF16ToString(classBuf[:])
-
-		if className == "Progman" || className == "WorkerW" || className == "Shell_TrayWnd" || className == "Windows.UI.Core.CoreWindow" {
-			return 1
-		}
-
-		var rect RECT
-		_, _, _ = procGetWindowRect.Call(hwnd, uintptr(unsafe.Pointer(&rect)))
-
-		width := rect.Right - rect.Left
-		height := rect.Bottom - rect.Top
-
-		if rect.Left <= 0 && rect.Top <= 0 && width >= (smw-15) && height >= (smh-15) {
-			foundFullscreenGame = true
-			return 0 // stop enumeration
-		}
-
-		return 1
-	})
-
-	_, _, _ = procEnumWindows.Call(cb, 0)
-	return foundFullscreenGame
 }
 
 // SetDevPillBounds is called by the frontend to show a separate developer menu.
