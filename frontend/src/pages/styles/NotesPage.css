@@ -1,0 +1,145 @@
+.editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.title-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--c-text-primary);
+  outline: none;
+}
+
+.title-input:disabled {
+  opacity: 0.9;
+  cursor: default;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.save-badge-container {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 60px;
+  flex-shrink: 0;
+}
+
+.save-badge {
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 500;
+}
+
+.save-badge.saved {
+  color: #10b981;
+}
+
+.save-badge.unsaved {
+  color: #f59e0b;
+}
+
+.dot-unsaved {
+  font-size: 8px;
+}
+
+.save-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: var(--c-text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  opacity: 0.6;
+  transition: all 0.15s ease;
+}
+
+.save-btn.dirty {
+  background: var(--c-primary, #6366f1);
+  color: #ffffff;
+  border-color: transparent;
+  opacity: 1;
+}
+
+.save-btn.dirty:hover {
+  filter: brightness(1.15);
+  transform: translateY(-1px);
+}
+
+.view-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: var(--c-text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.view-toggle-btn:hover,
+.view-toggle-btn.active {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--c-text-primary);
+}
+
+.editor-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.empty-editor {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--c-text-secondary);
+  font-size: 12px;
+}
+
+.empty-editor :global(.empty-icon) {
+  opacity: 0.3;
+}
+
+.new-note-btn.small {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--c-primary, #6366f1);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}

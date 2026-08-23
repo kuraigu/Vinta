@@ -1,0 +1,204 @@
+.apps-page {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 14px 14px 58px 14px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  flex-shrink: 0;
+}
+
+.title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--c-text-primary);
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--c-item-bg, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--c-border, rgba(255, 255, 255, 0.1));
+  border-radius: 12px;
+  padding: 4px 10px;
+  flex: 1;
+  max-width: 190px;
+}
+
+:global(.search-icon) {
+  color: var(--c-text-muted);
+  flex-shrink: 0;
+}
+
+.search-box input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--c-text-primary);
+  font-size: 11px;
+  width: 100%;
+}
+
+.search-box input::placeholder {
+  color: var(--c-text-muted);
+}
+
+.bento-container {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+}
+
+.bento-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 6px 2px 10px 2px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.bento-app-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 10px;
+  border-radius: 14px;
+  background: var(--c-item-bg, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--c-border, rgba(255, 255, 255, 0.1));
+  color: var(--c-text-primary);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.bento-app-card:hover {
+  background: var(--c-hover, rgba(255, 255, 255, 0.12));
+  transform: translateY(-2px);
+  border-color: var(--c-primary, #6366f1);
+}
+
+.bento-app-card.is-disabled {
+  opacity: 0.42;
+  filter: grayscale(0.65);
+  cursor: not-allowed;
+}
+
+.bento-app-card.is-disabled:hover {
+  transform: none;
+  background: var(--c-item-bg, rgba(255, 255, 255, 0.06));
+  border-color: var(--c-border, rgba(255, 255, 255, 0.1));
+}
+
+/* Tactile squircle app icons with top gloss highlight and bottom drop shadow */
+.card-icon-wrapper {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--c-text-primary);
+  box-shadow:
+    inset 0 1px 1px rgba(255, 255, 255, 0.45),
+    0 3px 8px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.bento-app-card.gradient-green .card-icon-wrapper {
+  background: linear-gradient(
+    135deg,
+    var(--c-success),
+    var(--c-island-border-idle)
+  );
+}
+
+.bento-app-card.gradient-amber .card-icon-wrapper {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+}
+
+.bento-app-card.gradient-pink .card-icon-wrapper {
+  background: linear-gradient(135deg, var(--c-danger), var(--c-purple));
+}
+
+.bento-app-card.gradient-blue .card-icon-wrapper {
+  background: linear-gradient(
+    135deg,
+    var(--c-primary),
+    var(--c-island-border-notification)
+  );
+}
+
+.bento-app-card.gradient-purple .card-icon-wrapper {
+  background: linear-gradient(135deg, var(--c-purple), var(--c-primary));
+}
+
+.bento-app-card.gradient-dark .card-icon-wrapper {
+  background: linear-gradient(135deg, var(--c-contrast-bg), var(--c-item-bg));
+}
+
+.card-badge {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  background: var(--c-danger);
+  color: var(--c-text-primary);
+  font-size: 8px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 6px;
+  line-height: 1;
+  border: 1px solid rgba(0, 0, 0, 0.4);
+}
+
+.card-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 0;
+  overflow: hidden;
+}
+
+.card-title {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.card-desc {
+  font-size: 9px;
+  color: var(--c-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.empty-state {
+  font-size: 11px;
+  color: var(--c-text-muted);
+  text-align: center;
+  padding: 24px 0;
+}

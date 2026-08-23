@@ -63,6 +63,18 @@ To maintain a consistent, predictable user experience when closing, collapsing, 
 3. Import and arrange your components.
 4. Register the new page route inside `frontend/src/store.ts` and `frontend/src/App.svelte`.
 
+### Component & Page CSS Splitting Guidelines
+
+To keep code readable, modular, and easy to maintain as features grow:
+
+- **When to Split**: CSS and Svelte do not necessarily need to be separated for small, concise components (inline `<style>` is completely fine for simple widgets). However, as a page or component grows in length and styling complexity, its styles should be extracted into a companion `.css` file.
+- **File Naming & Organization**:
+  - The companion `.css` file name must match its `.svelte` counterpart exactly (e.g. `HomePage.svelte` ➔ `HomePage.css`).
+  - **Pages**: Place extracted stylesheets in `frontend/src/pages/styles/` and reference them via `<style src="./styles/PageName.css"></style>`.
+  - **Components & Sub-groups**: Place extracted stylesheets under `frontend/src/components/styles/` mirroring any folder hierarchy (e.g. `src/components/notes/NoteLive.svelte` ➔ `src/components/styles/notes/NoteLive.css` referenced via `<style src="../styles/notes/NoteLive.css"></style>`).
+- **Preserve Scoping**: Always use `<style src="...">` rather than raw script imports to preserve Svelte's compile-time component scoping and prevent global CSS leakage.
+- **Theme Compliance**: All extracted styles must strictly consume CSS variables defined in [docs/DESIGN.md](docs/DESIGN.md).
+
 ### Creating a Theme
 
 Vinta uses a tokenized CSS variable system so that all UI components adapt cleanly between themes without hardcoding colors inside components.

@@ -1,0 +1,173 @@
+.notes-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+  min-height: 0;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.new-note-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--c-primary, #6366f1);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.new-note-btn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.folder-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  color: var(--c-text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.folder-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--c-text-primary);
+}
+
+.search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-box :global(.search-icon) {
+  position: absolute;
+  left: 8px;
+  color: var(--c-text-secondary);
+  pointer-events: none;
+}
+
+.search-box input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  padding: 5px 8px 5px 26px;
+  font-size: 11px;
+  color: var(--c-text-primary);
+  outline: none;
+  box-sizing: border-box;
+}
+
+.search-box input:focus {
+  border-color: var(--c-primary, #6366f1);
+}
+
+:global(.notes-list-scroll) {
+  flex: 1;
+  min-height: 0;
+}
+
+.notes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 4px;
+}
+
+.empty-list {
+  font-size: 11px;
+  color: var(--c-text-secondary);
+  text-align: center;
+  padding: 20px 0;
+}
+
+.note-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.note-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.note-card.active {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: var(--c-border);
+}
+
+.note-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.note-card-title {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--c-text-primary);
+}
+
+.delete-btn {
+  opacity: 0;
+  background: none;
+  border: none;
+  color: var(--c-text-secondary);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.note-card:hover .delete-btn {
+  opacity: 0.7;
+}
+
+.delete-btn:hover {
+  opacity: 1 !important;
+  color: #ef4444;
+}
+
+.note-card-snippet {
+  font-size: 10px;
+  color: var(--c-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.note-card-time {
+  font-size: 9px;
+  color: var(--c-text-secondary);
+  opacity: 0.6;
+  margin-top: 2px;
+}

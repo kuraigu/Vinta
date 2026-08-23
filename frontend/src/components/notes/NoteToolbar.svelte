@@ -123,41 +123,4 @@
   </button>
 </div>
 
-<style>
-  .toolbar {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 6px;
-    background: rgba(0, 0, 0, 0.2);
-    border: 1px solid var(--c-border);
-    border-radius: 8px;
-    margin-bottom: 8px;
-  }
-
-  .tool-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    background: transparent;
-    border: none;
-    border-radius: 4px;
-    color: var(--c-text-secondary);
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-
-  .tool-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: var(--c-text-primary);
-  }
-
-  .tool-divider {
-    width: 1px;
-    height: 14px;
-    background: var(--c-border);
-    margin: 0 2px;
-  }
-</style>
+<style src="../styles/notes/NoteToolbar.css"></style>

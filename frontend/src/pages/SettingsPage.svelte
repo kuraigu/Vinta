@@ -56,13 +56,4 @@
   {/snippet}
 </SidebarLayout>
 
-<style>
-  :global(.settings-content-scroll) {
-    flex: 1;
-    min-height: 0;
-  }
-
-  .tab-content {
-    padding-right: 4px;
-  }
-</style>
+<style src="./styles/SettingsPage.css"></style>
