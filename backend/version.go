@@ -2,11 +2,14 @@
 package backend
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
+	"time"
 )
 
 // AppVersion defines the current application version string. Do not change this version number manually in source files.
@@ -44,16 +47,35 @@ type Contributor struct {
 	URL    string `json:"url"`
 }
 
-func getBuildTime() string {
+var cachedBuildTime string
+
+func initBuildMetadata() {
 	if BuildTime != "" && BuildTime != "Unknown" {
-		return BuildTime
+		cachedBuildTime = BuildTime
+		return
 	}
-	if execPath, err := os.Executable(); err == nil {
-		if fi, err := os.Stat(execPath); err == nil {
-			return fi.ModTime().Format("20060102150405")
+	appData := os.Getenv("APPDATA")
+	if appData != "" {
+		seqFile := filepath.Join(appData, "FreeMatrix Studios", "Vinta", "build_seq")
+		count := 1
+		if data, err := os.ReadFile(seqFile); err == nil {
+			trimmed := strings.TrimSpace(string(data))
+			if num, err := strconv.Atoi(trimmed); err == nil && num > 0 {
+				count = num
+			}
 		}
+		year2 := time.Now().Format("06")
+		cachedBuildTime = fmt.Sprintf("%s.%d", year2, count)
+		return
 	}
-	return "Development"
+	cachedBuildTime = fmt.Sprintf("%s.1", time.Now().Format("06"))
+}
+
+func getBuildTime() string {
+	if cachedBuildTime == "" {
+		initBuildMetadata()
+	}
+	return cachedBuildTime
 }
 
 // GetAppInfo returns application versioning, build verification, and system details.

@@ -92,7 +92,6 @@
     <div class="about-hero-text">
       <div class="about-brand-row">
         <span class="about-brand-title">{appInfo.name}</span>
-        <span class="about-version-tag">v{appInfo.version}</span>
         <span
           class="build-badge"
           class:official={appInfo.isOfficialBuild}
@@ -101,7 +100,7 @@
           {appInfo.buildType}
         </span>
       </div>
-      <span class="about-tagline">Dynamic Island for Windows</span>
+      <span class="about-version-text">v{appInfo.version}</span>
     </div>
   </div>
 
@@ -255,12 +254,16 @@
   .about-hero-text {
     display: flex;
     flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
     gap: 2px;
+    text-align: left;
   }
 
   .about-brand-row {
     display: flex;
     align-items: center;
+    justify-content: flex-start;
     gap: 8px;
   }
 
@@ -268,21 +271,18 @@
     font-size: 15px;
     font-weight: 700;
     letter-spacing: -0.01em;
+    line-height: 1.2;
   }
 
-  .about-version-tag {
-    font-size: 10px;
-    font-weight: 700;
-    padding: 1px 6px;
-    border-radius: 8px;
-    background: var(--c-primary, #6366f1);
-    color: #ffffff;
-  }
-
-  .about-tagline {
-    font-size: 10px;
+  .about-version-text {
+    font-size: 11px;
+    font-weight: 500;
     color: var(--c-text-secondary);
-    opacity: 0.7;
+    opacity: 0.8;
+    text-align: left;
+    line-height: 1.2;
+    margin: 0;
+    padding: 0;
   }
 
   .about-info-grid {

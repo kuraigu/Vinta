@@ -167,10 +167,6 @@ export const mediaAutoHideStore = persistentWritable<boolean>(
   'vinta_media_autohide',
   true
 )
-export const notifAutoHideStore = persistentWritable<boolean>(
-  'vinta_notif_autohide',
-  false
-)
 export const autoHideDelayStore = persistentWritable<number>(
   'vinta_autohide_delay',
   10
@@ -308,16 +304,39 @@ export const globalMediaStore = writable<MediaData>({
 
 export const audioPeakStore = writable<number>(0)
 
+export interface BatteryData {
+  hasBattery: boolean
+  isCharging: boolean
+  percentage: number
+  batterySaver: boolean
+  lifeTimeSeconds: number
+  state: 'charging' | 'discharging' | 'full' | 'desktop' | 'unknown'
+}
+
+export const defaultBatteryData: BatteryData = {
+  hasBattery: false,
+  isCharging: true,
+  percentage: 100,
+  batterySaver: false,
+  lifeTimeSeconds: -1,
+  state: 'desktop'
+}
+
+export const batteryDataStore = writable<BatteryData>(defaultBatteryData)
+export const isSimulatingBatteryStore = writable<boolean>(false)
+
 export interface HomeWidgetsVisibility {
   clock: boolean
   calendar: boolean
   weather: boolean
+  battery: boolean
 }
 
 export const defaultHomeWidgetsVisibility: HomeWidgetsVisibility = {
   clock: true,
   calendar: true,
-  weather: true
+  weather: true,
+  battery: true
 }
 
 export const homeWidgetsVisibilityStore =
@@ -343,21 +362,44 @@ export const pageVisibilityStore = persistentWritable<PageVisibility>(
   defaultPageVisibility
 )
 
+export const devPinnedStore = writable<boolean>(false)
+export const activePageIdStore = writable<string>('home')
+
 export function calculateHomeMinimalWidth(
-  visibility: HomeWidgetsVisibility
+  visibility: HomeWidgetsVisibility,
+  hasBattery: boolean = true
 ): number {
-  const WIDGET_WIDTHS: Record<keyof HomeWidgetsVisibility, number> = {
-    clock: 82,
-    weather: 72,
-    calendar: 102
+  const isClockActive = visibility.clock
+  const isBatteryActive = visibility.battery && hasBattery
+  const isWeatherActive = visibility.weather
+  const isCalendarActive = visibility.calendar
+
+  const activeSlots: number[] = []
+
+  // Slot 1: Device Status Cluster (Battery + Clock)
+  if (isClockActive && isBatteryActive) {
+    activeSlots.push(34 + 6 + 82) // Battery Icon
+  } else if (isClockActive) {
+    activeSlots.push(82)
+  } else if (isBatteryActive) {
+    activeSlots.push(34)
   }
+
+  // Slot 2: Weather
+  if (isWeatherActive) {
+    activeSlots.push(72)
+  }
+
+  // Slot 3: Calendar
+  if (isCalendarActive) {
+    activeSlots.push(102)
+  }
+
+  if (activeSlots.length === 0) return 130
+
   const PADDING = 36 // 18px left + 18px right
-  const GAP = 18
-  const activeKeys = (
-    Object.keys(WIDGET_WIDTHS) as Array<keyof HomeWidgetsVisibility>
-  ).filter((k) => visibility[k])
-  if (activeKeys.length === 0) return 130
-  const contentW = activeKeys.reduce((sum, k) => sum + WIDGET_WIDTHS[k], 0)
-  const gapsW = Math.max(0, activeKeys.length - 1) * GAP
+  const GAP = 18 // Gap between primary slots
+  const contentW = activeSlots.reduce((sum, w) => sum + w, 0)
+  const gapsW = Math.max(0, activeSlots.length - 1) * GAP
   return Math.max(130, PADDING + contentW + gapsW)
 }

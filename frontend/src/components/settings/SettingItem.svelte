@@ -7,6 +7,8 @@
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     icon?: ComponentType<any>
     flexCol?: boolean
+    badge?: string
+    disabled?: boolean
     children?: Snippet
   }
 
@@ -15,17 +17,26 @@
     description,
     icon: IconComponent,
     flexCol = false,
+    badge,
+    disabled = false,
     children
   }: Props = $props()
 </script>
 
-<div class="setting-item" class:flex-col={flexCol}>
+<div
+  class="setting-item"
+  class:flex-col={flexCol}
+  class:item-disabled={disabled}
+>
   <div class="setting-label-group">
     <div class="setting-label">
       {#if IconComponent}
         <IconComponent size={14} class="item-icon" />
       {/if}
       <span>{label}</span>
+      {#if badge}
+        <span class="setting-badge">{badge}</span>
+      {/if}
     </div>
     {#if description}
       <span class="setting-description">{description}</span>
@@ -49,6 +60,11 @@
     border-radius: 12px;
     background: var(--c-item-bg, rgba(255, 255, 255, 0.05));
     border: 1px solid var(--c-border);
+    transition: opacity 0.2s ease;
+  }
+
+  .setting-item.item-disabled {
+    opacity: 0.55;
   }
 
   .setting-item.flex-col {
@@ -70,6 +86,18 @@
     font-size: 12px;
     font-weight: 600;
     color: var(--c-text-primary);
+  }
+
+  .setting-badge {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 2px 6px;
+    border-radius: 6px;
+    background: var(--c-contrast-bg, rgba(255, 255, 255, 0.08));
+    color: var(--c-text-muted);
+    border: 1px solid var(--c-border);
   }
 
   .setting-label :global(.item-icon) {

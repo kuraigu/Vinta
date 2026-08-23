@@ -11,10 +11,13 @@
   import Clock from '../components/Clock.svelte'
   import Calendar from '../components/Calendar.svelte'
   import Weather from '../components/Weather.svelte'
+  import BatteryWidget from '../components/BatteryWidget.svelte'
   import ComponentGallery from '../components/ComponentGallery.svelte'
-  import { homeWidgetsVisibilityStore } from '../store'
+  import { homeWidgetsVisibilityStore, batteryDataStore } from '../store'
 
   let { expanded = false } = $props<{ expanded?: boolean }>()
+
+  let hasBattery = $derived($batteryDataStore.hasBattery)
 
   let availableSlides = $derived.by(() => {
     const list = []
@@ -32,14 +35,16 @@
 
   let activeSlideTitle = $state('Home')
 
-  $effect(() => {
+  function handleActiveSlideEffect() {
     if (
       availableSlides.length > 0 &&
       !availableSlides.some((s) => s.title === activeSlideTitle)
     ) {
       activeSlideTitle = availableSlides[0].title
     }
-  })
+  }
+
+  $effect(handleActiveSlideEffect)
 
   function handleSlideChange(index: number) {
     activeSlideTitle = availableSlides[index]?.title || 'Home'
@@ -67,9 +72,14 @@
 <div class="page-container">
   {#if !expanded}
     <div class="minimal-view">
-      {#if $homeWidgetsVisibilityStore.clock}
-        <div class="minimal-slot">
-          <Clock expanded={false} />
+      {#if $homeWidgetsVisibilityStore.clock || ($homeWidgetsVisibilityStore.battery && hasBattery)}
+        <div class="minimal-slot status-cluster">
+          {#if $homeWidgetsVisibilityStore.battery && hasBattery}
+            <BatteryWidget />
+          {/if}
+          {#if $homeWidgetsVisibilityStore.clock}
+            <Clock expanded={false} />
+          {/if}
         </div>
       {/if}
       {#if $homeWidgetsVisibilityStore.weather}
@@ -132,6 +142,10 @@
     justify-content: center;
     white-space: nowrap;
     flex-shrink: 0;
+  }
+
+  .minimal-slot.status-cluster {
+    gap: 6px;
   }
 
   /* Expanded View - Integrated footer padding for Dock */

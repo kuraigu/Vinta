@@ -4,6 +4,7 @@
   import {
     pageVisibilityStore,
     homeWidgetsVisibilityStore,
+    batteryDataStore,
     type HomeWidgetsVisibility,
     type PageVisibility
   } from '../../../store'
@@ -19,8 +20,16 @@
     }, 600)
   }
 
+  let hasBattery = $derived($batteryDataStore.hasBattery)
+  let isBatteryActive = $derived(
+    $homeWidgetsVisibilityStore.battery && hasBattery
+  )
+
   let activeHomeCount = $derived(
-    Object.values($homeWidgetsVisibilityStore).filter(Boolean).length
+    ($homeWidgetsVisibilityStore.clock ? 1 : 0) +
+      ($homeWidgetsVisibilityStore.calendar ? 1 : 0) +
+      ($homeWidgetsVisibilityStore.weather ? 1 : 0) +
+      (isBatteryActive ? 1 : 0)
   )
 
   let isClockLocked = $derived(
@@ -31,6 +40,9 @@
   )
   let isWeatherLocked = $derived(
     $homeWidgetsVisibilityStore.weather && activeHomeCount <= 1
+  )
+  let isBatteryLocked = $derived(
+    hasBattery && $homeWidgetsVisibilityStore.battery && activeHomeCount <= 1
   )
 
   function toggleHomeWidget(key: keyof HomeWidgetsVisibility) {
@@ -228,6 +240,53 @@
         </div>
       </SettingItem>
       {#if isWeatherLocked && shakeKey === 'weather'}
+        <div class="locked-warning">
+          <AlertCircle size={12} />
+          <span>At least one widget must remain visible on the home island</span
+          >
+        </div>
+      {/if}
+    </div>
+
+    <!-- Battery Widget -->
+    <div class="item-wrapper" class:shake={shakeKey === 'battery'}>
+      <SettingItem
+        label="Battery & Power"
+        description={hasBattery
+          ? 'Battery percentage, charging animations, and power saver indicator'
+          : 'Battery hardware is not available on this device'}
+        badge={hasBattery ? undefined : 'Unavailable'}
+        disabled={!hasBattery}
+      >
+        <div
+          class="toggle-container"
+          class:locked={isBatteryLocked || !hasBattery}
+          title={!hasBattery
+            ? 'Battery hardware is not available on this device'
+            : isBatteryLocked
+              ? 'At least one widget must remain visible on the home island'
+              : ''}
+          role="button"
+          tabindex="0"
+          onclick={() => isBatteryLocked && triggerShake('battery')}
+          onkeydown={(e) =>
+            e.key === 'Enter' && isBatteryLocked && triggerShake('battery')}
+        >
+          <label
+            class="toggle-switch"
+            class:disabled-switch={isBatteryLocked || !hasBattery}
+          >
+            <input
+              type="checkbox"
+              checked={hasBattery && $homeWidgetsVisibilityStore.battery}
+              disabled={isBatteryLocked || !hasBattery}
+              onchange={() => toggleHomeWidget('battery')}
+            />
+            <span class="slider"></span>
+          </label>
+        </div>
+      </SettingItem>
+      {#if isBatteryLocked && shakeKey === 'battery'}
         <div class="locked-warning">
           <AlertCircle size={12} />
           <span>At least one widget must remain visible on the home island</span
