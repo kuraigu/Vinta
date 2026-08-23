@@ -6,7 +6,8 @@
     SetWidgetBounds,
     IsTestMode,
     FocusWindow,
-    Quit
+    Quit,
+    GetBatteryStatus
   } from '../wailsjs/go/backend/App.js'
   import { EventsOn, LogFatal, LogInfo } from '../wailsjs/runtime/runtime.js'
   import NotificationPage, {
@@ -15,6 +16,8 @@
   import HomePage, { config as homeConfig } from './pages/HomePage.svelte'
   import MediaPage, { config as mediaConfig } from './pages/MediaPage.svelte'
   import NotesPage from './pages/NotesPage.svelte'
+  import AppsPage from './pages/AppsPage.svelte'
+  import SettingsPage from './pages/SettingsPage.svelte'
   import Dock from './components/Dock.svelte'
   import Clock from './components/Clock.svelte'
   import DevPill from './devtest/DevPill.svelte'
@@ -48,7 +51,13 @@
     type IslandConfig,
     homeWidgetsVisibilityStore,
     pageVisibilityStore,
-    calculateHomeMinimalWidth
+    calculateHomeMinimalWidth,
+    batteryDataStore,
+    isSimulatingBatteryStore,
+    devPinnedStore,
+    devTestingStore,
+    activePageIdStore,
+    type BatteryData
   } from './store'
   import { preloadIcons, findAppIconConflicts } from './appIcons'
   import { debugBoundsOverlay, debugLogs } from './devtest/debugConfig'
@@ -142,6 +151,8 @@
     clearTimeout(hideTimeout)
     isTimeoutActive = false
 
+    if ($devPinnedStore) return
+
     if (!expanded && !isHidden && !isHovering) {
       if (
         shouldCurrentPageAutoHide ||
@@ -179,6 +190,7 @@
   let mediaIdleTimeout: number | undefined
 
   function handlePageVisibilityFallback() {
+    if ($devPinnedStore || $devTestingStore) return
     const pageVis = $pageVisibilityStore
     if (!pageVis.media && activePage === MediaPage) {
       navigateTo(HomePage, homeConfig, false)
@@ -194,6 +206,7 @@
   $effect(handlePageVisibilityFallback)
 
   function handleMediaIdleTransition() {
+    if ($devPinnedStore || $devTestingStore) return
     const mediaState = $globalMediaStore
     const isMediaEnabled = $pageVisibilityStore.media
     const isMediaConnected = mediaState.isAvailable && isMediaEnabled
@@ -203,9 +216,6 @@
         if (mediaIdleTimeout) {
           clearTimeout(mediaIdleTimeout)
           mediaIdleTimeout = undefined
-        }
-        if (activePage === HomePage && mediaState.isPlaying) {
-          navigateTo(MediaPage, mediaConfig, false)
         }
       } else {
         // Media has disconnected, stopped, or disabled - transition to HomePage
@@ -243,6 +253,7 @@
     const { w, h, r } = getBoundsForState(islandConfig, expanded, false)
     applyBounds(w, h, r)
     if (
+      !$devTestingStore &&
       $globalMediaStore.isPlaying &&
       $pageVisibilityStore.media &&
       activePage === HomePage &&
@@ -360,9 +371,11 @@
       : { w: 60, h: 8, r: 4 }
   )
 
+  let hasBattery = $derived($batteryDataStore.hasBattery)
+
   let currentMinimalW = $derived(
     activePage === HomePage
-      ? calculateHomeMinimalWidth($homeWidgetsVisibilityStore)
+      ? calculateHomeMinimalWidth($homeWidgetsVisibilityStore, hasBattery)
       : islandConfig.minimal.w
   )
 
@@ -373,10 +386,31 @@
         ? islandConfig.expanded.w
         : currentMinimalW
   )
+
   let maxAllowedOffsetForCurrentW = $derived(
     Math.max(0, Math.floor((screenWidth - currentIslandW) / 2 - 12))
   )
+
+  let maxDevPillOffset = $derived(
+    Math.max(0, Math.floor((screenWidth - 430) / 2 - 12))
+  )
+
   let currentLiveOffsetX = $state(0)
+
+  // Smart offset safety: smoothly clamp main island back into bounds if content expands near screen edge
+  function handleSmartEdgeOffsetAdjustment() {
+    const maxOffset = maxAllowedOffsetForCurrentW
+    if (
+      !isDraggingHidden &&
+      !isInFlight &&
+      Math.abs(currentLiveOffsetX) > maxOffset
+    ) {
+      currentLiveOffsetX = Math.sign(currentLiveOffsetX) * maxOffset
+      $hiddenPillOffsetXStore = currentLiveOffsetX
+    }
+  }
+
+  $effect(handleSmartEdgeOffsetAdjustment)
 
   // Sync store updates into live offset when not actively in flight
   function syncStoreOffsetToLive(val: number) {
@@ -394,6 +428,14 @@
     return Math.max(
       -maxAllowedOffsetForCurrentW,
       Math.min(maxAllowedOffsetForCurrentW, currentLiveOffsetX)
+    )
+  })
+
+  let devClampedOffsetX = $derived.by(() => {
+    if (Math.abs(clampedOffsetX) < 3) return 0
+    return Math.max(
+      -maxDevPillOffset,
+      Math.min(maxDevPillOffset, clampedOffsetX)
     )
   })
 
@@ -418,7 +460,9 @@
       ? hiddenBounds.w
       : isExp
         ? config.expanded.w
-        : currentMinimalW
+        : config === homeConfig || activePage === HomePage
+          ? calculateHomeMinimalWidth($homeWidgetsVisibilityStore, hasBattery)
+          : config.minimal.w
 
     const baseH = isHid
       ? hiddenBounds.h
@@ -444,6 +488,10 @@
     pageConfig: IslandConfig,
     expand: boolean = false
   ) {
+    if (isHidden) {
+      isHidden = false
+      stopInertia()
+    }
     if (expanded !== expand || activePage !== page) {
       triggerBlink()
     }
@@ -453,10 +501,17 @@
     activePage = page
     islandConfig = pageConfig
 
-    if (expand) {
-      const { w, h, r } = getBoundsForState(pageConfig, true, false)
-      applyBounds(w, h, r)
+    if (page === HomePage) $activePageIdStore = 'home'
+    else if (page === MediaPage) $activePageIdStore = 'media'
+    else if (page === NotificationPage) $activePageIdStore = 'notification'
+    else if (page === NotesPage) $activePageIdStore = 'notes'
+    else if (page === AppsPage) $activePageIdStore = 'apps'
+    else if (page === SettingsPage) $activePageIdStore = 'settings'
 
+    const { w, h, r } = getBoundsForState(pageConfig, expand, false)
+    applyBounds(w, h, r)
+
+    if (expand) {
       requestAnimationFrame(() => {
         expanded = true
       })
@@ -672,8 +727,24 @@
     window.addEventListener('resize', handleResize)
     window.addEventListener('blur', handleGlobalBlur)
 
+    const updateBattery = () => {
+      if (get(isSimulatingBatteryStore)) return
+      if (typeof GetBatteryStatus === 'function') {
+        GetBatteryStatus()
+          .then((status) => {
+            if (status && !get(isSimulatingBatteryStore)) {
+              batteryDataStore.set(status as BatteryData)
+            }
+          })
+          .catch(() => {})
+      }
+    }
+    updateBattery()
+    const batteryInterval = window.setInterval(updateBattery, 8000)
+
     return () => {
       stopInertia()
+      window.clearInterval(batteryInterval)
       window.removeEventListener('contextmenu', disableGlobalContextMenu)
       window.removeEventListener('vinta-overlay', handleOverlayChange)
       window.removeEventListener('vinta-quit', handleQuit)
@@ -1125,7 +1196,14 @@
   </div>
 
   {#if isTestMode}
-    <DevPill />
+    <div
+      style="
+        transform: translateX({devClampedOffsetX}px);
+        transition: {isDraggingHidden || isInFlight ? 'none' : islandAnim};
+      "
+    >
+      <DevPill />
+    </div>
   {/if}
 </div>
 

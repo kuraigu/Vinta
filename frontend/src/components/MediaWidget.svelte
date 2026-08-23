@@ -12,12 +12,18 @@
 <script lang="ts">
   import { SendMediaControl } from '../../wailsjs/go/backend/App.js'
   import Clock from './Clock.svelte'
+  import BatteryWidget from './BatteryWidget.svelte'
   import DynamicEqualizer from './DynamicEqualizer.svelte'
-  import { globalMediaStore, audioPeakStore, notifData } from '../store'
+  import {
+    globalMediaStore,
+    audioPeakStore,
+    notifData,
+    batteryDataStore,
+    homeWidgetsVisibilityStore
+  } from '../store'
   import {
     Volume2,
     VolumeX,
-    Music,
     Bell,
     Shuffle,
     Repeat,
@@ -41,6 +47,7 @@
   let { expanded = false }: Props = $props()
 
   let media = $derived($globalMediaStore)
+  let hasBattery = $derived($batteryDataStore.hasBattery)
 
   function computeAppBrand() {
     return resolveAppBrand(media.sourceApp)
@@ -363,7 +370,7 @@
         {/if}
       </div>
 
-      <!-- Minimal Re-used <Clock>, Bouncing Equalizer & Subtle Notification Indicator -->
+      <!-- Minimal Re-used <Clock>, Bouncing Equalizer & Subtle Notification Indicator / Battery Indicator -->
       <div class="minimal-right-meta">
         {#if $notifData.length > 0}
           <button
@@ -379,6 +386,8 @@
               >{$notifData.length > 9 ? '9+' : $notifData.length}</span
             >
           </button>
+        {:else if $homeWidgetsVisibilityStore.battery && hasBattery}
+          <BatteryWidget />
         {/if}
         <div class="minimal-clock-box">
           <Clock expanded={false} />
@@ -440,15 +449,6 @@
         </div>
 
         <div class="device-badge" title="Source: {appBrand.name}">
-          {#if appBrand.icon}
-            <img
-              src={appBrand.icon}
-              alt={appBrand.name}
-              class="badge-app-icon"
-            />
-          {:else}
-            <Music size={10} />
-          {/if}
           <span>{appBrand.name}</span>
         </div>
       </div>
@@ -1070,14 +1070,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-  }
-
-  .badge-app-icon {
-    width: 11px;
-    height: 11px;
-    border-radius: 2px;
-    object-fit: contain;
-    flex-shrink: 0;
   }
 
   .device-badge span {

@@ -462,7 +462,7 @@ func (a *App) FocusWindow() {
 	}
 }
 
-// SetDevPillBounds is called by the frontend to show a separate developer menu.
+// SetDevPillBounds is called by the frontend to update the size of the developer menu.
 func (a *App) SetDevPillBounds(width int, height int, extraH int, scale float64) {
 	a.devW = width
 	a.devH = height
@@ -485,37 +485,11 @@ func (a *App) updateWindowRegion() {
 	}
 }
 
-// setClickRegion updates the Win32 window region to combine the main pill and the dev pill.
-func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, dw int, dh int, extraH int, padding int, scale float64) {
-	var hrgnMain uintptr
-	var hrgnDev uintptr
-	var hrgnFinal uintptr
-
-	if scale <= 0 {
-		scale = 1.0
-	}
-
+// createMainPillRegion generates the Win32 HRGN for the primary dynamic island.
+func createMainPillRegion(w, h, r, offsetX, sw, padding int, scale float64) uintptr {
 	scaleInt := func(v int) int {
 		return int(float64(v) * scale)
 	}
-
-	type winRect struct {
-		Left, Top, Right, Bottom int32
-	}
-	var cr winRect
-	if hwnd != 0 {
-		_, _, _ = procGetClientRect.Call(hwnd, uintptr(unsafe.Pointer(&cr)))
-	}
-
-	sw := int(cr.Right - cr.Left)
-	if sw <= 0 {
-		sw = screenWidth
-		if sw <= 0 {
-			sw = 1920
-		}
-	}
-
-	// 1. Create main pill region
 	if w == -1 && h > 0 {
 		visualTop := scaleInt(5)
 		ph := scaleInt(h)
@@ -525,11 +499,11 @@ func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, dw int, dh i
 		}
 		bottom := visualTop + ph + padding
 
-		// In-flight full-width rectangular glide track: allows smooth 120 FPS glide across screen with zero edge clipping
-		hrgnMain, _, _ = procCreateRectRgn.Call(
+		hrgn, _, _ := procCreateRectRgn.Call(
 			0, uintptr(top),
 			uintptr(sw), uintptr(bottom),
 		)
+		return hrgn
 	} else if w > 0 && h > 0 {
 		visualTop := scaleInt(5)
 		physicalCenterX := (sw / 2) + scaleInt(offsetX)
@@ -553,63 +527,115 @@ func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, dw int, dh i
 			ellipseSize = wLimit
 		}
 
-		hrgnMain, _, _ = procCreateRoundRectRgn.Call(
+		hrgn, _, _ := procCreateRoundRectRgn.Call(
 			uintptr(left), uintptr(top),
 			uintptr(right), uintptr(bottom),
 			uintptr(ellipseSize), uintptr(ellipseSize),
 		)
+		return hrgn
+	}
+	return 0
+}
+
+// createDevPillRegion generates the Win32 HRGN for the secondary/dev floating panel anchored below the main island.
+func createDevPillRegion(dw, dh, extraH, mainH, offsetX, sw int, scale float64) uintptr {
+	if dw <= 0 || dh <= 0 {
+		return 0
+	}
+	scaleInt := func(v int) int {
+		return int(float64(v) * scale)
 	}
 
-	// 2. Create dev pill region (stacked under main pill)
-	if dw > 0 && dh > 0 {
-		gap := scaleInt(15) // Must match the CSS flex gap
-		visualTop := scaleInt(5)
-
-		// If main pill exists, stack it below it. Otherwise, default to some position.
-		devTopOffset := visualTop
-		if w > 0 && h > 0 {
-			ph := scaleInt(h)
-			devTopOffset = visualTop + ph + gap
-		}
-
-		devPadding := 6
-		extraMargin := scaleInt(extraH) // ONLY expand region when a dropdown is actively open!
-		physicalCenterX := sw / 2
-		pdw := scaleInt(dw)
-		pdh := scaleInt(dh)
-
-		devLeft := physicalCenterX - (pdw / 2) - devPadding
-		if devLeft < 0 {
-			devLeft = 0
-		}
-		devRight := physicalCenterX + (pdw / 2) + devPadding
-		devTop := devTopOffset - devPadding - extraMargin
-		if devTop < 0 {
-			devTop = 0
-		}
-		devBottom := devTopOffset + pdh + devPadding + extraMargin
-
-		hrgnDev, _, _ = procCreateRoundRectRgn.Call(
-			uintptr(devLeft), uintptr(devTop),
-			uintptr(devRight), uintptr(devBottom),
-			uintptr(24), uintptr(24),
-		)
+	gap := scaleInt(15)
+	visualTop := scaleInt(5)
+	devTopOffset := visualTop
+	if mainH > 0 {
+		ph := scaleInt(mainH)
+		devTopOffset = visualTop + ph + gap
 	}
 
-	// 3. Combine regions
-	if hrgnMain != 0 && hrgnDev != 0 {
-		// Both exist, combine into hrgnMain
-		_, _, _ = procCombineRgn.Call(hrgnMain, hrgnMain, hrgnDev, uintptr(rgnOr))
-		hrgnFinal = hrgnMain
-		_, _, _ = procDeleteObject.Call(hrgnDev) // cleanup
-	} else if hrgnMain != 0 {
-		hrgnFinal = hrgnMain
-	} else if hrgnDev != 0 {
-		hrgnFinal = hrgnDev
-	} else {
-		hrgnFinal = 0 // fully transparent
+	devPadding := OutsidePadding
+	extraMargin := scaleInt(extraH)
+
+	pdw := scaleInt(dw)
+	pdh := scaleInt(dh)
+
+	// Smart offset: dev pill follows main island but stops cleanly at screen edges
+	maxDevOffset := (sw-pdw)/2 - devPadding
+	if maxDevOffset < 0 {
+		maxDevOffset = 0
+	}
+	scaledOffset := scaleInt(offsetX)
+	if scaledOffset > maxDevOffset {
+		scaledOffset = maxDevOffset
+	} else if scaledOffset < -maxDevOffset {
+		scaledOffset = -maxDevOffset
 	}
 
+	physicalCenterX := (sw / 2) + scaledOffset
+
+	left := physicalCenterX - (pdw / 2) - devPadding
+	if left < 0 {
+		left = 0
+	}
+	right := physicalCenterX + (pdw / 2) + devPadding
+	top := devTopOffset - devPadding
+	if top < 0 {
+		top = 0
+	}
+	bottom := devTopOffset + pdh + devPadding + extraMargin
+
+	hrgn, _, _ := procCreateRoundRectRgn.Call(
+		uintptr(left), uintptr(top),
+		uintptr(right), uintptr(bottom),
+		uintptr(scaleInt(14)*2), uintptr(scaleInt(14)*2),
+	)
+	return hrgn
+}
+
+// combineWindowRegions merges a slice of Win32 HRGNs into a single composite region.
+func combineWindowRegions(regions ...uintptr) uintptr {
+	var finalRgn uintptr
+	for _, rgn := range regions {
+		if rgn == 0 {
+			continue
+		}
+		if finalRgn == 0 {
+			finalRgn = rgn
+		} else {
+			_, _, _ = procCombineRgn.Call(finalRgn, finalRgn, rgn, uintptr(rgnOr))
+			_, _, _ = procDeleteObject.Call(rgn)
+		}
+	}
+	return finalRgn
+}
+
+// setClickRegion updates the Win32 window region to combine the main pill and the dev pill.
+func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, dw int, dh int, extraH int, padding int, scale float64) {
+	if scale <= 0 {
+		scale = 1.0
+	}
+
+	type winRect struct {
+		Left, Top, Right, Bottom int32
+	}
+	var cr winRect
+	if hwnd != 0 {
+		_, _, _ = procGetClientRect.Call(hwnd, uintptr(unsafe.Pointer(&cr)))
+	}
+
+	sw := int(cr.Right - cr.Left)
+	if sw <= 0 {
+		sw = screenWidth
+		if sw <= 0 {
+			sw = 1920
+		}
+	}
+
+	hrgnMain := createMainPillRegion(w, h, r, offsetX, sw, padding, scale)
+	hrgnDev := createDevPillRegion(dw, dh, extraH, h, offsetX, sw, scale)
+
+	hrgnFinal := combineWindowRegions(hrgnMain, hrgnDev)
 	_, _, _ = procSetWindowRgn.Call(hwnd, hrgnFinal, 1)
 }
 
@@ -618,18 +644,14 @@ func (a *App) Greet(name string) string {
 	return fmt.Sprintf("Hello %s, It's show time!", name)
 }
 
-// IsTestMode returns true if the application was launched with the -test flag.
+// IsTestMode returns true if the application was compiled with the devtest tag.
 func (a *App) IsTestMode() bool {
 	return isTestModeSync()
 }
 
-func isTestModeSync() bool {
-	for _, arg := range os.Args {
-		if arg == "-test" || arg == "-debug" || arg == "--debug" {
-			return true
-		}
-	}
-	return false
+// GetBatteryStatus returns current system power status from the services layer.
+func (a *App) GetBatteryStatus() services.BatteryStatus {
+	return services.GetBatteryStatus()
 }
 
 // GetHardwareAccelerationConfig reads stored GPU acceleration setting from user config dir.

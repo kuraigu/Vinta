@@ -11,7 +11,8 @@
     searchable = false,
     searchPlaceholder = 'Search...',
     onSearch,
-    onSelectPayload
+    onSelectPayload,
+    onChange
   } = $props<{
     options: { value: string; label: string; payload?: unknown }[]
     value: string
@@ -22,6 +23,7 @@
     searchPlaceholder?: string
     onSearch?: (query: string) => Promise<void> | void
     onSelectPayload?: (payload: unknown) => void
+    onChange?: (value: string) => void
   }>()
 
   let isOpen = $state(false)
@@ -83,6 +85,9 @@
     value = opt.value
     if (onSelectPayload && opt.payload) {
       onSelectPayload(opt.payload)
+    }
+    if (onChange) {
+      onChange(opt.value)
     }
     isOpen = false
     notifyOverlay(false)

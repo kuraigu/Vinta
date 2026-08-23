@@ -20,7 +20,7 @@ if "%~1"=="dev" (
         call :build_native
         if errorlevel 1 exit /b !ERRORLEVEL!
     )
-    wails dev
+    wails dev -tags devtest
     if errorlevel 1 exit /b !ERRORLEVEL!
     exit /b 0
 )
@@ -69,16 +69,25 @@ if "%~1"=="run" (
 )
 
 if "%~1"=="test" (
-    if "%~2" NEQ "" (
-        echo Error: 'test' does not take extra arguments.
-        exit /b 1
+    set "DO_BUILD=1"
+
+    for %%A in (%2 %3) do (
+        if "%%~A"=="no_build" (
+            set "DO_BUILD=0"
+        ) else (
+            echo Error: Unknown argument '%%~A' for 'test'.
+            echo Allowed options for 'test': [no_build]
+            exit /b 1
+        )
     )
     taskkill /IM Vinta.exe /F 2>nul
-    call :build_native
-    if errorlevel 1 exit /b !ERRORLEVEL!
-    wails build
-    if errorlevel 1 exit /b !ERRORLEVEL!
-    start "" "build\bin\Vinta.exe" -test
+    if "!DO_BUILD!"=="1" (
+        call :build_native
+        if errorlevel 1 exit /b !ERRORLEVEL!
+        wails build -tags devtest
+        if errorlevel 1 exit /b !ERRORLEVEL!
+    )
+    start "" "build\bin\Vinta.exe"
     exit /b 0
 )
 
