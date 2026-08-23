@@ -382,11 +382,11 @@ export function calculateHomeMinimalWidth(
 
   // Slot 1: Device Status Cluster (Battery + Clock)
   if (isClockActive && isBatteryActive) {
-    activeSlots.push(38 + 6 + 82) // Battery Icon
+    activeSlots.push(34 + 6 + 82) // Battery Icon
   } else if (isClockActive) {
     activeSlots.push(82)
   } else if (isBatteryActive) {
-    activeSlots.push(38)
+    activeSlots.push(34)
   }
 
   // Slot 2: Weather

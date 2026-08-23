@@ -44,9 +44,9 @@
   let stateLabel = $derived(getStateLabel(battery))
 </script>
 
-<!-- Minimal View on Base Island: One UI 7 Battery Pill (2 Fill States + Leaf Icon for Power Saver) -->
+<!-- Minimal View on Base Island: Battery Capsule Pill (Fill State + Status Icon) -->
 <div
-  class="oneui-battery-minimal"
+  class="battery-capsule-minimal"
   class:charging={battery.isCharging}
   class:saver={!battery.isCharging && battery.batterySaver}
   class:low={!battery.isCharging && battery.percentage <= 15}
@@ -55,35 +55,34 @@
     : ''}"
 >
   <div
-    class="oneui-pill-fill"
+    class="battery-pill-fill"
     style="width: {fillPercentage}%; background: {batteryFillColor}; border-radius: {fillPercentage >=
     95
       ? '9999px'
       : '9999px 0 0 9999px'};"
   ></div>
 
-  <div class="oneui-pill-content">
+  <div class="battery-pill-content">
     {#if !battery.hasBattery}
-      <Plug size={10} strokeWidth={2.4} class="oneui-plug-icon" />
+      <Plug size={9} strokeWidth={2.4} class="battery-plug-icon" />
     {:else}
       {#if battery.isCharging}
-        <Zap size={8} strokeWidth={2.8} class="oneui-status-icon" />
+        <Zap size={7.5} strokeWidth={2.8} class="battery-status-icon" />
       {:else if battery.batterySaver}
-        <Leaf size={8} strokeWidth={2.8} class="oneui-status-icon" />
+        <Leaf size={7.5} strokeWidth={2.8} class="battery-status-icon" />
       {/if}
-      <span class="oneui-percent-num">{battery.percentage}</span>
+      <span class="battery-percent-num">{battery.percentage}</span>
     {/if}
   </div>
 </div>
 
 <style>
-  .oneui-battery-minimal {
+  .battery-capsule-minimal {
     position: relative;
-    height: 18px;
-    width: 38px;
-    min-width: 38px;
-    max-width: 38px;
-    padding: 0 3px;
+    height: 16px;
+    width: 34px;
+    min-width: 34px;
+    max-width: 34px;
     border-radius: 9999px;
     background: rgba(255, 255, 255, 0.45);
     border: none;
@@ -97,11 +96,11 @@
     flex-shrink: 0;
   }
 
-  .oneui-battery-minimal.low {
+  .battery-capsule-minimal.low {
     background: rgba(255, 59, 48, 0.35);
   }
 
-  .oneui-pill-fill {
+  .battery-pill-fill {
     position: absolute;
     left: 0;
     top: 0;
@@ -112,50 +111,56 @@
       background-color 0.3s ease;
   }
 
-  .oneui-pill-content {
-    position: relative;
+  .battery-pill-content {
+    position: absolute;
+    inset: 0;
     z-index: 2;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 100%;
-    height: 100%;
-    gap: 1px;
+    gap: 1.5px;
     line-height: 1;
+    pointer-events: none;
+    transform: translateY(0.75px);
   }
 
-  .oneui-percent-num {
-    font-size: 9.5px;
+  .battery-percent-num {
+    font-size: 8.5px;
     font-weight: 800;
-    letter-spacing: 0;
+    letter-spacing: -0.2px;
     color: #0f172a;
     font-variant-numeric: tabular-nums;
     line-height: 1;
-    text-align: center;
-    display: inline-block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
   }
 
-  :global(.oneui-status-icon) {
+  :global(.battery-status-icon) {
     color: #0f172a;
     flex-shrink: 0;
+    display: block;
     margin-right: -0.5px;
   }
 
-  :global(.oneui-plug-icon) {
+  :global(.battery-plug-icon) {
     color: #0f172a;
     flex-shrink: 0;
+    display: block;
   }
 
   /* Low battery: crisp white text/icon over red fill & coral track */
-  .oneui-battery-minimal.low .oneui-percent-num {
+  .battery-capsule-minimal.low .battery-percent-num {
     color: #ffffff;
   }
 
-  .oneui-battery-minimal.low :global(.oneui-status-icon) {
+  .battery-capsule-minimal.low :global(.battery-status-icon) {
     color: #ffffff;
   }
 
-  .oneui-battery-minimal.low :global(.oneui-plug-icon) {
+  .battery-capsule-minimal.low :global(.battery-plug-icon) {
     color: #ffffff;
   }
 </style>

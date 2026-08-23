@@ -47,27 +47,35 @@ type Contributor struct {
 	URL    string `json:"url"`
 }
 
-func getBuildTime() string {
+var cachedBuildTime string
+
+func initBuildMetadata() {
 	if BuildTime != "" && BuildTime != "Unknown" {
-		return BuildTime
+		cachedBuildTime = BuildTime
+		return
 	}
 	appData := os.Getenv("APPDATA")
 	if appData != "" {
-		seqDir := filepath.Join(appData, "FreeMatrix Studios", "Vinta")
-		_ = os.MkdirAll(seqDir, 0755)
-		seqFile := filepath.Join(seqDir, "build_seq")
+		seqFile := filepath.Join(appData, "FreeMatrix Studios", "Vinta", "build_seq")
 		count := 1
 		if data, err := os.ReadFile(seqFile); err == nil {
 			trimmed := strings.TrimSpace(string(data))
 			if num, err := strconv.Atoi(trimmed); err == nil && num > 0 {
-				count = num + 1
+				count = num
 			}
 		}
-		_ = os.WriteFile(seqFile, []byte(strconv.Itoa(count)), 0644)
 		year2 := time.Now().Format("06")
-		return fmt.Sprintf("%s.%d", year2, count)
+		cachedBuildTime = fmt.Sprintf("%s.%d", year2, count)
+		return
 	}
-	return "26.1"
+	cachedBuildTime = fmt.Sprintf("%s.1", time.Now().Format("06"))
+}
+
+func getBuildTime() string {
+	if cachedBuildTime == "" {
+		initBuildMetadata()
+	}
+	return cachedBuildTime
 }
 
 // GetAppInfo returns application versioning, build verification, and system details.

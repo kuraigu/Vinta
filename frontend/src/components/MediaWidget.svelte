@@ -2,7 +2,7 @@
   import type { IslandConfig } from '../store'
 
   export const config: IslandConfig = {
-    minimal: { w: 340, h: 44, r: 22 },
+    minimal: { w: 368, h: 44, r: 22 },
     expanded: { w: 440, h: 270, r: 28 },
     borderColor: 'rgba(255, 60, 100, 0.4)',
     glowColor: 'rgba(255, 60, 100, 0.35)'

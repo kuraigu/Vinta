@@ -20,6 +20,7 @@ if "%~1"=="dev" (
         call :build_native
         if errorlevel 1 exit /b !ERRORLEVEL!
     )
+    call :increment_build_seq
     wails dev -tags devtest
     if errorlevel 1 exit /b !ERRORLEVEL!
     exit /b 0
@@ -32,6 +33,7 @@ if "%~1"=="build" (
     )
     call :build_native_force
     if errorlevel 1 exit /b !ERRORLEVEL!
+    call :increment_build_seq
     wails build
     if errorlevel 1 exit /b !ERRORLEVEL!
     exit /b 0
@@ -57,6 +59,7 @@ if "%~1"=="run" (
     if "!DO_BUILD!"=="1" (
         call :build_native
         if errorlevel 1 exit /b !ERRORLEVEL!
+        call :increment_build_seq
         wails build
         if errorlevel 1 exit /b !ERRORLEVEL!
     )
@@ -84,6 +87,7 @@ if "%~1"=="test" (
     if "!DO_BUILD!"=="1" (
         call :build_native
         if errorlevel 1 exit /b !ERRORLEVEL!
+        call :increment_build_seq
         wails build -tags devtest
         if errorlevel 1 exit /b !ERRORLEVEL!
     )
@@ -167,6 +171,17 @@ if errorlevel 1 (
 )
 if exist "backend\services\native\*.obj" del /Q "backend\services\native\*.obj"
 if exist "build\bin\*.exp" del /Q "build\bin\*.exp"
-if exist "build\bin\*.lib" del /Q "build\bin\*.lib"
 echo Native C++/WinRT bridge built successfully.
+exit /b 0
+
+:increment_build_seq
+set "SEQ_DIR=%APPDATA%\FreeMatrix Studios\Vinta"
+if not exist "%SEQ_DIR%" mkdir "%SEQ_DIR%"
+set "SEQ_FILE=%SEQ_DIR%\build_seq"
+set "BUILD_COUNT=1"
+if exist "%SEQ_FILE%" (
+    set /p CUR_COUNT=<"%SEQ_FILE%"
+    set /a BUILD_COUNT=!CUR_COUNT!+1
+)
+<nul set /p="!BUILD_COUNT!" > "%SEQ_FILE%"
 exit /b 0

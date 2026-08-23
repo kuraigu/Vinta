@@ -180,8 +180,20 @@
   function hideWidget() {
     if (isHidden) return
     islandAnim = '0.35s cubic-bezier(0.2, 0.8, 0.2, 1)'
+    if (inertiaAnimFrame) {
+      cancelAnimationFrame(inertiaAnimFrame)
+      inertiaAnimFrame = undefined
+    }
+    clearTimeout(inertiaSafetyTimeout)
+    isInFlight = false
+    isDraggingHidden = false
     isHidden = true
-    stopInertia()
+    expanded = false
+    if (activePage !== HomePage && activePage !== MediaPage) {
+      const fallback = AppControls.getFallbackPage()
+      activePage = fallback.page as Component
+      islandConfig = fallback.config
+    }
   }
 
   // Global reactive fallback sync effect when island is minimized
@@ -246,8 +258,14 @@
   function showWidget() {
     if (!isHidden) return
     islandAnim = '0.32s cubic-bezier(0.2, 0.8, 0.2, 1)'
+    if (inertiaAnimFrame) {
+      cancelAnimationFrame(inertiaAnimFrame)
+      inertiaAnimFrame = undefined
+    }
+    clearTimeout(inertiaSafetyTimeout)
+    isInFlight = false
+    isDraggingHidden = false
     isHidden = false
-    stopInertia()
     const { w, h, r } = getBoundsForState(islandConfig, expanded, false)
     applyBounds(w, h, r)
     if (
@@ -265,10 +283,6 @@
   // Expose manual hide for the dock
   setContext('hidePill', () => {
     hideWidget()
-    if (expanded) {
-      const fallback = AppControls.getFallbackPage()
-      navigateTo(fallback.page as Component, fallback.config, false)
-    }
   })
 
   // Expose manual wake up for components
@@ -761,7 +775,7 @@
     if (isInFlight) return
     const target = getBoundsForState()
 
-    // When shrinking (e.g. collapsing/minimizing from expanded), hold window bounds until CSS transition finishes
+    // When shrinking (e.g. collapsing/minimizing from expanded, or hiding), hold window bounds until CSS transition finishes
     if (currentOSBounds.h > target.h || currentOSBounds.w > target.w) {
       targetPendingBounds = target
       clearTimeout(boundsTransitionTimeout)
@@ -774,7 +788,7 @@
           )
           targetPendingBounds = { w: 0, h: 0, r: 0 }
         }
-      }, 340)
+      }, 380)
     } else {
       clearTimeout(boundsTransitionTimeout)
       targetPendingBounds = { w: 0, h: 0, r: 0 }
@@ -1136,12 +1150,12 @@
   >
     {#if isHidden}
       {#if $autoHideDisplayStore === 'clock'}
-        <div class="hidden-widget-pill" in:fade={{ duration: 200 }}>
+        <div class="hidden-widget-pill" transition:fade={{ duration: 180 }}>
           <Clock expanded={false} />
           <div class="hidden-dash-mini"></div>
         </div>
       {:else}
-        <div class="hidden-dash" in:fade={{ duration: 200 }}></div>
+        <div class="hidden-dash" transition:fade={{ duration: 180 }}></div>
       {/if}
     {/if}
 
@@ -1156,9 +1170,13 @@
 
     <div
       class="content"
-      style="opacity: {isHidden || isBlinking ? 0 : 1}; display: {isHidden
+      style="opacity: {isHidden || isBlinking
+        ? 0
+        : 1}; pointer-events: {isHidden
         ? 'none'
-        : 'grid'}; transition: opacity {isBlinking ? '0s' : '0.2s'};"
+        : 'auto'}; transition: opacity {isBlinking
+        ? '0s'
+        : '0.22s cubic-bezier(0.2, 0.8, 0.2, 1)'};"
     >
       {#key activePage}
         {@const ActivePage = activePage}
@@ -1522,6 +1540,7 @@
     border-radius: inherit;
     overflow: hidden;
     position: relative;
+    transition: opacity 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 
   .view {
