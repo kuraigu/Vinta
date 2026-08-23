@@ -29,7 +29,6 @@
     autoHideStore,
     homeAutoHideStore,
     mediaAutoHideStore,
-    notifAutoHideStore,
     autoHideDelayStore,
     autoHideDisplayStore,
     notifAutoWakeStore,
@@ -134,7 +133,6 @@
   let shouldCurrentPageAutoHide = $derived.by(() => {
     if (activePage === HomePage) return $homeAutoHideStore
     if (activePage === MediaPage) return $mediaAutoHideStore
-    if (activePage === NotificationPage) return $notifAutoHideStore
     return $autoHideStore
   })
 
@@ -766,6 +764,9 @@
     }
   })
 
+  let prevExpandedState = false
+  let prevHiddenState = false
+
   /**
    * Synchronizes OS window bounds when island state changes.
    * In-flight drags skip this to prevent fighting the full-width track region,
@@ -775,8 +776,16 @@
     if (isInFlight) return
     const target = getBoundsForState()
 
-    // When shrinking (e.g. collapsing/minimizing from expanded, or hiding), hold window bounds until CSS transition finishes
-    if (currentOSBounds.h > target.h || currentOSBounds.w > target.w) {
+    const isCollapsing = prevExpandedState && !expanded
+    const isHiding = !prevHiddenState && isHidden
+    prevExpandedState = expanded
+    prevHiddenState = isHidden
+
+    // Only hold OS window bounds for the 350ms animation when actively collapsing from expanded or hiding to pill/dash
+    if (
+      (isCollapsing || isHiding) &&
+      (currentOSBounds.h > target.h || currentOSBounds.w > target.w)
+    ) {
       targetPendingBounds = target
       clearTimeout(boundsTransitionTimeout)
       boundsTransitionTimeout = window.setTimeout(() => {
@@ -788,7 +797,7 @@
           )
           targetPendingBounds = { w: 0, h: 0, r: 0 }
         }
-      }, 380)
+      }, 360)
     } else {
       clearTimeout(boundsTransitionTimeout)
       targetPendingBounds = { w: 0, h: 0, r: 0 }
@@ -1202,11 +1211,11 @@
     </div>
 
     <!-- Shrinking Timeout Bar -->
-    {#if isTimeoutActive && shouldCurrentPageAutoHide && !expanded && !isHidden}
+    {#if isTimeoutActive && (shouldCurrentPageAutoHide || (activePage !== HomePage && activePage !== MediaPage)) && !expanded && !isHidden}
       {#key hideTrigger}
         <div
           class="timeout-bar"
-          style="animation-duration: {$autoHideDelayStore || 10}s;"
+          style="animation-duration: {$autoHideDelayStore || 5}s;"
         ></div>
       {/key}
     {/if}

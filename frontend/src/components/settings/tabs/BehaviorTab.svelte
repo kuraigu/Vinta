@@ -6,7 +6,6 @@
   import {
     homeAutoHideStore,
     mediaAutoHideStore,
-    notifAutoHideStore,
     autoHideDelayStore,
     autoHideDisplayStore,
     wakeMethodStore,
@@ -40,13 +39,6 @@
   <SettingItem label="Auto-Hide Media Widget" icon={EyeOff}>
     <label class="toggle-switch">
       <input type="checkbox" bind:checked={$mediaAutoHideStore} />
-      <span class="slider"></span>
-    </label>
-  </SettingItem>
-
-  <SettingItem label="Auto-Hide Notifications" icon={EyeOff}>
-    <label class="toggle-switch">
-      <input type="checkbox" bind:checked={$notifAutoHideStore} />
       <span class="slider"></span>
     </label>
   </SettingItem>

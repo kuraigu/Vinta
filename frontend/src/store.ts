@@ -167,10 +167,6 @@ export const mediaAutoHideStore = persistentWritable<boolean>(
   'vinta_media_autohide',
   true
 )
-export const notifAutoHideStore = persistentWritable<boolean>(
-  'vinta_notif_autohide',
-  false
-)
 export const autoHideDelayStore = persistentWritable<number>(
   'vinta_autohide_delay',
   10
