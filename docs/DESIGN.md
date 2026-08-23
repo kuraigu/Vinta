@@ -55,3 +55,13 @@ Vinta supports custom community themes (including anime-styled or custom backgro
 - **Never use native HTML `<select>` elements**: Standard `<select>` elements create native OS popups that bleed through transparent Tauri/Wails webview boundaries, clip inside scrollable containers (`overflow: hidden` / `overflow-y: auto`), and break when hovering over background elements.
 - **Use `<CustomSelect>`**: Always import and use `CustomSelect` from `frontend/src/components/CustomSelect.svelte`.
 - **Swipe Protection**: `<CustomSelect>` includes `.no-swipe` and pointer event suppression to ensure opening and scrolling options inside carousel viewports (`ComponentGallery`) does not trigger unwanted slide navigation.
+
+### 10. Component & Page Stylesheet Splitting
+
+- **Scoped Styling via `<style src="...">`**: When a page or component grows in length and styling complexity, extract its `<style>` block into a dedicated `.css` file.
+- **File Naming & Directory Structure**:
+  - Keep stylesheet filenames identical to component filenames (`<Name>.svelte` ➔ `<Name>.css`).
+  - **Pages**: Place extracted stylesheets in `frontend/src/pages/styles/<PageName>.css` (linked via `<style src="./styles/<PageName>.css"></style>`).
+  - **Components & Sub-groups**: Place extracted stylesheets under `frontend/src/components/styles/` mirroring the folder structure (e.g. `src/components/notes/NoteLive.svelte` ➔ `src/components/styles/notes/NoteLive.css` linked via `<style src="../styles/notes/NoteLive.css"></style>`).
+- **No Global Script Imports**: Never use `import './styles.css'` inside `<script>` for component styling, as it bypasses scoping and leaks styles globally. Always use `<style src="...">` to retain Svelte's compile-time scoping hashes.
+
