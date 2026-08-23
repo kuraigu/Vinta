@@ -182,8 +182,6 @@
     islandAnim = '0.35s cubic-bezier(0.2, 0.8, 0.2, 1)'
     isHidden = true
     stopInertia()
-    const { w, h, r } = getBoundsForState(islandConfig, expanded, true)
-    applyBounds(w, h, r)
   }
 
   // Global reactive fallback sync effect when island is minimized
@@ -492,7 +490,7 @@
       isHidden = false
       stopInertia()
     }
-    if (expanded !== expand || activePage !== page) {
+    if (activePage !== page && expanded === expand) {
       triggerBlink()
     }
     if (expanded !== expand) {
@@ -508,10 +506,11 @@
     else if (page === AppsPage) $activePageIdStore = 'apps'
     else if (page === SettingsPage) $activePageIdStore = 'settings'
 
-    const { w, h, r } = getBoundsForState(pageConfig, expand, false)
-    applyBounds(w, h, r)
-
     if (expand) {
+      const { w, h, r } = getBoundsForState(pageConfig, true, false)
+      if (w > currentOSBounds.w || h > currentOSBounds.h) {
+        applyBounds(w, h, r)
+      }
       requestAnimationFrame(() => {
         expanded = true
       })
