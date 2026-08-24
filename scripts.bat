@@ -3,6 +3,16 @@ setlocal enabledelayedexpansion
 
 if "%~1"=="" goto usage
 
+if "%~1"=="doctor" (
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\doctor.ps1"
+    exit /b %ERRORLEVEL%
+)
+
+if "%~1"=="setup" (
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\setup.ps1" %2 %3
+    exit /b %ERRORLEVEL%
+)
+
 if "%~1"=="dev" (
     set "DO_BUILD_NATIVE=1"
 
@@ -20,6 +30,7 @@ if "%~1"=="dev" (
         call :build_native
         if errorlevel 1 exit /b !ERRORLEVEL!
     )
+    taskkill /IM Vinta.exe /F 2>nul
     call :increment_build_seq
     wails dev -tags devtest
     if errorlevel 1 exit /b !ERRORLEVEL!
@@ -122,6 +133,8 @@ echo Error: Unknown command '%~1'.
 echo Usage: scripts.bat ^<command^> [options]
 echo.
 echo Commands:
+echo   doctor                   Checks development environment toolchains and dependencies
+echo   setup [-InstallTools]    Sets up and configures the developer environment
 echo   dev [no_build]           Runs Vite / Wails live development server (optionally skip native build)
 echo   build                    Builds production binary
 echo   run [no_build] [debug]   Runs binary (optionally skip build, optionally enable debug mode)
@@ -130,47 +143,17 @@ echo   lint                     Runs Go and Frontend linters and formatters
 exit /b 1
 
 :build_native
-call :build_native_force
-exit /b %ERRORLEVEL%
-
 :build_native_force
-echo Building native C++/WinRT bridge...
-where cl.exe >nul 2>&1
-if errorlevel 1 (
-    set "VCVARS="
-    set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
-    if exist "%VSWHERE%" (
-        for /f "usebackq tokens=*" %%i in (`"%VSWHERE%" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath 2^>nul`) do (
-            if exist "%%i\VC\Auxiliary\Build\vcvars64.bat" set "VCVARS=%%i\VC\Auxiliary\Build\vcvars64.bat"
-        )
-    )
-    if defined VCVARS (
-        call "%VCVARS%"
-    ) else if exist "D:\Programs\Microsoft Visual Studio\18\BuildTools\VC\Auxiliary\Build\vcvars64.bat" (
-        call "D:\Programs\Microsoft Visual Studio\18\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
-    ) else if exist "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat" (
-        call "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvars64.bat"
-    ) else if exist "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat" (
-        call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
-    ) else if exist "C:\Program Files\Microsoft Visual Studio\2022\Professional\VC\Auxiliary\Build\vcvars64.bat" (
-        call "C:\Program Files\Microsoft Visual Studio\2022\Professional\VC\Auxiliary\Build\vcvars64.bat"
-    ) else if exist "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat" (
-        call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-    )
+echo Building native C++/WinRT bridge via CMake...
+if not exist "build\native" (
+    cmake -B build\native -S backend\services\native
+    if errorlevel 1 exit /b !ERRORLEVEL!
 )
-where cl.exe >nul 2>&1
-if errorlevel 1 (
-    echo Failed to initialize MSVC build environment: cl.exe not found.
-    exit /b 1
-)
-if not exist "build\bin" mkdir "build\bin"
-cl.exe /nologo /std:c++20 /EHa /O2 /LD backend\services\native\winrt_bridge.cpp backend\services\native\notification_service.cpp backend\services\native\media_service.cpp backend\services\native\audio_peak_service.cpp backend\services\native\radio_service.cpp /Fe:build\bin\vintaservices.dll /link /MACHINE:X64 WindowsApp.lib Ole32.lib OleAut32.lib RuntimeObject.lib Advapi32.lib User32.lib
+cmake --build build\native --config Release
 if errorlevel 1 (
     echo Native C++/WinRT compilation failed.
-    exit /b 1
+    exit /b !ERRORLEVEL!
 )
-if exist "backend\services\native\*.obj" del /Q "backend\services\native\*.obj"
-if exist "build\bin\*.exp" del /Q "build\bin\*.exp"
 echo Native C++/WinRT bridge built successfully.
 exit /b 0
 

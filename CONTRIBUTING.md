@@ -109,26 +109,60 @@ Vinta uses a tokenized CSS variable system so that all UI components adapt clean
 4. **Register Theme Option**: Add your theme definition to `AppTheme` in `frontend/src/store.ts` and append `{ label: 'My Theme', value: 'mytheme' }` to `themeOptions` in `frontend/src/pages/SettingsPage.svelte`.
 5. **Verify Design Guidelines**: Ensure components consume `var(--c-token)` variables without hardcoded hex values (see [docs/DESIGN.md](docs/DESIGN.md)).
 
-## Helper Scripts & Debugging
+## Developer Setup & Build Workflows
 
-Use `.\scripts.bat` in your terminal for development, testing, and debugging workflows:
+### 1. First-Time Environment Setup
 
-- `.\scripts.bat dev`: Runs the live development server with hot reloading and developer debug tools automatically enabled.
-- `.\scripts.bat run`: Builds the application and launches `Vinta.exe` in standard production mode.
-- `.\scripts.bat run debug`: Builds and launches `Vinta.exe` with developer debug tools and hotkeys enabled.
-- `.\scripts.bat run no_build`: Launches the pre-built `Vinta.exe` directly without rebuilding.
-- `.\scripts.bat run no_build debug`: Launches the pre-built executable with debug mode enabled.
-- `.\scripts.bat build`: Compiles the release binary to `build/bin/Vinta.exe`.
-- `.\scripts.bat test`: Runs test suite checks with the DevTest panel.
-- `.\scripts.bat lint`: Runs Go formatting, `golangci-lint`, and frontend type-checking/linters.
+Run the bootstrap setup script to install dependencies, configure CMake, and download the `task` CLI:
+
+```powershell
+# First-time repo bootstrap (installs task, frontend/go packages, and native CMake tree)
+.\scripts.bat setup
+```
+
+To verify that all compilers, runtimes, and SDKs are properly recognized:
+
+```powershell
+# Using Taskfile (recommended)
+task doctor
+
+# Or using scripts.bat as a fallback
+.\scripts.bat doctor
+```
+
+If any core system toolchain (Go, Node.js, Wails CLI, CMake, Ninja, or MSVC Build Tools) is missing, you can install them automatically using `winget`:
+
+```powershell
+# Automated toolchain installation via winget
+powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1 -InstallTools
+```
+
+### 2. Daily Development Commands
+
+Vinta uses **[go-task / Taskfile](https://taskfile.dev)** as its primary, standard development orchestrator. The `.\scripts.bat` file is maintained as a **fallback wrapper** if `task` is not installed or not running as expected.
+
+| Taskfile Command (Standard) | Batch Command (Fallback) | Description |
+| :--- | :--- | :--- |
+| `task dev` | `.\scripts.bat dev` | Runs live development server with hot reload and DevTest panel |
+| `task dev:nobuild` | `.\scripts.bat dev no_build` | Runs dev server without rebuilding the native C++ DLL |
+| `task run` | `.\scripts.bat run` | Compiles release binary and runs `Vinta.exe` in production mode |
+| `task run:debug` | `.\scripts.bat run debug` | Compiles release binary and runs `Vinta.exe` with debug hotkeys enabled |
+| `task run:nobuild` | `.\scripts.bat run no_build` | Launches pre-built executable directly without rebuilding |
+| `task run:nobuild:debug` | `.\scripts.bat run no_build debug` | Launches pre-built executable directly with debug hotkeys enabled |
+| `task build` | `.\scripts.bat build` | Compiles release binary to `build/bin/Vinta.exe` |
+| `task test` | `.\scripts.bat test` | Compiles and launches test suite binary with DevTest panel |
+| `task lint` | `.\scripts.bat lint` | Runs Go formatting, `golangci-lint`, and frontend type/style checks |
+| `task doctor` | `.\scripts.bat doctor` | Diagnoses environment toolchains, runtimes, and SDKs |
+| `task setup` | `.\scripts.bat setup` | Installs npm dependencies, downloads Go modules, and configures CMake |
+| `task help` | `task --list` | Displays available tasks and quick descriptions |
 
 ### Developer Debug Hotkeys
 
-When running in `dev` mode or launched via `.\scripts.bat run debug`:
+When running in `dev` mode or launched with debug flags (`task run:debug` or `task run:nobuild:debug`):
 - **`Ctrl + Shift + D`** (or **`Ctrl + Alt + B`**): Toggles the physical Win32 window clipping region (`SetWindowRgn`) highlight overlay in real-time.
 - **`Ctrl + Shift + L`** (or **`Ctrl + Alt + L`**): Toggles verbose console logging for window bounds and IPC communication.
 
-Please remember to run `.\scripts.bat lint` before opening a Pull Request.
+Please remember to run `task lint` before opening a Pull Request.
 
 ## Working on Issues & Claim Workflow
 
@@ -154,6 +188,6 @@ You do not need to write code to contribute! Testing is just as important:
 
 1. Fork the repository and create your branch from `main`.
 2. Make your changes using the rules in [docs/DESIGN.md](docs/DESIGN.md).
-3. Run `.\scripts.bat lint` and test your work.
+3. Run `task lint` (or `.\scripts.bat lint`) and test your work.
 4. Fill out the PR template in `.github/PULL_REQUEST_TEMPLATE.md`.
 5. Maintainers will review your PR and assign your contributor role upon merge.

@@ -58,10 +58,12 @@ vite.config.ts.timestamp-*
 .env.production.local
 
 # -------------------------------------------------------------------
-# Wails Specific
+# Wails Specific & Native Build Outputs
 # -------------------------------------------------------------------
+.task/
 build/bin/
 build/obj/
+build/native/
 dist/
 frontend/dist/
 frontend/wailsjs/
