@@ -46,24 +46,25 @@ Inspired by this heritage, Vinta brings that same fluid grace to your desktop in
 
 ## Development Setup
 
-Prerequisites: **Go 1.24+**, **Node.js 20+**, and **Wails v2 CLI**.
+Prerequisites: **Go 1.24+**, **Node.js 20+**, **Wails v2 CLI**, **CMake**, and **MSVC C++ Build Tools**.
 
 ```powershell
 # 1. Clone repository
 git clone https://github.com/kuraigu/Vinta.git
 cd Vinta
 
-# 2. Run live-reloading development server
-.\scripts.bat dev
+# 2. First-time setup (installs Taskfile, dependencies, and configures native build)
+.\scripts.bat setup
 
-# 3. Check linting and formatting
-.\scripts.bat lint
-
-# 4. Build release executable
-.\scripts.bat build
+# 3. Daily development with Taskfile (recommended)
+task dev      # Run live-reloading development server with DevTest panel
+task run      # Compile and launch release binary
+task lint     # Check formatting, Go linting, and TypeScript checks
+task build    # Build production executable to build/bin/Vinta.exe
 ```
 
-The compiled executable will be saved to `build/bin/Vinta.exe`. Refer to [CONTRIBUTING.md](CONTRIBUTING.md) for full developer documentation.
+> [!TIP]
+> **Taskfile Standard:** All daily development tasks should be run using **[go-task / Taskfile](https://taskfile.dev)** (`task dev`, `task run`, `task lint`, `task doctor`). The `.\scripts.bat` wrapper is provided primarily for **first-time setup (`.\scripts.bat setup`)** and as a **fallback** if `task` is not yet installed or not running as expected. Refer to [CONTRIBUTING.md](CONTRIBUTING.md) for full documentation.
 
 ---
 

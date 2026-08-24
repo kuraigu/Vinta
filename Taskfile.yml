@@ -1,0 +1,117 @@
+# https://taskfile.dev
+version: '3'
+
+vars:
+  APP_NAME: Vinta
+  BUILD_DIR: 'build/bin'
+
+tasks:
+  default:
+    desc: List all available development and build tasks
+    cmds:
+      - task --list
+
+  help:
+    desc: Show help and list available tasks
+    cmds:
+      - task --list
+    silent: true
+
+  doctor:
+    desc: Check development environment toolchains, SDKs, and dependencies
+    cmds:
+      - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/doctor.ps1
+    silent: true
+
+  setup:
+    desc: Install dependencies, configure CMake build tree, and download Go modules
+    cmds:
+      - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/setup.ps1
+    silent: false
+
+  kill:
+    desc: Terminate any running Vinta application processes
+    cmds:
+      - cmd.exe /c "taskkill /IM Vinta.exe /F >nul 2>&1 || exit 0"
+    silent: true
+
+  build:native:
+    desc: Build native C++/WinRT bridge DLL using CMake and MSVC
+    sources:
+      - 'backend/services/native/**/*.{cpp,h}'
+      - 'backend/services/native/CMakeLists.txt'
+    generates:
+      - 'backend/services/vintaservices.dll'
+      - 'build/bin/vintaservices.dll'
+    cmds:
+      - powershell.exe -NoProfile -Command "if (-not (Test-Path build/native)) { cmake -B build/native -S backend/services/native }; cmake --build build/native --config Release"
+
+  dev:
+    desc: Start live development server (Vite + Wails) with DevTest panel enabled
+    deps: [build:native]
+    cmds:
+      - cmd.exe /c "taskkill /IM Vinta.exe /F >nul 2>&1 || exit 0"
+      - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/increment_build.ps1
+      - wails dev -tags devtest
+
+  dev:nobuild:
+    desc: Start live development server without rebuilding native C++ DLL
+    cmds:
+      - cmd.exe /c "taskkill /IM Vinta.exe /F >nul 2>&1 || exit 0"
+      - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/increment_build.ps1
+      - wails dev -tags devtest
+
+  build:
+    desc: Build production executable and bundle assets
+    deps: [build:native]
+    cmds:
+      - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/increment_build.ps1
+      - wails build
+
+  run:
+    desc: Compile and run standalone binary
+    deps: [build:native]
+    cmds:
+      - cmd.exe /c "taskkill /IM Vinta.exe /F >nul 2>&1 || exit 0"
+      - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/increment_build.ps1
+      - wails build
+      - powershell.exe -NoProfile -Command "Start-Process 'build/bin/Vinta.exe'"
+
+  run:debug:
+    desc: Compile and run standalone binary with debug flags
+    deps: [build:native]
+    cmds:
+      - cmd.exe /c "taskkill /IM Vinta.exe /F >nul 2>&1 || exit 0"
+      - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/increment_build.ps1
+      - wails build
+      - powershell.exe -NoProfile -Command "Start-Process 'build/bin/Vinta.exe' -ArgumentList '-debug'"
+
+  run:nobuild:
+    desc: Launch pre-built binary directly without rebuilding
+    cmds:
+      - cmd.exe /c "taskkill /IM Vinta.exe /F >nul 2>&1 || exit 0"
+      - powershell.exe -NoProfile -Command "Start-Process 'build/bin/Vinta.exe'"
+
+  run:nobuild:debug:
+    desc: Launch pre-built binary directly with debug flags
+    cmds:
+      - cmd.exe /c "taskkill /IM Vinta.exe /F >nul 2>&1 || exit 0"
+      - powershell.exe -NoProfile -Command "Start-Process 'build/bin/Vinta.exe' -ArgumentList '-debug'"
+
+  test:
+    desc: Build and launch test suite binary with DevTest panel
+    deps: [build:native]
+    cmds:
+      - cmd.exe /c "taskkill /IM Vinta.exe /F >nul 2>&1 || exit 0"
+      - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/increment_build.ps1
+      - wails build -tags devtest
+      - powershell.exe -NoProfile -Command "Start-Process 'build/bin/Vinta.exe'"
+
+  lint:
+    desc: Run Go formatting, golangci-lint, and frontend TypeScript/ESLint/Prettier checks
+    cmds:
+      - echo "Running Go Lint..."
+      - gofmt -w .
+      - golangci-lint run
+      - echo "Running Frontend Lint..."
+      - cmd.exe /c "cd frontend && npm run check && npm run lint && npm run format"
