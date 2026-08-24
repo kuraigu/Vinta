@@ -27,6 +27,10 @@ BRIDGE_API void StopNativeWinRTServices(void);
 
 BRIDGE_API int SendNativeMediaCommand(const char* command);
 
+BRIDGE_API int SetNativeRadioState(int radioKind, int targetState);
+
+BRIDGE_API int GetNativeRadiosStatus(char* outJson, int maxLen);
+
 #ifdef __cplusplus
 }
 #endif

@@ -18,7 +18,8 @@
     Settings,
     Info,
     Search,
-    FileText
+    FileText,
+    SlidersHorizontal
   } from 'lucide-svelte'
   import HomePage, { config as homeConfig } from './HomePage.svelte'
   import NotificationPage, {
@@ -27,6 +28,9 @@
   import MediaPage, { config as mediaConfig } from './MediaPage.svelte'
   import SettingsPage, { config as settingsConfig } from './SettingsPage.svelte'
   import NotesPage, { config as notesConfig } from './NotesPage.svelte'
+  import ActionCenterPage, {
+    config as actionCenterConfig
+  } from './ActionCenterPage.svelte'
   import ScrollView from '../components/ScrollView.svelte'
   import {
     notifData,
@@ -66,6 +70,15 @@
       icon: House,
       color: 'gradient-green',
       action: () => openApp(HomePage, homeConfig)
+    },
+    {
+      id: 'actioncenter',
+      name: 'Action Center',
+      desc: 'Quick Controls',
+      icon: SlidersHorizontal,
+      color: 'gradient-indigo',
+      visibilityKey: 'actioncenter',
+      action: () => openApp(ActionCenterPage, actionCenterConfig)
     },
     {
       id: 'notes',

@@ -330,13 +330,15 @@ export interface HomeWidgetsVisibility {
   calendar: boolean
   weather: boolean
   battery: boolean
+  wireless: boolean
 }
 
 export const defaultHomeWidgetsVisibility: HomeWidgetsVisibility = {
   clock: true,
   calendar: true,
   weather: true,
-  battery: true
+  battery: true,
+  wireless: true
 }
 
 export const homeWidgetsVisibilityStore =
@@ -345,16 +347,57 @@ export const homeWidgetsVisibilityStore =
     defaultHomeWidgetsVisibility
   )
 
+export interface WirelessData {
+  hasWifi: boolean
+  wifiEnabled: boolean
+  wifiConnected: boolean
+  wifiSsid: string
+  wifiSignal: number // 0-100
+
+  hasBluetooth: boolean
+  bluetoothEnabled: boolean
+  bluetoothConnected: boolean
+  bluetoothDeviceName: string
+  bluetoothBattery?: number
+
+  airplaneMode: boolean
+}
+
+export const defaultWirelessData: WirelessData = {
+  hasWifi: true,
+  wifiEnabled: true,
+  wifiConnected: true,
+  wifiSsid: 'Wi-Fi',
+  wifiSignal: 85,
+
+  hasBluetooth: false, // Default to false unless hardware present or simulated
+  bluetoothEnabled: false,
+  bluetoothConnected: false,
+  bluetoothDeviceName: '',
+  bluetoothBattery: undefined,
+
+  airplaneMode: false
+}
+
+export const wirelessDataStore = persistentWritable<WirelessData>(
+  'vinta_wireless_data',
+  defaultWirelessData
+)
+
+export const isSimulatingWirelessStore = writable<boolean>(false)
+
 export interface PageVisibility {
   notes: boolean
   media: boolean
   notifications: boolean
+  actioncenter: boolean
 }
 
 export const defaultPageVisibility: PageVisibility = {
   notes: true,
   media: true,
-  notifications: true
+  notifications: true,
+  actioncenter: true
 }
 
 export const pageVisibilityStore = persistentWritable<PageVisibility>(
@@ -367,22 +410,26 @@ export const activePageIdStore = writable<string>('home')
 
 export function calculateHomeMinimalWidth(
   visibility: HomeWidgetsVisibility,
-  hasBattery: boolean = true
+  hasBattery: boolean = true,
+  hasWireless: boolean = true
 ): number {
   const isClockActive = visibility.clock
   const isBatteryActive = visibility.battery && hasBattery
+  const isWirelessActive = visibility.wireless && hasWireless
   const isWeatherActive = visibility.weather
   const isCalendarActive = visibility.calendar
 
   const activeSlots: number[] = []
 
-  // Slot 1: Device Status Cluster (Battery + Clock)
-  if (isClockActive && isBatteryActive) {
-    activeSlots.push(34 + 6 + 82) // Battery Icon
-  } else if (isClockActive) {
-    activeSlots.push(82)
-  } else if (isBatteryActive) {
-    activeSlots.push(34)
+  // Slot 1: Device Status Cluster (Wireless + Battery + Clock)
+  let statusClusterWidth = 0
+  if (isWirelessActive) statusClusterWidth += 15
+  if (isBatteryActive)
+    statusClusterWidth += (statusClusterWidth > 0 ? 3 : 0) + 25
+  if (isClockActive) statusClusterWidth += (statusClusterWidth > 0 ? 3 : 0) + 82
+
+  if (statusClusterWidth > 0) {
+    activeSlots.push(statusClusterWidth)
   }
 
   // Slot 2: Weather

@@ -2,6 +2,7 @@
 #include "notification_service.h"
 #include "media_service.h"
 #include "audio_peak_service.h"
+#include "radio_service.h"
 
 static bool g_bridgeRunning = false;
 
@@ -32,3 +33,12 @@ extern "C" BRIDGE_API void StopNativeWinRTServices(void) {
 extern "C" BRIDGE_API int SendNativeMediaCommand(const char* command) {
     return ExecuteMediaCommand(command);
 }
+
+extern "C" BRIDGE_API int SetNativeRadioState(int radioKind, int targetState) {
+    return SetRadioState(radioKind, targetState);
+}
+
+extern "C" BRIDGE_API int GetNativeRadiosStatus(char* outJson, int maxLen) {
+    return GetRadiosStateJson(outJson, maxLen);
+}
+
