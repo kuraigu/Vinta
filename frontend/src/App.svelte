@@ -7,7 +7,8 @@
     IsTestMode,
     FocusWindow,
     Quit,
-    GetBatteryStatus
+    GetBatteryStatus,
+    GetWirelessStatus
   } from '../wailsjs/go/backend/App.js'
   import { EventsOn, LogFatal, LogInfo } from '../wailsjs/runtime/runtime.js'
   import NotificationPage, {
@@ -53,10 +54,13 @@
     calculateHomeMinimalWidth,
     batteryDataStore,
     isSimulatingBatteryStore,
+    wirelessDataStore,
+    isSimulatingWirelessStore,
     devPinnedStore,
     devTestingStore,
     activePageIdStore,
-    type BatteryData
+    type BatteryData,
+    type WirelessData
   } from './store'
   import { preloadIcons, findAppIconConflicts } from './appIcons'
   import { debugBoundsOverlay, debugLogs } from './devtest/debugConfig'
@@ -753,9 +757,25 @@
     updateBattery()
     const batteryInterval = window.setInterval(updateBattery, 8000)
 
+    const updateWireless = () => {
+      if (get(isSimulatingWirelessStore)) return
+      if (typeof GetWirelessStatus === 'function') {
+        GetWirelessStatus()
+          .then((status) => {
+            if (status && !get(isSimulatingWirelessStore)) {
+              wirelessDataStore.set(status as unknown as WirelessData)
+            }
+          })
+          .catch(() => {})
+      }
+    }
+    updateWireless()
+    const wirelessInterval = window.setInterval(updateWireless, 10000)
+
     return () => {
       stopInertia()
       window.clearInterval(batteryInterval)
+      window.clearInterval(wirelessInterval)
       window.removeEventListener('contextmenu', disableGlobalContextMenu)
       window.removeEventListener('vinta-overlay', handleOverlayChange)
       window.removeEventListener('vinta-quit', handleQuit)

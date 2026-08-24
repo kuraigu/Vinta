@@ -1,6 +1,7 @@
 package services
 
 import (
+	"os/exec"
 	"syscall"
 	"unsafe"
 )
@@ -87,4 +88,21 @@ func GetBatteryStatus() BatteryStatus {
 		LifeTimeSeconds: lifeTime,
 		State:           state,
 	}
+}
+
+// SetBatterySaver toggles Windows Battery Saver threshold (100% to force ON, 20% default to restore).
+func SetBatterySaver(enabled bool) bool {
+	val := "20"
+	if enabled {
+		val = "100"
+	}
+	cmd1 := exec.Command("powercfg", "/setdcvalueindex", "SCHEME_CURRENT", "SUB_ENERGYSAVER", "ESBATTTHRESHOLD", val)
+	cmd1.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	_ = cmd1.Run()
+
+	cmd2 := exec.Command("powercfg", "/setactive", "SCHEME_CURRENT")
+	cmd2.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	_ = cmd2.Run()
+
+	return true
 }

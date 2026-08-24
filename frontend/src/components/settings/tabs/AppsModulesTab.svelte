@@ -1,5 +1,12 @@
 <script lang="ts">
-  import { FileText, Music, Bell, Layers, AlertCircle } from 'lucide-svelte'
+  import {
+    FileText,
+    Music,
+    Bell,
+    Layers,
+    AlertCircle,
+    SlidersHorizontal
+  } from 'lucide-svelte'
   import SettingItem from '../SettingItem.svelte'
   import {
     pageVisibilityStore,
@@ -29,6 +36,7 @@
     ($homeWidgetsVisibilityStore.clock ? 1 : 0) +
       ($homeWidgetsVisibilityStore.calendar ? 1 : 0) +
       ($homeWidgetsVisibilityStore.weather ? 1 : 0) +
+      ($homeWidgetsVisibilityStore.wireless ? 1 : 0) +
       (isBatteryActive ? 1 : 0)
   )
 
@@ -40,6 +48,9 @@
   )
   let isWeatherLocked = $derived(
     $homeWidgetsVisibilityStore.weather && activeHomeCount <= 1
+  )
+  let isWirelessLocked = $derived(
+    $homeWidgetsVisibilityStore.wireless && activeHomeCount <= 1
   )
   let isBatteryLocked = $derived(
     hasBattery && $homeWidgetsVisibilityStore.battery && activeHomeCount <= 1
@@ -78,6 +89,21 @@
   </div>
 
   <div class="setting-group">
+    <SettingItem
+      label="Action Center"
+      description="Quick wireless toggles, Bluetooth devices, battery status, and airplane mode"
+      icon={SlidersHorizontal}
+    >
+      <label class="toggle-switch">
+        <input
+          type="checkbox"
+          checked={$pageVisibilityStore.actioncenter}
+          onchange={() => togglePage('actioncenter')}
+        />
+        <span class="slider"></span>
+      </label>
+    </SettingItem>
+
     <SettingItem
       label="Now Playing / Media"
       description="System media playback controls and audio peak visualizer"
@@ -287,6 +313,44 @@
         </div>
       </SettingItem>
       {#if isBatteryLocked && shakeKey === 'battery'}
+        <div class="locked-warning">
+          <AlertCircle size={12} />
+          <span>At least one widget must remain visible on the home island</span
+          >
+        </div>
+      {/if}
+    </div>
+
+    <!-- Wireless & Connectivity Widget -->
+    <div class="item-wrapper" class:shake={shakeKey === 'wireless'}>
+      <SettingItem
+        label="Wireless & Connectivity"
+        description="Wi-Fi signal, Bluetooth devices, and Airplane mode status capsule"
+      >
+        <div
+          class="toggle-container"
+          class:locked={isWirelessLocked}
+          title={isWirelessLocked
+            ? 'At least one widget must remain visible on the home island'
+            : ''}
+          role="button"
+          tabindex="0"
+          onclick={() => isWirelessLocked && triggerShake('wireless')}
+          onkeydown={(e) =>
+            e.key === 'Enter' && isWirelessLocked && triggerShake('wireless')}
+        >
+          <label class="toggle-switch" class:disabled-switch={isWirelessLocked}>
+            <input
+              type="checkbox"
+              checked={$homeWidgetsVisibilityStore.wireless}
+              disabled={isWirelessLocked}
+              onchange={() => toggleHomeWidget('wireless')}
+            />
+            <span class="slider"></span>
+          </label>
+        </div>
+      </SettingItem>
+      {#if isWirelessLocked && shakeKey === 'wireless'}
         <div class="locked-warning">
           <AlertCircle size={12} />
           <span>At least one widget must remain visible on the home island</span

@@ -654,6 +654,31 @@ func (a *App) GetBatteryStatus() services.BatteryStatus {
 	return services.GetBatteryStatus()
 }
 
+// SetBatterySaver updates the system battery saver mode threshold.
+func (a *App) SetBatterySaver(enabled bool) bool {
+	return services.SetBatterySaver(enabled)
+}
+
+// GetWirelessStatus returns current wireless connectivity and Wi-Fi signal status from the services layer.
+func (a *App) GetWirelessStatus() services.WirelessStatus {
+	return services.GetWirelessStatus()
+}
+
+// SetWifiEnabled toggles the system Wi-Fi radio.
+func (a *App) SetWifiEnabled(enabled bool) bool {
+	return services.SetWifiEnabled(enabled)
+}
+
+// SetBluetoothEnabled toggles the system Bluetooth radio.
+func (a *App) SetBluetoothEnabled(enabled bool) bool {
+	return services.SetBluetoothEnabled(enabled)
+}
+
+// SetAirplaneMode toggles the system Airplane mode.
+func (a *App) SetAirplaneMode(enabled bool) bool {
+	return services.SetAirplaneMode(enabled)
+}
+
 // GetHardwareAccelerationConfig reads stored GPU acceleration setting from user config dir.
 func GetHardwareAccelerationConfig() bool {
 	configDir, err := os.UserConfigDir()
@@ -837,6 +862,26 @@ func (a *App) OpenNotesFolder() error {
 		return err
 	}
 	return exec.Command("explorer.exe", dir).Start()
+}
+
+// OpenWindowsSettings opens Windows system settings pages or flyouts.
+func (a *App) OpenWindowsSettings(target string) error {
+	var uri string
+	switch target {
+	case "wifi":
+		uri = "ms-settings:network-wifi"
+	case "network":
+		uri = "ms-availablenetworks:"
+	case "bluetooth":
+		uri = "ms-settings:bluetooth"
+	case "battery":
+		uri = "ms-settings:batterysaver"
+	case "airplane":
+		uri = "ms-settings:network-airplanemode"
+	default:
+		uri = "ms-settings:"
+	}
+	return exec.Command("rundll32", "url.dll,FileProtocolHandler", uri).Start()
 }
 
 // GetSettings reads settings.json from %APPDATA%/FreeMatrix Studios/Vinta.

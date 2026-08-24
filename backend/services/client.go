@@ -21,6 +21,8 @@ var (
 	procStartNativeWinRTServices uintptr
 	procStopNativeWinRTServices  uintptr
 	procSendNativeMediaCommand   uintptr
+	procSetNativeRadioState      uintptr
+	procGetNativeRadiosStatus    uintptr
 
 	mediaCallbackPtr uintptr
 	notifCallbackPtr uintptr
@@ -30,6 +32,27 @@ var (
 	serviceMu sync.Mutex
 	isStarted bool
 )
+
+func ensureDLLLoadedLocked() bool {
+	if dllHandle != 0 {
+		return true
+	}
+	dllPath := findDLLPath()
+	if dllPath == "" {
+		return false
+	}
+	handle, err := syscall.LoadLibrary(dllPath)
+	if err != nil {
+		return false
+	}
+	dllHandle = handle
+	procStartNativeWinRTServices, _ = syscall.GetProcAddress(dllHandle, "StartNativeWinRTServices")
+	procStopNativeWinRTServices, _ = syscall.GetProcAddress(dllHandle, "StopNativeWinRTServices")
+	procSendNativeMediaCommand, _ = syscall.GetProcAddress(dllHandle, "SendNativeMediaCommand")
+	procSetNativeRadioState, _ = syscall.GetProcAddress(dllHandle, "SetNativeRadioState")
+	procGetNativeRadiosStatus, _ = syscall.GetProcAddress(dllHandle, "GetNativeRadiosStatus")
+	return true
+}
 
 // StartServicesListener initializes the native C++/WinRT in-process bridge.
 func StartServicesListener(ctx context.Context) {
@@ -42,39 +65,15 @@ func StartServicesListener(ctx context.Context) {
 
 	wailsCtx = ctx
 
-	dllPath := findDLLPath()
-	if dllPath == "" {
-		logMsg("vintaservices.dll not found; media/notification services disabled")
+	if !ensureDLLLoadedLocked() {
+		logMsg("vintaservices.dll not found; native WinRT services disabled")
 		return
 	}
 
-	handle, err := syscall.LoadLibrary(dllPath)
-	if err != nil {
-		logMsg(fmt.Sprintf("Failed to load %s: %v", dllPath, err))
+	if procStartNativeWinRTServices == 0 {
+		logMsg("Failed to find StartNativeWinRTServices proc")
 		return
 	}
-	dllHandle = handle
-
-	procStart, err := syscall.GetProcAddress(dllHandle, "StartNativeWinRTServices")
-	if err != nil {
-		logMsg("Failed to find StartNativeWinRTServices proc: " + err.Error())
-		return
-	}
-	procStartNativeWinRTServices = procStart
-
-	procStop, err := syscall.GetProcAddress(dllHandle, "StopNativeWinRTServices")
-	if err != nil {
-		logMsg("Failed to find StopNativeWinRTServices proc: " + err.Error())
-		return
-	}
-	procStopNativeWinRTServices = procStop
-
-	procCmd, err := syscall.GetProcAddress(dllHandle, "SendNativeMediaCommand")
-	if err != nil {
-		logMsg("Failed to find SendNativeMediaCommand proc: " + err.Error())
-		return
-	}
-	procSendNativeMediaCommand = procCmd
 
 	mediaCallbackPtr = syscall.NewCallback(onNativeMedia)
 	notifCallbackPtr = syscall.NewCallback(onNativeNotification)
@@ -111,6 +110,11 @@ func StopServicesListener() {
 	if dllHandle != 0 {
 		_ = syscall.FreeLibrary(dllHandle)
 		dllHandle = 0
+		procStartNativeWinRTServices = 0
+		procStopNativeWinRTServices = 0
+		procSendNativeMediaCommand = 0
+		procSetNativeRadioState = 0
+		procGetNativeRadiosStatus = 0
 	}
 
 	isStarted = false
@@ -120,6 +124,10 @@ func StopServicesListener() {
 // SendMediaControl dispatches an action directly to the native GSMTC media controller.
 func SendMediaControl(action string) {
 	serviceMu.Lock()
+	if !ensureDLLLoadedLocked() {
+		serviceMu.Unlock()
+		return
+	}
 	proc := procSendNativeMediaCommand
 	serviceMu.Unlock()
 
@@ -129,6 +137,48 @@ func SendMediaControl(action string) {
 
 	cmdBytes := append([]byte(action), 0)
 	_, _, _ = syscall.SyscallN(proc, uintptr(unsafe.Pointer(&cmdBytes[0])))
+}
+
+// SetNativeRadioState sends radio state request to vintaservices.dll.
+// radioKind: 1 = WiFi, 2 = MobileBroadband, 3 = Bluetooth, 255 = All (Airplane Mode)
+// targetState: 1 = On, 2 = Off
+func SetNativeRadioState(radioKind int, targetState int) bool {
+	serviceMu.Lock()
+	if !ensureDLLLoadedLocked() {
+		serviceMu.Unlock()
+		return false
+	}
+	proc := procSetNativeRadioState
+	serviceMu.Unlock()
+
+	if proc == 0 {
+		return false
+	}
+
+	ret, _, _ := syscall.SyscallN(proc, uintptr(radioKind), uintptr(targetState))
+	return ret == 1
+}
+
+// GetNativeRadiosStatus queries radio states from vintaservices.dll.
+func GetNativeRadiosStatus() (string, bool) {
+	serviceMu.Lock()
+	if !ensureDLLLoadedLocked() {
+		serviceMu.Unlock()
+		return "", false
+	}
+	proc := procGetNativeRadiosStatus
+	serviceMu.Unlock()
+
+	if proc == 0 {
+		return "", false
+	}
+
+	buf := make([]byte, 1024)
+	ret, _, _ := syscall.SyscallN(proc, uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)))
+	if ret == 1 {
+		return windows.BytePtrToString(&buf[0]), true
+	}
+	return "", false
 }
 
 func onNativeMedia(cStr *byte) uintptr {

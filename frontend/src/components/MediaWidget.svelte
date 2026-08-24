@@ -370,7 +370,7 @@
         {/if}
       </div>
 
-      <!-- Minimal Re-used <Clock>, Bouncing Equalizer & Subtle Notification Indicator / Battery Indicator -->
+      <!-- Minimal Re-used <Clock>, Bouncing Equalizer, Notification Indicator & Battery Indicator -->
       <div class="minimal-right-meta">
         {#if $notifData.length > 0}
           <button
@@ -386,7 +386,8 @@
               >{$notifData.length > 9 ? '9+' : $notifData.length}</span
             >
           </button>
-        {:else if $homeWidgetsVisibilityStore.battery && hasBattery}
+        {/if}
+        {#if $homeWidgetsVisibilityStore.battery && hasBattery}
           <BatteryWidget />
         {/if}
         <div class="minimal-clock-box">

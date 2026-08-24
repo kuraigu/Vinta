@@ -13,7 +13,7 @@ if %ERRORLEVEL% neq 0 (
 )
 
 pushd "%ROOT_DIR%"
-cl.exe /nologo /std:c++20 /EHa /O2 /LD backend\services\native\winrt_bridge.cpp backend\services\native\notification_service.cpp backend\services\native\media_service.cpp backend\services\native\audio_peak_service.cpp /Fe:backend\services\vintaservices.dll /link /MACHINE:X64 WindowsApp.lib Ole32.lib OleAut32.lib RuntimeObject.lib Advapi32.lib User32.lib
+cl.exe /nologo /std:c++20 /EHa /O2 /LD backend\services\native\winrt_bridge.cpp backend\services\native\notification_service.cpp backend\services\native\media_service.cpp backend\services\native\audio_peak_service.cpp backend\services\native\radio_service.cpp /Fe:backend\services\vintaservices.dll /link /MACHINE:X64 WindowsApp.lib Ole32.lib OleAut32.lib RuntimeObject.lib Advapi32.lib User32.lib
 if %ERRORLEVEL% equ 0 (
     echo [OK] Built backend\services\vintaservices.dll successfully.
     if exist "build\bin" (

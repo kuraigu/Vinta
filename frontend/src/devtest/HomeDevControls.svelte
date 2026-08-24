@@ -1,9 +1,10 @@
 <script lang="ts">
-  import { CloudSun, BatteryCharging } from 'lucide-svelte'
+  import { CloudSun, BatteryCharging, Radio } from 'lucide-svelte'
   import WeatherDevControls from './WeatherDevControls.svelte'
   import BatteryDevControls from './BatteryDevControls.svelte'
+  import WirelessDevControls from './WirelessDevControls.svelte'
 
-  let activeTab = $state<'weather' | 'battery'>('battery')
+  let activeTab = $state<'battery' | 'wireless' | 'weather'>('battery')
 </script>
 
 <div class="home-dev-container">
@@ -14,7 +15,15 @@
       onclick={() => (activeTab = 'battery')}
     >
       <BatteryCharging size={12} />
-      <span>Battery & Power</span>
+      <span>Battery</span>
+    </button>
+    <button
+      class="subtab-btn"
+      class:active={activeTab === 'wireless'}
+      onclick={() => (activeTab = 'wireless')}
+    >
+      <Radio size={12} />
+      <span>Wireless & Status</span>
     </button>
     <button
       class="subtab-btn"
@@ -22,13 +31,15 @@
       onclick={() => (activeTab = 'weather')}
     >
       <CloudSun size={12} />
-      <span>Weather & Forecast</span>
+      <span>Weather</span>
     </button>
   </div>
 
   <div class="subtab-content">
     {#if activeTab === 'battery'}
       <BatteryDevControls />
+    {:else if activeTab === 'wireless'}
+      <WirelessDevControls />
     {:else}
       <WeatherDevControls />
     {/if}
@@ -57,9 +68,9 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    padding: 5px 8px;
-    font-size: 11px;
+    gap: 5px;
+    padding: 5px 6px;
+    font-size: 10.5px;
     font-weight: 600;
     color: var(--c-text-secondary);
     background: transparent;

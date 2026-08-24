@@ -57,19 +57,19 @@
   <div
     class="battery-pill-fill"
     style="width: {fillPercentage}%; background: {batteryFillColor}; border-radius: {fillPercentage >=
-    95
+    92
       ? '9999px'
       : '9999px 0 0 9999px'};"
   ></div>
 
   <div class="battery-pill-content">
     {#if !battery.hasBattery}
-      <Plug size={9} strokeWidth={2.4} class="battery-plug-icon" />
+      <Plug size={8.5} strokeWidth={2.8} class="battery-plug-icon" />
     {:else}
       {#if battery.isCharging}
-        <Zap size={7.5} strokeWidth={2.8} class="battery-status-icon" />
+        <Zap size={8} strokeWidth={3.2} class="battery-status-icon" />
       {:else if battery.batterySaver}
-        <Leaf size={7.5} strokeWidth={2.8} class="battery-status-icon" />
+        <Leaf size={8} strokeWidth={3.2} class="battery-status-icon" />
       {/if}
       <span class="battery-percent-num">{battery.percentage}</span>
     {/if}
@@ -79,12 +79,12 @@
 <style>
   .battery-capsule-minimal {
     position: relative;
-    height: 16px;
-    width: 34px;
-    min-width: 34px;
-    max-width: 34px;
+    height: 14px;
+    width: 29px;
+    min-width: 29px;
+    max-width: 29px;
     border-radius: 9999px;
-    background: rgba(255, 255, 255, 0.45);
+    background: rgba(255, 255, 255, 0.22);
     border: none;
     display: inline-flex;
     align-items: center;
@@ -118,16 +118,16 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 1.5px;
+    gap: 1px;
     line-height: 1;
     pointer-events: none;
-    transform: translateY(0.75px);
+    transform: translateY(0.2px);
   }
 
   .battery-percent-num {
-    font-size: 8.5px;
-    font-weight: 800;
-    letter-spacing: -0.2px;
+    font-size: 9px;
+    font-weight: 900;
+    letter-spacing: -0.3px;
     color: #0f172a;
     font-variant-numeric: tabular-nums;
     line-height: 1;

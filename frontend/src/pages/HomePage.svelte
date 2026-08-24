@@ -11,13 +11,11 @@
   import Clock from '../components/Clock.svelte'
   import Calendar from '../components/Calendar.svelte'
   import Weather from '../components/Weather.svelte'
-  import BatteryWidget from '../components/BatteryWidget.svelte'
+  import DeviceStatusWidget from '../components/DeviceStatusWidget.svelte'
   import ComponentGallery from '../components/ComponentGallery.svelte'
-  import { homeWidgetsVisibilityStore, batteryDataStore } from '../store'
+  import { homeWidgetsVisibilityStore } from '../store'
 
   let { expanded = false } = $props<{ expanded?: boolean }>()
-
-  let hasBattery = $derived($batteryDataStore.hasBattery)
 
   let availableSlides = $derived.by(() => {
     const list = []
@@ -72,16 +70,9 @@
 <div class="page-container">
   {#if !expanded}
     <div class="minimal-view">
-      {#if $homeWidgetsVisibilityStore.clock || ($homeWidgetsVisibilityStore.battery && hasBattery)}
-        <div class="minimal-slot status-cluster">
-          {#if $homeWidgetsVisibilityStore.battery && hasBattery}
-            <BatteryWidget />
-          {/if}
-          {#if $homeWidgetsVisibilityStore.clock}
-            <Clock expanded={false} />
-          {/if}
-        </div>
-      {/if}
+      <div class="minimal-slot">
+        <DeviceStatusWidget />
+      </div>
       {#if $homeWidgetsVisibilityStore.weather}
         <div class="minimal-slot">
           <Weather expanded={false} />
