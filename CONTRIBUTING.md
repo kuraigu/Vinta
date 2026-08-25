@@ -203,6 +203,6 @@ You do not need to write code to contribute! Testing is just as important:
 
 1. Fork the repository and create your branch from `main`.
 2. Make your changes using the rules in [docs/DESIGN.md](docs/DESIGN.md).
-3. Run `.\scripts.bat lint` and test your work.
+3. Run `task lint` (or `.\scripts.bat lint`) and test your work.
 4. Fill out the PR template in `.github/PULL_REQUEST_TEMPLATE.md`.
 5. Maintainers will review your PR and assign your contributor role upon merge.
