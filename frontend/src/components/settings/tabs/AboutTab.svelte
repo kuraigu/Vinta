@@ -1,7 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import {
-    Sparkles,
     Cpu,
     Layers,
     Code,
@@ -11,6 +10,7 @@
     Crown
   } from 'lucide-svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
+  import appIcon from '@appicon'
   import {
     GetAppInfo,
     GetContributors
@@ -87,7 +87,7 @@
 <div class="setting-group">
   <div class="about-hero-card">
     <div class="about-logo-wrapper">
-      <Sparkles size={20} />
+      <img src={appIcon} alt="Vinta" class="about-logo-img" />
     </div>
     <div class="about-hero-text">
       <div class="about-brand-row">
@@ -243,12 +243,17 @@
     width: 38px;
     height: 38px;
     border-radius: 10px;
-    background: linear-gradient(135deg, var(--c-primary, #6366f1), #a855f7);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #ffffff;
+    overflow: hidden;
     flex-shrink: 0;
+  }
+
+  .about-logo-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
   }
 
   .about-hero-text {

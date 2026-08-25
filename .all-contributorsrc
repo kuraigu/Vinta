@@ -39,6 +39,16 @@
         "founder",
         "contributor"
       ]
+    },
+    {
+      "login": "KnightCrawl",
+      "name": "Rico Salvador",
+      "avatar_url": "https://github.com/KnightCrawl.png",
+      "profile": "https://github.com/KnightCrawl",
+      "contributions": [
+        "maintainer",
+        "contributor"
+      ]
     }
   ],
   "commitConvention": "angular"

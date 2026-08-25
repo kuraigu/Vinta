@@ -47,7 +47,15 @@ type Contributor struct {
 	URL    string `json:"url"`
 }
 
-var cachedBuildTime string
+var (
+	cachedBuildTime        string
+	embeddedContributorsMD string
+)
+
+// SetEmbeddedContributors sets the fallback embedded contributors markdown data.
+func SetEmbeddedContributors(data string) {
+	embeddedContributorsMD = data
+}
 
 func initBuildMetadata() {
 	if BuildTime != "" && BuildTime != "Unknown" {
@@ -96,22 +104,25 @@ func (a *App) GetAppInfo() AppInfo {
 	}
 }
 
-// GetContributors dynamically reads and parses docs/CONTRIBUTORS.md to render the contributor list.
+// GetContributors dynamically parses the baked-in CONTRIBUTORS.md to render the contributor list.
 func (a *App) GetContributors() []Contributor {
 	var contributors []Contributor
 	seenMap := make(map[string]bool)
 
-	// Try reading docs/CONTRIBUTORS.md relative to executable or working directory
-	possiblePaths := []string{
-		filepath.Join(".", "docs", "CONTRIBUTORS.md"),
-		filepath.Join("..", "docs", "CONTRIBUTORS.md"),
-	}
+	// 1. Primary: Use baked-in embedded CONTRIBUTORS.md as the tamper-proof source of truth
+	content := embeddedContributorsMD
 
-	var content string
-	for _, p := range possiblePaths {
-		if b, err := os.ReadFile(p); err == nil {
-			content = string(b)
-			break
+	// 2. Dev Fallback: If running in raw unit test environments without main.go embedding
+	if content == "" {
+		possiblePaths := []string{
+			filepath.Join(".", "docs", "CONTRIBUTORS.md"),
+			filepath.Join("..", "docs", "CONTRIBUTORS.md"),
+		}
+		for _, p := range possiblePaths {
+			if b, err := os.ReadFile(p); err == nil && len(b) > 0 {
+				content = string(b)
+				break
+			}
 		}
 	}
 

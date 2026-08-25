@@ -24,10 +24,12 @@ Vinta is built using **Go + Wails v2 + Svelte 5**. The Go backend handles native
 ### Vinta Component vs Page
 
 #### Vinta Component
+
 - **What it is:** A reusable widget located in `frontend/src/components/`, such as `Clock.svelte`, `Weather.svelte`, `Calendar.svelte`, `MediaWidget.svelte`, or `BentoGrid.svelte`.
 - **How it works:** Components are designed to sit inside pages or carousels like `ComponentGallery.svelte`. They accept props such as `expanded` to adapt between minimal and expanded views.
 
 #### Vinta Page
+
 - **What it is:** A top-level view located in `frontend/src/pages/`, such as `HomePage.svelte`, `MediaPage.svelte`, `AppsPage.svelte`, `NotificationPage.svelte`, or `SettingsPage.svelte`.
 - **How it works:** Pages sit inside `App.svelte` and handle overall screen navigation, island height, and component layout.
 
@@ -81,88 +83,101 @@ Vinta uses a tokenized CSS variable system so that all UI components adapt clean
 
 1. **Create Theme CSS File**: Add a new `.css` file inside `frontend/src/themes/` (e.g. `mytheme.css`).
 2. **Define Theme Tokens**: Target the root selector `:root[data-theme='mytheme']` and declare all semantic design tokens:
+
    ```css
-   :root[data-theme='mytheme'] {
-     /* ACCENT COLORS */
-     --c-primary: #6366f1;
-     --c-danger: #ff3b30;
-     --c-warning: #ffcc00;
-     --c-success: #34c759;
-     --c-purple: #a78bfa;
+   :root[data-theme="mytheme"] {
+   	/* ACCENT COLORS */
+   	--c-primary: #6366f1;
+   	--c-danger: #ff3b30;
+   	--c-warning: #ffcc00;
+   	--c-success: #34c759;
+   	--c-purple: #a78bfa;
 
-     /* BACKGROUNDS & SURFACES */
-     --c-bg: rgba(15, 15, 20, 1);
-     --c-border: rgba(255, 255, 255, 0.1);
-     --c-hover: rgba(255, 255, 255, 0.08);
-     --c-item-bg: rgba(255, 255, 255, 0.05);
+   	/* BACKGROUNDS & SURFACES */
+   	--c-bg: rgba(15, 15, 20, 1);
+   	--c-border: rgba(255, 255, 255, 0.1);
+   	--c-hover: rgba(255, 255, 255, 0.08);
+   	--c-item-bg: rgba(255, 255, 255, 0.05);
 
-     /* TYPOGRAPHY */
-     --c-text-primary: #ffffff;
-     --c-text-secondary: #b0b0b0;
-     --c-text-muted: #888888;
+   	/* TYPOGRAPHY */
+   	--c-text-primary: #ffffff;
+   	--c-text-secondary: #b0b0b0;
+   	--c-text-muted: #888888;
 
-     /* MEDIA & AMBIENT SCRIM */
-     --c-scrim: rgba(0, 0, 0, 0.72);
+   	/* MEDIA & AMBIENT SCRIM */
+   	--c-scrim: rgba(0, 0, 0, 0.72);
    }
    ```
+
 3. **Import in `style.css`**: Add `@import './themes/mytheme.css';` at the top of `frontend/src/style.css`.
 4. **Register Theme Option**: Add your theme definition to `AppTheme` in `frontend/src/store.ts` and append `{ label: 'My Theme', value: 'mytheme' }` to `themeOptions` in `frontend/src/pages/SettingsPage.svelte`.
 5. **Verify Design Guidelines**: Ensure components consume `var(--c-token)` variables without hardcoded hex values (see [docs/DESIGN.md](docs/DESIGN.md)).
 
-## Developer Setup & Build Workflows
+## Developer Setup & Commands
 
-### 1. First-Time Environment Setup
+### 1. First-Time Setup
 
-Run the bootstrap setup script to install dependencies, configure CMake, and download the `task` CLI:
+Run the automated setup script to install dependencies, configure CMake, and download the `task` CLI:
 
 ```powershell
-# First-time repo bootstrap (installs task, frontend/go packages, and native CMake tree)
 .\scripts.bat setup
 ```
 
-To verify that all compilers, runtimes, and SDKs are properly recognized:
+To verify your environment toolchains:
 
 ```powershell
-# Using Taskfile (recommended)
 task doctor
-
-# Or using scripts.bat as a fallback
-.\scripts.bat doctor
+# Or: .\scripts.bat doctor
 ```
 
-If any core system toolchain (Go, Node.js, Wails CLI, CMake, Ninja, or MSVC Build Tools) is missing, you can install them automatically using `winget`:
+### 2. Development & Packaging Commands
 
-```powershell
-# Automated toolchain installation via winget
-powershell -ExecutionPolicy Bypass -File .\scripts\setup.ps1 -InstallTools
-```
+Vinta supports both **[go-task / Taskfile](https://taskfile.dev)** (recommended) and `.\scripts.bat`:
 
-### 2. Daily Development Commands
-
-Vinta uses **[go-task / Taskfile](https://taskfile.dev)** as its primary, standard development orchestrator. The `.\scripts.bat` file is maintained as a **fallback wrapper** if `task` is not installed or not running as expected.
-
-| Taskfile Command (Standard) | Batch Command (Fallback) | Description |
+| Task Command (Standard) | Batch Command (Fallback) | Description |
 | :--- | :--- | :--- |
 | `task dev` | `.\scripts.bat dev` | Runs live development server with hot reload and DevTest panel |
-| `task dev:nobuild` | `.\scripts.bat dev no_build` | Runs dev server without rebuilding the native C++ DLL |
+| `task dev:nobuild` | `.\scripts.bat dev no_build` | Runs dev server without rebuilding native C++ DLL |
 | `task run` | `.\scripts.bat run` | Compiles release binary and runs `Vinta.exe` in production mode |
 | `task run:debug` | `.\scripts.bat run debug` | Compiles release binary and runs `Vinta.exe` with debug hotkeys enabled |
 | `task run:nobuild` | `.\scripts.bat run no_build` | Launches pre-built executable directly without rebuilding |
 | `task run:nobuild:debug` | `.\scripts.bat run no_build debug` | Launches pre-built executable directly with debug hotkeys enabled |
 | `task build` | `.\scripts.bat build` | Compiles release binary to `build/bin/Vinta.exe` |
+| `task package:installer` | `wails build -nsis` | Compiles release binary and packages Windows NSIS installer |
 | `task test` | `.\scripts.bat test` | Compiles and launches test suite binary with DevTest panel |
 | `task lint` | `.\scripts.bat lint` | Runs Go formatting, `golangci-lint`, and frontend type/style checks |
 | `task doctor` | `.\scripts.bat doctor` | Diagnoses environment toolchains, runtimes, and SDKs |
-| `task setup` | `.\scripts.bat setup` | Installs npm dependencies, downloads Go modules, and configures CMake |
+| `task setup` | `.\scripts.bat setup` | Automated dependency installation and CMake configuration |
 | `task help` | `task --list` | Displays available tasks and quick descriptions |
 
 ### Developer Debug Hotkeys
 
-When running in `dev` mode or launched with debug flags (`task run:debug` or `task run:nobuild:debug`):
+When running in `dev` mode or launched via `.\scripts.bat run debug` (or `task run:debug`):
+
 - **`Ctrl + Shift + D`** (or **`Ctrl + Alt + B`**): Toggles the physical Win32 window clipping region (`SetWindowRgn`) highlight overlay in real-time.
 - **`Ctrl + Shift + L`** (or **`Ctrl + Alt + L`**): Toggles verbose console logging for window bounds and IPC communication.
 
-Please remember to run `task lint` before opening a Pull Request.
+Please remember to run `task lint` (or `.\scripts.bat lint`) before opening a Pull Request.
+
+## Maintainer Release Procedure
+
+Official releases are compiled on isolated GitHub Actions runners to ensure reproducible, tamper-proof builds:
+
+1. **Triggering a Release (Maintainers Only)**:
+   - Navigate to **Actions** > **Release Vinta** in the GitHub repository.
+   - Click **Run workflow**, specify the release tag (e.g. `v0.2.0`), and leave **Create as a Private Draft Release** checked.
+   - The workflow compiles the native DLL, builds the NSIS installer (`Vinta-Setup-vX.Y.Z-x64.exe`) and portable package (`Vinta-Portable-vX.Y.Z-x64.zip`), generates `SHA256SUMS.txt`, and cryptographically signs the build provenance.
+   - Inspect the private draft release on GitHub, download and test the assets, then click **Publish release** when ready.
+
+2. **Binary Verification (Optional for Developers & Package Managers)**:
+   - Anyone can cryptographically verify that an official `Vinta.exe` binary was compiled unmodified directly from the official commit:
+     ```bash
+     gh attestation verify Vinta.exe --owner kuraigu
+     ```
+   - Checksums can be verified using the attached `SHA256SUMS.txt`:
+     ```powershell
+     Get-FileHash Vinta-Setup-x64.exe -Algorithm SHA256
+     ```
 
 ## Working on Issues & Claim Workflow
 

@@ -47,6 +47,10 @@ if ($InstallTools) {
         Write-Host "Installing Wails CLI..." -ForegroundColor Cyan
         go install github.com/wailsapp/wails/v2/cmd/wails@latest
     }
+    if (-not (Get-Command "makensis" -ErrorAction SilentlyContinue)) {
+        Write-Host "Installing NSIS..." -ForegroundColor Cyan
+        winget install NSIS.NSIS --accept-source-agreements --accept-package-agreements
+    }
 }
 
 # 3. Install Frontend Node Packages

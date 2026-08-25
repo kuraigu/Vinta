@@ -19,8 +19,13 @@ var assets embed.FS
 //go:embed build/windows/icon.ico
 var icon []byte
 
+//go:embed docs/CONTRIBUTORS.md
+var contributorsMD string
+
 func main() {
 	defer backend.SetupPanicRecovery()
+
+	backend.SetEmbeddedContributors(contributorsMD)
 
 	// Create an instance of the app structure
 	app := backend.NewApp(icon)
