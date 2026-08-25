@@ -9,6 +9,7 @@ All contributors are recognized here and credited directly inside the Vinta desk
 |                                             Avatar                                             | Contributor                                                                | Role                   |
 | :--------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------- | :--------------------- |
 | <img src="https://github.com/kuraigu.png" width="48" height="48" style="border-radius: 50%" /> | **Innoh Reloza (DippedInSoju)**<br/>[@kuraigu](https://github.com/kuraigu) | Founder & Project Lead |
+| <img src="https://github.com/KnightCrawl.png" width="48" height="48" style="border-radius: 50%" /> | **Rico Salvador**<br/>[@KnightCrawl](https://github.com/KnightCrawl) | Project Maintainer |
 
 ## All Contributors & Testers
 
@@ -19,6 +20,7 @@ All contributors are recognized here and credited directly inside the Vinta desk
   <tbody>
     <tr>
       <td align="center" valign="top" width="20%"><a href="https://github.com/kuraigu"><img src="https://github.com/kuraigu.png" width="48px;" alt="Innoh Reloza (DippedInSoju)"/><br /><sub><b>Innoh Reloza (DippedInSoju)</b></sub></a><br />founder,contributor</td>
+      <td align="center" valign="top" width="20%"><a href="https://github.com/KnightCrawl"><img src="https://github.com/KnightCrawl.png" width="48px;" alt="Rico Salvador"/><br /><sub><b>Rico Salvador</b></sub></a><br />maintainer,contributor</td>
     </tr>
   </tbody>
 </table>

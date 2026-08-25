@@ -61,16 +61,33 @@ tasks:
       - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/increment_build.ps1
       - wails dev -tags devtest
 
+  icon:
+    desc: Generate multi-resolution build/windows/icon.ico from build/appicon.png
+    sources:
+      - 'build/appicon.png'
+    generates:
+      - 'build/windows/icon.ico'
+    cmds:
+      - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/generate_icon.ps1
+
   build:
     desc: Build production executable and bundle assets
-    deps: [build:native]
+    deps: [build:native, icon]
     cmds:
       - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/increment_build.ps1
       - wails build
 
+  package:installer:
+    desc: Build standalone production binary and Windows NSIS installer
+    deps: [build:native, icon]
+    cmds:
+      - cmd.exe /c "taskkill /IM Vinta.exe /F >nul 2>&1 || exit 0"
+      - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/increment_build.ps1
+      - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/package_installer.ps1
+
   run:
     desc: Compile and run standalone binary
-    deps: [build:native]
+    deps: [build:native, icon]
     cmds:
       - cmd.exe /c "taskkill /IM Vinta.exe /F >nul 2>&1 || exit 0"
       - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/increment_build.ps1
@@ -79,7 +96,7 @@ tasks:
 
   run:debug:
     desc: Compile and run standalone binary with debug flags
-    deps: [build:native]
+    deps: [build:native, icon]
     cmds:
       - cmd.exe /c "taskkill /IM Vinta.exe /F >nul 2>&1 || exit 0"
       - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/increment_build.ps1

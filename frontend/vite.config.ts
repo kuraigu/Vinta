@@ -66,7 +66,8 @@ export default defineConfig({
       'lucide-svelte/icons': path.resolve(
         __dirname,
         'node_modules/lucide-svelte/dist/icons'
-      )
+      ),
+      '@appicon': path.resolve(__dirname, '../build/appicon.png')
     }
   }
 })

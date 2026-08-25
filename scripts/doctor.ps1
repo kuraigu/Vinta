@@ -15,6 +15,19 @@ function Test-Tool {
     )
 
     $cmd = Get-Command $Command -ErrorAction SilentlyContinue
+    if (-not $cmd) {
+        $fallbacks = @(
+            "C:\Program Files (x86)\NSIS\makensis.exe",
+            "C:\Program Files\NSIS\makensis.exe"
+        )
+        foreach ($fb in $fallbacks) {
+            if ($fb -and (Test-Path $fb)) {
+                $cmd = (Get-Item $fb)
+                $Command = $fb
+                break
+            }
+        }
+    }
     if ($cmd) {
         try {
             $verOutput = (& $Command $VersionArg 2>&1 | Out-String).Trim()
@@ -50,6 +63,7 @@ Test-Tool -Name "NPM Package Manager" -Command "npm" -VersionArg "-v" -InstallHi
 Test-Tool -Name "Wails CLI" -Command "wails" -VersionArg "version" -InstallHint "go install github.com/wailsapp/wails/v2/cmd/wails@latest"
 Test-Tool -Name "CMake" -Command "cmake" -VersionArg "--version" -InstallHint "winget install Kitware.CMake"
 Test-Tool -Name "Ninja Build" -Command "ninja" -VersionArg "--version" -InstallHint "winget install Ninja-build.Ninja"
+Test-Tool -Name "NSIS Installer Compiler" -Command "makensis" -VersionArg "/VERSION" -InstallHint "winget install NSIS.NSIS" -Optional
 Test-Tool -Name "Taskfile CLI (go-task)" -Command "task" -VersionArg "--version" -InstallHint "winget install Task.Task (or use ./scripts.bat)" -Optional
 
 # Check MSVC / Visual Studio C++ Build Tools
