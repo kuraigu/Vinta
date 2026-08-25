@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version (e.g., v1.0.0)'
+        description: 'Release version (e.g., v0.1.0-alpha, v1.0.0)'
         required: true
-        default: 'v1.0.0'
+        default: 'v0.1.0-alpha'
       draft:
         description: 'Create as a Private Draft Release'
         required: true
@@ -20,8 +20,6 @@ on:
 
 permissions:
   contents: write
-  id-token: write
-  attestations: write
 
 jobs:
   build-and-release:
@@ -74,30 +72,39 @@ jobs:
       - name: Build Official Application & NSIS Installer
         shell: pwsh
         run: |
+          $version = "${{ github.event.inputs.version }}"
           $buildDate = (Get-Date -Format 'yy.MMdd')
-          $ldflags = "-X 'backend.BuildType=Official' -X 'backend.GitCommit=${{ github.sha }}' -X 'backend.BuildTime=$buildDate'"
-          wails build -nsis -clean -ldflags $ldflags
+          $ldflags = "-X 'Vinta/backend.BuildType=Official' -X 'Vinta/backend.AppVersion=$version' -X 'Vinta/backend.GitCommit=${{ github.sha }}' -X 'Vinta/backend.BuildTime=$buildDate' -X 'backend.BuildType=Official' -X 'backend.AppVersion=$version' -X 'backend.GitCommit=${{ github.sha }}' -X 'backend.BuildTime=$buildDate'"
+          wails build -nsis -ldflags $ldflags
 
       - name: Prepare Release Artifacts
         shell: pwsh
         run: |
+          $version = "${{ github.event.inputs.version }}"
           New-Item -ItemType Directory -Path "release-dist" -Force | Out-Null
 
-          # 1. Copy NSIS Installer (Vinta-Setup-x64.exe)
+          # 1. Copy NSIS Installer with version in filename
           $installerSrc = Get-Item "build/bin/Vinta-Setup-x64.exe", "build/bin/Vinta-*-installer.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
           if ($installerSrc) {
-              Copy-Item $installerSrc.FullName "release-dist/Vinta-Setup-x64.exe"
+              Copy-Item $installerSrc.FullName "release-dist/Vinta-$version-Setup-x64.exe"
           }
 
-          # 2. Package Portable ZIP bundle
+          # 2. Package Portable ZIP bundle with version in filename
           $portableDir = "build/portable-bundle"
           New-Item -ItemType Directory -Path $portableDir -Force | Out-Null
           Copy-Item "build/bin/Vinta.exe" "$portableDir/"
-          Copy-Item "build/bin/vintaservices.dll" "$portableDir/"
+
+          # Copy vintaservices.dll from native build output or backend/services
+          $dllSrc = Get-Item "backend/services/vintaservices.dll", "build/bin/vintaservices.dll", "build/native/vintaservices.dll", "build/native/Release/vintaservices.dll" -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($dllSrc) {
+              Copy-Item $dllSrc.FullName "$portableDir/vintaservices.dll"
+              Copy-Item $dllSrc.FullName "build/bin/vintaservices.dll" -Force -ErrorAction SilentlyContinue
+          }
+
           if (Test-Path "LICENSE") { Copy-Item "LICENSE" "$portableDir/" }
           if (Test-Path "README.md") { Copy-Item "README.md" "$portableDir/" }
 
-          Compress-Archive -Path "$portableDir/*" -DestinationPath "release-dist/Vinta-Portable-x64.zip" -Force
+          Compress-Archive -Path "$portableDir/*" -DestinationPath "release-dist/Vinta-$version-Portable-x64.zip" -Force
 
           # 3. Generate SHA256 Checksums
           Set-Location release-dist
@@ -106,13 +113,6 @@ jobs:
               "$hash  $($_.Name)" | Out-File -FilePath "SHA256SUMS.txt" -Append -Encoding ascii
           }
           Get-Content "SHA256SUMS.txt"
-
-      - name: Attest Build Provenance (Sigstore)
-        uses: actions/attest-build-provenance@v2
-        with:
-          subject-path: |
-            release-dist/*.exe
-            release-dist/*.zip
 
       - name: Create Release
         uses: softprops/action-gh-release@v3

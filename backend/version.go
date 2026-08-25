@@ -12,14 +12,15 @@ import (
 	"time"
 )
 
-// AppVersion defines the current application version string. Do not change this version number manually in source files.
-// Version increments must remain manual and be performed intentionally during release packaging procedures.
-const AppVersion = "0.1.0"
-
 // Build metadata variables injected during release compilation via -ldflags.
 var (
+	// AppVersion defines the runtime version string, dynamically injected during release.
+	AppVersion = "0.1.0-dev"
+	// GitCommit is injected at compile-time via -ldflags
 	GitCommit = "dev"
+	// BuildType indicates the release channel: "Official", "Preview", or "Development"
 	BuildType = "Development"
+	// BuildTime is injected at compile-time via -ldflags (format: "YY.MMDD" e.g., "26.0315")
 	BuildTime = "Unknown"
 )
 

@@ -100,7 +100,9 @@
           {appInfo.buildType}
         </span>
       </div>
-      <span class="about-version-text">v{appInfo.version}</span>
+      <span class="about-version-text">
+        {appInfo.version?.startsWith('v') ? appInfo.version : 'v' + (appInfo.version || '0.1.0-dev')}
+      </span>
     </div>
   </div>
 
