@@ -574,6 +574,12 @@ func (a *App) FocusMediaApp(sourceApp string) bool {
 	return services.FocusMediaApp(sourceApp)
 }
 
+// FocusNotificationApp brings the source window of a notification to the foreground,
+// matching by process name or App User Model ID (for UWP/Store apps).
+func (a *App) FocusNotificationApp(sourceApp string, aumid string) bool {
+	return services.FocusNotificationApp(sourceApp, aumid)
+}
+
 // GetDisplayLayout returns the multi-monitor geometry and composite virtual desktop layout.
 func (a *App) GetDisplayLayout() DisplayLayout {
 	vLeft, vTop, vWidth, vHeight, pCenter, monitors := getDisplayMetrics()

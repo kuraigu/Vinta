@@ -22,10 +22,12 @@
   import { SvelteSet, SvelteMap } from 'svelte/reactivity'
   import { appIcons, gameIcons } from '../appIcons'
   import ScrollView from '../components/ScrollView.svelte'
+  import { FocusNotificationApp, FocusWindow } from '../../wailsjs/go/backend/App'
 
   export type NotificationItem = {
     id: number
     appName?: string
+    aumid?: string
     icon?: string
     title: string
     message: string
@@ -515,6 +517,11 @@
             if (nested && !expandedGroups.has(brand.brandName)) {
               e.stopPropagation()
               toggleGroupExpand(brand.brandName)
+            } else if (expandedIds.has(notif.id)) {
+              // Already expanded — second click focuses the source app
+              e.stopPropagation()
+              FocusNotificationApp(notif.appName ?? '', notif.aumid ?? '')
+              FocusWindow()
             } else {
               e.stopPropagation()
               toggleExpand(notif.id)

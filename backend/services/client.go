@@ -25,6 +25,7 @@ var (
 	procGetNativeRadiosStatus    uintptr
 	procSelectNativeMediaSession uintptr
 	procFocusNativeMediaApp      uintptr
+	procFocusNativeApp           uintptr
 
 	mediaCallbackPtr uintptr
 	notifCallbackPtr uintptr
@@ -55,6 +56,7 @@ func ensureDLLLoadedLocked() bool {
 	procGetNativeRadiosStatus, _ = syscall.GetProcAddress(dllHandle, "GetNativeRadiosStatus")
 	procSelectNativeMediaSession, _ = syscall.GetProcAddress(dllHandle, "SelectNativeMediaSession")
 	procFocusNativeMediaApp, _ = syscall.GetProcAddress(dllHandle, "FocusNativeMediaApp")
+	procFocusNativeApp, _ = syscall.GetProcAddress(dllHandle, "FocusNativeApp")
 	return true
 }
 
@@ -220,6 +222,31 @@ func FocusMediaApp(sourceApp string) bool {
 
 	appBytes := append([]byte(sourceApp), 0)
 	ret, _, _ := syscall.SyscallN(proc, uintptr(unsafe.Pointer(&appBytes[0])))
+	return ret == 1
+}
+
+// FocusNotificationApp asks vintaservices.dll to focus the window matching either
+// the sourceApp process name or the App User Model ID (aumid).
+func FocusNotificationApp(sourceApp, aumid string) bool {
+	serviceMu.Lock()
+	if !ensureDLLLoadedLocked() {
+		serviceMu.Unlock()
+		return false
+	}
+	proc := procFocusNativeApp
+	serviceMu.Unlock()
+
+	if proc == 0 {
+		return false
+	}
+
+	appBytes := append([]byte(sourceApp), 0)
+	aumidBytes := append([]byte(aumid), 0)
+	ret, _, _ := syscall.SyscallN(
+		proc,
+		uintptr(unsafe.Pointer(&appBytes[0])),
+		uintptr(unsafe.Pointer(&aumidBytes[0])),
+	)
 	return ret == 1
 }
 
