@@ -39,6 +39,8 @@ var (
 	procCombineRgn         = gdi32.NewProc("CombineRgn")
 	procSetWindowRgn       = user32.NewProc("SetWindowRgn")
 	procDeleteObject       = gdi32.NewProc("DeleteObject")
+	procSetCapture         = user32.NewProc("SetCapture")
+	procReleaseCapture     = user32.NewProc("ReleaseCapture")
 )
 
 const (
@@ -464,6 +466,20 @@ func (a *App) FocusWindow() {
 	}
 }
 
+// SetDragCapture controls Win32 OS-level mouse capture during drag gestures.
+// When enabled, mouse messages across the monitor are delivered to the window,
+// preventing dropped gestures when bounds tighten or cursor moves rapidly.
+func (a *App) SetDragCapture(enable bool) {
+	hwnd := getMyWindowHwnd()
+	if hwnd != 0 {
+		if enable {
+			_, _, _ = procSetCapture.Call(hwnd)
+		} else {
+			_, _, _ = procReleaseCapture.Call()
+		}
+	}
+}
+
 // SetDevPillBounds is called by the frontend to update the size of the developer menu.
 func (a *App) SetDevPillBounds(width int, height int, extraH int, scale float64) {
 	a.devW = width
@@ -540,7 +556,7 @@ func createMainPillRegion(w, h, r, offsetX, sw, padding int, scale float64) uint
 }
 
 // createDevPillRegion generates the Win32 HRGN for the secondary/dev floating panel anchored below the main island.
-func createDevPillRegion(dw, dh, extraH, mainH, offsetX, sw int, scale float64) uintptr {
+func createDevPillRegion(dw, dh, extraH, mainH, offsetX, sw int, scale float64, fullWidth bool) uintptr {
 	if dw <= 0 || dh <= 0 {
 		return 0
 	}
@@ -562,6 +578,21 @@ func createDevPillRegion(dw, dh, extraH, mainH, offsetX, sw int, scale float64) 
 	pdw := scaleInt(dw)
 	pdh := scaleInt(dh)
 
+	top := devTopOffset - devPadding
+	if top < 0 {
+		top = 0
+	}
+	bottom := devTopOffset + pdh + devPadding + extraMargin
+
+	// When 100% width mode is active (w == -1), expand dev pill region across full monitor width
+	if fullWidth {
+		hrgn, _, _ := procCreateRectRgn.Call(
+			0, uintptr(top),
+			uintptr(sw), uintptr(bottom),
+		)
+		return hrgn
+	}
+
 	// Smart offset: dev pill follows main island but stops cleanly at screen edges
 	maxDevOffset := (sw-pdw)/2 - devPadding
 	if maxDevOffset < 0 {
@@ -581,11 +612,6 @@ func createDevPillRegion(dw, dh, extraH, mainH, offsetX, sw int, scale float64) 
 		left = 0
 	}
 	right := physicalCenterX + (pdw / 2) + devPadding
-	top := devTopOffset - devPadding
-	if top < 0 {
-		top = 0
-	}
-	bottom := devTopOffset + pdh + devPadding + extraMargin
 
 	hrgn, _, _ := procCreateRoundRectRgn.Call(
 		uintptr(left), uintptr(top),
@@ -635,7 +661,7 @@ func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, dw int, dh i
 	}
 
 	hrgnMain := createMainPillRegion(w, h, r, offsetX, sw, padding, scale)
-	hrgnDev := createDevPillRegion(dw, dh, extraH, h, offsetX, sw, scale)
+	hrgnDev := createDevPillRegion(dw, dh, extraH, h, offsetX, sw, scale, w == -1)
 
 	hrgnFinal := combineWindowRegions(hrgnMain, hrgnDev)
 	_, _, _ = procSetWindowRgn.Call(hwnd, hrgnFinal, 0)

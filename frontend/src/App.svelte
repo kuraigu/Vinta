@@ -4,6 +4,7 @@
   import { fade } from 'svelte/transition'
   import {
     SetWidgetBounds,
+    SetDragCapture,
     IsTestMode,
     FocusWindow,
     Quit,
@@ -120,6 +121,7 @@
   let dragHistory: Array<{ x: number; time: number }> = []
 
   let islandNode = $state<HTMLElement>()
+  let devPillContainerNode = $state<HTMLElement>()
   let isTestMode = $state(false)
 
   let isTransitionGlow = $state(true)
@@ -352,6 +354,12 @@
           updateBounds(next.w, next.h, next.r, next.offset)
         }
       })
+  }
+
+  function setOSDragCapture(enable: boolean) {
+    if (typeof SetDragCapture === 'function') {
+      SetDragCapture(enable).catch(() => {})
+    }
   }
 
   // --- Centralized OS Bounds Manager ---
@@ -778,14 +786,34 @@
     const handleResize = () => {
       screenWidth = window.screen?.width || window.innerWidth || 1920
     }
-    const handleGlobalBlur = () => {
+    // Global failsafe: only abort if focus is truly lost to another application.
+    // Internal blur events caused by window activation or clicks are safely ignored.
+    const handleGlobalDragFailsafe = (e?: Event) => {
+      if (e?.type === 'blur') {
+        if (
+          typeof document !== 'undefined' &&
+          !document.hidden &&
+          document.hasFocus()
+        ) {
+          return
+        }
+      }
       if (isDraggingHidden) {
-        isDraggingHidden = false
-        stopInertia()
+        handleDragFailsafe()
+      }
+    }
+    const handleWindowKeydownFailsafe = (e: KeyboardEvent) => {
+      if (
+        e.key === 'Escape' &&
+        (isDraggingHidden || isInFlight || isTrackRegionActive)
+      ) {
+        handleDragFailsafe()
       }
     }
     window.addEventListener('resize', handleResize)
-    window.addEventListener('blur', handleGlobalBlur)
+    window.addEventListener('blur', handleGlobalDragFailsafe)
+    window.addEventListener('pointercancel', handleGlobalDragFailsafe)
+    window.addEventListener('keydown', handleWindowKeydownFailsafe)
 
     const updateBattery = () => {
       if (get(isSimulatingBatteryStore)) return
@@ -825,7 +853,9 @@
       window.removeEventListener('vinta-overlay', handleOverlayChange)
       window.removeEventListener('vinta-quit', handleQuit)
       window.removeEventListener('resize', handleResize)
-      window.removeEventListener('blur', handleGlobalBlur)
+      window.removeEventListener('blur', handleGlobalDragFailsafe)
+      window.removeEventListener('pointercancel', handleGlobalDragFailsafe)
+      window.removeEventListener('keydown', handleWindowKeydownFailsafe)
     }
   })
 
@@ -838,7 +868,7 @@
    * but the drag handlers call stopInertia() before any state changes.
    */
   function syncOSBoundsOnStateChange() {
-    if (isInFlight) return
+    if (isDraggingHidden || isInFlight || isTrackRegionActive) return
     const target = getBoundsForState()
 
     const isCollapsing = prevExpandedState && !expanded
@@ -873,6 +903,28 @@
   $effect(syncOSBoundsOnStateChange)
 
   let isTrackRegionActive = false
+  let dragWatchdogTimeout: number | undefined
+
+  // Resets the drag inactivity watchdog timer. If pointer interaction stalls
+  // during a drag gesture, the watchdog automatically restores tight resting bounds.
+  function resetDragWatchdog() {
+    clearTimeout(dragWatchdogTimeout)
+    dragWatchdogTimeout = window.setTimeout(() => {
+      if (isDraggingHidden || isInFlight || isTrackRegionActive) {
+        handleDragFailsafe()
+      }
+    }, 6000)
+  }
+
+  // Failsafe handler to cleanly cancel any drag operation, release OS mouse capture,
+  // and guarantee the Win32 window clipping region escapes 100% width mode.
+  function handleDragFailsafe() {
+    clearTimeout(dragWatchdogTimeout)
+    dragWatchdogTimeout = undefined
+    isDraggingHidden = false
+    setOSDragCapture(false)
+    stopInertia()
+  }
 
   function stopInertia() {
     if (inertiaAnimFrame) {
@@ -881,9 +933,12 @@
     }
     clearTimeout(inertiaSafetyTimeout)
     inertiaSafetyTimeout = undefined
+    clearTimeout(dragWatchdogTimeout)
+    dragWatchdogTimeout = undefined
     isInFlight = false
     isTrackRegionActive = false
     dragHistory = []
+    setOSDragCapture(false)
 
     // Persist final resting offset to store once motion is fully settled
     $hiddenPillOffsetXStore = clampedOffsetX
@@ -921,10 +976,12 @@
     if (inertiaAnimFrame) {
       stopInertia()
     }
+    setOSDragCapture(true)
     isDraggingHidden = true
     hasPointerCaptured = false
     dragMovedDistance = 0
     clearTimeout(dragResetTimeout)
+    resetDragWatchdog()
     hiddenDragStartX = e.screenX
     hiddenDragStartOffset = currentLiveOffsetX
     dragHistory = [{ x: e.screenX, time: performance.now() }]
@@ -932,11 +989,13 @@
 
   function handleHiddenPointerMove(e: PointerEvent) {
     if (!isDraggingHidden) return
-    // If no mouse buttons are pressed (e.g. released outside/interrupted), cancel drag
+    // If no mouse buttons are pressed (e.g. released outside/interrupted), cancel drag immediately
     if (e.buttons === 0) {
       handleHiddenPointerUp(e)
       return
     }
+
+    resetDragWatchdog()
 
     const now = performance.now()
     dragHistory.push({ x: e.screenX, time: now })
@@ -962,11 +1021,46 @@
         Math.min(maxAllowedOffsetForCurrentW, rawOffset)
       )
 
-      // Open full-width horizontal track region on first move beyond threshold
-      if (!isTrackRegionActive) {
-        isTrackRegionActive = true
-        const { h, r } = getBoundsForState()
-        updateBounds(-1, h, r, 0)
+      // Dynamic OnDrag window bounding region management:
+      // When the cursor is physically inside the horizontal bounds of the island,
+      // expand the Win32 window clipping region to 100% width (-1) to provide unlimited
+      // horizontal runway and prevent cursor outrunning.
+      // When the cursor leaves the island bounds (e.g. edge clamped or fast flick),
+      // dynamically update bounds to track and rubberband with the island.
+      let isCursorInside = true
+      if (islandNode) {
+        const rect = islandNode.getBoundingClientRect()
+        const isInsideIsland = e.clientX >= rect.left && e.clientX <= rect.right
+        let isInsideDevPill = false
+        if (devPillContainerNode) {
+          const devRect = devPillContainerNode.getBoundingClientRect()
+          isInsideDevPill =
+            e.clientX >= devRect.left && e.clientX <= devRect.right
+        }
+        isCursorInside = isInsideIsland || isInsideDevPill
+      } else {
+        const screenCenterX = screenWidth / 2
+        const islandCenterX = screenCenterX + clampedOffsetX
+        const halfW = currentIslandW / 2
+        isCursorInside =
+          e.screenX >= islandCenterX - halfW && e.screenX <= islandCenterX + halfW
+      }
+
+      if (isCursorInside) {
+        if (!isTrackRegionActive) {
+          isTrackRegionActive = true
+          const { h, r } = getBoundsForState()
+          updateBounds(-1, h, r, clampedOffsetX)
+        }
+      } else {
+        if (isTrackRegionActive) {
+          isTrackRegionActive = false
+        }
+        // Symmetrical motion margin: provides breathing room on both sides of the moving island
+        // to prevent the leading edge from clipping due to rendering/IPC phase difference.
+        const motionMargin = 40
+        const { w, h, r } = getBoundsForState()
+        updateBounds(w + motionMargin, h, r, clampedOffsetX)
       }
     }
   }
@@ -974,6 +1068,9 @@
   function handleHiddenPointerUp(e: PointerEvent) {
     if (!isDraggingHidden) return
     isDraggingHidden = false
+    clearTimeout(dragWatchdogTimeout)
+    dragWatchdogTimeout = undefined
+    setOSDragCapture(false)
     if (hasPointerCaptured) {
       hasPointerCaptured = false
       try {
@@ -1039,6 +1136,14 @@
               stopInertia()
               return
             }
+
+            // Dynamic OnDrag: expand bounds with velocity-based margin to prevent leading-edge clipping
+            const motionMargin = Math.min(
+              60,
+              Math.round(Math.abs(velocity) * 20) + 30
+            )
+            const { w, h, r } = getBoundsForState()
+            updateBounds(w + motionMargin, h, r, clampedOffsetX)
           }
 
           inertiaAnimFrame = requestAnimationFrame(runInertiaStep)
@@ -1278,6 +1383,7 @@
 
   {#if isTestMode}
     <div
+      bind:this={devPillContainerNode}
       style="
         transform: translateX({devClampedOffsetX}px);
         transition: {isDraggingHidden || isInFlight ? 'none' : islandAnim};
