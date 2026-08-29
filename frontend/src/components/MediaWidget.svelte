@@ -436,7 +436,6 @@
             audioPeak={$audioPeakStore}
             variant="minimal"
             barCount={4}
-            color="var(--c-primary, #38bdf8)"
           />
         {/if}
       </div>

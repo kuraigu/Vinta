@@ -227,8 +227,11 @@
   bottom: 0;
   left: 0;
   height: 100%;
-  background: var(--c-primary, #38bdf8);
-  box-shadow: 0 0 6px var(--c-primary, rgba(56, 189, 248, 0.4));
+  background: linear-gradient(90deg, #00f0ff 0%, #a855f7 50%, #ff007f 100%);
+  box-shadow:
+    0 0 10px #00f0ff,
+    0 0 20px #ff007f,
+    inset 0 0 4px #ffffff;
   border-radius: 9999px;
   transition: width 0.1s linear;
 }
@@ -241,7 +244,10 @@
   height: 8px;
   border-radius: 50%;
   background: #ffffff;
-  box-shadow: 0 0 6px var(--c-primary, rgba(56, 189, 248, 0.6));
+  box-shadow:
+    0 0 10px #00f0ff,
+    0 0 18px #ff007f,
+    0 0 4px #ffffff;
   z-index: 10;
   pointer-events: none;
   transition: left 0.1s linear;

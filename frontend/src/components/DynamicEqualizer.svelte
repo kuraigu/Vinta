@@ -114,14 +114,10 @@
     let activeFill: CanvasGradient | string
     if (color && !color.startsWith('var(')) {
       activeFill = color
-    } else if (variant === 'minimal') {
-      if (canvasRef && color && color.startsWith('var(')) {
-        const varName = color.replace(/^var\(\s*([^,\)]+).*/, '$1').trim()
-        const computed = getComputedStyle(canvasRef).getPropertyValue(varName).trim()
-        activeFill = computed || '#34c759'
-      } else {
-        activeFill = '#34c759'
-      }
+    } else if (color && color.startsWith('var(') && canvasRef) {
+      const varName = color.replace(/^var\(\s*([^,\)]+).*/, '$1').trim()
+      const computed = getComputedStyle(canvasRef).getPropertyValue(varName).trim()
+      activeFill = computed || '#00f0ff'
     } else {
       const g = ctx.createLinearGradient(0, height, 0, 0)
       g.addColorStop(0, '#00f0ff')
