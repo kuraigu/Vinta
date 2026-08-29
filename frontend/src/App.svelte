@@ -570,9 +570,7 @@
     if (activePage !== page && expanded === expand) {
       triggerBlink()
     }
-    if (expanded !== expand) {
-      islandAnim = '0.32s cubic-bezier(0.2, 0.8, 0.2, 1)'
-    }
+    islandAnim = '0.32s cubic-bezier(0.2, 0.8, 0.2, 1)'
     activePage = page
     islandConfig = pageConfig
 
@@ -586,7 +584,11 @@
     if (expand) {
       const { w, h, r } = getBoundsForState(pageConfig, true, false)
       if (w > currentOSBounds.w || h > currentOSBounds.h) {
-        applyBounds(w, h, r)
+        applyBounds(
+          Math.max(w, currentOSBounds.w),
+          Math.max(h, currentOSBounds.h),
+          r
+        )
       }
       requestAnimationFrame(() => {
         expanded = true
@@ -922,20 +924,44 @@
    * In-flight drags skip this to prevent fighting the full-width track region,
    * but the drag handlers call stopInertia() before any state changes.
    */
+  let hasInitializedBounds = false
+
   function syncOSBoundsOnStateChange() {
     if (isDraggingHidden || isInFlight || isTrackRegionActive) return
     const target = getBoundsForState()
 
-    const isCollapsing = prevExpandedState && !expanded
-    const isHiding = !prevHiddenState && isHidden
+    if (!hasInitializedBounds) {
+      hasInitializedBounds = true
+      currentOSBounds = { w: target.w, h: target.h, r: target.r }
+      prevExpandedState = expanded
+      prevHiddenState = isHidden
+      return
+    }
+
+    const wasExpanded = prevExpandedState
+    const wasHidden = prevHiddenState
     prevExpandedState = expanded
     prevHiddenState = isHidden
 
-    // Only hold OS window bounds for the 350ms animation when actively collapsing from expanded or hiding to pill/dash
-    if (
-      (isCollapsing || isHiding) &&
-      (currentOSBounds.h > target.h || currentOSBounds.w > target.w)
-    ) {
+    const isCollapsing = wasExpanded && !expanded
+    const isHiding = !wasHidden && isHidden
+    const isShrinking =
+      isCollapsing ||
+      isHiding ||
+      currentOSBounds.w > target.w ||
+      currentOSBounds.h > target.h
+    const isGrowing =
+      currentOSBounds.w < target.w || currentOSBounds.h < target.h
+
+    if (isGrowing) {
+      clearTimeout(boundsTransitionTimeout)
+      targetPendingBounds = { w: 0, h: 0, r: 0 }
+      const immediateW = Math.max(currentOSBounds.w, target.w)
+      const immediateH = Math.max(currentOSBounds.h, target.h)
+      applyBounds(immediateW, immediateH, target.r)
+    }
+
+    if (isShrinking) {
       targetPendingBounds = target
       clearTimeout(boundsTransitionTimeout)
       boundsTransitionTimeout = window.setTimeout(() => {
@@ -948,7 +974,7 @@
           targetPendingBounds = { w: 0, h: 0, r: 0 }
         }
       }, 450)
-    } else {
+    } else if (!isGrowing) {
       clearTimeout(boundsTransitionTimeout)
       targetPendingBounds = { w: 0, h: 0, r: 0 }
       applyBounds(target.w, target.h, target.r)

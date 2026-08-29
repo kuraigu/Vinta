@@ -42,16 +42,10 @@ var (
 	procSetCapture         = user32.NewProc("SetCapture")
 	procReleaseCapture     = user32.NewProc("ReleaseCapture")
 
-	psapi                        = syscall.NewLazyDLL("psapi.dll")
-	procEmptyWorkingSet          = psapi.NewProc("EmptyWorkingSet")
-	kernel32                     = syscall.NewLazyDLL("kernel32.dll")
-	procGetCurrentProcess        = kernel32.NewProc("GetCurrentProcess")
-	procGetCurrentProcessId      = kernel32.NewProc("GetCurrentProcessId")
-	procCreateToolhelp32Snapshot = kernel32.NewProc("CreateToolhelp32Snapshot")
-	procProcess32First           = kernel32.NewProc("Process32FirstW")
-	procProcess32Next            = kernel32.NewProc("Process32NextW")
-	procOpenProcess              = kernel32.NewProc("OpenProcess")
-	procCloseHandle              = kernel32.NewProc("CloseHandle")
+	psapi                 = syscall.NewLazyDLL("psapi.dll")
+	procEmptyWorkingSet   = psapi.NewProc("EmptyWorkingSet")
+	kernel32              = syscall.NewLazyDLL("kernel32.dll")
+	procGetCurrentProcess = kernel32.NewProc("GetCurrentProcess")
 )
 
 const (
@@ -399,11 +393,6 @@ func (a *App) SetWidgetBounds(width int, height int, radius int, scale float64, 
 	if scale > 0 {
 		a.scale = scale
 	}
-	if a.pillW > 0 && a.pillW <= 110 && a.pillH <= 30 {
-		services.SetAppHidden(true)
-	} else if a.pillW > 110 {
-		services.SetAppHidden(false)
-	}
 	a.updateWindowRegion()
 }
 
@@ -496,69 +485,11 @@ func (a *App) SetDragCapture(enable bool) {
 	}
 }
 
-type processEntry32W struct {
-	dwSize              uint32
-	cntUsage            uint32
-	th32ProcessID       uint32
-	th32DefaultHeapID   uintptr
-	th32ModuleID        uint32
-	cntThreads          uint32
-	th32ParentProcessID uint32
-	pcPriClassBase      int32
-	dwFlags             uint32
-	szExeFile           [260]uint16
-}
-
-const (
-	th32csSnapProcess       = 0x00000002
-	processSetQuota         = 0x0100
-	processQueryInformation = 0x0400
-)
-
-func trimProcessWorkingSet(hProcess uintptr) {
-	if hProcess != 0 && procEmptyWorkingSet.Find() == nil {
-		_, _, _ = procEmptyWorkingSet.Call(hProcess)
-	}
-}
-
-func trimChildProcesses(parentPID uint32) {
-	if procCreateToolhelp32Snapshot.Find() != nil || procEmptyWorkingSet.Find() != nil {
-		return
-	}
-	hSnap, _, _ := procCreateToolhelp32Snapshot.Call(th32csSnapProcess, 0)
-	if hSnap == 0 || hSnap == uintptr(syscall.InvalidHandle) {
-		return
-	}
-	defer procCloseHandle.Call(hSnap)
-
-	var entry processEntry32W
-	entry.dwSize = uint32(unsafe.Sizeof(entry))
-
-	ret, _, _ := procProcess32First.Call(hSnap, uintptr(unsafe.Pointer(&entry)))
-	for ret != 0 {
-		if entry.th32ParentProcessID == parentPID {
-			childH, _, _ := procOpenProcess.Call(
-				processSetQuota|processQueryInformation,
-				0,
-				uintptr(entry.th32ProcessID),
-			)
-			if childH != 0 {
-				trimProcessWorkingSet(childH)
-				procCloseHandle.Call(childH)
-			}
-		}
-		ret, _, _ = procProcess32Next.Call(hSnap, uintptr(unsafe.Pointer(&entry)))
-	}
-}
-
-// TrimMemory requests Windows to reclaim unused physical RAM pages from Vinta and its WebView2 child processes.
+// TrimMemory requests Windows to reclaim unused physical RAM pages from the Vinta process working set.
 func (a *App) TrimMemory() {
 	hProcess, _, _ := procGetCurrentProcess.Call()
-	trimProcessWorkingSet(hProcess)
-
-	myPID, _, _ := procGetCurrentProcessId.Call()
-	if myPID != 0 {
-		trimChildProcesses(uint32(myPID))
+	if hProcess != 0 && procEmptyWorkingSet.Find() == nil {
+		_, _, _ = procEmptyWorkingSet.Call(hProcess)
 	}
 }
 
