@@ -9,5 +9,6 @@ int ExecuteMediaCommand(const char* command);
 bool IsMediaPlayingState();
 int SelectMediaSession(const char* sessionId);
 int FocusMediaApp(const char* sourceApp);
+int FocusApp(const char* sourceApp, const char* aumid);
 
 #endif // MEDIA_SERVICE_H

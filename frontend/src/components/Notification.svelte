@@ -23,7 +23,10 @@
   import { SvelteSet, SvelteMap } from 'svelte/reactivity'
   import { appIcons, gameIcons } from '../appIcons'
   import ScrollView from '../components/ScrollView.svelte'
-  import { FocusNotificationApp, FocusWindow } from '../../wailsjs/go/backend/App'
+  import {
+    FocusNotificationApp,
+    FocusWindow
+  } from '../../wailsjs/go/backend/App'
 
   export type NotificationItem = {
     id: number
@@ -668,13 +671,19 @@
                 {#if expandedIds.has(notif.id) && (notif.appName || notif.aumid)}
                   <!-- svelte-ignore a11y_click_events_have_key_events -->
                   <!-- svelte-ignore a11y_no_static_element_interactions -->
-                  <div class="open-app-hint" onclick={(e) => {
-                    e.stopPropagation()
-                    FocusNotificationApp(notif.appName ?? '', notif.aumid ?? '')
-                    FocusWindow()
-                  }}>
+                  <div
+                    class="open-app-hint"
+                    onclick={(e) => {
+                      e.stopPropagation()
+                      FocusNotificationApp(
+                        notif.appName ?? '',
+                        notif.aumid ?? ''
+                      )
+                      FocusWindow()
+                    }}
+                  >
                     <ExternalLink size={11} />
-                    <span>Open app</span>
+                    <span>Open</span>
                   </div>
                 {/if}
               </div>

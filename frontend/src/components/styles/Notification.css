@@ -635,17 +635,17 @@ h3 {
   font-weight: 500;
   width: fit-content;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition: opacity 0.15s ease;
   user-select: none;
+  opacity: 0.7;
 }
 
 .open-app-hint:hover {
-  background: color-mix(in srgb, var(--c-primary) 18%, var(--c-hover));
-  color: var(--c-primary);
+  opacity: 1;
 }
 
 .open-app-hint:active {
-  opacity: 0.75;
+  opacity: 0.5;
 }
 
 .empty-state {

@@ -50,3 +50,7 @@ extern "C" BRIDGE_API int FocusNativeMediaApp(const char* sourceApp) {
     return FocusMediaApp(sourceApp);
 }
 
+extern "C" BRIDGE_API int FocusNativeApp(const char* sourceApp, const char* aumid) {
+    return FocusApp(sourceApp, aumid);
+}
+
