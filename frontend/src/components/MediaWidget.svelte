@@ -636,183 +636,204 @@
       {:else}
         <!-- Middle Row: Left-aligned Track Title/Artist + Hero Play/Pause Button -->
         <div class="middle-section">
-        <div class="track-details">
-          <div class="track-title" title={media.title || 'No Media Playing'}>
-            {media.title || 'No Media Playing'}
+          <div class="track-details">
+            <div class="track-title" title={media.title || 'No Media Playing'}>
+              {media.title || 'No Media Playing'}
+            </div>
+            {#if media.artist}
+              <div class="artist-name" title={media.artist}>{media.artist}</div>
+            {:else if !media.title}
+              <div class="artist-name">Connect Media Player</div>
+            {/if}
           </div>
-          {#if media.artist}
-            <div class="artist-name" title={media.artist}>{media.artist}</div>
-          {:else if !media.title}
-            <div class="artist-name">Connect Media Player</div>
-          {/if}
-        </div>
-
-        <button
-          class="hero-play-btn"
-          title={media.isPlaying ? 'Pause' : 'Play'}
-          onclick={(e) => handleControl('play_pause', e)}
-        >
-          {#if media.isPlaying}
-            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
-              <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
-            </svg>
-          {:else}
-            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
-              <path d="M8 5v14l11-7z" />
-            </svg>
-          {/if}
-        </button>
-      </div>
-
-      <!-- Controls Row: Shuffle, Prev, Next, Repeat, Source on Left, Volume Slider on Right -->
-      <div class="bottom-controls-row" class:is-playing={media.isPlaying}>
-        <div class="nav-controls">
-          {#if media.isShuffleEnabled !== false && media.isShuffleActive !== undefined}
-            <button
-              class="action-btn"
-              class:is-active={media.isShuffleActive}
-              disabled={media.isShuffleActive === undefined}
-              title={media.isShuffleActive === undefined
-                ? 'Shuffle: Not supported by current playback'
-                : media.isShuffleActive
-                  ? 'Shuffle: On'
-                  : 'Shuffle: Off'}
-              onclick={(e) => handleControl('shuffle', e)}
-            >
-              <Shuffle size={13} />
-            </button>
-          {/if}
 
           <button
-            class="action-btn"
-            title="Previous Track"
-            onclick={(e) => handleControl('prev', e)}
+            class="hero-play-btn"
+            title={media.isPlaying ? 'Pause' : 'Play'}
+            onclick={(e) => handleControl('play_pause', e)}
           >
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-              <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
-            </svg>
-          </button>
-
-          <button
-            class="action-btn"
-            title="Next Track"
-            onclick={(e) => handleControl('next', e)}
-          >
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-              <path
-                d="M6 6h2v12H6zm3.5 6l8.5 6V6z"
-                transform="rotate(180 12 12)"
-              />
-            </svg>
-          </button>
-
-          {#if media.isRepeatEnabled !== false && media.autoRepeatMode !== undefined}
-            <button
-              class="action-btn"
-              class:is-active={media.autoRepeatMode && media.autoRepeatMode > 0}
-              disabled={media.autoRepeatMode === undefined}
-              title={media.autoRepeatMode === undefined
-                ? 'Repeat: Not supported by current playback'
-                : media.autoRepeatMode === 1
-                  ? 'Repeat: One Track'
-                  : media.autoRepeatMode === 2
-                    ? 'Repeat: All Tracks'
-                    : 'Repeat: Off'}
-              onclick={(e) => handleControl('repeat', e)}
-            >
-              {#if media.autoRepeatMode === 1}
-                <Repeat1 size={13} />
-              {:else}
-                <Repeat size={13} />
-              {/if}
-            </button>
-          {/if}
-
-          {#if media.sessions && media.sessions.length > 1}
-            <button
-              class="action-btn session-btn"
-              class:is-active={isSessionMenuOpen}
-              title="Media Sources ({media.sessions.length})"
-              onclick={toggleSessionMenu}
-            >
-              <ListMusic size={14} />
-              <span class="session-indicator-dot"></span>
-            </button>
-          {/if}
-        </div>
-
-        <!-- Volume Slider Control -->
-        <div class="volume-control">
-          <button
-            class="vol-icon-btn"
-            title={media.isMuted ? 'Unmute' : 'Mute'}
-            onclick={(e) => handleControl('toggle_mute', e)}
-          >
-            {#if media.isMuted || currentVol === 0}
-              <VolumeX size={12} />
-            {:else if currentVol > 50}
-              <Volume2 size={12} />
+            {#if media.isPlaying}
+              <svg
+                viewBox="0 0 24 24"
+                width="22"
+                height="22"
+                fill="currentColor"
+              >
+                <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+              </svg>
             {:else}
-              <Volume1 size={12} />
+              <svg
+                viewBox="0 0 24 24"
+                width="22"
+                height="22"
+                fill="currentColor"
+              >
+                <path d="M8 5v14l11-7z" />
+              </svg>
             {/if}
           </button>
-          <span class="vol-percentage-text">{Math.round(currentVol)}%</span>
-          <div class="vol-slider-wrapper">
-            <div class="vol-fill" style="width: {currentVol}%;"></div>
+        </div>
+
+        <!-- Controls Row: Shuffle, Prev, Next, Repeat, Source on Left, Volume Slider on Right -->
+        <div class="bottom-controls-row" class:is-playing={media.isPlaying}>
+          <div class="nav-controls">
+            {#if media.isShuffleEnabled !== false && media.isShuffleActive !== undefined}
+              <button
+                class="action-btn"
+                class:is-active={media.isShuffleActive}
+                disabled={media.isShuffleActive === undefined}
+                title={media.isShuffleActive === undefined
+                  ? 'Shuffle: Not supported by current playback'
+                  : media.isShuffleActive
+                    ? 'Shuffle: On'
+                    : 'Shuffle: Off'}
+                onclick={(e) => handleControl('shuffle', e)}
+              >
+                <Shuffle size={13} />
+              </button>
+            {/if}
+
+            <button
+              class="action-btn"
+              title="Previous Track"
+              onclick={(e) => handleControl('prev', e)}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="14"
+                height="14"
+                fill="currentColor"
+              >
+                <path d="M6 6h2v12H6zm3.5 6l8.5 6V6z" />
+              </svg>
+            </button>
+
+            <button
+              class="action-btn"
+              title="Next Track"
+              onclick={(e) => handleControl('next', e)}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="14"
+                height="14"
+                fill="currentColor"
+              >
+                <path
+                  d="M6 6h2v12H6zm3.5 6l8.5 6V6z"
+                  transform="rotate(180 12 12)"
+                />
+              </svg>
+            </button>
+
+            {#if media.isRepeatEnabled !== false && media.autoRepeatMode !== undefined}
+              <button
+                class="action-btn"
+                class:is-active={media.autoRepeatMode &&
+                  media.autoRepeatMode > 0}
+                disabled={media.autoRepeatMode === undefined}
+                title={media.autoRepeatMode === undefined
+                  ? 'Repeat: Not supported by current playback'
+                  : media.autoRepeatMode === 1
+                    ? 'Repeat: One Track'
+                    : media.autoRepeatMode === 2
+                      ? 'Repeat: All Tracks'
+                      : 'Repeat: Off'}
+                onclick={(e) => handleControl('repeat', e)}
+              >
+                {#if media.autoRepeatMode === 1}
+                  <Repeat1 size={13} />
+                {:else}
+                  <Repeat size={13} />
+                {/if}
+              </button>
+            {/if}
+
+            {#if media.sessions && media.sessions.length > 1}
+              <button
+                class="action-btn session-btn"
+                class:is-active={isSessionMenuOpen}
+                title="Media Sources ({media.sessions.length})"
+                onclick={toggleSessionMenu}
+              >
+                <ListMusic size={14} />
+                <span class="session-indicator-dot"></span>
+              </button>
+            {/if}
+          </div>
+
+          <!-- Volume Slider Control -->
+          <div class="volume-control">
+            <button
+              class="vol-icon-btn"
+              title={media.isMuted ? 'Unmute' : 'Mute'}
+              onclick={(e) => handleControl('toggle_mute', e)}
+            >
+              {#if media.isMuted || currentVol === 0}
+                <VolumeX size={12} />
+              {:else if currentVol > 50}
+                <Volume2 size={12} />
+              {:else}
+                <Volume1 size={12} />
+              {/if}
+            </button>
+            <span class="vol-percentage-text">{Math.round(currentVol)}%</span>
+            <div class="vol-slider-wrapper">
+              <div class="vol-fill" style="width: {currentVol}%;"></div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={currentVol}
+                class="vol-input"
+                onpointerdown={handleVolPointerDown}
+                onpointerup={handleVolPointerUp}
+                oninput={handleVolInput}
+                onchange={handleVolChange}
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom Audio Spectrum Waveform Scrub Bar with aligned Time Labels -->
+        <div class="scrub-container">
+          <span class="time-label">{formatTime(currentPos)}</span>
+          <div class="waveform-scrub-wrapper">
+            <div class="spectrum-bars-container">
+              <DynamicEqualizer
+                isPlaying={media.isPlaying}
+                audioPeak={$audioPeakStore}
+                variant="full"
+                barCount={32}
+                {progressPercent}
+              />
+            </div>
+            <div
+              class="whole-capsule-track {isDraggingSeek ? 'is-dragging' : ''}"
+            >
+              <div class="capsule-track-ghost"></div>
+              <div
+                class="capsule-track-fill"
+                style="width: {progressPercent}%;"
+              ></div>
+              <div
+                class="capsule-track-head"
+                style="left: {progressPercent}%;"
+              ></div>
+            </div>
             <input
               type="range"
               min="0"
-              max="100"
-              value={currentVol}
-              class="vol-input"
-              onpointerdown={handleVolPointerDown}
-              onpointerup={handleVolPointerUp}
-              oninput={handleVolInput}
-              onchange={handleVolChange}
+              max={media.durationMs > 0 ? media.durationMs : 100}
+              value={currentPos}
+              class="scrub-input"
+              onpointerdown={handleSeekStart}
+              oninput={handleSeekInput}
+              onchange={handleSeekCommit}
             />
           </div>
+          <span class="time-label">{formatTime(media.durationMs)}</span>
         </div>
-      </div>
-
-      <!-- Bottom Audio Spectrum Waveform Scrub Bar with aligned Time Labels -->
-      <div class="scrub-container">
-        <span class="time-label">{formatTime(currentPos)}</span>
-        <div class="waveform-scrub-wrapper">
-          <div class="spectrum-bars-container">
-            <DynamicEqualizer
-              isPlaying={media.isPlaying}
-              audioPeak={$audioPeakStore}
-              variant="full"
-              barCount={32}
-              {progressPercent}
-            />
-          </div>
-          <div
-            class="whole-capsule-track {isDraggingSeek ? 'is-dragging' : ''}"
-          >
-            <div class="capsule-track-ghost"></div>
-            <div
-              class="capsule-track-fill"
-              style="width: {progressPercent}%;"
-            ></div>
-            <div
-              class="capsule-track-head"
-              style="left: {progressPercent}%;"
-            ></div>
-          </div>
-          <input
-            type="range"
-            min="0"
-            max={media.durationMs > 0 ? media.durationMs : 100}
-            value={currentPos}
-            class="scrub-input"
-            onpointerdown={handleSeekStart}
-            oninput={handleSeekInput}
-            onchange={handleSeekCommit}
-          />
-        </div>
-        <span class="time-label">{formatTime(media.durationMs)}</span>
-      </div>
       {/if}
     </div>
   {/if}
