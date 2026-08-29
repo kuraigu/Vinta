@@ -1108,7 +1108,7 @@
       // horizontal runway and prevent cursor outrunning.
       // When the cursor leaves the island bounds (e.g. edge clamped or fast flick),
       // dynamically update bounds to track and rubberband with the island.
-      let isCursorInside = true
+      let isCursorInside: boolean
       if (islandNode) {
         const rect = islandNode.getBoundingClientRect()
         const isInsideIsland = e.clientX >= rect.left && e.clientX <= rect.right
@@ -1124,7 +1124,8 @@
         const islandCenterX = screenCenterX + clampedOffsetX
         const halfW = currentIslandW / 2
         isCursorInside =
-          e.screenX >= islandCenterX - halfW && e.screenX <= islandCenterX + halfW
+          e.screenX >= islandCenterX - halfW &&
+          e.screenX <= islandCenterX + halfW
       }
 
       if (isCursorInside) {
