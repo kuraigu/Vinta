@@ -7,5 +7,7 @@ void StartMediaService(NativeMediaCallback cb);
 void StopMediaService();
 int ExecuteMediaCommand(const char* command);
 bool IsMediaPlayingState();
+int SelectMediaSession(const char* sessionId);
+int FocusMediaApp(const char* sourceApp);
 
 #endif // MEDIA_SERVICE_H

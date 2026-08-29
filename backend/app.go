@@ -32,6 +32,8 @@ var (
 	procSetWinEventHook          = user32.NewProc("SetWinEventHook")
 	procEnumWindows              = user32.NewProc("EnumWindows")
 	procGetClientRect            = user32.NewProc("GetClientRect")
+	procEnumDisplayMonitors      = user32.NewProc("EnumDisplayMonitors")
+	procGetMonitorInfoW          = user32.NewProc("GetMonitorInfoW")
 
 	gdi32                  = syscall.NewLazyDLL("gdi32.dll")
 	procCreateRectRgn      = gdi32.NewProc("CreateRectRgn")
@@ -86,7 +88,122 @@ const (
 	EVENT_SYSTEM_FOREGROUND = 0x0003
 	//nolint:revive // Windows API constants
 	WINEVENT_OUTOFCONTEXT = 0x0000
+
+	//nolint:revive // Windows API constants
+	SM_CXSCREEN = 0
+	//nolint:revive // Windows API constants
+	SM_CYSCREEN = 1
+	//nolint:revive // Windows API constants
+	SM_XVIRTUALSCREEN = 76
+	//nolint:revive // Windows API constants
+	SM_YVIRTUALSCREEN = 77
+	//nolint:revive // Windows API constants
+	SM_CXVIRTUALSCREEN = 78
+	//nolint:revive // Windows API constants
+	SM_CYVIRTUALSCREEN = 79
 )
+
+type rect32 struct {
+	Left, Top, Right, Bottom int32
+}
+
+type monitorInfoW struct {
+	CbSize    uint32
+	RcMonitor rect32
+	RcWork    rect32
+	DwFlags   uint32
+}
+
+// MonitorInfo describes a connected physical display's boundaries and properties.
+type MonitorInfo struct {
+	ID        int    `json:"id"`
+	Name      string `json:"name"`
+	Left      int    `json:"left"`
+	Top       int    `json:"top"`
+	Width     int    `json:"width"`
+	Height    int    `json:"height"`
+	IsPrimary bool   `json:"isPrimary"`
+}
+
+// DisplayLayout captures multi-monitor geometry and the composite virtual desktop space.
+type DisplayLayout struct {
+	VirtualLeft   int           `json:"virtualLeft"`
+	VirtualTop    int           `json:"virtualTop"`
+	VirtualWidth  int           `json:"virtualWidth"`
+	VirtualHeight int           `json:"virtualHeight"`
+	PrimaryCenter int           `json:"primaryCenter"`
+	Monitors      []MonitorInfo `json:"monitors"`
+}
+
+func getDisplayMetrics() (vLeft, vTop, vWidth, vHeight, pCenter int, monitors []MonitorInfo) {
+	procGetSystemMetrics := user32.NewProc("GetSystemMetrics")
+	vx, _, _ := procGetSystemMetrics.Call(SM_XVIRTUALSCREEN)
+	vy, _, _ := procGetSystemMetrics.Call(SM_YVIRTUALSCREEN)
+	vw, _, _ := procGetSystemMetrics.Call(SM_CXVIRTUALSCREEN)
+	vh, _, _ := procGetSystemMetrics.Call(SM_CYVIRTUALSCREEN)
+
+	vLeft = int(int32(vx))
+	vTop = int(int32(vy))
+	vWidth = int(vw)
+	vHeight = int(vh)
+
+	pw, _, _ := procGetSystemMetrics.Call(SM_CXSCREEN)
+	ph, _, _ := procGetSystemMetrics.Call(SM_CYSCREEN)
+	primaryW := int(pw)
+	if primaryW <= 0 {
+		primaryW = 1920
+	}
+	if vWidth <= 0 {
+		vWidth = primaryW
+	}
+	if vHeight <= 0 {
+		vHeight = int(ph)
+		if vHeight <= 0 {
+			vHeight = 1080
+		}
+	}
+
+	pCenter = (0 - vLeft) + (primaryW / 2)
+
+	if procEnumDisplayMonitors.Find() == nil && procGetMonitorInfoW.Find() == nil {
+		id := 0
+		cb := syscall.NewCallback(func(hMonitor, _, _, _ uintptr) uintptr {
+			var mi monitorInfoW
+			mi.CbSize = uint32(unsafe.Sizeof(mi))
+			ret, _, _ := procGetMonitorInfoW.Call(hMonitor, uintptr(unsafe.Pointer(&mi)))
+			if ret != 0 {
+				id++
+				w := int(mi.RcMonitor.Right - mi.RcMonitor.Left)
+				h := int(mi.RcMonitor.Bottom - mi.RcMonitor.Top)
+				isPrimary := (mi.DwFlags & 1) != 0
+				monitors = append(monitors, MonitorInfo{
+					ID:        id,
+					Name:      fmt.Sprintf("Display %d", id),
+					Left:      int(mi.RcMonitor.Left),
+					Top:       int(mi.RcMonitor.Top),
+					Width:     w,
+					Height:    h,
+					IsPrimary: isPrimary,
+				})
+			}
+			return 1
+		})
+		_, _, _ = procEnumDisplayMonitors.Call(0, 0, cb, 0)
+	}
+
+	if len(monitors) == 0 {
+		monitors = append(monitors, MonitorInfo{
+			ID:        1,
+			Name:      "Primary Display",
+			Left:      0,
+			Top:       0,
+			Width:     primaryW,
+			Height:    vHeight,
+			IsPrimary: true,
+		})
+	}
+	return
+}
 
 func getMyWindowHwnd() uintptr {
 	titlePtr, _ := syscall.UTF16PtrFromString("Vinta")
@@ -310,16 +427,17 @@ func (a *App) Startup(ctx context.Context) {
 
 			procSetWindowPos := user32.NewProc("SetWindowPos")
 			// HWND_TOPMOST = ^uintptr(0), SWP_NOACTIVATE (0x0010) | SWP_FRAMECHANGED (0x0020) | SWP_SHOWWINDOW (0x0040)
+			vLeft, _, vWidth, _, _, _ := getDisplayMetrics()
 			overlayHeight := 650
 			if screenHeight > 0 && overlayHeight > screenHeight {
 				overlayHeight = screenHeight
 			}
-			if screenWidth > 0 {
+			if vWidth > 0 {
 				_, _, _ = procSetWindowPos.Call(
 					hwnd,
 					uintptr(^uintptr(0)),
-					0, 0,
-					uintptr(screenWidth), uintptr(overlayHeight),
+					uintptr(int32(vLeft)), 0,
+					uintptr(vWidth), uintptr(overlayHeight),
 					0x0010|0x0020|0x0040,
 				)
 			}
@@ -446,6 +564,29 @@ func (a *App) SendMediaControl(action string) {
 	services.SendMediaControl(action)
 }
 
+// SelectMediaSession asks the native media service to switch active playback to sessionID.
+func (a *App) SelectMediaSession(sessionID string) bool {
+	return services.SelectMediaSession(sessionID)
+}
+
+// FocusMediaApp brings the top-level window of the specified media application to the foreground.
+func (a *App) FocusMediaApp(sourceApp string) bool {
+	return services.FocusMediaApp(sourceApp)
+}
+
+// GetDisplayLayout returns the multi-monitor geometry and composite virtual desktop layout.
+func (a *App) GetDisplayLayout() DisplayLayout {
+	vLeft, vTop, vWidth, vHeight, pCenter, monitors := getDisplayMetrics()
+	return DisplayLayout{
+		VirtualLeft:   vLeft,
+		VirtualTop:    vTop,
+		VirtualWidth:  vWidth,
+		VirtualHeight: vHeight,
+		PrimaryCenter: pCenter,
+		Monitors:      monitors,
+	}
+}
+
 // Quit terminates the application
 func (a *App) Quit() {
 	services.StopServicesListener()
@@ -542,7 +683,8 @@ func createMainPillRegion(w, h, r, offsetX, sw, padding int, scale float64) uint
 		return hrgn
 	} else if w > 0 && h > 0 {
 		visualTop := scaleInt(5)
-		physicalCenterX := (sw / 2) + scaleInt(offsetX)
+		_, _, _, _, pCenter, _ := getDisplayMetrics()
+		physicalCenterX := pCenter + scaleInt(offsetX)
 		pw := scaleInt(w)
 		ph := scaleInt(h)
 		left := physicalCenterX - (pw / 2) - padding
@@ -611,19 +753,9 @@ func createDevPillRegion(dw, dh, extraH, mainH, offsetX, sw int, scale float64, 
 		return hrgn
 	}
 
-	// Smart offset: dev pill follows main island but stops cleanly at screen edges
-	maxDevOffset := (sw-pdw)/2 - devPadding
-	if maxDevOffset < 0 {
-		maxDevOffset = 0
-	}
+	_, _, _, _, pCenter, _ := getDisplayMetrics()
 	scaledOffset := scaleInt(offsetX)
-	if scaledOffset > maxDevOffset {
-		scaledOffset = maxDevOffset
-	} else if scaledOffset < -maxDevOffset {
-		scaledOffset = -maxDevOffset
-	}
-
-	physicalCenterX := (sw / 2) + scaledOffset
+	physicalCenterX := pCenter + scaledOffset
 
 	left := physicalCenterX - (pdw / 2) - devPadding
 	if left < 0 {

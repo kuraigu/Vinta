@@ -23,6 +23,8 @@ var (
 	procSendNativeMediaCommand   uintptr
 	procSetNativeRadioState      uintptr
 	procGetNativeRadiosStatus    uintptr
+	procSelectNativeMediaSession uintptr
+	procFocusNativeMediaApp      uintptr
 
 	mediaCallbackPtr uintptr
 	notifCallbackPtr uintptr
@@ -51,6 +53,8 @@ func ensureDLLLoadedLocked() bool {
 	procSendNativeMediaCommand, _ = syscall.GetProcAddress(dllHandle, "SendNativeMediaCommand")
 	procSetNativeRadioState, _ = syscall.GetProcAddress(dllHandle, "SetNativeRadioState")
 	procGetNativeRadiosStatus, _ = syscall.GetProcAddress(dllHandle, "GetNativeRadiosStatus")
+	procSelectNativeMediaSession, _ = syscall.GetProcAddress(dllHandle, "SelectNativeMediaSession")
+	procFocusNativeMediaApp, _ = syscall.GetProcAddress(dllHandle, "FocusNativeMediaApp")
 	return true
 }
 
@@ -181,12 +185,51 @@ func GetNativeRadiosStatus() (string, bool) {
 	return "", false
 }
 
+// SelectMediaSession asks vintaservices.dll to switch active playback session to sessionID.
+func SelectMediaSession(sessionID string) bool {
+	serviceMu.Lock()
+	if !ensureDLLLoadedLocked() {
+		serviceMu.Unlock()
+		return false
+	}
+	proc := procSelectNativeMediaSession
+	serviceMu.Unlock()
+
+	if proc == 0 {
+		return false
+	}
+
+	idBytes := append([]byte(sessionID), 0)
+	ret, _, _ := syscall.SyscallN(proc, uintptr(unsafe.Pointer(&idBytes[0])))
+	return ret == 1
+}
+
+// FocusMediaApp asks vintaservices.dll to find and focus the source application's window.
+func FocusMediaApp(sourceApp string) bool {
+	serviceMu.Lock()
+	if !ensureDLLLoadedLocked() {
+		serviceMu.Unlock()
+		return false
+	}
+	proc := procFocusNativeMediaApp
+	serviceMu.Unlock()
+
+	if proc == 0 || sourceApp == "" {
+		return false
+	}
+
+	appBytes := append([]byte(sourceApp), 0)
+	ret, _, _ := syscall.SyscallN(proc, uintptr(unsafe.Pointer(&appBytes[0])))
+	return ret == 1
+}
+
 var (
-	mediaMu       sync.Mutex
-	lastTrackKey  string
-	lastPlayState bool
-	isAppHidden   bool
-	hiddenMu      sync.RWMutex
+	mediaMu             sync.Mutex
+	lastTrackKey        string
+	lastPlayState       bool
+	lastArtSentTrackKey string
+	isAppHidden         bool
+	hiddenMu            sync.RWMutex
 )
 
 // SetAppHidden informs the native services whether Vinta is currently hidden to throttle high-frequency events.
@@ -222,12 +265,23 @@ func onNativeMedia(cStr *byte) uintptr {
 		playStateChanged := (isPlaying != lastPlayState)
 		lastPlayState = isPlaying
 
-		if !trackChanged {
-			// Do not re-send the multi-megabyte albumArt on routine 500ms position updates.
-			// The frontend preserves the album art for the same track.
+		art, _ := payload["albumArt"].(string)
+		if art != "" {
+			if lastArtSentTrackKey != trackKey {
+				lastArtSentTrackKey = trackKey
+			}
+		} else if !trackChanged && lastArtSentTrackKey == trackKey {
 			payload["albumArt"] = ""
-		} else {
+		}
+
+		if trackChanged {
 			lastTrackKey = trackKey
+			if art == "" {
+				lastArtSentTrackKey = ""
+			}
+		} else if !trackChanged && lastArtSentTrackKey == trackKey && art != "" {
+			// Once delivered, suppress multi-megabyte base64 on subsequent routine position updates
+			payload["albumArt"] = ""
 		}
 		mediaMu.Unlock()
 
