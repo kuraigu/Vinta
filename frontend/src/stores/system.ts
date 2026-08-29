@@ -19,6 +19,14 @@ export const notificationPermissionDenied = writable<boolean>(false)
 // ============================================================================
 // Media Player & Audio Peaks
 // ============================================================================
+export interface MediaSessionItem {
+  id: string
+  title: string
+  artist: string
+  sourceApp: string
+  isPlaying: boolean
+}
+
 export interface MediaData {
   isAvailable: boolean
   sourceApp?: string
@@ -40,6 +48,8 @@ export interface MediaData {
   autoRepeatMode?: number // 0: None, 1: Track, 2: List
   isShuffleEnabled?: boolean
   isRepeatEnabled?: boolean
+  sessions?: MediaSessionItem[]
+  activeSessionId?: string
 }
 
 export const globalMediaStore = writable<MediaData>({

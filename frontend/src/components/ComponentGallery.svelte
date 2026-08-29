@@ -241,7 +241,14 @@
   role="region"
   aria-label="Component Slideshow"
 >
-  <div class="gallery-viewport">
+  <div
+    class="gallery-viewport"
+    onscroll={(e) => {
+      const el = e.currentTarget as HTMLElement
+      if (el.scrollLeft !== 0) el.scrollLeft = 0
+      if (el.scrollTop !== 0) el.scrollTop = 0
+    }}
+  >
     <div
       class="gallery-track"
       ontransitionend={handleTransitionEnd}
@@ -257,6 +264,8 @@
           class="gallery-slide"
           class:active={i === displayIndex ||
             (!isLoopingable && i === displayIndex)}
+          inert={i !== displayIndex ? true : undefined}
+          aria-hidden={i !== displayIndex ? 'true' : undefined}
         >
           {#if slide.snippet}
             {@render slide.snippet()}
@@ -269,13 +278,19 @@
 
     <!-- Ambient edge hit-zones (replace chevrons) -->
     {#if showControls && slides.length > 1}
-      <!-- svelte-ignore a11y_click_events_have_key_events -->
       <div
         class="nav-edge-zone prev"
         class:disabled={!loop && activeRealIndex === 0}
         onclick={(e) => {
           e.stopPropagation()
           prevSlide()
+        }}
+        onkeydown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            e.stopPropagation()
+            prevSlide()
+          }
         }}
         aria-label="Previous Slide"
         role="button"
@@ -284,13 +299,19 @@
         <span class="nav-edge-icon"><ChevronLeft size={16} /></span>
       </div>
 
-      <!-- svelte-ignore a11y_click_events_have_key_events -->
       <div
         class="nav-edge-zone next"
         class:disabled={!loop && activeRealIndex === slides.length - 1}
         onclick={(e) => {
           e.stopPropagation()
           nextSlide()
+        }}
+        onkeydown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            e.stopPropagation()
+            nextSlide()
+          }
         }}
         aria-label="Next Slide"
         role="button"

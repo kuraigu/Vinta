@@ -12,7 +12,8 @@
     GetWirelessStatus,
     CheckPostUpdateInstalled,
     TrimMemory,
-    SetIsHidden
+    SetIsHidden,
+    GetDisplayLayout
   } from '../wailsjs/go/backend/App.js'
   import { EventsOn, LogFatal, LogInfo } from '../wailsjs/runtime/runtime.js'
   import NotificationPage, {
@@ -148,11 +149,24 @@
     return $autoHideStore
   })
 
-  let screenWidth = $state(
-    typeof window !== 'undefined'
-      ? window.screen?.width || window.innerWidth || 1920
-      : 1920
-  )
+  let displayLayout = $state({
+    virtualLeft: 0,
+    virtualTop: 0,
+    virtualWidth: 1920,
+    virtualHeight: 1080,
+    primaryCenter: 960,
+    monitors: [
+      {
+        id: 1,
+        name: 'Primary Display',
+        left: 0,
+        top: 0,
+        width: 1920,
+        height: 1080,
+        isPrimary: true
+      }
+    ]
+  })
 
   let hideTrigger = $state(0)
 
@@ -456,26 +470,42 @@
         : currentMinimalW
   )
 
-  let maxAllowedOffsetForCurrentW = $derived(
-    Math.max(0, Math.floor((screenWidth - currentIslandW) / 2 - 12))
-  )
+  let minAllowedOffsetForCurrentW = $derived.by(() => {
+    const halfW = currentIslandW / 2
+    return Math.floor(12 + halfW - displayLayout.primaryCenter)
+  })
 
-  let maxDevPillOffset = $derived(
-    Math.max(0, Math.floor((screenWidth - 430) / 2 - 12))
-  )
+  let maxAllowedOffsetForCurrentW = $derived.by(() => {
+    const halfW = currentIslandW / 2
+    return Math.floor(
+      displayLayout.virtualWidth - 12 - halfW - displayLayout.primaryCenter
+    )
+  })
+
+  let minDevPillOffset = $derived.by(() => {
+    const halfW = 430 / 2
+    return Math.floor(12 + halfW - displayLayout.primaryCenter)
+  })
+
+  let maxDevPillOffset = $derived.by(() => {
+    const halfW = 430 / 2
+    return Math.floor(
+      displayLayout.virtualWidth - 12 - halfW - displayLayout.primaryCenter
+    )
+  })
 
   let currentLiveOffsetX = $state(0)
 
   // Smart offset safety: smoothly clamp main island back into bounds if content expands near screen edge
   function handleSmartEdgeOffsetAdjustment() {
-    const maxOffset = maxAllowedOffsetForCurrentW
-    if (
-      !isDraggingHidden &&
-      !isInFlight &&
-      Math.abs(currentLiveOffsetX) > maxOffset
-    ) {
-      currentLiveOffsetX = Math.sign(currentLiveOffsetX) * maxOffset
-      $hiddenPillOffsetXStore = currentLiveOffsetX
+    if (!isDraggingHidden && !isInFlight) {
+      if (currentLiveOffsetX > maxAllowedOffsetForCurrentW) {
+        currentLiveOffsetX = maxAllowedOffsetForCurrentW
+        $hiddenPillOffsetXStore = currentLiveOffsetX
+      } else if (currentLiveOffsetX < minAllowedOffsetForCurrentW) {
+        currentLiveOffsetX = minAllowedOffsetForCurrentW
+        $hiddenPillOffsetXStore = currentLiveOffsetX
+      }
     }
   }
 
@@ -495,7 +525,7 @@
   let clampedOffsetX = $derived.by(() => {
     if (Math.abs(currentLiveOffsetX) < 3) return 0
     return Math.max(
-      -maxAllowedOffsetForCurrentW,
+      minAllowedOffsetForCurrentW,
       Math.min(maxAllowedOffsetForCurrentW, currentLiveOffsetX)
     )
   })
@@ -503,7 +533,7 @@
   let devClampedOffsetX = $derived.by(() => {
     if (Math.abs(clampedOffsetX) < 3) return 0
     return Math.max(
-      -maxDevPillOffset,
+      minDevPillOffset,
       Math.min(maxDevPillOffset, clampedOffsetX)
     )
   })
@@ -840,8 +870,20 @@
         .catch(() => {})
     }
 
+    const refreshDisplay = async () => {
+      try {
+        const layout = await GetDisplayLayout()
+        if (layout && layout.virtualWidth > 0) {
+          displayLayout = layout
+        }
+      } catch {
+        // Keep current layout
+      }
+    }
+    refreshDisplay()
+
     const handleResize = () => {
-      screenWidth = window.screen?.width || window.innerWidth || 1920
+      refreshDisplay()
     }
     // Global failsafe: only abort if focus is truly lost to another application.
     // Internal blur events caused by window activation or clicks are safely ignored.
@@ -1096,10 +1138,24 @@
         }
       }
       const rawOffset = hiddenDragStartOffset + dx
-      // Hard clamp: No rubberband past the edge
+      let targetOffset = rawOffset
+
+      // Magnetic snap when near any monitor center (within ±28px)
+      if (displayLayout.monitors && displayLayout.monitors.length > 0) {
+        for (const mon of displayLayout.monitors) {
+          const monClientLeft = mon.left - displayLayout.virtualLeft
+          const monCenter = monClientLeft + mon.width / 2
+          const monSnapOffset = monCenter - displayLayout.primaryCenter
+          if (Math.abs(rawOffset - monSnapOffset) <= 28) {
+            targetOffset = monSnapOffset
+            break
+          }
+        }
+      }
+
       currentLiveOffsetX = Math.max(
-        -maxAllowedOffsetForCurrentW,
-        Math.min(maxAllowedOffsetForCurrentW, rawOffset)
+        minAllowedOffsetForCurrentW,
+        Math.min(maxAllowedOffsetForCurrentW, targetOffset)
       )
 
       // Dynamic OnDrag window bounding region management:
@@ -1120,8 +1176,7 @@
         }
         isCursorInside = isInsideIsland || isInsideDevPill
       } else {
-        const screenCenterX = screenWidth / 2
-        const islandCenterX = screenCenterX + clampedOffsetX
+        const islandCenterX = displayLayout.primaryCenter + clampedOffsetX
         const halfW = currentIslandW / 2
         isCursorInside =
           e.screenX >= islandCenterX - halfW &&
@@ -1207,8 +1262,8 @@
               stopInertia()
               return
             }
-            if (currentLiveOffsetX <= -maxAllowedOffsetForCurrentW) {
-              currentLiveOffsetX = -maxAllowedOffsetForCurrentW
+            if (currentLiveOffsetX <= minAllowedOffsetForCurrentW) {
+              currentLiveOffsetX = minAllowedOffsetForCurrentW
               stopInertia()
               return
             }
@@ -1346,6 +1401,7 @@
   role="application"
   onfocusin={handleFocusIn}
   onpointerdown={handleGlobalPointerDown}
+  style="position: absolute; left: {displayLayout.primaryCenter}px; transform: translateX(-50%);"
 >
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->

@@ -38,6 +38,10 @@ static std::mutex g_artCacheMutex;
 
 static std::mutex g_audioVolMutex;
 
+static std::string g_selectedSessionId;
+static std::chrono::steady_clock::time_point g_selectedSessionTime;
+static std::mutex g_selectedSessionMutex;
+
 static void UpdateCurrentSession();
 static void EmitMediaState(bool includeVolume = true);
 static void ScheduleEmit();
@@ -51,6 +55,79 @@ static void SendVolumeKey(BYTE vk);
 
 bool IsMediaPlayingState() {
     return g_isMediaPlaying.load();
+}
+
+int SelectMediaSession(const char* sessionId) {
+    {
+        std::lock_guard<std::mutex> lock(g_selectedSessionMutex);
+        g_selectedSessionId = (sessionId != nullptr) ? sessionId : "";
+        g_selectedSessionTime = std::chrono::steady_clock::now();
+    }
+    ScheduleEmit();
+    return 1;
+}
+
+struct WindowFocusData {
+    std::string needle;
+    HWND foundHwnd = nullptr;
+};
+
+static std::string ToLowerStr(std::string s) {
+    std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return std::tolower(c); });
+    return s;
+}
+
+int FocusMediaApp(const char* sourceApp) {
+    if (!sourceApp || strlen(sourceApp) == 0) return 0;
+    std::string needle = ToLowerStr(sourceApp);
+    size_t lastSlash = needle.find_last_of("\\/");
+    if (lastSlash != std::string::npos) needle = needle.substr(lastSlash + 1);
+    if (needle.size() > 4 && needle.substr(needle.size() - 4) == ".exe") {
+        needle = needle.substr(0, needle.size() - 4);
+    }
+
+    WindowFocusData data;
+    data.needle = needle;
+
+    EnumWindows([](HWND hwnd, LPARAM lParam) -> BOOL {
+        if (!IsWindowVisible(hwnd)) return TRUE;
+        LONG exStyle = GetWindowLongW(hwnd, GWL_EXSTYLE);
+        if (exStyle & WS_EX_TOOLWINDOW) return TRUE;
+
+        DWORD pid = 0;
+        GetWindowThreadProcessId(hwnd, &pid);
+        if (pid == 0) return TRUE;
+
+        HANDLE hProc = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
+        if (hProc) {
+            WCHAR path[MAX_PATH] = {0};
+            DWORD size = MAX_PATH;
+            if (QueryFullProcessImageNameW(hProc, 0, path, &size)) {
+                std::string exePath = ToLowerStr(Utf16ToUtf8(path));
+                auto* d = reinterpret_cast<WindowFocusData*>(lParam);
+                if (exePath.find(d->needle) != std::string::npos || 
+                   (d->needle.find("spotify") != std::string::npos && exePath.find("spotify") != std::string::npos)) {
+                    int len = GetWindowTextLengthW(hwnd);
+                    if (len > 0) {
+                        d->foundHwnd = hwnd;
+                        CloseHandle(hProc);
+                        return FALSE;
+                    }
+                }
+            }
+            CloseHandle(hProc);
+        }
+        return TRUE;
+    }, reinterpret_cast<LPARAM>(&data));
+
+    if (data.foundHwnd) {
+        if (IsIconic(data.foundHwnd)) {
+            ShowWindow(data.foundHwnd, SW_RESTORE);
+        }
+        SetForegroundWindow(data.foundHwnd);
+        return 1;
+    }
+    return 0;
 }
 
 static void ScheduleEmit() {
@@ -70,29 +147,52 @@ static void UpdateCurrentSession() {
     if (!g_sessionManager) return;
 
     try {
+        std::string selectedId;
+        std::chrono::steady_clock::time_point selectedTime;
+        {
+            std::lock_guard<std::mutex> sLock(g_selectedSessionMutex);
+            selectedId = g_selectedSessionId;
+            selectedTime = g_selectedSessionTime;
+        }
+
         winrt_media::GlobalSystemMediaTransportControlsSession targetSession{nullptr};
+        winrt_media::GlobalSystemMediaTransportControlsSession chosenSession{nullptr};
 
-        // 1. Get focused session
-        winrt_media::GlobalSystemMediaTransportControlsSession focusedSession{nullptr};
-        try {
-            focusedSession = g_sessionManager.GetCurrentSession();
-        } catch (...) {}
-
-        // 2. Check if focused session is actively playing
-        bool focusedIsPlaying = false;
-        if (focusedSession) {
+        // If user explicitly picked a session, attempt to find it among current sessions
+        if (!selectedId.empty()) {
             try {
-                auto info = focusedSession.GetPlaybackInfo();
-                if (info && info.PlaybackStatus() == winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing) {
-                    focusedIsPlaying = true;
+                auto sessions = g_sessionManager.GetSessions();
+                for (auto const& s : sessions) {
+                    try {
+                        std::string sId = Utf16ToUtf8(s.SourceAppUserModelId().c_str());
+                        if (sId == selectedId) {
+                            chosenSession = s;
+                            break;
+                        }
+                    } catch (...) {}
                 }
             } catch (...) {}
         }
 
-        if (focusedIsPlaying) {
-            targetSession = focusedSession;
+        // Check if chosen session is actively playing or within recent selection window
+        bool chosenIsPlaying = false;
+        if (chosenSession) {
+            try {
+                auto info = chosenSession.GetPlaybackInfo();
+                if (info && info.PlaybackStatus() == winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing) {
+                    chosenIsPlaying = true;
+                }
+            } catch (...) {}
+        }
+
+        auto now = std::chrono::steady_clock::now();
+        bool isRecentSelection = (std::chrono::duration_cast<std::chrono::milliseconds>(now - selectedTime).count() < 4000);
+
+        if (chosenSession && (chosenIsPlaying || isRecentSelection)) {
+            // User's chosen session has priority if playing or freshly selected
+            targetSession = chosenSession;
         } else {
-            // Focused session is not playing (or null). Check if ANY other session is actively Playing
+            // Chosen session is not playing (and not just clicked). Check if ANY session IS playing!
             try {
                 auto sessions = g_sessionManager.GetSessions();
                 for (auto const& s : sessions) {
@@ -106,18 +206,27 @@ static void UpdateCurrentSession() {
                 }
             } catch (...) {}
 
-            // If no session is actively playing, fallback to focusedSession (paused), or first available session
+            // If no session is actively playing, fallback to chosenSession, or focusedSession, or first session
             if (!targetSession) {
-                if (focusedSession) {
-                    targetSession = focusedSession;
+                if (chosenSession) {
+                    targetSession = chosenSession;
                 } else {
+                    winrt_media::GlobalSystemMediaTransportControlsSession focusedSession{nullptr};
                     try {
-                        auto sessions = g_sessionManager.GetSessions();
-                        for (auto const& s : sessions) {
-                            targetSession = s;
-                            break;
-                        }
+                        focusedSession = g_sessionManager.GetCurrentSession();
                     } catch (...) {}
+
+                    if (focusedSession) {
+                        targetSession = focusedSession;
+                    } else {
+                        try {
+                            auto sessions = g_sessionManager.GetSessions();
+                            for (auto const& s : sessions) {
+                                targetSession = s;
+                                break;
+                            }
+                        } catch (...) {}
+                    }
                 }
             }
         }
@@ -289,6 +398,54 @@ static void EmitMediaState(bool includeVolume) {
         }
     } catch (...) {}
 
+    std::string sessionsJson = "[]";
+    try {
+        if (g_sessionManager) {
+            auto allSessions = g_sessionManager.GetSessions();
+            std::ostringstream sJson;
+            sJson << "[";
+            bool first = true;
+            for (auto const& s : allSessions) {
+                try {
+                    std::string sId = Utf16ToUtf8(s.SourceAppUserModelId().c_str());
+                    std::string sApp = sId;
+                    size_t slash = sApp.find_last_of("\\/");
+                    if (slash != std::string::npos) sApp = sApp.substr(slash + 1);
+
+                    std::string sTitle = "";
+                    std::string sArtist = "";
+                    try {
+                        auto props = s.TryGetMediaPropertiesAsync().get();
+                        if (props) {
+                            sTitle = Utf16ToUtf8(props.Title().c_str());
+                            sArtist = Utf16ToUtf8(props.Artist().c_str());
+                        }
+                    } catch (...) {}
+
+                    bool sPlaying = false;
+                    try {
+                        auto pInfo = s.GetPlaybackInfo();
+                        if (pInfo) {
+                            sPlaying = (pInfo.PlaybackStatus() == winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing);
+                        }
+                    } catch (...) {}
+
+                    if (!first) sJson << ",";
+                    first = false;
+                    sJson << "{"
+                          << "\"id\":\"" << EscapeJsonString(sId) << "\","
+                          << "\"sourceApp\":\"" << EscapeJsonString(sApp) << "\","
+                          << "\"title\":\"" << EscapeJsonString(sTitle) << "\","
+                          << "\"artist\":\"" << EscapeJsonString(sArtist) << "\","
+                          << "\"isPlaying\":" << (sPlaying ? "true" : "false")
+                          << "}";
+                } catch (...) {}
+            }
+            sJson << "]";
+            sessionsJson = sJson.str();
+        }
+    } catch (...) {}
+
     auto [volume, isMuted] = GetMediaAudioVolumeAndMute(sourceApp);
 
     std::ostringstream json;
@@ -312,7 +469,9 @@ static void EmitMediaState(bool includeVolume) {
          << "\"canGoNext\":" << (canGoNext ? "true" : "false") << ","
          << "\"canGoPrev\":" << (canGoPrev ? "true" : "false") << ","
          << "\"canPause\":" << (canPause ? "true" : "false") << ","
-         << "\"canPlay\":" << (canPlay ? "true" : "false") << "}";
+         << "\"canPlay\":" << (canPlay ? "true" : "false") << ","
+         << "\"sessions\":" << sessionsJson << ","
+         << "\"activeSessionId\":\"" << EscapeJsonString(sourceApp) << "\"}";
 
     if (g_mediaCb) {
         g_mediaCb(json.str().c_str());

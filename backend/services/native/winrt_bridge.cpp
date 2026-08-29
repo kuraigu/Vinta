@@ -42,3 +42,11 @@ extern "C" BRIDGE_API int GetNativeRadiosStatus(char* outJson, int maxLen) {
     return GetRadiosStateJson(outJson, maxLen);
 }
 
+extern "C" BRIDGE_API int SelectNativeMediaSession(const char* sessionId) {
+    return SelectMediaSession(sessionId);
+}
+
+extern "C" BRIDGE_API int FocusNativeMediaApp(const char* sourceApp) {
+    return FocusMediaApp(sourceApp);
+}
+

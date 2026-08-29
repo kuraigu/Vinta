@@ -31,6 +31,10 @@ BRIDGE_API int SetNativeRadioState(int radioKind, int targetState);
 
 BRIDGE_API int GetNativeRadiosStatus(char* outJson, int maxLen);
 
+BRIDGE_API int SelectNativeMediaSession(const char* sessionId);
+
+BRIDGE_API int FocusNativeMediaApp(const char* sourceApp);
+
 #ifdef __cplusplus
 }
 #endif
