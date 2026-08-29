@@ -1,8 +1,64 @@
 import { writable, get } from 'svelte/store'
-import { GetSettings, SaveSettings } from '../wailsjs/go/backend/App.js'
+import {
+  GetSettings,
+  SaveSettings,
+  CheckForUpdates
+} from '../wailsjs/go/backend/App.js'
+
+export interface ReleaseInfo {
+  version: string
+  tagName: string
+  name: string
+  body: string
+  publishedAt: string
+  htmlUrl: string
+  installerUrl: string
+  portableUrl: string
+  isPrerelease: boolean
+}
+
+export interface UpdateCheckResult {
+  status: 'up-to-date' | 'update-available' | 'dev-mode' | 'error' | string
+  updateAvailable: boolean
+  currentVersion: string
+  latestVersion: string
+  release: ReleaseInfo
+  checkedAt: string
+  message: string
+}
 
 export const devTestingStore = writable<boolean>(false)
 export const activeSettingsTabStore = writable<string>('appearance')
+export const updateInfoStore = writable<UpdateCheckResult | null>(null)
+export const updateCheckingStore = writable<boolean>(false)
+
+export async function triggerUpdateCheck(
+  force = true
+): Promise<UpdateCheckResult | null> {
+  updateCheckingStore.set(true)
+  try {
+    if (typeof CheckForUpdates === 'function') {
+      const res = await CheckForUpdates(force)
+      if (res) {
+        updateInfoStore.set(res as UpdateCheckResult)
+        return res as UpdateCheckResult
+      }
+    }
+  } catch (err) {
+    updateInfoStore.set({
+      status: 'error',
+      updateAvailable: false,
+      currentVersion: '',
+      latestVersion: '',
+      release: {} as ReleaseInfo,
+      checkedAt: new Date().toLocaleTimeString(),
+      message: String(err)
+    })
+  } finally {
+    updateCheckingStore.set(false)
+  }
+  return null
+}
 
 const allSettingsCache: Record<string, unknown> = {}
 let saveSettingsTimeout: ReturnType<typeof setTimeout> | null = null
@@ -119,6 +175,10 @@ export type IslandConfig = {
 
 export const themeStore = persistentWritable<AppTheme>('vinta_theme', 'dark')
 export const shapeStore = persistentWritable<IslandShape>('vinta_shape', 'pill')
+export const autoCheckUpdatesStore = persistentWritable<boolean>(
+  'autoCheckUpdates',
+  true
+)
 export const opacityMinimalStore = persistentWritable<number>(
   'vinta_opacity_minimal',
   1.0

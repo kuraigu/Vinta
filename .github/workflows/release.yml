@@ -4,9 +4,14 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version (e.g., v0.1.0-alpha, v1.0.0)'
-        required: true
-        default: 'v0.1.0-alpha'
+        description: 'Release version tag (e.g. v0.1.0-alpha, v0.2.0 - Leave blank to auto-detect and increment)'
+        required: false
+        default: ''
+      release_notes:
+        description: 'Release highlights / changelog (Optional: leave blank to auto-generate from PRs/commits)'
+        required: false
+        type: string
+        default: ''
       draft:
         description: 'Create as a Private Draft Release'
         required: true
@@ -28,6 +33,36 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Resolve Release Version
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $inputVersion = "${{ github.event.inputs.version }}".Trim()
+          if (-not $inputVersion -or $inputVersion -eq "auto") {
+              $latestTag = (gh release list --limit 1 --json tagName --jq '.[0].tagName' 2>$null)
+              if ($latestTag) {
+                  Write-Host "Detected latest release tag: $latestTag"
+                  if ($latestTag -match '^v?(\d+)\.(\d+)\.(\d+)(.*)$') {
+                      $major = [int]$Matches[1]
+                      $minor = [int]$Matches[2]
+                      $patch = [int]$Matches[3] + 1
+                      $extra = $Matches[4]
+                      $version = "v$major.$minor.$patch$extra"
+                  } else {
+                      $version = "$latestTag.1"
+                  }
+              } else {
+                  $version = "v0.1.0-alpha"
+              }
+              Write-Host "Auto-incremented release version: $version"
+          } else {
+              $version = $inputVersion
+          }
+          "RELEASE_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Set up Go
         uses: actions/setup-go@v7
@@ -72,7 +107,7 @@ jobs:
       - name: Build Official Application & NSIS Installer
         shell: pwsh
         run: |
-          $version = "${{ github.event.inputs.version }}"
+          $version = "$env:RELEASE_VERSION"
           $buildDate = (Get-Date -Format 'yy.MMdd')
           $ldflags = "-X 'Vinta/backend.BuildType=Official' -X 'Vinta/backend.AppVersion=$version' -X 'Vinta/backend.GitCommit=${{ github.sha }}' -X 'Vinta/backend.BuildTime=$buildDate' -X 'backend.BuildType=Official' -X 'backend.AppVersion=$version' -X 'backend.GitCommit=${{ github.sha }}' -X 'backend.BuildTime=$buildDate'"
           wails build -nsis -ldflags $ldflags
@@ -80,7 +115,7 @@ jobs:
       - name: Prepare Release Artifacts
         shell: pwsh
         run: |
-          $version = "${{ github.event.inputs.version }}"
+          $version = "$env:RELEASE_VERSION"
           New-Item -ItemType Directory -Path "release-dist" -Force | Out-Null
 
           # 1. Copy NSIS Installer with version in filename
@@ -117,11 +152,12 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ github.event.inputs.version }}
-          name: Release ${{ github.event.inputs.version }}
+          tag_name: ${{ env.RELEASE_VERSION }}
+          name: Release ${{ env.RELEASE_VERSION }}
           draft: ${{ github.event.inputs.draft }}
           prerelease: ${{ github.event.inputs.prerelease }}
+          body: ${{ github.event.inputs.release_notes }}
           files: release-dist/*
-          generate_release_notes: true
+          generate_release_notes: ${{ github.event.inputs.release_notes == '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

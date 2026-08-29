@@ -323,6 +323,8 @@ func (a *App) Startup(ctx context.Context) {
 		}
 	}()
 
+	a.StartBackgroundUpdateChecker()
+
 	go systray.Run(a.onReady, a.onExit)
 }
 
@@ -477,9 +479,9 @@ func (a *App) updateWindowRegion() {
 	hwnd := getMyWindowHwnd()
 	if hwnd != 0 {
 		padding := OutsidePadding
-		// Use tight padding (2px) when hidden to allow ambient glow and smooth drag without clipping
+		// Use compact padding (6px) when hidden to allow ambient glow and smooth drag without clipping
 		if a.pillW <= 110 && a.pillH <= 30 {
-			padding = 2
+			padding = 6
 		}
 		setClickRegion(hwnd, a.pillW, a.pillH, a.pillR, a.offsetX, a.devW, a.devH, a.devExtra, padding, a.scale)
 	}
@@ -636,7 +638,7 @@ func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, dw int, dh i
 	hrgnDev := createDevPillRegion(dw, dh, extraH, h, offsetX, sw, scale)
 
 	hrgnFinal := combineWindowRegions(hrgnMain, hrgnDev)
-	_, _, _ = procSetWindowRgn.Call(hwnd, hrgnFinal, 1)
+	_, _, _ = procSetWindowRgn.Call(hwnd, hrgnFinal, 0)
 }
 
 // Greet returns a greeting for the given name
@@ -685,7 +687,7 @@ func GetHardwareAccelerationConfig() bool {
 	if err != nil {
 		return true // Default enabled
 	}
-	filePath := filepath.Join(configDir, "Vinta", "hw_accel.txt")
+	filePath := filepath.Join(configDir, "FreeMatrix Studios", "Vinta", "hw_accel.txt")
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return true // Default enabled
@@ -704,7 +706,7 @@ func (a *App) SetHardwareAcceleration(enabled bool) error {
 	if err != nil {
 		return err
 	}
-	dirPath := filepath.Join(configDir, "Vinta")
+	dirPath := filepath.Join(configDir, "FreeMatrix Studios", "Vinta")
 	_ = os.MkdirAll(dirPath, 0755)
 	filePath := filepath.Join(dirPath, "hw_accel.txt")
 	val := "true"

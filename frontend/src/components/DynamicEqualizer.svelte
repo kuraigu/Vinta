@@ -7,6 +7,7 @@
     barCount?: number
     variant?: 'minimal' | 'full'
     progressPercent?: number
+    color?: string
   }
 
   let {
@@ -14,7 +15,8 @@
     audioPeak = 0,
     barCount = 24,
     variant = 'minimal',
-    progressPercent
+    progressPercent,
+    color
   }: Props = $props()
 
   let canvasRef = $state<HTMLCanvasElement | null>(null)
@@ -38,19 +40,17 @@
 
   function updateCanvasSize() {
     if (!canvasRef) return
+    const rect = canvasRef.getBoundingClientRect()
+    cssWidth = rect.width
+    cssHeight = rect.height
     dpr = window.devicePixelRatio || 1
-    const w = canvasRef.clientWidth || (variant === 'minimal' ? 18 : 200)
-    const h = canvasRef.clientHeight || (variant === 'minimal' ? 12 : 24)
 
-    if (w > 0 && h > 0) {
-      cssWidth = w
-      cssHeight = h
-      const targetW = Math.floor(w * dpr)
-      const targetH = Math.floor(h * dpr)
-      if (canvasRef.width !== targetW || canvasRef.height !== targetH) {
-        canvasRef.width = targetW
-        canvasRef.height = targetH
-      }
+    const targetW = Math.round(cssWidth * dpr)
+    const targetH = Math.round(cssHeight * dpr)
+
+    if (canvasRef.width !== targetW || canvasRef.height !== targetH) {
+      canvasRef.width = targetW
+      canvasRef.height = targetH
     }
   }
 
@@ -111,16 +111,23 @@
       ? Math.min(1.8, 0.45 + (peak > 0.001 ? peak * 2.2 : 0))
       : 0
 
-    // Linear Gradient for played audio bars
-    let grad: CanvasGradient | string
-    if (variant === 'minimal') {
-      grad = '#34c759'
+    let activeFill: CanvasGradient | string
+    if (color && !color.startsWith('var(')) {
+      activeFill = color
+    } else if (variant === 'minimal') {
+      if (canvasRef && color && color.startsWith('var(')) {
+        const varName = color.replace(/^var\(\s*([^,\)]+).*/, '$1').trim()
+        const computed = getComputedStyle(canvasRef).getPropertyValue(varName).trim()
+        activeFill = computed || '#34c759'
+      } else {
+        activeFill = '#34c759'
+      }
     } else {
       const g = ctx.createLinearGradient(0, height, 0, 0)
       g.addColorStop(0, '#00f0ff')
       g.addColorStop(0.5, '#a855f7')
       g.addColorStop(1, '#ff007f')
-      grad = g
+      activeFill = g
     }
 
     for (let i = 0; i < count; i++) {
@@ -145,7 +152,7 @@
       const isPlayed =
         progressPercent === undefined || barPercent <= progressPercent
 
-      ctx.fillStyle = isPlayed ? grad : 'rgba(255, 255, 255, 0.22)'
+      ctx.fillStyle = isPlayed ? activeFill : 'rgba(255, 255, 255, 0.22)'
 
       if (typeof ctx.roundRect === 'function') {
         ctx.beginPath()

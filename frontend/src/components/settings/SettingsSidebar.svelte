@@ -7,6 +7,7 @@
     Clock,
     CloudSun,
     Cpu,
+    RefreshCw,
     Info
   } from 'lucide-svelte'
   import { activeSettingsTabStore } from '../../store'
@@ -19,7 +20,8 @@
     { id: 'clock', name: 'Clock & Date', icon: Clock },
     { id: 'weather', name: 'Weather', icon: CloudSun },
     { id: 'system', name: 'System', icon: Cpu },
-    { id: 'about', name: 'About', icon: Info }
+    { id: 'about', name: 'About', icon: Info },
+    { id: 'updates', name: 'Updates', icon: RefreshCw }
   ]
 </script>
 

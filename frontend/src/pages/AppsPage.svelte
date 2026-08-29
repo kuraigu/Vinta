@@ -19,7 +19,8 @@
     Info,
     Search,
     FileText,
-    SlidersHorizontal
+    SlidersHorizontal,
+    RefreshCw
   } from 'lucide-svelte'
   import HomePage, { config as homeConfig } from './HomePage.svelte'
   import NotificationPage, {
@@ -36,6 +37,8 @@
     notifData,
     activeSettingsTabStore,
     pageVisibilityStore,
+    triggerUpdateCheck,
+    updateInfoStore,
     type PageVisibility
   } from '../store'
 
@@ -122,11 +125,24 @@
     {
       id: 'about',
       name: 'About',
-      desc: 'Vinta Island v0.1.0',
+      desc: 'Check Vinta Information',
       icon: Info,
       color: 'gradient-purple',
       action: () => {
         activeSettingsTabStore.set('about')
+        openApp(SettingsPage, settingsConfig)
+      }
+    },
+    {
+      id: 'updates',
+      name: 'Check for Updates',
+      desc: 'Releases & Highlights',
+      icon: RefreshCw,
+      color: 'gradient-cyan',
+      badge: $updateInfoStore?.updateAvailable,
+      action: () => {
+        activeSettingsTabStore.set('updates')
+        triggerUpdateCheck(true)
         openApp(SettingsPage, settingsConfig)
       }
     }

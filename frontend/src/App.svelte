@@ -8,7 +8,8 @@
     FocusWindow,
     Quit,
     GetBatteryStatus,
-    GetWirelessStatus
+    GetWirelessStatus,
+    CheckPostUpdateInstalled
   } from '../wailsjs/go/backend/App.js'
   import { EventsOn, LogFatal, LogInfo } from '../wailsjs/runtime/runtime.js'
   import NotificationPage, {
@@ -59,6 +60,9 @@
     devPinnedStore,
     devTestingStore,
     activePageIdStore,
+    updateInfoStore,
+    autoCheckUpdatesStore,
+    type UpdateCheckResult,
     type BatteryData,
     type WirelessData
   } from './store'
@@ -366,16 +370,14 @@
       (e.propertyName === 'width' || e.propertyName === 'height')
     ) {
       clearTimeout(boundsTransitionTimeout)
-      boundsTransitionTimeout = window.setTimeout(() => {
-        if (targetPendingBounds.w > 0 && targetPendingBounds.h > 0) {
-          applyBounds(
-            targetPendingBounds.w,
-            targetPendingBounds.h,
-            targetPendingBounds.r
-          )
-          targetPendingBounds = { w: 0, h: 0, r: 0 }
-        }
-      }, 25)
+      if (targetPendingBounds.w > 0 && targetPendingBounds.h > 0) {
+        applyBounds(
+          targetPendingBounds.w,
+          targetPendingBounds.h,
+          targetPendingBounds.r
+        )
+        targetPendingBounds = { w: 0, h: 0, r: 0 }
+      }
     }
   }
 
@@ -730,6 +732,49 @@
       }
     })
 
+    EventsOn('update:available', (data: UpdateCheckResult) => {
+      if (data && data.updateAvailable) {
+        updateInfoStore.set(data)
+        if (get(autoCheckUpdatesStore)) {
+          const notifs = get(notifData)
+          notifData.set([
+            {
+              id: Date.now(),
+              appName: 'Vinta System',
+              title: `Vinta Update Available (${data.latestVersion})`,
+              message:
+                'A new version of Vinta is ready for download. Open Settings > Updates to review release highlights.',
+              timestamp: Date.now()
+            },
+            ...notifs
+          ])
+          showWidget()
+        }
+      }
+    })
+
+    if (typeof CheckPostUpdateInstalled === 'function') {
+      CheckPostUpdateInstalled()
+        .then((newVer: string) => {
+          if (newVer) {
+            const notifs = get(notifData)
+            notifData.set([
+              {
+                id: Date.now(),
+                appName: 'Vinta System',
+                title: `Welcome to Vinta ${newVer}!`,
+                message:
+                  'Vinta has been successfully updated. Check out the Updates tab in Settings to see what is new.',
+                timestamp: Date.now()
+              },
+              ...notifs
+            ])
+            showWidget()
+          }
+        })
+        .catch(() => {})
+    }
+
     const handleResize = () => {
       screenWidth = window.screen?.width || window.innerWidth || 1920
     }
@@ -817,7 +862,7 @@
           )
           targetPendingBounds = { w: 0, h: 0, r: 0 }
         }
-      }, 360)
+      }, 330)
     } else {
       clearTimeout(boundsTransitionTimeout)
       targetPendingBounds = { w: 0, h: 0, r: 0 }
@@ -914,15 +959,17 @@
         Math.min(maxAllowedOffsetForCurrentW, rawOffset)
       )
 
-      // Keep OS click region tightly aligned around current drag position
+      // Keep OS click region aligned with a comfort buffer around current drag position
       const { w, h, r } = getBoundsForState()
-      updateBounds(w, h, r, currentLiveOffsetX)
+      updateBounds(w + 32, h, r, currentLiveOffsetX)
     }
   }
 
   function handleHiddenPointerUp(e: PointerEvent) {
     if (!isDraggingHidden) return
     isDraggingHidden = false
+    const { w, h, r } = getBoundsForState()
+    updateBounds(w, h, r, clampedOffsetX)
     if (hasPointerCaptured) {
       hasPointerCaptured = false
       try {
@@ -1207,7 +1254,7 @@
         ? '0s'
         : '0.22s cubic-bezier(0.2, 0.8, 0.2, 1)'};"
     >
-      {#key activePage}
+      {#key [activePage, expanded]}
         {@const ActivePage = activePage}
         <div
           class="view"

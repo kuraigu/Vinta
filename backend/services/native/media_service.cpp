@@ -382,12 +382,27 @@ static std::vector<std::string> ExtractAppTokens(const std::string& sourceApp) {
         tokens.push_back(cur);
     }
 
+    size_t lastSlash = s.find_last_of("\\/");
+    std::string base = (lastSlash != std::string::npos) ? s.substr(lastSlash + 1) : s;
+    size_t pExe = base.find(".exe");
+    if (pExe != std::string::npos) base = base.substr(0, pExe);
+    if (!base.empty() && base.length() > 2) {
+        tokens.push_back(base);
+    }
+
     return tokens;
 }
 
+struct SessionMatch {
+    ISimpleAudioVolume* pVol = nullptr;
+    int score = 0;
+    float peak = 0.0f;
+    bool isActive = false;
+};
+
 static bool GetAllAppSessionVolumes(const std::string& sourceApp, std::vector<ISimpleAudioVolume*>& outVolumes, ISimpleAudioVolume** ppPrimaryVolume) {
-    outVolumes.clear();
     if (ppPrimaryVolume) *ppPrimaryVolume = nullptr;
+    outVolumes.clear();
 
     IMMDeviceEnumerator* pEnumerator = nullptr;
     if (FAILED(CoCreateInstance(__uuidof(MMDeviceEnumerator), NULL, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void**)&pEnumerator)) || !pEnumerator) return false;
@@ -397,29 +412,25 @@ static bool GetAllAppSessionVolumes(const std::string& sourceApp, std::vector<IS
     pEnumerator->Release();
     if (FAILED(hr) || !pDevice) return false;
 
-    IAudioSessionManager2* pSessionManager2 = nullptr;
-    hr = pDevice->Activate(__uuidof(IAudioSessionManager2), CLSCTX_ALL, NULL, (void**)&pSessionManager2);
+    IAudioSessionManager2* pSessionMgr = nullptr;
+    hr = pDevice->Activate(__uuidof(IAudioSessionManager2), CLSCTX_ALL, NULL, (void**)&pSessionMgr);
     pDevice->Release();
-    if (FAILED(hr) || !pSessionManager2) return false;
+    if (FAILED(hr) || !pSessionMgr) return false;
 
     IAudioSessionEnumerator* pSessionEnum = nullptr;
-    hr = pSessionManager2->GetSessionEnumerator(&pSessionEnum);
-    pSessionManager2->Release();
+    hr = pSessionMgr->GetSessionEnumerator(&pSessionEnum);
+    pSessionMgr->Release();
     if (FAILED(hr) || !pSessionEnum) return false;
 
     int count = 0;
-    pSessionEnum->GetCount(&count);
+    if (FAILED(pSessionEnum->GetCount(&count))) {
+        pSessionEnum->Release();
+        return false;
+    }
 
-    std::vector<std::string> tokens = ExtractAppTokens(sourceApp);
     std::string appLower = sourceApp;
     std::transform(appLower.begin(), appLower.end(), appLower.begin(), ::tolower);
-
-    struct SessionMatch {
-        ISimpleAudioVolume* pVol = nullptr;
-        int score = 0;
-        float peak = 0.0f;
-        bool isActive = false;
-    };
+    auto tokens = ExtractAppTokens(sourceApp);
 
     std::vector<SessionMatch> matches;
     SessionMatch bestFallback;
@@ -435,7 +446,7 @@ static bool GetAllAppSessionVolumes(const std::string& sourceApp, std::vector<IS
                     continue;
                 }
 
-                int score = 0;
+                int appScore = 0;
                 float peak = 0.0f;
                 AudioSessionState state = AudioSessionStateInactive;
                 pControl2->GetState(&state);
@@ -491,32 +502,40 @@ static bool GetAllAppSessionVolumes(const std::string& sourceApp, std::vector<IS
                 // Match against tokens & app name
                 if (!appLower.empty()) {
                     if (!procName.empty() && (appLower.find(procName) != std::string::npos || procName.find(appLower) != std::string::npos)) {
-                        score += 100;
+                        appScore += 100;
                     }
                     if (!sessId.empty() && sessId.find(appLower) != std::string::npos) {
-                        score += 80;
+                        appScore += 80;
                     }
                     if (!dispName.empty() && (appLower.find(dispName) != std::string::npos || dispName.find(appLower) != std::string::npos)) {
-                        score += 70;
+                        appScore += 70;
                     }
                 }
 
                 for (const auto& token : tokens) {
                     if (token.empty()) continue;
-                    if (!procName.empty() && procName.find(token) != std::string::npos) score += 60;
-                    if (!procPath.empty() && procPath.find(token) != std::string::npos) score += 40;
-                    if (!sessId.empty() && sessId.find(token) != std::string::npos) score += 40;
-                    if (!dispName.empty() && dispName.find(token) != std::string::npos) score += 30;
+                    if (!procName.empty() && procName.find(token) != std::string::npos) appScore += 60;
+                    if (!procPath.empty() && procPath.find(token) != std::string::npos) appScore += 40;
+                    if (!sessId.empty() && sessId.find(token) != std::string::npos) appScore += 40;
+                    if (!dispName.empty() && dispName.find(token) != std::string::npos) appScore += 30;
                 }
 
-                if (isActive) score += 20;
-                if (peak > 0.001f) score += 30;
+                int score = appScore + (isActive ? 20 : 0) + (peak > 0.001f ? 30 : 0);
 
                 ISimpleAudioVolume* pVol = nullptr;
                 pControl2->QueryInterface(__uuidof(ISimpleAudioVolume), (void**)&pVol);
 
+                // A session is ONLY considered a match for the target app if appScore > 0!
+                // Unrelated active apps (like browser, Discord, game) with appScore == 0 must NEVER be added to matches.
+                bool isMatch = false;
+                if (!appLower.empty() || !tokens.empty()) {
+                    isMatch = (appScore > 0);
+                } else {
+                    isMatch = (score >= 50);
+                }
+
                 if (pVol) {
-                    if (score >= 50) {
+                    if (isMatch) {
                         matches.push_back({pVol, score, peak, isActive});
                     } else {
                         int fallbackScore = (isActive ? 20 : 0) + (peak > 0.001f ? 50 : 0);
@@ -528,7 +547,7 @@ static bool GetAllAppSessionVolumes(const std::string& sourceApp, std::vector<IS
                     }
                 }
 
-                if (pVol && score < 50) {
+                if (pVol && !isMatch) {
                     pVol->Release();
                 }
 
@@ -560,9 +579,12 @@ static bool GetAllAppSessionVolumes(const std::string& sourceApp, std::vector<IS
     }
 
     if (bestFallback.pVol) {
-        outVolumes.push_back(bestFallback.pVol);
-        if (ppPrimaryVolume) *ppPrimaryVolume = bestFallback.pVol;
-        return true;
+        if (appLower.empty()) {
+            outVolumes.push_back(bestFallback.pVol);
+            if (ppPrimaryVolume) *ppPrimaryVolume = bestFallback.pVol;
+            return true;
+        }
+        bestFallback.pVol->Release();
     }
 
     return false;
@@ -781,7 +803,16 @@ int ExecuteMediaCommand(const char* command) {
     }
 
     if (cmd.rfind("set_volume:", 0) == 0) {
-        float vol = std::stof(cmd.substr(11));
+        std::string payload = cmd.substr(11);
+        size_t colon = payload.find(':');
+        float vol = 0.0f;
+        if (colon != std::string::npos) {
+            vol = std::stof(payload.substr(0, colon));
+            std::string explicitApp = payload.substr(colon + 1);
+            if (!explicitApp.empty()) sourceApp = explicitApp;
+        } else {
+            vol = std::stof(payload);
+        }
         SetMediaAudioVolume(sourceApp, vol);
         EmitMediaState(true);
         return 1;
@@ -798,7 +829,14 @@ int ExecuteMediaCommand(const char* command) {
         EmitMediaState(true);
         return 1;
     }
-    if (cmd == "mute") {
+    if (cmd.rfind("toggle_mute:", 0) == 0) {
+        std::string explicitApp = cmd.substr(12);
+        if (!explicitApp.empty()) sourceApp = explicitApp;
+        ToggleMediaAudioMute(sourceApp);
+        EmitMediaState(true);
+        return 1;
+    }
+    if (cmd == "mute" || cmd == "toggle_mute") {
         ToggleMediaAudioMute(sourceApp);
         EmitMediaState(true);
         return 1;

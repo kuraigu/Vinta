@@ -29,18 +29,22 @@
   class:item-disabled={disabled}
 >
   <div class="setting-label-group">
-    <div class="setting-label">
-      {#if IconComponent}
+    {#if IconComponent}
+      <div class="setting-icon-col">
         <IconComponent size={14} class="item-icon" />
-      {/if}
-      <span>{label}</span>
-      {#if badge}
-        <span class="setting-badge">{badge}</span>
+      </div>
+    {/if}
+    <div class="setting-text-col">
+      <div class="setting-label">
+        <span>{label}</span>
+        {#if badge}
+          <span class="setting-badge">{badge}</span>
+        {/if}
+      </div>
+      {#if description}
+        <span class="setting-description">{description}</span>
       {/if}
     </div>
-    {#if description}
-      <span class="setting-description">{description}</span>
-    {/if}
   </div>
 
   {#if children}
@@ -75,8 +79,28 @@
 
   .setting-label-group {
     display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+  }
+
+  .setting-icon-col {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-top: 1px;
+    flex-shrink: 0;
+  }
+
+  .setting-text-col {
+    display: flex;
     flex-direction: column;
     gap: 2px;
+    flex: 1;
+    min-width: 0;
+    text-align: left;
   }
 
   .setting-label {
@@ -86,6 +110,7 @@
     font-size: 12px;
     font-weight: 600;
     color: var(--c-text-primary);
+    text-align: left;
   }
 
   .setting-badge {
@@ -100,18 +125,21 @@
     border: 1px solid var(--c-border);
   }
 
-  .setting-label :global(.item-icon) {
+  .setting-icon-col :global(.item-icon) {
     color: var(--c-text-secondary);
   }
 
   .setting-description {
     font-size: 10px;
+    line-height: 1.4;
     color: var(--c-text-muted);
+    text-align: left;
   }
 
   .setting-control {
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-shrink: 0;
   }
 </style>
