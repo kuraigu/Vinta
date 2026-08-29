@@ -10,7 +10,9 @@
     Quit,
     GetBatteryStatus,
     GetWirelessStatus,
-    CheckPostUpdateInstalled
+    CheckPostUpdateInstalled,
+    TrimMemory,
+    SetIsHidden
   } from '../wailsjs/go/backend/App.js'
   import { EventsOn, LogFatal, LogInfo } from '../wailsjs/runtime/runtime.js'
   import NotificationPage, {
@@ -184,6 +186,10 @@
 
   $effect(handleAutoHideAndRevert)
 
+  let isPageDormant = $state(false)
+  let dormantUnmountTimeout: number | undefined
+  let memoryTrimTimeout: number | undefined
+
   // Manage OS bounds when hiding/unhiding
   function hideWidget() {
     if (isHidden) return
@@ -197,6 +203,26 @@
     isDraggingHidden = false
     isHidden = true
     expanded = false
+    notifyOSHidden(true)
+
+    // Multi-tier resource management:
+    // Allow the 0.22s CSS opacity fade-out to finish, then unmount the active page
+    // to release DOM elements, images, canvases, and texture caches.
+    clearTimeout(dormantUnmountTimeout)
+    dormantUnmountTimeout = window.setTimeout(() => {
+      if (isHidden) {
+        isPageDormant = true
+      }
+    }, 240)
+
+    // After 3 seconds in hidden mode, instruct the OS to reclaim unused physical memory
+    clearTimeout(memoryTrimTimeout)
+    memoryTrimTimeout = window.setTimeout(() => {
+      if (isHidden) {
+        trimOSMemory()
+      }
+    }, 3000)
+
     if (activePage !== HomePage && activePage !== MediaPage) {
       const fallback = AppControls.getFallbackPage()
       activePage = fallback.page as Component
@@ -265,6 +291,12 @@
 
   function showWidget() {
     if (!isHidden) return
+    clearTimeout(dormantUnmountTimeout)
+    dormantUnmountTimeout = undefined
+    clearTimeout(memoryTrimTimeout)
+    memoryTrimTimeout = undefined
+    isPageDormant = false
+
     islandAnim = '0.32s cubic-bezier(0.2, 0.8, 0.2, 1)'
     if (inertiaAnimFrame) {
       cancelAnimationFrame(inertiaAnimFrame)
@@ -274,6 +306,7 @@
     isInFlight = false
     isDraggingHidden = false
     isHidden = false
+    notifyOSHidden(false)
     const { w, h, r } = getBoundsForState(islandConfig, expanded, false)
     applyBounds(w, h, r)
     if (
@@ -359,6 +392,18 @@
   function setOSDragCapture(enable: boolean) {
     if (typeof SetDragCapture === 'function') {
       SetDragCapture(enable).catch(() => {})
+    }
+  }
+
+  function trimOSMemory() {
+    if (typeof TrimMemory === 'function') {
+      TrimMemory().catch(() => {})
+    }
+  }
+
+  function notifyOSHidden(hidden: boolean) {
+    if (typeof SetIsHidden === 'function') {
+      SetIsHidden(hidden).catch(() => {})
     }
   }
 
@@ -513,7 +558,13 @@
     expand: boolean = false
   ) {
     if (isHidden) {
+      clearTimeout(dormantUnmountTimeout)
+      dormantUnmountTimeout = undefined
+      clearTimeout(memoryTrimTimeout)
+      memoryTrimTimeout = undefined
+      isPageDormant = false
       isHidden = false
+      notifyOSHidden(false)
       stopInertia()
     }
     if (activePage !== page && expanded === expand) {
@@ -626,6 +677,9 @@
     let prevIsPlaying = false
     EventsOn('media-update', (data: Record<string, unknown>) => {
       if (data) {
+        const isIncomingPlaying = Boolean(data.isPlaying)
+        if (isPageDormant && !isIncomingPlaying) return
+
         globalMediaStore.update((m) => {
           const isLocked = Boolean(
             (m as unknown as Record<string, unknown>)._isPlayStateLocked
@@ -674,6 +728,7 @@
     })
 
     EventsOn('audio-peak', (data: Record<string, unknown>) => {
+      if (isHidden || isPageDormant || activePage !== MediaPage) return
       if (data && typeof data.peak === 'number') {
         audioPeakStore.set(data.peak as number)
       }
@@ -1347,21 +1402,23 @@
         ? '0s'
         : '0.22s cubic-bezier(0.2, 0.8, 0.2, 1)'};"
     >
-      {#key [activePage, expanded]}
-        {@const ActivePage = activePage}
-        <div
-          class="view"
-          style="width: {expanded
-            ? islandConfig.expanded.w
-            : currentMinimalW}px; height: {expanded
-            ? islandConfig.expanded.h
-            : islandConfig.minimal.h}px;"
-        >
-          {#if ActivePage}
-            <ActivePage {expanded} />
-          {/if}
-        </div>
-      {/key}
+      {#if !isPageDormant}
+        {#key [activePage, expanded]}
+          {@const ActivePage = activePage}
+          <div
+            class="view"
+            style="width: {expanded
+              ? islandConfig.expanded.w
+              : currentMinimalW}px; height: {expanded
+              ? islandConfig.expanded.h
+              : islandConfig.minimal.h}px;"
+          >
+            {#if ActivePage}
+              <ActivePage {expanded} />
+            {/if}
+          </div>
+        {/key}
+      {/if}
 
       {#if expanded}
         <div in:fade={{ duration: 200, delay: 150 }}>

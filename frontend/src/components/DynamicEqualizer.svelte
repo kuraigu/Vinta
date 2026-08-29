@@ -177,9 +177,15 @@
   onDestroy(() => {
     if (animFrame) {
       cancelAnimationFrame(animFrame)
+      animFrame = 0
     }
     if (resizeObserver) {
       resizeObserver.disconnect()
+      resizeObserver = null
+    }
+    if (canvasRef) {
+      canvasRef.width = 0
+      canvasRef.height = 0
     }
   })
 </script>

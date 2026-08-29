@@ -181,6 +181,21 @@ func GetNativeRadiosStatus() (string, bool) {
 	return "", false
 }
 
+var (
+	mediaMu       sync.Mutex
+	lastTrackKey  string
+	lastPlayState bool
+	isAppHidden   bool
+	hiddenMu      sync.RWMutex
+)
+
+// SetAppHidden informs the native services whether Vinta is currently hidden to throttle high-frequency events.
+func SetAppHidden(hidden bool) {
+	hiddenMu.Lock()
+	isAppHidden = hidden
+	hiddenMu.Unlock()
+}
+
 func onNativeMedia(cStr *byte) uintptr {
 	if cStr == nil || wailsCtx == nil {
 		return 0
@@ -193,6 +208,35 @@ func onNativeMedia(cStr *byte) uintptr {
 
 	var payload map[string]interface{}
 	if err := json.Unmarshal([]byte(str), &payload); err == nil {
+		title, _ := payload["title"].(string)
+		artist, _ := payload["artist"].(string)
+		isPlaying, _ := payload["isPlaying"].(bool)
+		trackKey := title + "_" + artist
+
+		hiddenMu.RLock()
+		hidden := isAppHidden
+		hiddenMu.RUnlock()
+
+		mediaMu.Lock()
+		trackChanged := (trackKey != lastTrackKey)
+		playStateChanged := (isPlaying != lastPlayState)
+		lastPlayState = isPlaying
+
+		if !trackChanged {
+			// Do not re-send the multi-megabyte albumArt on routine 500ms position updates.
+			// The frontend preserves the album art for the same track.
+			payload["albumArt"] = ""
+		} else {
+			lastTrackKey = trackKey
+		}
+		mediaMu.Unlock()
+
+		// When the island is in hidden mode, avoid emitting high-frequency timeline
+		// scrub ticks into WebView2. Only notify when track changes or play state toggles.
+		if hidden && !trackChanged && !playStateChanged {
+			return 0
+		}
+
 		runtime.EventsEmit(wailsCtx, "media-update", payload)
 	}
 
@@ -224,6 +268,13 @@ var (
 
 func onNativeAudioPeak(peakBits uintptr) uintptr {
 	if wailsCtx == nil {
+		return 0
+	}
+
+	hiddenMu.RLock()
+	hidden := isAppHidden
+	hiddenMu.RUnlock()
+	if hidden {
 		return 0
 	}
 
