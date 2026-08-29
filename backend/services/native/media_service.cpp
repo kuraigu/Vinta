@@ -322,6 +322,7 @@ static void EmitMediaState(bool includeVolume) {
 static float g_mediaVolumeStore = 100.0f;
 static bool g_mediaMuteStore = false;
 static std::mutex g_mediaVolStateMutex;
+static std::chrono::steady_clock::time_point g_lastVolumeSetTime{};
 
 static std::vector<std::string> ExtractAppTokens(const std::string& sourceApp) {
     std::vector<std::string> tokens;
@@ -520,7 +521,7 @@ static bool GetAllAppSessionVolumes(const std::string& sourceApp, std::vector<IS
                     if (!dispName.empty() && dispName.find(token) != std::string::npos) appScore += 30;
                 }
 
-                int score = appScore + (isActive ? 20 : 0) + (peak > 0.001f ? 30 : 0);
+                int score = appScore + (isActive ? 40 : 0) + (peak > 0.001f ? 20 : 0);
 
                 ISimpleAudioVolume* pVol = nullptr;
                 pControl2->QueryInterface(__uuidof(ISimpleAudioVolume), (void**)&pVol);
@@ -562,8 +563,8 @@ static bool GetAllAppSessionVolumes(const std::string& sourceApp, std::vector<IS
     if (!matches.empty()) {
         if (bestFallback.pVol) bestFallback.pVol->Release();
 
-        // Sort by score descending, then peak descending
-        std::sort(matches.begin(), matches.end(), [](const SessionMatch& a, const SessionMatch& b) {
+        // Stable sort by score descending, then peak descending to prevent flapping
+        std::stable_sort(matches.begin(), matches.end(), [](const SessionMatch& a, const SessionMatch& b) {
             if (a.score != b.score) return a.score > b.score;
             return a.peak > b.peak;
         });
@@ -653,6 +654,15 @@ static void ToggleMasterAudioMute() {
 }
 
 static std::pair<float, bool> GetMediaAudioVolumeAndMute(const std::string& sourceApp) {
+    {
+        std::lock_guard<std::mutex> stLock(g_mediaVolStateMutex);
+        auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - g_lastVolumeSetTime).count();
+        if (elapsedMs < 700) {
+            return {g_mediaVolumeStore, g_mediaMuteStore};
+        }
+    }
+
     std::lock_guard<std::mutex> lock(g_audioVolMutex);
     ComInitScope com;
 
@@ -687,6 +697,7 @@ static void SetMediaAudioVolume(const std::string& sourceApp, float percent) {
     {
         std::lock_guard<std::mutex> stLock(g_mediaVolStateMutex);
         g_mediaVolumeStore = clamped;
+        g_lastVolumeSetTime = std::chrono::steady_clock::now();
     }
 
     std::lock_guard<std::mutex> lock(g_audioVolMutex);

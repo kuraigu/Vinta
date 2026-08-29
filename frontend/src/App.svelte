@@ -862,7 +862,7 @@
           )
           targetPendingBounds = { w: 0, h: 0, r: 0 }
         }
-      }, 330)
+      }, 450)
     } else {
       clearTimeout(boundsTransitionTimeout)
       targetPendingBounds = { w: 0, h: 0, r: 0 }
@@ -872,6 +872,8 @@
 
   $effect(syncOSBoundsOnStateChange)
 
+  let isTrackRegionActive = false
+
   function stopInertia() {
     if (inertiaAnimFrame) {
       cancelAnimationFrame(inertiaAnimFrame)
@@ -880,6 +882,7 @@
     clearTimeout(inertiaSafetyTimeout)
     inertiaSafetyTimeout = undefined
     isInFlight = false
+    isTrackRegionActive = false
     dragHistory = []
 
     // Persist final resting offset to store once motion is fully settled
@@ -959,17 +962,18 @@
         Math.min(maxAllowedOffsetForCurrentW, rawOffset)
       )
 
-      // Keep OS click region aligned with a comfort buffer around current drag position
-      const { w, h, r } = getBoundsForState()
-      updateBounds(w + 32, h, r, currentLiveOffsetX)
+      // Open full-width horizontal track region on first move beyond threshold
+      if (!isTrackRegionActive) {
+        isTrackRegionActive = true
+        const { h, r } = getBoundsForState()
+        updateBounds(-1, h, r, 0)
+      }
     }
   }
 
   function handleHiddenPointerUp(e: PointerEvent) {
     if (!isDraggingHidden) return
     isDraggingHidden = false
-    const { w, h, r } = getBoundsForState()
-    updateBounds(w, h, r, clampedOffsetX)
     if (hasPointerCaptured) {
       hasPointerCaptured = false
       try {
@@ -1002,17 +1006,7 @@
         velocity = Math.max(-maxVelocity, Math.min(maxVelocity, velocity))
         isInFlight = true
 
-        const { w: islandW, h, r } = getBoundsForState()
         const friction = 0.0035
-
-        // Initial glide corridor with compact lead comfort padding
-        const initialLead = Math.max(-20, Math.min(20, velocity * 15))
-        updateBounds(
-          islandW + Math.abs(initialLead) + 24,
-          h,
-          r,
-          currentLiveOffsetX + initialLead / 2
-        )
 
         clearTimeout(inertiaSafetyTimeout)
         inertiaSafetyTimeout = window.setTimeout(stopInertia, 1200)
@@ -1045,12 +1039,6 @@
               stopInertia()
               return
             }
-
-            // Dynamic corridor: island width + lead buffer + compact comfort width padding to prevent clipping
-            const lead = Math.max(-20, Math.min(20, velocity * 15))
-            const dynamicW = islandW + Math.abs(lead) + 24
-            const dynamicOffset = currentLiveOffsetX + lead / 2
-            updateBounds(dynamicW, h, r, dynamicOffset)
           }
 
           inertiaAnimFrame = requestAnimationFrame(runInertiaStep)

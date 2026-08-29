@@ -480,7 +480,7 @@ func (a *App) updateWindowRegion() {
 	if hwnd != 0 {
 		padding := OutsidePadding
 		// Use compact padding (6px) when hidden to allow ambient glow and smooth drag without clipping
-		if a.pillW <= 110 && a.pillH <= 30 {
+		if a.pillW > 0 && a.pillW <= 110 && a.pillH <= 30 {
 			padding = 6
 		}
 		setClickRegion(hwnd, a.pillW, a.pillH, a.pillR, a.offsetX, a.devW, a.devH, a.devExtra, padding, a.scale)

@@ -95,6 +95,17 @@
   let localPosMs = $state(0)
   let isDraggingVol = $state(false)
   let volVal = $state(50)
+  let isVolLocked = $state(false)
+  let volLockTimer: ReturnType<typeof setTimeout> | null = null
+
+  function lockVolumeWithGracePeriod() {
+    isVolLocked = true
+    if (volLockTimer) clearTimeout(volLockTimer)
+    volLockTimer = setTimeout(() => {
+      isVolLocked = false
+      volLockTimer = null
+    }, 850)
+  }
 
   let prevNotifCount = $state(0)
   let isNewNotif = $state(false)
@@ -145,7 +156,7 @@
     prevArtist = curArtist
     prevBackendPos = backendPos
 
-    if (!isDraggingVol && media.volume !== undefined) {
+    if (!isDraggingVol && !isVolLocked && media.volume !== undefined) {
       volVal = media.volume
     }
   }
@@ -294,6 +305,7 @@
     const val = Number((e.target as HTMLInputElement).value)
     volVal = val
     isDraggingVol = true
+    lockVolumeWithGracePeriod()
     if (!volThrottleTimer) {
       SendMediaControl(`set_volume:${val}:${media.sourceApp || ''}`)
       volThrottleTimer = setTimeout(() => {
@@ -307,9 +319,20 @@
     if (volThrottleTimer) clearTimeout(volThrottleTimer)
     volThrottleTimer = null
     volVal = val
+    lockVolumeWithGracePeriod()
     SendMediaControl(`set_volume:${val}:${media.sourceApp || ''}`)
     globalMediaStore.update((m) => ({ ...m, volume: val }))
     isDraggingVol = false
+  }
+
+  function handleVolPointerDown() {
+    isDraggingVol = true
+    lockVolumeWithGracePeriod()
+  }
+
+  function handleVolPointerUp() {
+    isDraggingVol = false
+    lockVolumeWithGracePeriod()
   }
 
   function formatTime(ms: number): string {
@@ -328,7 +351,9 @@
       : 0
   )
 
-  let currentVol = $derived(isDraggingVol ? volVal : (media.volume ?? 50))
+  let currentVol = $derived(
+    isDraggingVol || isVolLocked ? volVal : (media.volume ?? 50)
+  )
 </script>
 
 <div class="media-container {expanded ? 'expanded' : 'minimal'}">
@@ -586,6 +611,8 @@
               max="100"
               value={currentVol}
               class="vol-input"
+              onpointerdown={handleVolPointerDown}
+              onpointerup={handleVolPointerUp}
               oninput={handleVolInput}
               onchange={handleVolChange}
             />
