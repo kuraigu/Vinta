@@ -1,6 +1,6 @@
 @import './assets/fonts/fonts.css';
 @import './themes/dark.css';
-@import './themes/light.css';
+
 html {
   background-color: transparent;
   text-align: center;
@@ -34,6 +34,13 @@ body {
   height: 100vh;
   text-align: center;
   pointer-events: none;
+}
+
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
 }
 
 body.debug-bounds-overlay,

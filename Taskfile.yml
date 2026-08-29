@@ -37,6 +37,7 @@ tasks:
 
   build:native:
     desc: Build native C++/WinRT bridge DLL using CMake and MSVC
+    deps: [kill]
     sources:
       - 'backend/services/native/**/*.{cpp,h}'
       - 'backend/services/native/CMakeLists.txt'

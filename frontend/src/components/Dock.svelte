@@ -36,7 +36,7 @@
     <DockButton
       tooltip="Apps"
       active={activePage === AppsPage}
-      onclick={() => AppControls.goApps(navigate)}
+      onclick={(e: MouseEvent) => AppControls.goApps(navigate, e)}
     >
       <Grid size={18} />
     </DockButton>

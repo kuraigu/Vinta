@@ -41,7 +41,8 @@ export const AppControls = {
     navigate(HomePage, homeConfig, true)
   },
 
-  goApps: (navigate: NavFn) => {
+  goApps: (navigate: NavFn, e?: Event) => {
+    if (e) e.stopPropagation()
     navigate(AppsPage, appsConfig, true)
   },
 

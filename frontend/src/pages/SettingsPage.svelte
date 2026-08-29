@@ -3,7 +3,7 @@
 
   export const config: IslandConfig = {
     minimal: { w: 10, h: 10, r: 5 },
-    expanded: { w: 540, h: 440, r: 32 },
+    expanded: { w: 580, h: 480, r: 32 },
     borderColor: 'var(--c-border)',
     glowColor: 'transparent'
   }
@@ -20,6 +20,7 @@
   import ClockTab from '../components/settings/tabs/ClockTab.svelte'
   import WeatherTab from '../components/settings/tabs/WeatherTab.svelte'
   import SystemTab from '../components/settings/tabs/SystemTab.svelte'
+  import UpdatesTab from '../components/settings/tabs/UpdatesTab.svelte'
   import AboutTab from '../components/settings/tabs/AboutTab.svelte'
   import { activeSettingsTabStore } from '../store'
 
@@ -48,6 +49,8 @@
           <WeatherTab />
         {:else if activeTab === 'system'}
           <SystemTab />
+        {:else if activeTab === 'updates'}
+          <UpdatesTab />
         {:else if activeTab === 'about'}
           <AboutTab />
         {/if}

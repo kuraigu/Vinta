@@ -4,11 +4,15 @@
   import { fade } from 'svelte/transition'
   import {
     SetWidgetBounds,
+    SetDragCapture,
     IsTestMode,
     FocusWindow,
     Quit,
     GetBatteryStatus,
-    GetWirelessStatus
+    GetWirelessStatus,
+    CheckPostUpdateInstalled,
+    TrimMemory,
+    SetIsHidden
   } from '../wailsjs/go/backend/App.js'
   import { EventsOn, LogFatal, LogInfo } from '../wailsjs/runtime/runtime.js'
   import NotificationPage, {
@@ -59,6 +63,9 @@
     devPinnedStore,
     devTestingStore,
     activePageIdStore,
+    updateInfoStore,
+    autoCheckUpdatesStore,
+    type UpdateCheckResult,
     type BatteryData,
     type WirelessData
   } from './store'
@@ -116,6 +123,7 @@
   let dragHistory: Array<{ x: number; time: number }> = []
 
   let islandNode = $state<HTMLElement>()
+  let devPillContainerNode = $state<HTMLElement>()
   let isTestMode = $state(false)
 
   let isTransitionGlow = $state(true)
@@ -178,6 +186,10 @@
 
   $effect(handleAutoHideAndRevert)
 
+  let isPageDormant = $state(false)
+  let dormantUnmountTimeout: number | undefined
+  let memoryTrimTimeout: number | undefined
+
   // Manage OS bounds when hiding/unhiding
   function hideWidget() {
     if (isHidden) return
@@ -191,6 +203,26 @@
     isDraggingHidden = false
     isHidden = true
     expanded = false
+    notifyOSHidden(true)
+
+    // Multi-tier resource management:
+    // Allow the 0.22s CSS opacity fade-out to finish, then unmount the active page
+    // to release DOM elements, images, canvases, and texture caches.
+    clearTimeout(dormantUnmountTimeout)
+    dormantUnmountTimeout = window.setTimeout(() => {
+      if (isHidden) {
+        isPageDormant = true
+      }
+    }, 240)
+
+    // After 3 seconds in hidden mode, instruct the OS to reclaim unused physical memory
+    clearTimeout(memoryTrimTimeout)
+    memoryTrimTimeout = window.setTimeout(() => {
+      if (isHidden) {
+        trimOSMemory()
+      }
+    }, 3000)
+
     if (activePage !== HomePage && activePage !== MediaPage) {
       const fallback = AppControls.getFallbackPage()
       activePage = fallback.page as Component
@@ -259,6 +291,12 @@
 
   function showWidget() {
     if (!isHidden) return
+    clearTimeout(dormantUnmountTimeout)
+    dormantUnmountTimeout = undefined
+    clearTimeout(memoryTrimTimeout)
+    memoryTrimTimeout = undefined
+    isPageDormant = false
+
     islandAnim = '0.32s cubic-bezier(0.2, 0.8, 0.2, 1)'
     if (inertiaAnimFrame) {
       cancelAnimationFrame(inertiaAnimFrame)
@@ -268,6 +306,7 @@
     isInFlight = false
     isDraggingHidden = false
     isHidden = false
+    notifyOSHidden(false)
     const { w, h, r } = getBoundsForState(islandConfig, expanded, false)
     applyBounds(w, h, r)
     if (
@@ -350,6 +389,24 @@
       })
   }
 
+  function setOSDragCapture(enable: boolean) {
+    if (typeof SetDragCapture === 'function') {
+      SetDragCapture(enable).catch(() => {})
+    }
+  }
+
+  function trimOSMemory() {
+    if (typeof TrimMemory === 'function') {
+      TrimMemory().catch(() => {})
+    }
+  }
+
+  function notifyOSHidden(hidden: boolean) {
+    if (typeof SetIsHidden === 'function') {
+      SetIsHidden(hidden).catch(() => {})
+    }
+  }
+
   // --- Centralized OS Bounds Manager ---
   let currentOSBounds = { w: 0, h: 0, r: 0 }
   let targetPendingBounds = { w: 0, h: 0, r: 0 }
@@ -366,16 +423,14 @@
       (e.propertyName === 'width' || e.propertyName === 'height')
     ) {
       clearTimeout(boundsTransitionTimeout)
-      boundsTransitionTimeout = window.setTimeout(() => {
-        if (targetPendingBounds.w > 0 && targetPendingBounds.h > 0) {
-          applyBounds(
-            targetPendingBounds.w,
-            targetPendingBounds.h,
-            targetPendingBounds.r
-          )
-          targetPendingBounds = { w: 0, h: 0, r: 0 }
-        }
-      }, 25)
+      if (targetPendingBounds.w > 0 && targetPendingBounds.h > 0) {
+        applyBounds(
+          targetPendingBounds.w,
+          targetPendingBounds.h,
+          targetPendingBounds.r
+        )
+        targetPendingBounds = { w: 0, h: 0, r: 0 }
+      }
     }
   }
 
@@ -503,15 +558,19 @@
     expand: boolean = false
   ) {
     if (isHidden) {
+      clearTimeout(dormantUnmountTimeout)
+      dormantUnmountTimeout = undefined
+      clearTimeout(memoryTrimTimeout)
+      memoryTrimTimeout = undefined
+      isPageDormant = false
       isHidden = false
+      notifyOSHidden(false)
       stopInertia()
     }
     if (activePage !== page && expanded === expand) {
       triggerBlink()
     }
-    if (expanded !== expand) {
-      islandAnim = '0.32s cubic-bezier(0.2, 0.8, 0.2, 1)'
-    }
+    islandAnim = '0.32s cubic-bezier(0.2, 0.8, 0.2, 1)'
     activePage = page
     islandConfig = pageConfig
 
@@ -525,7 +584,11 @@
     if (expand) {
       const { w, h, r } = getBoundsForState(pageConfig, true, false)
       if (w > currentOSBounds.w || h > currentOSBounds.h) {
-        applyBounds(w, h, r)
+        applyBounds(
+          Math.max(w, currentOSBounds.w),
+          Math.max(h, currentOSBounds.h),
+          r
+        )
       }
       requestAnimationFrame(() => {
         expanded = true
@@ -616,6 +679,9 @@
     let prevIsPlaying = false
     EventsOn('media-update', (data: Record<string, unknown>) => {
       if (data) {
+        const isIncomingPlaying = Boolean(data.isPlaying)
+        if (isPageDormant && !isIncomingPlaying) return
+
         globalMediaStore.update((m) => {
           const isLocked = Boolean(
             (m as unknown as Record<string, unknown>)._isPlayStateLocked
@@ -664,6 +730,7 @@
     })
 
     EventsOn('audio-peak', (data: Record<string, unknown>) => {
+      if (isHidden || isPageDormant || activePage !== MediaPage) return
       if (data && typeof data.peak === 'number') {
         audioPeakStore.set(data.peak as number)
       }
@@ -730,17 +797,80 @@
       }
     })
 
+    EventsOn('update:available', (data: UpdateCheckResult) => {
+      if (data && data.updateAvailable) {
+        updateInfoStore.set(data)
+        if (get(autoCheckUpdatesStore)) {
+          const notifs = get(notifData)
+          notifData.set([
+            {
+              id: Date.now(),
+              appName: 'Vinta System',
+              title: `Vinta Update Available (${data.latestVersion})`,
+              message:
+                'A new version of Vinta is ready for download. Open Settings > Updates to review release highlights.',
+              timestamp: Date.now()
+            },
+            ...notifs
+          ])
+          showWidget()
+        }
+      }
+    })
+
+    if (typeof CheckPostUpdateInstalled === 'function') {
+      CheckPostUpdateInstalled()
+        .then((newVer: string) => {
+          if (newVer) {
+            const notifs = get(notifData)
+            notifData.set([
+              {
+                id: Date.now(),
+                appName: 'Vinta System',
+                title: `Welcome to Vinta ${newVer}!`,
+                message:
+                  'Vinta has been successfully updated. Check out the Updates tab in Settings to see what is new.',
+                timestamp: Date.now()
+              },
+              ...notifs
+            ])
+            showWidget()
+          }
+        })
+        .catch(() => {})
+    }
+
     const handleResize = () => {
       screenWidth = window.screen?.width || window.innerWidth || 1920
     }
-    const handleGlobalBlur = () => {
+    // Global failsafe: only abort if focus is truly lost to another application.
+    // Internal blur events caused by window activation or clicks are safely ignored.
+    const handleGlobalDragFailsafe = (e?: Event) => {
+      if (e?.type === 'blur') {
+        if (
+          typeof document !== 'undefined' &&
+          !document.hidden &&
+          document.hasFocus()
+        ) {
+          return
+        }
+      }
       if (isDraggingHidden) {
-        isDraggingHidden = false
-        stopInertia()
+        handleDragFailsafe()
+      }
+    }
+    const handleWindowKeydownFailsafe = (e: KeyboardEvent) => {
+      if (
+        e.key === 'Escape' &&
+        (isDraggingHidden || isInFlight || isTrackRegionActive)
+      ) {
+        handleDragFailsafe()
       }
     }
     window.addEventListener('resize', handleResize)
-    window.addEventListener('blur', handleGlobalBlur)
+    window.addEventListener('blur', handleGlobalDragFailsafe)
+    window.addEventListener('pointercancel', handleGlobalDragFailsafe)
+    window.addEventListener('keydown', handleWindowKeydownFailsafe)
 
     const updateBattery = () => {
       if (get(isSimulatingBatteryStore)) return
@@ -780,7 +910,9 @@
       window.removeEventListener('vinta-overlay', handleOverlayChange)
       window.removeEventListener('vinta-quit', handleQuit)
       window.removeEventListener('resize', handleResize)
-      window.removeEventListener('blur', handleGlobalBlur)
+      window.removeEventListener('blur', handleGlobalDragFailsafe)
+      window.removeEventListener('pointercancel', handleGlobalDragFailsafe)
+      window.removeEventListener('keydown', handleWindowKeydownFailsafe)
     }
   })
 
@@ -792,20 +924,44 @@
    * In-flight drags skip this to prevent fighting the full-width track region,
    * but the drag handlers call stopInertia() before any state changes.
    */
+  let hasInitializedBounds = false
+
   function syncOSBoundsOnStateChange() {
-    if (isInFlight) return
+    if (isDraggingHidden || isInFlight || isTrackRegionActive) return
     const target = getBoundsForState()
 
-    const isCollapsing = prevExpandedState && !expanded
-    const isHiding = !prevHiddenState && isHidden
+    if (!hasInitializedBounds) {
+      hasInitializedBounds = true
+      currentOSBounds = { w: target.w, h: target.h, r: target.r }
+      prevExpandedState = expanded
+      prevHiddenState = isHidden
+      return
+    }
+
+    const wasExpanded = prevExpandedState
+    const wasHidden = prevHiddenState
     prevExpandedState = expanded
     prevHiddenState = isHidden
 
-    // Only hold OS window bounds for the 350ms animation when actively collapsing from expanded or hiding to pill/dash
-    if (
-      (isCollapsing || isHiding) &&
-      (currentOSBounds.h > target.h || currentOSBounds.w > target.w)
-    ) {
+    const isCollapsing = wasExpanded && !expanded
+    const isHiding = !wasHidden && isHidden
+    const isShrinking =
+      isCollapsing ||
+      isHiding ||
+      currentOSBounds.w > target.w ||
+      currentOSBounds.h > target.h
+    const isGrowing =
+      currentOSBounds.w < target.w || currentOSBounds.h < target.h
+
+    if (isGrowing) {
+      clearTimeout(boundsTransitionTimeout)
+      targetPendingBounds = { w: 0, h: 0, r: 0 }
+      const immediateW = Math.max(currentOSBounds.w, target.w)
+      const immediateH = Math.max(currentOSBounds.h, target.h)
+      applyBounds(immediateW, immediateH, target.r)
+    }
+
+    if (isShrinking) {
       targetPendingBounds = target
       clearTimeout(boundsTransitionTimeout)
       boundsTransitionTimeout = window.setTimeout(() => {
@@ -817,8 +973,8 @@
           )
           targetPendingBounds = { w: 0, h: 0, r: 0 }
         }
-      }, 360)
-    } else {
+      }, 450)
+    } else if (!isGrowing) {
       clearTimeout(boundsTransitionTimeout)
       targetPendingBounds = { w: 0, h: 0, r: 0 }
       applyBounds(target.w, target.h, target.r)
@@ -827,6 +983,30 @@
 
   $effect(syncOSBoundsOnStateChange)
 
+  let isTrackRegionActive = false
+  let dragWatchdogTimeout: number | undefined
+
+  // Resets the drag inactivity watchdog timer. If pointer interaction stalls
+  // during a drag gesture, the watchdog automatically restores tight resting bounds.
+  function resetDragWatchdog() {
+    clearTimeout(dragWatchdogTimeout)
+    dragWatchdogTimeout = window.setTimeout(() => {
+      if (isDraggingHidden || isInFlight || isTrackRegionActive) {
+        handleDragFailsafe()
+      }
+    }, 6000)
+  }
+
+  // Failsafe handler to cleanly cancel any drag operation, release OS mouse capture,
+  // and guarantee the Win32 window clipping region escapes 100% width mode.
+  function handleDragFailsafe() {
+    clearTimeout(dragWatchdogTimeout)
+    dragWatchdogTimeout = undefined
+    isDraggingHidden = false
+    setOSDragCapture(false)
+    stopInertia()
+  }
+
   function stopInertia() {
     if (inertiaAnimFrame) {
       cancelAnimationFrame(inertiaAnimFrame)
@@ -834,8 +1014,12 @@
     }
     clearTimeout(inertiaSafetyTimeout)
     inertiaSafetyTimeout = undefined
+    clearTimeout(dragWatchdogTimeout)
+    dragWatchdogTimeout = undefined
     isInFlight = false
+    isTrackRegionActive = false
     dragHistory = []
+    setOSDragCapture(false)
 
     // Persist final resting offset to store once motion is fully settled
     $hiddenPillOffsetXStore = clampedOffsetX
@@ -873,10 +1057,12 @@
     if (inertiaAnimFrame) {
       stopInertia()
     }
+    setOSDragCapture(true)
     isDraggingHidden = true
     hasPointerCaptured = false
     dragMovedDistance = 0
     clearTimeout(dragResetTimeout)
+    resetDragWatchdog()
     hiddenDragStartX = e.screenX
     hiddenDragStartOffset = currentLiveOffsetX
     dragHistory = [{ x: e.screenX, time: performance.now() }]
@@ -884,11 +1070,13 @@
 
   function handleHiddenPointerMove(e: PointerEvent) {
     if (!isDraggingHidden) return
-    // If no mouse buttons are pressed (e.g. released outside/interrupted), cancel drag
+    // If no mouse buttons are pressed (e.g. released outside/interrupted), cancel drag immediately
     if (e.buttons === 0) {
       handleHiddenPointerUp(e)
       return
     }
+
+    resetDragWatchdog()
 
     const now = performance.now()
     dragHistory.push({ x: e.screenX, time: now })
@@ -914,15 +1102,57 @@
         Math.min(maxAllowedOffsetForCurrentW, rawOffset)
       )
 
-      // Keep OS click region tightly aligned around current drag position
-      const { w, h, r } = getBoundsForState()
-      updateBounds(w, h, r, currentLiveOffsetX)
+      // Dynamic OnDrag window bounding region management:
+      // When the cursor is physically inside the horizontal bounds of the island,
+      // expand the Win32 window clipping region to 100% width (-1) to provide unlimited
+      // horizontal runway and prevent cursor outrunning.
+      // When the cursor leaves the island bounds (e.g. edge clamped or fast flick),
+      // dynamically update bounds to track and rubberband with the island.
+      let isCursorInside: boolean
+      if (islandNode) {
+        const rect = islandNode.getBoundingClientRect()
+        const isInsideIsland = e.clientX >= rect.left && e.clientX <= rect.right
+        let isInsideDevPill = false
+        if (devPillContainerNode) {
+          const devRect = devPillContainerNode.getBoundingClientRect()
+          isInsideDevPill =
+            e.clientX >= devRect.left && e.clientX <= devRect.right
+        }
+        isCursorInside = isInsideIsland || isInsideDevPill
+      } else {
+        const screenCenterX = screenWidth / 2
+        const islandCenterX = screenCenterX + clampedOffsetX
+        const halfW = currentIslandW / 2
+        isCursorInside =
+          e.screenX >= islandCenterX - halfW &&
+          e.screenX <= islandCenterX + halfW
+      }
+
+      if (isCursorInside) {
+        if (!isTrackRegionActive) {
+          isTrackRegionActive = true
+          const { h, r } = getBoundsForState()
+          updateBounds(-1, h, r, clampedOffsetX)
+        }
+      } else {
+        if (isTrackRegionActive) {
+          isTrackRegionActive = false
+        }
+        // Symmetrical motion margin: provides breathing room on both sides of the moving island
+        // to prevent the leading edge from clipping due to rendering/IPC phase difference.
+        const motionMargin = 40
+        const { w, h, r } = getBoundsForState()
+        updateBounds(w + motionMargin, h, r, clampedOffsetX)
+      }
     }
   }
 
   function handleHiddenPointerUp(e: PointerEvent) {
     if (!isDraggingHidden) return
     isDraggingHidden = false
+    clearTimeout(dragWatchdogTimeout)
+    dragWatchdogTimeout = undefined
+    setOSDragCapture(false)
     if (hasPointerCaptured) {
       hasPointerCaptured = false
       try {
@@ -955,17 +1185,7 @@
         velocity = Math.max(-maxVelocity, Math.min(maxVelocity, velocity))
         isInFlight = true
 
-        const { w: islandW, h, r } = getBoundsForState()
         const friction = 0.0035
-
-        // Initial glide corridor with compact lead comfort padding
-        const initialLead = Math.max(-20, Math.min(20, velocity * 15))
-        updateBounds(
-          islandW + Math.abs(initialLead) + 24,
-          h,
-          r,
-          currentLiveOffsetX + initialLead / 2
-        )
 
         clearTimeout(inertiaSafetyTimeout)
         inertiaSafetyTimeout = window.setTimeout(stopInertia, 1200)
@@ -999,11 +1219,13 @@
               return
             }
 
-            // Dynamic corridor: island width + lead buffer + compact comfort width padding to prevent clipping
-            const lead = Math.max(-20, Math.min(20, velocity * 15))
-            const dynamicW = islandW + Math.abs(lead) + 24
-            const dynamicOffset = currentLiveOffsetX + lead / 2
-            updateBounds(dynamicW, h, r, dynamicOffset)
+            // Dynamic OnDrag: expand bounds with velocity-based margin to prevent leading-edge clipping
+            const motionMargin = Math.min(
+              60,
+              Math.round(Math.abs(velocity) * 20) + 30
+            )
+            const { w, h, r } = getBoundsForState()
+            updateBounds(w + motionMargin, h, r, clampedOffsetX)
           }
 
           inertiaAnimFrame = requestAnimationFrame(runInertiaStep)
@@ -1207,21 +1429,23 @@
         ? '0s'
         : '0.22s cubic-bezier(0.2, 0.8, 0.2, 1)'};"
     >
-      {#key activePage}
-        {@const ActivePage = activePage}
-        <div
-          class="view"
-          style="width: {expanded
-            ? islandConfig.expanded.w
-            : currentMinimalW}px; height: {expanded
-            ? islandConfig.expanded.h
-            : islandConfig.minimal.h}px;"
-        >
-          {#if ActivePage}
-            <ActivePage {expanded} />
-          {/if}
-        </div>
-      {/key}
+      {#if !isPageDormant}
+        {#key [activePage, expanded]}
+          {@const ActivePage = activePage}
+          <div
+            class="view"
+            style="width: {expanded
+              ? islandConfig.expanded.w
+              : currentMinimalW}px; height: {expanded
+              ? islandConfig.expanded.h
+              : islandConfig.minimal.h}px;"
+          >
+            {#if ActivePage}
+              <ActivePage {expanded} />
+            {/if}
+          </div>
+        {/key}
+      {/if}
 
       {#if expanded}
         <div in:fade={{ duration: 200, delay: 150 }}>
@@ -1243,6 +1467,7 @@
 
   {#if isTestMode}
     <div
+      bind:this={devPillContainerNode}
       style="
         transform: translateX({devClampedOffsetX}px);
         transition: {isDraggingHidden || isInFlight ? 'none' : islandAnim};

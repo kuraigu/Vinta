@@ -3,7 +3,7 @@
 
   export const config: IslandConfig = {
     minimal: { w: 368, h: 44, r: 22 },
-    expanded: { w: 440, h: 270, r: 28 },
+    expanded: { w: 440, h: 235, r: 28 },
     borderColor: 'rgba(255, 60, 100, 0.4)',
     glowColor: 'rgba(255, 60, 100, 0.35)'
   }
@@ -22,6 +22,7 @@
     homeWidgetsVisibilityStore
   } from '../store'
   import {
+    Volume1,
     Volume2,
     VolumeX,
     Bell,
@@ -94,6 +95,17 @@
   let localPosMs = $state(0)
   let isDraggingVol = $state(false)
   let volVal = $state(50)
+  let isVolLocked = $state(false)
+  let volLockTimer: ReturnType<typeof setTimeout> | null = null
+
+  function lockVolumeWithGracePeriod() {
+    isVolLocked = true
+    if (volLockTimer) clearTimeout(volLockTimer)
+    volLockTimer = setTimeout(() => {
+      isVolLocked = false
+      volLockTimer = null
+    }, 850)
+  }
 
   let prevNotifCount = $state(0)
   let isNewNotif = $state(false)
@@ -144,7 +156,7 @@
     prevArtist = curArtist
     prevBackendPos = backendPos
 
-    if (!isDraggingVol && media.volume !== undefined) {
+    if (!isDraggingVol && !isVolLocked && media.volume !== undefined) {
       volVal = media.volume
     }
   }
@@ -237,6 +249,13 @@
         ...m,
         autoRepeatMode: ((m.autoRepeatMode || 0) + 1) % 3
       }))
+    } else if (action === 'toggle_mute' || action === 'mute') {
+      globalMediaStore.update((m) => ({
+        ...m,
+        isMuted: !m.isMuted
+      }))
+      SendMediaControl(`toggle_mute:${media.sourceApp || ''}`)
+      return
     }
     SendMediaControl(action)
   }
@@ -283,10 +302,12 @@
 
   let volThrottleTimer: ReturnType<typeof setTimeout> | null = null
   function handleVolInput(e: Event) {
-    volVal = Number((e.target as HTMLInputElement).value)
+    const val = Number((e.target as HTMLInputElement).value)
+    volVal = val
     isDraggingVol = true
+    lockVolumeWithGracePeriod()
     if (!volThrottleTimer) {
-      SendMediaControl(`set_volume:${volVal}`)
+      SendMediaControl(`set_volume:${val}:${media.sourceApp || ''}`)
       volThrottleTimer = setTimeout(() => {
         volThrottleTimer = null
       }, 75)
@@ -297,9 +318,21 @@
     const val = Number((e.target as HTMLInputElement).value)
     if (volThrottleTimer) clearTimeout(volThrottleTimer)
     volThrottleTimer = null
-    SendMediaControl(`set_volume:${val}`)
-    if (media) media.volume = val
+    volVal = val
+    lockVolumeWithGracePeriod()
+    SendMediaControl(`set_volume:${val}:${media.sourceApp || ''}`)
+    globalMediaStore.update((m) => ({ ...m, volume: val }))
     isDraggingVol = false
+  }
+
+  function handleVolPointerDown() {
+    isDraggingVol = true
+    lockVolumeWithGracePeriod()
+  }
+
+  function handleVolPointerUp() {
+    isDraggingVol = false
+    lockVolumeWithGracePeriod()
   }
 
   function formatTime(ms: number): string {
@@ -316,6 +349,10 @@
     media.durationMs > 0
       ? Math.min(100, Math.max(0, (currentPos / media.durationMs) * 100))
       : 0
+  )
+
+  let currentVol = $derived(
+    isDraggingVol || isVolLocked ? volVal : (media.volume ?? 50)
   )
 </script>
 
@@ -393,7 +430,7 @@
         <div class="minimal-clock-box">
           <Clock expanded={false} />
         </div>
-        {#if media.isPlaying}
+        {#if media.title || media.isPlaying}
           <DynamicEqualizer
             isPlaying={media.isPlaying}
             audioPeak={$audioPeakStore}
@@ -454,18 +491,16 @@
         </div>
       </div>
 
-      <!-- Middle Row: Centered Track Title/Artist + Hero Play/Pause Button -->
+      <!-- Middle Row: Left-aligned Track Title/Artist + Hero Play/Pause Button -->
       <div class="middle-section">
-        <div class="middle-left-spacer"></div>
         <div class="track-details">
-          <div class="track-title">{media.title || 'No Media Playing'}</div>
+          <div class="track-title" title={media.title || 'No Media Playing'}>
+            {media.title || 'No Media Playing'}
+          </div>
           {#if media.artist}
-            <div class="artist-name">{media.artist}</div>
+            <div class="artist-name" title={media.artist}>{media.artist}</div>
           {:else if !media.title}
             <div class="artist-name">Connect Media Player</div>
-          {/if}
-          {#if media.album}
-            <div class="album-name">{media.album}</div>
           {/if}
         </div>
 
@@ -486,47 +521,7 @@
         </button>
       </div>
 
-      <!-- Soundcloud / iOS Dynamic Audio Spectrum Waveform Scrub Bar -->
-      <div class="scrub-container">
-        <span class="time-label">{formatTime(currentPos)}</span>
-        <div class="waveform-scrub-wrapper">
-          <div class="spectrum-bars-container">
-            <DynamicEqualizer
-              isPlaying={media.isPlaying}
-              audioPeak={$audioPeakStore}
-              variant="full"
-              barCount={32}
-              {progressPercent}
-            />
-          </div>
-          <div
-            class="whole-capsule-track {isDraggingSeek ? 'is-dragging' : ''}"
-          >
-            <div class="capsule-track-ghost"></div>
-            <div
-              class="capsule-track-fill"
-              style="width: {progressPercent}%;"
-            ></div>
-            <div
-              class="capsule-track-head"
-              style="left: {progressPercent}%;"
-            ></div>
-          </div>
-          <input
-            type="range"
-            min="0"
-            max={media.durationMs > 0 ? media.durationMs : 100}
-            value={currentPos}
-            class="scrub-input"
-            onpointerdown={handleSeekStart}
-            oninput={handleSeekInput}
-            onchange={handleSeekCommit}
-          />
-        </div>
-        <span class="time-label">{formatTime(media.durationMs)}</span>
-      </div>
-
-      <!-- Bottom Controls Row: Shuffle, Prev, Next, Repeat, Volume Slider -->
+      <!-- Controls Row: Shuffle, Prev, Next, Repeat on Left, Volume Slider on Right -->
       <div class="bottom-controls-row">
         <div class="nav-controls">
           {#if media.isShuffleEnabled !== false && media.isShuffleActive !== undefined}
@@ -596,35 +591,72 @@
           <button
             class="vol-icon-btn"
             title={media.isMuted ? 'Unmute' : 'Mute'}
-            onclick={(e) => handleControl('mute', e)}
+            onclick={(e) => handleControl('toggle_mute', e)}
           >
-            {#if media.isMuted}
-              <VolumeX size={14} />
+            {#if media.isMuted || currentVol === 0}
+              <VolumeX size={12} />
+            {:else if currentVol > 50}
+              <Volume2 size={12} />
             {:else}
-              <Volume2 size={14} />
+              <Volume1 size={12} />
             {/if}
           </button>
-
-          <span class="vol-percentage-text"
-            >{Math.round(isDraggingVol ? volVal : (media.volume ?? 50))}%</span
-          >
-
+          <span class="vol-percentage-text">{Math.round(currentVol)}%</span>
           <div class="vol-slider-wrapper">
-            <div
-              class="vol-fill"
-              style="width: {isDraggingVol ? volVal : (media.volume ?? 50)}%"
-            ></div>
+            <div class="vol-fill" style="width: {currentVol}%;"></div>
             <input
               type="range"
               min="0"
               max="100"
-              value={isDraggingVol ? volVal : (media.volume ?? 50)}
+              value={currentVol}
               class="vol-input"
+              onpointerdown={handleVolPointerDown}
+              onpointerup={handleVolPointerUp}
               oninput={handleVolInput}
               onchange={handleVolChange}
             />
           </div>
         </div>
+      </div>
+
+      <!-- Bottom Audio Spectrum Waveform Scrub Bar with aligned Time Labels -->
+      <div class="scrub-container">
+        <span class="time-label">{formatTime(currentPos)}</span>
+        <div class="waveform-scrub-wrapper">
+          <div class="spectrum-bars-container">
+            <DynamicEqualizer
+              isPlaying={media.isPlaying}
+              audioPeak={$audioPeakStore}
+              variant="full"
+              barCount={32}
+              {progressPercent}
+            />
+          </div>
+          <div
+            class="whole-capsule-track {isDraggingSeek ? 'is-dragging' : ''}"
+          >
+            <div class="capsule-track-ghost"></div>
+            <div
+              class="capsule-track-fill"
+              style="width: {progressPercent}%;"
+            ></div>
+            <div
+              class="capsule-track-head"
+              style="left: {progressPercent}%;"
+            ></div>
+          </div>
+          <input
+            type="range"
+            min="0"
+            max={media.durationMs > 0 ? media.durationMs : 100}
+            value={currentPos}
+            class="scrub-input"
+            onpointerdown={handleSeekStart}
+            oninput={handleSeekInput}
+            onchange={handleSeekCommit}
+          />
+        </div>
+        <span class="time-label">{formatTime(media.durationMs)}</span>
       </div>
     </div>
   {/if}
