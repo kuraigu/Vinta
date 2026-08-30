@@ -285,8 +285,8 @@ h3 {
 }
 
 .notif-item:hover {
-  background-color: var(--c-contrast-bg);
-  border-color: var(--c-hover);
+  background-color: var(--c-hover);
+  border-color: rgba(255, 255, 255, 0.16);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
@@ -434,13 +434,33 @@ h3 {
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.expand-indicator:hover {
+.expand-indicator,
+.expand-indicator-btn {
+  color: var(--c-text-secondary);
+  background: var(--c-contrast-bg);
+  border: 1px solid var(--c-contrast-bg);
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.expand-indicator:hover,
+.expand-indicator-btn:hover {
   background: var(--c-hover);
   color: var(--c-text-primary);
+  border-color: rgba(255, 255, 255, 0.16);
 }
 
 /* Keep visible when expanded so user can collapse */
-.expand-indicator.is-expanded {
+.expand-indicator.is-expanded,
+.expand-indicator-btn.is-expanded {
   transform: rotate(180deg);
 }
 
@@ -621,31 +641,58 @@ h3 {
   background-color: var(--c-contrast-bg);
 }
 
-/* Open-app hint chip — appears inside expanded notification body */
-.open-app-hint {
+/* Expanded notification bottom action row — aligned to the right with the time */
+.notif-item-actions-row {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-top: 6px;
+  width: 100%;
+  min-height: 22px;
+}
+
+.notif-item.nested .notif-item-actions-row {
+  margin-right: -75px;
+  width: calc(100% + 75px);
+}
+
+.open-app-btn {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  margin-top: 7px;
-  padding: 2px 7px;
+  padding: 2px 8px;
   border-radius: 999px;
   background: var(--c-hover);
-  color: var(--c-text-muted);
-  font-size: 0.7rem;
+  border: 1px solid var(--c-border);
+  color: var(--c-text-secondary);
+  font-size: 0.68rem;
   font-weight: 500;
-  width: fit-content;
   cursor: pointer;
-  transition: opacity 0.15s ease;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.15s ease,
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
   user-select: none;
-  opacity: 0.7;
 }
 
-.open-app-hint:hover {
+/* Appears only on hover of an expanded notification */
+.notif-item:hover .open-app-btn {
+  opacity: 0.85;
+  pointer-events: auto;
+}
+
+.notif-item:hover .open-app-btn:hover {
   opacity: 1;
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--c-text-primary);
+  border-color: rgba(255, 255, 255, 0.22);
 }
 
-.open-app-hint:active {
-  opacity: 0.5;
+.notif-item:hover .open-app-btn:active {
+  transform: scale(0.96);
 }
 
 .empty-state {
@@ -669,8 +716,8 @@ h3 {
 }
 
 .notif-group.unified-card:hover {
-  background: var(--c-contrast-bg);
-  border-color: var(--c-hover);
+  background: var(--c-hover);
+  border-color: rgba(255, 255, 255, 0.16);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
 }
 
@@ -746,7 +793,7 @@ h3 {
 }
 
 .notif-item.nested:hover {
-  background-color: var(--c-contrast-bg);
+  background-color: var(--c-hover);
   transform: none;
-  border-color: var(--c-contrast-bg);
+  border-color: transparent;
 }

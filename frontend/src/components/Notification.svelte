@@ -37,6 +37,7 @@
     message: string
     heroImage?: string
     timestamp: number
+    canOpen?: boolean
   }
 
   let { expanded = false, notifications = [] } = $props<{
@@ -286,6 +287,16 @@
     )
   }
 
+  function canOpenApp(notif: NotificationItem): boolean {
+    if (notif.canOpen === false) return false
+    if (notif.canOpen === true) return true
+    const name = (notif.appName || '').trim().toLowerCase()
+    const aumid = (notif.aumid || '').trim().toLowerCase()
+    if (!name && !aumid) return false
+    if (name.includes('vinta') || aumid.includes('vinta')) return false
+    return true
+  }
+
   function cleanAppName(appStr: string): string {
     if (!appStr) return 'Notification'
     return appStr
@@ -489,11 +500,15 @@
       )}
         {@const displayBrand = getDisplayBrand(notif)}
         {@const iconUrl = displayBrand.icon}
+        {@const isExpanded = expandedIds.has(notif.id)}
+        {@const canOpen = canOpenApp(notif)}
         <!-- svelte-ignore a11y_click_events_have_key_events -->
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div
           class="notif-item"
           class:nested
+          class:is-expanded={isExpanded}
+          class:can-open={isExpanded && canOpen}
           class:is-swiping={itemDragOffsets.has(`item-${notif.id}`)}
           style="transform: translateX({itemDragOffsets.get(
             `item-${notif.id}`
@@ -503,7 +518,7 @@
           use:swipe={{
             enableSwipe: true,
             ignoreSelector:
-              '.notif-actions, .expand-indicator, input, textarea, .no-swipe',
+              '.notif-actions, .expand-indicator, .expand-indicator-btn, input, textarea, .no-swipe',
             onDragMove: (offset) => {
               itemDragOffsets.set(`item-${notif.id}`, offset.x)
             },
@@ -533,13 +548,25 @@
                 >{getRelativeTime(notif.timestamp)}</span
               >
               <div class="notif-actions">
-                <div
-                  class="expand-indicator"
-                  class:is-expanded={expandedIds.has(notif.id)}
+                <button
+                  type="button"
+                  class="expand-indicator-btn"
+                  class:is-expanded={isExpanded}
+                  onclick={(e) => {
+                    e.stopPropagation()
+                    toggleExpand(notif.id)
+                  }}
+                  title={isExpanded
+                    ? 'Collapse notification'
+                    : 'Expand notification'}
+                  aria-label={isExpanded
+                    ? 'Collapse notification'
+                    : 'Expand notification'}
                 >
                   <ChevronDown size={14} />
-                </div>
+                </button>
                 <button
+                  type="button"
                   class="dismiss-item-btn"
                   onclick={(e) => {
                     e.stopPropagation()
@@ -647,43 +674,42 @@
             <div class="notif-item-content-col">
               <div class="notif-item-body">
                 <div class="notif-item-title-row">
-                  <span
-                    class="notif-item-title"
-                    class:is-expanded={expandedIds.has(notif.id)}
-                  >
+                  <span class="notif-item-title" class:is-expanded={isExpanded}>
                     {notif.title}
                   </span>
                 </div>
                 {#if notif.message}
                   <p
                     class="notif-item-message"
-                    class:is-expanded={expandedIds.has(notif.id)}
-                    class:is-visible={nested || expandedIds.has(notif.id)}
+                    class:is-expanded={isExpanded}
+                    class:is-visible={nested || isExpanded}
                   >
                     {notif.message}
                   </p>
                 {/if}
-                {#if notif.heroImage && isImageUrl(notif.heroImage) && notif.heroImage !== displayBrand.icon && notif.heroImage !== notif.icon && (!nested || expandedIds.has(notif.id))}
+                {#if notif.heroImage && isImageUrl(notif.heroImage) && notif.heroImage !== displayBrand.icon && notif.heroImage !== notif.icon && (!nested || isExpanded)}
                   <div class="hero-image-wrapper">
                     <img src={notif.heroImage} alt="hero" class="hero-image" />
                   </div>
                 {/if}
-                {#if expandedIds.has(notif.id) && (notif.appName || notif.aumid)}
-                  <!-- svelte-ignore a11y_click_events_have_key_events -->
-                  <!-- svelte-ignore a11y_no_static_element_interactions -->
-                  <div
-                    class="open-app-hint"
-                    onclick={(e) => {
-                      e.stopPropagation()
-                      FocusNotificationApp(
-                        notif.appName ?? '',
-                        notif.aumid ?? ''
-                      )
-                      FocusWindow()
-                    }}
-                  >
-                    <ExternalLink size={11} />
-                    <span>Open</span>
+                {#if isExpanded && canOpen}
+                  <div class="notif-item-actions-row">
+                    <button
+                      type="button"
+                      class="open-app-btn"
+                      onclick={(e) => {
+                        e.stopPropagation()
+                        FocusNotificationApp(
+                          notif.appName ?? '',
+                          notif.aumid ?? ''
+                        )
+                        FocusWindow()
+                      }}
+                      title="Open in {notif.appName || brand.brandName}"
+                    >
+                      <ExternalLink size={11} />
+                      <span>Open</span>
+                    </button>
                   </div>
                 {/if}
               </div>

@@ -1,72 +1,54 @@
-// This file maps Windows application display names to curated icons and categories.
+// This file maps Windows application identifiers and display names to curated icons,
+// categories, and process targeting metadata.
 //
-// ARCHITECTURE NOTE: Vinta uses the official WinRT UserNotificationListener API
-// (Windows.UI.Notifications.Management) to intercept toast notifications. The backend
-// resolves each notification's app name via IAppDisplayInfo.get_DisplayName — so matchers
-// here run against the real, human-readable OS display name (e.g. "Discord", "NVIDIA App")
-// rather than raw system IDs.
+// ARCHITECTURE NOTE:
+// This catalog and resolver (resolveAppBrand) are shared across two core Vinta features:
+// 1. Notification Center: Matches human-readable OS display names intercepted via WinRT
+//    UserNotificationListener (Windows.UI.Notifications.Management) to display brand icons
+//    and group notification cards.
+// 2. Media Player: Matches session source identifiers from WinRT SMTC
+//    (GlobalSystemMediaTransportControlsSession.SourceAppUserModelId) to resolve the media
+//    brand, badge icon, and executable process token for source app window focusing.
 //
-// WHY THIS FILE STILL EXISTS:
-// The WinRT API gives us app names but not icons. GetLogo() exists but returns a raw byte
-// stream that would require expensive Base64 encoding on every notification. Instead, we
-// match the display name against this dictionary to load a high-quality CDN icon and assign
-// a semantic category (used for fallback icon rendering).
-//
-//
-// We primarily use thesvg.org CDN for major developer brands and applications.
-// For video games and apps not in that CDN, the source may vary.
-//
+// WHY THIS FILE EXISTS:
+// Windows APIs frequently expose disparate identifiers across Win32, UWP, and WinRT sessions
+// (e.g., "Google Chrome", "Google.Chrome", "chrome.exe", or raw package IDs), and GetLogo() byte
+// streams incur expensive encoding overhead. This centralized dictionary maps those variations
+// to lightweight CDN SVGs, semantic categories, and executable process names.
 //
 // Licenses & Fair Use:
 // All brand icons and logos linked in this dictionary are the property of their
 // respective trademark and copyright holders. They are loaded dynamically for
-// identification purposes only. Their usage here constitutes "fair use" under
-// copyright law, as they are utilized solely to visually identify the source
-// of incoming notifications on the user's personal operating system.
+// identification purposes only under fair use for visual representation within the OS.
 //
-//
-// NOTE TO ALL CONTRIBUTORS:
-// PLEASE AVOID PUTTING ANY FILE IMAGE OF THE LOGOS IN OUR REPO
+// NOTE TO CONTRIBUTORS:
+// DO NOT STORE STATIC LOGO IMAGE FILES IN THIS REPOSITORY. All assets must be loaded via CDN.
 
 export type AppCategory =
   | 'communication' // Messaging, email, & video calls (Discord, Telegram, Outlook)
   | 'gaming' // Games & game launchers (Steam, CS2, Valorant)
-  | 'media' // Audio, video, & streaming tools (Spotify, OBS Studio)
+  | 'media' // Audio, video, & streaming tools (Spotify, Netflix, OBS Studio)
   | 'productivity' // Office, calendars, utilities (Word, Excel)
   | 'browser' // Web browsers (Chrome, Edge)
   | 'system' // Drivers & OS utilities (NVIDIA, AMD, Snipping Tool)
-  | 'dev' // Coding tools, terminals, IDEs (VS Code, Git) - for future use
+  | 'dev' // Coding tools, terminals, IDEs (VS Code, Git)
 
 export interface AppBrand {
   name: string
   icon: string
   matchers: string[]
-  fallbackRegexes?: RegExp[] // Used for strict regex matching against the notification title when the OS fails to provide an appName
+  fallbackRegexes?: RegExp[] // Used for regex matching against notification content when the OS omits appName
   category?: AppCategory
 }
 
-// IMPORTANT MATCHING BEHAVIOR & HOW TO ADD APPS:
-// 1. Matchers run against the lowercased WinRT display name (e.g. 'discord', 'nvidia app').
-//    Use `.includes()` semantics — partial matches work, so 'discord' matches 'Discord'.
-// 2. The frontend loops through gameIcons FIRST, then appIcons.
-//    Order matters: place more specific matchers above general ones.
-// 3. DO NOT ADD `.exe` SUFFIXES, AUMIDs (e.g., `com.squirrel...`), OR RAW PACKAGE NAMES.
-//    Because the OS display name is already human-readable, matchers MUST be just
-//    the simple, lowercased app name (e.g. 'discord', 'spotify', 'google chrome').
-//
-// HOW TO LOCATE A MATCHER FOR A NEW APP:
-// - Method A: Receive a notification from the app while Vinta is running. The debug log at
-//   %LOCALAPPDATA%\vinta_debug.log will show: Emitting notification: app="..."
-//   Use that lowercased app name string as your matcher.
-// - Method B: Check Windows Settings → Apps → Notifications to see the exact display name
-//   Windows uses for the app.
-//
-// NOTE TO ALL CONTRIBUTORS:
-// 1. WE DO NOT NEED TO ADD EVERY SINGLE APPLICATION — THERE IS A FALLBACK ICON.
-//    ONLY ADD APPS THAT ACTUALLY SEND NOTIFICATIONS.
-// 2. ALL VIDEO GAMES MUST BE PLACED IN THE `gameIcons` ARRAY.
-//    Keep general client launchers (Steam, Epic, EA App) in `appIcons`. Because `gameIcons`
-//    is evaluated first, putting games there guarantees no conflicts with generic launchers.
+// MATCHING BEHAVIOR & MATCHER RULES:
+// 1. Matchers run against lowercased input strings using `.includes()` semantics.
+// 2. Evaluation order: `gameIcons` runs first, followed by `appIcons`. Place specific matchers above general ones.
+// 3. Process Targeting Rule for Media Player:
+//    Because the Media Player switches to source applications via FocusMediaApp(), entries should include
+//    both the full display name (e.g., 'google chrome') and the single-word executable token (e.g., 'chrome').
+//    The resolver selects the single-word token (without spaces) as `processName` to target the executable image.
+// 4. Video games must always be added to `gameIcons`, keeping general game launchers in `appIcons`.
 
 // DO NOT REMOVE THIS
 // THIS ENSURES THAT PRETTIER FORMATTER WOULD NOT MESS UP WITH THE MINIFIED FORMAT
@@ -91,7 +73,7 @@ export const appIcons: AppBrand[] = [
 
   // --- BROWSERS (Web Push Notifications - Massive Toast Volume) ---
   { name: 'Google Chrome', icon: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/google-chrome/default.svg', matchers: ['google chrome', 'chrome'], category: 'browser' },
-  { name: 'Microsoft Edge', icon: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/microsoft-edge/default.svg', matchers: ['microsoft edge', 'edge'], category: 'browser' },
+  { name: 'Microsoft Edge', icon: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/microsoft-edge/default.svg', matchers: ['microsoft edge', 'msedge', 'edge'], category: 'browser' },
   { name: 'Mozilla Firefox', icon: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/firefox/default.svg', matchers: ['mozilla firefox', 'firefox'], category: 'browser' },
   { name: 'Brave Browser', icon: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/brave/default.svg', matchers: ['brave browser', 'brave'], category: 'browser' },
   { name: 'Opera', icon: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/opera/default.svg', matchers: ['opera'], category: 'browser' },
@@ -136,6 +118,7 @@ export const appIcons: AppBrand[] = [
   { name: 'Medal.tv', icon: '', matchers: ['medal.tv', 'medal'], category: 'media' },
   { name: 'Outplayed', icon: '', matchers: ['outplayed', 'overwolf'], category: 'media' },
   { name: 'Loom', icon: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/loom/default.svg', matchers: ['loom'], category: 'media' },
+  { name: 'Netflix', icon: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/netflix/default.svg', matchers: ['netflix'], category: 'media' },
 
   // --- PRODUCTIVITY, OFFICE & TASKS (Reminders & Alerts) ---
   { name: 'Notion', icon: 'https://cdn.jsdelivr.net/gh/glincker/thesvg@main/public/icons/notion/default.svg', matchers: ['notion'], category: 'productivity' },
@@ -242,6 +225,8 @@ export function getCachedBase64Url(url: string | undefined): string {
 export function resolveAppBrand(sourceApp?: string): {
   name: string
   icon: string
+  processName?: string
+  aumid?: string
 } {
   if (!sourceApp) {
     return { name: 'Media Player', icon: '' }
@@ -250,8 +235,18 @@ export function resolveAppBrand(sourceApp?: string): {
   const allIcons = [...appIcons, ...gameIcons]
 
   for (const brand of allIcons) {
-    if (brand.matchers.some((m) => s.includes(m))) {
-      return { name: brand.name, icon: brand.icon }
+    const matched = brand.matchers.find((m) => s.includes(m.toLowerCase()))
+    if (matched) {
+      // Find clean single-word process token without spaces or punctuation
+      const processName =
+        brand.matchers.find((m) => !m.includes(' ') && !m.includes('!')) ||
+        (matched.includes('!') ? '' : matched)
+      // Extract AUMID if present in sourceApp or matchers
+      const aumid =
+        (sourceApp.includes('!') ? sourceApp : '') ||
+        brand.matchers.find((m) => m.includes('!')) ||
+        ''
+      return { name: brand.name, icon: brand.icon, processName, aumid }
     }
   }
 
@@ -269,11 +264,13 @@ export function resolveAppBrand(sourceApp?: string): {
   const underscore = cleanName.indexOf('_')
   if (underscore >= 0) cleanName = cleanName.substring(0, underscore)
 
+  const processName = cleanName.toLowerCase()
+  const aumid = sourceApp.includes('!') ? sourceApp : ''
   if (cleanName.length > 0) {
     cleanName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1)
   } else {
     cleanName = 'Media Player'
   }
 
-  return { name: cleanName, icon: '' }
+  return { name: cleanName, icon: '', processName, aumid }
 }
