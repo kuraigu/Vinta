@@ -13,7 +13,7 @@
   import {
     SendMediaControl,
     SelectMediaSession,
-    FocusMediaApp
+    FocusNotificationApp
   } from '../../wailsjs/go/backend/App.js'
   import Clock from './Clock.svelte'
   import BatteryWidget from './BatteryWidget.svelte'
@@ -110,8 +110,13 @@
 
   function handleFocusApp(e: MouseEvent) {
     e.stopPropagation()
-    if (media.sourceApp) {
-      FocusMediaApp(media.sourceApp)
+    const process = appBrand.processName || media.sourceApp || ''
+    const aumid =
+      appBrand.aumid ||
+      (media.sourceApp?.includes('!') ? media.sourceApp : '') ||
+      ''
+    if (process || aumid) {
+      FocusNotificationApp(process, aumid)
     }
   }
 

@@ -842,7 +842,8 @@
               title: `Vinta Update Available (${data.latestVersion})`,
               message:
                 'A new version of Vinta is ready for download. Open Settings > Updates to review release highlights.',
-              timestamp: Date.now()
+              timestamp: Date.now(),
+              canOpen: false
             },
             ...notifs
           ])
@@ -863,7 +864,8 @@
                 title: `Welcome to Vinta ${newVer}!`,
                 message:
                   'Vinta has been successfully updated. Check out the Updates tab in Settings to see what is new.',
-                timestamp: Date.now()
+                timestamp: Date.now(),
+                canOpen: false
               },
               ...notifs
             ])
