@@ -287,6 +287,7 @@ static void NotificationWorker() {
                             std::ostringstream json;
                             json << "{\"type\":\"notification\","
                                  << "\"appName\":\"" << EscapeJsonString(appName) << "\","
+                                 << "\"aumid\":\"" << EscapeJsonString(aumid) << "\","
                                  << "\"icon\":\"" << EscapeJsonString(icon) << "\","
                                  << "\"title\":\"" << EscapeJsonString(title) << "\","
                                  << "\"message\":\"" << EscapeJsonString(message) << "\","

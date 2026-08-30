@@ -5,6 +5,7 @@
 #include <endpointvolume.h>
 #include <audiopolicy.h>
 #include <psapi.h>
+#include <shellapi.h>
 #include <winrt/Windows.Media.Control.h>
 #include <algorithm>
 
@@ -69,6 +70,7 @@ int SelectMediaSession(const char* sessionId) {
 
 struct WindowFocusData {
     std::string needle;
+    std::string needleAumid;
     HWND foundHwnd = nullptr;
 };
 
@@ -77,17 +79,30 @@ static std::string ToLowerStr(std::string s) {
     return s;
 }
 
-int FocusMediaApp(const char* sourceApp) {
-    if (!sourceApp || strlen(sourceApp) == 0) return 0;
-    std::string needle = ToLowerStr(sourceApp);
+int FocusApp(const char* sourceApp, const char* aumid) {
+    std::string needle = (sourceApp && strlen(sourceApp) > 0) ? ToLowerStr(sourceApp) : "";
+    std::string rawAumid = (aumid && strlen(aumid) > 0) ? aumid : "";
+    std::string needleAumid = ToLowerStr(rawAumid);
+
     size_t lastSlash = needle.find_last_of("\\/");
     if (lastSlash != std::string::npos) needle = needle.substr(lastSlash + 1);
     if (needle.size() > 4 && needle.substr(needle.size() - 4) == ".exe") {
         needle = needle.substr(0, needle.size() - 4);
     }
 
+    std::string aumidToken = needleAumid;
+    size_t lastDot = aumidToken.find_last_of(".");
+    if (lastDot != std::string::npos && lastDot + 1 < aumidToken.size()) {
+        aumidToken = aumidToken.substr(lastDot + 1);
+    }
+    size_t bang = aumidToken.find("!");
+    if (bang != std::string::npos) {
+        aumidToken = aumidToken.substr(0, bang);
+    }
+
     WindowFocusData data;
     data.needle = needle;
+    data.needleAumid = aumidToken;
 
     EnumWindows([](HWND hwnd, LPARAM lParam) -> BOOL {
         if (!IsWindowVisible(hwnd)) return TRUE;
@@ -105,8 +120,17 @@ int FocusMediaApp(const char* sourceApp) {
             if (QueryFullProcessImageNameW(hProc, 0, path, &size)) {
                 std::string exePath = ToLowerStr(Utf16ToUtf8(path));
                 auto* d = reinterpret_cast<WindowFocusData*>(lParam);
-                if (exePath.find(d->needle) != std::string::npos || 
-                   (d->needle.find("spotify") != std::string::npos && exePath.find("spotify") != std::string::npos)) {
+                bool match = false;
+                if (!d->needle.empty() && exePath.find(d->needle) != std::string::npos) {
+                    match = true;
+                }
+                if (!match && !d->needleAumid.empty() && exePath.find(d->needleAumid) != std::string::npos) {
+                    match = true;
+                }
+                if (!match && d->needle.find("spotify") != std::string::npos && exePath.find("spotify") != std::string::npos) {
+                    match = true;
+                }
+                if (match) {
                     int len = GetWindowTextLengthW(hwnd);
                     if (len > 0) {
                         d->foundHwnd = hwnd;
@@ -124,10 +148,33 @@ int FocusMediaApp(const char* sourceApp) {
         if (IsIconic(data.foundHwnd)) {
             ShowWindow(data.foundHwnd, SW_RESTORE);
         }
-        SetForegroundWindow(data.foundHwnd);
+        DWORD foreThread = GetWindowThreadProcessId(GetForegroundWindow(), nullptr);
+        DWORD appThread = GetCurrentThreadId();
+        if (foreThread != appThread) {
+            AttachThreadInput(foreThread, appThread, TRUE);
+            BringWindowToTop(data.foundHwnd);
+            SetForegroundWindow(data.foundHwnd);
+            AttachThreadInput(foreThread, appThread, FALSE);
+        } else {
+            BringWindowToTop(data.foundHwnd);
+            SetForegroundWindow(data.foundHwnd);
+        }
         return 1;
     }
+
+    if (!rawAumid.empty()) {
+        std::wstring target = L"shell:AppsFolder\\" + Utf8ToUtf16(rawAumid);
+        HINSTANCE res = ShellExecuteW(nullptr, L"open", target.c_str(), nullptr, nullptr, SW_SHOWNORMAL);
+        if ((INT_PTR)res > 32) {
+            return 1;
+        }
+    }
+
     return 0;
+}
+
+int FocusMediaApp(const char* sourceApp) {
+    return FocusApp(sourceApp, "");
 }
 
 static void ScheduleEmit() {

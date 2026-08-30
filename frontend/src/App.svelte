@@ -770,18 +770,21 @@
       'notification',
       (payload: {
         appName: string
+        aumid: string
         icon: string
         title: string
         message: string
         heroImage: string
       }) => {
         const appName = payload.appName || ''
+        const aumid = payload.aumid || ''
         const title = payload.title || ''
         const message = payload.message || ''
 
         const newNotif = {
           id: Date.now() + Math.floor(Math.random() * 1000),
           appName,
+          aumid,
           icon: payload.icon,
           title,
           message,

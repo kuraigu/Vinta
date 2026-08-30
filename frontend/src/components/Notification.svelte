@@ -8,6 +8,7 @@
     Trash2,
     X,
     ChevronDown,
+    ExternalLink,
     Calendar,
     MessageCircle,
     Gamepad2,
@@ -22,10 +23,15 @@
   import { SvelteSet, SvelteMap } from 'svelte/reactivity'
   import { appIcons, gameIcons } from '../appIcons'
   import ScrollView from '../components/ScrollView.svelte'
+  import {
+    FocusNotificationApp,
+    FocusWindow
+  } from '../../wailsjs/go/backend/App'
 
   export type NotificationItem = {
     id: number
     appName?: string
+    aumid?: string
     icon?: string
     title: string
     message: string
@@ -660,6 +666,24 @@
                 {#if notif.heroImage && isImageUrl(notif.heroImage) && notif.heroImage !== displayBrand.icon && notif.heroImage !== notif.icon && (!nested || expandedIds.has(notif.id))}
                   <div class="hero-image-wrapper">
                     <img src={notif.heroImage} alt="hero" class="hero-image" />
+                  </div>
+                {/if}
+                {#if expandedIds.has(notif.id) && (notif.appName || notif.aumid)}
+                  <!-- svelte-ignore a11y_click_events_have_key_events -->
+                  <!-- svelte-ignore a11y_no_static_element_interactions -->
+                  <div
+                    class="open-app-hint"
+                    onclick={(e) => {
+                      e.stopPropagation()
+                      FocusNotificationApp(
+                        notif.appName ?? '',
+                        notif.aumid ?? ''
+                      )
+                      FocusWindow()
+                    }}
+                  >
+                    <ExternalLink size={11} />
+                    <span>Open</span>
                   </div>
                 {/if}
               </div>

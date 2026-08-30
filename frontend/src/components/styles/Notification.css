@@ -621,6 +621,33 @@ h3 {
   background-color: var(--c-contrast-bg);
 }
 
+/* Open-app hint chip — appears inside expanded notification body */
+.open-app-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 7px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--c-hover);
+  color: var(--c-text-muted);
+  font-size: 0.7rem;
+  font-weight: 500;
+  width: fit-content;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+  user-select: none;
+  opacity: 0.7;
+}
+
+.open-app-hint:hover {
+  opacity: 1;
+}
+
+.open-app-hint:active {
+  opacity: 0.5;
+}
+
 .empty-state {
   text-align: center;
   color: var(--c-text-muted);

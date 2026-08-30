@@ -112,6 +112,31 @@ jobs:
           $ldflags = "-X 'Vinta/backend.BuildType=Official' -X 'Vinta/backend.AppVersion=$version' -X 'Vinta/backend.GitCommit=${{ github.sha }}' -X 'Vinta/backend.BuildTime=$buildDate' -X 'backend.BuildType=Official' -X 'backend.AppVersion=$version' -X 'backend.GitCommit=${{ github.sha }}' -X 'backend.BuildTime=$buildDate'"
           wails build -nsis -ldflags $ldflags
 
+      - name: Sign Executables and Installer
+        shell: pwsh
+        env:
+          SIGNING_CERT_BASE64: ${{ secrets.SIGNING_CERT_BASE64 }}
+          SIGNING_CERT_PASSWORD: ${{ secrets.SIGNING_CERT_PASSWORD }}
+        run: |
+          $pfxPath = "$env:TEMP\signing_cert.pfx"
+          $cert = $null
+
+          if ($env:SIGNING_CERT_BASE64 -and $env:SIGNING_CERT_PASSWORD) {
+              Write-Host "Using production Code Signing Certificate from secrets..."
+              [System.IO.File]::WriteAllBytes($pfxPath, [System.Convert]::FromBase64String($env:SIGNING_CERT_BASE64))
+              $cert = Get-PfxCertificate -FilePath $pfxPath
+          } else {
+              Write-Host "Creating FreeMatrix Studios Code Signing Certificate..."
+              $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=FreeMatrix Studios, O=FreeMatrix Studios, C=US" -CertStoreLocation "Cert:\CurrentUser\My" -HashAlgorithm SHA256 -NotAfter (Get-Date).AddYears(5)
+              Export-Certificate -Cert $cert -FilePath "build/FreeMatrixStudios.cer" | Out-Null
+          }
+
+          $targets = Get-Item "build/bin/Vinta.exe", "build/bin/Vinta-Setup-x64.exe" -ErrorAction SilentlyContinue
+          foreach ($file in $targets) {
+              Write-Host "Signing $($file.FullName)..."
+              Set-AuthenticodeSignature -FilePath $file.FullName -Certificate $cert -HashAlgorithm SHA256 -TimestampServer "http://timestamp.digicert.com"
+          }
+
       - name: Prepare Release Artifacts
         shell: pwsh
         run: |
@@ -138,6 +163,10 @@ jobs:
 
           if (Test-Path "LICENSE") { Copy-Item "LICENSE" "$portableDir/" }
           if (Test-Path "README.md") { Copy-Item "README.md" "$portableDir/" }
+
+          if (Test-Path "build/FreeMatrixStudios.cer") {
+              Copy-Item "build/FreeMatrixStudios.cer" "release-dist/"
+          }
 
           Compress-Archive -Path "$portableDir/*" -DestinationPath "release-dist/Vinta-$version-Portable-x64.zip" -Force
 

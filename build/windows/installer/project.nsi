@@ -13,12 +13,17 @@ Unicode true
 VIProductVersion "${INFO_PRODUCTVERSION}.0"
 VIFileVersion    "${INFO_PRODUCTVERSION}.0"
 
-VIAddVersionKey "CompanyName"     "${INFO_COMPANYNAME}"
-VIAddVersionKey "FileDescription" "${INFO_PRODUCTNAME} Installer"
-VIAddVersionKey "ProductVersion"  "${INFO_PRODUCTVERSION}"
-VIAddVersionKey "FileVersion"     "${INFO_PRODUCTVERSION}"
-VIAddVersionKey "LegalCopyright"  "${INFO_COPYRIGHT}"
-VIAddVersionKey "ProductName"     "${INFO_PRODUCTNAME}"
+VIAddVersionKey "CompanyName"      "${INFO_COMPANYNAME}"
+VIAddVersionKey "Publisher"        "${INFO_COMPANYNAME}"
+VIAddVersionKey "FileDescription"  "${INFO_PRODUCTNAME} Installer"
+VIAddVersionKey "ProductVersion"   "${INFO_PRODUCTVERSION}"
+VIAddVersionKey "FileVersion"      "${INFO_PRODUCTVERSION}"
+VIAddVersionKey "LegalCopyright"   "${INFO_COPYRIGHT}"
+VIAddVersionKey "ProductName"      "${INFO_PRODUCTNAME}"
+VIAddVersionKey "OriginalFilename" "Vinta-Setup-x64.exe"
+
+# Execution Level: Run as standard user (installs into %LOCALAPPDATA%\Programs\Vinta without elevated UAC warnings)
+RequestExecutionLevel user
 
 # Enable HiDPI support
 ManifestDPIAware true
