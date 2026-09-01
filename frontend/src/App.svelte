@@ -70,7 +70,6 @@
     type BatteryData,
     type WirelessData
   } from './store'
-  import { preloadIcons, findAppIconConflicts } from './appIcons'
   import { debugBoundsOverlay, debugLogs } from './devtest/debugConfig'
 
   function syncDebugBoundsOverlay(enabled: boolean) {
@@ -641,24 +640,9 @@
     $themeStore = 'dark'
     document.documentElement.setAttribute('data-theme', 'dark')
 
-    // Preload SVG caches in the background after initial UI has rendered and settled
-    if (typeof window.requestIdleCallback === 'function') {
-      window.requestIdleCallback(() => preloadIcons(), { timeout: 3000 })
-    } else {
-      window.setTimeout(() => preloadIcons(), 2000)
-    }
-
     // Check if launched via `scripts.bat test`
     IsTestMode().then((testMode) => {
       isTestMode = testMode
-      if (isTestMode) {
-        const conflicts = findAppIconConflicts()
-        if (conflicts.length > 0) {
-          LogFatal('APP ICON CONFLICTS FOUND:\n' + conflicts.join('\n'))
-        } else {
-          LogInfo('APP ICON TEST PASSED: No conflicts found.')
-        }
-      }
     })
 
     // Reset offset to 0 on launch

@@ -13,7 +13,7 @@ Never use hardcoded hex or RGB colors like `#ffffff` or `rgb(30, 30, 30)` inside
 ### 2. Iconography Standards
 
 - **Primary Icon Library:** Always use **Lucide Icons** (`lucide-svelte`) for standard UI icons.
-- **Custom SVG Icons:** If a required icon is not available in Lucide, place custom SVG helpers inside `frontend/src/appIcons.ts` or `frontend/src/assets/`.
+- **Custom SVG Icons:** If a required icon is not available in Lucide, place custom SVG helpers inside `frontend/src/assets/`. Application icons for notifications and media sessions are extracted authentically at runtime from Windows executables and packaged Store apps via `frontend/src/services/iconService.ts`.
 - **SVG Color Rule:** Custom SVG paths must use `fill="currentColor"` or `stroke="currentColor"` so they adapt to parent theme CSS variables.
 
 ### 3. Custom Themes and Asset Rules

@@ -150,6 +150,59 @@ static bool MatchProcessName(const std::wstring& runningExe, const std::wstring&
     return false;
 }
 
+// Universally parses Windows SourceAppUserModelId (AUMID) or process strings into clean executable base
+static std::wstring ParseAumidToExecutableBase(const std::wstring& raw) {
+    if (raw.empty()) return L"";
+
+    std::wstring s = raw;
+
+    // 1. Drop filesystem path if present
+    size_t lastSlash = s.find_last_of(L"/\\");
+    if (lastSlash != std::wstring::npos && lastSlash + 1 < s.size()) {
+        s = s.substr(lastSlash + 1);
+    }
+
+    // 2. Chromium browsers: <AppName>.UserData.<Profile>
+    // Split on case-insensitive ".userdata" and keep first segment
+    std::wstring lower = s;
+    std::transform(lower.begin(), lower.end(), lower.begin(), ::towlower);
+    size_t userDataIdx = lower.find(L".userdata");
+    if (userDataIdx != std::wstring::npos && userDataIdx > 0) {
+        s = s.substr(0, userDataIdx);
+    }
+
+    // 3. UWP / Store apps: <PackageFamilyName>!<AppId>
+    // Isolate app identifier after '!'
+    size_t bangIdx = s.rfind(L'!');
+    if (bangIdx != std::wstring::npos && bangIdx + 1 < s.size()) {
+        s = s.substr(bangIdx + 1);
+    }
+
+    // 4. Strip .exe if present
+    if (s.size() > 4) {
+        std::wstring ext = s.substr(s.size() - 4);
+        std::transform(ext.begin(), ext.end(), ext.begin(), ::towlower);
+        if (ext == L".exe") {
+            s = s.substr(0, s.size() - 4);
+        }
+    }
+
+    // 5. Reverse-domain / vendor prefix strings: take last dot-separated token
+    size_t dotIdx = s.rfind(L'.');
+    if (dotIdx != std::wstring::npos && dotIdx + 1 < s.size()) {
+        s = s.substr(dotIdx + 1);
+    }
+
+    // 6. Strip package suffix after underscore
+    size_t underscoreIdx = s.find(L'_');
+    if (underscoreIdx != std::wstring::npos && underscoreIdx > 0) {
+        s = s.substr(0, underscoreIdx);
+    }
+
+    std::transform(s.begin(), s.end(), s.begin(), ::towlower);
+    return s;
+}
+
 std::wstring FindProcessExecutablePath(const std::wstring& targetExe) {
     if (targetExe.empty()) return L"";
 
@@ -169,14 +222,23 @@ std::wstring FindProcessExecutablePath(const std::wstring& targetExe) {
     std::vector<std::wstring> candidates;
     candidates.push_back(lowerTarget);
 
-    // If target has spaces or punctuation, extract significant words (e.g. "Google Chrome" -> "chrome.exe")
+    // Universal AUMID parsing
+    std::wstring parsedBase = ParseAumidToExecutableBase(targetExe);
+    if (!parsedBase.empty()) {
+        std::wstring parsedExe = parsedBase + L".exe";
+        if (parsedExe != lowerTarget) {
+            candidates.push_back(parsedExe);
+        }
+    }
+
+    // If target has spaces (e.g. "Google Chrome"), also extract last word ("chrome.exe")
     size_t lastSpace = lowerTarget.find_last_of(L" ._!\\/");
     if (lastSpace != std::wstring::npos && lastSpace + 1 < lowerTarget.size()) {
         std::wstring lastWord = lowerTarget.substr(lastSpace + 1);
         if (lastWord.size() > 4 && lastWord.substr(lastWord.size() - 4) != L".exe") {
             lastWord += L".exe";
         }
-        if (!lastWord.empty() && lastWord != L".exe") {
+        if (!lastWord.empty() && lastWord != L".exe" && lastWord != candidates.back()) {
             candidates.push_back(lastWord);
         }
     }

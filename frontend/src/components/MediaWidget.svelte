@@ -42,7 +42,7 @@
   import NotificationPage, {
     config as notifConfig
   } from '../pages/NotificationPage.svelte'
-  import { resolveAppBrand, nativeIconsStore } from '../appIcons'
+  import { resolveAppBrand, nativeIconsStore } from '../services/iconService'
 
   const navigate =
     getContext<

@@ -22,11 +22,10 @@
   import { onMount } from 'svelte'
   import { SvelteSet, SvelteMap } from 'svelte/reactivity'
   import {
-    appIcons,
-    gameIcons,
     nativeIconsStore,
-    requestNativeAppIcon
-  } from '../appIcons'
+    requestNativeAppIcon,
+    parseAumid
+  } from '../services/iconService'
   import ScrollView from '../components/ScrollView.svelte'
   import {
     FocusNotificationApp,
@@ -322,66 +321,29 @@
     appIcon: string | null
     category?: string
   } {
-    const rawName = notif.appName || 'Notification'
+    const rawInput = notif.appName || notif.aumid || 'Notification'
+    const parsed = parseAumid(rawInput)
     let defaultIcon = notif.icon || null
 
-    const allIcons = [...gameIcons, ...appIcons]
-
-    // 1. Check brand matching from catalog for metadata and backup SVG
-    let matchedBrand: (typeof allIcons)[0] | undefined
-    const matchString = (notif.appName || '').toLowerCase()
-    if (matchString && matchString !== 'notification') {
-      matchedBrand = allIcons.find((b) =>
-        b.matchers.some((m) => matchString.includes(m))
-      )
-    }
-
-    const titleText = notif.title || ''
-    const messageText = notif.message || ''
-    const combined = `${titleText} ${messageText}`.trim()
-    if (!matchedBrand && combined) {
-      for (const brand of allIcons) {
-        if (
-          brand.fallbackRegexes &&
-          brand.fallbackRegexes.some(
-            (regex) =>
-              regex.test(titleText) ||
-              regex.test(messageText) ||
-              regex.test(combined)
-          )
-        ) {
-          matchedBrand = brand
-          break
-        }
-      }
-    }
-
-    let displayName = matchedBrand ? matchedBrand.name : cleanAppName(rawName)
+    let displayName = parsed.displayName
     if (displayName.toLowerCase() === (notif.title || '').toLowerCase()) {
       displayName = 'Notification'
     }
 
-    // Priority 1 (Option A): Request or check native extracted icon from Windows (.exe / AUMID)
-    const searchApp =
-      matchedBrand?.matchers.find(
-        (m) => !m.includes(' ') && !m.includes('!')
-      ) ||
-      notif.appName ||
-      ''
+    // Request native extracted icon from Windows (.exe / AUMID)
+    const searchApp = parsed.processName || notif.appName || ''
     const iconKey = `${searchApp.toLowerCase()}|${(notif.aumid || '').toLowerCase()}`
     const nativeUri =
       nativeIcons[iconKey] || requestNativeAppIcon(searchApp, notif.aumid)
 
-    // Priority 2 (Option B backup): Curated brand SVG
-    const curatedIcon = matchedBrand?.icon || ''
-    const effectiveAppIcon = nativeUri || curatedIcon || null
-    const effectiveIcon = defaultIcon || nativeUri || curatedIcon || null
+    const effectiveAppIcon = nativeUri || null
+    const effectiveIcon = defaultIcon || nativeUri || null
 
     return {
       name: displayName,
       icon: effectiveIcon,
       appIcon: effectiveAppIcon,
-      category: matchedBrand?.category || 'system'
+      category: 'system'
     }
   }
 </script>
