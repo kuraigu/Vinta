@@ -26,6 +26,7 @@ var (
 	procSelectNativeMediaSession uintptr
 	procFocusNativeMediaApp      uintptr
 	procFocusNativeApp           uintptr
+	procExtractAppIconToFile     uintptr
 
 	mediaCallbackPtr uintptr
 	notifCallbackPtr uintptr
@@ -57,6 +58,7 @@ func ensureDLLLoadedLocked() bool {
 	procSelectNativeMediaSession, _ = syscall.GetProcAddress(dllHandle, "SelectNativeMediaSession")
 	procFocusNativeMediaApp, _ = syscall.GetProcAddress(dllHandle, "FocusNativeMediaApp")
 	procFocusNativeApp, _ = syscall.GetProcAddress(dllHandle, "FocusNativeApp")
+	procExtractAppIconToFile, _ = syscall.GetProcAddress(dllHandle, "ExtractAppIconToFile")
 	return true
 }
 
@@ -121,6 +123,9 @@ func StopServicesListener() {
 		procSendNativeMediaCommand = 0
 		procSetNativeRadioState = 0
 		procGetNativeRadiosStatus = 0
+		procFocusNativeMediaApp = 0
+		procFocusNativeApp = 0
+		procExtractAppIconToFile = 0
 	}
 
 	isStarted = false
@@ -246,6 +251,37 @@ func FocusNotificationApp(sourceApp, aumid string) bool {
 		proc,
 		uintptr(unsafe.Pointer(&appBytes[0])),
 		uintptr(unsafe.Pointer(&aumidBytes[0])),
+	)
+	return ret == 1
+}
+
+// ExtractAppIconToFile invokes vintaservices.dll to extract the native icon for sourceApp/aumid to destFilePath.
+func ExtractAppIconToFile(sourceApp, aumid, destFilePath string, size int) bool {
+	serviceMu.Lock()
+	if !ensureDLLLoadedLocked() {
+		serviceMu.Unlock()
+		return false
+	}
+	proc := procExtractAppIconToFile
+	serviceMu.Unlock()
+
+	if proc == 0 || destFilePath == "" {
+		return false
+	}
+
+	appBytes := append([]byte(sourceApp), 0)
+	aumidBytes := append([]byte(aumid), 0)
+	destPathW, err := syscall.UTF16PtrFromString(destFilePath)
+	if err != nil {
+		return false
+	}
+
+	ret, _, _ := syscall.SyscallN(
+		proc,
+		uintptr(unsafe.Pointer(&appBytes[0])),
+		uintptr(unsafe.Pointer(&aumidBytes[0])),
+		uintptr(unsafe.Pointer(destPathW)),
+		uintptr(size),
 	)
 	return ret == 1
 }

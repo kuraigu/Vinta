@@ -21,6 +21,8 @@ add_library(vintaservices SHARED
     audio_peak_service.h
     radio_service.cpp
     radio_service.h
+    icon_service.cpp
+    icon_service.h
     winrt_common.h
 )
 
@@ -31,6 +33,9 @@ target_link_libraries(vintaservices PRIVATE
     RuntimeObject.lib
     Advapi32.lib
     User32.lib
+    Shell32.lib
+    Gdi32.lib
+    Windowscodecs.lib
 )
 
 # Ensure DLL is copied to backend/services and build/bin on build completion

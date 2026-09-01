@@ -21,7 +21,12 @@
   import { swipe } from '../utils/useSwipe'
   import { onMount } from 'svelte'
   import { SvelteSet, SvelteMap } from 'svelte/reactivity'
-  import { appIcons, gameIcons } from '../appIcons'
+  import {
+    appIcons,
+    gameIcons,
+    nativeIconsStore,
+    requestNativeAppIcon
+  } from '../appIcons'
   import ScrollView from '../components/ScrollView.svelte'
   import {
     FocusNotificationApp,
@@ -44,6 +49,8 @@
     expanded?: boolean
     notifications?: NotificationItem[]
   }>()
+
+  let nativeIcons = $derived($nativeIconsStore)
 
   let expandedIds = new SvelteSet<number>()
 
@@ -304,6 +311,7 @@
 
   function getDisplayBrand(notif: {
     appName?: string
+    aumid?: string
     title?: string
     message?: string
     icon?: string
@@ -319,53 +327,62 @@
 
     const allIcons = [...gameIcons, ...appIcons]
 
-    // 1. Direct appName matching
+    // 1. Check brand matching from catalog for metadata and backup SVG
+    let matchedBrand: (typeof allIcons)[0] | undefined
     const matchString = (notif.appName || '').toLowerCase()
     if (matchString && matchString !== 'notification') {
-      for (const brand of allIcons) {
-        if (brand.matchers.some((m) => matchString.includes(m))) {
-          return {
-            name: brand.name,
-            icon: defaultIcon,
-            appIcon: brand.icon,
-            category: brand.category
-          }
-        }
-      }
+      matchedBrand = allIcons.find((b) =>
+        b.matchers.some((m) => matchString.includes(m))
+      )
     }
 
-    // 2. Fallback regex matching against title, message, and combined text
     const titleText = notif.title || ''
     const messageText = notif.message || ''
     const combined = `${titleText} ${messageText}`.trim()
-
-    if (combined) {
+    if (!matchedBrand && combined) {
       for (const brand of allIcons) {
-        if (brand.fallbackRegexes) {
-          for (const regex of brand.fallbackRegexes) {
-            if (
+        if (
+          brand.fallbackRegexes &&
+          brand.fallbackRegexes.some(
+            (regex) =>
               regex.test(titleText) ||
               regex.test(messageText) ||
               regex.test(combined)
-            ) {
-              return {
-                name: brand.name,
-                icon: defaultIcon,
-                appIcon: brand.icon,
-                category: brand.category
-              }
-            }
-          }
+          )
+        ) {
+          matchedBrand = brand
+          break
         }
       }
     }
 
-    let displayName = cleanAppName(rawName)
+    let displayName = matchedBrand ? matchedBrand.name : cleanAppName(rawName)
     if (displayName.toLowerCase() === (notif.title || '').toLowerCase()) {
       displayName = 'Notification'
     }
 
-    return { name: displayName, icon: defaultIcon, appIcon: null }
+    // Priority 1 (Option A): Request or check native extracted icon from Windows (.exe / AUMID)
+    const searchApp =
+      matchedBrand?.matchers.find(
+        (m) => !m.includes(' ') && !m.includes('!')
+      ) ||
+      notif.appName ||
+      ''
+    const iconKey = `${searchApp.toLowerCase()}|${(notif.aumid || '').toLowerCase()}`
+    const nativeUri =
+      nativeIcons[iconKey] || requestNativeAppIcon(searchApp, notif.aumid)
+
+    // Priority 2 (Option B backup): Curated brand SVG
+    const curatedIcon = matchedBrand?.icon || ''
+    const effectiveAppIcon = nativeUri || curatedIcon || null
+    const effectiveIcon = defaultIcon || nativeUri || curatedIcon || null
+
+    return {
+      name: displayName,
+      icon: effectiveIcon,
+      appIcon: effectiveAppIcon,
+      category: matchedBrand?.category || 'system'
+    }
   }
 </script>
 

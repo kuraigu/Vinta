@@ -159,7 +159,70 @@ export const gameIcons: AppBrand[] = [
 // FORTINET CLIENT
 // OTHER VPNS
 
+import { writable } from 'svelte/store'
 import { CacheIcons } from '../wailsjs/go/backend/Cache.js'
+import { GetAppIcon } from '../wailsjs/go/backend/App.js'
+
+// In-memory client cache for native resolved icons
+const nativeIconCache = new Map<string, string>()
+const pendingRequests = new Set<string>()
+
+// Reactive store for extracted icons across components
+export const nativeIconsStore = writable<Record<string, string>>({})
+
+export async function getNativeAppIcon(
+  sourceApp?: string,
+  aumid?: string
+): Promise<string> {
+  const sApp = sourceApp?.trim() || ''
+  const sAumid = aumid?.trim() || ''
+  if (!sApp && !sAumid) return ''
+
+  const key = `${sApp.toLowerCase()}|${sAumid.toLowerCase()}`
+  if (nativeIconCache.has(key)) {
+    return nativeIconCache.get(key)!
+  }
+
+  try {
+    let uri = ''
+    if (typeof GetAppIcon === 'function') {
+      uri = await GetAppIcon(sApp, sAumid)
+    } else if (
+      typeof window !== 'undefined' &&
+      (window as unknown as { go?: { backend?: { App?: { GetAppIcon?: (a: string, b: string) => Promise<string> } } } })?.go?.backend?.App?.GetAppIcon
+    ) {
+      uri = await (window as unknown as { go: { backend: { App: { GetAppIcon: (a: string, b: string) => Promise<string> } } } }).go.backend.App.GetAppIcon(sApp, sAumid)
+    }
+    const res = uri || ''
+    nativeIconCache.set(key, res)
+    if (res) {
+      nativeIconsStore.update((curr) => ({ ...curr, [key]: res }))
+    }
+    return res
+  } catch (err) {
+    nativeIconCache.set(key, '')
+    return ''
+  } finally {
+    pendingRequests.delete(key)
+  }
+}
+
+export function requestNativeAppIcon(sourceApp?: string, aumid?: string): string {
+  const sApp = sourceApp?.trim() || ''
+  const sAumid = aumid?.trim() || ''
+  if (!sApp && !sAumid) return ''
+
+  const key = `${sApp.toLowerCase()}|${sAumid.toLowerCase()}`
+  if (nativeIconCache.has(key)) {
+    return nativeIconCache.get(key)!
+  }
+
+  if (!pendingRequests.has(key)) {
+    pendingRequests.add(key)
+    getNativeAppIcon(sApp, sAumid).catch(() => {})
+  }
+  return ''
+}
 
 export async function preloadIcons() {
   const urls: string[] = []
@@ -222,55 +285,83 @@ export function getCachedBase64Url(url: string | undefined): string {
   return url
 }
 
-export function resolveAppBrand(sourceApp?: string): {
+export function resolveAppBrand(
+  sourceApp?: string,
+  aumidOverride?: string
+): {
   name: string
   icon: string
   processName?: string
   aumid?: string
+  isCurated?: boolean
 } {
-  if (!sourceApp) {
-    return { name: 'Media Player', icon: '' }
+  if (!sourceApp && !aumidOverride) {
+    return { name: 'Media Player', icon: '', isCurated: false }
   }
-  const s = sourceApp.toLowerCase()
+  const s = (sourceApp || '').toLowerCase()
   const allIcons = [...appIcons, ...gameIcons]
 
+  let matchedBrand: (typeof allIcons)[0] | undefined
   for (const brand of allIcons) {
     const matched = brand.matchers.find((m) => s.includes(m.toLowerCase()))
     if (matched) {
-      // Find clean single-word process token without spaces or punctuation
-      const processName =
-        brand.matchers.find((m) => !m.includes(' ') && !m.includes('!')) ||
-        (matched.includes('!') ? '' : matched)
-      // Extract AUMID if present in sourceApp or matchers
-      const aumid =
-        (sourceApp.includes('!') ? sourceApp : '') ||
-        brand.matchers.find((m) => m.includes('!')) ||
-        ''
-      return { name: brand.name, icon: brand.icon, processName, aumid }
+      matchedBrand = brand
+      break
     }
   }
 
-  // Fallback: clean raw process executable or package name
-  let cleanName = sourceApp
-  const lastSlash = Math.max(
-    cleanName.lastIndexOf('/'),
-    cleanName.lastIndexOf('\\')
-  )
-  if (lastSlash >= 0) cleanName = cleanName.substring(lastSlash + 1)
-  const dotExe = cleanName.toLowerCase().indexOf('.exe')
-  if (dotExe >= 0) cleanName = cleanName.substring(0, dotExe)
-  const bang = cleanName.lastIndexOf('!')
-  if (bang >= 0) cleanName = cleanName.substring(bang + 1)
-  const underscore = cleanName.indexOf('_')
-  if (underscore >= 0) cleanName = cleanName.substring(0, underscore)
+  let processName = ''
+  let aumid =
+    aumidOverride || (sourceApp && sourceApp.includes('!') ? sourceApp : '')
+  let cleanName = ''
 
-  const processName = cleanName.toLowerCase()
-  const aumid = sourceApp.includes('!') ? sourceApp : ''
-  if (cleanName.length > 0) {
-    cleanName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1)
+  if (matchedBrand) {
+    cleanName = matchedBrand.name
+    processName =
+      matchedBrand.matchers.find(
+        (m) => !m.includes(' ') && !m.includes('!')
+      ) || ''
+    if (!aumid) {
+      aumid = matchedBrand.matchers.find((m) => m.includes('!')) || ''
+    }
   } else {
-    cleanName = 'Media Player'
+    cleanName = sourceApp || aumidOverride || ''
+    const lastSlash = Math.max(
+      cleanName.lastIndexOf('/'),
+      cleanName.lastIndexOf('\\')
+    )
+    if (lastSlash >= 0) cleanName = cleanName.substring(lastSlash + 1)
+    const dotExe = cleanName.toLowerCase().indexOf('.exe')
+    if (dotExe >= 0) cleanName = cleanName.substring(0, dotExe)
+    const bang = cleanName.lastIndexOf('!')
+    if (bang >= 0) cleanName = cleanName.substring(bang + 1)
+    const underscore = cleanName.indexOf('_')
+    if (underscore >= 0) cleanName = cleanName.substring(0, underscore)
+
+    processName = cleanName.toLowerCase()
+    if (cleanName.length > 0) {
+      cleanName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1)
+    } else {
+      cleanName = 'Media Player'
+    }
   }
 
-  return { name: cleanName, icon: '', processName, aumid }
+  // Priority 1 (Option A): Request or check native extracted icon from Windows (.exe / AUMID)
+  const searchApp = processName || sourceApp || ''
+  const nativeIcon =
+    requestNativeAppIcon(searchApp, aumid) ||
+    (sourceApp && sourceApp !== searchApp
+      ? requestNativeAppIcon(sourceApp, aumid)
+      : '')
+
+  // Priority 2 (Option B backup): Curated vector SVG if native icon is not yet ready or unavailable
+  const effectiveIcon = nativeIcon || matchedBrand?.icon || ''
+
+  return {
+    name: cleanName,
+    icon: effectiveIcon,
+    processName,
+    aumid,
+    isCurated: Boolean(matchedBrand?.icon)
+  }
 }

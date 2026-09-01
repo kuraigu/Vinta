@@ -46,8 +46,9 @@ var (
 
 	psapi                 = syscall.NewLazyDLL("psapi.dll")
 	procEmptyWorkingSet   = psapi.NewProc("EmptyWorkingSet")
-	kernel32              = syscall.NewLazyDLL("kernel32.dll")
-	procGetCurrentProcess = kernel32.NewProc("GetCurrentProcess")
+	kernel32                  = syscall.NewLazyDLL("kernel32.dll")
+	procGetCurrentProcess     = kernel32.NewProc("GetCurrentProcess")
+	procSetProcessInformation = kernel32.NewProc("SetProcessInformation")
 )
 
 const (
@@ -101,7 +102,23 @@ const (
 	SM_CXVIRTUALSCREEN = 78
 	//nolint:revive // Windows API constants
 	SM_CYVIRTUALSCREEN = 79
+
+	// Windows Power Throttling / EcoQoS constants (Windows 10 1709+ / Windows 11)
+	//nolint:revive // Windows API constants
+	processPowerThrottling = 4
+	//nolint:revive // Windows API constants
+	processPowerThrottlingCurrentVersion = 1
+	//nolint:revive // Windows API constants
+	processPowerThrottlingExecutionSpeed = 0x1
+	//nolint:revive // Windows API constants
+	processPowerThrottlingIgnoreTimerResolution = 0x4
 )
+
+type processPowerThrottlingState struct {
+	Version     uint32
+	ControlMask uint32
+	StateMask   uint32
+}
 
 type rect32 struct {
 	Left, Top, Right, Bottom int32
@@ -394,6 +411,8 @@ func (a *App) Startup(ctx context.Context) {
 	defer SetupPanicRecovery()
 	a.ctx = ctx
 
+	disableProcessPowerThrottling()
+
 	smwVal, _, _ := user32.NewProc("GetSystemMetrics").Call(0)
 	smhVal, _, _ := user32.NewProc("GetSystemMetrics").Call(1)
 	if smwVal > 0 {
@@ -638,6 +657,30 @@ func (a *App) TrimMemory() {
 	if hProcess != 0 && procEmptyWorkingSet.Find() == nil {
 		_, _, _ = procEmptyWorkingSet.Call(hProcess)
 	}
+}
+
+// disableProcessPowerThrottling opts the application out of Windows 11 Efficiency Mode (EcoQoS) and timer throttling.
+func disableProcessPowerThrottling() {
+	if procSetProcessInformation.Find() != nil {
+		return
+	}
+	hProcess, _, _ := procGetCurrentProcess.Call()
+	if hProcess == 0 {
+		return
+	}
+
+	state := processPowerThrottlingState{
+		Version:     processPowerThrottlingCurrentVersion,
+		ControlMask: processPowerThrottlingExecutionSpeed | processPowerThrottlingIgnoreTimerResolution,
+		StateMask:   0,
+	}
+
+	_, _, _ = procSetProcessInformation.Call(
+		hProcess,
+		uintptr(processPowerThrottling),
+		uintptr(unsafe.Pointer(&state)),
+		uintptr(unsafe.Sizeof(state)),
+	)
 }
 
 // SetIsHidden informs native background services whether Vinta is currently hidden to throttle high-frequency IPC.

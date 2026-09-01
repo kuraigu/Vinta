@@ -42,7 +42,7 @@
   import NotificationPage, {
     config as notifConfig
   } from '../pages/NotificationPage.svelte'
-  import { resolveAppBrand } from '../appIcons'
+  import { resolveAppBrand, nativeIconsStore } from '../appIcons'
 
   const navigate =
     getContext<
@@ -57,8 +57,10 @@
 
   let media = $derived($globalMediaStore)
   let hasBattery = $derived($batteryDataStore.hasBattery)
+  let nativeIcons = $derived($nativeIconsStore)
 
   function computeAppBrand() {
+    void nativeIcons
     return resolveAppBrand(media.sourceApp)
   }
   let appBrand = $derived(computeAppBrand())
@@ -591,7 +593,7 @@
               {@const isSelected =
                 s.id === media.activeSessionId ||
                 s.sourceApp === media.sourceApp}
-              {@const sBrand = resolveAppBrand(s.sourceApp)}
+              {@const sBrand = (void nativeIcons, resolveAppBrand(s.sourceApp))}
               <button
                 class="session-menu-item"
                 class:is-selected={isSelected}
