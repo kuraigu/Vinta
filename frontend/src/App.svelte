@@ -349,6 +349,13 @@
     r: number
     offset?: number
   } | null = null
+  let lastDispatchedBounds: {
+    w: number
+    h: number
+    r: number
+    offset: number
+    scale: number
+  } | null = null
 
   function updateBounds(
     w: number,
@@ -368,6 +375,18 @@
           : clampedOffsetX
     const offset = Math.round(rawOffset)
 
+    // Skip redundant IPC if identical rounded bounds are already active on the OS
+    if (
+      lastDispatchedBounds &&
+      lastDispatchedBounds.w === computedW &&
+      lastDispatchedBounds.h === computedH &&
+      lastDispatchedBounds.r === computedR &&
+      lastDispatchedBounds.offset === offset &&
+      lastDispatchedBounds.scale === scale
+    ) {
+      return
+    }
+
     if (isBoundsIpcPending) {
       pendingBoundsArgs = { w: computedW, h: computedH, r: computedR, offset }
       return
@@ -384,6 +403,14 @@
     }
 
     isBoundsIpcPending = true
+    lastDispatchedBounds = {
+      w: computedW,
+      h: computedH,
+      r: computedR,
+      offset,
+      scale
+    }
+
     Promise.resolve(
       SetWidgetBounds(computedW, computedH, computedR, scale, offset)
     )
@@ -1147,46 +1174,13 @@
         Math.min(maxAllowedOffsetForCurrentW, targetOffset)
       )
 
-      // Dynamic OnDrag window bounding region management:
-      // When the cursor is physically inside the horizontal bounds of the island,
-      // expand the Win32 window clipping region to 100% width (-1) to provide unlimited
-      // horizontal runway and prevent cursor outrunning.
-      // When the cursor leaves the island bounds (e.g. edge clamped or fast flick),
-      // dynamically update bounds to track and rubberband with the island.
-      let isCursorInside: boolean
-      if (islandNode) {
-        const rect = islandNode.getBoundingClientRect()
-        const isInsideIsland = e.clientX >= rect.left && e.clientX <= rect.right
-        let isInsideDevPill = false
-        if (devPillContainerNode) {
-          const devRect = devPillContainerNode.getBoundingClientRect()
-          isInsideDevPill =
-            e.clientX >= devRect.left && e.clientX <= devRect.right
-        }
-        isCursorInside = isInsideIsland || isInsideDevPill
-      } else {
-        const islandCenterX = displayLayout.primaryCenter + clampedOffsetX
-        const halfW = currentIslandW / 2
-        isCursorInside =
-          e.screenX >= islandCenterX - halfW &&
-          e.screenX <= islandCenterX + halfW
-      }
-
-      if (isCursorInside) {
-        if (!isTrackRegionActive) {
-          isTrackRegionActive = true
-          const { h, r } = getBoundsForState()
-          updateBounds(-1, h, r, clampedOffsetX)
-        }
-      } else {
-        if (isTrackRegionActive) {
-          isTrackRegionActive = false
-        }
-        // Symmetrical motion margin: provides breathing room on both sides of the moving island
-        // to prevent the leading edge from clipping due to rendering/IPC phase difference.
-        const motionMargin = 40
-        const { w, h, r } = getBoundsForState()
-        updateBounds(w + motionMargin, h, r, clampedOffsetX)
+      // While actively moving with mouse held down, expand Win32 clipping region to 100% width (-1) ONCE.
+      // This eliminates all redundant intermediate bounds updates during the entire drag gesture,
+      // saving dozens of IPC calls while providing an unclipped full-width runway.
+      if (!isTrackRegionActive) {
+        isTrackRegionActive = true
+        const { h, r } = getBoundsForState()
+        updateBounds(-1, h, r, 0)
       }
     }
   }

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	goruntime "runtime"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 	"unsafe"
@@ -30,7 +31,6 @@ var (
 	procGetWindowThreadProcessID = user32.NewProc("GetWindowThreadProcessId")
 	procGetClassName             = user32.NewProc("GetClassNameW")
 	procSetWinEventHook          = user32.NewProc("SetWinEventHook")
-	procEnumWindows              = user32.NewProc("EnumWindows")
 	procGetClientRect            = user32.NewProc("GetClientRect")
 	procEnumDisplayMonitors      = user32.NewProc("EnumDisplayMonitors")
 	procGetMonitorInfoW          = user32.NewProc("GetMonitorInfoW")
@@ -222,34 +222,35 @@ func getDisplayMetrics() (vLeft, vTop, vWidth, vHeight, pCenter int, monitors []
 	return
 }
 
+var (
+	cachedWindowHwnd uintptr
+	cachedHwndMu     sync.Mutex
+	procIsWindow     = user32.NewProc("IsWindow")
+)
+
 func getMyWindowHwnd() uintptr {
+	cachedHwndMu.Lock()
+	if cachedWindowHwnd != 0 {
+		ret, _, _ := procIsWindow.Call(cachedWindowHwnd)
+		if ret != 0 {
+			h := cachedWindowHwnd
+			cachedHwndMu.Unlock()
+			return h
+		}
+		cachedWindowHwnd = 0
+	}
+	cachedHwndMu.Unlock()
+
 	titlePtr, _ := syscall.UTF16PtrFromString("Vinta")
 	hwnd, _, _ := procFindWindow.Call(0, uintptr(unsafe.Pointer(titlePtr)))
 	if hwnd != 0 {
+		cachedHwndMu.Lock()
+		cachedWindowHwnd = hwnd
+		cachedHwndMu.Unlock()
 		return hwnd
 	}
 
 	myPid := uint32(os.Getpid())
-	var targetHwnd uintptr
-	cb := syscall.NewCallback(func(h uintptr, _ uintptr) uintptr {
-		var pid uint32
-		_, _, _ = procGetWindowThreadProcessID.Call(h, uintptr(unsafe.Pointer(&pid)))
-		if pid == myPid {
-			var classBuf [256]uint16
-			_, _, _ = procGetClassName.Call(h, uintptr(unsafe.Pointer(&classBuf[0])), 256)
-			className := syscall.UTF16ToString(classBuf[:])
-			if className != "IME" && className != "MSCTFIME UI" && className != "Chrome_WidgetWin_0" && className != "Intermediate D3D Window" {
-				targetHwnd = h
-				return 0
-			}
-		}
-		return 1
-	})
-	_, _, _ = procEnumWindows.Call(cb, 0)
-	if targetHwnd != 0 {
-		return targetHwnd
-	}
-
 	desktop, _, _ := procGetDesktopWindow.Call()
 	child, _, _ := procGetWindow.Call(desktop, uintptr(GW_CHILD))
 	for child != 0 {
@@ -260,6 +261,9 @@ func getMyWindowHwnd() uintptr {
 			_, _, _ = procGetClassName.Call(child, uintptr(unsafe.Pointer(&classBuf[0])), 256)
 			className := syscall.UTF16ToString(classBuf[:])
 			if className != "IME" && className != "MSCTFIME UI" {
+				cachedHwndMu.Lock()
+				cachedWindowHwnd = child
+				cachedHwndMu.Unlock()
 				return child
 			}
 		}
@@ -837,21 +841,44 @@ func combineWindowRegions(regions ...uintptr) uintptr {
 	return finalRgn
 }
 
+type regionCache struct {
+	w, h, r, offsetX int
+	dw, dh, extraH   int
+	padding          int
+	scale            float64
+	sw               int
+}
+
+var (
+	regionMu       sync.Mutex
+	lastRegion     regionCache
+	cachedClientSw int
+)
+
 // setClickRegion updates the Win32 window region to combine the main pill and the dev pill.
 func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, dw int, dh int, extraH int, padding int, scale float64) {
+	if hwnd == 0 {
+		return
+	}
+	regionMu.Lock()
+	defer regionMu.Unlock()
+
 	if scale <= 0 {
 		scale = 1.0
 	}
 
-	type winRect struct {
-		Left, Top, Right, Bottom int32
-	}
-	var cr winRect
-	if hwnd != 0 {
+	sw := cachedClientSw
+	if sw <= 0 {
+		type winRect struct {
+			Left, Top, Right, Bottom int32
+		}
+		var cr winRect
 		_, _, _ = procGetClientRect.Call(hwnd, uintptr(unsafe.Pointer(&cr)))
+		sw = int(cr.Right - cr.Left)
+		if sw > 0 {
+			cachedClientSw = sw
+		}
 	}
-
-	sw := int(cr.Right - cr.Left)
 	if sw <= 0 {
 		sw = screenWidth
 		if sw <= 0 {
@@ -859,11 +886,27 @@ func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, dw int, dh i
 		}
 	}
 
+	// Early exit if identical region is already applied to HWND
+	if lastRegion.w == w && lastRegion.h == h && lastRegion.r == r &&
+		lastRegion.offsetX == offsetX && lastRegion.dw == dw && lastRegion.dh == dh &&
+		lastRegion.extraH == extraH && lastRegion.padding == padding &&
+		lastRegion.scale == scale && lastRegion.sw == sw {
+		return
+	}
+
+	lastRegion = regionCache{
+		w: w, h: h, r: r, offsetX: offsetX,
+		dw: dw, dh: dh, extraH: extraH,
+		padding: padding, scale: scale, sw: sw,
+	}
+
 	hrgnMain := createMainPillRegion(w, h, r, offsetX, sw, padding, scale)
 	hrgnDev := createDevPillRegion(dw, dh, extraH, h, offsetX, sw, scale, w == -1)
 
 	hrgnFinal := combineWindowRegions(hrgnMain, hrgnDev)
-	_, _, _ = procSetWindowRgn.Call(hwnd, hrgnFinal, 0)
+	if hrgnFinal != 0 {
+		_, _, _ = procSetWindowRgn.Call(hwnd, hrgnFinal, 0)
+	}
 }
 
 // Greet returns a greeting for the given name
