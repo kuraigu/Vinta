@@ -55,7 +55,10 @@ export async function getNativeAppIcon(
     nativeIconsStore.update((store) => ({ ...store, [key]: res }))
     return res
   } catch (err) {
-    console.warn(`[IconService] Failed to extract native icon for '${sApp}':`, err)
+    console.warn(
+      `[IconService] Failed to extract native icon for '${sApp}':`,
+      err
+    )
     nativeIconCache.set(key, '')
     return ''
   }
@@ -104,6 +107,12 @@ export function parseAumid(raw?: string): {
   if (!raw) return { displayName: 'Notification', processName: '' }
 
   let s = raw.trim()
+
+  // Drop composite session suffix if present (e.g. AUMID::index::title)
+  const doubleColonIdx = s.indexOf('::')
+  if (doubleColonIdx >= 0) {
+    s = s.substring(0, doubleColonIdx)
+  }
 
   // 1. Drop filesystem path if present
   const lastSlash = Math.max(s.lastIndexOf('/'), s.lastIndexOf('\\'))
@@ -166,8 +175,11 @@ export function resolveAppBrand(
   const rawInput = sourceApp || aumidOverride || ''
   const parsed = parseAumid(rawInput)
 
-  const aumid =
+  let aumid =
     aumidOverride || (sourceApp && sourceApp.includes('!') ? sourceApp : '')
+  if (aumid.includes('::')) {
+    aumid = aumid.substring(0, aumid.indexOf('::'))
+  }
 
   const searchApp = parsed.processName || sourceApp || ''
   const nativeIcon =

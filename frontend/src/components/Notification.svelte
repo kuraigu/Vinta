@@ -303,11 +303,6 @@
     return true
   }
 
-  function cleanAppName(appStr: string): string {
-    if (!appStr) return 'Notification'
-    return appStr
-  }
-
   function getDisplayBrand(notif: {
     appName?: string
     aumid?: string

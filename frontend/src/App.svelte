@@ -15,7 +15,7 @@
     SetIsHidden,
     GetDisplayLayout
   } from '../wailsjs/go/backend/App.js'
-  import { EventsOn, LogFatal, LogInfo } from '../wailsjs/runtime/runtime.js'
+  import { EventsOn } from '../wailsjs/runtime/runtime.js'
   import NotificationPage, {
     config as notifConfig
   } from './pages/NotificationPage.svelte'

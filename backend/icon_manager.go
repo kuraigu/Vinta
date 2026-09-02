@@ -22,7 +22,6 @@ var (
 type iconFlightCall struct {
 	wg  sync.WaitGroup
 	val string
-	err error
 }
 
 func getIconCacheDir() string {
@@ -74,8 +73,8 @@ func (a *App) ResolveNativeAppIcon(sourceApp, aumid string) string {
 	cacheDir := getIconCacheDir()
 	filePath := filepath.Join(cacheDir, hashKey+".png")
 
-	// 3. Check persistent disk cache
-	if info, err := os.Stat(filePath); err == nil && info.Size() > 0 {
+	// 3. Check persistent disk cache (rejecting small 1168-byte generic Windows shell placeholders)
+	if info, err := os.Stat(filePath); err == nil && info.Size() > 1200 {
 		if data, err := os.ReadFile(filePath); err == nil {
 			uri := "data:image/png;base64," + base64.StdEncoding.EncodeToString(data)
 			iconMemoryCache.Store(hashKey, uri)

@@ -73,6 +73,9 @@
   height: 100%;
   object-fit: cover;
   border-radius: 50%;
+  -webkit-user-drag: none;
+  user-select: none;
+  pointer-events: none;
 }
 
 .vinyl-placeholder {
@@ -237,6 +240,7 @@
     inset 0 0 4px #ffffff;
   border-radius: 9999px;
   transition: width 0.1s linear;
+  will-change: width;
 }
 
 .mini-progress-head {
@@ -261,6 +265,7 @@
   z-index: 10;
   pointer-events: none;
   transition: left 0.1s linear;
+  will-change: left;
 }
 
 @keyframes subtleHeadPulse {
@@ -306,6 +311,9 @@
   filter: brightness(0.5);
   position: relative;
   transition: opacity 0.3s ease;
+  -webkit-user-drag: none;
+  user-select: none;
+  pointer-events: none;
 }
 
 .card-bg-overlay {
@@ -814,6 +822,7 @@
   border-radius: 16px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
   box-sizing: border-box;
+  contain: layout paint;
   animation: sessionPanelFadeIn 0.2s cubic-bezier(0.22, 1, 0.36, 1);
 }
 

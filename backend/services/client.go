@@ -291,6 +291,7 @@ var (
 	lastTrackKey        string
 	lastPlayState       bool
 	lastArtSentTrackKey string
+	lastSentArtLen      int
 	isAppHidden         bool
 	hiddenMu            sync.RWMutex
 )
@@ -330,8 +331,13 @@ func onNativeMedia(cStr *byte) uintptr {
 
 		art, _ := payload["albumArt"].(string)
 		if art != "" {
-			if lastArtSentTrackKey != trackKey {
+			isNewOrBetterArt := (lastArtSentTrackKey != trackKey) || (len(art) > lastSentArtLen+1000)
+			if isNewOrBetterArt {
 				lastArtSentTrackKey = trackKey
+				lastSentArtLen = len(art)
+			} else if !trackChanged {
+				// Once delivered, suppress multi-megabyte base64 on subsequent routine position updates
+				payload["albumArt"] = ""
 			}
 		} else if !trackChanged && lastArtSentTrackKey == trackKey {
 			payload["albumArt"] = ""
@@ -341,10 +347,8 @@ func onNativeMedia(cStr *byte) uintptr {
 			lastTrackKey = trackKey
 			if art == "" {
 				lastArtSentTrackKey = ""
+				lastSentArtLen = 0
 			}
-		} else if !trackChanged && lastArtSentTrackKey == trackKey && art != "" {
-			// Once delivered, suppress multi-megabyte base64 on subsequent routine position updates
-			payload["albumArt"] = ""
 		}
 		mediaMu.Unlock()
 

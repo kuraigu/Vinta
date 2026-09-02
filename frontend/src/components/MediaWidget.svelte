@@ -38,7 +38,7 @@
     Check,
     X
   } from 'lucide-svelte'
-  import { getContext } from 'svelte'
+  import { getContext, untrack } from 'svelte'
   import NotificationPage, {
     config as notifConfig
   } from '../pages/NotificationPage.svelte'
@@ -183,32 +183,42 @@
 
   let playLockTimer: ReturnType<typeof setTimeout> | null = null
 
-  // Sync with incoming media store updates when track changes, play state changes, or external seek occurs
-  let prevTitle = $state('')
-  let prevArtist = $state('')
-  let prevBackendPos = $state(0)
+  // Track synchronization with incoming media store updates
+  let prevTitle = ''
+  let prevArtist = ''
+
+  let isPlayingState = $derived(Boolean(media.isPlaying))
+  let durationMsState = $derived(Number(media.durationMs || 0))
 
   function handleMediaSyncEffect() {
     const curTitle = media.title || ''
     const curArtist = media.artist || ''
     const backendPos = media.positionMs || 0
+    const playing = Boolean(media.isPlaying)
 
     const isTrackChanged = curTitle !== prevTitle || curArtist !== prevArtist
-    const isExternalSeek = Math.abs(backendPos - prevBackendPos) > 3000
 
     if (!isDraggingSeek && !isSeekingLocked) {
-      if (isTrackChanged || !media.isPlaying || isExternalSeek) {
+      if (isTrackChanged || !playing) {
+        // Track change or paused: sync directly to backend snapshot
         localPosMs = backendPos
         seekVal = backendPos
-      } else if (Math.abs(localPosMs - backendPos) > 1500) {
-        localPosMs = backendPos
-        seekVal = backendPos
+      } else {
+        // While actively playing:
+        // A genuine external seek (Spotify/YouTube/Chrome) jumps by more than 4 seconds.
+        // Routine background updates, Discord events, volume shifts, or clock drift
+        // must NEVER interrupt or jerk the continuous local playhead.
+        const currentLocal = untrack(() => localPosMs)
+        const diff = backendPos - currentLocal
+        if (Math.abs(diff) > 4000) {
+          localPosMs = backendPos
+          seekVal = backendPos
+        }
       }
     }
 
     prevTitle = curTitle
     prevArtist = curArtist
-    prevBackendPos = backendPos
 
     if (!isDraggingVol && !isVolLocked && media.volume !== undefined) {
       volVal = media.volume
@@ -222,9 +232,11 @@
     globalMediaStore.update((m) => ({ ...m, albumArt: '' }))
   }
 
-  // Smooth local timeline progression between backend SMTC updates
+  // Smooth local timeline progression between backend SMTC updates.
+  // Reactive ONLY to isPlayingState and isDraggingSeek to prevent routine
+  // media-update events (Discord, volume, audio peaks) from cancelling the rAF loop.
   function handleTimelineProgressEffect() {
-    if (!media.isPlaying || isDraggingSeek) return
+    if (!isPlayingState || isDraggingSeek) return
 
     let lastTick = performance.now()
     let rafId: number
@@ -235,19 +247,19 @@
       lastTick = now
 
       const isSettlingAfterSeek = now - lastSeekTimestamp < 500
+      const totalDur = untrack(() => durationMsState)
 
       if (
         !isDraggingSeek &&
         !isSettlingAfterSeek &&
         !isSeekingLocked &&
-        media.durationMs > 0 &&
-        media.isPlaying
+        totalDur > 0
       ) {
-        localPosMs = Math.min(media.durationMs, localPosMs + elapsed)
+        localPosMs = Math.min(totalDur, localPosMs + elapsed)
         seekVal = localPosMs
       }
 
-      if (media.isPlaying && !isDraggingSeek) {
+      if (untrack(() => isPlayingState) && !isDraggingSeek) {
         rafId = requestAnimationFrame(tick)
       }
     }
@@ -427,6 +439,11 @@
   let currentVol = $derived(
     isDraggingVol || isVolLocked ? volVal : (media.volume ?? 50)
   )
+
+  function getSessionBrand(sourceApp: string, sessionId: string) {
+    void nativeIcons
+    return resolveAppBrand(sourceApp, sessionId)
+  }
 </script>
 
 <div class="media-container {expanded ? 'expanded' : 'minimal'}">
@@ -444,6 +461,8 @@
               src={media.albumArt}
               alt={media.title}
               class="vinyl-art"
+              draggable="false"
+              decoding="async"
               onerror={handleImgError}
             />
           {:else}
@@ -531,6 +550,8 @@
           src={media.albumArt}
           alt={media.title}
           class="card-bg-image"
+          draggable="false"
+          decoding="async"
           onerror={handleImgError}
         />
       {:else}
@@ -592,8 +613,10 @@
             {#each media.sessions as s (s.id)}
               {@const isSelected =
                 s.id === media.activeSessionId ||
-                s.sourceApp === media.sourceApp}
-              {@const sBrand = (void nativeIcons, resolveAppBrand(s.sourceApp))}
+                (Boolean(media.title) && s.title === media.title) ||
+                (media.sessions.length === 1 &&
+                  s.sourceApp === media.sourceApp)}
+              {@const sBrand = getSessionBrand(s.sourceApp, s.id)}
               <button
                 class="session-menu-item"
                 class:is-selected={isSelected}
@@ -606,6 +629,8 @@
                       src={sBrand.icon}
                       alt={sBrand.name}
                       class="session-app-img"
+                      draggable="false"
+                      decoding="async"
                       onerror={(e) => {
                         const el = e.currentTarget as HTMLImageElement
                         el.style.display = 'none'

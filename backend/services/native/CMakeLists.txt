@@ -7,7 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Enable asynchronous exception handling on MSVC for C++/WinRT coroutines and COM
 if(MSVC)
-    add_compile_options(/EHa /O2 /W3)
+    add_compile_options(/EHa /O2 /W4 /wd4100 /wd4201 /wd4458 /wd4505 /wd4244)
 endif()
 
 add_library(vintaservices SHARED

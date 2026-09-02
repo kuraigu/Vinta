@@ -44,8 +44,8 @@ var (
 	procSetCapture         = user32.NewProc("SetCapture")
 	procReleaseCapture     = user32.NewProc("ReleaseCapture")
 
-	psapi                 = syscall.NewLazyDLL("psapi.dll")
-	procEmptyWorkingSet   = psapi.NewProc("EmptyWorkingSet")
+	psapi                     = syscall.NewLazyDLL("psapi.dll")
+	procEmptyWorkingSet       = psapi.NewProc("EmptyWorkingSet")
 	kernel32                  = syscall.NewLazyDLL("kernel32.dll")
 	procGetCurrentProcess     = kernel32.NewProc("GetCurrentProcess")
 	procSetProcessInformation = kernel32.NewProc("SetProcessInformation")

@@ -116,6 +116,15 @@ if "%~1"=="lint" (
     if errorlevel 1 exit /b !ERRORLEVEL!
     golangci-lint run
     if errorlevel 1 exit /b !ERRORLEVEL!
+    echo Running Native C++ Lint...
+    where clang-format >nul 2>&1
+    if not errorlevel 1 (
+        for %%f in (backend\services\native\*.cpp backend\services\native\*.h) do (
+            clang-format -i "%%f"
+        )
+    ) else (
+        echo clang-format not found on PATH, skipping native C++ formatting.
+    )
     echo Running Frontend Lint...
     cd frontend
     call npm run check
@@ -146,7 +155,7 @@ exit /b 1
 :build_native_force
 echo Building native C++/WinRT bridge via CMake...
 if not exist "build\native" (
-    cmake -B build\native -S backend\services\native
+    cmake -B build\native -S backend\services\native -G "Visual Studio 18 2026" -A x64
     if errorlevel 1 exit /b !ERRORLEVEL!
 )
 cmake --build build\native --config Release

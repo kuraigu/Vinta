@@ -141,13 +141,12 @@ bool SaveBitmapToPngFile(HBITMAP hBitmap, const wchar_t* destFilePath) {
 
 static bool MatchProcessName(const std::wstring& runningExe, const std::wstring& target) {
     if (runningExe.empty() || target.empty()) return false;
-    if (runningExe == target) return true;
-    if (runningExe.find(target) != std::wstring::npos) return true;
-    if (target.find(runningExe) != std::wstring::npos) return true;
-    std::wstring baseRunning = (runningExe.size() > 4 && runningExe.substr(runningExe.size() - 4) == L".exe")
-        ? runningExe.substr(0, runningExe.size() - 4) : runningExe;
-    if (!baseRunning.empty() && target.find(baseRunning) != std::wstring::npos) return true;
-    return false;
+    std::wstring r = runningExe;
+    if (r.size() > 4 && r.substr(r.size() - 4) == L".exe") r = r.substr(0, r.size() - 4);
+    std::wstring t = target;
+    if (t.size() > 4 && t.substr(t.size() - 4) == L".exe") t = t.substr(0, t.size() - 4);
+    if (r.empty() || t.empty()) return false;
+    return (r == t);
 }
 
 // Universally parses Windows SourceAppUserModelId (AUMID) or process strings into clean executable base
@@ -229,17 +228,14 @@ std::wstring FindProcessExecutablePath(const std::wstring& targetExe) {
         if (parsedExe != lowerTarget) {
             candidates.push_back(parsedExe);
         }
-    }
 
-    // If target has spaces (e.g. "Google Chrome"), also extract last word ("chrome.exe")
-    size_t lastSpace = lowerTarget.find_last_of(L" ._!\\/");
-    if (lastSpace != std::wstring::npos && lastSpace + 1 < lowerTarget.size()) {
-        std::wstring lastWord = lowerTarget.substr(lastSpace + 1);
-        if (lastWord.size() > 4 && lastWord.substr(lastWord.size() - 4) != L".exe") {
-            lastWord += L".exe";
-        }
-        if (!lastWord.empty() && lastWord != L".exe" && lastWord != candidates.back()) {
-            candidates.push_back(lastWord);
+        // If target has spaces (e.g. "Google Chrome"), also extract last word ("chrome.exe")
+        size_t lastSpace = parsedBase.find_last_of(L" ");
+        if (lastSpace != std::wstring::npos && lastSpace + 1 < parsedBase.size()) {
+            std::wstring lastWord = parsedBase.substr(lastSpace + 1);
+            if (!lastWord.empty() && lastWord != parsedBase) {
+                candidates.push_back(lastWord + L".exe");
+            }
         }
     }
 
@@ -340,8 +336,8 @@ extern "C" int ExtractAppIconNativeToFile(
         HBITMAP hBitmap = nullptr;
         ScopedGdiObject gdiScope(nullptr);
 
-        // --- STEP 1: Try UWP / Packaged App AUMID via Shell Namespace ---
-        if (!sAumid.empty()) {
+        // Try UWP / Packaged App AUMID via Shell Namespace (Strictly for PackageFamilyName!AppId) ---
+        if (!sAumid.empty() && sAumid.find('!') != std::string::npos) {
             std::wstring wAumid = Utf8ToUtf16(sAumid);
             std::wstring parsingName = L"shell:AppsFolder\\" + wAumid;
 
@@ -360,14 +356,16 @@ extern "C" int ExtractAppIconNativeToFile(
             }
         }
 
-        // --- STEP 2: Try Win32 Executable Path Resolution ---
-        if (!gdiScope.handle && !sApp.empty()) {
-            std::wstring wSource = Utf8ToUtf16(sApp);
-            std::wstring resolvedExe = FindProcessExecutablePath(wSource);
+        // Try Win32 Executable Path Resolution ---
+        if (!gdiScope.handle) {
+            std::string targetSearch = !sApp.empty() ? sApp : sAumid;
+            if (!targetSearch.empty()) {
+                std::wstring wSource = Utf8ToUtf16(targetSearch);
+                std::wstring resolvedExe = FindProcessExecutablePath(wSource);
 
-            if (!resolvedExe.empty()) {
-                // Method 2A (Primary for Win32): Direct resource icon extraction via PrivateExtractIconsW
-                HICON hIcon = nullptr;
+                if (!resolvedExe.empty()) {
+                    // Method 2A (Primary for Win32): Direct resource icon extraction via PrivateExtractIconsW
+                    HICON hIcon = nullptr;
                 UINT extracted = PrivateExtractIconsW(
                     resolvedExe.c_str(),
                     0,
@@ -423,8 +421,9 @@ extern "C" int ExtractAppIconNativeToFile(
                 }
             }
         }
+    }
 
-        // --- STEP 3: Encode to PNG via WIC ---
+        // Encode to PNG via WIC
         if (gdiScope.handle) {
             bool saved = SaveBitmapToPngFile(reinterpret_cast<HBITMAP>(gdiScope.handle), destFilePath);
             return saved ? 1 : 0;
