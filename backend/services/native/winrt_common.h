@@ -362,6 +362,7 @@ inline std::string StreamToBase64(winrt_storage::IRandomAccessStreamWithContentT
         uint64_t size = stream.Size();
         if (size == 0 || size > 5 * 1024 * 1024) return "";
 
+        try { stream.Seek(0); } catch (...) {}
         winrt_storage::Buffer buffer(static_cast<uint32_t>(size));
         auto readOp = stream.ReadAsync(buffer, static_cast<uint32_t>(size), winrt_storage::InputStreamOptions::None).get();
 
@@ -370,7 +371,22 @@ inline std::string StreamToBase64(winrt_storage::IRandomAccessStreamWithContentT
         dataReader.ReadBytes(bytes);
 
         std::string mime = Utf16ToUtf8(stream.ContentType().c_str());
-        if (mime.empty()) mime = "image/png";
+        if (mime.empty() || mime == "application/octet-stream") {
+            if (bytes.size() >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF) {
+                mime = "image/jpeg";
+            } else if (bytes.size() >= 8 && bytes[0] == 0x89 && bytes[1] == 'P' && bytes[2] == 'N' && bytes[3] == 'G') {
+                mime = "image/png";
+            } else if (bytes.size() >= 12 && bytes[0] == 'R' && bytes[1] == 'I' && bytes[2] == 'F' && bytes[3] == 'F' &&
+                       bytes[8] == 'W' && bytes[9] == 'E' && bytes[10] == 'B' && bytes[11] == 'P') {
+                mime = "image/webp";
+            } else if (bytes.size() >= 6 && bytes[0] == 'G' && bytes[1] == 'I' && bytes[2] == 'F') {
+                mime = "image/gif";
+            } else if (bytes.size() >= 2 && bytes[0] == 'B' && bytes[1] == 'M') {
+                mime = "image/bmp";
+            } else {
+                mime = "image/jpeg";
+            }
+        }
 
         return "data:" + mime + ";base64," + Base64Encode(bytes.data(), bytes.size());
     } catch (...) {

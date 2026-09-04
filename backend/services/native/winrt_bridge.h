@@ -36,6 +36,8 @@ BRIDGE_API int SelectNativeMediaSession(const char* sessionId);
 BRIDGE_API int FocusNativeMediaApp(const char* sourceApp);
 BRIDGE_API int FocusNativeApp(const char* sourceApp, const char* aumid);
 
+BRIDGE_API int ExtractAppIconToFile(const char* sourceApp, const char* aumid, const wchar_t* destFilePath, int targetSize);
+
 #ifdef __cplusplus
 }
 #endif

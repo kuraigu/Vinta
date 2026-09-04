@@ -7,7 +7,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Enable asynchronous exception handling on MSVC for C++/WinRT coroutines and COM
 if(MSVC)
-    add_compile_options(/EHa /O2 /W3)
+    add_compile_options(/EHa /O2 /W4 /wd4100 /wd4201 /wd4458 /wd4505 /wd4244)
 endif()
 
 add_library(vintaservices SHARED
@@ -21,6 +21,8 @@ add_library(vintaservices SHARED
     audio_peak_service.h
     radio_service.cpp
     radio_service.h
+    icon_service.cpp
+    icon_service.h
     winrt_common.h
 )
 
@@ -31,6 +33,9 @@ target_link_libraries(vintaservices PRIVATE
     RuntimeObject.lib
     Advapi32.lib
     User32.lib
+    Shell32.lib
+    Gdi32.lib
+    Windowscodecs.lib
 )
 
 # Ensure DLL is copied to backend/services and build/bin on build completion

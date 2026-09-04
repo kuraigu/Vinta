@@ -45,7 +45,7 @@ tasks:
       - 'backend/services/vintaservices.dll'
       - 'build/bin/vintaservices.dll'
     cmds:
-      - powershell.exe -NoProfile -Command "if (-not (Test-Path build/native)) { cmake -B build/native -S backend/services/native }; cmake --build build/native --config Release"
+      - powershell.exe -NoProfile -Command "if (-not (Test-Path build/native)) { cmake -B build/native -S backend/services/native -G 'Visual Studio 18 2026' -A x64 }; cmake --build build/native --config Release"
 
   dev:
     desc: Start live development server (Vite + Wails) with DevTest panel enabled
@@ -125,11 +125,18 @@ tasks:
       - wails build -tags devtest
       - powershell.exe -NoProfile -Command "Start-Process 'build/bin/Vinta.exe'"
 
+  lint:native:
+    desc: Run clang-format on native C++ services
+    cmds:
+      - powershell.exe -NoProfile -Command "if (Get-Command clang-format -ErrorAction SilentlyContinue) { Get-ChildItem -Path 'backend/services/native/*.cpp','backend/services/native/*.h' | ForEach-Object { clang-format -i $_.FullName } } else { Write-Host 'clang-format not found on PATH, skipping native C++ formatting.' }"
+
   lint:
-    desc: Run Go formatting, golangci-lint, and frontend TypeScript/ESLint/Prettier checks
+    desc: Run Go formatting, golangci-lint, native C++ formatting, and frontend TypeScript/ESLint/Prettier checks
     cmds:
       - echo "Running Go Lint..."
       - gofmt -w .
       - golangci-lint run
+      - echo "Running Native C++ Lint..."
+      - task: lint:native
       - echo "Running Frontend Lint..."
       - cmd.exe /c "cd frontend && npm run check && npm run lint && npm run format"

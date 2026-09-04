@@ -8,6 +8,7 @@
 #include <shellapi.h>
 #include <winrt/Windows.Media.Control.h>
 #include <algorithm>
+#include <unordered_map>
 
 #include <atomic>
 #include <mutex>
@@ -32,9 +33,9 @@ static winrt::event_token g_timelinePropsChangedToken;
 static std::atomic<bool> g_isMediaPlaying{false};
 static std::atomic<bool> g_emitPending{false};
 
-static std::string g_cachedTrackKey;
-static std::string g_cachedAlbumArt;
-static int g_artFetchCount = 0;
+static std::unordered_map<std::string, std::string> g_trackArtMap;
+static std::string g_currentTrackKey;
+static std::string g_previousTrackArt;
 static std::mutex g_artCacheMutex;
 
 static std::mutex g_audioVolMutex;
@@ -42,6 +43,31 @@ static std::mutex g_audioVolMutex;
 static std::string g_selectedSessionId;
 static std::chrono::steady_clock::time_point g_selectedSessionTime;
 static std::mutex g_selectedSessionMutex;
+
+static std::atomic<uint64_t> g_artCorrectionGeneration{0};
+static std::chrono::steady_clock::time_point g_lastArtResyncTime{};
+static std::mutex g_artResyncMutex;
+
+static std::string g_cachedSessionsJson = "[]";
+static std::chrono::steady_clock::time_point g_lastSessionsFetchTime{};
+static std::mutex g_sessionsJsonMutex;
+
+static std::string TryExtractThumbnail(winrt_media::GlobalSystemMediaTransportControlsSessionMediaProperties const& props, const std::string& staleArt = "") {
+    if (!props) return "";
+    try {
+        auto thumbRef = props.Thumbnail();
+        if (thumbRef) {
+            auto stream = thumbRef.OpenReadAsync().get();
+            if (stream) {
+                std::string fetched = StreamToBase64(stream);
+                if (!fetched.empty() && (staleArt.empty() || fetched != staleArt)) {
+                    return fetched;
+                }
+            }
+        }
+    } catch (...) {}
+    return "";
+}
 
 static void UpdateCurrentSession();
 static void EmitMediaState(bool includeVolume = true);
@@ -75,7 +101,7 @@ struct WindowFocusData {
 };
 
 static std::string ToLowerStr(std::string s) {
-    std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return std::tolower(c); });
+    std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
     return s;
 }
 
@@ -209,14 +235,25 @@ static void UpdateCurrentSession() {
         if (!selectedId.empty()) {
             try {
                 auto sessions = g_sessionManager.GetSessions();
+                int sIndex = 0;
                 for (auto const& s : sessions) {
                     try {
                         std::string sId = Utf16ToUtf8(s.SourceAppUserModelId().c_str());
-                        if (sId == selectedId) {
+                        std::string sTitle = "";
+                        try {
+                            auto props = s.TryGetMediaPropertiesAsync().get();
+                            if (props) {
+                                sTitle = Utf16ToUtf8(props.Title().c_str());
+                            }
+                        } catch (...) {}
+
+                        std::string compositeId = sId + "::" + std::to_string(sIndex) + "::" + sTitle;
+                        if (selectedId == compositeId || (!sTitle.empty() && selectedId.find(sTitle) != std::string::npos) || selectedId == sId) {
                             chosenSession = s;
                             break;
                         }
                     } catch (...) {}
+                    sIndex++;
                 }
             } catch (...) {}
         }
@@ -239,21 +276,34 @@ static void UpdateCurrentSession() {
             // User's chosen session has priority if playing or freshly selected
             targetSession = chosenSession;
         } else {
-            // Chosen session is not playing (and not just clicked). Check if ANY session IS playing!
+            // Check if Windows's own focused session is actively playing
             try {
-                auto sessions = g_sessionManager.GetSessions();
-                for (auto const& s : sessions) {
-                    try {
-                        auto info = s.GetPlaybackInfo();
-                        if (info && info.PlaybackStatus() == winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing) {
-                            targetSession = s;
-                            break;
-                        }
-                    } catch (...) {}
+                winrt_media::GlobalSystemMediaTransportControlsSession focusedSession = g_sessionManager.GetCurrentSession();
+                if (focusedSession) {
+                    auto info = focusedSession.GetPlaybackInfo();
+                    if (info && info.PlaybackStatus() == winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing) {
+                        targetSession = focusedSession;
+                    }
                 }
             } catch (...) {}
 
-            // If no session is actively playing, fallback to chosenSession, or focusedSession, or first session
+            // If focused session is not playing, scan other sessions for an actively playing session
+            if (!targetSession) {
+                try {
+                    auto sessions = g_sessionManager.GetSessions();
+                    for (auto const& s : sessions) {
+                        try {
+                            auto info = s.GetPlaybackInfo();
+                            if (info && info.PlaybackStatus() == winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing) {
+                                targetSession = s;
+                                break;
+                            }
+                        } catch (...) {}
+                    }
+                } catch (...) {}
+            }
+
+            // Fallback if none are actively playing
             if (!targetSession) {
                 if (chosenSession) {
                     targetSession = chosenSession;
@@ -348,44 +398,118 @@ static void EmitMediaState(bool includeVolume) {
             album = Utf16ToUtf8(props.AlbumTitle().c_str());
 
             std::string trackKey = title + "_" + artist;
-            bool shouldFetchArt = false;
+            std::string staleArt;
+            bool isNewTrack = false;
             {
                 std::lock_guard<std::mutex> artLock(g_artCacheMutex);
-                if (trackKey != g_cachedTrackKey) {
-                    g_cachedTrackKey = trackKey;
-                    g_cachedAlbumArt = "";
-                    g_artFetchCount = 0;
+                if (trackKey != g_currentTrackKey) {
+                    isNewTrack = true;
+                    auto prevIt = g_trackArtMap.find(g_currentTrackKey);
+                    if (prevIt != g_trackArtMap.end() && !prevIt->second.empty()) {
+                        g_previousTrackArt = prevIt->second;
+                    }
+                    g_currentTrackKey = trackKey;
                 }
+                staleArt = g_previousTrackArt;
 
-                if (props.Thumbnail() != nullptr && (g_cachedAlbumArt.empty() || g_artFetchCount < 6)) {
-                    shouldFetchArt = true;
-                    g_artFetchCount++;
-                } else if (!g_cachedAlbumArt.empty()) {
-                    albumArt = g_cachedAlbumArt;
+                auto it = g_trackArtMap.find(trackKey);
+                if (it != g_trackArtMap.end() && !it->second.empty()) {
+                    albumArt = it->second;
                 }
             }
 
-            if (shouldFetchArt && props.Thumbnail()) {
-                try {
-                    auto stream = props.Thumbnail().OpenReadAsync().get();
-                    if (stream) {
-                        std::string fetchedArt = StreamToBase64(stream);
-                        if (!fetchedArt.empty()) {
-                            std::lock_guard<std::mutex> artLock(g_artCacheMutex);
-                            if (g_cachedTrackKey == trackKey) {
-                                g_cachedAlbumArt = fetchedArt;
-                                albumArt = fetchedArt;
+            // Attempt immediate extraction from current props if art is missing
+            if (albumArt.empty() && props.Thumbnail() != nullptr) {
+                std::string fetchedArt = TryExtractThumbnail(props, staleArt);
+                if (!fetchedArt.empty()) {
+                    std::lock_guard<std::mutex> artLock(g_artCacheMutex);
+                    g_trackArtMap[trackKey] = fetchedArt;
+                    albumArt = fetchedArt;
+                }
+            }
+
+            // Continuous 10-second auto-resync:
+            // If the song is active and albumArt is still missing, retry at least every 10 seconds
+            if (albumArt.empty() && !trackKey.empty() && !isNewTrack) {
+                auto now = std::chrono::steady_clock::now();
+                bool shouldResync = false;
+                {
+                    std::lock_guard<std::mutex> resyncLock(g_artResyncMutex);
+                    auto elapsedSec = std::chrono::duration_cast<std::chrono::seconds>(now - g_lastArtResyncTime).count();
+                    if (elapsedSec >= 10) {
+                        g_lastArtResyncTime = now;
+                        shouldResync = true;
+                    }
+                }
+                if (shouldResync) {
+                    try {
+                        auto freshProps = session.TryGetMediaPropertiesAsync().get();
+                        if (freshProps) {
+                            std::string freshArt = TryExtractThumbnail(freshProps, staleArt);
+                            if (!freshArt.empty()) {
+                                {
+                                    std::lock_guard<std::mutex> artLock(g_artCacheMutex);
+                                    g_trackArtMap[trackKey] = freshArt;
+                                }
+                                albumArt = freshArt;
                             }
                         }
-                    }
-                } catch (...) {}
+                    } catch (...) {}
+                }
             }
 
-            if (albumArt.empty()) {
-                std::lock_guard<std::mutex> artLock(g_artCacheMutex);
-                if (g_cachedTrackKey == trackKey && !g_cachedAlbumArt.empty()) {
-                    albumArt = g_cachedAlbumArt;
+            // Rapid initial retry worker: spawned strictly when a new track is detected without full-res art.
+            // Generation counter only increments on actual track change to avoid routine progress cancels.
+            bool needsWorker = isNewTrack && (albumArt.empty() || albumArt.size() < 10000);
+            if (needsWorker && !trackKey.empty()) {
+                {
+                    std::lock_guard<std::mutex> resyncLock(g_artResyncMutex);
+                    g_lastArtResyncTime = std::chrono::steady_clock::now();
                 }
+                uint64_t gen = ++g_artCorrectionGeneration;
+                std::thread([gen, trackKey, staleArt]() {
+                    ApartmentScope apt;
+                    const int delaysMs[] = { 300, 500, 800, 1200, 1800, 2500, 3500 };
+
+                    for (int delay : delaysMs) {
+                        std::this_thread::sleep_for(std::chrono::milliseconds(delay));
+                        if (g_artCorrectionGeneration.load() != gen) return;
+
+                        try {
+                            winrt_media::GlobalSystemMediaTransportControlsSession curSession{nullptr};
+                            {
+                                std::lock_guard<std::recursive_mutex> lock(g_sessionMutex);
+                                curSession = g_currentSession;
+                            }
+
+                            if (curSession) {
+                                auto p = curSession.TryGetMediaPropertiesAsync().get();
+                                if (p) {
+                                    std::string curTrackKey = Utf16ToUtf8(p.Title().c_str()) + "_" + Utf16ToUtf8(p.Artist().c_str());
+                                    if (curTrackKey != trackKey) return; // Switched track
+
+                                    std::string newArt = TryExtractThumbnail(p, staleArt);
+                                    if (!newArt.empty()) {
+                                        bool changed = false;
+                                        {
+                                            std::lock_guard<std::mutex> artLock(g_artCacheMutex);
+                                            if (g_trackArtMap[trackKey] != newArt) {
+                                                g_trackArtMap[trackKey] = newArt;
+                                                changed = true;
+                                            }
+                                        }
+                                        if (changed) {
+                                            ScheduleEmit();
+                                            if (newArt.size() > 10000) {
+                                                return; // Acquired high-res poster
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (...) {}
+                    }
+                }).detach();
             }
         }
     } catch (...) {}
@@ -430,66 +554,94 @@ static void EmitMediaState(bool includeVolume) {
         if (timeline) {
             double rawPosMs = std::chrono::duration<double, std::milli>(timeline.Position()).count();
             durMs = std::chrono::duration<double, std::milli>(timeline.EndTime()).count();
-            posMs = rawPosMs;
 
-            if (isPlaying && durMs > 0) {
+            if (isPlaying) {
                 auto lastUpdated = timeline.LastUpdatedTime();
                 auto now = winrt::clock::now();
                 if (now > lastUpdated) {
-                    double elapsedSinceUpdate = std::chrono::duration<double, std::milli>(now - lastUpdated).count();
-                    if (elapsedSinceUpdate > 0 && elapsedSinceUpdate < 600000) {
-                        posMs = std::min(durMs, rawPosMs + elapsedSinceUpdate);
+                    double elapsedMs = std::chrono::duration<double, std::milli>(now - lastUpdated).count();
+                    // Chrome / Spotify update LastUpdatedTime every 1-5s while actively playing.
+                    // Extrapolate position smoothly while fresh (< 10 seconds) to prevent stale backwards snapshots.
+                    if (elapsedMs > 0.0 && elapsedMs < 10000.0) {
+                        posMs = rawPosMs + elapsedMs;
+                        if (durMs > 0.0 && posMs > durMs) {
+                            posMs = durMs;
+                        }
+                    } else {
+                        posMs = rawPosMs;
                     }
+                } else {
+                    posMs = rawPosMs;
                 }
+            } else {
+                posMs = rawPosMs;
             }
         }
     } catch (...) {}
 
     std::string sessionsJson = "[]";
+    std::string activeSessionId = sourceApp;
     try {
         if (g_sessionManager) {
-            auto allSessions = g_sessionManager.GetSessions();
-            std::ostringstream sJson;
-            sJson << "[";
-            bool first = true;
-            for (auto const& s : allSessions) {
-                try {
-                    std::string sId = Utf16ToUtf8(s.SourceAppUserModelId().c_str());
-                    std::string sApp = sId;
-                    size_t slash = sApp.find_last_of("\\/");
-                    if (slash != std::string::npos) sApp = sApp.substr(slash + 1);
+            auto now = std::chrono::steady_clock::now();
+            std::lock_guard<std::mutex> sLock(g_sessionsJsonMutex);
+            auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - g_lastSessionsFetchTime).count();
 
-                    std::string sTitle = "";
-                    std::string sArtist = "";
+            if (elapsedMs < 2500 && g_cachedSessionsJson != "[]") {
+                sessionsJson = g_cachedSessionsJson;
+            } else {
+                auto allSessions = g_sessionManager.GetSessions();
+                std::ostringstream sJson;
+                sJson << "[";
+                bool first = true;
+                int sIndex = 0;
+                for (auto const& s : allSessions) {
                     try {
-                        auto props = s.TryGetMediaPropertiesAsync().get();
-                        if (props) {
-                            sTitle = Utf16ToUtf8(props.Title().c_str());
-                            sArtist = Utf16ToUtf8(props.Artist().c_str());
-                        }
-                    } catch (...) {}
+                        std::string sId = Utf16ToUtf8(s.SourceAppUserModelId().c_str());
+                        std::string sApp = sId;
+                        size_t slash = sApp.find_last_of("\\/");
+                        if (slash != std::string::npos) sApp = sApp.substr(slash + 1);
 
-                    bool sPlaying = false;
-                    try {
-                        auto pInfo = s.GetPlaybackInfo();
-                        if (pInfo) {
-                            sPlaying = (pInfo.PlaybackStatus() == winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing);
-                        }
-                    } catch (...) {}
+                        std::string sTitle = "";
+                        std::string sArtist = "";
+                        try {
+                            auto props = s.TryGetMediaPropertiesAsync().get();
+                            if (props) {
+                                sTitle = Utf16ToUtf8(props.Title().c_str());
+                                sArtist = Utf16ToUtf8(props.Artist().c_str());
+                            }
+                        } catch (...) {}
 
-                    if (!first) sJson << ",";
-                    first = false;
-                    sJson << "{"
-                          << "\"id\":\"" << EscapeJsonString(sId) << "\","
-                          << "\"sourceApp\":\"" << EscapeJsonString(sApp) << "\","
-                          << "\"title\":\"" << EscapeJsonString(sTitle) << "\","
-                          << "\"artist\":\"" << EscapeJsonString(sArtist) << "\","
-                          << "\"isPlaying\":" << (sPlaying ? "true" : "false")
-                          << "}";
-                } catch (...) {}
+                        bool sPlaying = false;
+                        try {
+                            auto pInfo = s.GetPlaybackInfo();
+                            if (pInfo) {
+                                sPlaying = (pInfo.PlaybackStatus() == winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing);
+                            }
+                        } catch (...) {}
+
+                        std::string uniqueId = sId + "::" + std::to_string(sIndex) + "::" + sTitle;
+                        if (s == session) {
+                            activeSessionId = uniqueId;
+                        }
+
+                        if (!first) sJson << ",";
+                        first = false;
+                        sJson << "{"
+                              << "\"id\":\"" << EscapeJsonString(uniqueId) << "\","
+                              << "\"sourceApp\":\"" << EscapeJsonString(sApp) << "\","
+                              << "\"title\":\"" << EscapeJsonString(sTitle) << "\","
+                              << "\"artist\":\"" << EscapeJsonString(sArtist) << "\","
+                              << "\"isPlaying\":" << (sPlaying ? "true" : "false")
+                              << "}";
+                    } catch (...) {}
+                    sIndex++;
+                }
+                sJson << "]";
+                g_cachedSessionsJson = sJson.str();
+                g_lastSessionsFetchTime = now;
+                sessionsJson = g_cachedSessionsJson;
             }
-            sJson << "]";
-            sessionsJson = sJson.str();
         }
     } catch (...) {}
 
@@ -518,7 +670,7 @@ static void EmitMediaState(bool includeVolume) {
          << "\"canPause\":" << (canPause ? "true" : "false") << ","
          << "\"canPlay\":" << (canPlay ? "true" : "false") << ","
          << "\"sessions\":" << sessionsJson << ","
-         << "\"activeSessionId\":\"" << EscapeJsonString(sourceApp) << "\"}";
+         << "\"activeSessionId\":\"" << EscapeJsonString(activeSessionId) << "\"}";
 
     if (g_mediaCb) {
         g_mediaCb(json.str().c_str());
@@ -535,7 +687,7 @@ static std::vector<std::string> ExtractAppTokens(const std::string& sourceApp) {
     if (sourceApp.empty()) return tokens;
 
     std::string s = sourceApp;
-    std::transform(s.begin(), s.end(), s.begin(), ::tolower);
+    std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
 
     // Common app aliases
     if (s.find("308046b0af4a39cb") != std::string::npos || s.find("firefox") != std::string::npos) {
@@ -636,7 +788,7 @@ static bool GetAllAppSessionVolumes(const std::string& sourceApp, std::vector<IS
     }
 
     std::string appLower = sourceApp;
-    std::transform(appLower.begin(), appLower.end(), appLower.begin(), ::tolower);
+    std::transform(appLower.begin(), appLower.end(), appLower.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
     auto tokens = ExtractAppTokens(sourceApp);
 
     std::vector<SessionMatch> matches;
@@ -671,7 +823,7 @@ static bool GetAllAppSessionVolumes(const std::string& sourceApp, std::vector<IS
                 if (SUCCEEDED(pControl2->GetSessionIdentifier(&pswSessionId)) && pswSessionId) {
                     sessId = Utf16ToUtf8(pswSessionId);
                     CoTaskMemFree(pswSessionId);
-                    std::transform(sessId.begin(), sessId.end(), sessId.begin(), ::tolower);
+                    std::transform(sessId.begin(), sessId.end(), sessId.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
                 }
 
                 LPWSTR pswDisplayName = nullptr;
@@ -679,7 +831,7 @@ static bool GetAllAppSessionVolumes(const std::string& sourceApp, std::vector<IS
                 if (SUCCEEDED(pControl2->GetDisplayName(&pswDisplayName)) && pswDisplayName) {
                     dispName = Utf16ToUtf8(pswDisplayName);
                     CoTaskMemFree(pswDisplayName);
-                    std::transform(dispName.begin(), dispName.end(), dispName.begin(), ::tolower);
+                    std::transform(dispName.begin(), dispName.end(), dispName.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
                 }
 
                 // 2. Check Process Executable Name
@@ -969,6 +1121,10 @@ void StartMediaService(NativeMediaCallback cb) {
                     ScheduleEmit();
                 });
                 g_sessionsChangedToken = g_sessionManager.SessionsChanged([](auto const&, auto const&) {
+                    {
+                        std::lock_guard<std::mutex> sLock(g_sessionsJsonMutex);
+                        g_lastSessionsFetchTime = {};
+                    }
                     ScheduleEmit();
                 });
             }
@@ -977,7 +1133,8 @@ void StartMediaService(NativeMediaCallback cb) {
         UpdateCurrentSession();
 
         while (g_mediaRunning) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            // Heartbeat fallback: real-time updates are handled asynchronously by WinRT push callbacks
+            std::this_thread::sleep_for(std::chrono::milliseconds(3000));
             if (g_mediaRunning) {
                 UpdateCurrentSession();
             }

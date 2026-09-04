@@ -3,6 +3,7 @@
 #include "media_service.h"
 #include "audio_peak_service.h"
 #include "radio_service.h"
+#include "icon_service.h"
 
 static bool g_bridgeRunning = false;
 
@@ -52,5 +53,13 @@ extern "C" BRIDGE_API int FocusNativeMediaApp(const char* sourceApp) {
 
 extern "C" BRIDGE_API int FocusNativeApp(const char* sourceApp, const char* aumid) {
     return FocusApp(sourceApp, aumid);
+}
+
+extern "C" BRIDGE_API int ExtractAppIconToFile(const char* sourceApp, const char* aumid, const wchar_t* destFilePath, int targetSize) {
+    try {
+        return ExtractAppIconNativeToFile(sourceApp, aumid, destFilePath, targetSize);
+    } catch (...) {
+        return 0;
+    }
 }
 
