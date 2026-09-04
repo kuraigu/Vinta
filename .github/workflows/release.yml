@@ -32,7 +32,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -65,14 +65,18 @@ jobs:
           "RELEASE_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Set up Go
-        uses: actions/setup-go@v7
+        uses: actions/setup-go@v5
         with:
           go-version: "1.25"
+          cache: true
+          cache-dependency-path: go.sum
 
       - name: Set up Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@v4
         with:
           node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
 
       - name: Set up MSVC environment
         uses: ilammy/msvc-dev-cmd@v1
@@ -87,13 +91,21 @@ jobs:
           choco install nsis -y --no-progress
           echo "C:\Program Files (x86)\NSIS" >> $env:GITHUB_PATH
 
+      - name: Cache Wails CLI
+        id: cache-wails
+        uses: actions/cache@v4
+        with:
+          path: ~/go/bin/wails.exe
+          key: ${{ runner.os }}-wails-2.13.0
+
       - name: Install Wails
+        if: steps.cache-wails.outputs.cache-hit != 'true'
         run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.13.0
 
       - name: Install Frontend Dependencies
         run: |
           cd frontend
-          npm install
+          npm ci --prefer-offline
 
       - name: Build Native WinRT Bridge DLL (CMake)
         run: |
@@ -110,7 +122,7 @@ jobs:
           $version = "$env:RELEASE_VERSION"
           $buildDate = (Get-Date -Format 'yy.MMdd')
           $ldflags = "-X 'Vinta/backend.BuildType=Official' -X 'Vinta/backend.AppVersion=$version' -X 'Vinta/backend.GitCommit=${{ github.sha }}' -X 'Vinta/backend.BuildTime=$buildDate' -X 'backend.BuildType=Official' -X 'backend.AppVersion=$version' -X 'backend.GitCommit=${{ github.sha }}' -X 'backend.BuildTime=$buildDate'"
-          wails build -nsis -ldflags $ldflags
+          wails build -nsis -s -ldflags $ldflags
 
       - name: Sign Executables and Installer
         shell: pwsh

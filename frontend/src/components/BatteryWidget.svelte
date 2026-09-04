@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Zap, Plug, Leaf } from 'lucide-svelte'
+  import { Zap, Plug, Leaf } from '@lucide/svelte'
   import { batteryDataStore } from '../store'
 
   let battery = $derived($batteryDataStore)

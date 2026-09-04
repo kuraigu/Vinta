@@ -23,7 +23,7 @@
     Plug,
     Plane,
     ExternalLink
-  } from 'lucide-svelte'
+  } from '@lucide/svelte'
   import AppsPage, { config as appsConfig } from './AppsPage.svelte'
   import {
     wirelessDataStore,

@@ -9,7 +9,7 @@
     Cpu,
     RefreshCw,
     Info
-  } from 'lucide-svelte'
+  } from '@lucide/svelte'
   import { activeSettingsTabStore } from '../../store'
 
   const categories = [

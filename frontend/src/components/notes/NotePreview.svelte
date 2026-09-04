@@ -1,6 +1,6 @@
 <script lang="ts">
   import ScrollView from '../ScrollView.svelte'
-  import { Check, Copy } from 'lucide-svelte'
+  import { Check, Copy } from '@lucide/svelte'
 
   interface Props {
     content: string

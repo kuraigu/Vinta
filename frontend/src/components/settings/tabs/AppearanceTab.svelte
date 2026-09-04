@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Moon, Maximize2, Sparkles, Eye } from 'lucide-svelte'
+  import { Moon, Maximize2, Sparkles, Eye } from '@lucide/svelte'
   import CustomSelect from '../../CustomSelect.svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingSlider from '../SettingSlider.svelte'

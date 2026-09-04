@@ -1,6 +1,6 @@
 <script lang="ts">
   import { slide } from 'svelte/transition'
-  import { ChevronDown, Search } from 'lucide-svelte'
+  import { ChevronDown, Search } from '@lucide/svelte'
 
   let {
     options,

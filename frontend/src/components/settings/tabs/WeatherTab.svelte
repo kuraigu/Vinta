@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { MapPin, Thermometer } from 'lucide-svelte'
+  import { MapPin, Thermometer } from '@lucide/svelte'
   import SettingItem from '../SettingItem.svelte'
   import CustomSelect from '../../CustomSelect.svelte'
   import { weatherLocationStore, weatherUnitStore } from '../../../store'

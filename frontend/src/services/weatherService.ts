@@ -5,7 +5,7 @@ import {
   CloudRain,
   CloudSnow,
   CloudLightning
-} from 'lucide-svelte'
+} from '@lucide/svelte'
 
 export type ForecastDay = {
   day: string

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Clock, Globe, Calendar } from 'lucide-svelte'
+  import { Clock, Globe, Calendar } from '@lucide/svelte'
   import SettingItem from '../SettingItem.svelte'
   import CustomSelect from '../../CustomSelect.svelte'
   import {

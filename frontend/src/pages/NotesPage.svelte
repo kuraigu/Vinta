@@ -11,7 +11,7 @@
 
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { Check, Lock, Unlock, FileText, Plus, Save } from 'lucide-svelte'
+  import { Check, Lock, Unlock, FileText, Plus, Save } from '@lucide/svelte'
   import SidebarLayout from '../components/SidebarLayout.svelte'
   import NoteSidebar from '../components/notes/NoteSidebar.svelte'
   import NoteToolbar from '../components/notes/NoteToolbar.svelte'

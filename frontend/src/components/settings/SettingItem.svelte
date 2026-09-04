@@ -1,11 +1,11 @@
 <script lang="ts">
-  import type { Snippet, ComponentType } from 'svelte'
+  import type { Snippet, Component, ComponentType } from 'svelte'
 
   interface Props {
     label: string
     description?: string
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    icon?: ComponentType<any>
+    icon?: Component<any> | ComponentType<any>
     flexCol?: boolean
     badge?: string
     disabled?: boolean

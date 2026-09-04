@@ -8,7 +8,7 @@
     ShieldCheck,
     Heart,
     Crown
-  } from 'lucide-svelte'
+  } from '@lucide/svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
   import appIcon from '@appicon'
   import {

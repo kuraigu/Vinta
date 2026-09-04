@@ -11,7 +11,7 @@
     Link,
     Code,
     Quote
-  } from 'lucide-svelte'
+  } from '@lucide/svelte'
 
   export type FormatType = 'inline' | 'line' | 'link' | 'codeblock'
 

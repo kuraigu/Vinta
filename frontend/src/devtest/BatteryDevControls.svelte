@@ -6,7 +6,7 @@
     Leaf,
     Plug,
     RefreshCw
-  } from 'lucide-svelte'
+  } from '@lucide/svelte'
   import {
     batteryDataStore,
     isSimulatingBatteryStore,

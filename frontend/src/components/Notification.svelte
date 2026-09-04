@@ -16,7 +16,7 @@
     Play,
     Settings,
     Terminal
-  } from 'lucide-svelte'
+  } from '@lucide/svelte'
   import { notifData, notificationPermissionDenied, dndStore } from '../store'
   import { swipe } from '../utils/useSwipe'
   import { onMount } from 'svelte'

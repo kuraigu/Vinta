@@ -7,7 +7,7 @@
     RefreshCw,
     WifiOff,
     MapPin
-  } from 'lucide-svelte'
+  } from '@lucide/svelte'
   import {
     weatherLocationStore,
     weatherUnitStore,

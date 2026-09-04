@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Plus, Search, Trash2, FolderOpen } from 'lucide-svelte'
+  import { Plus, Search, Trash2, FolderOpen } from '@lucide/svelte'
   import ScrollView from '../ScrollView.svelte'
 
   interface NoteItem {

@@ -21,7 +21,7 @@
     FileText,
     SlidersHorizontal,
     RefreshCw
-  } from 'lucide-svelte'
+  } from '@lucide/svelte'
   import HomePage, { config as homeConfig } from './HomePage.svelte'
   import NotificationPage, {
     config as notifConfig

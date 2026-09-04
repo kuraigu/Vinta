@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { CloudSun, BatteryCharging, Radio } from 'lucide-svelte'
+  import { CloudSun, BatteryCharging, Radio } from '@lucide/svelte'
   import WeatherDevControls from './WeatherDevControls.svelte'
   import BatteryDevControls from './BatteryDevControls.svelte'
   import WirelessDevControls from './WirelessDevControls.svelte'

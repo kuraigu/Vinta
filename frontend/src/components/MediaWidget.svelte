@@ -37,7 +37,7 @@
     Music2,
     Check,
     X
-  } from 'lucide-svelte'
+  } from '@lucide/svelte'
   import { getContext, untrack } from 'svelte'
   import NotificationPage, {
     config as notifConfig

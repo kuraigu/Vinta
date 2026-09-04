@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Power, Cpu, Database, RotateCcw, Check } from 'lucide-svelte'
+  import { Power, Cpu, Database, RotateCcw, Check } from '@lucide/svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
   import { autostartStore, hardwareAccelStore, notifData } from '../../../store'

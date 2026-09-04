@@ -9,7 +9,7 @@
 
 <script lang="ts">
   import { getContext } from 'svelte'
-  import { ChevronUp } from 'lucide-svelte'
+  import { ChevronUp } from '@lucide/svelte'
   import { AppControls } from '../utils/AppControls.svelte'
   import Notification from '../components/Notification.svelte'
   import { notifData } from '../store'

@@ -6,7 +6,7 @@
     Layers,
     AlertCircle,
     SlidersHorizontal
-  } from 'lucide-svelte'
+  } from '@lucide/svelte'
   import SettingItem from '../SettingItem.svelte'
   import {
     pageVisibilityStore,

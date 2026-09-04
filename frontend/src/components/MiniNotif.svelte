@@ -1,6 +1,6 @@
 <script lang="ts">
   import { getContext } from 'svelte'
-  import { Bell } from 'lucide-svelte'
+  import { Bell } from '@lucide/svelte'
   import { notifData } from '../store'
   import type { IslandConfig } from '../store'
   import NotificationPage, {

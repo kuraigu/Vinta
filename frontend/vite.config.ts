@@ -12,11 +12,11 @@ function pascalToKebab(str: string): string {
     .toLowerCase()
 }
 
-// Vite plugin to automatically rewrite named lucide-svelte imports into direct per-icon imports.
-// Example: import { Eye, Minimize2 } from 'lucide-svelte' ->
-//          import Eye from 'lucide-svelte/icons/eye.js'
-//          import Minimize2 from 'lucide-svelte/icons/minimize-2.js'
-// This eliminates bundling/evaluating all 1500+ icons in lucide-svelte, dramatically boosting startup & build speed.
+// Vite plugin to automatically rewrite named @lucide/svelte imports into direct per-icon imports.
+// Example: import { Eye, Minimize2 } from '@lucide/svelte' ->
+//          import Eye from '@lucide/svelte/icons/eye.js'
+//          import Minimize2 from '@lucide/svelte/icons/minimize-2.js'
+// This eliminates bundling/evaluating all 1500+ icons in @lucide/svelte, dramatically boosting startup & build speed.
 function optimizeLucideImports(): Plugin {
   return {
     name: 'optimize-lucide-imports',
@@ -26,7 +26,7 @@ function optimizeLucideImports(): Plugin {
         return null
 
       const lucideImportRegex =
-        /import\s+\{([^}]+)\}\s+from\s+['"]lucide-svelte['"]/g
+        /import\s+\{([^}]+)\}\s+from\s+['"](?:@lucide\/svelte|lucide-svelte)['"]/g
       if (!lucideImportRegex.test(code)) return null
 
       const transformed = code.replace(lucideImportRegex, (_, importsStr) => {
@@ -40,7 +40,7 @@ function optimizeLucideImports(): Plugin {
           const iconName = parts[0]
           const alias = parts[1] || iconName
           const kebabName = pascalToKebab(iconName)
-          return `import ${alias} from 'lucide-svelte/icons/${kebabName}.js'`
+          return `import ${alias} from '@lucide/svelte/icons/${kebabName}.js'`
         })
 
         return directImports.join('\n')
@@ -59,13 +59,17 @@ export default defineConfig({
   plugins: [optimizeLucideImports(), svelte()],
   optimizeDeps: {
     include: ['svelte', 'svelte/internal', 'svelte/transition', 'svelte/store'],
-    exclude: ['lucide-svelte']
+    exclude: ['@lucide/svelte', 'lucide-svelte']
   },
   resolve: {
     alias: {
+      '@lucide/svelte/icons': path.resolve(
+        __dirname,
+        'node_modules/@lucide/svelte/dist/icons'
+      ),
       'lucide-svelte/icons': path.resolve(
         __dirname,
-        'node_modules/lucide-svelte/dist/icons'
+        'node_modules/@lucide/svelte/dist/icons'
       ),
       '@appicon': path.resolve(__dirname, '../build/appicon.png')
     }

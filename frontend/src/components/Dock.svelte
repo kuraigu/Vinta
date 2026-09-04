@@ -9,7 +9,7 @@
     EyeOff,
     House,
     Bell
-  } from 'lucide-svelte'
+  } from '@lucide/svelte'
   import { AppControls } from '../utils/AppControls.svelte'
   import DockButton from './DockButton.svelte'
   import AppsPage from '../pages/AppsPage.svelte'

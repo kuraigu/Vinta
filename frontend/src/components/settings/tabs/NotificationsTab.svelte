@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Bell, Volume2, BellRing, Trash2 } from 'lucide-svelte'
+  import { Bell, Volume2, BellRing, Trash2 } from '@lucide/svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
   import {

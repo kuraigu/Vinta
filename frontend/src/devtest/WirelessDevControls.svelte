@@ -6,7 +6,7 @@
     Plane,
     Radio,
     RefreshCw
-  } from 'lucide-svelte'
+  } from '@lucide/svelte'
   import {
     wirelessDataStore,
     defaultWirelessData,

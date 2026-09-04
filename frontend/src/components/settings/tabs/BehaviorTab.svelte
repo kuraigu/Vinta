@@ -1,5 +1,11 @@
 <script lang="ts">
-  import { Layout, EyeOff, Timer, MousePointer, RotateCcw } from 'lucide-svelte'
+  import {
+    Layout,
+    EyeOff,
+    Timer,
+    MousePointer,
+    RotateCcw
+  } from '@lucide/svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingSlider from '../SettingSlider.svelte'
   import CustomSelect from '../../CustomSelect.svelte'

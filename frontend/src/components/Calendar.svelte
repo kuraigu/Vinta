@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
-  import { ChevronLeft, ChevronRight } from 'lucide-svelte'
+  import { ChevronLeft, ChevronRight } from '@lucide/svelte'
 
   let { expanded = false } = $props<{ expanded?: boolean }>()
 

@@ -6,7 +6,7 @@
     Download,
     ExternalLink,
     FileText
-  } from 'lucide-svelte'
+  } from '@lucide/svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
   import {

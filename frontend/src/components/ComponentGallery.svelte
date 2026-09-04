@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet, Component } from 'svelte'
-  import { ChevronLeft, ChevronRight } from 'lucide-svelte'
+  import { ChevronLeft, ChevronRight } from '@lucide/svelte'
   import { swipe } from '../utils/useSwipe'
 
   export interface SlideItem {

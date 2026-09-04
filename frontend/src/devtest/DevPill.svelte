@@ -15,7 +15,7 @@
     Pill,
     ChevronDown,
     ChevronUp
-  } from 'lucide-svelte'
+  } from '@lucide/svelte'
 
   import HomePage, { config as homeConfig } from '../pages/HomePage.svelte'
   import MediaPage, { config as mediaConfig } from '../pages/MediaPage.svelte'

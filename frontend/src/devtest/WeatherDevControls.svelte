@@ -19,7 +19,7 @@
     Thermometer,
     Globe,
     Trash2
-  } from 'lucide-svelte'
+  } from '@lucide/svelte'
 
   let currentLocation = $state<WeatherLocation>({
     name: 'Manila',
