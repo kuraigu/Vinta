@@ -1,0 +1,22 @@
+changelog:
+  categories:
+    - title: "### What's New"
+      labels:
+        - feature
+        - enhancement
+    - title: "### Bug Fixes"
+      labels:
+        - bug
+        - fix
+    - title: "### Improvements & Performance"
+      labels:
+        - performance
+        - refactor
+        - optimization
+    - title: "### Other Changes"
+      labels:
+        - "*"
+    - title: "### Dependencies & Updates"
+      labels:
+        - dependencies
+        - dependabot

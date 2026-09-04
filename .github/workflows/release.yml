@@ -190,15 +190,85 @@ jobs:
           }
           Get-Content "SHA256SUMS.txt"
 
+      - name: Generate Clean Release Changelog
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_NOTES_INPUT: ${{ github.event.inputs.release_notes }}
+          IS_PRERELEASE_INPUT: ${{ github.event.inputs.prerelease }}
+        run: |
+          $version = "$env:RELEASE_VERSION"
+          $isPrerelease = $env:IS_PRERELEASE_INPUT -eq "true" -or $version -match "alpha|beta|rc"
+
+          # Format version for shields.io badge (hyphens escaped as --)
+          $badgeVersion = $version.Replace("-", "--")
+          $status = if ($version -match "alpha") { "alpha" } elseif ($version -match "beta") { "beta" } elseif ($version -match "rc") { "rc" } elseif ($isPrerelease) { "prerelease" } else { "stable" }
+          $statusColor = if ($status -eq "stable") { "green" } elseif ($status -eq "beta") { "yellow" } else { "orange" }
+
+          $header = "![Version](https://img.shields.io/badge/version-$badgeVersion-blue)`n![Status](https://img.shields.io/badge/status-$status-$statusColor)"
+
+          $customNotes = if ($env:RELEASE_NOTES_INPUT) { $env:RELEASE_NOTES_INPUT.Trim() } else { "" }
+
+          if ($customNotes) {
+              $body = "$header`n`n$customNotes"
+          } else {
+              # Find previous release tag
+              $prevTag = (gh release list --limit 2 --json tagName --jq '.[1].tagName' 2>$null)
+              if (-not $prevTag) {
+                  $prevTag = (git describe --tags --abbrev=0 HEAD^ 2>$null)
+              }
+
+              $rawCommits = if ($prevTag) {
+                  git log "$prevTag..HEAD" --no-merges --pretty=format:"%s"
+              } else {
+                  git log -n 100 --no-merges --pretty=format:"%s"
+              }
+
+              $commits = [System.Collections.Generic.List[string]]::new()
+              $dependencies = [System.Collections.Generic.List[string]]::new()
+
+              foreach ($line in ($rawCommits -split "`r?`n")) {
+                  $msg = $line.Trim()
+                  if (-not $msg) { continue }
+                  # Skip git merge commits
+                  if ($msg -match '^Merge (branch|pull request|remote-tracking)') { continue }
+
+                  # Route dependabot and dependency bumps to bottom
+                  if ($msg -match 'dependabot' -or $msg -match '^(build|chore)\(deps(-dev)?\):' -or $msg -match '^Bump ') {
+                      $dependencies.Add("- $msg")
+                  } else {
+                      $commits.Add("- $msg")
+                  }
+              }
+
+              $changelogSections = [System.Collections.Generic.List[string]]::new()
+              $changelogSections.Add("## What's Changed")
+
+              if ($commits.Count -gt 0) {
+                  $changelogSections.Add(($commits -join "`n"))
+              }
+
+              if ($dependencies.Count -gt 0) {
+                  $changelogSections.Add("### Dependencies`n" + ($dependencies -join "`n"))
+              }
+
+              if ($commits.Count -eq 0 -and $dependencies.Count -eq 0) {
+                  $changelogSections.Add("- Minor updates, bug fixes, and stability improvements.")
+              }
+
+              $body = "$header`n`n" + ($changelogSections -join "`n`n")
+          }
+
+          [System.IO.File]::WriteAllText("$env:GITHUB_WORKSPACE/RELEASE_CHANGELOG.md", $body)
+
       - name: Create Release
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.RELEASE_VERSION }}
           name: Release ${{ env.RELEASE_VERSION }}
           draft: ${{ github.event.inputs.draft }}
           prerelease: ${{ github.event.inputs.prerelease }}
-          body: ${{ github.event.inputs.release_notes }}
+          body_path: RELEASE_CHANGELOG.md
           files: release-dist/*
-          generate_release_notes: ${{ github.event.inputs.release_notes == '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
