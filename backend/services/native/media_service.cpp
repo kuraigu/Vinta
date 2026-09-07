@@ -215,6 +215,91 @@ static void ScheduleEmit() {
     }
 }
 
+static bool IsValidMediaSession(winrt_media::GlobalSystemMediaTransportControlsSession const& session) {
+    if (!session) return false;
+    try {
+        auto info = session.GetPlaybackInfo();
+        if (!info) return false;
+
+        auto status = info.PlaybackStatus();
+        if (status == winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Closed ||
+            status == winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Stopped) {
+            return false;
+        }
+
+        // Must support at least one interactive media playback control
+        auto controls = info.Controls();
+        if (!controls) return false;
+        bool hasControls = controls.IsPlayEnabled() || controls.IsPauseEnabled() ||
+                           controls.IsStopEnabled() || controls.IsNextEnabled() ||
+                           controls.IsPreviousEnabled();
+        if (!hasControls) return false;
+
+        // Must have valid track metadata
+        auto props = session.TryGetMediaPropertiesAsync().get();
+        if (!props) return false;
+
+        std::string title = Utf16ToUtf8(props.Title().c_str());
+        std::string artist = Utf16ToUtf8(props.Artist().c_str());
+        std::string album = Utf16ToUtf8(props.AlbumTitle().c_str());
+
+        auto trim = [](std::string& s) {
+            size_t start = s.find_first_not_of(" \t\r\n");
+            if (start == std::string::npos) {
+                s.clear();
+                return;
+            }
+            size_t end = s.find_last_not_of(" \t\r\n");
+            s = s.substr(start, end - start + 1);
+        };
+        trim(title);
+        trim(artist);
+        trim(album);
+
+        if (title.empty() && artist.empty()) {
+            return false;
+        }
+
+        // Non-media applications (e.g. game launchers, screen or audio recorders) may register
+        // a dummy audio session where the title is just the application or window name.
+        std::string sourceApp;
+        try {
+            sourceApp = Utf16ToUtf8(session.SourceAppUserModelId().c_str());
+            trim(sourceApp);
+        } catch (...) {}
+
+        if (artist.empty() && album.empty()) {
+            std::string appName = sourceApp;
+            size_t slash = appName.find_last_of("\\/");
+            if (slash != std::string::npos) appName = appName.substr(slash + 1);
+            size_t dot = appName.rfind('.');
+            if (dot != std::string::npos) appName = appName.substr(0, dot);
+
+            auto toLower = [](std::string s) {
+                std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) {
+                    return static_cast<char>(std::tolower(c));
+                });
+                return s;
+            };
+
+            std::string lowerTitle = toLower(title);
+            std::string lowerAppName = toLower(appName);
+
+            // If the title matches the process name and there are no playlist navigation controls,
+            // this is an application audio stream rather than a media player.
+            if (!lowerAppName.empty() && (lowerTitle == lowerAppName || lowerTitle.find(lowerAppName) != std::string::npos)) {
+                if (!controls.IsNextEnabled() && !controls.IsPreviousEnabled()) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    } catch (...) {
+        return false;
+    }
+}
+
 static void UpdateCurrentSession() {
     std::lock_guard<std::recursive_mutex> lock(g_sessionMutex);
     if (!g_sessionManager) return;
@@ -260,7 +345,7 @@ static void UpdateCurrentSession() {
 
         // Check if chosen session is actively playing or within recent selection window
         bool chosenIsPlaying = false;
-        if (chosenSession) {
+        if (chosenSession && IsValidMediaSession(chosenSession)) {
             try {
                 auto info = chosenSession.GetPlaybackInfo();
                 if (info && info.PlaybackStatus() == winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing) {
@@ -276,10 +361,10 @@ static void UpdateCurrentSession() {
             // User's chosen session has priority if playing or freshly selected
             targetSession = chosenSession;
         } else {
-            // Check if Windows's own focused session is actively playing
+            // Check if Windows's own focused session is actively playing and valid
             try {
                 winrt_media::GlobalSystemMediaTransportControlsSession focusedSession = g_sessionManager.GetCurrentSession();
-                if (focusedSession) {
+                if (focusedSession && IsValidMediaSession(focusedSession)) {
                     auto info = focusedSession.GetPlaybackInfo();
                     if (info && info.PlaybackStatus() == winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing) {
                         targetSession = focusedSession;
@@ -293,6 +378,8 @@ static void UpdateCurrentSession() {
                     auto sessions = g_sessionManager.GetSessions();
                     for (auto const& s : sessions) {
                         try {
+                            if (!IsValidMediaSession(s)) continue;
+
                             auto info = s.GetPlaybackInfo();
                             if (info && info.PlaybackStatus() == winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing) {
                                 targetSession = s;
@@ -305,7 +392,7 @@ static void UpdateCurrentSession() {
 
             // Fallback if none are actively playing
             if (!targetSession) {
-                if (chosenSession) {
+                if (chosenSession && IsValidMediaSession(chosenSession)) {
                     targetSession = chosenSession;
                 } else {
                     winrt_media::GlobalSystemMediaTransportControlsSession focusedSession{nullptr};
@@ -313,14 +400,16 @@ static void UpdateCurrentSession() {
                         focusedSession = g_sessionManager.GetCurrentSession();
                     } catch (...) {}
 
-                    if (focusedSession) {
+                    if (focusedSession && IsValidMediaSession(focusedSession)) {
                         targetSession = focusedSession;
                     } else {
                         try {
                             auto sessions = g_sessionManager.GetSessions();
                             for (auto const& s : sessions) {
-                                targetSession = s;
-                                break;
+                                if (IsValidMediaSession(s)) {
+                                    targetSession = s;
+                                    break;
+                                }
                             }
                         } catch (...) {}
                     }
@@ -378,7 +467,7 @@ static void EmitMediaState(bool includeVolume) {
         session = g_currentSession;
     }
 
-    if (!session) {
+    if (!session || !IsValidMediaSession(session)) {
         g_isMediaPlaying.store(false);
         std::ostringstream json;
         json << "{\"type\":\"media\",\"isAvailable\":false}";
@@ -549,6 +638,14 @@ static void EmitMediaState(bool includeVolume) {
         }
     } catch (...) {}
 
+    if ((title.empty() && artist.empty()) || (!canPlay && !canPause && !canGoNext && !canGoPrev)) {
+        g_isMediaPlaying.store(false);
+        std::ostringstream json;
+        json << "{\"type\":\"media\",\"isAvailable\":false}";
+        g_mediaCb(json.str().c_str());
+        return;
+    }
+
     try {
         auto timeline = session.GetTimelineProperties();
         if (timeline) {
@@ -597,6 +694,8 @@ static void EmitMediaState(bool includeVolume) {
                 int sIndex = 0;
                 for (auto const& s : allSessions) {
                     try {
+                        if (!IsValidMediaSession(s)) continue;
+
                         std::string sId = Utf16ToUtf8(s.SourceAppUserModelId().c_str());
                         std::string sApp = sId;
                         size_t slash = sApp.find_last_of("\\/");
@@ -611,6 +710,8 @@ static void EmitMediaState(bool includeVolume) {
                                 sArtist = Utf16ToUtf8(props.Artist().c_str());
                             }
                         } catch (...) {}
+
+                        if (sTitle.empty() && sArtist.empty()) continue;
 
                         bool sPlaying = false;
                         try {

@@ -10,7 +10,8 @@
     autoHideDisplayStore,
     wakeMethodStore,
     hiddenPillOffsetXStore,
-    allowDragPositionStore
+    allowDragPositionStore,
+    autoHideBorderlessStore
   } from '../../../store'
 
   const widgetContentOptions = [
@@ -39,6 +40,13 @@
   <SettingItem label="Auto-Hide Media Widget" icon={EyeOff}>
     <label class="toggle-switch">
       <input type="checkbox" bind:checked={$mediaAutoHideStore} />
+      <span class="slider"></span>
+    </label>
+  </SettingItem>
+
+  <SettingItem label="Auto-Hide in Borderless Fullscreen" icon={EyeOff}>
+    <label class="toggle-switch">
+      <input type="checkbox" bind:checked={$autoHideBorderlessStore} />
       <span class="slider"></span>
     </label>
   </SettingItem>

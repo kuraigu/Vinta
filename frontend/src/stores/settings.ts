@@ -1,5 +1,9 @@
 import { writable, get } from 'svelte/store'
-import { GetSettings, SaveSettings } from '../../wailsjs/go/backend/App.js'
+import {
+  GetSettings,
+  SaveSettings,
+  SetAutoHideBorderless
+} from '../../wailsjs/go/backend/App.js'
 import { devTestingStore } from './appState'
 
 // ============================================================================
@@ -193,6 +197,14 @@ export const autoHideDisplayStore = persistentWritable<AutoHideDisplayWidget>('v
 export const hiddenPillPositionStore = persistentWritable<HiddenPillPosition>('vinta_hidden_pill_position', 'center')
 export const wakeMethodStore = persistentWritable<'hover' | 'click'>('vinta_wakemethod', 'hover')
 export const allowDragPositionStore = persistentWritable<boolean>('vinta_allow_drag_position', true)
+export const autoHideBorderlessStore = persistentWritable<boolean>('vinta_autohide_borderless', false)
+
+// Synchronize borderless auto-hide setting to native backend hooks
+autoHideBorderlessStore.subscribe((val) => {
+  if (typeof SetAutoHideBorderless === 'function') {
+    SetAutoHideBorderless(val).catch(() => {})
+  }
+})
 
 // ============================================================================
 // 3. Notifications & Do Not Disturb

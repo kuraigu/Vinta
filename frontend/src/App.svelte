@@ -41,6 +41,7 @@
     globalMediaStore,
     audioPeakStore,
     type MediaData,
+    type MediaSessionItem,
     notifData,
     notificationPermissionDenied,
     wakeMethodStore,
@@ -717,17 +718,62 @@
     })
     EventsOn('show-pill', showWidget)
 
+    let wasHiddenBeforeGameMode = false
+    EventsOn('game-mode-enter', (reason: unknown) => {
+      if (isHidden) {
+        wasHiddenBeforeGameMode = true
+      } else {
+        wasHiddenBeforeGameMode = false
+        hideWidget()
+      }
+
+      let reasonText = 'exclusive fullscreen application'
+      if (typeof reason === 'string') {
+        if (reason === 'presentation_mode') {
+          reasonText = 'presentation mode'
+        } else if (reason === 'borderless_fullscreen') {
+          reasonText = 'borderless fullscreen application'
+        }
+      }
+
+      const newNotif = {
+        id: Date.now(),
+        appName: 'Vinta',
+        title: 'Auto-Hidden for Fullscreen',
+        message: `Vinta was automatically hidden to prevent overlay conflicts during ${reasonText}.`,
+        timestamp: Date.now()
+      }
+
+      notifData.update((items) => [newNotif, ...items].slice(0, 99))
+    })
+
+    EventsOn('game-mode-exit', () => {
+      if (!wasHiddenBeforeGameMode && isHidden) {
+        showWidget()
+      }
+    })
+
     let prevIsPlaying = false
     EventsOn('media-update', (data: Record<string, unknown>) => {
       if (data) {
-        const isIncomingPlaying = Boolean(data.isPlaying)
+        const title = ((data.title as string) || '').trim()
+        const artist = ((data.artist as string) || '').trim()
+        const hasValidTrackInfo = title.length > 0 || artist.length > 0
+        const hasPlaybackControls =
+          Boolean(data.canPlay) ||
+          Boolean(data.canPause) ||
+          Boolean(data.canGoNext) ||
+          Boolean(data.canGoPrev)
+
+        const isIncomingAvailable =
+          data.isAvailable !== false && hasValidTrackInfo && hasPlaybackControls
+        const isIncomingPlaying = Boolean(data.isPlaying) && isIncomingAvailable
         if (isPageDormant && !isIncomingPlaying) return
 
         globalMediaStore.update((m) => {
           const isLocked = Boolean(
             (m as unknown as Record<string, unknown>)._isPlayStateLocked
           )
-          const isIncomingAvailable = data.isAvailable !== false
           const incomingTitle = (data.title as string) || ''
           const incomingArt = (data.albumArt as string) || ''
           const isSameTrack =
@@ -749,14 +795,23 @@
             }
           }
 
+          const filteredSessions = Array.isArray(data.sessions)
+            ? (data.sessions as Array<Record<string, unknown>>).filter((s) => {
+                const sTitle = ((s.title as string) || '').trim()
+                const sArtist = ((s.artist as string) || '').trim()
+                return sTitle.length > 0 || sArtist.length > 0
+              })
+            : []
+
           return {
             ...(data as unknown as MediaData),
+            sessions: filteredSessions as unknown as MediaSessionItem[],
             albumArt: resolvedAlbumArt,
             isPlaying: isLocked ? m.isPlaying : Boolean(data.isPlaying),
             _isPlayStateLocked: isLocked
           }
         })
-        const isPlaying = Boolean(data.isPlaying)
+        const isPlaying = isIncomingPlaying
         if (
           isPlaying &&
           !prevIsPlaying &&
