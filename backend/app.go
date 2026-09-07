@@ -34,6 +34,18 @@ var (
 	procGetClientRect            = user32.NewProc("GetClientRect")
 	procEnumDisplayMonitors      = user32.NewProc("EnumDisplayMonitors")
 	procGetMonitorInfoW          = user32.NewProc("GetMonitorInfoW")
+	procGetWindowRect            = user32.NewProc("GetWindowRect")
+	procMonitorFromWindow        = user32.NewProc("MonitorFromWindow")
+	procEnumWindows              = user32.NewProc("EnumWindows")
+	procIsWindowVisible          = user32.NewProc("IsWindowVisible")
+	procIsIconic                 = user32.NewProc("IsIconic")
+
+	shell32                          = syscall.NewLazyDLL("shell32.dll")
+	procSHQueryUserNotificationState = shell32.NewProc("SHQueryUserNotificationState")
+
+	ole32              = syscall.NewLazyDLL("ole32.dll")
+	procCoInitializeEx = ole32.NewProc("CoInitializeEx")
+	procCoUninitialize = ole32.NewProc("CoUninitialize")
 
 	gdi32                  = syscall.NewLazyDLL("gdi32.dll")
 	procCreateRectRgn      = gdi32.NewProc("CreateRectRgn")
@@ -44,11 +56,14 @@ var (
 	procSetCapture         = user32.NewProc("SetCapture")
 	procReleaseCapture     = user32.NewProc("ReleaseCapture")
 
-	psapi                     = syscall.NewLazyDLL("psapi.dll")
-	procEmptyWorkingSet       = psapi.NewProc("EmptyWorkingSet")
-	kernel32                  = syscall.NewLazyDLL("kernel32.dll")
-	procGetCurrentProcess     = kernel32.NewProc("GetCurrentProcess")
-	procSetProcessInformation = kernel32.NewProc("SetProcessInformation")
+	psapi                         = syscall.NewLazyDLL("psapi.dll")
+	procEmptyWorkingSet           = psapi.NewProc("EmptyWorkingSet")
+	kernel32                      = syscall.NewLazyDLL("kernel32.dll")
+	procGetCurrentProcess         = kernel32.NewProc("GetCurrentProcess")
+	procSetProcessInformation     = kernel32.NewProc("SetProcessInformation")
+	procOpenProcess               = kernel32.NewProc("OpenProcess")
+	procCloseHandle               = kernel32.NewProc("CloseHandle")
+	procQueryFullProcessImageName = kernel32.NewProc("QueryFullProcessImageNameW")
 )
 
 const (
@@ -88,7 +103,36 @@ const (
 	//nolint:revive // Windows API constants
 	EVENT_SYSTEM_FOREGROUND = 0x0003
 	//nolint:revive // Windows API constants
+	EVENT_SYSTEM_MOVESIZEEND = 0x000B
+	//nolint:revive // Windows API constants
 	WINEVENT_OUTOFCONTEXT = 0x0000
+
+	//nolint:revive // Windows API constants
+	MONITOR_DEFAULTTONEAREST = 2
+	//nolint:revive // Windows API constants
+	GWL_STYLE = -16
+	//nolint:revive // Windows API constants
+	WS_CAPTION = 0x00C00000
+	//nolint:revive // Windows API constants
+	SW_HIDE = 0
+	//nolint:revive // Windows API constants
+	SW_SHOWNA = 8
+
+	// QUERY_USER_NOTIFICATION_STATE enum
+	//nolint:revive // Windows API constants
+	QUNS_NOT_PRESENT = 1
+	//nolint:revive // Windows API constants
+	QUNS_BUSY = 2
+	//nolint:revive // Windows API constants
+	QUNS_RUNNING_D3D_FULL_SCREEN = 3
+	//nolint:revive // Windows API constants
+	QUNS_PRESENTATION_MODE = 4
+	//nolint:revive // Windows API constants
+	QUNS_ACCEPTS_NOTIFICATIONS = 5
+	//nolint:revive // Windows API constants
+	QUNS_QUIET_TIME = 6
+	//nolint:revive // Windows API constants
+	QUNS_APP = 7
 
 	//nolint:revive // Windows API constants
 	SM_CXSCREEN = 0
@@ -272,10 +316,93 @@ func getMyWindowHwnd() uintptr {
 	return 0
 }
 
-// setupForegroundEventHook registers a WinEvent hook on a dedicated OS-locked thread
-// with a Win32 message pump to maintain topmost Z-order on window changes without
-// stealing focus or causing fullscreen games to minimize.
-func setupForegroundEventHook(vintaHwnd uintptr) {
+// isBorderlessFullscreen determines whether the foreground window is a borderless
+// window that covers the monitor where Vinta is currently hosted.
+func isBorderlessFullscreen(fgHwnd, vintaHwnd uintptr) bool {
+	if fgHwnd == 0 || fgHwnd == vintaHwnd {
+		return false
+	}
+
+	var classBuf [256]uint16
+	_, _, _ = procGetClassName.Call(fgHwnd, uintptr(unsafe.Pointer(&classBuf[0])), 256)
+	className := syscall.UTF16ToString(classBuf[:])
+	if className == "WorkerW" || className == "Progman" ||
+		className == "Shell_TrayWnd" || className == "Shell_SecondaryTrayWnd" ||
+		className == "Windows.UI.Core.CoreWindow" {
+		return false
+	}
+
+	hMonFg, _, _ := procMonitorFromWindow.Call(fgHwnd, uintptr(MONITOR_DEFAULTTONEAREST))
+	hMonVinta, _, _ := procMonitorFromWindow.Call(vintaHwnd, uintptr(MONITOR_DEFAULTTONEAREST))
+	if hMonFg == 0 || hMonFg != hMonVinta {
+		return false
+	}
+
+	var mi monitorInfoW
+	mi.CbSize = uint32(unsafe.Sizeof(mi))
+	res, _, _ := procGetMonitorInfoW.Call(hMonFg, uintptr(unsafe.Pointer(&mi)))
+	if res == 0 {
+		return false
+	}
+
+	var rc rect32
+	res, _, _ = procGetWindowRect.Call(fgHwnd, uintptr(unsafe.Pointer(&rc)))
+	if res == 0 {
+		return false
+	}
+
+	coversMonitor := rc.Left <= mi.RcMonitor.Left &&
+		rc.Top <= mi.RcMonitor.Top &&
+		rc.Right >= mi.RcMonitor.Right &&
+		rc.Bottom >= mi.RcMonitor.Bottom
+	if !coversMonitor {
+		return false
+	}
+
+	gwlStyle := int32(GWL_STYLE)
+	styleVal, _, _ := procGetWindowLong.Call(fgHwnd, uintptr(gwlStyle))
+	style := uint32(styleVal)
+	hasCaption := (style & WS_CAPTION) == WS_CAPTION
+
+	return !hasCaption
+}
+
+// isSnippingTool checks whether the given window belongs to Windows Snipping Tool or ScreenClippingHost.
+func isSnippingTool(hwnd uintptr) bool {
+	if hwnd == 0 {
+		return false
+	}
+
+	var pid uint32
+	_, _, _ = procGetWindowThreadProcessID.Call(hwnd, uintptr(unsafe.Pointer(&pid)))
+	if pid == 0 {
+		return false
+	}
+
+	hProc, _, _ := procOpenProcess.Call(0x1000, 0, uintptr(pid)) // PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+	if hProc == 0 {
+		return false
+	}
+	defer func() {
+		_, _, _ = procCloseHandle.Call(hProc)
+	}()
+
+	var buf [1024]uint16
+	size := uint32(len(buf))
+	res, _, _ := procQueryFullProcessImageName.Call(hProc, 0, uintptr(unsafe.Pointer(&buf[0])), uintptr(unsafe.Pointer(&size)))
+	if res == 0 {
+		return false
+	}
+
+	exePath := syscall.UTF16ToString(buf[:size])
+	baseName := strings.ToLower(filepath.Base(exePath))
+	return baseName == "screenclippinghost.exe" || baseName == "snippingtool.exe"
+}
+
+// setupForegroundEventHook registers WinEvent hooks on a dedicated OS-locked thread
+// with a Win32 message pump to maintain topmost Z-order on window changes and
+// auto-hide Vinta when exclusive fullscreen games or presentations are active.
+func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 	if vintaHwnd == 0 {
 		return
 	}
@@ -306,7 +433,60 @@ func setupForegroundEventHook(vintaHwnd uintptr) {
 		return pid == myPid
 	}
 
+	var activeSnipHwnd uintptr
+	cbEnumSnip := syscall.NewCallback(func(h, _ uintptr) uintptr {
+		vis, _, _ := procIsWindowVisible.Call(h)
+		if vis == 0 {
+			return 1
+		}
+
+		// A minimized window must never be treated as an active overlay.
+		iconic, _, _ := procIsIconic.Call(h)
+		if iconic != 0 {
+			return 1
+		}
+
+		// Snipping overlay toolbars are explicitly WS_EX_TOPMOST (0x00000008).
+		// Normal Snipping Tool application windows or dialogs are not topmost.
+		exStyle, _, _ := procGetWindowLong.Call(h, uintptr(0xFFFFFFEC)) // GWL_EXSTYLE = -20
+		if exStyle&0x00000008 == 0 {
+			return 1
+		}
+
+		var rc struct {
+			Left, Top, Right, Bottom int32
+		}
+		res, _, _ := procGetWindowRect.Call(h, uintptr(unsafe.Pointer(&rc)))
+		if res == 0 || rc.Left <= -10000 || rc.Right <= rc.Left || rc.Bottom <= rc.Top {
+			return 1
+		}
+
+		if isSnippingTool(h) {
+			activeSnipHwnd = h
+			return 0
+		}
+		return 1
+	})
+
+	findActiveSnippingWindow := func() uintptr {
+		activeSnipHwnd = 0
+		_, _, _ = procEnumWindows.Call(cbEnumSnip, 0)
+		return activeSnipHwnd
+	}
+
 	reassertTopmost := func() {
+		snipHwnd := findActiveSnippingWindow()
+		if snipHwnd != 0 {
+			// Place Vinta immediately behind Snipping Tool so its top toolbar controls stay on top.
+			_, _, _ = procSetWindowPos.Call(
+				vintaHwnd,
+				snipHwnd,
+				0, 0, 0, 0,
+				0x0001|0x0002|0x0010|0x0400,
+			)
+			return
+		}
+
 		// HWND_TOPMOST = ^uintptr(0), SWP_NOSIZE (0x0001) | SWP_NOMOVE (0x0002) | SWP_NOACTIVATE (0x0010) | SWP_NOOWNERZORDER (0x0200) | SWP_NOSENDCHANGING (0x0400)
 		_, _, _ = procSetWindowPos.Call(
 			vintaHwnd,
@@ -316,18 +496,102 @@ func setupForegroundEventHook(vintaHwnd uintptr) {
 		)
 	}
 
+	var (
+		autoHiddenByFullscreen bool
+		autoHiddenMu           sync.Mutex
+	)
+
+	evaluateForegroundState := func() {
+		curFg, _, _ := procGetForegroundWindow.Call()
+		if curFg == 0 || isVintaForeground(curFg) {
+			reassertTopmost()
+			return
+		}
+
+		a.autoHideMu.RLock()
+		hideBorderless := a.autoHideBorderless
+		a.autoHideMu.RUnlock()
+
+		shouldHide := false
+		reason := ""
+
+		var qState uint32
+		goruntime.LockOSThread()
+		coInitRes, _, _ := procCoInitializeEx.Call(0, 0)
+		ret, _, _ := procSHQueryUserNotificationState.Call(uintptr(unsafe.Pointer(&qState)))
+		if coInitRes == 0 || coInitRes == 1 {
+			_, _, _ = procCoUninitialize.Call()
+		}
+		goruntime.UnlockOSThread()
+
+		if ret == 0 {
+			switch qState {
+			case QUNS_RUNNING_D3D_FULL_SCREEN:
+				shouldHide = true
+				reason = "exclusive_fullscreen"
+			case QUNS_PRESENTATION_MODE:
+				shouldHide = true
+				reason = "presentation_mode"
+			}
+		}
+
+		if !shouldHide && hideBorderless {
+			if isBorderlessFullscreen(curFg, vintaHwnd) {
+				shouldHide = true
+				reason = "borderless_fullscreen"
+			}
+		}
+
+		autoHiddenMu.Lock()
+		defer autoHiddenMu.Unlock()
+
+		if shouldHide {
+			if !autoHiddenByFullscreen {
+				autoHiddenByFullscreen = true
+				services.SetAppHidden(true)
+				if a.ctx != nil {
+					runtime.WindowHide(a.ctx)
+					runtime.EventsEmit(a.ctx, "game-mode-enter", reason)
+				}
+			}
+			return
+		}
+
+		if autoHiddenByFullscreen {
+			autoHiddenByFullscreen = false
+			services.SetAppHidden(false)
+			if a.ctx != nil {
+				runtime.WindowShow(a.ctx)
+				runtime.EventsEmit(a.ctx, "game-mode-exit")
+			}
+		}
+
+		reassertTopmost()
+	}
+
+	go func() {
+		ticker := time.NewTicker(500 * time.Millisecond)
+		defer ticker.Stop()
+		for range ticker.C {
+			evaluateForegroundState()
+		}
+	}()
+
 	go func() {
 		goruntime.LockOSThread()
 
 		cb := syscall.NewCallback(func(_ uintptr, event uint32, fgHwnd uintptr, _ int32, _ int32, _ uint32, _ uint32) uintptr {
 			if event == EVENT_SYSTEM_FOREGROUND && fgHwnd != 0 && !isVintaForeground(fgHwnd) {
-				// Debounce asynchronously so the external app and WebView2 cleanly finish
-				// foreground transitions before Vinta reasserts its topmost position.
-				time.AfterFunc(100*time.Millisecond, func() {
-					curFg, _, _ := procGetForegroundWindow.Call()
-					if curFg != 0 && !isVintaForeground(curFg) {
-						reassertTopmost()
-					}
+				time.AfterFunc(40*time.Millisecond, func() {
+					evaluateForegroundState()
+				})
+				time.AfterFunc(200*time.Millisecond, func() {
+					evaluateForegroundState()
+				})
+				// Fullscreen games frequently initialize graphics after window creation.
+				// A third check catches transitions into exclusive swapchains.
+				time.AfterFunc(1500*time.Millisecond, func() {
+					evaluateForegroundState()
 				})
 			}
 			return 0
@@ -373,16 +637,18 @@ var screenWidth, screenHeight int
 
 // App struct
 type App struct {
-	ctx      context.Context
-	icon     []byte
-	pillW    int
-	pillH    int
-	pillR    int
-	offsetX  int
-	devW     int
-	devH     int
-	devExtra int
-	scale    float64
+	ctx                context.Context
+	icon               []byte
+	pillW              int
+	pillH              int
+	pillR              int
+	offsetX            int
+	devW               int
+	devH               int
+	devExtra           int
+	scale              float64
+	autoHideBorderless bool
+	autoHideMu         sync.RWMutex
 }
 
 // NewApp creates a new App application struct
@@ -401,11 +667,12 @@ func NewApp(icon []byte) *App {
 	screenHeight = sh
 
 	return &App{
-		icon:  icon,
-		pillW: 340,
-		pillH: 34,
-		pillR: 24,
-		scale: 1.0,
+		icon:               icon,
+		pillW:              340,
+		pillH:              34,
+		pillR:              24,
+		scale:              1.0,
+		autoHideBorderless: false,
 	}
 }
 
@@ -446,7 +713,7 @@ func (a *App) Startup(ctx context.Context) {
 			style = (style | WS_EX_TOOLWINDOW | WS_EX_TOPMOST) &^ WS_EX_NOACTIVATE &^ WS_EX_APPWINDOW
 			_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwl), style)
 
-			setupForegroundEventHook(hwnd)
+			a.setupForegroundEventHook(hwnd)
 
 			procSetWindowPos := user32.NewProc("SetWindowPos")
 			// HWND_TOPMOST = ^uintptr(0), SWP_NOACTIVATE (0x0010) | SWP_FRAMECHANGED (0x0020) | SWP_SHOWWINDOW (0x0040)
@@ -690,6 +957,13 @@ func disableProcessPowerThrottling() {
 // SetIsHidden informs native background services whether Vinta is currently hidden to throttle high-frequency IPC.
 func (a *App) SetIsHidden(hidden bool) {
 	services.SetAppHidden(hidden)
+}
+
+// SetAutoHideBorderless toggles automatic hiding when a borderless fullscreen window is detected on Vinta's monitor.
+func (a *App) SetAutoHideBorderless(enabled bool) {
+	a.autoHideMu.Lock()
+	a.autoHideBorderless = enabled
+	a.autoHideMu.Unlock()
 }
 
 // SetDevPillBounds is called by the frontend to update the size of the developer menu.
