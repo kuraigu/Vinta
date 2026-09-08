@@ -27,7 +27,7 @@ export function getFallbackPage(): {
 } {
   const mediaState = get(globalMediaStore)
   const isMediaEnabled = get(pageVisibilityStore).media
-  if (mediaState.isAvailable && isMediaEnabled) {
+  if (mediaState.isPlaying && mediaState.isAvailable && isMediaEnabled) {
     return { page: MediaPage, config: mediaConfig }
   }
   return { page: HomePage, config: homeConfig }
@@ -66,10 +66,14 @@ export const AppControls = {
     navigate(NotesPage, notesConfig, true)
   },
 
-  doMinimize: (navigate: NavFn, e?: Event) => {
+  doMinimize: (navigate: NavFn, e?: Event, currentPage?: unknown) => {
     if (e) {
       e.stopPropagation()
       e.preventDefault()
+    }
+    if (currentPage === MediaPage) {
+      navigate(MediaPage, mediaConfig, false)
+      return
     }
     const fallback = getFallbackPage()
     navigate(fallback.page, fallback.config, false)

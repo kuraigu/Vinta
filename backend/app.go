@@ -859,6 +859,18 @@ func (a *App) SelectMediaSession(sessionID string) bool {
 	return services.SelectMediaSession(sessionID)
 }
 
+// RequestMediaUpdate asks the backend and native WinRT bridge to immediately emit
+// a fresh media state snapshot to the frontend without suppressing the album art.
+func (a *App) RequestMediaUpdate() {
+	services.RequestMediaUpdate()
+}
+
+// RequeryMediaArt requests the native WinRT service to re-extract the thumbnail
+// stream for the current track and immediately push it to the frontend.
+func (a *App) RequeryMediaArt() {
+	services.RequeryMediaArt()
+}
+
 // FocusMediaApp brings the top-level window of the specified media application to the foreground.
 func (a *App) FocusMediaApp(sourceApp string) bool {
 	return services.FocusMediaApp(sourceApp)
@@ -1446,4 +1458,60 @@ func (a *App) SaveSettings(settingsJSON string) error {
 	}
 	filePath := filepath.Join(dir, "settings.json")
 	return os.WriteFile(filePath, []byte(settingsJSON), 0644)
+}
+
+// GetCacheSize computes the total byte size of disk caches and temporary sync databases.
+func (a *App) GetCacheSize() (int64, error) {
+	var totalSize int64
+
+	cacheDir := filepath.Join(GetAppDataDir(), "cache")
+	if info, err := os.Stat(cacheDir); err == nil && info.IsDir() {
+		_ = filepath.Walk(cacheDir, func(_ string, info os.FileInfo, err error) error {
+			if err == nil && !info.IsDir() {
+				totalSize += info.Size()
+			}
+			return nil
+		})
+	}
+
+	tempDir := os.TempDir()
+	matches, _ := filepath.Glob(filepath.Join(tempDir, "wpn_vinta_sync.db*"))
+	for _, match := range matches {
+		if info, err := os.Stat(match); err == nil && !info.IsDir() {
+			totalSize += info.Size()
+		}
+	}
+
+	return totalSize, nil
+}
+
+// ClearCache deletes persistent disk cache files, cleans temp sync files, and flushes in-memory caches.
+func (a *App) ClearCache() error {
+	cacheDir := filepath.Join(GetAppDataDir(), "cache")
+
+	// Read and remove entries inside cacheDir rather than deleting the root cache directory itself
+	if entries, err := os.ReadDir(cacheDir); err == nil {
+		for _, entry := range entries {
+			targetPath := filepath.Join(cacheDir, entry.Name())
+			_ = os.RemoveAll(targetPath)
+		}
+	} else if os.IsNotExist(err) {
+		_ = os.MkdirAll(cacheDir, 0755)
+	}
+
+	// Always guarantee the persistent icon subdirectory exists
+	_ = os.MkdirAll(filepath.Join(cacheDir, "icons"), 0755)
+
+	// Clean up temporary notification sync database files in %TEMP%
+	tempDir := os.TempDir()
+	matches, _ := filepath.Glob(filepath.Join(tempDir, "wpn_vinta_sync.db*"))
+	for _, match := range matches {
+		_ = os.Remove(match)
+	}
+
+	// Flush in-memory caches
+	FlushIconMemoryCache()
+	services.ClearNativeMediaArtCache()
+
+	return nil
 }

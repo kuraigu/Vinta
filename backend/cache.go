@@ -26,14 +26,17 @@ func NewCache() *Cache {
 	}
 }
 
-func downloadFile(url, filepath string) error {
+func downloadFile(url, targetPath string) error {
+	if err := os.MkdirAll(filepath.Dir(targetPath), 0755); err != nil {
+		return err
+	}
 	resp, err := http.Get(url)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	out, err := os.Create(filepath)
+	out, err := os.Create(targetPath)
 	if err != nil {
 		return err
 	}
@@ -45,6 +48,7 @@ func downloadFile(url, filepath string) error {
 
 // CacheIcons takes a list of URLs, downloads missing ones, and returns a map of URL to a local custom URI.
 func (c *Cache) CacheIcons(urls []string) map[string]string {
+	_ = os.MkdirAll(c.cacheDir, 0755)
 	results := make(map[string]string)
 
 	for _, u := range urls {
@@ -86,6 +90,7 @@ func (c *Cache) CacheIcons(urls []string) map[string]string {
 // ServeHTTP implements the http.Handler interface to serve cached files directly to the frontend.
 func (c *Cache) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	if strings.HasPrefix(req.URL.Path, "/icon-cache/") {
+		_ = os.MkdirAll(c.cacheDir, 0755)
 		// Strip the prefix to get the actual filename
 		filename := strings.TrimPrefix(req.URL.Path, "/icon-cache/")
 		fullPath := filepath.Join(c.cacheDir, filename)
@@ -97,11 +102,9 @@ func (c *Cache) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 
 	if strings.HasPrefix(req.URL.Path, "/local/") {
 		localPath := strings.TrimPrefix(req.URL.Path, "/local/")
-		println("DEBUG CACHE: Original localPath:", localPath)
 		if unescaped, err := url.PathUnescape(localPath); err == nil {
 			localPath = unescaped
 		}
-		println("DEBUG CACHE: Unescaped localPath:", localPath)
 		if localPath != "" {
 			http.ServeFile(res, req, localPath)
 			return

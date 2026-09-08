@@ -24,6 +24,14 @@ type iconFlightCall struct {
 	val string
 }
 
+// FlushIconMemoryCache clears the in-memory icon cache map.
+func FlushIconMemoryCache() {
+	iconMemoryCache.Range(func(key, _ any) bool {
+		iconMemoryCache.Delete(key)
+		return true
+	})
+}
+
 func getIconCacheDir() string {
 	dir := filepath.Join(GetAppDataDir(), "cache", "icons")
 	_ = os.MkdirAll(dir, 0755)

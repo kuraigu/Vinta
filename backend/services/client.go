@@ -17,16 +17,19 @@ import (
 )
 
 var (
-	dllHandle                    syscall.Handle
-	procStartNativeWinRTServices uintptr
-	procStopNativeWinRTServices  uintptr
-	procSendNativeMediaCommand   uintptr
-	procSetNativeRadioState      uintptr
-	procGetNativeRadiosStatus    uintptr
-	procSelectNativeMediaSession uintptr
-	procFocusNativeMediaApp      uintptr
-	procFocusNativeApp           uintptr
-	procExtractAppIconToFile     uintptr
+	dllHandle                     syscall.Handle
+	procStartNativeWinRTServices  uintptr
+	procStopNativeWinRTServices   uintptr
+	procSendNativeMediaCommand    uintptr
+	procSetNativeRadioState       uintptr
+	procGetNativeRadiosStatus     uintptr
+	procSelectNativeMediaSession  uintptr
+	procFocusNativeMediaApp       uintptr
+	procFocusNativeApp            uintptr
+	procExtractAppIconToFile      uintptr
+	procClearNativeMediaArtCache  uintptr
+	procRequeryNativeMediaArtwork uintptr
+	procForceEmitNativeMediaState uintptr
 
 	mediaCallbackPtr uintptr
 	notifCallbackPtr uintptr
@@ -59,6 +62,9 @@ func ensureDLLLoadedLocked() bool {
 	procFocusNativeMediaApp, _ = syscall.GetProcAddress(dllHandle, "FocusNativeMediaApp")
 	procFocusNativeApp, _ = syscall.GetProcAddress(dllHandle, "FocusNativeApp")
 	procExtractAppIconToFile, _ = syscall.GetProcAddress(dllHandle, "ExtractAppIconToFile")
+	procClearNativeMediaArtCache, _ = syscall.GetProcAddress(dllHandle, "ClearNativeMediaArtCache")
+	procRequeryNativeMediaArtwork, _ = syscall.GetProcAddress(dllHandle, "RequeryNativeMediaArtwork")
+	procForceEmitNativeMediaState, _ = syscall.GetProcAddress(dllHandle, "ForceEmitNativeMediaState")
 	return true
 }
 
@@ -291,7 +297,7 @@ var (
 	lastTrackKey        string
 	lastPlayState       bool
 	lastArtSentTrackKey string
-	lastSentArtLen      int
+	lastSentArt         string
 	isAppHidden         bool
 	hiddenMu            sync.RWMutex
 )
@@ -301,6 +307,48 @@ func SetAppHidden(hidden bool) {
 	hiddenMu.Lock()
 	isAppHidden = hidden
 	hiddenMu.Unlock()
+}
+
+// ResetMediaArtCacheState flushes in-memory media artwork deduplication state.
+func ResetMediaArtCacheState() {
+	mediaMu.Lock()
+	defer mediaMu.Unlock()
+	lastArtSentTrackKey = ""
+	lastSentArt = ""
+	lastTrackKey = ""
+}
+
+// ClearNativeMediaArtCache calls into the native WinRT bridge to wipe cached media artwork.
+func ClearNativeMediaArtCache() {
+	serviceMu.Lock()
+	if dllHandle != 0 && procClearNativeMediaArtCache != 0 {
+		_, _, _ = syscall.SyscallN(procClearNativeMediaArtCache)
+	}
+	serviceMu.Unlock()
+	ResetMediaArtCacheState()
+}
+
+// RequeryMediaArt instructs the native WinRT bridge to re-extract the thumbnail
+// for the current session and forces an immediate IPC push.
+func RequeryMediaArt() {
+	ResetMediaArtCacheState()
+	serviceMu.Lock()
+	if dllHandle != 0 && procRequeryNativeMediaArtwork != 0 {
+		_, _, _ = syscall.SyscallN(procRequeryNativeMediaArtwork)
+	}
+	serviceMu.Unlock()
+}
+
+// RequestMediaUpdate resets the cached delivered artwork state and requests
+// the native bridge to immediately emit the current media snapshot.
+// This is called when the frontend mounts or reconnects to avoid stale blank state.
+func RequestMediaUpdate() {
+	ResetMediaArtCacheState()
+	serviceMu.Lock()
+	if dllHandle != 0 && procForceEmitNativeMediaState != 0 {
+		_, _, _ = syscall.SyscallN(procForceEmitNativeMediaState)
+	}
+	serviceMu.Unlock()
 }
 
 func onNativeMedia(cStr *byte) uintptr {
@@ -317,8 +365,10 @@ func onNativeMedia(cStr *byte) uintptr {
 	if err := json.Unmarshal([]byte(str), &payload); err == nil {
 		title, _ := payload["title"].(string)
 		artist, _ := payload["artist"].(string)
+		sourceApp, _ := payload["sourceApp"].(string)
+		activeSessionID, _ := payload["activeSessionId"].(string)
 		isPlaying, _ := payload["isPlaying"].(bool)
-		trackKey := title + "_" + artist
+		trackKey := sourceApp + "::" + activeSessionID + "::" + title + "::" + artist
 
 		hiddenMu.RLock()
 		hidden := isAppHidden
@@ -331,10 +381,10 @@ func onNativeMedia(cStr *byte) uintptr {
 
 		art, _ := payload["albumArt"].(string)
 		if art != "" {
-			isNewOrBetterArt := (lastArtSentTrackKey != trackKey) || (len(art) > lastSentArtLen+1000)
-			if isNewOrBetterArt {
+			isNewOrDifferentArt := (lastArtSentTrackKey != trackKey) || (art != lastSentArt)
+			if isNewOrDifferentArt {
 				lastArtSentTrackKey = trackKey
-				lastSentArtLen = len(art)
+				lastSentArt = art
 			} else if !trackChanged {
 				// Once delivered, suppress multi-megabyte base64 on subsequent routine position updates
 				payload["albumArt"] = ""
@@ -347,7 +397,7 @@ func onNativeMedia(cStr *byte) uintptr {
 			lastTrackKey = trackKey
 			if art == "" {
 				lastArtSentTrackKey = ""
-				lastSentArtLen = 0
+				lastSentArt = ""
 			}
 		}
 		mediaMu.Unlock()

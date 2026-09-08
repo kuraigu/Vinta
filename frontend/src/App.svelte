@@ -13,7 +13,8 @@
     CheckPostUpdateInstalled,
     TrimMemory,
     SetIsHidden,
-    GetDisplayLayout
+    GetDisplayLayout,
+    RequestMediaUpdate
   } from '../wailsjs/go/backend/App.js'
   import { EventsOn } from '../wailsjs/runtime/runtime.js'
   import NotificationPage, {
@@ -776,8 +777,13 @@
           )
           const incomingTitle = (data.title as string) || ''
           const incomingArt = (data.albumArt as string) || ''
+          const incomingSessionId = (data.activeSessionId as string) || ''
+          const incomingSourceApp = (data.sourceApp as string) || ''
           const isSameTrack =
-            incomingTitle === m.title && data.artist === m.artist
+            incomingTitle === m.title &&
+            data.artist === m.artist &&
+            (!incomingSessionId || incomingSessionId === m.activeSessionId) &&
+            (!incomingSourceApp || incomingSourceApp === m.sourceApp)
           const resolvedAlbumArt = incomingArt
             ? incomingArt
             : isSameTrack && m.albumArt
@@ -835,12 +841,14 @@
     EventsOn(
       'notification',
       (payload: {
-        appName: string
-        aumid: string
-        icon: string
-        title: string
-        message: string
-        heroImage: string
+        id?: number
+        appName?: string
+        aumid?: string
+        icon?: string
+        appLogo?: string
+        title?: string
+        message?: string
+        heroImage?: string
       }) => {
         const appName = payload.appName || ''
         const aumid = payload.aumid || ''
@@ -849,9 +857,11 @@
 
         const newNotif = {
           id: Date.now() + Math.floor(Math.random() * 1000),
+          nativeId: payload.id,
           appName,
           aumid,
           icon: payload.icon,
+          appLogo: payload.appLogo || '',
           title,
           message,
           heroImage: payload.heroImage,
@@ -885,6 +895,46 @@
           showWidget()
           hideTrigger++
         }
+      }
+    )
+
+    EventsOn(
+      'notification_update',
+      (payload: {
+        id?: number
+        appName?: string
+        aumid?: string
+        icon?: string
+        appLogo?: string
+        title?: string
+        message?: string
+        heroImage?: string
+      }) => {
+        if (!payload) return
+        notifData.update((items) => {
+          let updated = false
+          const next = items.map((it) => {
+            const matchesId = payload.id && it.nativeId === payload.id
+            const matchesContent =
+              !it.nativeId &&
+              it.title === payload.title &&
+              it.appName === payload.appName
+            if (matchesId || matchesContent) {
+              updated = true
+              return {
+                ...it,
+                icon: payload.icon || it.icon,
+                appLogo: payload.appLogo || it.appLogo,
+                heroImage:
+                  payload.heroImage !== undefined
+                    ? payload.heroImage
+                    : it.heroImage
+              }
+            }
+            return it
+          })
+          return updated ? next : items
+        })
       }
     )
 
@@ -952,6 +1002,12 @@
       }
     }
     refreshDisplay()
+
+    // Query active media state on startup so album art and playback state
+    // are rendered immediately if media was playing before Vinta launched.
+    if (typeof RequestMediaUpdate === 'function') {
+      RequestMediaUpdate()
+    }
 
     const handleResize = () => {
       refreshDisplay()

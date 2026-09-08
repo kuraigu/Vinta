@@ -63,3 +63,14 @@ extern "C" BRIDGE_API int ExtractAppIconToFile(const char* sourceApp, const char
     }
 }
 
+extern "C" BRIDGE_API void ClearNativeMediaArtCache(void) {
+    FlushMediaArtCache();
+}
+
+extern "C" BRIDGE_API void RequeryNativeMediaArtwork(void) {
+    RequeryMediaArtwork();
+}
+
+extern "C" BRIDGE_API void ForceEmitNativeMediaState(void) {
+    ForceEmitMediaState();
+}

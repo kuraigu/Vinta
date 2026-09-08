@@ -34,9 +34,11 @@
 
   export type NotificationItem = {
     id: number
+    nativeId?: number
     appName?: string
     aumid?: string
     icon?: string
+    appLogo?: string
     title: string
     message: string
     heroImage?: string
@@ -88,10 +90,72 @@
     latestTimestamp: number
   }
 
-  // Shared deduplication filter: strip control chars and hide unidentified "Notification"
-  // entries when an identified version of the same content (title+message) exists.
-  // Sequential messages sent >5s apart (like repeated chat tests) are preserved.
-  let filteredNotifications = $derived.by(() => {
+  const SENDER_AVATAR_STORAGE_KEY = 'vinta_sender_avatars'
+
+  /**
+   * Retrieves the sender avatar mapping stored in persistent browser storage.
+   * This preserves discovered contact profile pictures across app reloads.
+   */
+  function loadSenderAvatars(): Record<string, string> {
+    try {
+      const raw = localStorage.getItem(SENDER_AVATAR_STORAGE_KEY)
+      if (raw) return JSON.parse(raw)
+    } catch {
+      // Storage unavailable or unparseable
+    }
+    return {}
+  }
+
+  // Pure in-memory cache loaded once from localStorage, updated out-of-band without causing reactive loops
+  const persistentSenderAvatars = loadSenderAvatars()
+
+  /**
+   * Persists a resolved avatar URL for a given sender identifier into local storage.
+   */
+  function saveSenderAvatar(key: string, url: string) {
+    if (!key || !url) return
+    if (persistentSenderAvatars[key] === url) return
+    persistentSenderAvatars[key] = url
+    try {
+      localStorage.setItem(
+        SENDER_AVATAR_STORAGE_KEY,
+        JSON.stringify(persistentSenderAvatars)
+      )
+    } catch {
+      // Storage write error
+    }
+  }
+
+  /**
+   * Generates a composite lookup key combining the source application with the sender title.
+   */
+  function getSenderKey(notif: {
+    appName?: string
+    aumid?: string
+    title?: string
+  }): string {
+    const app = (notif.appName || notif.aumid || '').trim().toLowerCase()
+    const sender = (notif.title || '').trim().toLowerCase()
+    if (!sender) return ''
+    return `${app}::${sender}`
+  }
+
+  /**
+   * Evaluates whether a notification's current icon is simply the generic application logo.
+   */
+  function isGenericAppLogo(notif: NotificationItem): boolean {
+    if (!notif.icon) return true
+    if (notif.appLogo && notif.icon === notif.appLogo) return true
+    const brand = getDisplayBrand(notif)
+    if (brand.appIcon && notif.icon === brand.appIcon) return true
+    return false
+  }
+
+  /**
+   * Deduplicates notifications: strips control chars and hides unidentified entries
+   * when an identified version of the same content exists.
+   */
+  function computeFilteredNotifications() {
     const normTitle = (t: string) => {
       // eslint-disable-next-line no-control-regex
       return (t || '').replace(/[\x00-\x1f]/g, '').trim()
@@ -117,10 +181,17 @@
       }
       return true
     })
-  })
+  }
+
+  let filteredNotifications = $derived.by(computeFilteredNotifications)
 
   const imageSizingCache = new SvelteMap<string, 'avatar' | 'hero'>()
 
+  /**
+   * Asynchronously inspects the natural dimensions of an incoming hero image.
+   * Images having roughly square dimensions up to 512px are promoted to contact avatars,
+   * while wider screenshots, photos, and banners remain classified as hero banners.
+   */
   function checkImageSizing(url: string) {
     if (!url || !isImageUrl(url) || imageSizingCache.has(url)) return
     const img = new Image()
@@ -132,27 +203,39 @@
         const isAvatar =
           ratio >= 0.75 && ratio <= 1.33 && (w <= 512 || h <= 512)
         imageSizingCache.set(url, isAvatar ? 'avatar' : 'hero')
-        notifData.update((items) => {
-          let changed = false
-          for (const it of items) {
-            if (it.heroImage === url && isAvatar) {
-              it.icon = it.heroImage
-              it.heroImage = ''
-              changed = true
+        if (isAvatar) {
+          notifData.update((items) => {
+            let changed = false
+            for (const it of items) {
+              if (it.heroImage === url) {
+                it.icon = url
+                it.heroImage = ''
+                changed = true
+                const sKey = getSenderKey(it)
+                if (sKey) {
+                  saveSenderAvatar(sKey, url)
+                }
+              }
             }
-          }
-          return changed ? [...items] : items
-        })
+            return changed ? [...items] : items
+          })
+        }
       }
     }
     img.src = url
   }
 
-  let processedNotifications = $derived.by(() => {
+  /**
+   * Derives display properties for notifications: applies cached sizing
+   * and restores persistent sender avatars. Must remain completely pure.
+   */
+  function computeProcessedNotifications() {
     const items = filteredNotifications.map((n) => ({ ...n }))
-    const senderAvatars: Record<string, string> = {}
 
     for (const notif of items) {
+      const sKey = getSenderKey(notif)
+
+      // Promote cached avatar-sized hero images
       if (notif.heroImage && isImageUrl(notif.heroImage)) {
         const sizing = imageSizingCache.get(notif.heroImage)
         if (sizing === 'avatar') {
@@ -163,27 +246,35 @@
         }
       }
 
-      const senderKey = (notif.title || '').trim().toLowerCase()
-      if (senderKey && notif.icon && isImageUrl(notif.icon)) {
-        if (!senderAvatars[senderKey]) {
-          senderAvatars[senderKey] = notif.icon
-        }
-      }
-    }
-
-    for (const notif of items) {
-      const senderKey = (notif.title || '').trim().toLowerCase()
-      if (
-        senderKey &&
-        senderAvatars[senderKey] &&
-        (!notif.icon || !isImageUrl(notif.icon))
-      ) {
-        notif.icon = senderAvatars[senderKey]
+      // Apply cached sender avatar when notification lacks a custom avatar
+      if (sKey && isGenericAppLogo(notif) && persistentSenderAvatars[sKey]) {
+        notif.icon = persistentSenderAvatars[sKey]
       }
     }
 
     return items
-  })
+  }
+
+  let processedNotifications = $derived.by(computeProcessedNotifications)
+
+  /**
+   * Persists newly resolved custom contact avatars to browser local storage.
+   * Runs inside a reactive effect rather than during derived computations to keep derivations pure.
+   */
+  function handlePersistAvatarsEffect() {
+    for (const notif of processedNotifications) {
+      const sKey = getSenderKey(notif)
+      if (
+        sKey &&
+        notif.icon &&
+        isImageUrl(notif.icon) &&
+        !isGenericAppLogo(notif)
+      ) {
+        saveSenderAvatar(sKey, notif.icon)
+      }
+    }
+  }
+  $effect(handlePersistAvatarsEffect)
 
   let groupedNotifications = $derived.by(() => {
     const groups: Record<string, NotificationGroup> = {}
@@ -661,9 +752,19 @@
                     {notif.message}
                   </p>
                 {/if}
-                {#if notif.heroImage && isImageUrl(notif.heroImage) && notif.heroImage !== displayBrand.icon && notif.heroImage !== notif.icon && (!nested || isExpanded)}
+                {#if notif.heroImage && isImageUrl(notif.heroImage) && notif.heroImage !== notif.icon && notif.heroImage !== displayBrand.icon && notif.heroImage !== displayBrand.appIcon && (!nested || isExpanded)}
                   <div class="hero-image-wrapper">
-                    <img src={notif.heroImage} alt="hero" class="hero-image" />
+                    <img
+                      src={notif.heroImage}
+                      alt="hero"
+                      class="hero-image"
+                      onerror={(e) => {
+                        const target = e.currentTarget as HTMLImageElement
+                        if (target.parentElement) {
+                          target.parentElement.style.display = 'none'
+                        }
+                      }}
+                    />
                   </div>
                 {/if}
                 {#if isExpanded && canOpen}

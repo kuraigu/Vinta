@@ -5,9 +5,11 @@ import { writable } from 'svelte/store'
 // ============================================================================
 export type AppNotification = {
   id: number
+  nativeId?: number
   appName?: string
   aumid?: string
   icon?: string
+  appLogo?: string
   title: string
   message: string
   heroImage?: string

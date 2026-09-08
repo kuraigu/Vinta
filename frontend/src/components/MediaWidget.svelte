@@ -13,7 +13,8 @@
   import {
     SendMediaControl,
     SelectMediaSession,
-    FocusNotificationApp
+    FocusNotificationApp,
+    RequeryMediaArt
   } from '../../wailsjs/go/backend/App.js'
   import Clock from './Clock.svelte'
   import BatteryWidget from './BatteryWidget.svelte'
@@ -186,6 +187,8 @@
   // Track synchronization with incoming media store updates
   let prevTitle = ''
   let prevArtist = ''
+  let prevSessionId = ''
+  let prevSourceApp = ''
 
   let isPlayingState = $derived(Boolean(media.isPlaying))
   let durationMsState = $derived(Number(media.durationMs || 0))
@@ -193,24 +196,30 @@
   function handleMediaSyncEffect() {
     const curTitle = media.title || ''
     const curArtist = media.artist || ''
+    const curSessionId = media.activeSessionId || ''
+    const curSourceApp = media.sourceApp || ''
     const backendPos = media.positionMs || 0
     const playing = Boolean(media.isPlaying)
 
-    const isTrackChanged = curTitle !== prevTitle || curArtist !== prevArtist
+    const isTrackChanged =
+      curTitle !== prevTitle ||
+      curArtist !== prevArtist ||
+      (curSessionId !== '' && curSessionId !== prevSessionId) ||
+      (curSourceApp !== '' && curSourceApp !== prevSourceApp)
 
     if (!isDraggingSeek && !isSeekingLocked) {
       if (isTrackChanged || !playing) {
-        // Track change or paused: sync directly to backend snapshot
+        // Track change, session switch, or paused: sync directly to backend snapshot
         localPosMs = backendPos
         seekVal = backendPos
       } else {
         // While actively playing:
         // A genuine external seek (Spotify/YouTube/Chrome) jumps by more than 4 seconds.
         // Routine background updates, Discord events, volume shifts, or clock drift
-        // must NEVER interrupt or jerk the continuous local playhead.
+        // must not interrupt or jerk the continuous local playhead.
         const currentLocal = untrack(() => localPosMs)
         const diff = backendPos - currentLocal
-        if (Math.abs(diff) > 4000) {
+        if (Math.abs(diff) > 4000 || (currentLocal === 0 && backendPos > 0)) {
           localPosMs = backendPos
           seekVal = backendPos
         }
@@ -219,12 +228,45 @@
 
     prevTitle = curTitle
     prevArtist = curArtist
+    prevSessionId = curSessionId
+    prevSourceApp = curSourceApp
 
     if (!isDraggingVol && !isVolLocked && media.volume !== undefined) {
       volVal = media.volume
     }
   }
   $effect(handleMediaSyncEffect)
+
+  // Artwork fallback: if an active media session is reported without album artwork,
+  // request a thumbnail re-query after a brief settling delay.
+  let requeryTimer: ReturnType<typeof setTimeout> | null = null
+  function handleArtRequeryEffect() {
+    const isAvailable = Boolean(media.isAvailable)
+    const hasArt = Boolean(media.albumArt)
+    const track = media.title || ''
+
+    if (requeryTimer) {
+      clearTimeout(requeryTimer)
+      requeryTimer = null
+    }
+
+    if (isAvailable && !hasArt && track) {
+      requeryTimer = setTimeout(() => {
+        if (typeof RequeryMediaArt === 'function') {
+          RequeryMediaArt()
+        }
+        requeryTimer = null
+      }, 1500)
+    }
+
+    return () => {
+      if (requeryTimer) {
+        clearTimeout(requeryTimer)
+        requeryTimer = null
+      }
+    }
+  }
+  $effect(handleArtRequeryEffect)
 
   let lastSeekTimestamp = $state(0)
 

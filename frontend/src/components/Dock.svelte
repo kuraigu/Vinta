@@ -101,7 +101,8 @@
     <DockButton
       variant="warning"
       tooltip="Collapse Island"
-      onclick={(e: MouseEvent) => AppControls.doMinimize(navigate, e)}
+      onclick={(e: MouseEvent) =>
+        AppControls.doMinimize(navigate, e, activePage)}
     >
       <Minimize2 size={18} />
     </DockButton>

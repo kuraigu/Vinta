@@ -39,8 +39,9 @@ struct DbToastInfo {
 static void ParseToastXmlPayload(const std::string& payload, DbToastInfo& outInfo) {
     if (payload.empty()) return;
     std::regex imgRegex("<image[^>]+>", std::regex::icase);
-    std::regex srcRegex("src=\"([^\"]+)\"", std::regex::icase);
-    std::regex placementRegex("placement=\"([^\"]+)\"", std::regex::icase);
+    std::regex srcRegex("src\\s*=\\s*[\"']([^\"']+)[\"']", std::regex::icase);
+    std::regex placementRegex("placement\\s*=\\s*[\"']([^\"']+)[\"']", std::regex::icase);
+    std::regex cropRegex("hint-crop\\s*=\\s*[\"']circle[\"']", std::regex::icase);
 
     auto imgBegin = std::sregex_iterator(payload.begin(), payload.end(), imgRegex);
     auto imgEnd = std::sregex_iterator();
@@ -53,8 +54,14 @@ static void ParseToastXmlPayload(const std::string& payload, DbToastInfo& outInf
 
         if (src.empty()) continue;
 
-        if (placement == "appLogoOverride" || placement == "applogo") {
-            outInfo.appLogoOverride = src;
+        bool hasCircleCrop = std::regex_search(imgTag, cropRegex);
+
+        if (placement == "appLogoOverride" || placement == "applogo" || hasCircleCrop) {
+            // According to Windows Toast schema guidelines, circle crop or appLogoOverride
+            // explicitly designates a contact profile avatar rather than a decorative banner.
+            if (outInfo.appLogoOverride.empty()) {
+                outInfo.appLogoOverride = src;
+            }
         } else if (placement == "hero") {
             outInfo.heroImage = src;
         } else {
@@ -84,20 +91,18 @@ static DbToastInfo ExtractToastFromDb(uint32_t notifId, const std::string& targe
     if (GetEnvironmentVariableA("LOCALAPPDATA", localAppData, MAX_PATH) == 0) return outInfo;
     std::string dbPath = std::string(localAppData) + "\\Microsoft\\Windows\\Notifications\\wpndatabase.db";
 
-    char tempPath[MAX_PATH];
-    GetTempPathA(MAX_PATH, tempPath);
-    std::string copyPath = std::string(tempPath) + "wpn_vinta_sync.db";
-    std::string walPath = dbPath + "-wal";
-    std::string shmPath = dbPath + "-shm";
-    std::string copyWal = copyPath + "-wal";
-    std::string copyShm = copyPath + "-shm";
-
-    CopyFileA(dbPath.c_str(), copyPath.c_str(), FALSE);
-    CopyFileA(walPath.c_str(), copyWal.c_str(), FALSE);
-    CopyFileA(shmPath.c_str(), copyShm.c_str(), FALSE);
-
     sqlite3 *db = nullptr;
-    if (p_open(copyPath.c_str(), &db, 0x00000001, nullptr) != 0) return outInfo;
+    int rc = p_open(dbPath.c_str(), &db, 0x00000001, nullptr);
+    if (rc != 0) {
+        char tempPath[MAX_PATH];
+        GetTempPathA(MAX_PATH, tempPath);
+        std::string copyPath = std::string(tempPath) + "wpn_vinta_" + std::to_string(GetCurrentThreadId()) + ".db";
+        std::string walPath = dbPath + "-wal";
+        std::string copyWal = copyPath + "-wal";
+        CopyFileA(dbPath.c_str(), copyPath.c_str(), FALSE);
+        CopyFileA(walPath.c_str(), copyWal.c_str(), FALSE);
+        if (p_open(copyPath.c_str(), &db, 0x00000001, nullptr) != 0) return outInfo;
+    }
 
     bool found = false;
 
@@ -125,7 +130,7 @@ static DbToastInfo ExtractToastFromDb(uint32_t notifId, const std::string& targe
             "FROM Notification n "
             "LEFT JOIN NotificationHandler h ON n.HandlerId = h.RecordId "
             "WHERE n.Type = 'toast' "
-            "ORDER BY n.ArrivalTime DESC LIMIT 10;";
+            "ORDER BY n.ArrivalTime DESC LIMIT 25;";
 
         sqlite3_stmt *stmt = nullptr;
         if (p_prepare(db, sql, -1, &stmt, nullptr) == 0) {
@@ -149,12 +154,16 @@ static DbToastInfo ExtractToastFromDb(uint32_t notifId, const std::string& targe
                 }
 
                 bool match = false;
-                if (!targetTitle.empty() && (dbTitle.find(targetTitle) != std::string::npos || targetTitle.find(dbTitle) != std::string::npos)) {
-                    match = true;
-                } else if (!aumid.empty() && primStr.find(aumid) != std::string::npos) {
-                    match = true;
-                } else if (targetTitle.empty()) {
-                    match = true;
+                if (!targetTitle.empty()) {
+                    if (dbTitle.find(targetTitle) != std::string::npos ||
+                        targetTitle.find(dbTitle) != std::string::npos ||
+                        payload.find(targetTitle) != std::string::npos) {
+                        match = true;
+                    }
+                } else if (!aumid.empty() && !primStr.empty()) {
+                    if (primStr.find(aumid) != std::string::npos || aumid.find(primStr) != std::string::npos) {
+                        match = true;
+                    }
                 }
 
                 if (match) {
@@ -168,6 +177,30 @@ static DbToastInfo ExtractToastFromDb(uint32_t notifId, const std::string& targe
 
     p_close(db);
     return outInfo;
+}
+
+/**
+ * Extracts toast payload information with retry polling.
+ * When Windows broadcasts UserNotificationListener notifications,
+ * the Action Center service is concurrently committing the toast XML record
+ * to wpndatabase.db and its write-ahead log (WAL).
+ * A single immediate read often misses the payload on the first notification.
+ * Retrying across short intervals allows SQLite to complete the transaction commit,
+ * ensuring sender avatars and hero images are captured on the initial message.
+ */
+static DbToastInfo ExtractToastWithRetry(uint32_t notifId, const std::string& targetTitle, const std::string& aumid) {
+    DbToastInfo dbInfo;
+    const int delaysMs[] = { 40, 80, 120, 160 };
+    for (int attempt = 0; attempt < 4; ++attempt) {
+        dbInfo = ExtractToastFromDb(notifId, targetTitle, aumid);
+        if (!dbInfo.appLogoOverride.empty() || !dbInfo.heroImage.empty() || !dbInfo.inlineImages.empty()) {
+            return dbInfo;
+        }
+        if (attempt < 3) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(delaysMs[attempt]));
+        }
+    }
+    return dbInfo;
 }
 
 static void NotificationWorker() {
@@ -240,7 +273,7 @@ static void NotificationWorker() {
                         } catch (...) {}
 
                         try {
-                            DbToastInfo dbInfo = ExtractToastFromDb(id, title, aumid);
+                            DbToastInfo dbInfo = ExtractToastWithRetry(id, title, aumid);
                             if (!dbInfo.appLogoOverride.empty()) {
                                 ProcessedImage appLogoImg = ProcessImageSource(Utf8ToUtf16(dbInfo.appLogoOverride), packageFamilyName);
                                 if (!appLogoImg.dataUri.empty()) {
@@ -251,8 +284,10 @@ static void NotificationWorker() {
                             if (!dbInfo.heroImage.empty()) {
                                 ProcessedImage heroImg = ProcessImageSource(Utf8ToUtf16(dbInfo.heroImage), packageFamilyName);
                                 if (!heroImg.dataUri.empty()) {
-                                    if (heroImg.isAvatarSize() && icon.empty()) {
-                                        icon = heroImg.dataUri;
+                                    if (heroImg.isAvatarSize()) {
+                                        if (icon.empty()) {
+                                            icon = heroImg.dataUri;
+                                        }
                                     } else {
                                         heroImage = heroImg.dataUri;
                                     }
@@ -271,28 +306,101 @@ static void NotificationWorker() {
                             }
                         } catch (...) {}
 
-                        if (icon.empty()) {
-                            try {
-                                if (notif.AppInfo() && notif.AppInfo().DisplayInfo()) {
-                                    auto logoStreamRef = notif.AppInfo().DisplayInfo().GetLogo(winrt::Windows::Foundation::Size{48.0f, 48.0f});
-                                    if (logoStreamRef) {
-                                        auto stream = logoStreamRef.OpenReadAsync().get();
-                                        icon = StreamToBase64(stream);
-                                    }
+                        std::string appLogo;
+                        try {
+                            if (notif.AppInfo() && notif.AppInfo().DisplayInfo()) {
+                                auto logoStreamRef = notif.AppInfo().DisplayInfo().GetLogo(winrt::Windows::Foundation::Size{48.0f, 48.0f});
+                                if (logoStreamRef) {
+                                    auto stream = logoStreamRef.OpenReadAsync().get();
+                                    appLogo = StreamToBase64(stream);
                                 }
-                            } catch (...) {}
+                            }
+                        } catch (...) {}
+
+                        if (icon.empty()) {
+                            icon = appLogo;
                         }
 
                         if (g_notifCb) {
                             std::ostringstream json;
                             json << "{\"type\":\"notification\","
+                                 << "\"id\":" << id << ","
                                  << "\"appName\":\"" << EscapeJsonString(appName) << "\","
                                  << "\"aumid\":\"" << EscapeJsonString(aumid) << "\","
                                  << "\"icon\":\"" << EscapeJsonString(icon) << "\","
+                                 << "\"appLogo\":\"" << EscapeJsonString(appLogo) << "\","
                                  << "\"title\":\"" << EscapeJsonString(title) << "\","
                                  << "\"message\":\"" << EscapeJsonString(message) << "\","
                                  << "\"heroImage\":\"" << EscapeJsonString(heroImage) << "\"}";
                             g_notifCb(json.str().c_str());
+                        }
+
+                        /**
+                         * Delayed SQLite transaction polling:
+                         * Windows Action Center writes toast records to wpndatabase.db asynchronously.
+                         * When an initial notification read catches only the generic app logo, polling
+                         * across short intervals captures the committed avatar or hero image and
+                         * emits an in-place update to the frontend.
+                         */
+                        if (icon == appLogo && heroImage.empty() && g_notifCb) {
+                            std::thread([id, title, aumid, appName, message, packageFamilyName, appLogo]() {
+                                ApartmentScope apt;
+                                const int retryDelays[] = { 300, 700, 1300 };
+                                for (int delay : retryDelays) {
+                                    std::this_thread::sleep_for(std::chrono::milliseconds(delay));
+                                    if (!g_notifRunning) return;
+
+                                    DbToastInfo retryDb = ExtractToastFromDb(id, title, aumid);
+                                    std::string lateIcon;
+                                    std::string lateHero;
+
+                                    if (!retryDb.appLogoOverride.empty()) {
+                                        ProcessedImage img = ProcessImageSource(Utf8ToUtf16(retryDb.appLogoOverride), packageFamilyName);
+                                        if (!img.dataUri.empty()) lateIcon = img.dataUri;
+                                    }
+
+                                    if (!retryDb.heroImage.empty()) {
+                                        ProcessedImage heroImg = ProcessImageSource(Utf8ToUtf16(retryDb.heroImage), packageFamilyName);
+                                        if (!heroImg.dataUri.empty()) {
+                                            if (heroImg.isAvatarSize()) {
+                                                if (lateIcon.empty()) {
+                                                    lateIcon = heroImg.dataUri;
+                                                }
+                                            } else {
+                                                lateHero = heroImg.dataUri;
+                                            }
+                                        }
+                                    }
+
+                                    for (const auto& inlineSrc : retryDb.inlineImages) {
+                                        ProcessedImage inImg = ProcessImageSource(Utf8ToUtf16(inlineSrc), packageFamilyName);
+                                        if (!inImg.dataUri.empty()) {
+                                            if (inImg.isAvatarSize() && lateIcon.empty()) {
+                                                lateIcon = inImg.dataUri;
+                                            } else if (lateHero.empty()) {
+                                                lateHero = inImg.dataUri;
+                                            }
+                                        }
+                                    }
+
+                                    if (!lateIcon.empty() || !lateHero.empty()) {
+                                        if (g_notifCb) {
+                                            std::ostringstream json;
+                                            json << "{\"type\":\"notification_update\","
+                                                 << "\"id\":" << id << ","
+                                                 << "\"appName\":\"" << EscapeJsonString(appName) << "\","
+                                                 << "\"aumid\":\"" << EscapeJsonString(aumid) << "\","
+                                                 << "\"icon\":\"" << EscapeJsonString(lateIcon.empty() ? appLogo : lateIcon) << "\","
+                                                 << "\"appLogo\":\"" << EscapeJsonString(appLogo) << "\","
+                                                 << "\"title\":\"" << EscapeJsonString(title) << "\","
+                                                 << "\"message\":\"" << EscapeJsonString(message) << "\","
+                                                 << "\"heroImage\":\"" << EscapeJsonString(lateHero) << "\"}";
+                                            g_notifCb(json.str().c_str());
+                                        }
+                                        break;
+                                    }
+                                }
+                            }).detach();
                         }
                     }
                 }

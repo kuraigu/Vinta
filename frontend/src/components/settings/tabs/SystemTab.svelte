@@ -5,20 +5,57 @@
   import { autostartStore, hardwareAccelStore, notifData } from '../../../store'
   import {
     SetAutostart,
-    SetHardwareAcceleration
+    SetHardwareAcceleration,
+    GetCacheSize,
+    ClearCache
   } from '../../../../wailsjs/go/backend/App.js'
 
-  $effect(() => {
+  function handleAutostartEffect() {
     SetAutostart($autostartStore).catch(() => {})
-  })
+  }
+  $effect(handleAutostartEffect)
 
-  $effect(() => {
+  function handleHardwareAccelEffect() {
     SetHardwareAcceleration($hardwareAccelStore).catch(() => {})
-  })
+  }
+  $effect(handleHardwareAccelEffect)
 
   let cacheCleared = $state(false)
   let clearTimer: ReturnType<typeof setTimeout> | null = null
   let cacheSizeStr = $state('0 B')
+
+  const SETTINGS_KEYS = new Set([
+    'vinta_theme',
+    'vinta_shape',
+    'vinta_glow_intensity',
+    'vinta_opacity_minimal',
+    'vinta_opacity_expanded',
+    'vinta_opacity_hidden',
+    'vinta_autohide',
+    'vinta_home_autohide',
+    'vinta_media_autohide',
+    'vinta_autohide_delay',
+    'vinta_autohide_display',
+    'vinta_hidden_pill_position',
+    'vinta_wakemethod',
+    'vinta_allow_drag_position',
+    'vinta_autohide_borderless',
+    'vinta_dnd',
+    'vinta_notif_autowake',
+    'vinta_media_autowake',
+    'vinta_notif_sound',
+    'vinta_notif_volume',
+    'vinta_time_format',
+    'vinta_timezone',
+    'vinta_date_format',
+    'vinta_weather_location',
+    'vinta_weather_unit',
+    'vinta_home_widgets_visibility',
+    'vinta_page_visibility',
+    'vinta_autostart',
+    'vinta_hardware_accel',
+    'autoCheckUpdates'
+  ])
 
   function formatBytes(bytes: number): string {
     if (bytes <= 0) return '0 B'
@@ -27,7 +64,7 @@
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   }
 
-  function calculateCacheSize() {
+  async function calculateCacheSize() {
     try {
       let totalBytes = 0
       const notifs = $notifData || []
@@ -35,42 +72,21 @@
         totalBytes += new Blob([JSON.stringify(notifs)]).size
       }
 
-      const keepKeys = new Set([
-        'vinta_theme',
-        'vinta_shape',
-        'vinta_glow_intensity',
-        'vinta_home_autohide',
-        'vinta_media_autohide',
-        'vinta_notif_autohide',
-        'vinta_autohide_delay',
-        'vinta_autohide_display',
-        'vinta_wake_method',
-        'vinta_dnd',
-        'vinta_notif_autowake',
-        'vinta_time_format',
-        'vinta_timezone',
-        'vinta_date_format',
-        'vinta_weather_location',
-        'vinta_weather_unit',
-        'vinta_opacity_minimal',
-        'vinta_opacity_expanded',
-        'vinta_opacity_hidden',
-        'vinta_hidden_pill_offset_x',
-        'vinta_allow_drag_pos',
-        'vinta_hw_accel',
-        'vinta_notif_sound',
-        'vinta_notif_volume',
-        'vinta_autostart',
-        'vinta_home_widgets_visibility',
-        'vinta_page_visibility'
-      ])
-
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i)
-        if (key && !keepKeys.has(key)) {
+        if (key && !SETTINGS_KEYS.has(key)) {
           const val = localStorage.getItem(key) || ''
           totalBytes += (key.length + val.length) * 2
         }
+      }
+
+      try {
+        const diskBytes = await GetCacheSize()
+        if (typeof diskBytes === 'number' && diskBytes > 0) {
+          totalBytes += diskBytes
+        }
+      } catch {
+        // Fall back to local calculation if native call is unavailable
       }
 
       cacheSizeStr = formatBytes(totalBytes)
@@ -79,49 +95,24 @@
     }
   }
 
-  $effect(() => {
-    calculateCacheSize()
-  })
+  function handleCalculateCacheSizeEffect() {
+    void calculateCacheSize()
+  }
+  $effect(handleCalculateCacheSizeEffect)
 
-  function handleClearCache() {
+  async function handleClearCache() {
     try {
-      const keepKeys = new Set([
-        'vinta_theme',
-        'vinta_shape',
-        'vinta_glow_intensity',
-        'vinta_home_autohide',
-        'vinta_media_autohide',
-        'vinta_notif_autohide',
-        'vinta_autohide_delay',
-        'vinta_autohide_display',
-        'vinta_wake_method',
-        'vinta_dnd',
-        'vinta_notif_autowake',
-        'vinta_time_format',
-        'vinta_timezone',
-        'vinta_date_format',
-        'vinta_weather_location',
-        'vinta_weather_unit',
-        'vinta_opacity_minimal',
-        'vinta_opacity_expanded',
-        'vinta_opacity_hidden',
-        'vinta_hidden_pill_offset_x',
-        'vinta_allow_drag_pos',
-        'vinta_hw_accel',
-        'vinta_notif_sound',
-        'vinta_notif_volume',
-        'vinta_autostart',
-        'vinta_home_widgets_visibility',
-        'vinta_page_visibility'
-      ])
+      await ClearCache().catch(() => {})
+      notifData.set([])
+
       for (let i = localStorage.length - 1; i >= 0; i--) {
         const key = localStorage.key(i)
-        if (key && !keepKeys.has(key)) {
+        if (key && !SETTINGS_KEYS.has(key)) {
           localStorage.removeItem(key)
         }
       }
       cacheCleared = true
-      calculateCacheSize()
+      await calculateCacheSize()
       if (clearTimer) clearTimeout(clearTimer)
       clearTimer = setTimeout(() => {
         cacheCleared = false
