@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -115,6 +116,33 @@ func (a *App) CheckPostUpdateInstalled() string {
 	return ""
 }
 
+// resolveUpdaterToken resolves an authentication token for GitHub API requests.
+// Resolution order:
+// -UpdaterToken injected during compilation via -ldflags (from GitHub Secrets).
+// -VINTA_GITHUB_TOKEN or GITHUB_TOKEN environment variables.
+// -GitHub CLI authentication token via 'gh auth token' during local development.
+func resolveUpdaterToken() string {
+	if strings.TrimSpace(UpdaterToken) != "" {
+		return strings.TrimSpace(UpdaterToken)
+	}
+	if tok := strings.TrimSpace(os.Getenv("VINTA_GITHUB_TOKEN")); tok != "" {
+		return tok
+	}
+	if tok := strings.TrimSpace(os.Getenv("GITHUB_TOKEN")); tok != "" {
+		return tok
+	}
+	if BuildType == "Development" {
+		cmd := exec.Command("gh", "auth", "token")
+		if out, err := cmd.Output(); err == nil {
+			trimmed := strings.TrimSpace(string(out))
+			if trimmed != "" {
+				return trimmed
+			}
+		}
+	}
+	return ""
+}
+
 // CheckForUpdates queries GitHub Releases API to check for newer versions.
 func (a *App) CheckForUpdates(force bool) (*UpdateCheckResult, error) {
 	currentVersion := AppVersion
@@ -151,9 +179,9 @@ func (a *App) CheckForUpdates(force bool) (*UpdateCheckResult, error) {
 		}
 	}
 
-	// 3. Query GitHub Releases API
+	// 3. Query GitHub Releases API (queries release list to accommodate pre-release channels)
 	client := &http.Client{Timeout: 10 * time.Second}
-	req, err := http.NewRequest("GET", "https://api.github.com/repos/kuraigu/Vinta/releases/latest", nil)
+	req, err := http.NewRequest("GET", "https://api.github.com/repos/kuraigu/Vinta/releases?per_page=5", nil)
 	if err != nil {
 		return &UpdateCheckResult{
 			Status:          "error",
@@ -166,6 +194,10 @@ func (a *App) CheckForUpdates(force bool) (*UpdateCheckResult, error) {
 
 	req.Header.Set("User-Agent", "Vinta-Update-Checker/1.0")
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
+
+	if token := resolveUpdaterToken(); token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -202,8 +234,8 @@ func (a *App) CheckForUpdates(force bool) (*UpdateCheckResult, error) {
 		}, nil
 	}
 
-	var ghRelease ghReleaseResponse
-	if err := json.NewDecoder(resp.Body).Decode(&ghRelease); err != nil {
+	var releases []ghReleaseResponse
+	if err := json.NewDecoder(resp.Body).Decode(&releases); err != nil {
 		return &UpdateCheckResult{
 			Status:          "error",
 			UpdateAvailable: false,
@@ -211,6 +243,27 @@ func (a *App) CheckForUpdates(force bool) (*UpdateCheckResult, error) {
 			CheckedAt:       now,
 			Message:         "Failed to parse release information.",
 		}, nil
+	}
+
+	var ghRelease *ghReleaseResponse
+	for i := range releases {
+		if !releases[i].Draft {
+			ghRelease = &releases[i]
+			break
+		}
+	}
+
+	if ghRelease == nil {
+		result := &UpdateCheckResult{
+			Status:          "up-to-date",
+			UpdateAvailable: false,
+			CurrentVersion:  currentVersion,
+			LatestVersion:   currentVersion,
+			CheckedAt:       now,
+			Message:         "Vinta is currently up to date.",
+		}
+		a.saveUpdateCache(cacheFile, result)
+		return result, nil
 	}
 
 	var installerURL, portableURL string

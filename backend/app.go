@@ -37,6 +37,8 @@ var (
 	procGetWindowRect            = user32.NewProc("GetWindowRect")
 	procMonitorFromWindow        = user32.NewProc("MonitorFromWindow")
 	procEnumWindows              = user32.NewProc("EnumWindows")
+	procEnumChildWindows         = user32.NewProc("EnumChildWindows")
+	procSetWindowPos             = user32.NewProc("SetWindowPos")
 	procIsWindowVisible          = user32.NewProc("IsWindowVisible")
 	procIsIconic                 = user32.NewProc("IsIconic")
 
@@ -93,7 +95,9 @@ const (
 	WS_EX_TOOLWINDOW = 0x00000080
 	//nolint:revive // Windows API constants
 	WS_EX_NOACTIVATE = 0x08000000
-	OutsidePadding   = 10
+	//nolint:revive // Windows API constants
+	WS_EX_TRANSPARENT = 0x00000020
+	OutsidePadding   = 20
 	rgnOr            = 2
 
 	//nolint:revive // Windows API constants
@@ -117,6 +121,17 @@ const (
 	SW_HIDE = 0
 	//nolint:revive // Windows API constants
 	SW_SHOWNA = 8
+
+	//nolint:revive // Windows API constants
+	SWP_NOSIZE = 0x0001
+	//nolint:revive // Windows API constants
+	SWP_NOMOVE = 0x0002
+	//nolint:revive // Windows API constants
+	SWP_NOZORDER = 0x0004
+	//nolint:revive // Windows API constants
+	SWP_NOACTIVATE = 0x0010
+	//nolint:revive // Windows API constants
+	SWP_FRAMECHANGED = 0x0020
 
 	// QUERY_USER_NOTIFICATION_STATE enum
 	//nolint:revive // Windows API constants
@@ -710,12 +725,11 @@ func (a *App) Startup(ctx context.Context) {
 		if hwnd != 0 {
 			gwl := int32(GWL_EXSTYLE)
 			style, _, _ := procGetWindowLong.Call(hwnd, uintptr(gwl))
-			style = (style | WS_EX_TOOLWINDOW | WS_EX_TOPMOST) &^ WS_EX_NOACTIVATE &^ WS_EX_APPWINDOW
+			style = (style | WS_EX_TOOLWINDOW | WS_EX_TOPMOST) &^ WS_EX_NOACTIVATE &^ WS_EX_APPWINDOW &^ WS_EX_LAYERED
 			_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwl), style)
 
 			a.setupForegroundEventHook(hwnd)
 
-			procSetWindowPos := user32.NewProc("SetWindowPos")
 			// HWND_TOPMOST = ^uintptr(0), SWP_NOACTIVATE (0x0010) | SWP_FRAMECHANGED (0x0020) | SWP_SHOWWINDOW (0x0040)
 			vLeft, _, vWidth, _, _, _ := getDisplayMetrics()
 			overlayHeight := 650
@@ -733,6 +747,7 @@ func (a *App) Startup(ctx context.Context) {
 			}
 
 			go services.StartServicesListener(ctx)
+			go services.StartClipboardListener(ctx)
 
 			a.updateWindowRegion()
 		}
@@ -782,11 +797,13 @@ func (a *App) onReady() {
 }
 
 func (a *App) onExit() {
+	services.StopClipboardListener()
 	services.StopServicesListener()
 }
 
 // Shutdown is called when Wails application shuts down.
 func (a *App) Shutdown(_ context.Context) {
+	services.StopClipboardListener()
 	services.StopServicesListener()
 	systray.Quit()
 }
@@ -802,6 +819,11 @@ func (a *App) SetWidgetBounds(width int, height int, radius int, scale float64, 
 		a.scale = scale
 	}
 	a.updateWindowRegion()
+}
+
+// SetClipboardMonitoring updates the native clipboard copy and paste monitoring state.
+func (a *App) SetClipboardMonitoring(copyEnabled bool, pasteEnabled bool) {
+	services.SetClipboardMonitoring(copyEnabled, pasteEnabled)
 }
 
 // SetAutostart registers or unregisters the app in Windows Startup Registry
@@ -934,6 +956,50 @@ func (a *App) SetDragCapture(enable bool) {
 	}
 }
 
+// SetIgnoreMouseEvents toggles click-through for the entire window and its children using Win32 WS_EX_TRANSPARENT.
+// When enabled, all mouse clicks pass straight through to underlying applications and the clipping region is lifted.
+func (a *App) SetIgnoreMouseEvents(ignore bool) {
+	hwnd := getMyWindowHwnd()
+	if hwnd == 0 {
+		return
+	}
+
+	setExStyle := func(h uintptr) {
+		gwl := int32(GWL_EXSTYLE)
+		style, _, _ := procGetWindowLong.Call(h, uintptr(gwl))
+		if ignore {
+			style = (style | WS_EX_TRANSPARENT) &^ WS_EX_LAYERED
+		} else {
+			style = style &^ WS_EX_TRANSPARENT &^ WS_EX_LAYERED
+		}
+		_, _, _ = procSetWindowLong.Call(h, uintptr(gwl), style)
+		_, _, _ = procSetWindowPos.Call(
+			h, 0, 0, 0, 0, 0,
+			uintptr(SWP_NOSIZE|SWP_NOMOVE|SWP_NOZORDER|SWP_NOACTIVATE|SWP_FRAMECHANGED),
+		)
+	}
+
+	setExStyle(hwnd)
+
+	// Propagate to all child windows (e.g. WebView2 Chrome_WidgetWin_0 and intermediate windows)
+	cb := syscall.NewCallback(func(childHwnd uintptr, _ uintptr) uintptr {
+		setExStyle(childHwnd)
+		return 1
+	})
+	_, _, _ = procEnumChildWindows.Call(hwnd, cb, 0)
+
+	if ignore {
+		// Lift clipping region completely so island renders seamlessly without edge clipping during flight
+		_, _, _ = procSetWindowRgn.Call(hwnd, 0, 1)
+	} else {
+		// Invalidate region cache and restore tight hit-testing region around the pill
+		regionMu.Lock()
+		lastRegion = regionCache{}
+		regionMu.Unlock()
+		a.updateWindowRegion()
+	}
+}
+
 // TrimMemory requests Windows to reclaim unused physical RAM pages from the Vinta process working set.
 func (a *App) TrimMemory() {
 	hProcess, _, _ := procGetCurrentProcess.Call()
@@ -993,9 +1059,9 @@ func (a *App) updateWindowRegion() {
 	hwnd := getMyWindowHwnd()
 	if hwnd != 0 {
 		padding := OutsidePadding
-		// Use compact padding (6px) when hidden to allow ambient glow and smooth drag without clipping
+		// Use generous compact padding (16px) when hidden to allow ambient glow and prevent clipping during motion and glides
 		if a.pillW > 0 && a.pillW <= 110 && a.pillH <= 30 {
-			padding = 6
+			padding = 16
 		}
 		setClickRegion(hwnd, a.pillW, a.pillH, a.pillR, a.offsetX, a.devW, a.devH, a.devExtra, padding, a.scale)
 	}

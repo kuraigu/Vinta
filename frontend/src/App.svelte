@@ -13,6 +13,7 @@
     CheckPostUpdateInstalled,
     TrimMemory,
     SetIsHidden,
+    SetIgnoreMouseEvents,
     GetDisplayLayout,
     RequestMediaUpdate
   } from '../wailsjs/go/backend/App.js'
@@ -54,6 +55,8 @@
     allowDragPositionStore,
     notifSoundStore,
     notifVolumeStore,
+    clipboardCopyNotifStore,
+    clipboardPasteNotifStore,
     glowIntensityStore,
     type IslandConfig,
     homeWidgetsVisibilityStore,
@@ -938,6 +941,82 @@
       }
     )
 
+    EventsOn(
+      'clipboard:event',
+      (payload: {
+        action?: string
+        appName?: string
+        aumid?: string
+        title?: string
+        message?: string
+        contentType?: string
+        contentSnippet?: string
+        canOpen?: boolean
+        timestamp?: number
+      }) => {
+        if (!payload) return
+
+        const isCopy = payload.action === 'copy'
+        const isPaste = payload.action === 'paste'
+        const isCopyAllowed = get(clipboardCopyNotifStore)
+        const isPasteAllowed = get(clipboardPasteNotifStore)
+
+        if ((isCopy && !isCopyAllowed) || (isPaste && !isPasteAllowed)) {
+          return
+        }
+
+        // Consolidated under "Clipboard" regardless of originating application
+        const appName = 'Clipboard'
+        const aumid = 'Clipboard'
+        const title =
+          payload.title ||
+          (isPaste ? 'Pasted from Clipboard' : 'Copied to Clipboard')
+
+        // Enforce strict character limit on preview snippet
+        const rawMsg = (payload.message || '').trim()
+        const charLimit = 100
+        const message =
+          rawMsg.length > charLimit
+            ? rawMsg.slice(0, charLimit - 3) + '...'
+            : rawMsg
+
+        const newNotif = {
+          id: Date.now() + Math.floor(Math.random() * 1000),
+          appName,
+          aumid,
+          title,
+          message,
+          canOpen: false,
+          timestamp: payload.timestamp || Date.now()
+        }
+
+        notifData.update((n) => [newNotif, ...n].slice(0, 99))
+
+        const isNotifEnabled = get(pageVisibilityStore).notifications
+        const mediaIsActive =
+          activePage === MediaPage && $globalMediaStore.isPlaying
+        if (
+          !$dndStore &&
+          $notifAutoWakeStore &&
+          isNotifEnabled &&
+          !expanded &&
+          !mediaIsActive
+        ) {
+          showWidget()
+          navigateTo(NotificationPage, notifConfig, false)
+          triggerGlow()
+        }
+
+        if ($notifSoundStore && !$dndStore && isNotifEnabled) {
+          playNotifChime($notifVolumeStore)
+        }
+        if (isNotifEnabled) {
+          showWidget()
+          hideTrigger++
+        }
+      }
+    )
+
     EventsOn('notification_permission_denied', () => {
       notificationPermissionDenied.set(true)
       if (get(pageVisibilityStore).notifications) {
@@ -1189,6 +1268,7 @@
     isTrackRegionActive = false
     dragHistory = []
     setOSDragCapture(false)
+    SetIgnoreMouseEvents(false)
 
     // Persist final resting offset to store once motion is fully settled
     $hiddenPillOffsetXStore = clampedOffsetX
@@ -1302,6 +1382,7 @@
     clearTimeout(dragWatchdogTimeout)
     dragWatchdogTimeout = undefined
     setOSDragCapture(false)
+    isTrackRegionActive = false
     if (hasPointerCaptured) {
       hasPointerCaptured = false
       try {
@@ -1333,6 +1414,9 @@
         const maxVelocity = 2.2 // px/ms
         velocity = Math.max(-maxVelocity, Math.min(maxVelocity, velocity))
         isInFlight = true
+
+        // True click-through: ignore mouse events and lift clipping region during flight
+        SetIgnoreMouseEvents(true)
 
         const friction = 0.0035
 
@@ -1367,14 +1451,6 @@
               stopInertia()
               return
             }
-
-            // Dynamic OnDrag: expand bounds with velocity-based margin to prevent leading-edge clipping
-            const motionMargin = Math.min(
-              60,
-              Math.round(Math.abs(velocity) * 20) + 30
-            )
-            const { w, h, r } = getBoundsForState()
-            updateBounds(w + motionMargin, h, r, clampedOffsetX)
           }
 
           inertiaAnimFrame = requestAnimationFrame(runInertiaStep)

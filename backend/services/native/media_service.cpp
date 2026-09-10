@@ -412,6 +412,7 @@ static void UpdateCurrentSession() {
         if (!selectedId.empty()) {
             try {
                 auto sessions = g_sessionManager.GetSessions();
+                // Pass 1: exact uniqueId or non-empty title match (prevents multi-tab browser collisions)
                 for (auto const& s : sessions) {
                     try {
                         std::string sId = Utf16ToUtf8(s.SourceAppUserModelId().c_str());
@@ -427,12 +428,23 @@ static void UpdateCurrentSession() {
 
                         std::string uniqueId = ComputeSessionUniqueId(sId, sTitle, sArtist);
                         if (selectedId == uniqueId ||
-                            (!sTitle.empty() && selectedId.find(sTitle) != std::string::npos) ||
-                            (!sId.empty() && selectedId.rfind(sId, 0) == 0)) {
+                            (!sTitle.empty() && selectedId.find(sTitle) != std::string::npos)) {
                             chosenSession = s;
                             break;
                         }
                     } catch (...) {}
+                }
+                // Pass 2: fallback to app ID match only if no title was available
+                if (!chosenSession) {
+                    for (auto const& s : sessions) {
+                        try {
+                            std::string sId = Utf16ToUtf8(s.SourceAppUserModelId().c_str());
+                            if (!sId.empty() && selectedId.rfind(sId, 0) == 0) {
+                                chosenSession = s;
+                                break;
+                            }
+                        } catch (...) {}
+                    }
                 }
             } catch (...) {}
         }
@@ -451,18 +463,45 @@ static void UpdateCurrentSession() {
                 std::lock_guard<std::mutex> sLock(g_selectedSessionMutex);
                 g_selectedSessionId.clear();
             }
-            // Check if Windows's own focused session is actively playing and valid
+
+            // Hysteresis Rule 1:
+            // If the current session is valid and actively Playing, prefer keeping it.
+            // Do NOT let background tabs or focus shifts interrupt active playback.
+            bool currentIsPlaying = false;
+            if (g_currentSession && IsValidMediaSession(g_currentSession)) {
+                try {
+                    auto curInfo = g_currentSession.GetPlaybackInfo();
+                    if (curInfo && curInfo.PlaybackStatus() == winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing) {
+                        currentIsPlaying = true;
+                    }
+                } catch (...) {}
+            }
+
+            // Check if Windows's focused session is actively playing and valid
+            winrt_media::GlobalSystemMediaTransportControlsSession focusedPlayingSession{nullptr};
             try {
-                winrt_media::GlobalSystemMediaTransportControlsSession focusedSession = g_sessionManager.GetCurrentSession();
-                if (focusedSession && IsValidMediaSession(focusedSession)) {
-                    auto info = focusedSession.GetPlaybackInfo();
+                winrt_media::GlobalSystemMediaTransportControlsSession focused = g_sessionManager.GetCurrentSession();
+                if (focused && IsValidMediaSession(focused)) {
+                    auto info = focused.GetPlaybackInfo();
                     if (info && info.PlaybackStatus() == winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing) {
-                        targetSession = focusedSession;
+                        focusedPlayingSession = focused;
                     }
                 }
             } catch (...) {}
 
-            // If focused session is not playing, scan other sessions for an actively playing session
+            if (currentIsPlaying) {
+                // If another session started playing AND is the focused session, switch to it.
+                // Otherwise, retain current playing session to avoid tab jitter.
+                if (focusedPlayingSession && focusedPlayingSession != g_currentSession) {
+                    targetSession = focusedPlayingSession;
+                } else {
+                    targetSession = g_currentSession;
+                }
+            } else if (focusedPlayingSession) {
+                targetSession = focusedPlayingSession;
+            }
+
+            // If still no target session found, scan other sessions for an actively playing session
             if (!targetSession) {
                 try {
                     auto sessions = g_sessionManager.GetSessions();
@@ -480,10 +519,12 @@ static void UpdateCurrentSession() {
                 } catch (...) {}
             }
 
-            // Fallback if none are actively playing
+            // Hysteresis Rule 2:
+            // When paused (no session is playing), do NOT randomly bounce between background browser tabs.
+            // Retain the existing session if it is still alive and valid.
             if (!targetSession) {
-                if (chosenSession && IsValidMediaSession(chosenSession)) {
-                    targetSession = chosenSession;
+                if (g_currentSession && IsValidMediaSession(g_currentSession)) {
+                    targetSession = g_currentSession;
                 } else {
                     winrt_media::GlobalSystemMediaTransportControlsSession focusedSession{nullptr};
                     try {

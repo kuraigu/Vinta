@@ -15,7 +15,8 @@
     Globe,
     Play,
     Settings,
-    Terminal
+    Terminal,
+    Clipboard
   } from 'lucide-svelte'
   import { notifData, notificationPermissionDenied, dndStore } from '../store'
   import { swipe } from '../utils/useSwipe'
@@ -425,11 +426,16 @@
     const effectiveAppIcon = nativeUri || null
     const effectiveIcon = defaultIcon || nativeUri || null
 
+    const isClipboard =
+      (notif.appName || '').toLowerCase() === 'clipboard' ||
+      (notif.aumid || '').toLowerCase() === 'clipboard'
+    const category = isClipboard ? 'clipboard' : 'system'
+
     return {
       name: displayName,
       icon: effectiveIcon,
       appIcon: effectiveAppIcon,
-      category: 'system'
+      category
     }
   }
 </script>
@@ -453,6 +459,8 @@
     <Settings {size} color="var(--c-text-secondary)" />
   {:else if cat === 'dev'}
     <Terminal {size} color="var(--c-text-secondary)" />
+  {:else if cat === 'clipboard'}
+    <Clipboard {size} color="var(--c-text-secondary)" />
   {:else}
     <MessageSquareDot {size} color="var(--c-text-secondary)" />
   {/if}

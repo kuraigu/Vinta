@@ -109,7 +109,8 @@ jobs:
         run: |
           $version = "$env:RELEASE_VERSION"
           $buildDate = (Get-Date -Format 'yy.MMdd')
-          $ldflags = "-X 'Vinta/backend.BuildType=Official' -X 'Vinta/backend.AppVersion=$version' -X 'Vinta/backend.GitCommit=${{ github.sha }}' -X 'Vinta/backend.BuildTime=$buildDate' -X 'backend.BuildType=Official' -X 'backend.AppVersion=$version' -X 'backend.GitCommit=${{ github.sha }}' -X 'backend.BuildTime=$buildDate'"
+          $updaterToken = "${{ secrets.UPDATER_TOKEN }}"
+          $ldflags = "-X 'Vinta/backend.BuildType=Official' -X 'Vinta/backend.AppVersion=$version' -X 'Vinta/backend.GitCommit=${{ github.sha }}' -X 'Vinta/backend.BuildTime=$buildDate' -X 'Vinta/backend.UpdaterToken=$updaterToken' -X 'backend.BuildType=Official' -X 'backend.AppVersion=$version' -X 'backend.GitCommit=${{ github.sha }}' -X 'backend.BuildTime=$buildDate' -X 'backend.UpdaterToken=$updaterToken'"
           wails build -nsis -ldflags $ldflags
 
       - name: Sign Executables and Installer
@@ -178,6 +179,112 @@ jobs:
           }
           Get-Content "SHA256SUMS.txt"
 
+      - name: Generate Formatted Release Notes
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $customNotes = "${{ github.event.inputs.release_notes }}".Trim()
+          $version = "$env:RELEASE_VERSION"
+
+          # Version badge encoding (escape dashes as -- for shields.io)
+          $badgeVersion = $version -replace '-', '--'
+          $versionBadge = "![Version](https://img.shields.io/badge/version-$badgeVersion-blue)"
+
+          # Status badge detection
+          if ($version -match 'alpha') {
+              $statusBadge = "![Status](https://img.shields.io/badge/status-alpha-orange)"
+          } elseif ($version -match 'beta') {
+              $statusBadge = "![Status](https://img.shields.io/badge/status-beta-yellow)"
+          } else {
+              $statusBadge = "![Status](https://img.shields.io/badge/status-stable-brightgreen)"
+          }
+
+          if ($customNotes) {
+              $finalBody = "$versionBadge`n$statusBadge`n`n$customNotes"
+              Set-Content -Path "release-notes.md" -Value $finalBody -Encoding utf8
+              exit 0
+          }
+
+          # Auto-generate notes using GitHub Releases API
+          $notesJson = gh api "repos/${{ github.repository }}/releases/generate-notes" -f "tag_name=$version" 2>$null | ConvertFrom-Json
+          if (-not $notesJson -or -not $notesJson.body) {
+              $finalBody = "$versionBadge`n$statusBadge`n`n## What's Changed`n* Official Release $version"
+              Set-Content -Path "release-notes.md" -Value $finalBody -Encoding utf8
+              exit 0
+          }
+
+          $rawBody = $notesJson.body
+          $lines = $rawBody -split "`n"
+
+          $featureLines = [System.Collections.Generic.List[string]]::new()
+          $depLines = [System.Collections.Generic.List[string]]::new()
+          $changelogLine = ""
+
+          foreach ($line in $lines) {
+              $trimmed = $line.Trim()
+              if ($trimmed -like "*Full Changelog*:*") {
+                  $changelogLine = $trimmed
+                  continue
+              }
+              if ($trimmed -eq "## What's Changed" -or $trimmed -eq "") {
+                  continue
+              }
+
+              if ($trimmed.StartsWith("* ")) {
+                  # Format PR line: change "by @... in https://github.com/.../pull/123" to "([#123](https://github.com/.../pull/123))"
+                  $formatted = $trimmed
+                  if ($formatted -match '^(.*?)\s+by\s+@[^\s]+\s+in\s+(https://github\.com/[^/]+/[^/]+/pull/(\d+))$') {
+                      $formatted = "$($Matches[1]) ([#$($Matches[3])]($($Matches[2])))"
+                  }
+
+                  # Separate dependency updates
+                  if ($formatted -match 'build\(deps' -or $formatted -match 'bump\s+' -or $formatted -match 'dependabot') {
+                      $depLines.Add($formatted)
+                  } else {
+                      $featureLines.Add($formatted)
+                  }
+              }
+          }
+
+          $sb = [System.Text.StringBuilder]::new()
+          [void]$sb.AppendLine($versionBadge)
+          [void]$sb.AppendLine($statusBadge)
+          [void]$sb.AppendLine()
+          [void]$sb.AppendLine("## What's Changed")
+
+          if ($featureLines.Count -gt 0) {
+              foreach ($f in $featureLines) {
+                  [void]$sb.AppendLine($f)
+              }
+          } else {
+              [void]$sb.AppendLine("* General improvements and bug fixes.")
+          }
+
+          if ($depLines.Count -gt 0) {
+              [void]$sb.AppendLine()
+              [void]$sb.AppendLine("---")
+              [void]$sb.AppendLine()
+              [void]$sb.AppendLine("<details>")
+              [void]$sb.AppendLine("<summary><b>Dependency Updates</b></summary>")
+              [void]$sb.AppendLine()
+              foreach ($d in $depLines) {
+                  [void]$sb.AppendLine($d)
+              }
+              [void]$sb.AppendLine()
+              [void]$sb.AppendLine("</details>")
+          }
+
+          if ($changelogLine) {
+              [void]$sb.AppendLine()
+              [void]$sb.AppendLine($changelogLine)
+          }
+
+          $finalBody = $sb.ToString()
+          Set-Content -Path "release-notes.md" -Value $finalBody -Encoding utf8
+          Write-Host "Generated Release Notes:"
+          Write-Host $finalBody
+
       - name: Create Release
         uses: softprops/action-gh-release@v3
         with:
@@ -185,8 +292,7 @@ jobs:
           name: Release ${{ env.RELEASE_VERSION }}
           draft: ${{ github.event.inputs.draft }}
           prerelease: ${{ github.event.inputs.prerelease }}
-          body: ${{ github.event.inputs.release_notes }}
+          body_path: release-notes.md
           files: release-dist/*
-          generate_release_notes: ${{ github.event.inputs.release_notes == '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
