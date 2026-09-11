@@ -13,7 +13,6 @@
     CheckPostUpdateInstalled,
     TrimMemory,
     SetIsHidden,
-    SetIgnoreMouseEvents,
     GetDisplayLayout,
     RequestMediaUpdate,
     StartInertiaGlide,
@@ -207,9 +206,7 @@
   // Derive the active monitor based on island composite desktop coordinates
   let activeMonitor = $derived.by(() => {
     const screenCenterX =
-      displayLayout.virtualLeft +
-      displayLayout.primaryCenter +
-      clampedOffsetX
+      displayLayout.virtualLeft + displayLayout.primaryCenter + clampedOffsetX
     if (displayLayout.monitors && displayLayout.monitors.length > 0) {
       for (const mon of displayLayout.monitors) {
         if (screenCenterX >= mon.left && screenCenterX < mon.left + mon.width) {
@@ -574,18 +571,6 @@
     )
   })
 
-  let minDevPillOffset = $derived.by(() => {
-    const halfW = 430 / 2
-    return Math.floor(12 + halfW - displayLayout.primaryCenter)
-  })
-
-  let maxDevPillOffset = $derived.by(() => {
-    const halfW = 430 / 2
-    return Math.floor(
-      displayLayout.virtualWidth - 12 - halfW - displayLayout.primaryCenter
-    )
-  })
-
   let currentLiveOffsetX = $state(0)
 
   // Smart offset safety: smoothly clamp main island back into bounds if content expands near screen edge
@@ -619,14 +604,6 @@
     return Math.max(
       minAllowedOffsetForCurrentW,
       Math.min(maxAllowedOffsetForCurrentW, currentLiveOffsetX)
-    )
-  })
-
-  let devClampedOffsetX = $derived.by(() => {
-    if (Math.abs(clampedOffsetX) < 3) return 0
-    return Math.max(
-      minDevPillOffset,
-      Math.min(maxDevPillOffset, clampedOffsetX)
     )
   })
 

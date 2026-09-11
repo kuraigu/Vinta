@@ -393,7 +393,9 @@ func readClipboardContent(action, appName, processName string) (ClipboardEventPa
 	if !openSuccess {
 		return ClipboardEventPayload{}, false
 	}
-	defer procCloseClipboard.Call()
+	defer func() {
+		_, _, _ = procCloseClipboard.Call()
+	}()
 
 	// Privacy guard: Ignore passwords from password managers (1Password, Bitwarden, KeePass)
 	formatIgnoreName, _ := syscall.UTF16PtrFromString("Clipboard Viewer Ignore")
@@ -420,8 +422,14 @@ func readClipboardContent(action, appName, processName string) (ClipboardEventPa
 		displayTitle = "Pasted from Clipboard"
 	}
 
-	effectiveAppName := "Clipboard"
-	processName = "Clipboard"
+	effectiveAppName := appName
+	if effectiveAppName == "" {
+		effectiveAppName = "Clipboard"
+	}
+	effectiveProcessName := processName
+	if effectiveProcessName == "" {
+		effectiveProcessName = "Clipboard"
+	}
 
 	// 1. Check for Unicode Text
 	availText, _, _ := procIsClipboardFormatAvailable.Call(uintptr(cfUnicodeText))
@@ -441,7 +449,7 @@ func readClipboardContent(action, appName, processName string) (ClipboardEventPa
 					return ClipboardEventPayload{
 						Action:         action,
 						AppName:        effectiveAppName,
-						Aumid:          processName,
+						Aumid:          effectiveProcessName,
 						Title:          displayTitle,
 						Message:        preview,
 						ContentType:    "text",
@@ -462,7 +470,9 @@ func readClipboardContent(action, appName, processName string) (ClipboardEventPa
 			rawPtr, _, _ := syscall.SyscallN(procGlobalLock.Addr(), hData)
 			if rawPtr != 0 {
 				hDrop := rawPtr
-				defer procGlobalUnlock.Call(hData)
+				defer func() {
+					_, _, _ = procGlobalUnlock.Call(hData)
+				}()
 
 				retCount, _, _ := procDragQueryFileW.Call(hDrop, 0xFFFFFFFF, 0, 0)
 				fileCount := int(retCount)
@@ -496,7 +506,7 @@ func readClipboardContent(action, appName, processName string) (ClipboardEventPa
 				return ClipboardEventPayload{
 					Action:         action,
 					AppName:        effectiveAppName,
-					Aumid:          processName,
+					Aumid:          effectiveProcessName,
 					Title:          itemTitle,
 					Message:        formatSnippet(msg, 100),
 					ContentType:    "files",
@@ -520,7 +530,7 @@ func readClipboardContent(action, appName, processName string) (ClipboardEventPa
 		return ClipboardEventPayload{
 			Action:         action,
 			AppName:        effectiveAppName,
-			Aumid:          processName,
+			Aumid:          effectiveProcessName,
 			Title:          imgTitle,
 			Message:        "Image on clipboard",
 			ContentType:    "image",
@@ -555,7 +565,9 @@ func getProcessInfo(hwnd uintptr) (appName string, processName string) {
 		uintptr(pid),
 	)
 	if hProcess != 0 {
-		defer procCloseHandle.Call(hProcess)
+		defer func() {
+			_, _, _ = procCloseHandle.Call(hProcess)
+		}()
 
 		var pathBuf [1024]uint16
 		size := uint32(len(pathBuf))
