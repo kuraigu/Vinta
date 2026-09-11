@@ -1035,8 +1035,9 @@ func (a *App) SetDragCapture(enable bool) {
 }
 
 type glideController struct {
-	mu     sync.Mutex
-	stopCh chan struct{}
+	mu         sync.Mutex
+	stopCh     chan struct{}
+	generation uint64
 }
 
 var activeGlideController glideController
@@ -1048,6 +1049,8 @@ func (a *App) StartInertiaGlide(startOffset float64, velocity float64, minOffset
 		close(activeGlideController.stopCh)
 		activeGlideController.stopCh = nil
 	}
+	activeGlideController.generation++
+	myGen := activeGlideController.generation
 	stopCh := make(chan struct{})
 	activeGlideController.stopCh = stopCh
 	activeGlideController.mu.Unlock()
@@ -1068,9 +1071,13 @@ func (a *App) StartInertiaGlide(startOffset float64, velocity float64, minOffset
 			}
 
 			if hasDwmFlush {
-				_, _, _ = procDwmFlush.Call()
+				ret, _, _ := procDwmFlush.Call()
+				if ret != 0 {
+					// Fall back to sleep if DWM composition drops or returns an error
+					time.Sleep(8 * time.Millisecond)
+				}
 			} else {
-				time.Sleep(7 * time.Millisecond)
+				time.Sleep(8 * time.Millisecond)
 			}
 
 			select {
@@ -1079,46 +1086,70 @@ func (a *App) StartInertiaGlide(startOffset float64, velocity float64, minOffset
 			default:
 			}
 
+			// Validate generation before updating window state or emitting events
+			activeGlideController.mu.Lock()
+			if activeGlideController.generation != myGen {
+				activeGlideController.mu.Unlock()
+				return
+			}
+			activeGlideController.mu.Unlock()
+
 			now := time.Now()
 			dt := float64(now.Sub(lastTime).Nanoseconds()) / 1e6
 			lastTime = now
-			if dt <= 0.1 {
+			if dt < 1.0 {
+				time.Sleep(2 * time.Millisecond)
 				continue
 			}
-			if dt > 32 {
-				dt = 32
-			}
 
-			decay := math.Exp(-friction * dt)
-			curVel *= decay
-			curOffset += curVel * dt
+			// Sub-step physics if dt is large due to a system lag spike
+			if dt > 32 {
+				steps := int(math.Ceil(dt / 16.0))
+				if steps > 4 {
+					steps = 4
+				}
+				stepDt := dt / float64(steps)
+				for s := 0; s < steps; s++ {
+					curVel *= math.Exp(-friction * stepDt)
+					curOffset += curVel * stepDt
+				}
+			} else {
+				curVel *= math.Exp(-friction * dt)
+				curOffset += curVel * dt
+			}
 
 			// Clamp to monitor boundaries
 			if curOffset >= maxOffset {
 				curOffset = maxOffset
 				a.offsetX = int(curOffset)
 				a.updateWindowRegion()
-				if a.ctx != nil {
+				activeGlideController.mu.Lock()
+				if activeGlideController.generation == myGen && a.ctx != nil {
 					runtime.EventsEmit(a.ctx, "inertia-stopped", curOffset)
 				}
+				activeGlideController.mu.Unlock()
 				return
 			}
 			if curOffset <= minOffset {
 				curOffset = minOffset
 				a.offsetX = int(curOffset)
 				a.updateWindowRegion()
-				if a.ctx != nil {
+				activeGlideController.mu.Lock()
+				if activeGlideController.generation == myGen && a.ctx != nil {
 					runtime.EventsEmit(a.ctx, "inertia-stopped", curOffset)
 				}
+				activeGlideController.mu.Unlock()
 				return
 			}
 
-			if math.Abs(curVel) < 0.035 {
-				a.offsetX = int(curOffset)
+			if math.Abs(curVel) < 0.04 {
+				a.offsetX = int(math.Round(curOffset))
 				a.updateWindowRegion()
-				if a.ctx != nil {
-					runtime.EventsEmit(a.ctx, "inertia-stopped", curOffset)
+				activeGlideController.mu.Lock()
+				if activeGlideController.generation == myGen && a.ctx != nil {
+					runtime.EventsEmit(a.ctx, "inertia-stopped", float64(a.offsetX))
 				}
+				activeGlideController.mu.Unlock()
 				return
 			}
 
@@ -1127,9 +1158,11 @@ func (a *App) StartInertiaGlide(startOffset float64, velocity float64, minOffset
 
 			if now.Sub(lastEmit) >= 15*time.Millisecond {
 				lastEmit = now
-				if a.ctx != nil {
+				activeGlideController.mu.Lock()
+				if activeGlideController.generation == myGen && a.ctx != nil {
 					runtime.EventsEmit(a.ctx, "inertia-tick", curOffset)
 				}
+				activeGlideController.mu.Unlock()
 			}
 		}
 	}()
@@ -1142,6 +1175,7 @@ func (a *App) StopInertiaGlide() float64 {
 		close(activeGlideController.stopCh)
 		activeGlideController.stopCh = nil
 	}
+	activeGlideController.generation++
 	offset := float64(a.offsetX)
 	activeGlideController.mu.Unlock()
 	return offset

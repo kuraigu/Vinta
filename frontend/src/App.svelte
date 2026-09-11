@@ -1118,12 +1118,14 @@
     })
 
     EventsOn('inertia-tick', (curOffset: number) => {
+      if (isDraggingHidden || !isInFlight) return
       if (typeof curOffset === 'number' && !isNaN(curOffset)) {
         currentLiveOffsetX = curOffset
       }
     })
 
     EventsOn('inertia-stopped', (finalOffset: number) => {
+      if (isDraggingHidden || !isInFlight) return
       if (typeof finalOffset === 'number' && !isNaN(finalOffset)) {
         currentLiveOffsetX = Math.round(finalOffset)
         $hiddenPillOffsetXStore = currentLiveOffsetX
@@ -1329,7 +1331,11 @@
     if (typeof StopInertiaGlide === 'function') {
       StopInertiaGlide()
         .then((offset) => {
-          if (typeof offset === 'number' && !isNaN(offset)) {
+          if (
+            !isDraggingHidden &&
+            typeof offset === 'number' &&
+            !isNaN(offset)
+          ) {
             currentLiveOffsetX = Math.round(offset)
             $hiddenPillOffsetXStore = currentLiveOffsetX
           }
@@ -1371,7 +1377,12 @@
     }
 
     if (isInFlight) {
-      stopInertia()
+      isInFlight = false
+      clearTimeout(inertiaSafetyTimeout)
+      inertiaSafetyTimeout = undefined
+      if (typeof StopInertiaGlide === 'function') {
+        StopInertiaGlide().catch(() => {})
+      }
     }
     setOSDragCapture(true)
     isDraggingHidden = true
@@ -1457,22 +1468,27 @@
       const now = performance.now()
       dragHistory.push({ x: e.screenX, time: now })
 
-      // Sample points within the last 150ms of release
-      const recent = dragHistory.filter((p) => now - p.time <= 150)
       let velocity = 0
+      const secondLastMove =
+        dragHistory.length >= 2 ? dragHistory[dragHistory.length - 2] : null
+      const isStalled = secondLastMove && now - secondLastMove.time > 70
 
-      if (recent.length >= 2) {
-        const oldest = recent[0]
-        const newest = recent[recent.length - 1]
-        const dt = newest.time - oldest.time
-        const dx = newest.x - oldest.x
-        if (dt > 15) {
-          velocity = dx / dt // true px/ms
+      if (!isStalled) {
+        // Sample points within the last 90ms of release
+        const recent = dragHistory.filter((p) => now - p.time <= 90)
+        if (recent.length >= 2) {
+          const oldest = recent[0]
+          const newest = recent[recent.length - 1]
+          const dt = newest.time - oldest.time
+          const dx = newest.x - oldest.x
+          if (dt >= 15 && dt <= 120) {
+            velocity = dx / dt // true px/ms
+          }
         }
       }
 
-      if (Math.abs(velocity) >= 0.08) {
-        const maxVelocity = 2.2 // px/ms
+      if (Math.abs(velocity) >= 0.1) {
+        const maxVelocity = 1.7 // px/ms
         velocity = Math.max(-maxVelocity, Math.min(maxVelocity, velocity))
         isInFlight = true
 
