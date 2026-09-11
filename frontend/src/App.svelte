@@ -54,6 +54,8 @@
     allowDragPositionStore,
     notifSoundStore,
     notifVolumeStore,
+    clipboardCopyNotifStore,
+    clipboardPasteNotifStore,
     glowIntensityStore,
     type IslandConfig,
     homeWidgetsVisibilityStore,
@@ -83,9 +85,10 @@
       }
     }
   }
-  $effect(() => {
+  function handleDebugBoundsOverlayEffect() {
     syncDebugBoundsOverlay($debugBoundsOverlay)
-  })
+  }
+  $effect(handleDebugBoundsOverlayEffect)
 
   // Dynamic Routing: The active app that the island is displaying
   let activePage = $state<Component>(HomePage)
@@ -150,12 +153,41 @@
     return $autoHideStore
   })
 
-  let displayLayout = $state({
+  interface MonitorInfo {
+    id: number
+    name: string
+    left: number
+    top: number
+    width: number
+    height: number
+    isPrimary: boolean
+  }
+
+  interface DisplayLayoutInfo {
+    virtualLeft: number
+    virtualTop: number
+    virtualWidth: number
+    virtualHeight: number
+    primaryCenter: number
+    currentMonitor?: MonitorInfo
+    monitors: MonitorInfo[]
+  }
+
+  let displayLayout = $state<DisplayLayoutInfo>({
     virtualLeft: 0,
     virtualTop: 0,
     virtualWidth: 1920,
     virtualHeight: 1080,
     primaryCenter: 960,
+    currentMonitor: {
+      id: 1,
+      name: 'Primary Display',
+      left: 0,
+      top: 0,
+      width: 1920,
+      height: 1080,
+      isPrimary: true
+    },
     monitors: [
       {
         id: 1,
@@ -168,6 +200,33 @@
       }
     ]
   })
+
+  // Derive the active monitor based on island composite desktop coordinates
+  let activeMonitor = $derived.by(() => {
+    const screenCenterX =
+      displayLayout.virtualLeft + displayLayout.primaryCenter + clampedOffsetX
+    if (displayLayout.monitors && displayLayout.monitors.length > 0) {
+      for (const mon of displayLayout.monitors) {
+        if (screenCenterX >= mon.left && screenCenterX < mon.left + mon.width) {
+          return mon
+        }
+      }
+    }
+    return (
+      displayLayout.currentMonitor ||
+      displayLayout.monitors?.[0] || {
+        id: 1,
+        name: 'Primary Display',
+        left: 0,
+        top: 0,
+        width: 1920,
+        height: 1080,
+        isPrimary: true
+      }
+    )
+  })
+
+  setContext('activeMonitor', () => activeMonitor)
 
   let hideTrigger = $state(0)
 
@@ -304,7 +363,7 @@
 
   $effect(handleMediaIdleTransition)
 
-  function showWidget() {
+  async function showWidget() {
     if (!isHidden) return
     clearTimeout(dormantUnmountTimeout)
     dormantUnmountTimeout = undefined
@@ -320,10 +379,17 @@
     clearTimeout(inertiaSafetyTimeout)
     isInFlight = false
     isDraggingHidden = false
+
+    // Pre-expand the OS bounds before toggling isHidden so the expanding CSS transition is never clipped
+    const { w, h, r } = getBoundsForState(islandConfig, expanded, false)
+    await applyBounds(
+      Math.max(currentOSBounds.w, w),
+      Math.max(currentOSBounds.h, h),
+      r
+    )
+
     isHidden = false
     notifyOSHidden(false)
-    const { w, h, r } = getBoundsForState(islandConfig, expanded, false)
-    applyBounds(w, h, r)
     if (
       !$devTestingStore &&
       $globalMediaStore.isPlaying &&
@@ -359,12 +425,14 @@
     scale: number
   } | null = null
 
+  let pendingBoundsResolver: (() => void) | null = null
+
   function updateBounds(
     w: number,
     h: number,
     r: number,
     explicitOffset?: number
-  ) {
+  ): Promise<void> {
     const computedW = Math.round(w)
     const computedH = Math.round(h)
     const computedR = Math.round($shapeStore === 'box' ? 12 : r)
@@ -386,12 +454,18 @@
       lastDispatchedBounds.offset === offset &&
       lastDispatchedBounds.scale === scale
     ) {
-      return
+      return Promise.resolve()
     }
 
     if (isBoundsIpcPending) {
       pendingBoundsArgs = { w: computedW, h: computedH, r: computedR, offset }
-      return
+      return new Promise<void>((resolve) => {
+        const prevResolver = pendingBoundsResolver
+        pendingBoundsResolver = () => {
+          if (prevResolver) prevResolver()
+          resolve()
+        }
+      })
     }
 
     if (get(debugLogs)) {
@@ -413,7 +487,7 @@
       scale
     }
 
-    Promise.resolve(
+    return Promise.resolve(
       SetWidgetBounds(computedW, computedH, computedR, scale, offset)
     )
       .catch((err) => {
@@ -423,10 +497,16 @@
       })
       .finally(() => {
         isBoundsIpcPending = false
+        const resolver = pendingBoundsResolver
+        pendingBoundsResolver = null
         if (pendingBoundsArgs) {
           const next = pendingBoundsArgs
           pendingBoundsArgs = null
-          updateBounds(next.w, next.h, next.r, next.offset)
+          updateBounds(next.w, next.h, next.r, next.offset).then(() => {
+            if (resolver) resolver()
+          })
+        } else if (resolver) {
+          resolver()
         }
       })
   }
@@ -454,25 +534,49 @@
   let targetPendingBounds = { w: 0, h: 0, r: 0 }
   let boundsTransitionTimeout: number | undefined
 
-  function applyBounds(w: number, h: number, r: number) {
+  function applyBounds(w: number, h: number, r: number): Promise<void> {
     currentOSBounds = { w, h, r }
-    updateBounds(w, h, r, clampedOffsetX)
+    return updateBounds(w, h, r, clampedOffsetX)
+  }
+
+  function tryCommitShrinkingBounds() {
+    if (targetPendingBounds.w <= 0 || targetPendingBounds.h <= 0) return
+
+    // If islandNode is still visually animating down, do not shrink the OS region yet!
+    if (islandNode) {
+      const currentVisualW = islandNode.offsetWidth
+      const currentVisualH = islandNode.offsetHeight
+      if (
+        currentVisualW > targetPendingBounds.w + 1 ||
+        currentVisualH > targetPendingBounds.h + 1
+      ) {
+        // Postpone check to let laggy or heavy-load animation finish smoothly
+        clearTimeout(boundsTransitionTimeout)
+        boundsTransitionTimeout = window.setTimeout(
+          tryCommitShrinkingBounds,
+          100
+        )
+        return
+      }
+    }
+
+    clearTimeout(boundsTransitionTimeout)
+    applyBounds(
+      targetPendingBounds.w,
+      targetPendingBounds.h,
+      targetPendingBounds.r
+    )
+    targetPendingBounds = { w: 0, h: 0, r: 0 }
   }
 
   function handleIslandTransitionEnd(e: TransitionEvent) {
-    if (
-      e.target === e.currentTarget &&
-      (e.propertyName === 'width' || e.propertyName === 'height')
-    ) {
-      clearTimeout(boundsTransitionTimeout)
-      if (targetPendingBounds.w > 0 && targetPendingBounds.h > 0) {
-        applyBounds(
-          targetPendingBounds.w,
-          targetPendingBounds.h,
-          targetPendingBounds.r
-        )
-        targetPendingBounds = { w: 0, h: 0, r: 0 }
-      }
+    if (e.target !== e.currentTarget) return
+    if (e.propertyName !== 'width' && e.propertyName !== 'height') return
+
+    // If we are shrinking, ensure the visual island has actually finished transitioning
+    // to target dimensions before shrinking the OS region
+    if (targetPendingBounds.w > 0 && targetPendingBounds.h > 0) {
+      tryCommitShrinkingBounds()
     }
   }
 
@@ -505,18 +609,6 @@
 
   let maxAllowedOffsetForCurrentW = $derived.by(() => {
     const halfW = currentIslandW / 2
-    return Math.floor(
-      displayLayout.virtualWidth - 12 - halfW - displayLayout.primaryCenter
-    )
-  })
-
-  let minDevPillOffset = $derived.by(() => {
-    const halfW = 430 / 2
-    return Math.floor(12 + halfW - displayLayout.primaryCenter)
-  })
-
-  let maxDevPillOffset = $derived.by(() => {
-    const halfW = 430 / 2
     return Math.floor(
       displayLayout.virtualWidth - 12 - halfW - displayLayout.primaryCenter
     )
@@ -555,6 +647,18 @@
     return Math.max(
       minAllowedOffsetForCurrentW,
       Math.min(maxAllowedOffsetForCurrentW, currentLiveOffsetX)
+    )
+  })
+
+  let minDevPillOffset = $derived.by(() => {
+    const halfW = 430 / 2
+    return Math.floor(12 + halfW - displayLayout.primaryCenter)
+  })
+
+  let maxDevPillOffset = $derived.by(() => {
+    const halfW = 430 / 2
+    return Math.floor(
+      displayLayout.virtualWidth - 12 - halfW - displayLayout.primaryCenter
     )
   })
 
@@ -621,9 +725,16 @@
       clearTimeout(memoryTrimTimeout)
       memoryTrimTimeout = undefined
       isPageDormant = false
-      isHidden = false
-      notifyOSHidden(false)
       stopInertia()
+      const bounds = getBoundsForState(pageConfig, expand, false)
+      applyBounds(
+        Math.max(bounds.w, currentOSBounds.w),
+        Math.max(bounds.h, currentOSBounds.h),
+        bounds.r
+      ).then(() => {
+        isHidden = false
+        notifyOSHidden(false)
+      })
     }
     if (activePage !== page && expanded === expand) {
       triggerBlink()
@@ -646,11 +757,12 @@
           Math.max(w, currentOSBounds.w),
           Math.max(h, currentOSBounds.h),
           r
-        )
-      }
-      requestAnimationFrame(() => {
+        ).then(() => {
+          expanded = true
+        })
+      } else {
         expanded = true
-      })
+      }
     } else {
       expanded = false
     }
@@ -938,6 +1050,82 @@
       }
     )
 
+    EventsOn(
+      'clipboard:event',
+      (payload: {
+        action?: string
+        appName?: string
+        aumid?: string
+        title?: string
+        message?: string
+        contentType?: string
+        contentSnippet?: string
+        canOpen?: boolean
+        timestamp?: number
+      }) => {
+        if (!payload) return
+
+        const isCopy = payload.action === 'copy'
+        const isPaste = payload.action === 'paste'
+        const isCopyAllowed = get(clipboardCopyNotifStore)
+        const isPasteAllowed = get(clipboardPasteNotifStore)
+
+        if ((isCopy && !isCopyAllowed) || (isPaste && !isPasteAllowed)) {
+          return
+        }
+
+        // Consolidated under "Clipboard" regardless of originating application
+        const appName = 'Clipboard'
+        const aumid = 'Clipboard'
+        const title =
+          payload.title ||
+          (isPaste ? 'Pasted from Clipboard' : 'Copied to Clipboard')
+
+        // Enforce strict character limit on preview snippet
+        const rawMsg = (payload.message || '').trim()
+        const charLimit = 100
+        const message =
+          rawMsg.length > charLimit
+            ? rawMsg.slice(0, charLimit - 3) + '...'
+            : rawMsg
+
+        const newNotif = {
+          id: Date.now() + Math.floor(Math.random() * 1000),
+          appName,
+          aumid,
+          title,
+          message,
+          canOpen: false,
+          timestamp: payload.timestamp || Date.now()
+        }
+
+        notifData.update((n) => [newNotif, ...n].slice(0, 99))
+
+        const isNotifEnabled = get(pageVisibilityStore).notifications
+        const mediaIsActive =
+          activePage === MediaPage && $globalMediaStore.isPlaying
+        if (
+          !$dndStore &&
+          $notifAutoWakeStore &&
+          isNotifEnabled &&
+          !expanded &&
+          !mediaIsActive
+        ) {
+          showWidget()
+          navigateTo(NotificationPage, notifConfig, false)
+          triggerGlow()
+        }
+
+        if ($notifSoundStore && !$dndStore && isNotifEnabled) {
+          playNotifChime($notifVolumeStore)
+        }
+        if (isNotifEnabled) {
+          showWidget()
+          hideTrigger++
+        }
+      }
+    )
+
     EventsOn('notification_permission_denied', () => {
       notificationPermissionDenied.set(true)
       if (get(pageVisibilityStore).notifications) {
@@ -990,6 +1178,15 @@
         })
         .catch(() => {})
     }
+
+    EventsOn('monitor-changed', (mon: MonitorInfo) => {
+      if (mon && mon.id) {
+        displayLayout = {
+          ...displayLayout,
+          currentMonitor: mon
+        }
+      }
+    })
 
     const refreshDisplay = async () => {
       try {
@@ -1133,16 +1330,7 @@
     if (isShrinking) {
       targetPendingBounds = target
       clearTimeout(boundsTransitionTimeout)
-      boundsTransitionTimeout = window.setTimeout(() => {
-        if (targetPendingBounds.w > 0 && targetPendingBounds.h > 0) {
-          applyBounds(
-            targetPendingBounds.w,
-            targetPendingBounds.h,
-            targetPendingBounds.r
-          )
-          targetPendingBounds = { w: 0, h: 0, r: 0 }
-        }
-      }, 450)
+      boundsTransitionTimeout = window.setTimeout(tryCommitShrinkingBounds, 600)
     } else if (!isGrowing) {
       clearTimeout(boundsTransitionTimeout)
       targetPendingBounds = { w: 0, h: 0, r: 0 }
@@ -1166,9 +1354,54 @@
     }, 6000)
   }
 
+  function runJSInertiaGlide(initialVelocity: number) {
+    if (inertiaAnimFrame) {
+      cancelAnimationFrame(inertiaAnimFrame)
+      inertiaAnimFrame = undefined
+    }
+
+    let velocity = initialVelocity
+    const friction = 0.0038
+    let lastTime = performance.now()
+
+    function step(now: number) {
+      if (!isInFlight) return
+      const dt = Math.min(32, Math.max(1, now - lastTime))
+      lastTime = now
+
+      const decay = Math.exp(-friction * dt)
+      velocity *= decay
+      currentLiveOffsetX += velocity * dt
+
+      if (currentLiveOffsetX >= maxAllowedOffsetForCurrentW) {
+        currentLiveOffsetX = maxAllowedOffsetForCurrentW
+        stopInertia()
+        return
+      }
+      if (currentLiveOffsetX <= minAllowedOffsetForCurrentW) {
+        currentLiveOffsetX = minAllowedOffsetForCurrentW
+        stopInertia()
+        return
+      }
+
+      if (Math.abs(velocity) < 0.035) {
+        stopInertia()
+        return
+      }
+
+      inertiaAnimFrame = requestAnimationFrame(step)
+    }
+
+    inertiaAnimFrame = requestAnimationFrame(step)
+  }
+
   // Failsafe handler to cleanly cancel any drag operation, release OS mouse capture,
   // and guarantee the Win32 window clipping region escapes 100% width mode.
   function handleDragFailsafe() {
+    if (inertiaAnimFrame) {
+      cancelAnimationFrame(inertiaAnimFrame)
+      inertiaAnimFrame = undefined
+    }
     clearTimeout(dragWatchdogTimeout)
     dragWatchdogTimeout = undefined
     isDraggingHidden = false
@@ -1193,7 +1426,7 @@
     // Persist final resting offset to store once motion is fully settled
     $hiddenPillOffsetXStore = clampedOffsetX
 
-    // Commit final exact tight OS window bounds at resting position
+    // Commit final exact tight OS window bounds at resting position once
     const { w, h, r } = getBoundsForState()
     updateBounds(w, h, r, clampedOffsetX)
     currentOSBounds = { w, h, r }
@@ -1224,7 +1457,13 @@
     }
 
     if (inertiaAnimFrame) {
-      stopInertia()
+      cancelAnimationFrame(inertiaAnimFrame)
+      inertiaAnimFrame = undefined
+    }
+    if (isInFlight) {
+      isInFlight = false
+      clearTimeout(inertiaSafetyTimeout)
+      inertiaSafetyTimeout = undefined
     }
     setOSDragCapture(true)
     isDraggingHidden = true
@@ -1264,6 +1503,15 @@
           // Ignore
         }
       }
+
+      // While actively moving with mouse held down, expand Win32 clipping region to 100% width (-1) once.
+      // This provides an unclipped full-width runway across the screen with zero intermediate bounds IPC calls.
+      if (!isTrackRegionActive) {
+        isTrackRegionActive = true
+        const { h, r } = getBoundsForState()
+        updateBounds(-1, h, r, 0)
+      }
+
       const rawOffset = hiddenDragStartOffset + dx
       let targetOffset = rawOffset
 
@@ -1284,15 +1532,6 @@
         minAllowedOffsetForCurrentW,
         Math.min(maxAllowedOffsetForCurrentW, targetOffset)
       )
-
-      // While actively moving with mouse held down, expand Win32 clipping region to 100% width (-1) ONCE.
-      // This eliminates all redundant intermediate bounds updates during the entire drag gesture,
-      // saving dozens of IPC calls while providing an unclipped full-width runway.
-      if (!isTrackRegionActive) {
-        isTrackRegionActive = true
-        const { h, r } = getBoundsForState()
-        updateBounds(-1, h, r, 0)
-      }
     }
   }
 
@@ -1312,75 +1551,70 @@
     }
 
     if (dragMovedDistance > 6) {
-      const now = performance.now()
+      const now = e.timeStamp || performance.now()
       dragHistory.push({ x: e.screenX, time: now })
 
-      // Sample points within the last 150ms of release
-      const recent = dragHistory.filter((p) => now - p.time <= 150)
       let velocity = 0
+      const recent = dragHistory.filter((pt) => now - pt.time <= 100)
 
       if (recent.length >= 2) {
-        const oldest = recent[0]
-        const newest = recent[recent.length - 1]
-        const dt = newest.time - oldest.time
-        const dx = newest.x - oldest.x
-        if (dt > 15) {
-          velocity = dx / dt // true px/ms
+        const lastMove = recent[recent.length - 1]
+        const secondLast = recent[recent.length - 2]
+        const isStalled =
+          lastMove.time - secondLast.time > 60 &&
+          Math.abs(lastMove.x - secondLast.x) < 3
+
+        if (!isStalled) {
+          let finalDir = 0
+          for (let i = recent.length - 1; i >= 1; i--) {
+            const stepDx = recent[i].x - recent[i - 1].x
+            if (Math.abs(stepDx) >= 2) {
+              finalDir = Math.sign(stepDx)
+              break
+            }
+          }
+
+          if (finalDir !== 0) {
+            let strokeStart = recent[recent.length - 1]
+            for (let i = recent.length - 2; i >= 0; i--) {
+              const pt = recent[i]
+              const nextPt = recent[i + 1]
+              const stepDx = nextPt.x - pt.x
+              if (Math.abs(stepDx) >= 2 && Math.sign(stepDx) !== finalDir) {
+                strokeStart = nextPt
+                break
+              }
+              strokeStart = pt
+            }
+
+            const strokeEnd = recent[recent.length - 1]
+            const strokeDt = strokeEnd.time - strokeStart.time
+            const strokeDx = strokeEnd.x - strokeStart.x
+
+            if (strokeDt >= 18 && Math.abs(strokeDx) >= 4) {
+              velocity = strokeDx / strokeDt
+            } else if (recent.length >= 3) {
+              const first = recent[0]
+              const totalDt = strokeEnd.time - first.time
+              const totalDx = strokeEnd.x - first.x
+              if (totalDt >= 25 && Math.sign(totalDx) === finalDir) {
+                velocity = totalDx / totalDt
+              }
+            }
+          }
         }
       }
 
       if (Math.abs(velocity) >= 0.08) {
-        const maxVelocity = 2.2 // px/ms
+        const maxVelocity = 1.25
         velocity = Math.max(-maxVelocity, Math.min(maxVelocity, velocity))
         isInFlight = true
 
-        const friction = 0.0035
-
         clearTimeout(inertiaSafetyTimeout)
-        inertiaSafetyTimeout = window.setTimeout(stopInertia, 1200)
+        inertiaSafetyTimeout = window.setTimeout(stopInertia, 1600)
 
-        let lastFrameTime = performance.now()
-
-        function runInertiaStep(currentTime: number) {
-          const frameDt = Math.min(32, currentTime - lastFrameTime)
-          lastFrameTime = currentTime
-
-          if (frameDt > 0) {
-            const decay = Math.exp(-friction * frameDt)
-            velocity *= decay
-            currentLiveOffsetX += velocity * frameDt
-
-            // Edge reached: hard clamp with zero bounce and immediately stop
-            if (currentLiveOffsetX >= maxAllowedOffsetForCurrentW) {
-              currentLiveOffsetX = maxAllowedOffsetForCurrentW
-              stopInertia()
-              return
-            }
-            if (currentLiveOffsetX <= minAllowedOffsetForCurrentW) {
-              currentLiveOffsetX = minAllowedOffsetForCurrentW
-              stopInertia()
-              return
-            }
-
-            // Snap to rest when velocity decays
-            if (Math.abs(velocity) < 0.035) {
-              stopInertia()
-              return
-            }
-
-            // Dynamic OnDrag: expand bounds with velocity-based margin to prevent leading-edge clipping
-            const motionMargin = Math.min(
-              60,
-              Math.round(Math.abs(velocity) * 20) + 30
-            )
-            const { w, h, r } = getBoundsForState()
-            updateBounds(w + motionMargin, h, r, clampedOffsetX)
-          }
-
-          inertiaAnimFrame = requestAnimationFrame(runInertiaStep)
-        }
-
-        inertiaAnimFrame = requestAnimationFrame(runInertiaStep)
+        // Keep isTrackRegionActive open during in-flight glide to prevent clipping
+        runJSInertiaGlide(velocity)
       } else {
         stopInertia()
       }
@@ -1422,20 +1656,21 @@
     }
   }
 
-  function handleExpand() {
+  async function handleExpand() {
     if (expanded) return
     // Cancel any active drag/inertia first so the OS region update isn't blocked
     if (isInFlight || isDraggingHidden) stopInertia()
-    triggerBlink()
     islandAnim = '0.32s cubic-bezier(0.2, 0.8, 0.2, 1)'
 
-    // Immediately open expanded OS bounds synchronously before starting CSS expansion
+    // Open expanded OS bounds before starting CSS expansion to eliminate clipping
     const { w, h, r } = getBoundsForState(islandConfig, true, isHidden)
-    applyBounds(w, h, r)
+    await applyBounds(
+      Math.max(currentOSBounds.w, w),
+      Math.max(currentOSBounds.h, h),
+      r
+    )
 
-    requestAnimationFrame(() => {
-      expanded = true
-    })
+    expanded = true
   }
 
   function handleIslandClick(e: MouseEvent) {

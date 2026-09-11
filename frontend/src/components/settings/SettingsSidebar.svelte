@@ -7,7 +7,7 @@
     Clock,
     CloudSun,
     Cpu,
-    RefreshCw,
+    Download,
     Info
   } from 'lucide-svelte'
   import { activeSettingsTabStore } from '../../store'
@@ -21,7 +21,7 @@
     { id: 'weather', name: 'Weather', icon: CloudSun },
     { id: 'system', name: 'System', icon: Cpu },
     { id: 'about', name: 'About', icon: Info },
-    { id: 'updates', name: 'Updates', icon: RefreshCw }
+    { id: 'updates', name: 'Updates', icon: Download }
   ]
 </script>
 

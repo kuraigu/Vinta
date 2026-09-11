@@ -4,8 +4,10 @@ package backend
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -115,6 +117,24 @@ func (a *App) CheckPostUpdateInstalled() string {
 	return ""
 }
 
+// resolveUpdaterToken resolves an authentication token for GitHub API requests.
+// Resolution order:
+// -UpdaterToken injected during compilation via -ldflags (from GitHub Secrets).
+// -VINTA_GITHUB_TOKEN or GITHUB_TOKEN environment variables.
+// -GitHub CLI authentication token via 'gh auth token' during local development.
+func resolveUpdaterToken() string {
+	if strings.TrimSpace(UpdaterToken) != "" {
+		return strings.TrimSpace(UpdaterToken)
+	}
+	if tok := strings.TrimSpace(os.Getenv("VINTA_GITHUB_TOKEN")); tok != "" {
+		return tok
+	}
+	if tok := strings.TrimSpace(os.Getenv("GITHUB_TOKEN")); tok != "" {
+		return tok
+	}
+	return ""
+}
+
 // CheckForUpdates queries GitHub Releases API to check for newer versions.
 func (a *App) CheckForUpdates(force bool) (*UpdateCheckResult, error) {
 	currentVersion := AppVersion
@@ -124,15 +144,15 @@ func (a *App) CheckForUpdates(force bool) (*UpdateCheckResult, error) {
 
 	now := time.Now().Format("2006-01-02 15:04:05")
 
-	// 1. In Development Builds: Disable update checking
-	if BuildType == "Development" && !force {
+	// 1. In Development Builds: Disable update checking completely
+	if BuildType == "Development" {
 		return &UpdateCheckResult{
 			Status:          "dev-mode",
 			UpdateAvailable: false,
 			CurrentVersion:  currentVersion,
 			LatestVersion:   currentVersion,
 			CheckedAt:       now,
-			Message:         "Update checking is disabled for development builds.",
+			Message:         "Update checking is disabled in development mode.",
 		}, nil
 	}
 
@@ -151,9 +171,9 @@ func (a *App) CheckForUpdates(force bool) (*UpdateCheckResult, error) {
 		}
 	}
 
-	// 3. Query GitHub Releases API
+	// 3. Query GitHub Releases API (queries release list to accommodate pre-release channels)
 	client := &http.Client{Timeout: 10 * time.Second}
-	req, err := http.NewRequest("GET", "https://api.github.com/repos/kuraigu/Vinta/releases/latest", nil)
+	req, err := http.NewRequest("GET", "https://api.github.com/repos/kuraigu/Vinta/releases?per_page=5", nil)
 	if err != nil {
 		return &UpdateCheckResult{
 			Status:          "error",
@@ -166,6 +186,10 @@ func (a *App) CheckForUpdates(force bool) (*UpdateCheckResult, error) {
 
 	req.Header.Set("User-Agent", "Vinta-Update-Checker/1.0")
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
+
+	if token := resolveUpdaterToken(); token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -202,8 +226,8 @@ func (a *App) CheckForUpdates(force bool) (*UpdateCheckResult, error) {
 		}, nil
 	}
 
-	var ghRelease ghReleaseResponse
-	if err := json.NewDecoder(resp.Body).Decode(&ghRelease); err != nil {
+	var releases []ghReleaseResponse
+	if err := json.NewDecoder(resp.Body).Decode(&releases); err != nil {
 		return &UpdateCheckResult{
 			Status:          "error",
 			UpdateAvailable: false,
@@ -211,6 +235,27 @@ func (a *App) CheckForUpdates(force bool) (*UpdateCheckResult, error) {
 			CheckedAt:       now,
 			Message:         "Failed to parse release information.",
 		}, nil
+	}
+
+	var ghRelease *ghReleaseResponse
+	for i := range releases {
+		if !releases[i].Draft {
+			ghRelease = &releases[i]
+			break
+		}
+	}
+
+	if ghRelease == nil {
+		result := &UpdateCheckResult{
+			Status:          "up-to-date",
+			UpdateAvailable: false,
+			CurrentVersion:  currentVersion,
+			LatestVersion:   currentVersion,
+			CheckedAt:       now,
+			Message:         "Vinta is currently up to date.",
+		}
+		a.saveUpdateCache(cacheFile, result)
+		return result, nil
 	}
 
 	var installerURL, portableURL string
@@ -271,6 +316,9 @@ func (a *App) saveUpdateCache(cacheFile string, result *UpdateCheckResult) {
 
 // StartBackgroundUpdateChecker launches a background ticker that checks for updates periodically.
 func (a *App) StartBackgroundUpdateChecker() {
+	if BuildType == "Development" {
+		return
+	}
 	go func() {
 		// Wait 10 seconds after app startup before first check
 		time.Sleep(10 * time.Second)
@@ -354,4 +402,55 @@ func (a *App) OpenURL(targetURL string) error {
 		return nil
 	}
 	return browser.OpenURL(targetURL)
+}
+
+// DownloadAndInstallUpdate downloads the installer executable for the update and executes it.
+func (a *App) DownloadAndInstallUpdate(downloadURL string) error {
+	if downloadURL == "" {
+		return fmt.Errorf("no download URL provided")
+	}
+
+	req, err := http.NewRequest("GET", downloadURL, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create download request: %w", err)
+	}
+	req.Header.Set("User-Agent", "Vinta-Updater/1.0")
+
+	client := &http.Client{Timeout: 10 * time.Minute}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("failed to download update: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("download server returned status: %d", resp.StatusCode)
+	}
+
+	tempDir := os.TempDir()
+	installerPath := filepath.Join(tempDir, "Vinta-Setup-Update.exe")
+
+	out, err := os.OpenFile(installerPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
+	if err != nil {
+		return fmt.Errorf("failed to create destination file: %w", err)
+	}
+
+	_, err = io.Copy(out, resp.Body)
+	_ = out.Close()
+	if err != nil {
+		return fmt.Errorf("failed to write installer binary: %w", err)
+	}
+
+	cmd := exec.Command(installerPath)
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to launch installer: %w", err)
+	}
+
+	// Terminate Vinta gracefully so the installer can overwrite binaries without file locks
+	go func() {
+		time.Sleep(500 * time.Millisecond)
+		a.Quit()
+	}()
+
+	return nil
 }

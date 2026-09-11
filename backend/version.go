@@ -22,6 +22,8 @@ var (
 	BuildType = "Development"
 	// BuildTime is injected at compile-time via -ldflags (format: "YY.MMDD" e.g., "26.0315")
 	BuildTime = "Unknown"
+	// UpdaterToken is injected at compile-time via -ldflags during release builds.
+	UpdaterToken = ""
 )
 
 // AppInfo represents structured application build, authenticity, and runtime metadata.

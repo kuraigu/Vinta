@@ -31,12 +31,14 @@ var (
 	procGetWindowThreadProcessID = user32.NewProc("GetWindowThreadProcessId")
 	procGetClassName             = user32.NewProc("GetClassNameW")
 	procSetWinEventHook          = user32.NewProc("SetWinEventHook")
-	procGetClientRect            = user32.NewProc("GetClientRect")
 	procEnumDisplayMonitors      = user32.NewProc("EnumDisplayMonitors")
 	procGetMonitorInfoW          = user32.NewProc("GetMonitorInfoW")
 	procGetWindowRect            = user32.NewProc("GetWindowRect")
+	procGetClientRect            = user32.NewProc("GetClientRect")
 	procMonitorFromWindow        = user32.NewProc("MonitorFromWindow")
 	procEnumWindows              = user32.NewProc("EnumWindows")
+	procEnumChildWindows         = user32.NewProc("EnumChildWindows")
+	procSetWindowPos             = user32.NewProc("SetWindowPos")
 	procIsWindowVisible          = user32.NewProc("IsWindowVisible")
 	procIsIconic                 = user32.NewProc("IsIconic")
 
@@ -64,6 +66,9 @@ var (
 	procOpenProcess               = kernel32.NewProc("OpenProcess")
 	procCloseHandle               = kernel32.NewProc("CloseHandle")
 	procQueryFullProcessImageName = kernel32.NewProc("QueryFullProcessImageNameW")
+
+	winmm               = syscall.NewLazyDLL("winmm.dll")
+	procTimeBeginPeriod = winmm.NewProc("timeBeginPeriod")
 )
 
 const (
@@ -93,8 +98,10 @@ const (
 	WS_EX_TOOLWINDOW = 0x00000080
 	//nolint:revive // Windows API constants
 	WS_EX_NOACTIVATE = 0x08000000
-	OutsidePadding   = 10
-	rgnOr            = 2
+	//nolint:revive // Windows API constants
+	WS_EX_TRANSPARENT = 0x00000020
+	OutsidePadding    = 20
+	rgnOr             = 2
 
 	//nolint:revive // Windows API constants
 	GW_CHILD = 5
@@ -117,6 +124,27 @@ const (
 	SW_HIDE = 0
 	//nolint:revive // Windows API constants
 	SW_SHOWNA = 8
+
+	//nolint:revive // Windows API constants
+	SWP_NOSIZE = 0x0001
+	//nolint:revive // Windows API constants
+	SWP_NOMOVE = 0x0002
+	//nolint:revive // Windows API constants
+	SWP_NOZORDER = 0x0004
+	//nolint:revive // Windows API constants
+	SWP_NOACTIVATE = 0x0010
+	//nolint:revive // Windows API constants
+	SWP_FRAMECHANGED = 0x0020
+	//nolint:revive // Windows API constants
+	SWP_SHOWWINDOW = 0x0040
+	//nolint:revive // Windows API constants
+	SWP_NOCOPYBITS = 0x0100
+	//nolint:revive // Windows API constants
+	SWP_NOOWNERZORDER = 0x0200
+	//nolint:revive // Windows API constants
+	SWP_NOSENDCHANGING = 0x0400
+	//nolint:revive // Windows API constants
+	SWP_DEFERERASE = 0x2000
 
 	// QUERY_USER_NOTIFICATION_STATE enum
 	//nolint:revive // Windows API constants
@@ -188,15 +216,38 @@ type MonitorInfo struct {
 
 // DisplayLayout captures multi-monitor geometry and the composite virtual desktop space.
 type DisplayLayout struct {
-	VirtualLeft   int           `json:"virtualLeft"`
-	VirtualTop    int           `json:"virtualTop"`
-	VirtualWidth  int           `json:"virtualWidth"`
-	VirtualHeight int           `json:"virtualHeight"`
-	PrimaryCenter int           `json:"primaryCenter"`
-	Monitors      []MonitorInfo `json:"monitors"`
+	VirtualLeft    int           `json:"virtualLeft"`
+	VirtualTop     int           `json:"virtualTop"`
+	VirtualWidth   int           `json:"virtualWidth"`
+	VirtualHeight  int           `json:"virtualHeight"`
+	PrimaryCenter  int           `json:"primaryCenter"`
+	CurrentMonitor MonitorInfo   `json:"currentMonitor"`
+	Monitors       []MonitorInfo `json:"monitors"`
 }
 
+var (
+	cachedDisplayLayout DisplayLayout
+	cachedDisplayMu     sync.RWMutex
+	lastDisplayFetch    time.Time
+)
+
 func getDisplayMetrics() (vLeft, vTop, vWidth, vHeight, pCenter int, monitors []MonitorInfo) {
+	cachedDisplayMu.RLock()
+	if time.Since(lastDisplayFetch) < 10*time.Second && cachedDisplayLayout.VirtualWidth > 0 {
+		layout := cachedDisplayLayout
+		cachedDisplayMu.RUnlock()
+		return layout.VirtualLeft, layout.VirtualTop, layout.VirtualWidth, layout.VirtualHeight, layout.PrimaryCenter, layout.Monitors
+	}
+	cachedDisplayMu.RUnlock()
+
+	cachedDisplayMu.Lock()
+	defer cachedDisplayMu.Unlock()
+
+	if time.Since(lastDisplayFetch) < 10*time.Second && cachedDisplayLayout.VirtualWidth > 0 {
+		layout := cachedDisplayLayout
+		return layout.VirtualLeft, layout.VirtualTop, layout.VirtualWidth, layout.VirtualHeight, layout.PrimaryCenter, layout.Monitors
+	}
+
 	procGetSystemMetrics := user32.NewProc("GetSystemMetrics")
 	vx, _, _ := procGetSystemMetrics.Call(SM_XVIRTUALSCREEN)
 	vy, _, _ := procGetSystemMetrics.Call(SM_YVIRTUALSCREEN)
@@ -263,7 +314,43 @@ func getDisplayMetrics() (vLeft, vTop, vWidth, vHeight, pCenter int, monitors []
 			IsPrimary: true,
 		})
 	}
+
+	cachedDisplayLayout = DisplayLayout{
+		VirtualLeft:   vLeft,
+		VirtualTop:    vTop,
+		VirtualWidth:  vWidth,
+		VirtualHeight: vHeight,
+		PrimaryCenter: pCenter,
+		Monitors:      monitors,
+	}
+	lastDisplayFetch = time.Now()
 	return
+}
+
+// resolveCurrentMonitor finds the display monitor corresponding to screenCenterX.
+func resolveCurrentMonitor(screenCenterX int, monitors []MonitorInfo) MonitorInfo {
+	for _, mon := range monitors {
+		if screenCenterX >= mon.Left && screenCenterX < mon.Left+mon.Width {
+			return mon
+		}
+	}
+	for _, mon := range monitors {
+		if mon.IsPrimary {
+			return mon
+		}
+	}
+	if len(monitors) > 0 {
+		return monitors[0]
+	}
+	return MonitorInfo{
+		ID:        1,
+		Name:      "Primary Display",
+		Left:      0,
+		Top:       0,
+		Width:     1920,
+		Height:    1080,
+		IsPrimary: true,
+	}
 }
 
 var (
@@ -682,6 +769,10 @@ func (a *App) Startup(ctx context.Context) {
 	defer SetupPanicRecovery()
 	a.ctx = ctx
 
+	if procTimeBeginPeriod.Find() == nil {
+		_, _, _ = procTimeBeginPeriod.Call(1)
+	}
+
 	disableProcessPowerThrottling()
 
 	smwVal, _, _ := user32.NewProc("GetSystemMetrics").Call(0)
@@ -710,29 +801,29 @@ func (a *App) Startup(ctx context.Context) {
 		if hwnd != 0 {
 			gwl := int32(GWL_EXSTYLE)
 			style, _, _ := procGetWindowLong.Call(hwnd, uintptr(gwl))
-			style = (style | WS_EX_TOOLWINDOW | WS_EX_TOPMOST) &^ WS_EX_NOACTIVATE &^ WS_EX_APPWINDOW
+			style = (style | WS_EX_TOOLWINDOW | WS_EX_TOPMOST) &^ WS_EX_NOACTIVATE &^ WS_EX_APPWINDOW &^ WS_EX_LAYERED
 			_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwl), style)
 
 			a.setupForegroundEventHook(hwnd)
 
-			procSetWindowPos := user32.NewProc("SetWindowPos")
-			// HWND_TOPMOST = ^uintptr(0), SWP_NOACTIVATE (0x0010) | SWP_FRAMECHANGED (0x0020) | SWP_SHOWWINDOW (0x0040)
-			vLeft, _, vWidth, _, _, _ := getDisplayMetrics()
-			overlayHeight := 650
-			if screenHeight > 0 && overlayHeight > screenHeight {
-				overlayHeight = screenHeight
+			// Size stationary overlay window across virtual desktop space once at startup
+			vLeft, vTop, vWidth, vHeight, _, _ := getDisplayMetrics()
+			overlayHeight := 680
+			if vHeight > 0 && overlayHeight > vHeight {
+				overlayHeight = vHeight
 			}
 			if vWidth > 0 {
 				_, _, _ = procSetWindowPos.Call(
 					hwnd,
-					uintptr(^uintptr(0)),
-					uintptr(int32(vLeft)), 0,
+					uintptr(^uintptr(0)), // HWND_TOPMOST
+					uintptr(int32(vLeft)), uintptr(int32(vTop)),
 					uintptr(vWidth), uintptr(overlayHeight),
-					0x0010|0x0020|0x0040,
+					0x0010|0x0020|0x0040, // SWP_NOACTIVATE | SWP_FRAMECHANGED | SWP_SHOWWINDOW
 				)
 			}
 
 			go services.StartServicesListener(ctx)
+			go services.StartClipboardListener(ctx)
 
 			a.updateWindowRegion()
 		}
@@ -782,11 +873,13 @@ func (a *App) onReady() {
 }
 
 func (a *App) onExit() {
+	services.StopClipboardListener()
 	services.StopServicesListener()
 }
 
 // Shutdown is called when Wails application shuts down.
 func (a *App) Shutdown(_ context.Context) {
+	services.StopClipboardListener()
 	services.StopServicesListener()
 	systray.Quit()
 }
@@ -802,6 +895,11 @@ func (a *App) SetWidgetBounds(width int, height int, radius int, scale float64, 
 		a.scale = scale
 	}
 	a.updateWindowRegion()
+}
+
+// SetClipboardMonitoring updates the native clipboard copy and paste monitoring state.
+func (a *App) SetClipboardMonitoring(copyEnabled bool, pasteEnabled bool) {
+	services.SetClipboardMonitoring(copyEnabled, pasteEnabled)
 }
 
 // SetAutostart registers or unregisters the app in Windows Startup Registry
@@ -885,14 +983,32 @@ func (a *App) FocusNotificationApp(sourceApp string, aumid string) bool {
 // GetDisplayLayout returns the multi-monitor geometry and composite virtual desktop layout.
 func (a *App) GetDisplayLayout() DisplayLayout {
 	vLeft, vTop, vWidth, vHeight, pCenter, monitors := getDisplayMetrics()
-	return DisplayLayout{
-		VirtualLeft:   vLeft,
-		VirtualTop:    vTop,
-		VirtualWidth:  vWidth,
-		VirtualHeight: vHeight,
-		PrimaryCenter: pCenter,
-		Monitors:      monitors,
+	scale := a.scale
+	if scale <= 0 {
+		scale = 1.0
 	}
+	screenCenterX := vLeft + pCenter + int(float64(a.offsetX)*scale)
+	currentMon := resolveCurrentMonitor(screenCenterX, monitors)
+	return DisplayLayout{
+		VirtualLeft:    vLeft,
+		VirtualTop:     vTop,
+		VirtualWidth:   vWidth,
+		VirtualHeight:  vHeight,
+		PrimaryCenter:  pCenter,
+		CurrentMonitor: currentMon,
+		Monitors:       monitors,
+	}
+}
+
+// GetCurrentMonitor returns the active monitor where Vinta is currently located.
+func (a *App) GetCurrentMonitor() MonitorInfo {
+	vLeft, _, _, _, pCenter, monitors := getDisplayMetrics()
+	scale := a.scale
+	if scale <= 0 {
+		scale = 1.0
+	}
+	screenCenterX := vLeft + pCenter + int(float64(a.offsetX)*scale)
+	return resolveCurrentMonitor(screenCenterX, monitors)
 }
 
 // Quit terminates the application
@@ -931,6 +1047,87 @@ func (a *App) SetDragCapture(enable bool) {
 		} else {
 			_, _, _ = procReleaseCapture.Call()
 		}
+	}
+}
+
+type glideController struct {
+	mu         sync.Mutex
+	stopCh     chan struct{}
+	generation uint64
+}
+
+var activeGlideController glideController
+
+// StartInertiaGlide resets active glide generation tokens.
+func (a *App) StartInertiaGlide(startOffset float64, velocity float64, minOffset float64, maxOffset float64) {
+	activeGlideController.mu.Lock()
+	if activeGlideController.stopCh != nil {
+		close(activeGlideController.stopCh)
+		activeGlideController.stopCh = nil
+	}
+	activeGlideController.generation++
+	myGen := activeGlideController.generation
+	activeGlideController.mu.Unlock()
+
+	if a.ctx != nil {
+		runtime.EventsEmit(a.ctx, "inertia-started", myGen)
+	}
+}
+
+// StopInertiaGlide immediately halts any in-progress inertia glide and returns current offset.
+func (a *App) StopInertiaGlide() float64 {
+	activeGlideController.mu.Lock()
+	if activeGlideController.stopCh != nil {
+		close(activeGlideController.stopCh)
+		activeGlideController.stopCh = nil
+	}
+	activeGlideController.generation++
+	offset := float64(a.offsetX)
+	activeGlideController.mu.Unlock()
+	return offset
+}
+
+// SetIgnoreMouseEvents toggles click-through for the entire window and its children using Win32 WS_EX_TRANSPARENT.
+// When enabled, all mouse clicks pass straight through to underlying applications and the clipping region is lifted.
+func (a *App) SetIgnoreMouseEvents(ignore bool) {
+	hwnd := getMyWindowHwnd()
+	if hwnd == 0 {
+		return
+	}
+
+	setExStyle := func(h uintptr) {
+		gwl := int32(GWL_EXSTYLE)
+		style, _, _ := procGetWindowLong.Call(h, uintptr(gwl))
+		if ignore {
+			style = (style | WS_EX_TRANSPARENT) &^ WS_EX_LAYERED
+		} else {
+			style = style &^ WS_EX_TRANSPARENT &^ WS_EX_LAYERED
+		}
+		_, _, _ = procSetWindowLong.Call(h, uintptr(gwl), style)
+		_, _, _ = procSetWindowPos.Call(
+			h, 0, 0, 0, 0, 0,
+			uintptr(SWP_NOSIZE|SWP_NOMOVE|SWP_NOZORDER|SWP_NOACTIVATE|SWP_FRAMECHANGED),
+		)
+	}
+
+	setExStyle(hwnd)
+
+	// Propagate to all child windows (e.g. WebView2 Chrome_WidgetWin_0 and intermediate windows)
+	cb := syscall.NewCallback(func(childHwnd uintptr, _ uintptr) uintptr {
+		setExStyle(childHwnd)
+		return 1
+	})
+	_, _, _ = procEnumChildWindows.Call(hwnd, cb, 0)
+
+	if ignore {
+		// Lift clipping region completely so island renders seamlessly without edge clipping during flight
+		_, _, _ = procSetWindowRgn.Call(hwnd, 0, 0)
+	} else {
+		// Invalidate region cache and restore tight hit-testing region around the pill
+		regionMu.Lock()
+		lastRegion = regionCache{}
+		regionMu.Unlock()
+		a.updateWindowRegion()
 	}
 }
 
@@ -989,144 +1186,6 @@ func (a *App) SetDevPillBounds(width int, height int, extraH int, scale float64)
 	a.updateWindowRegion()
 }
 
-func (a *App) updateWindowRegion() {
-	hwnd := getMyWindowHwnd()
-	if hwnd != 0 {
-		padding := OutsidePadding
-		// Use compact padding (6px) when hidden to allow ambient glow and smooth drag without clipping
-		if a.pillW > 0 && a.pillW <= 110 && a.pillH <= 30 {
-			padding = 6
-		}
-		setClickRegion(hwnd, a.pillW, a.pillH, a.pillR, a.offsetX, a.devW, a.devH, a.devExtra, padding, a.scale)
-	}
-}
-
-// createMainPillRegion generates the Win32 HRGN for the primary dynamic island.
-func createMainPillRegion(w, h, r, offsetX, sw, padding int, scale float64) uintptr {
-	scaleInt := func(v int) int {
-		return int(float64(v) * scale)
-	}
-	if w == -1 && h > 0 {
-		visualTop := scaleInt(5)
-		ph := scaleInt(h)
-		top := visualTop - padding
-		if top < 0 {
-			top = 0
-		}
-		bottom := visualTop + ph + padding
-
-		hrgn, _, _ := procCreateRectRgn.Call(
-			0, uintptr(top),
-			uintptr(sw), uintptr(bottom),
-		)
-		return hrgn
-	} else if w > 0 && h > 0 {
-		visualTop := scaleInt(5)
-		_, _, _, _, pCenter, _ := getDisplayMetrics()
-		physicalCenterX := pCenter + scaleInt(offsetX)
-		pw := scaleInt(w)
-		ph := scaleInt(h)
-		left := physicalCenterX - (pw / 2) - padding
-		if left < 0 {
-			left = 0
-		}
-		right := physicalCenterX + (pw / 2) + padding
-		top := visualTop - padding
-		if top < 0 {
-			top = 0
-		}
-		bottom := visualTop + ph + padding
-		ellipseSize := scaleInt(r) * 2
-		if hLimit := bottom - top; ellipseSize > hLimit {
-			ellipseSize = hLimit
-		}
-		if wLimit := right - left; ellipseSize > wLimit {
-			ellipseSize = wLimit
-		}
-
-		hrgn, _, _ := procCreateRoundRectRgn.Call(
-			uintptr(left), uintptr(top),
-			uintptr(right), uintptr(bottom),
-			uintptr(ellipseSize), uintptr(ellipseSize),
-		)
-		return hrgn
-	}
-	return 0
-}
-
-// createDevPillRegion generates the Win32 HRGN for the secondary/dev floating panel anchored below the main island.
-func createDevPillRegion(dw, dh, extraH, mainH, offsetX, sw int, scale float64, fullWidth bool) uintptr {
-	if dw <= 0 || dh <= 0 {
-		return 0
-	}
-	scaleInt := func(v int) int {
-		return int(float64(v) * scale)
-	}
-
-	gap := scaleInt(15)
-	visualTop := scaleInt(5)
-	devTopOffset := visualTop
-	if mainH > 0 {
-		ph := scaleInt(mainH)
-		devTopOffset = visualTop + ph + gap
-	}
-
-	devPadding := OutsidePadding
-	extraMargin := scaleInt(extraH)
-
-	pdw := scaleInt(dw)
-	pdh := scaleInt(dh)
-
-	top := devTopOffset - devPadding
-	if top < 0 {
-		top = 0
-	}
-	bottom := devTopOffset + pdh + devPadding + extraMargin
-
-	// When 100% width mode is active (w == -1), expand dev pill region across full monitor width
-	if fullWidth {
-		hrgn, _, _ := procCreateRectRgn.Call(
-			0, uintptr(top),
-			uintptr(sw), uintptr(bottom),
-		)
-		return hrgn
-	}
-
-	_, _, _, _, pCenter, _ := getDisplayMetrics()
-	scaledOffset := scaleInt(offsetX)
-	physicalCenterX := pCenter + scaledOffset
-
-	left := physicalCenterX - (pdw / 2) - devPadding
-	if left < 0 {
-		left = 0
-	}
-	right := physicalCenterX + (pdw / 2) + devPadding
-
-	hrgn, _, _ := procCreateRoundRectRgn.Call(
-		uintptr(left), uintptr(top),
-		uintptr(right), uintptr(bottom),
-		uintptr(scaleInt(14)*2), uintptr(scaleInt(14)*2),
-	)
-	return hrgn
-}
-
-// combineWindowRegions merges a slice of Win32 HRGNs into a single composite region.
-func combineWindowRegions(regions ...uintptr) uintptr {
-	var finalRgn uintptr
-	for _, rgn := range regions {
-		if rgn == 0 {
-			continue
-		}
-		if finalRgn == 0 {
-			finalRgn = rgn
-		} else {
-			_, _, _ = procCombineRgn.Call(finalRgn, finalRgn, rgn, uintptr(rgnOr))
-			_, _, _ = procDeleteObject.Call(rgn)
-		}
-	}
-	return finalRgn
-}
-
 type regionCache struct {
 	w, h, r, offsetX int
 	dw, dh, extraH   int
@@ -1140,6 +1199,22 @@ var (
 	lastRegion     regionCache
 	cachedClientSw int
 )
+
+// updateWindowRegion updates the Win32 window clipping region for click-through.
+func (a *App) updateWindowRegion() {
+	hwnd := getMyWindowHwnd()
+	if hwnd == 0 {
+		return
+	}
+
+	padding := OutsidePadding
+	// Use compact padding when in minimal collapsed state
+	if a.pillW > 0 && a.pillW <= 110 && a.pillH <= 30 {
+		padding = 16
+	}
+
+	setClickRegion(hwnd, a.pillW, a.pillH, a.pillR, a.offsetX, a.devW, a.devH, a.devExtra, padding, a.scale)
+}
 
 // setClickRegion updates the Win32 window region to combine the main pill and the dev pill.
 func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, dw int, dh int, extraH int, padding int, scale float64) {
@@ -1193,6 +1268,144 @@ func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, dw int, dh i
 	if hrgnFinal != 0 {
 		_, _, _ = procSetWindowRgn.Call(hwnd, hrgnFinal, 0)
 	}
+}
+
+// createMainPillRegion generates the Win32 HRGN for the primary dynamic island.
+func createMainPillRegion(w, h, r, offsetX, sw, padding int, scale float64) uintptr {
+	scaleInt := func(v int) int {
+		return int(float64(v) * scale)
+	}
+	if w == -1 && h > 0 {
+		visualTop := scaleInt(5)
+		ph := scaleInt(h)
+		pad := scaleInt(padding)
+		top := visualTop - pad
+		if top < 0 {
+			top = 0
+		}
+		bottom := visualTop + ph + pad
+
+		hrgn, _, _ := procCreateRectRgn.Call(
+			0, uintptr(top),
+			uintptr(sw), uintptr(bottom),
+		)
+		return hrgn
+	} else if w > 0 && h > 0 {
+		visualTop := scaleInt(5)
+		_, _, _, _, pCenter, _ := getDisplayMetrics()
+		physicalCenterX := pCenter + scaleInt(offsetX)
+		pw := scaleInt(w)
+		ph := scaleInt(h)
+		pad := scaleInt(padding)
+
+		left := physicalCenterX - (pw / 2) - pad
+		if left < 0 {
+			left = 0
+		}
+		right := physicalCenterX + (pw / 2) + pad
+		top := visualTop - pad
+		if top < 0 {
+			top = 0
+		}
+		bottom := visualTop + ph + pad
+
+		ellipseSize := scaleInt(r) * 2
+		if hLimit := bottom - top; ellipseSize > hLimit {
+			ellipseSize = hLimit
+		}
+		if wLimit := right - left; ellipseSize > wLimit {
+			ellipseSize = wLimit
+		}
+
+		hrgn, _, _ := procCreateRoundRectRgn.Call(
+			uintptr(left), uintptr(top),
+			uintptr(right), uintptr(bottom),
+			uintptr(ellipseSize), uintptr(ellipseSize),
+		)
+		return hrgn
+	}
+	return 0
+}
+
+// createDevPillRegion generates the Win32 HRGN for the secondary dev panel anchored below the main island.
+func createDevPillRegion(dw, dh, extraH, mainH, offsetX, sw int, scale float64, fullWidth bool) uintptr {
+	if dw <= 0 || dh <= 0 {
+		return 0
+	}
+	scaleInt := func(v int) int {
+		return int(float64(v) * scale)
+	}
+
+	gap := scaleInt(15)
+	visualTop := scaleInt(5)
+	devTopOffset := visualTop
+	if mainH > 0 {
+		ph := scaleInt(mainH)
+		devTopOffset = visualTop + ph + gap
+	}
+
+	pad := scaleInt(OutsidePadding)
+	extraMargin := scaleInt(extraH)
+
+	pdw := scaleInt(dw)
+	pdh := scaleInt(dh)
+
+	top := devTopOffset - pad
+	if top < 0 {
+		top = 0
+	}
+	bottom := devTopOffset + pdh + pad + extraMargin
+
+	// When runway mode is active (w == -1), expand dev pill region across full monitor width
+	if fullWidth {
+		hrgn, _, _ := procCreateRectRgn.Call(
+			0, uintptr(top),
+			uintptr(sw), uintptr(bottom),
+		)
+		return hrgn
+	}
+
+	_, _, _, _, pCenter, _ := getDisplayMetrics()
+	scaledOffset := scaleInt(offsetX)
+	physicalCenterX := pCenter + scaledOffset
+
+	left := physicalCenterX - (pdw / 2) - pad
+	if left < 0 {
+		left = 0
+	}
+	right := physicalCenterX + (pdw / 2) + pad
+
+	ellipseSize := scaleInt(14) * 2
+	if hLimit := bottom - top; ellipseSize > hLimit {
+		ellipseSize = hLimit
+	}
+	if wLimit := right - left; ellipseSize > wLimit {
+		ellipseSize = wLimit
+	}
+
+	hrgn, _, _ := procCreateRoundRectRgn.Call(
+		uintptr(left), uintptr(top),
+		uintptr(right), uintptr(bottom),
+		uintptr(ellipseSize), uintptr(ellipseSize),
+	)
+	return hrgn
+}
+
+// combineWindowRegions merges a slice of Win32 HRGNs into a single composite region.
+func combineWindowRegions(regions ...uintptr) uintptr {
+	var finalRgn uintptr
+	for _, rgn := range regions {
+		if rgn == 0 {
+			continue
+		}
+		if finalRgn == 0 {
+			finalRgn = rgn
+		} else {
+			_, _, _ = procCombineRgn.Call(finalRgn, finalRgn, rgn, uintptr(rgnOr))
+			_, _, _ = procDeleteObject.Call(rgn)
+		}
+	}
+	return finalRgn
 }
 
 // Greet returns a greeting for the given name

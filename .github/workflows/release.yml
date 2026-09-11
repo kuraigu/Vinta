@@ -106,10 +106,13 @@ jobs:
 
       - name: Build Official Application & NSIS Installer
         shell: pwsh
+        env:
+          UPDATER_TOKEN: ${{ secrets.UPDATER_TOKEN }}
         run: |
           $version = "$env:RELEASE_VERSION"
           $buildDate = (Get-Date -Format 'yy.MMdd')
-          $ldflags = "-X 'Vinta/backend.BuildType=Official' -X 'Vinta/backend.AppVersion=$version' -X 'Vinta/backend.GitCommit=${{ github.sha }}' -X 'Vinta/backend.BuildTime=$buildDate' -X 'backend.BuildType=Official' -X 'backend.AppVersion=$version' -X 'backend.GitCommit=${{ github.sha }}' -X 'backend.BuildTime=$buildDate'"
+          $updaterToken = if ($env:UPDATER_TOKEN) { $env:UPDATER_TOKEN.Trim() } else { "" }
+          $ldflags = "-X 'Vinta/backend.BuildType=Official' -X 'Vinta/backend.AppVersion=$version' -X 'Vinta/backend.GitCommit=${{ github.sha }}' -X 'Vinta/backend.BuildTime=$buildDate' -X 'Vinta/backend.UpdaterToken=$updaterToken' -X 'backend.BuildType=Official' -X 'backend.AppVersion=$version' -X 'backend.GitCommit=${{ github.sha }}' -X 'backend.BuildTime=$buildDate' -X 'backend.UpdaterToken=$updaterToken'"
           wails build -nsis -ldflags $ldflags
 
       - name: Sign Executables and Installer
@@ -120,12 +123,32 @@ jobs:
         run: |
           $pfxPath = "$env:TEMP\signing_cert.pfx"
           $cert = $null
+          $hasCert = $false
 
-          if ($env:SIGNING_CERT_BASE64 -and $env:SIGNING_CERT_PASSWORD) {
-              Write-Host "Using production Code Signing Certificate from secrets..."
-              [System.IO.File]::WriteAllBytes($pfxPath, [System.Convert]::FromBase64String($env:SIGNING_CERT_BASE64))
-              $cert = Get-PfxCertificate -FilePath $pfxPath
-          } else {
+          $rawCert = if ($env:SIGNING_CERT_BASE64) { $env:SIGNING_CERT_BASE64.Trim() } else { "" }
+          $rawPass = if ($env:SIGNING_CERT_PASSWORD) { $env:SIGNING_CERT_PASSWORD.Trim() } else { "" }
+
+          if ($rawCert -and $rawPass) {
+              try {
+                  $certBytes = [System.Convert]::FromBase64String($rawCert)
+                  if ($certBytes.Length -gt 0) {
+                      [System.IO.File]::WriteAllBytes($pfxPath, $certBytes)
+                      $secPassword = ConvertTo-SecureString -String $rawPass -AsPlainText -Force
+                      $cert = Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation "Cert:\CurrentUser\My" -Password $secPassword -ErrorAction Stop
+                      $hasCert = $true
+                      Write-Host "Successfully loaded production Code Signing Certificate."
+                  }
+              } catch {
+                  Write-Warning "Failed to load production certificate from secrets ($($_.Exception.Message)). Falling back to self-signed certificate."
+                  $hasCert = $false
+              } finally {
+                  if (Test-Path $pfxPath) {
+                      Remove-Item $pfxPath -Force -ErrorAction SilentlyContinue
+                  }
+              }
+          }
+
+          if (-not $hasCert) {
               Write-Host "Creating FreeMatrix Studios Code Signing Certificate..."
               $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=FreeMatrix Studios, O=FreeMatrix Studios, C=US" -CertStoreLocation "Cert:\CurrentUser\My" -HashAlgorithm SHA256 -NotAfter (Get-Date).AddYears(5)
               Export-Certificate -Cert $cert -FilePath "build/FreeMatrixStudios.cer" | Out-Null
@@ -178,6 +201,141 @@ jobs:
           }
           Get-Content "SHA256SUMS.txt"
 
+      - name: Generate Formatted Release Notes
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $customNotes = "${{ github.event.inputs.release_notes }}".Trim()
+          $version = "$env:RELEASE_VERSION"
+
+          # Version badge encoding (escape dashes as -- for shields.io)
+          $badgeVersion = $version -replace '-', '--'
+          $versionBadge = "![Version](https://img.shields.io/badge/version-$badgeVersion-blue)"
+
+          # Status badge detection
+          if ($version -match 'alpha') {
+              $statusBadge = "![Status](https://img.shields.io/badge/status-alpha-orange)"
+          } elseif ($version -match 'beta') {
+              $statusBadge = "![Status](https://img.shields.io/badge/status-beta-yellow)"
+          } else {
+              $statusBadge = "![Status](https://img.shields.io/badge/status-stable-brightgreen)"
+          }
+
+          if ($customNotes) {
+              $finalBody = "$versionBadge $statusBadge`n`n$customNotes"
+              Set-Content -Path "release-notes.md" -Value $finalBody -Encoding utf8
+              exit 0
+          }
+
+          $prevTag = git describe --tags --abbrev=0 HEAD~1 2>$null
+          if (-not $prevTag) {
+              $prevTag = git tag --sort=-v:refname | Select-Object -First 1
+          }
+
+          function Format-ChangelogEntry([string]$text) {
+              if (-not $text) { return $text }
+              return [regex]::Replace($text, '\(#(\d+)\)', '([#$1](https://github.com/${{ github.repository }}/pull/$1))')
+          }
+
+          # Attempt auto-generation using GitHub Releases API
+          $notesJson = $null
+          try {
+              $apiArgs = @(
+                  "api",
+                  "repos/${{ github.repository }}/releases/generate-notes",
+                  "-f", "tag_name=$version",
+                  "-f", "target_commitish=${{ github.sha }}"
+              )
+              if ($prevTag) {
+                  $apiArgs += @("-f", "previous_tag_name=$prevTag")
+              }
+              $notesJson = gh @apiArgs 2>$null | ConvertFrom-Json
+          } catch {
+              $notesJson = $null
+          }
+
+          $rawBody = if ($notesJson -and $notesJson.body) { $notesJson.body } else { "" }
+          $lines = if ($rawBody) { $rawBody -split "`r?`n" } else { @() }
+
+          $featureLines = [System.Collections.Generic.List[string]]::new()
+          $depLines = [System.Collections.Generic.List[string]]::new()
+          $changelogLine = ""
+
+          foreach ($line in $lines) {
+              $trimmed = $line.Trim()
+              if ($trimmed -like "*Full Changelog*:*") {
+                  $changelogLine = $trimmed
+                  continue
+              }
+              if ($trimmed -eq "## What's Changed" -or $trimmed -eq "") {
+                  continue
+              }
+
+              $formattedLine = Format-ChangelogEntry $line
+              if ($trimmed -match '(?i)build\(deps' -or $trimmed -match '(?i)\bbump\s+' -or $trimmed -match '(?i)dependabot') {
+                  $depLines.Add($formattedLine)
+              } else {
+                  $featureLines.Add($formattedLine)
+              }
+          }
+
+          # Fallback to git log when GitHub API returns no commit entries
+          if ($featureLines.Count -eq 0 -and $depLines.Count -eq 0) {
+              $range = if ($prevTag) { "$prevTag..HEAD" } else { "HEAD" }
+              $gitCommits = git log $range --pretty=format:"%s" --reverse
+
+              if ($gitCommits) {
+                  foreach ($c in ($gitCommits -split "`r?`n")) {
+                      $cTrimmed = $c.Trim()
+                      if (-not $cTrimmed) { continue }
+                      $entry = Format-ChangelogEntry "* $cTrimmed"
+                      if ($cTrimmed -match '(?i)build\(deps' -or $cTrimmed -match '(?i)\bbump\s+' -or $cTrimmed -match '(?i)dependabot') {
+                          $depLines.Add($entry)
+                      } else {
+                          $featureLines.Add($entry)
+                      }
+                  }
+              }
+
+              if (-not $changelogLine -and $prevTag) {
+                  $changelogLine = "**Full Changelog**: https://github.com/${{ github.repository }}/compare/$prevTag...$version"
+              }
+          }
+
+          $sb = [System.Text.StringBuilder]::new()
+          [void]$sb.AppendLine("$versionBadge $statusBadge")
+          [void]$sb.AppendLine()
+          [void]$sb.AppendLine("## What's Changed")
+
+          if ($featureLines.Count -gt 0) {
+              foreach ($f in $featureLines) {
+                  [void]$sb.AppendLine($f)
+              }
+          }
+
+          if ($depLines.Count -gt 0) {
+              [void]$sb.AppendLine()
+              [void]$sb.AppendLine("<details>")
+              [void]$sb.AppendLine("<summary><b>Dependency Updates</b></summary>")
+              [void]$sb.AppendLine()
+              foreach ($d in $depLines) {
+                  [void]$sb.AppendLine($d)
+              }
+              [void]$sb.AppendLine()
+              [void]$sb.AppendLine("</details>")
+          }
+
+          if ($changelogLine) {
+              [void]$sb.AppendLine()
+              [void]$sb.AppendLine($changelogLine)
+          }
+
+          $finalBody = Format-ChangelogEntry $sb.ToString().Trim()
+          Set-Content -Path "release-notes.md" -Value $finalBody -Encoding utf8
+          Write-Host "Generated Release Notes:"
+          Write-Host $finalBody
+
       - name: Create Release
         uses: softprops/action-gh-release@v3
         with:
@@ -185,8 +343,7 @@ jobs:
           name: Release ${{ env.RELEASE_VERSION }}
           draft: ${{ github.event.inputs.draft }}
           prerelease: ${{ github.event.inputs.prerelease }}
-          body: ${{ github.event.inputs.release_notes }}
+          body_path: release-notes.md
           files: release-dist/*
-          generate_release_notes: ${{ github.event.inputs.release_notes == '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

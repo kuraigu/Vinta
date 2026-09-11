@@ -20,7 +20,7 @@
     Search,
     FileText,
     SlidersHorizontal,
-    RefreshCw
+    Download
   } from 'lucide-svelte'
   import HomePage, { config as homeConfig } from './HomePage.svelte'
   import NotificationPage, {
@@ -37,7 +37,6 @@
     notifData,
     activeSettingsTabStore,
     pageVisibilityStore,
-    triggerUpdateCheck,
     updateInfoStore,
     type PageVisibility
   } from '../store'
@@ -137,12 +136,11 @@
       id: 'updates',
       name: 'Check for Updates',
       desc: 'Releases & Highlights',
-      icon: RefreshCw,
+      icon: Download,
       color: 'gradient-cyan',
       badge: $updateInfoStore?.updateAvailable,
       action: () => {
         activeSettingsTabStore.set('updates')
-        triggerUpdateCheck(true)
         openApp(SettingsPage, settingsConfig)
       }
     }
