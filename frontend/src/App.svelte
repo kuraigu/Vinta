@@ -1309,9 +1309,26 @@
     }, 6000)
   }
 
+  let dragBoundsRafId: number | undefined
+
+  function scheduleDragBoundsUpdate() {
+    if (dragBoundsRafId !== undefined) return
+    dragBoundsRafId = requestAnimationFrame(() => {
+      dragBoundsRafId = undefined
+      if (isDraggingHidden) {
+        const { w, h, r } = getBoundsForState()
+        updateBounds(w, h, r, clampedOffsetX)
+      }
+    })
+  }
+
   // Failsafe handler to cleanly cancel any drag operation, release OS mouse capture,
   // and guarantee the Win32 window clipping region escapes 100% width mode.
   function handleDragFailsafe() {
+    if (dragBoundsRafId !== undefined) {
+      cancelAnimationFrame(dragBoundsRafId)
+      dragBoundsRafId = undefined
+    }
     clearTimeout(dragWatchdogTimeout)
     dragWatchdogTimeout = undefined
     isDraggingHidden = false
@@ -1320,6 +1337,10 @@
   }
 
   function stopInertia() {
+    if (dragBoundsRafId !== undefined) {
+      cancelAnimationFrame(dragBoundsRafId)
+      dragBoundsRafId = undefined
+    }
     clearTimeout(inertiaSafetyTimeout)
     inertiaSafetyTimeout = undefined
     clearTimeout(dragWatchdogTimeout)
@@ -1443,12 +1464,15 @@
         Math.min(maxAllowedOffsetForCurrentW, targetOffset)
       )
 
-      const { w, h, r } = getBoundsForState()
-      updateBounds(w, h, r, clampedOffsetX)
+      scheduleDragBoundsUpdate()
     }
   }
 
   function handleHiddenPointerUp(e: PointerEvent) {
+    if (dragBoundsRafId !== undefined) {
+      cancelAnimationFrame(dragBoundsRafId)
+      dragBoundsRafId = undefined
+    }
     if (!isDraggingHidden) return
     isDraggingHidden = false
     clearTimeout(dragWatchdogTimeout)

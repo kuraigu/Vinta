@@ -145,6 +145,8 @@ const (
 	SWP_NOOWNERZORDER = 0x0200
 	//nolint:revive // Windows API constants
 	SWP_NOSENDCHANGING = 0x0400
+	//nolint:revive // Windows API constants
+	SWP_DEFERERASE = 0x2000
 
 	// QUERY_USER_NOTIFICATION_STATE enum
 	//nolint:revive // Windows API constants
@@ -233,7 +235,7 @@ var (
 
 func getDisplayMetrics() (vLeft, vTop, vWidth, vHeight, pCenter int, monitors []MonitorInfo) {
 	cachedDisplayMu.RLock()
-	if time.Since(lastDisplayFetch) < 2*time.Second && cachedDisplayLayout.VirtualWidth > 0 {
+	if time.Since(lastDisplayFetch) < 10*time.Second && cachedDisplayLayout.VirtualWidth > 0 {
 		layout := cachedDisplayLayout
 		cachedDisplayMu.RUnlock()
 		return layout.VirtualLeft, layout.VirtualTop, layout.VirtualWidth, layout.VirtualHeight, layout.PrimaryCenter, layout.Monitors
@@ -243,7 +245,7 @@ func getDisplayMetrics() (vLeft, vTop, vWidth, vHeight, pCenter int, monitors []
 	cachedDisplayMu.Lock()
 	defer cachedDisplayMu.Unlock()
 
-	if time.Since(lastDisplayFetch) < 2*time.Second && cachedDisplayLayout.VirtualWidth > 0 {
+	if time.Since(lastDisplayFetch) < 10*time.Second && cachedDisplayLayout.VirtualWidth > 0 {
 		layout := cachedDisplayLayout
 		return layout.VirtualLeft, layout.VirtualTop, layout.VirtualWidth, layout.VirtualHeight, layout.PrimaryCenter, layout.Monitors
 	}
@@ -1395,9 +1397,11 @@ func (a *App) updateWindowRegion() {
 		return
 	}
 
-	flags := uintptr(SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_NOSENDCHANGING | SWP_NOCOPYBITS)
+	flags := uintptr(SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_NOSENDCHANGING | SWP_NOCOPYBITS | SWP_DEFERERASE)
+	hWndInsertAfter := uintptr(0)
 	if isFirstPlacement {
 		flags |= SWP_SHOWWINDOW | SWP_FRAMECHANGED
+		hWndInsertAfter = uintptr(^uintptr(0))
 	} else {
 		flags |= SWP_NOZORDER
 		if !needResize {
@@ -1410,7 +1414,7 @@ func (a *App) updateWindowRegion() {
 
 	_, _, _ = procSetWindowPos.Call(
 		hwnd,
-		uintptr(^uintptr(0)),
+		hWndInsertAfter,
 		uintptr(int32(windowLeft)),
 		uintptr(int32(windowTop)),
 		uintptr(winW),
