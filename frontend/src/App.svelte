@@ -15,7 +15,9 @@
     SetIsHidden,
     SetIgnoreMouseEvents,
     GetDisplayLayout,
-    RequestMediaUpdate
+    RequestMediaUpdate,
+    StartInertiaGlide,
+    StopInertiaGlide
   } from '../wailsjs/go/backend/App.js'
   import { EventsOn } from '../wailsjs/runtime/runtime.js'
   import NotificationPage, {
@@ -86,9 +88,10 @@
       }
     }
   }
-  $effect(() => {
+  function handleDebugBoundsOverlayEffect() {
     syncDebugBoundsOverlay($debugBoundsOverlay)
-  })
+  }
+  $effect(handleDebugBoundsOverlayEffect)
 
   // Dynamic Routing: The active app that the island is displaying
   let activePage = $state<Component>(HomePage)
@@ -153,12 +156,41 @@
     return $autoHideStore
   })
 
-  let displayLayout = $state({
+  interface MonitorInfo {
+    id: number
+    name: string
+    left: number
+    top: number
+    width: number
+    height: number
+    isPrimary: boolean
+  }
+
+  interface DisplayLayoutInfo {
+    virtualLeft: number
+    virtualTop: number
+    virtualWidth: number
+    virtualHeight: number
+    primaryCenter: number
+    currentMonitor?: MonitorInfo
+    monitors: MonitorInfo[]
+  }
+
+  let displayLayout = $state<DisplayLayoutInfo>({
     virtualLeft: 0,
     virtualTop: 0,
     virtualWidth: 1920,
     virtualHeight: 1080,
     primaryCenter: 960,
+    currentMonitor: {
+      id: 1,
+      name: 'Primary Display',
+      left: 0,
+      top: 0,
+      width: 1920,
+      height: 1080,
+      isPrimary: true
+    },
     monitors: [
       {
         id: 1,
@@ -171,6 +203,35 @@
       }
     ]
   })
+
+  // Derive the active monitor based on island composite desktop coordinates
+  let activeMonitor = $derived.by(() => {
+    const screenCenterX =
+      displayLayout.virtualLeft +
+      displayLayout.primaryCenter +
+      clampedOffsetX
+    if (displayLayout.monitors && displayLayout.monitors.length > 0) {
+      for (const mon of displayLayout.monitors) {
+        if (screenCenterX >= mon.left && screenCenterX < mon.left + mon.width) {
+          return mon
+        }
+      }
+    }
+    return (
+      displayLayout.currentMonitor ||
+      displayLayout.monitors?.[0] || {
+        id: 1,
+        name: 'Primary Display',
+        left: 0,
+        top: 0,
+        width: 1920,
+        height: 1080,
+        isPrimary: true
+      }
+    )
+  })
+
+  setContext('activeMonitor', () => activeMonitor)
 
   let hideTrigger = $state(0)
 
@@ -1070,6 +1131,30 @@
         .catch(() => {})
     }
 
+    EventsOn('monitor-changed', (mon: MonitorInfo) => {
+      if (mon && mon.id) {
+        displayLayout = {
+          ...displayLayout,
+          currentMonitor: mon
+        }
+      }
+    })
+
+    EventsOn('inertia-tick', (curOffset: number) => {
+      if (typeof curOffset === 'number' && !isNaN(curOffset)) {
+        currentLiveOffsetX = curOffset
+      }
+    })
+
+    EventsOn('inertia-stopped', (finalOffset: number) => {
+      if (typeof finalOffset === 'number' && !isNaN(finalOffset)) {
+        currentLiveOffsetX = Math.round(finalOffset)
+        $hiddenPillOffsetXStore = currentLiveOffsetX
+      }
+      isInFlight = false
+      stopInertia()
+    })
+
     const refreshDisplay = async () => {
       try {
         const layout = await GetDisplayLayout()
@@ -1256,10 +1341,6 @@
   }
 
   function stopInertia() {
-    if (inertiaAnimFrame) {
-      cancelAnimationFrame(inertiaAnimFrame)
-      inertiaAnimFrame = undefined
-    }
     clearTimeout(inertiaSafetyTimeout)
     inertiaSafetyTimeout = undefined
     clearTimeout(dragWatchdogTimeout)
@@ -1268,7 +1349,16 @@
     isTrackRegionActive = false
     dragHistory = []
     setOSDragCapture(false)
-    SetIgnoreMouseEvents(false)
+    if (typeof StopInertiaGlide === 'function') {
+      StopInertiaGlide()
+        .then((offset) => {
+          if (typeof offset === 'number' && !isNaN(offset)) {
+            currentLiveOffsetX = Math.round(offset)
+            $hiddenPillOffsetXStore = currentLiveOffsetX
+          }
+        })
+        .catch(() => {})
+    }
 
     // Persist final resting offset to store once motion is fully settled
     $hiddenPillOffsetXStore = clampedOffsetX
@@ -1303,7 +1393,7 @@
       return
     }
 
-    if (inertiaAnimFrame) {
+    if (isInFlight) {
       stopInertia()
     }
     setOSDragCapture(true)
@@ -1365,14 +1455,8 @@
         Math.min(maxAllowedOffsetForCurrentW, targetOffset)
       )
 
-      // While actively moving with mouse held down, expand Win32 clipping region to 100% width (-1) ONCE.
-      // This eliminates all redundant intermediate bounds updates during the entire drag gesture,
-      // saving dozens of IPC calls while providing an unclipped full-width runway.
-      if (!isTrackRegionActive) {
-        isTrackRegionActive = true
-        const { h, r } = getBoundsForState()
-        updateBounds(-1, h, r, 0)
-      }
+      const { w, h, r } = getBoundsForState()
+      updateBounds(w, h, r, clampedOffsetX)
     }
   }
 
@@ -1415,48 +1499,21 @@
         velocity = Math.max(-maxVelocity, Math.min(maxVelocity, velocity))
         isInFlight = true
 
-        // True click-through: ignore mouse events and lift clipping region during flight
-        SetIgnoreMouseEvents(true)
-
-        const friction = 0.0035
-
         clearTimeout(inertiaSafetyTimeout)
-        inertiaSafetyTimeout = window.setTimeout(stopInertia, 1200)
+        inertiaSafetyTimeout = window.setTimeout(stopInertia, 1600)
 
-        let lastFrameTime = performance.now()
-
-        function runInertiaStep(currentTime: number) {
-          const frameDt = Math.min(32, currentTime - lastFrameTime)
-          lastFrameTime = currentTime
-
-          if (frameDt > 0) {
-            const decay = Math.exp(-friction * frameDt)
-            velocity *= decay
-            currentLiveOffsetX += velocity * frameDt
-
-            // Edge reached: hard clamp with zero bounce and immediately stop
-            if (currentLiveOffsetX >= maxAllowedOffsetForCurrentW) {
-              currentLiveOffsetX = maxAllowedOffsetForCurrentW
-              stopInertia()
-              return
-            }
-            if (currentLiveOffsetX <= minAllowedOffsetForCurrentW) {
-              currentLiveOffsetX = minAllowedOffsetForCurrentW
-              stopInertia()
-              return
-            }
-
-            // Snap to rest when velocity decays
-            if (Math.abs(velocity) < 0.035) {
-              stopInertia()
-              return
-            }
-          }
-
-          inertiaAnimFrame = requestAnimationFrame(runInertiaStep)
+        if (typeof StartInertiaGlide === 'function') {
+          StartInertiaGlide(
+            currentLiveOffsetX,
+            velocity,
+            minAllowedOffsetForCurrentW,
+            maxAllowedOffsetForCurrentW
+          ).catch(() => {
+            stopInertia()
+          })
+        } else {
+          stopInertia()
         }
-
-        inertiaAnimFrame = requestAnimationFrame(runInertiaStep)
       } else {
         stopInertia()
       }
@@ -1502,7 +1559,6 @@
     if (expanded) return
     // Cancel any active drag/inertia first so the OS region update isn't blocked
     if (isInFlight || isDraggingHidden) stopInertia()
-    triggerBlink()
     islandAnim = '0.32s cubic-bezier(0.2, 0.8, 0.2, 1)'
 
     // Immediately open expanded OS bounds synchronously before starting CSS expansion
@@ -1571,7 +1627,6 @@
   role="application"
   onfocusin={handleFocusIn}
   onpointerdown={handleGlobalPointerDown}
-  style="position: absolute; left: {displayLayout.primaryCenter}px; transform: translateX(-50%);"
 >
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -1588,9 +1643,7 @@
     onpointercancel={handleHiddenPointerUp}
     oncontextmenu={handleContextMenu}
     style="
-      transform: translateX({clampedOffsetX}px) {isQuitting
-      ? 'scale(0.6) translateY(-20px)'
-      : ''};
+      transform: {isQuitting ? 'scale(0.6) translateY(-20px)' : 'none'};
       opacity: {isQuitting ? 0 : activeOpacity};
       filter: {isQuitting ? 'blur(12px)' : 'none'};
       width: {isHidden
@@ -1695,7 +1748,6 @@
     <div
       bind:this={devPillContainerNode}
       style="
-        transform: translateX({devClampedOffsetX}px);
         transition: {isDraggingHidden || isInFlight ? 'none' : islandAnim};
       "
     >
