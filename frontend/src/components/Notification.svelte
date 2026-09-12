@@ -31,7 +31,7 @@
   import {
     FocusNotificationApp,
     FocusWindow
-  } from '../../wailsjs/go/backend/App'
+  } from '../../bindings/Vinta/backend/app.js'
 
   export type NotificationItem = {
     id: number

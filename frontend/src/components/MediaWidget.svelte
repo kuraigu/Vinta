@@ -15,7 +15,7 @@
     SelectMediaSession,
     FocusNotificationApp,
     RequeryMediaArt
-  } from '../../wailsjs/go/backend/App.js'
+  } from '../../bindings/Vinta/backend/app.js'
   import Clock from './Clock.svelte'
   import BatteryWidget from './BatteryWidget.svelte'
   import DynamicEqualizer from './DynamicEqualizer.svelte'

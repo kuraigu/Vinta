@@ -5,7 +5,7 @@
     SendTestLongMessageToast,
     SendTestNoTitleToast,
     SendTestBadge
-  } from '../../wailsjs/go/devtest/DevTest.js'
+  } from '../../bindings/Vinta/backend/devtest/devtest.js'
 
   let selectedAction = $state('native')
   let customAppName = $state('')

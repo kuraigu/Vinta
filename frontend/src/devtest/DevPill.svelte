@@ -1,7 +1,7 @@
 <script lang="ts">
   import { getContext, onMount, untrack } from 'svelte'
   import { fade } from 'svelte/transition'
-  import { SetDevPillBounds } from '../../wailsjs/go/backend/App.js'
+  import { SetDevPillBounds } from '../../bindings/Vinta/backend/app.js'
 
   import {
     Pin,

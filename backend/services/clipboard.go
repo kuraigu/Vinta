@@ -2,7 +2,6 @@
 package services
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -14,7 +13,7 @@ import (
 	"unicode/utf16"
 	"unsafe"
 
-	wailsRuntime "github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 var (
@@ -108,7 +107,6 @@ var (
 	clipWindowHwnd     uintptr
 	keyboardHook       uintptr
 	pasteTriggerChan   = make(chan struct{}, 10)
-	clipContext        context.Context
 )
 
 func init() {
@@ -134,14 +132,13 @@ func SetClipboardMonitoring(copyEnabled bool, pasteEnabled bool) {
 }
 
 // StartClipboardListener initializes background clipboard monitoring and message handling.
-func StartClipboardListener(ctx context.Context) {
+func StartClipboardListener() {
 	clipMutex.Lock()
 	if clipStarted {
 		clipMutex.Unlock()
 		return
 	}
 	clipStarted = true
-	clipContext = ctx
 	clipMutex.Unlock()
 
 	// Launch worker for processing paste trigger events asynchronously
@@ -352,11 +349,10 @@ func handleClipboardUpdate() {
 		return
 	}
 	lastSnippet = payload.ContentSnippet
-	ctx := clipContext
 	clipMutex.Unlock()
 
-	if ctx != nil {
-		wailsRuntime.EventsEmit(ctx, "clipboard:event", payload)
+	if app := application.Get(); app != nil {
+		app.Event.Emit("clipboard:event", payload)
 	}
 }
 
@@ -369,12 +365,8 @@ func dispatchPasteNotification() {
 		return
 	}
 
-	clipMutex.Lock()
-	ctx := clipContext
-	clipMutex.Unlock()
-
-	if ctx != nil {
-		wailsRuntime.EventsEmit(ctx, "clipboard:event", payload)
+	if app := application.Get(); app != nil {
+		app.Event.Emit("clipboard:event", payload)
 	}
 }
 

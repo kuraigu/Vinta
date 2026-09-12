@@ -2,7 +2,6 @@
 package services
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -12,7 +11,7 @@ import (
 	"syscall"
 	"unsafe"
 
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/wailsapp/wails/v3/pkg/application"
 	"golang.org/x/sys/windows"
 )
 
@@ -35,7 +34,6 @@ var (
 	notifCallbackPtr uintptr
 	peakCallbackPtr  uintptr
 
-	wailsCtx  context.Context
 	serviceMu sync.Mutex
 	isStarted bool
 )
@@ -69,15 +67,13 @@ func ensureDLLLoadedLocked() bool {
 }
 
 // StartServicesListener initializes the native C++/WinRT in-process bridge.
-func StartServicesListener(ctx context.Context) {
+func StartServicesListener() {
 	serviceMu.Lock()
 	defer serviceMu.Unlock()
 
 	if isStarted {
 		return
 	}
-
-	wailsCtx = ctx
 
 	if !ensureDLLLoadedLocked() {
 		logMsg("vintaservices.dll not found; native WinRT services disabled")
@@ -352,7 +348,7 @@ func RequestMediaUpdate() {
 }
 
 func onNativeMedia(cStr *byte) uintptr {
-	if cStr == nil || wailsCtx == nil {
+	if cStr == nil {
 		return 0
 	}
 
@@ -407,15 +403,16 @@ func onNativeMedia(cStr *byte) uintptr {
 		if hidden && !trackChanged && !playStateChanged {
 			return 0
 		}
-
-		runtime.EventsEmit(wailsCtx, "media-update", payload)
+		if app := application.Get(); app != nil {
+			app.Event.Emit("media-update", payload)
+		}
 	}
 
 	return 0
 }
 
 func onNativeNotification(cStr *byte) uintptr {
-	if cStr == nil || wailsCtx == nil {
+	if cStr == nil {
 		return 0
 	}
 
@@ -426,7 +423,9 @@ func onNativeNotification(cStr *byte) uintptr {
 
 	var payload map[string]interface{}
 	if err := json.Unmarshal([]byte(str), &payload); err == nil {
-		runtime.EventsEmit(wailsCtx, "notification", payload)
+		if app := application.Get(); app != nil {
+			app.Event.Emit("notification", payload)
+		}
 	}
 
 	return 0
@@ -438,9 +437,6 @@ var (
 )
 
 func onNativeAudioPeak(peakBits uintptr) uintptr {
-	if wailsCtx == nil {
-		return 0
-	}
 
 	hiddenMu.RLock()
 	hidden := isAppHidden
@@ -467,7 +463,9 @@ func onNativeAudioPeak(peakBits uintptr) uintptr {
 		"type": "audio_peak",
 		"peak": float64(peak),
 	}
-	runtime.EventsEmit(wailsCtx, "audio-peak", payload)
+	if app := application.Get(); app != nil {
+		app.Event.Emit("audio-peak", payload)
+	}
 	return 0
 }
 

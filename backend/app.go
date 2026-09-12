@@ -14,8 +14,8 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/getlantern/systray"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/events"
 	"golang.org/x/sys/windows/registry"
 
 	"Vinta/backend/services"
@@ -30,6 +30,7 @@ var (
 	procGetWindow                = user32.NewProc("GetWindow")
 	procGetWindowThreadProcessID = user32.NewProc("GetWindowThreadProcessId")
 	procGetClassName             = user32.NewProc("GetClassNameW")
+	procGetWindowTextW           = user32.NewProc("GetWindowTextW")
 	procSetWinEventHook          = user32.NewProc("SetWinEventHook")
 	procEnumDisplayMonitors      = user32.NewProc("EnumDisplayMonitors")
 	procGetMonitorInfoW          = user32.NewProc("GetMonitorInfoW")
@@ -55,8 +56,6 @@ var (
 	procCombineRgn         = gdi32.NewProc("CombineRgn")
 	procSetWindowRgn       = user32.NewProc("SetWindowRgn")
 	procDeleteObject       = gdi32.NewProc("DeleteObject")
-	procSetCapture         = user32.NewProc("SetCapture")
-	procReleaseCapture     = user32.NewProc("ReleaseCapture")
 
 	psapi                         = syscall.NewLazyDLL("psapi.dll")
 	procEmptyWorkingSet           = psapi.NewProc("EmptyWorkingSet")
@@ -205,13 +204,14 @@ type monitorInfoW struct {
 
 // MonitorInfo describes a connected physical display's boundaries and properties.
 type MonitorInfo struct {
-	ID        int    `json:"id"`
-	Name      string `json:"name"`
-	Left      int    `json:"left"`
-	Top       int    `json:"top"`
-	Width     int    `json:"width"`
-	Height    int    `json:"height"`
-	IsPrimary bool   `json:"isPrimary"`
+	ID         int    `json:"id"`
+	Name       string `json:"name"`
+	Left       int    `json:"left"`
+	Top        int    `json:"top"`
+	Width      int    `json:"width"`
+	Height     int    `json:"height"`
+	IsPrimary  bool   `json:"isPrimary"`
+	IsPortrait bool   `json:"isPortrait"`
 }
 
 // DisplayLayout captures multi-monitor geometry and the composite virtual desktop space.
@@ -231,9 +231,20 @@ var (
 	lastDisplayFetch    time.Time
 )
 
-func getDisplayMetrics() (vLeft, vTop, vWidth, vHeight, pCenter int, monitors []MonitorInfo) {
+// GetDisplayMetrics returns the virtual screen boundaries and monitor list for window placement.
+func GetDisplayMetrics() (vLeft, vTop, vWidth, vHeight, pCenter int, monitors []MonitorInfo) {
+	procGetSystemMetrics := user32.NewProc("GetSystemMetrics")
+	vx, _, _ := procGetSystemMetrics.Call(SM_XVIRTUALSCREEN)
+	vy, _, _ := procGetSystemMetrics.Call(SM_YVIRTUALSCREEN)
+	vw, _, _ := procGetSystemMetrics.Call(SM_CXVIRTUALSCREEN)
+	vh, _, _ := procGetSystemMetrics.Call(SM_CYVIRTUALSCREEN)
+
+	currVw := int(vw)
+	currVh := int(vh)
+
 	cachedDisplayMu.RLock()
-	if time.Since(lastDisplayFetch) < 10*time.Second && cachedDisplayLayout.VirtualWidth > 0 {
+	if time.Since(lastDisplayFetch) < 10*time.Second && cachedDisplayLayout.VirtualWidth > 0 &&
+		cachedDisplayLayout.VirtualWidth == currVw && cachedDisplayLayout.VirtualHeight == currVh {
 		layout := cachedDisplayLayout
 		cachedDisplayMu.RUnlock()
 		return layout.VirtualLeft, layout.VirtualTop, layout.VirtualWidth, layout.VirtualHeight, layout.PrimaryCenter, layout.Monitors
@@ -243,21 +254,16 @@ func getDisplayMetrics() (vLeft, vTop, vWidth, vHeight, pCenter int, monitors []
 	cachedDisplayMu.Lock()
 	defer cachedDisplayMu.Unlock()
 
-	if time.Since(lastDisplayFetch) < 10*time.Second && cachedDisplayLayout.VirtualWidth > 0 {
+	if time.Since(lastDisplayFetch) < 10*time.Second && cachedDisplayLayout.VirtualWidth > 0 &&
+		cachedDisplayLayout.VirtualWidth == currVw && cachedDisplayLayout.VirtualHeight == currVh {
 		layout := cachedDisplayLayout
 		return layout.VirtualLeft, layout.VirtualTop, layout.VirtualWidth, layout.VirtualHeight, layout.PrimaryCenter, layout.Monitors
 	}
 
-	procGetSystemMetrics := user32.NewProc("GetSystemMetrics")
-	vx, _, _ := procGetSystemMetrics.Call(SM_XVIRTUALSCREEN)
-	vy, _, _ := procGetSystemMetrics.Call(SM_YVIRTUALSCREEN)
-	vw, _, _ := procGetSystemMetrics.Call(SM_CXVIRTUALSCREEN)
-	vh, _, _ := procGetSystemMetrics.Call(SM_CYVIRTUALSCREEN)
-
 	vLeft = int(int32(vx))
 	vTop = int(int32(vy))
-	vWidth = int(vw)
-	vHeight = int(vh)
+	vWidth = currVw
+	vHeight = currVh
 
 	pw, _, _ := procGetSystemMetrics.Call(SM_CXSCREEN)
 	ph, _, _ := procGetSystemMetrics.Call(SM_CYSCREEN)
@@ -288,14 +294,16 @@ func getDisplayMetrics() (vLeft, vTop, vWidth, vHeight, pCenter int, monitors []
 				w := int(mi.RcMonitor.Right - mi.RcMonitor.Left)
 				h := int(mi.RcMonitor.Bottom - mi.RcMonitor.Top)
 				isPrimary := (mi.DwFlags & 1) != 0
+				isPortrait := h > w
 				monitors = append(monitors, MonitorInfo{
-					ID:        id,
-					Name:      fmt.Sprintf("Display %d", id),
-					Left:      int(mi.RcMonitor.Left),
-					Top:       int(mi.RcMonitor.Top),
-					Width:     w,
-					Height:    h,
-					IsPrimary: isPrimary,
+					ID:         id,
+					Name:       fmt.Sprintf("Display %d", id),
+					Left:       int(mi.RcMonitor.Left),
+					Top:        int(mi.RcMonitor.Top),
+					Width:      w,
+					Height:     h,
+					IsPrimary:  isPrimary,
+					IsPortrait: isPortrait,
 				})
 			}
 			return 1
@@ -305,13 +313,14 @@ func getDisplayMetrics() (vLeft, vTop, vWidth, vHeight, pCenter int, monitors []
 
 	if len(monitors) == 0 {
 		monitors = append(monitors, MonitorInfo{
-			ID:        1,
-			Name:      "Primary Display",
-			Left:      0,
-			Top:       0,
-			Width:     primaryW,
-			Height:    vHeight,
-			IsPrimary: true,
+			ID:         1,
+			Name:       "Primary Display",
+			Left:       0,
+			Top:        0,
+			Width:      primaryW,
+			Height:     vHeight,
+			IsPrimary:  true,
+			IsPortrait: vHeight > primaryW,
 		})
 	}
 
@@ -343,13 +352,14 @@ func resolveCurrentMonitor(screenCenterX int, monitors []MonitorInfo) MonitorInf
 		return monitors[0]
 	}
 	return MonitorInfo{
-		ID:        1,
-		Name:      "Primary Display",
-		Left:      0,
-		Top:       0,
-		Width:     1920,
-		Height:    1080,
-		IsPrimary: true,
+		ID:         1,
+		Name:       "Primary Display",
+		Left:       0,
+		Top:        0,
+		Width:      1920,
+		Height:     1080,
+		IsPrimary:  true,
+		IsPortrait: false,
 	}
 }
 
@@ -388,10 +398,13 @@ func getMyWindowHwnd() uintptr {
 		var pid uint32
 		_, _, _ = procGetWindowThreadProcessID.Call(child, uintptr(unsafe.Pointer(&pid)))
 		if pid == myPid {
-			var classBuf [256]uint16
-			_, _, _ = procGetClassName.Call(child, uintptr(unsafe.Pointer(&classBuf[0])), 256)
-			className := syscall.UTF16ToString(classBuf[:])
-			if className != "IME" && className != "MSCTFIME UI" {
+			var textBuf [256]uint16
+			_, _, _ = procGetWindowTextW.Call(child, uintptr(unsafe.Pointer(&textBuf[0])), 256)
+			windowTitle := syscall.UTF16ToString(textBuf[:])
+
+			// Strictly accept only the window explicitly titled Vinta.
+			// Internal Wails synchronization windows, IME windows, and helper windows are excluded.
+			if windowTitle == "Vinta" {
 				cachedHwndMu.Lock()
 				cachedWindowHwnd = child
 				cachedHwndMu.Unlock()
@@ -636,9 +649,11 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 			if !autoHiddenByFullscreen {
 				autoHiddenByFullscreen = true
 				services.SetAppHidden(true)
-				if a.ctx != nil {
-					runtime.WindowHide(a.ctx)
-					runtime.EventsEmit(a.ctx, "game-mode-enter", reason)
+				if a.window != nil {
+					a.window.Hide()
+				}
+				if app := application.Get(); app != nil {
+					app.Event.Emit("game-mode-enter", reason)
 				}
 			}
 			return
@@ -647,9 +662,11 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 		if autoHiddenByFullscreen {
 			autoHiddenByFullscreen = false
 			services.SetAppHidden(false)
-			if a.ctx != nil {
-				runtime.WindowShow(a.ctx)
-				runtime.EventsEmit(a.ctx, "game-mode-exit")
+			if a.window != nil {
+				a.window.Show()
+			}
+			if app := application.Get(); app != nil {
+				app.Event.Emit("game-mode-exit")
 			}
 		}
 
@@ -725,6 +742,8 @@ var screenWidth, screenHeight int
 // App struct
 type App struct {
 	ctx                context.Context
+	wailsApp           *application.App
+	window             *application.WebviewWindow
 	icon               []byte
 	pillW              int
 	pillH              int
@@ -763,11 +782,24 @@ func NewApp(icon []byte) *App {
 	}
 }
 
-// Startup is called when the app starts. The context is saved
-// so we can call the runtime methods
-func (a *App) Startup(ctx context.Context) {
+// getHwnd retrieves the window handle, preferring the native Wails v3 window handle.
+func (a *App) getHwnd() uintptr {
+	if a.window != nil {
+		if h := uintptr(a.window.NativeWindow()); h != 0 {
+			return h
+		}
+	}
+	return getMyWindowHwnd()
+}
+
+// Setup initializes the Wails v3 application instance, window hooks, and native system tray.
+func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 	defer SetupPanicRecovery()
-	a.ctx = ctx
+	a.wailsApp = wailsApp
+	a.window = win
+	if wailsApp != nil {
+		a.ctx = wailsApp.Context()
+	}
 
 	if procTimeBeginPeriod.Find() == nil {
 		_, _, _ = procTimeBeginPeriod.Call(1)
@@ -788,27 +820,32 @@ func (a *App) Startup(ctx context.Context) {
 		screenHeight = 1080
 	}
 
-	go func() {
-		var hwnd uintptr
-		for i := 0; i < 30; i++ {
-			hwnd = getMyWindowHwnd()
-			if hwnd != 0 {
-				break
-			}
-			time.Sleep(100 * time.Millisecond)
+	var initOnce sync.Once
+	applyInit := func(hwnd uintptr) {
+		if hwnd == 0 {
+			return
 		}
+		initOnce.Do(func() {
+			cachedHwndMu.Lock()
+			cachedWindowHwnd = hwnd
+			cachedHwndMu.Unlock()
 
-		if hwnd != 0 {
 			gwl := int32(GWL_EXSTYLE)
 			style, _, _ := procGetWindowLong.Call(hwnd, uintptr(gwl))
-			style = (style | WS_EX_TOOLWINDOW | WS_EX_TOPMOST) &^ WS_EX_NOACTIVATE &^ WS_EX_APPWINDOW &^ WS_EX_LAYERED
+			style = (style | WS_EX_TOOLWINDOW | WS_EX_TOPMOST) &^ WS_EX_NOACTIVATE &^ WS_EX_APPWINDOW
 			_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwl), style)
 
 			a.setupForegroundEventHook(hwnd)
 
 			// Size stationary overlay window across virtual desktop space once at startup
-			vLeft, vTop, vWidth, vHeight, _, _ := getDisplayMetrics()
-			overlayHeight := 680
+			vLeft, vTop, vWidth, vHeight, _, monitors := GetDisplayMetrics()
+			maxTopOffset := 0
+			for _, mon := range monitors {
+				if offset := mon.Top - vTop; offset > maxTopOffset {
+					maxTopOffset = offset
+				}
+			}
+			overlayHeight := maxTopOffset + 680
 			if vHeight > 0 && overlayHeight > vHeight {
 				overlayHeight = vHeight
 			}
@@ -818,70 +855,93 @@ func (a *App) Startup(ctx context.Context) {
 					uintptr(^uintptr(0)), // HWND_TOPMOST
 					uintptr(int32(vLeft)), uintptr(int32(vTop)),
 					uintptr(vWidth), uintptr(overlayHeight),
-					0x0010|0x0020|0x0040, // SWP_NOACTIVATE | SWP_FRAMECHANGED | SWP_SHOWWINDOW
+					0x0010|0x0020, // SWP_NOACTIVATE | SWP_FRAMECHANGED
 				)
 			}
 
-			go services.StartServicesListener(ctx)
-			go services.StartClipboardListener(ctx)
+			go services.StartServicesListener()
+			go services.StartClipboardListener()
 
 			a.updateWindowRegion()
+		})
+	}
+
+	if win != nil {
+		win.OnWindowEvent(events.Common.WindowShow, func(_ *application.WindowEvent) {
+			if h := uintptr(win.NativeWindow()); h != 0 {
+				applyInit(h)
+			}
+		})
+		win.OnWindowEvent(events.Common.WindowRuntimeReady, func(_ *application.WindowEvent) {
+			if h := uintptr(win.NativeWindow()); h != 0 {
+				applyInit(h)
+			}
+		})
+	}
+
+	go func() {
+		for i := 0; i < 400; i++ {
+			if win != nil {
+				if h := uintptr(win.NativeWindow()); h != 0 {
+					applyInit(h)
+					return
+				}
+			}
+			if h := getMyWindowHwnd(); h != 0 {
+				applyInit(h)
+				return
+			}
+			time.Sleep(50 * time.Millisecond)
 		}
 	}()
 
 	a.StartBackgroundUpdateChecker()
 
-	go systray.Run(a.onReady, a.onExit)
-}
+	if wailsApp != nil {
+		systray := wailsApp.SystemTray.New()
+		systray.SetIcon(a.icon)
+		systray.SetTooltip("Vinta Dynamic Island")
 
-func (a *App) onReady() {
-	systray.SetIcon(a.icon)
-	systray.SetTitle("Vinta")
-	systray.SetTooltip("Vinta Dynamic Island")
-
-	mShow := systray.AddMenuItem("Show Vinta", "Bring the widget back into view")
-	systray.AddSeparator()
-	mTheme := systray.AddMenuItem("Toggle Theme", "Switch between Dark and Light mode")
-	mShape := systray.AddMenuItem("Toggle Shape", "Switch between Pill and Box shape")
-	systray.AddSeparator()
-	mQuit := systray.AddMenuItem("Quit Vinta", "Close the application")
-
-	go func() {
-		for {
-			select {
-			case <-mShow.ClickedCh:
-				if a.ctx != nil {
-					runtime.EventsEmit(a.ctx, "show-pill")
-				}
-			case <-mTheme.ClickedCh:
-				if a.ctx != nil {
-					runtime.EventsEmit(a.ctx, "toggle-theme")
-				}
-			case <-mShape.ClickedCh:
-				if a.ctx != nil {
-					runtime.EventsEmit(a.ctx, "toggle-shape")
-				}
-			case <-mQuit.ClickedCh:
-				systray.Quit()
-				if a.ctx != nil {
-					runtime.Quit(a.ctx)
-				}
-				return
+		menu := wailsApp.NewMenu()
+		menu.Add("Show Vinta").OnClick(func(_ *application.Context) {
+			if app := application.Get(); app != nil {
+				app.Event.Emit("show-pill")
 			}
-		}
-	}()
+		})
+		menu.AddSeparator()
+		menu.Add("Toggle Theme").OnClick(func(_ *application.Context) {
+			if app := application.Get(); app != nil {
+				app.Event.Emit("toggle-theme")
+			}
+		})
+		menu.Add("Toggle Shape").OnClick(func(_ *application.Context) {
+			if app := application.Get(); app != nil {
+				app.Event.Emit("toggle-shape")
+			}
+		})
+		menu.AddSeparator()
+		menu.Add("Quit Vinta").OnClick(func(_ *application.Context) {
+			a.Quit()
+		})
+
+		systray.SetMenu(menu)
+
+		wailsApp.OnShutdown(func() {
+			services.StopClipboardListener()
+			services.StopServicesListener()
+		})
+	}
 }
 
-func (a *App) onExit() {
-	services.StopClipboardListener()
-	services.StopServicesListener()
+// Startup satisfies legacy startup calls if invoked.
+func (a *App) Startup(ctx context.Context) {
+	a.ctx = ctx
 }
 
-// Shutdown is called when Wails application shuts down.
+// Shutdown stops native background listeners.
 func (a *App) Shutdown(_ context.Context) {
 	services.StopClipboardListener()
 	services.StopServicesListener()
-	systray.Quit()
 }
 
 // SetWidgetBounds is called by the frontend whenever the widget dimensions change.
@@ -982,7 +1042,7 @@ func (a *App) FocusNotificationApp(sourceApp string, aumid string) bool {
 
 // GetDisplayLayout returns the multi-monitor geometry and composite virtual desktop layout.
 func (a *App) GetDisplayLayout() DisplayLayout {
-	vLeft, vTop, vWidth, vHeight, pCenter, monitors := getDisplayMetrics()
+	vLeft, vTop, vWidth, vHeight, pCenter, monitors := GetDisplayMetrics()
 	scale := a.scale
 	if scale <= 0 {
 		scale = 1.0
@@ -1002,7 +1062,7 @@ func (a *App) GetDisplayLayout() DisplayLayout {
 
 // GetCurrentMonitor returns the active monitor where Vinta is currently located.
 func (a *App) GetCurrentMonitor() MonitorInfo {
-	vLeft, _, _, _, pCenter, monitors := getDisplayMetrics()
+	vLeft, _, _, _, pCenter, monitors := GetDisplayMetrics()
 	scale := a.scale
 	if scale <= 0 {
 		scale = 1.0
@@ -1014,14 +1074,16 @@ func (a *App) GetCurrentMonitor() MonitorInfo {
 // Quit terminates the application
 func (a *App) Quit() {
 	services.StopServicesListener()
-	if a.ctx != nil {
-		runtime.Quit(a.ctx)
+	if a.wailsApp != nil {
+		a.wailsApp.Quit()
+	} else if app := application.Get(); app != nil {
+		app.Quit()
 	}
 }
 
 // FocusWindow requests OS input focus so typing and keyboard events work immediately on click/focus
 func (a *App) FocusWindow() {
-	hwnd := getMyWindowHwnd()
+	hwnd := a.getHwnd()
 	if hwnd != 0 {
 		procGetForegroundWindow := user32.NewProc("GetForegroundWindow")
 		curFg, _, _ := procGetForegroundWindow.Call()
@@ -1037,17 +1099,10 @@ func (a *App) FocusWindow() {
 }
 
 // SetDragCapture controls Win32 OS-level mouse capture during drag gestures.
-// When enabled, mouse messages across the monitor are delivered to the window,
-// preventing dropped gestures when bounds tighten or cursor moves rapidly.
+// Deprecated/No-op: WebView2 child window requires uninterrupted mouse messages to fire DOM pointer capture.
+// Calling Win32 SetCapture on the parent HWND starves WebView2 of WM_MOUSEMOVE and WM_LBUTTONUP.
 func (a *App) SetDragCapture(enable bool) {
-	hwnd := getMyWindowHwnd()
-	if hwnd != 0 {
-		if enable {
-			_, _, _ = procSetCapture.Call(hwnd)
-		} else {
-			_, _, _ = procReleaseCapture.Call()
-		}
-	}
+	_ = enable
 }
 
 type glideController struct {
@@ -1060,6 +1115,7 @@ var activeGlideController glideController
 
 // StartInertiaGlide resets active glide generation tokens.
 func (a *App) StartInertiaGlide(startOffset float64, velocity float64, minOffset float64, maxOffset float64) {
+	_, _, _, _ = startOffset, velocity, minOffset, maxOffset
 	activeGlideController.mu.Lock()
 	if activeGlideController.stopCh != nil {
 		close(activeGlideController.stopCh)
@@ -1069,8 +1125,8 @@ func (a *App) StartInertiaGlide(startOffset float64, velocity float64, minOffset
 	myGen := activeGlideController.generation
 	activeGlideController.mu.Unlock()
 
-	if a.ctx != nil {
-		runtime.EventsEmit(a.ctx, "inertia-started", myGen)
+	if app := application.Get(); app != nil {
+		app.Event.Emit("inertia-started", myGen)
 	}
 }
 
@@ -1090,7 +1146,11 @@ func (a *App) StopInertiaGlide() float64 {
 // SetIgnoreMouseEvents toggles click-through for the entire window and its children using Win32 WS_EX_TRANSPARENT.
 // When enabled, all mouse clicks pass straight through to underlying applications and the clipping region is lifted.
 func (a *App) SetIgnoreMouseEvents(ignore bool) {
-	hwnd := getMyWindowHwnd()
+	if a.window != nil {
+		a.window.SetIgnoreMouseEvents(ignore)
+	}
+
+	hwnd := a.getHwnd()
 	if hwnd == 0 {
 		return
 	}
@@ -1202,7 +1262,7 @@ var (
 
 // updateWindowRegion updates the Win32 window clipping region for click-through.
 func (a *App) updateWindowRegion() {
-	hwnd := getMyWindowHwnd()
+	hwnd := a.getHwnd()
 	if hwnd == 0 {
 		return
 	}
@@ -1246,6 +1306,9 @@ func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, dw int, dh i
 			sw = 1920
 		}
 	}
+	if _, _, vWidth, _, _, _ := GetDisplayMetrics(); vWidth > sw {
+		sw = vWidth
+	}
 
 	// Early exit if identical region is already applied to HWND
 	if lastRegion.w == w && lastRegion.h == h && lastRegion.r == r &&
@@ -1266,7 +1329,7 @@ func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, dw int, dh i
 
 	hrgnFinal := combineWindowRegions(hrgnMain, hrgnDev)
 	if hrgnFinal != 0 {
-		_, _, _ = procSetWindowRgn.Call(hwnd, hrgnFinal, 0)
+		_, _, _ = procSetWindowRgn.Call(hwnd, hrgnFinal, 1)
 	}
 }
 
@@ -1275,25 +1338,37 @@ func createMainPillRegion(w, h, r, offsetX, sw, padding int, scale float64) uint
 	scaleInt := func(v int) int {
 		return int(float64(v) * scale)
 	}
-	if w == -1 && h > 0 {
-		visualTop := scaleInt(5)
-		ph := scaleInt(h)
-		pad := scaleInt(padding)
-		top := visualTop - pad
-		if top < 0 {
-			top = 0
+
+	vLeft, vTop, _, _, pCenter, monitors := GetDisplayMetrics()
+	scaledOffset := scaleInt(offsetX)
+	screenCenterX := vLeft + pCenter + scaledOffset
+	currentMon := resolveCurrentMonitor(screenCenterX, monitors)
+	monitorTopOffset := scaleInt(currentMon.Top - vTop)
+	if monitorTopOffset < 0 {
+		monitorTopOffset = 0
+	}
+	visualTop := monitorTopOffset + scaleInt(5)
+
+	if w == -1 {
+		maxTopOffset := 0
+		for _, mon := range monitors {
+			if offset := mon.Top - vTop; offset > maxTopOffset {
+				maxTopOffset = offset
+			}
 		}
-		bottom := visualTop + ph + pad
+		overlayHeight := maxTopOffset + 680
+		_, _, _, vHeight, _, _ := GetDisplayMetrics()
+		if vHeight > 0 && overlayHeight > vHeight {
+			overlayHeight = vHeight
+		}
 
 		hrgn, _, _ := procCreateRectRgn.Call(
-			0, uintptr(top),
-			uintptr(sw), uintptr(bottom),
+			0, 0,
+			uintptr(sw), uintptr(overlayHeight),
 		)
 		return hrgn
 	} else if w > 0 && h > 0 {
-		visualTop := scaleInt(5)
-		_, _, _, _, pCenter, _ := getDisplayMetrics()
-		physicalCenterX := pCenter + scaleInt(offsetX)
+		physicalCenterX := pCenter + scaledOffset
 		pw := scaleInt(w)
 		ph := scaleInt(h)
 		pad := scaleInt(padding)
@@ -1336,8 +1411,17 @@ func createDevPillRegion(dw, dh, extraH, mainH, offsetX, sw int, scale float64, 
 		return int(float64(v) * scale)
 	}
 
+	vLeft, vTop, _, _, pCenter, monitors := GetDisplayMetrics()
+	scaledOffset := scaleInt(offsetX)
+	screenCenterX := vLeft + pCenter + scaledOffset
+	currentMon := resolveCurrentMonitor(screenCenterX, monitors)
+	monitorTopOffset := scaleInt(currentMon.Top - vTop)
+	if monitorTopOffset < 0 {
+		monitorTopOffset = 0
+	}
+
 	gap := scaleInt(15)
-	visualTop := scaleInt(5)
+	visualTop := monitorTopOffset + scaleInt(5)
 	devTopOffset := visualTop
 	if mainH > 0 {
 		ph := scaleInt(mainH)
@@ -1365,8 +1449,6 @@ func createDevPillRegion(dw, dh, extraH, mainH, offsetX, sw int, scale float64, 
 		return hrgn
 	}
 
-	_, _, _, _, pCenter, _ := getDisplayMetrics()
-	scaledOffset := scaleInt(offsetX)
 	physicalCenterX := pCenter + scaledOffset
 
 	left := physicalCenterX - (pdw / 2) - pad

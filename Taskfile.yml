@@ -52,15 +52,18 @@ tasks:
     deps: [build:native]
     cmds:
       - cmd.exe /c "taskkill /IM Vinta.exe /F >nul 2>&1 || exit 0"
-      - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/increment_build.ps1
-      - wails dev -tags devtest
+      - wails3 dev -config ./build/config.yml -port 9245
+
+  dev:frontend:
+    desc: Start Vite dev server for Wails v3 dev mode
+    cmds:
+      - cmd.exe /c "cd frontend && npm run dev -- --port 9245 --strictPort"
 
   dev:nobuild:
     desc: Start live development server without rebuilding native C++ DLL
     cmds:
       - cmd.exe /c "taskkill /IM Vinta.exe /F >nul 2>&1 || exit 0"
-      - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/increment_build.ps1
-      - wails dev -tags devtest
+      - wails3 dev -config ./build/config.yml -port 9245
 
   icon:
     desc: Generate multi-resolution build/windows/icon.ico from build/appicon.png
@@ -71,12 +74,38 @@ tasks:
     cmds:
       - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/generate_icon.ps1
 
-  build:
-    desc: Build production executable and bundle assets
-    deps: [build:native, icon]
+  build:frontend:
+    desc: Build frontend production bundle using Vite
+    sources:
+      - 'frontend/src/**/*'
+      - 'frontend/package.json'
+      - 'frontend/vite.config.ts'
+      - 'frontend/index.html'
+      - 'frontend/tsconfig.json'
+    generates:
+      - 'frontend/dist/index.html'
     cmds:
+      - cmd.exe /c "cd frontend && npm run build"
+
+  generate:syso:
+    desc: Generate Windows syso resource file
+    sources:
+      - 'build/windows/icon.ico'
+      - 'build/windows/info.json'
+      - 'build/windows/wails.exe.manifest'
+    generates:
+      - 'wails_windows_amd64.syso'
+    cmds:
+      - wails3 generate syso -arch amd64 -icon build/windows/icon.ico -manifest build/windows/wails.exe.manifest -info build/windows/info.json -out wails_windows_amd64.syso
+
+  build:
+    desc: Build application binary (production by default, dev with DEV=true)
+    deps: [build:native, icon, build:frontend, generate:syso]
+    cmds:
+      - cmd.exe /c "taskkill /IM Vinta.exe /F >nul 2>&1 || exit 0"
       - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/increment_build.ps1
-      - wails build
+      - '{{if eq .DEV "true"}}go build -tags devtest -o "{{.BUILD_DIR}}/{{.APP_NAME}}.exe" .{{else}}go build -trimpath -ldflags="-w -s -H windowsgui" -o "{{.BUILD_DIR}}/{{.APP_NAME}}.exe" .{{end}}'
+      - powershell.exe -NoProfile -Command "if (Test-Path wails_windows_amd64.syso) { Remove-Item -Force wails_windows_amd64.syso }"
 
   package:installer:
     desc: Build standalone production binary and Windows NSIS installer
@@ -88,20 +117,19 @@ tasks:
 
   run:
     desc: Compile and run standalone binary
-    deps: [build:native, icon]
+    deps: [build]
     cmds:
       - cmd.exe /c "taskkill /IM Vinta.exe /F >nul 2>&1 || exit 0"
-      - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/increment_build.ps1
-      - wails build
       - powershell.exe -NoProfile -Command "Start-Process 'build/bin/Vinta.exe'"
 
   run:debug:
     desc: Compile and run standalone binary with debug flags
-    deps: [build:native, icon]
+    deps:
+      - task: build
+        vars:
+          DEV: "true"
     cmds:
       - cmd.exe /c "taskkill /IM Vinta.exe /F >nul 2>&1 || exit 0"
-      - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/increment_build.ps1
-      - wails build
       - powershell.exe -NoProfile -Command "Start-Process 'build/bin/Vinta.exe' -ArgumentList '-debug'"
 
   run:nobuild:
@@ -118,11 +146,12 @@ tasks:
 
   test:
     desc: Build and launch test suite binary with DevTest panel
-    deps: [build:native]
+    deps:
+      - task: build
+        vars:
+          DEV: "true"
     cmds:
       - cmd.exe /c "taskkill /IM Vinta.exe /F >nul 2>&1 || exit 0"
-      - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/increment_build.ps1
-      - wails build -tags devtest
       - powershell.exe -NoProfile -Command "Start-Process 'build/bin/Vinta.exe'"
 
   lint:native:

@@ -15,8 +15,17 @@
     SetIsHidden,
     GetDisplayLayout,
     RequestMediaUpdate
-  } from '../wailsjs/go/backend/App.js'
-  import { EventsOn } from '../wailsjs/runtime/runtime.js'
+  } from '../bindings/Vinta/backend/app.js'
+  import { Events } from '@wailsio/runtime'
+
+  function EventsOn<T = unknown>(
+    eventName: string,
+    callback: (data: T) => void
+  ): () => void {
+    return Events.On(eventName, (ev: { data: T }) => {
+      callback(ev?.data)
+    })
+  }
   import NotificationPage, {
     config as notifConfig
   } from './pages/NotificationPage.svelte'
@@ -161,6 +170,7 @@
     width: number
     height: number
     isPrimary: boolean
+    isPortrait?: boolean
   }
 
   interface DisplayLayoutInfo {
@@ -186,7 +196,8 @@
       top: 0,
       width: 1920,
       height: 1080,
-      isPrimary: true
+      isPrimary: true,
+      isPortrait: false
     },
     monitors: [
       {
@@ -196,15 +207,18 @@
         top: 0,
         width: 1920,
         height: 1080,
-        isPrimary: true
+        isPrimary: true,
+        isPortrait: false
       }
     ]
   })
 
   // Derive the active monitor based on island composite desktop coordinates
-  let activeMonitor = $derived.by(() => {
+  function computeActiveMonitor() {
     const screenCenterX =
-      displayLayout.virtualLeft + displayLayout.primaryCenter + clampedOffsetX
+      displayLayout.virtualLeft +
+      displayLayout.primaryCenter +
+      currentLiveOffsetX
     if (displayLayout.monitors && displayLayout.monitors.length > 0) {
       for (const mon of displayLayout.monitors) {
         if (screenCenterX >= mon.left && screenCenterX < mon.left + mon.width) {
@@ -221,10 +235,12 @@
         top: 0,
         width: 1920,
         height: 1080,
-        isPrimary: true
+        isPrimary: true,
+        isPortrait: false
       }
     )
-  })
+  }
+  let activeMonitor = $derived.by(computeActiveMonitor)
 
   setContext('activeMonitor', () => activeMonitor)
 
@@ -597,22 +613,61 @@
   let currentIslandW = $derived(
     isHidden
       ? hiddenBounds.w
-      : expanded
-        ? islandConfig.expanded.w
-        : currentMinimalW
+      : Math.min(
+          expanded ? islandConfig.expanded.w : currentMinimalW,
+          activeMonitor.width ? activeMonitor.width - 24 : 1920
+        )
   )
 
-  let minAllowedOffsetForCurrentW = $derived.by(() => {
+  function computeVirtualMinOffset() {
     const halfW = currentIslandW / 2
-    return Math.floor(12 + halfW - displayLayout.primaryCenter)
-  })
+    const baseCenter = displayLayout.virtualLeft + displayLayout.primaryCenter
+    return Math.floor(displayLayout.virtualLeft + 12 + halfW - baseCenter)
+  }
+  let virtualMinOffset = $derived.by(computeVirtualMinOffset)
 
-  let maxAllowedOffsetForCurrentW = $derived.by(() => {
+  function computeVirtualMaxOffset() {
     const halfW = currentIslandW / 2
+    const baseCenter = displayLayout.virtualLeft + displayLayout.primaryCenter
     return Math.floor(
-      displayLayout.virtualWidth - 12 - halfW - displayLayout.primaryCenter
+      displayLayout.virtualLeft +
+        displayLayout.virtualWidth -
+        12 -
+        halfW -
+        baseCenter
     )
-  })
+  }
+  let virtualMaxOffset = $derived.by(computeVirtualMaxOffset)
+
+  function computeMinAllowedOffsetForCurrentW() {
+    const halfW = currentIslandW / 2
+    const mon = activeMonitor
+    const baseCenter = displayLayout.virtualLeft + displayLayout.primaryCenter
+    const targetLeft = mon.left + 12 + halfW
+    const targetRight = mon.left + mon.width - 12 - halfW
+    if (targetLeft > targetRight) {
+      return Math.floor(mon.left + mon.width / 2 - baseCenter)
+    }
+    return Math.floor(targetLeft - baseCenter)
+  }
+  let minAllowedOffsetForCurrentW = $derived.by(
+    computeMinAllowedOffsetForCurrentW
+  )
+
+  function computeMaxAllowedOffsetForCurrentW() {
+    const halfW = currentIslandW / 2
+    const mon = activeMonitor
+    const baseCenter = displayLayout.virtualLeft + displayLayout.primaryCenter
+    const targetLeft = mon.left + 12 + halfW
+    const targetRight = mon.left + mon.width - 12 - halfW
+    if (targetLeft > targetRight) {
+      return Math.floor(mon.left + mon.width / 2 - baseCenter)
+    }
+    return Math.floor(targetRight - baseCenter)
+  }
+  let maxAllowedOffsetForCurrentW = $derived.by(
+    computeMaxAllowedOffsetForCurrentW
+  )
 
   let currentLiveOffsetX = $state(0)
 
@@ -642,33 +697,55 @@
   }
   $effect(handleHiddenPillOffsetSync)
 
-  let clampedOffsetX = $derived.by(() => {
+  function computeClampedOffsetX() {
     if (Math.abs(currentLiveOffsetX) < 3) return 0
+    if (isDraggingHidden || isInFlight) {
+      return Math.max(
+        virtualMinOffset,
+        Math.min(virtualMaxOffset, currentLiveOffsetX)
+      )
+    }
     return Math.max(
       minAllowedOffsetForCurrentW,
       Math.min(maxAllowedOffsetForCurrentW, currentLiveOffsetX)
     )
-  })
+  }
+  let clampedOffsetX = $derived.by(computeClampedOffsetX)
 
-  let minDevPillOffset = $derived.by(() => {
+  function computeMinDevPillOffset() {
     const halfW = 430 / 2
-    return Math.floor(12 + halfW - displayLayout.primaryCenter)
-  })
+    const mon = activeMonitor
+    const baseCenter = displayLayout.virtualLeft + displayLayout.primaryCenter
+    const targetLeft = mon.left + 12 + halfW
+    const targetRight = mon.left + mon.width - 12 - halfW
+    if (targetLeft > targetRight) {
+      return Math.floor(mon.left + mon.width / 2 - baseCenter)
+    }
+    return Math.floor(targetLeft - baseCenter)
+  }
+  let minDevPillOffset = $derived.by(computeMinDevPillOffset)
 
-  let maxDevPillOffset = $derived.by(() => {
+  function computeMaxDevPillOffset() {
     const halfW = 430 / 2
-    return Math.floor(
-      displayLayout.virtualWidth - 12 - halfW - displayLayout.primaryCenter
-    )
-  })
+    const mon = activeMonitor
+    const baseCenter = displayLayout.virtualLeft + displayLayout.primaryCenter
+    const targetLeft = mon.left + 12 + halfW
+    const targetRight = mon.left + mon.width - 12 - halfW
+    if (targetLeft > targetRight) {
+      return Math.floor(mon.left + mon.width / 2 - baseCenter)
+    }
+    return Math.floor(targetRight - baseCenter)
+  }
+  let maxDevPillOffset = $derived.by(computeMaxDevPillOffset)
 
-  let devClampedOffsetX = $derived.by(() => {
+  function computeDevClampedOffsetX() {
     if (Math.abs(clampedOffsetX) < 3) return 0
     return Math.max(
       minDevPillOffset,
       Math.min(maxDevPillOffset, clampedOffsetX)
     )
-  })
+  }
+  let devClampedOffsetX = $derived.by(computeDevClampedOffsetX)
 
   let glowOpacity = $derived(
     $glowIntensityStore === 'disabled'
@@ -701,7 +778,9 @@
         ? config.expanded.h
         : config.minimal.h
 
-    const w = baseW + extraDropdownW
+    const maxMonW = activeMonitor?.width ? activeMonitor.width - 24 : 1920
+    const boundedBaseW = isHid ? baseW : Math.min(baseW, maxMonW)
+    const w = boundedBaseW + extraDropdownW
     const h = baseH + extraDropdownH
     const r = isHid
       ? hiddenBounds.r
@@ -1373,13 +1452,13 @@
       velocity *= decay
       currentLiveOffsetX += velocity * dt
 
-      if (currentLiveOffsetX >= maxAllowedOffsetForCurrentW) {
-        currentLiveOffsetX = maxAllowedOffsetForCurrentW
+      if (currentLiveOffsetX >= virtualMaxOffset) {
+        currentLiveOffsetX = virtualMaxOffset
         stopInertia()
         return
       }
-      if (currentLiveOffsetX <= minAllowedOffsetForCurrentW) {
-        currentLiveOffsetX = minAllowedOffsetForCurrentW
+      if (currentLiveOffsetX <= virtualMinOffset) {
+        currentLiveOffsetX = virtualMinOffset
         stopInertia()
         return
       }
@@ -1423,12 +1502,17 @@
     dragHistory = []
     setOSDragCapture(false)
 
-    // Persist final resting offset to store once motion is fully settled
-    $hiddenPillOffsetXStore = clampedOffsetX
+    // Clamp current offset to active monitor once resting
+    const restingOffset = Math.max(
+      minAllowedOffsetForCurrentW,
+      Math.min(maxAllowedOffsetForCurrentW, currentLiveOffsetX)
+    )
+    currentLiveOffsetX = restingOffset
+    $hiddenPillOffsetXStore = restingOffset
 
     // Commit final exact tight OS window bounds at resting position once
     const { w, h, r } = getBoundsForState()
-    updateBounds(w, h, r, clampedOffsetX)
+    updateBounds(w, h, r, restingOffset)
     currentOSBounds = { w, h, r }
   }
 
@@ -1465,7 +1549,6 @@
       clearTimeout(inertiaSafetyTimeout)
       inertiaSafetyTimeout = undefined
     }
-    setOSDragCapture(true)
     isDraggingHidden = true
     hasPointerCaptured = false
     dragMovedDistance = 0
@@ -1474,6 +1557,13 @@
     hiddenDragStartX = e.screenX
     hiddenDragStartOffset = currentLiveOffsetX
     dragHistory = [{ x: e.screenX, time: performance.now() }]
+
+    try {
+      ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+      hasPointerCaptured = true
+    } catch {
+      // Ignore
+    }
   }
 
   function handleHiddenPointerMove(e: PointerEvent) {
@@ -1529,8 +1619,8 @@
       }
 
       currentLiveOffsetX = Math.max(
-        minAllowedOffsetForCurrentW,
-        Math.min(maxAllowedOffsetForCurrentW, targetOffset)
+        virtualMinOffset,
+        Math.min(virtualMaxOffset, targetOffset)
       )
     }
   }
@@ -1660,6 +1750,8 @@
     if (expanded) return
     // Cancel any active drag/inertia first so the OS region update isn't blocked
     if (isInFlight || isDraggingHidden) stopInertia()
+    clearTimeout(boundsTransitionTimeout)
+    targetPendingBounds = { w: 0, h: 0, r: 0 }
     islandAnim = '0.32s cubic-bezier(0.2, 0.8, 0.2, 1)'
 
     // Open expanded OS bounds before starting CSS expansion to eliminate clipping
@@ -1730,7 +1822,10 @@
   role="application"
   onfocusin={handleFocusIn}
   onpointerdown={handleGlobalPointerDown}
-  style="position: absolute; left: {displayLayout.primaryCenter}px; transform: translateX(-50%);"
+  style="position: absolute; left: {displayLayout.primaryCenter}px; top: {Math.max(
+    0,
+    activeMonitor.top - displayLayout.virtualTop
+  )}px; transform: translateX(-50%);"
 >
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -1754,9 +1849,10 @@
       filter: {isQuitting ? 'blur(12px)' : 'none'};
       width: {isHidden
       ? hiddenBounds.w
-      : expanded
-        ? islandConfig.expanded.w
-        : currentMinimalW}px;
+      : Math.min(
+          expanded ? islandConfig.expanded.w : currentMinimalW,
+          activeMonitor.width ? activeMonitor.width - 24 : 1920
+        )}px;
       height: {isHidden
       ? hiddenBounds.h
       : expanded
@@ -1819,9 +1915,10 @@
           {@const ActivePage = activePage}
           <div
             class="view"
-            style="width: {expanded
-              ? islandConfig.expanded.w
-              : currentMinimalW}px; height: {expanded
+            style="width: {Math.min(
+              expanded ? islandConfig.expanded.w : currentMinimalW,
+              activeMonitor.width ? activeMonitor.width - 24 : 1920
+            )}px; height: {expanded
               ? islandConfig.expanded.h
               : islandConfig.minimal.h}px;"
           >
@@ -1833,7 +1930,10 @@
       {/if}
 
       {#if expanded}
-        <div in:fade={{ duration: 200, delay: 150 }}>
+        <div
+          class="dock-overlay-wrapper"
+          in:fade={{ duration: 200, delay: 150 }}
+        >
           <Dock {activePage} />
         </div>
       {/if}

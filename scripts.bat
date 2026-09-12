@@ -31,8 +31,7 @@ if "%~1"=="dev" (
         if errorlevel 1 exit /b !ERRORLEVEL!
     )
     taskkill /IM Vinta.exe /F 2>nul
-    call :increment_build_seq
-    wails dev -tags devtest
+    task dev
     if errorlevel 1 exit /b !ERRORLEVEL!
     exit /b 0
 )
@@ -42,10 +41,7 @@ if "%~1"=="build" (
         echo Error: 'build' does not take extra arguments.
         exit /b 1
     )
-    call :build_native_force
-    if errorlevel 1 exit /b !ERRORLEVEL!
-    call :increment_build_seq
-    wails build
+    task build
     if errorlevel 1 exit /b !ERRORLEVEL!
     exit /b 0
 )
@@ -68,10 +64,7 @@ if "%~1"=="run" (
 
     taskkill /IM Vinta.exe /F 2>nul
     if "!DO_BUILD!"=="1" (
-        call :build_native
-        if errorlevel 1 exit /b !ERRORLEVEL!
-        call :increment_build_seq
-        wails build
+        task build
         if errorlevel 1 exit /b !ERRORLEVEL!
     )
     if defined DEBUG_FLAG (
@@ -96,10 +89,7 @@ if "%~1"=="test" (
     )
     taskkill /IM Vinta.exe /F 2>nul
     if "!DO_BUILD!"=="1" (
-        call :build_native
-        if errorlevel 1 exit /b !ERRORLEVEL!
-        call :increment_build_seq
-        wails build -tags devtest
+        task build DEV=true
         if errorlevel 1 exit /b !ERRORLEVEL!
     )
     start "" "build\bin\Vinta.exe"

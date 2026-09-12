@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/pkg/browser"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 // ReleaseAsset represents a downloadable release file asset.
@@ -325,7 +325,9 @@ func (a *App) StartBackgroundUpdateChecker() {
 
 		// Perform initial check
 		if res, err := a.CheckForUpdates(false); err == nil && res.UpdateAvailable {
-			runtime.EventsEmit(a.ctx, "update:available", res)
+			if app := application.Get(); app != nil {
+				app.Event.Emit("update:available", res)
+			}
 		}
 
 		// Check every 6 hours
@@ -334,7 +336,9 @@ func (a *App) StartBackgroundUpdateChecker() {
 
 		for range ticker.C {
 			if res, err := a.CheckForUpdates(false); err == nil && res.UpdateAvailable {
-				runtime.EventsEmit(a.ctx, "update:available", res)
+				if app := application.Get(); app != nil {
+					app.Event.Emit("update:available", res)
+				}
 			}
 		}
 	}()

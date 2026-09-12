@@ -4,7 +4,7 @@ import {
   SaveSettings,
   SetAutoHideBorderless,
   SetClipboardMonitoring
-} from '../../wailsjs/go/backend/App.js'
+} from '../../bindings/Vinta/backend/app.js'
 import { devTestingStore } from './appState'
 
 // ============================================================================

@@ -39,7 +39,7 @@
     SetBatterySaver,
     GetWirelessStatus,
     GetBatteryStatus
-  } from '../../wailsjs/go/backend/App.js'
+  } from '../../bindings/Vinta/backend/app.js'
 
   const navigate =
     getContext<

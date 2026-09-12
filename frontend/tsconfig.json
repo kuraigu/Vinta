@@ -22,9 +22,9 @@
     "src/**/*.js",
     "src/**/*.svelte",
     "scripts/**/*.ts",
-    "wailsjs/**/*.d.ts",
-    "wailsjs/**/*.ts",
-    "wailsjs/**/*.js"
+    "bindings/**/*.d.ts",
+    "bindings/**/*.ts",
+    "bindings/**/*.js"
   ],
   "references": [
     {

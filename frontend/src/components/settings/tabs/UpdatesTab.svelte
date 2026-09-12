@@ -1,11 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import {
-    RefreshCw,
-    Download,
-    ExternalLink,
-    FileText
-  } from 'lucide-svelte'
+  import { RefreshCw, Download, ExternalLink, FileText } from 'lucide-svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
   import {
@@ -18,7 +13,7 @@
     OpenURL,
     GetAppInfo,
     DownloadAndInstallUpdate
-  } from '../../../../wailsjs/go/backend/App.js'
+  } from '../../../../bindings/Vinta/backend/app.js'
 
   let isDevBuild = $state(false)
   let isDownloadingUpdate = $state(false)
