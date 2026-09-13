@@ -1,5 +1,8 @@
 /* Remove translateZ from root to prevent transparent viewport memory bloat */
-:global(html) {
+:global(html),
+:global(*),
+:global(*::before),
+:global(*::after) {
   box-sizing: border-box;
 }
 
@@ -31,6 +34,7 @@
 }
 
 .island {
+  box-sizing: border-box;
   --island-border-color: transparent;
   --island-glow-color: transparent;
   --island-border-width: 1.5px;
@@ -129,24 +133,35 @@
 }
 
 .drag-pill-bar {
-  width: 28px;
-  height: 3px;
+  width: 48px;
+  height: 3.5px;
   border-radius: 9999px;
   background: var(--c-text-primary, #ffffff);
-  opacity: 0.18;
+  opacity: 0.35;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
   transition:
-    opacity 0.2s ease,
-    width 0.2s ease;
+    opacity 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+    width 0.24s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
 }
 
 .island-drag-handle:hover .drag-pill-bar {
-  width: 36px;
-  opacity: 0.45;
-  background: var(--c-text-primary, #ffffff);
+  width: 64px;
+  opacity: 0.85;
+  transform: scaleY(1.05);
+  box-shadow:
+    0 0 8px rgba(255, 255, 255, 0.3),
+    0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
 .island-drag-handle:active .drag-pill-bar {
-  opacity: 0.6;
+  width: 72px;
+  opacity: 1;
+  transform: scaleY(1.15);
+  box-shadow:
+    0 0 12px rgba(255, 255, 255, 0.45),
+    0 1px 3px rgba(0, 0, 0, 0.5);
 }
 
 .hidden-widget-pill {

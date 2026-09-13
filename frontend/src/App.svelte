@@ -264,8 +264,7 @@
           isTimeoutActive = false
           if (shouldCurrentPageAutoHide) {
             hideWidget()
-          }
-          if (activePage !== HomePage && activePage !== MediaPage) {
+          } else if (activePage !== HomePage && activePage !== MediaPage) {
             const fallback = AppControls.getFallbackPage()
             navigateTo(fallback.page as Component, fallback.config, false)
           }
@@ -318,6 +317,15 @@
       activePage = fallback.page as Component
       islandConfig = fallback.config
     }
+
+    const target = getBoundsForState(islandConfig, false, true)
+    clearTimeout(boundsTransitionTimeout)
+    boundsTransitionTimeout = window.setTimeout(() => {
+      if (isHidden) {
+        applyBounds(target.w, target.h, target.r)
+        targetPendingBounds = { w: 0, h: 0, r: 0 }
+      }
+    }, 380)
   }
 
   // Global reactive fallback sync effect when island is minimized
@@ -555,18 +563,24 @@
     return updateBounds(w, h, r, clampedOffsetX)
   }
 
+  let shrinkingRetryCount = 0
+
   function tryCommitShrinkingBounds() {
-    if (targetPendingBounds.w <= 0 || targetPendingBounds.h <= 0) return
+    if (targetPendingBounds.w <= 0 || targetPendingBounds.h <= 0) {
+      shrinkingRetryCount = 0
+      return
+    }
 
     // If islandNode is still visually animating down, do not shrink the OS region yet!
-    if (islandNode) {
+    if (islandNode && shrinkingRetryCount < 4) {
       const currentVisualW = islandNode.offsetWidth
       const currentVisualH = islandNode.offsetHeight
       if (
-        currentVisualW > targetPendingBounds.w + 1 ||
-        currentVisualH > targetPendingBounds.h + 1
+        currentVisualW > targetPendingBounds.w + 4 ||
+        currentVisualH > targetPendingBounds.h + 4
       ) {
         // Postpone check to let laggy or heavy-load animation finish smoothly
+        shrinkingRetryCount++
         clearTimeout(boundsTransitionTimeout)
         boundsTransitionTimeout = window.setTimeout(
           tryCommitShrinkingBounds,
@@ -576,6 +590,7 @@
       }
     }
 
+    shrinkingRetryCount = 0
     clearTimeout(boundsTransitionTimeout)
     applyBounds(
       targetPendingBounds.w,
@@ -951,11 +966,11 @@
         const title = ((data.title as string) || '').trim()
         const artist = ((data.artist as string) || '').trim()
         const hasValidTrackInfo = title.length > 0 || artist.length > 0
+        const hasPlaylistControls =
+          Boolean(data.canGoNext) || Boolean(data.canGoPrev)
         const hasPlaybackControls =
-          Boolean(data.canPlay) ||
-          Boolean(data.canPause) ||
-          Boolean(data.canGoNext) ||
-          Boolean(data.canGoPrev)
+          (Boolean(data.canPlay) || Boolean(data.canPause)) &&
+          hasPlaylistControls
 
         const isIncomingAvailable =
           data.isAvailable !== false && hasValidTrackInfo && hasPlaybackControls
@@ -996,7 +1011,9 @@
             ? (data.sessions as Array<Record<string, unknown>>).filter((s) => {
                 const sTitle = ((s.title as string) || '').trim()
                 const sArtist = ((s.artist as string) || '').trim()
-                return sTitle.length > 0 || sArtist.length > 0
+                const hasNextOrPrev =
+                  Boolean(s.canGoNext) || Boolean(s.canGoPrev)
+                return (sTitle.length > 0 || sArtist.length > 0) && hasNextOrPrev
               })
             : []
 
@@ -1468,6 +1485,14 @@
         return
       }
 
+      // Dynamic motion tracking: expand bounds with velocity-based margin to prevent leading-edge clipping
+      const motionMargin = Math.min(
+        60,
+        Math.round(Math.abs(velocity) * 20) + 30
+      )
+      const { w, h, r } = getBoundsForState()
+      updateBounds(w + motionMargin, h, r, clampedOffsetX)
+
       inertiaAnimFrame = requestAnimationFrame(step)
     }
 
@@ -1628,6 +1653,7 @@
   function handleHiddenPointerUp(e: PointerEvent) {
     if (!isDraggingHidden) return
     isDraggingHidden = false
+    isTrackRegionActive = false
     clearTimeout(dragWatchdogTimeout)
     dragWatchdogTimeout = undefined
     setOSDragCapture(false)
@@ -1703,7 +1729,7 @@
         clearTimeout(inertiaSafetyTimeout)
         inertiaSafetyTimeout = window.setTimeout(stopInertia, 1600)
 
-        // Keep isTrackRegionActive open during in-flight glide to prevent clipping
+        // Run inertia glide with dynamic bounds tracking
         runJSInertiaGlide(velocity)
       } else {
         stopInertia()

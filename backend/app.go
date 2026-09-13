@@ -99,8 +99,9 @@ const (
 	WS_EX_NOACTIVATE = 0x08000000
 	//nolint:revive // Windows API constants
 	WS_EX_TRANSPARENT = 0x00000020
-	OutsidePadding    = 20
-	rgnOr             = 2
+	OutsidePadding       = 10
+	HiddenOutsidePadding = 2
+	rgnOr                = 2
 
 	//nolint:revive // Windows API constants
 	GW_CHILD = 5
@@ -753,6 +754,7 @@ type App struct {
 	devH               int
 	devExtra           int
 	scale              float64
+	isHidden           bool
 	autoHideBorderless bool
 	autoHideMu         sync.RWMutex
 }
@@ -1225,7 +1227,9 @@ func disableProcessPowerThrottling() {
 
 // SetIsHidden informs native background services whether Vinta is currently hidden to throttle high-frequency IPC.
 func (a *App) SetIsHidden(hidden bool) {
+	a.isHidden = hidden
 	services.SetAppHidden(hidden)
+	a.updateWindowRegion()
 }
 
 // SetAutoHideBorderless toggles automatic hiding when a borderless fullscreen window is detected on Vinta's monitor.
@@ -1268,9 +1272,9 @@ func (a *App) updateWindowRegion() {
 	}
 
 	padding := OutsidePadding
-	// Use compact padding when in minimal collapsed state
-	if a.pillW > 0 && a.pillW <= 110 && a.pillH <= 30 {
-		padding = 16
+	// Use minimal padding when in hidden state so click-through around the small pill is precise
+	if a.isHidden || (a.pillW > 0 && a.pillW <= 110 && a.pillH <= 30) {
+		padding = HiddenOutsidePadding
 	}
 
 	setClickRegion(hwnd, a.pillW, a.pillH, a.pillR, a.offsetX, a.devW, a.devH, a.devExtra, padding, a.scale)
@@ -1449,13 +1453,30 @@ func createDevPillRegion(dw, dh, extraH, mainH, offsetX, sw int, scale float64, 
 		return hrgn
 	}
 
+	monLeftClient := scaleInt(currentMon.Left - vLeft)
+	monRightClient := scaleInt(currentMon.Left + currentMon.Width - vLeft)
+	minDevCenter := monLeftClient + scaleInt(12) + (pdw / 2)
+	maxDevCenter := monRightClient - scaleInt(12) - (pdw / 2)
+	if minDevCenter > maxDevCenter {
+		minDevCenter = monLeftClient + (scaleInt(currentMon.Width) / 2)
+		maxDevCenter = minDevCenter
+	}
+
 	physicalCenterX := pCenter + scaledOffset
+	if physicalCenterX < minDevCenter {
+		physicalCenterX = minDevCenter
+	} else if physicalCenterX > maxDevCenter {
+		physicalCenterX = maxDevCenter
+	}
 
 	left := physicalCenterX - (pdw / 2) - pad
 	if left < 0 {
 		left = 0
 	}
 	right := physicalCenterX + (pdw / 2) + pad
+	if right > sw {
+		right = sw
+	}
 
 	ellipseSize := scaleInt(14) * 2
 	if hLimit := bottom - top; ellipseSize > hLimit {

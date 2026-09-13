@@ -319,12 +319,14 @@ static bool IsValidMediaSession(winrt_media::GlobalSystemMediaTransportControlsS
             return false;
         }
 
-        // Must support at least one interactive media playback control
+        // Must support playlist navigation (next or previous track)
         auto controls = info.Controls();
         if (!controls) return false;
+        if (!controls.IsNextEnabled() && !controls.IsPreviousEnabled()) {
+            return false;
+        }
         bool hasControls = controls.IsPlayEnabled() || controls.IsPauseEnabled() ||
-                           controls.IsStopEnabled() || controls.IsNextEnabled() ||
-                           controls.IsPreviousEnabled();
+                           controls.IsStopEnabled();
         if (!hasControls) return false;
 
         // Must have valid track metadata
@@ -776,7 +778,7 @@ static void EmitMediaState(bool includeVolume) {
         }
     } catch (...) {}
 
-    if ((title.empty() && artist.empty()) || (!canPlay && !canPause && !canGoNext && !canGoPrev)) {
+    if ((title.empty() && artist.empty()) || (!canGoNext && !canGoPrev)) {
         g_isMediaPlaying.store(false);
         std::ostringstream json;
         json << "{\"type\":\"media\",\"isAvailable\":false}";
