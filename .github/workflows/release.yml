@@ -25,6 +25,8 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 jobs:
   build-and-release:
@@ -347,6 +349,11 @@ jobs:
           Set-Content -Path "release-notes.md" -Value $finalBody -Encoding utf8
           Write-Host "Generated Release Notes:"
           Write-Host $finalBody
+
+      - name: Generate Build Provenance Attestations
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: 'release-dist/*'
 
       - name: Create Release
         uses: softprops/action-gh-release@v3

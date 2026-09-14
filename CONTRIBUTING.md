@@ -170,13 +170,23 @@ Official releases are compiled on isolated GitHub Actions runners to ensure repr
    - Inspect the private draft release on GitHub, download and test the assets, then click **Publish release** when ready.
 
 2. **Binary Verification (Optional for Developers & Package Managers)**:
-   - Anyone can cryptographically verify that an official `Vinta.exe` binary was compiled unmodified directly from the official commit:
+   - Anyone can cryptographically verify that an official `Vinta-Setup-x64.exe` installer or portable package was compiled unmodified directly from the official commit:
      ```bash
-     gh attestation verify Vinta.exe --owner kuraigu
+     gh attestation verify Vinta-Setup-x64.exe --owner kuraigu
      ```
    - Checksums can be verified using the attached `SHA256SUMS.txt`:
      ```powershell
-     Get-FileHash Vinta-Setup-x64.exe -Algorithm SHA256
+     # In PowerShell:
+     Get-FileHash .\Vinta-Setup-x64.exe -Algorithm SHA256
+     Get-Content .\SHA256SUMS.txt
+     ```
+     ```bash
+     # In Linux / Git Bash:
+     sha256sum -c SHA256SUMS.txt --ignore-missing
+     ```
+   - If signed with an official code-signing certificate, the Authenticode signature can be verified in PowerShell:
+     ```powershell
+     Get-AuthenticodeSignature .\Vinta-Setup-x64.exe
      ```
 
 ## Working on Issues & Claim Workflow
