@@ -43,7 +43,7 @@
       return
     }
 
-    // No custom name — fire a real Windows toast through the backend.
+    // No custom name: fire a real Windows toast through the backend.
     if (selectedAction === 'native') SendTestNotification()
     if (selectedAction === 'notitle') SendTestNoTitleToast()
     if (selectedAction === 'longmsg') SendTestLongMessageToast()

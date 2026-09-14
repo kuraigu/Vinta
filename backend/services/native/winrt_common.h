@@ -143,14 +143,14 @@ struct ProcessedImage {
 
     /**
      * Determines whether the image represents a sender profile picture or contact avatar.
-     * Messaging applications deliver square contact avatars at sizes ranging up to 512x512.
+     * Messaging applications deliver square contact avatars at various resolutions.
      * Ratios between 0.75 and 1.33 capture both exact squares and rounded icon crops.
      */
     bool isAvatarSize() const {
         if (dataUri.empty()) return false;
         if (width <= 0 || height <= 0) return false;
         float ratio = static_cast<float>(width) / static_cast<float>(height);
-        return (ratio >= 0.75f && ratio <= 1.33f && (width <= 512 || height <= 512));
+        return (ratio >= 0.75f && ratio <= 1.33f);
     }
 };
 

@@ -63,8 +63,6 @@
     allowDragPositionStore,
     notifSoundStore,
     notifVolumeStore,
-    clipboardCopyNotifStore,
-    clipboardPasteNotifStore,
     glowIntensityStore,
     type IslandConfig,
     homeWidgetsVisibilityStore,
@@ -127,14 +125,10 @@
   let hoverShowTimeout: number
 
   let isDraggingHidden = $state(false)
-  let isInFlight = $state(false)
   let hiddenDragStartX = 0
   let hiddenDragStartOffset = 0
   let dragMovedDistance = 0
   let dragResetTimeout: number | undefined
-  let inertiaSafetyTimeout: number | undefined
-  let inertiaAnimFrame: number | undefined
-  let dragHistory: Array<{ x: number; time: number }> = []
 
   let islandNode = $state<HTMLElement>()
   let devPillContainerNode = $state<HTMLElement>()
@@ -283,12 +277,6 @@
   function hideWidget() {
     if (isHidden) return
     islandAnim = '0.35s cubic-bezier(0.2, 0.8, 0.2, 1)'
-    if (inertiaAnimFrame) {
-      cancelAnimationFrame(inertiaAnimFrame)
-      inertiaAnimFrame = undefined
-    }
-    clearTimeout(inertiaSafetyTimeout)
-    isInFlight = false
     isDraggingHidden = false
     isHidden = true
     expanded = false
@@ -396,12 +384,6 @@
     isPageDormant = false
 
     islandAnim = '0.32s cubic-bezier(0.2, 0.8, 0.2, 1)'
-    if (inertiaAnimFrame) {
-      cancelAnimationFrame(inertiaAnimFrame)
-      inertiaAnimFrame = undefined
-    }
-    clearTimeout(inertiaSafetyTimeout)
-    isInFlight = false
     isDraggingHidden = false
 
     // Pre-expand the OS bounds before toggling isHidden so the expanding CSS transition is never clipped
@@ -566,6 +548,7 @@
   let shrinkingRetryCount = 0
 
   function tryCommitShrinkingBounds() {
+    if (isDraggingHidden || isTrackRegionActive) return
     if (targetPendingBounds.w <= 0 || targetPendingBounds.h <= 0) {
       shrinkingRetryCount = 0
       return
@@ -636,23 +619,29 @@
 
   function computeVirtualMinOffset() {
     const halfW = currentIslandW / 2
-    const baseCenter = displayLayout.virtualLeft + displayLayout.primaryCenter
-    return Math.floor(displayLayout.virtualLeft + 12 + halfW - baseCenter)
+    return Math.floor(12 + halfW - displayLayout.primaryCenter)
   }
   let virtualMinOffset = $derived.by(computeVirtualMinOffset)
 
   function computeVirtualMaxOffset() {
     const halfW = currentIslandW / 2
-    const baseCenter = displayLayout.virtualLeft + displayLayout.primaryCenter
     return Math.floor(
-      displayLayout.virtualLeft +
-        displayLayout.virtualWidth -
-        12 -
-        halfW -
-        baseCenter
+      displayLayout.virtualWidth - 12 - halfW - displayLayout.primaryCenter
     )
   }
   let virtualMaxOffset = $derived.by(computeVirtualMaxOffset)
+
+  function computeMonitorSnapOffsets() {
+    if (!displayLayout.monitors || displayLayout.monitors.length === 0) {
+      return [0]
+    }
+    return displayLayout.monitors.map((mon) => {
+      const monClientLeft = mon.left - displayLayout.virtualLeft
+      const monCenter = monClientLeft + mon.width / 2
+      return Math.round(monCenter - displayLayout.primaryCenter)
+    })
+  }
+  let monitorSnapOffsets = $derived.by(computeMonitorSnapOffsets)
 
   function computeMinAllowedOffsetForCurrentW() {
     const halfW = currentIslandW / 2
@@ -688,7 +677,7 @@
 
   // Smart offset safety: smoothly clamp main island back into bounds if content expands near screen edge
   function handleSmartEdgeOffsetAdjustment() {
-    if (!isDraggingHidden && !isInFlight) {
+    if (!isDraggingHidden) {
       if (currentLiveOffsetX > maxAllowedOffsetForCurrentW) {
         currentLiveOffsetX = maxAllowedOffsetForCurrentW
         $hiddenPillOffsetXStore = currentLiveOffsetX
@@ -701,9 +690,9 @@
 
   $effect(handleSmartEdgeOffsetAdjustment)
 
-  // Sync store updates into live offset when not actively in flight
+  // Sync store updates into live offset when not dragging
   function syncStoreOffsetToLive(val: number) {
-    if (!isInFlight && !isDraggingHidden) {
+    if (!isDraggingHidden) {
       currentLiveOffsetX = val
     }
   }
@@ -714,11 +703,8 @@
 
   function computeClampedOffsetX() {
     if (Math.abs(currentLiveOffsetX) < 3) return 0
-    if (isDraggingHidden || isInFlight) {
-      return Math.max(
-        virtualMinOffset,
-        Math.min(virtualMaxOffset, currentLiveOffsetX)
-      )
+    if (isDraggingHidden) {
+      return currentLiveOffsetX
     }
     return Math.max(
       minAllowedOffsetForCurrentW,
@@ -966,11 +952,11 @@
         const title = ((data.title as string) || '').trim()
         const artist = ((data.artist as string) || '').trim()
         const hasValidTrackInfo = title.length > 0 || artist.length > 0
-        const hasPlaylistControls =
-          Boolean(data.canGoNext) || Boolean(data.canGoPrev)
         const hasPlaybackControls =
-          (Boolean(data.canPlay) || Boolean(data.canPause)) &&
-          hasPlaylistControls
+          Boolean(data.canPlay) ||
+          Boolean(data.canPause) ||
+          Boolean(data.canGoNext) ||
+          Boolean(data.canGoPrev)
 
         const isIncomingAvailable =
           data.isAvailable !== false && hasValidTrackInfo && hasPlaybackControls
@@ -1011,9 +997,7 @@
             ? (data.sessions as Array<Record<string, unknown>>).filter((s) => {
                 const sTitle = ((s.title as string) || '').trim()
                 const sArtist = ((s.artist as string) || '').trim()
-                const hasNextOrPrev =
-                  Boolean(s.canGoNext) || Boolean(s.canGoPrev)
-                return (sTitle.length > 0 || sArtist.length > 0) && hasNextOrPrev
+                return sTitle.length > 0 || sArtist.length > 0
               })
             : []
 
@@ -1146,82 +1130,6 @@
       }
     )
 
-    EventsOn(
-      'clipboard:event',
-      (payload: {
-        action?: string
-        appName?: string
-        aumid?: string
-        title?: string
-        message?: string
-        contentType?: string
-        contentSnippet?: string
-        canOpen?: boolean
-        timestamp?: number
-      }) => {
-        if (!payload) return
-
-        const isCopy = payload.action === 'copy'
-        const isPaste = payload.action === 'paste'
-        const isCopyAllowed = get(clipboardCopyNotifStore)
-        const isPasteAllowed = get(clipboardPasteNotifStore)
-
-        if ((isCopy && !isCopyAllowed) || (isPaste && !isPasteAllowed)) {
-          return
-        }
-
-        // Consolidated under "Clipboard" regardless of originating application
-        const appName = 'Clipboard'
-        const aumid = 'Clipboard'
-        const title =
-          payload.title ||
-          (isPaste ? 'Pasted from Clipboard' : 'Copied to Clipboard')
-
-        // Enforce strict character limit on preview snippet
-        const rawMsg = (payload.message || '').trim()
-        const charLimit = 100
-        const message =
-          rawMsg.length > charLimit
-            ? rawMsg.slice(0, charLimit - 3) + '...'
-            : rawMsg
-
-        const newNotif = {
-          id: Date.now() + Math.floor(Math.random() * 1000),
-          appName,
-          aumid,
-          title,
-          message,
-          canOpen: false,
-          timestamp: payload.timestamp || Date.now()
-        }
-
-        notifData.update((n) => [newNotif, ...n].slice(0, 99))
-
-        const isNotifEnabled = get(pageVisibilityStore).notifications
-        const mediaIsActive =
-          activePage === MediaPage && $globalMediaStore.isPlaying
-        if (
-          !$dndStore &&
-          $notifAutoWakeStore &&
-          isNotifEnabled &&
-          !expanded &&
-          !mediaIsActive
-        ) {
-          showWidget()
-          navigateTo(NotificationPage, notifConfig, false)
-          triggerGlow()
-        }
-
-        if ($notifSoundStore && !$dndStore && isNotifEnabled) {
-          playNotifChime($notifVolumeStore)
-        }
-        if (isNotifEnabled) {
-          showWidget()
-          hideTrigger++
-        }
-      }
-    )
-
     EventsOn('notification_permission_denied', () => {
       notificationPermissionDenied.set(true)
       if (get(pageVisibilityStore).notifications) {
@@ -1324,7 +1232,7 @@
     const handleWindowKeydownFailsafe = (e: KeyboardEvent) => {
       if (
         e.key === 'Escape' &&
-        (isDraggingHidden || isInFlight || isTrackRegionActive)
+        (isDraggingHidden || isTrackRegionActive)
       ) {
         handleDragFailsafe()
       }
@@ -1389,7 +1297,7 @@
   let hasInitializedBounds = false
 
   function syncOSBoundsOnStateChange() {
-    if (isDraggingHidden || isInFlight || isTrackRegionActive) return
+    if (isDraggingHidden || isTrackRegionActive) return
     const target = getBoundsForState()
 
     if (!hasInitializedBounds) {
@@ -1444,68 +1352,15 @@
   function resetDragWatchdog() {
     clearTimeout(dragWatchdogTimeout)
     dragWatchdogTimeout = window.setTimeout(() => {
-      if (isDraggingHidden || isInFlight || isTrackRegionActive) {
+      if (isDraggingHidden || isTrackRegionActive) {
         handleDragFailsafe()
       }
     }, 6000)
   }
 
-  function runJSInertiaGlide(initialVelocity: number) {
-    if (inertiaAnimFrame) {
-      cancelAnimationFrame(inertiaAnimFrame)
-      inertiaAnimFrame = undefined
-    }
-
-    let velocity = initialVelocity
-    const friction = 0.0038
-    let lastTime = performance.now()
-
-    function step(now: number) {
-      if (!isInFlight) return
-      const dt = Math.min(32, Math.max(1, now - lastTime))
-      lastTime = now
-
-      const decay = Math.exp(-friction * dt)
-      velocity *= decay
-      currentLiveOffsetX += velocity * dt
-
-      if (currentLiveOffsetX >= virtualMaxOffset) {
-        currentLiveOffsetX = virtualMaxOffset
-        stopInertia()
-        return
-      }
-      if (currentLiveOffsetX <= virtualMinOffset) {
-        currentLiveOffsetX = virtualMinOffset
-        stopInertia()
-        return
-      }
-
-      if (Math.abs(velocity) < 0.035) {
-        stopInertia()
-        return
-      }
-
-      // Dynamic motion tracking: expand bounds with velocity-based margin to prevent leading-edge clipping
-      const motionMargin = Math.min(
-        60,
-        Math.round(Math.abs(velocity) * 20) + 30
-      )
-      const { w, h, r } = getBoundsForState()
-      updateBounds(w + motionMargin, h, r, clampedOffsetX)
-
-      inertiaAnimFrame = requestAnimationFrame(step)
-    }
-
-    inertiaAnimFrame = requestAnimationFrame(step)
-  }
-
   // Failsafe handler to cleanly cancel any drag operation, release OS mouse capture,
   // and guarantee the Win32 window clipping region escapes 100% width mode.
   function handleDragFailsafe() {
-    if (inertiaAnimFrame) {
-      cancelAnimationFrame(inertiaAnimFrame)
-      inertiaAnimFrame = undefined
-    }
     clearTimeout(dragWatchdogTimeout)
     dragWatchdogTimeout = undefined
     isDraggingHidden = false
@@ -1514,17 +1369,9 @@
   }
 
   function stopInertia() {
-    if (inertiaAnimFrame) {
-      cancelAnimationFrame(inertiaAnimFrame)
-      inertiaAnimFrame = undefined
-    }
-    clearTimeout(inertiaSafetyTimeout)
-    inertiaSafetyTimeout = undefined
     clearTimeout(dragWatchdogTimeout)
     dragWatchdogTimeout = undefined
-    isInFlight = false
     isTrackRegionActive = false
-    dragHistory = []
     setOSDragCapture(false)
 
     // Clamp current offset to active monitor once resting
@@ -1565,15 +1412,10 @@
       return
     }
 
-    if (inertiaAnimFrame) {
-      cancelAnimationFrame(inertiaAnimFrame)
-      inertiaAnimFrame = undefined
-    }
-    if (isInFlight) {
-      isInFlight = false
-      clearTimeout(inertiaSafetyTimeout)
-      inertiaSafetyTimeout = undefined
-    }
+    clearTimeout(boundsTransitionTimeout)
+    targetPendingBounds = { w: 0, h: 0, r: 0 }
+    shrinkingRetryCount = 0
+
     isDraggingHidden = true
     hasPointerCaptured = false
     dragMovedDistance = 0
@@ -1581,7 +1423,11 @@
     resetDragWatchdog()
     hiddenDragStartX = e.screenX
     hiddenDragStartOffset = currentLiveOffsetX
-    dragHistory = [{ x: e.screenX, time: performance.now() }]
+
+    // While mouse is actively held down, expand Win32 clipping region to full width runway
+    isTrackRegionActive = true
+    const { h, r } = getBoundsForState()
+    updateBounds(-1, Math.max(h, 200), r, 0)
 
     try {
       ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
@@ -1599,14 +1445,6 @@
       return
     }
 
-    resetDragWatchdog()
-
-    const now = performance.now()
-    dragHistory.push({ x: e.screenX, time: now })
-    if (dragHistory.length > 25) {
-      dragHistory.shift()
-    }
-
     const dx = e.screenX - hiddenDragStartX
     dragMovedDistance = Math.abs(dx)
     if (dragMovedDistance > 6) {
@@ -1619,27 +1457,14 @@
         }
       }
 
-      // While actively moving with mouse held down, expand Win32 clipping region to 100% width (-1) once.
-      // This provides an unclipped full-width runway across the screen with zero intermediate bounds IPC calls.
-      if (!isTrackRegionActive) {
-        isTrackRegionActive = true
-        const { h, r } = getBoundsForState()
-        updateBounds(-1, h, r, 0)
-      }
-
       const rawOffset = hiddenDragStartOffset + dx
       let targetOffset = rawOffset
 
       // Magnetic snap when near any monitor center (within ±28px)
-      if (displayLayout.monitors && displayLayout.monitors.length > 0) {
-        for (const mon of displayLayout.monitors) {
-          const monClientLeft = mon.left - displayLayout.virtualLeft
-          const monCenter = monClientLeft + mon.width / 2
-          const monSnapOffset = monCenter - displayLayout.primaryCenter
-          if (Math.abs(rawOffset - monSnapOffset) <= 28) {
-            targetOffset = monSnapOffset
-            break
-          }
+      for (const snap of monitorSnapOffsets) {
+        if (Math.abs(rawOffset - snap) <= 28) {
+          targetOffset = snap
+          break
         }
       }
 
@@ -1666,87 +1491,17 @@
       }
     }
 
-    if (dragMovedDistance > 6) {
-      const now = e.timeStamp || performance.now()
-      dragHistory.push({ x: e.screenX, time: now })
+    // Direct placement: commit exact tight resting bounds immediately on release
+    stopInertia()
 
-      let velocity = 0
-      const recent = dragHistory.filter((pt) => now - pt.time <= 100)
-
-      if (recent.length >= 2) {
-        const lastMove = recent[recent.length - 1]
-        const secondLast = recent[recent.length - 2]
-        const isStalled =
-          lastMove.time - secondLast.time > 60 &&
-          Math.abs(lastMove.x - secondLast.x) < 3
-
-        if (!isStalled) {
-          let finalDir = 0
-          for (let i = recent.length - 1; i >= 1; i--) {
-            const stepDx = recent[i].x - recent[i - 1].x
-            if (Math.abs(stepDx) >= 2) {
-              finalDir = Math.sign(stepDx)
-              break
-            }
-          }
-
-          if (finalDir !== 0) {
-            let strokeStart = recent[recent.length - 1]
-            for (let i = recent.length - 2; i >= 0; i--) {
-              const pt = recent[i]
-              const nextPt = recent[i + 1]
-              const stepDx = nextPt.x - pt.x
-              if (Math.abs(stepDx) >= 2 && Math.sign(stepDx) !== finalDir) {
-                strokeStart = nextPt
-                break
-              }
-              strokeStart = pt
-            }
-
-            const strokeEnd = recent[recent.length - 1]
-            const strokeDt = strokeEnd.time - strokeStart.time
-            const strokeDx = strokeEnd.x - strokeStart.x
-
-            if (strokeDt >= 18 && Math.abs(strokeDx) >= 4) {
-              velocity = strokeDx / strokeDt
-            } else if (recent.length >= 3) {
-              const first = recent[0]
-              const totalDt = strokeEnd.time - first.time
-              const totalDx = strokeEnd.x - first.x
-              if (totalDt >= 25 && Math.sign(totalDx) === finalDir) {
-                velocity = totalDx / totalDt
-              }
-            }
-          }
-        }
-      }
-
-      if (Math.abs(velocity) >= 0.08) {
-        const maxVelocity = 1.25
-        velocity = Math.max(-maxVelocity, Math.min(maxVelocity, velocity))
-        isInFlight = true
-
-        clearTimeout(inertiaSafetyTimeout)
-        inertiaSafetyTimeout = window.setTimeout(stopInertia, 1600)
-
-        // Run inertia glide with dynamic bounds tracking
-        runJSInertiaGlide(velocity)
-      } else {
-        stopInertia()
-      }
-
-      clearTimeout(dragResetTimeout)
-      dragResetTimeout = window.setTimeout(() => {
-        dragMovedDistance = 0
-      }, 150)
-    } else {
+    clearTimeout(dragResetTimeout)
+    dragResetTimeout = window.setTimeout(() => {
       dragMovedDistance = 0
-      stopInertia()
-    }
+    }, 150)
   }
 
   function handleContextMenu(e: MouseEvent) {
-    if (isDraggingHidden || dragMovedDistance > 6 || isInFlight) {
+    if (isDraggingHidden || dragMovedDistance > 6) {
       isDraggingHidden = false
       dragMovedDistance = 0
       stopInertia()
@@ -1774,8 +1529,8 @@
 
   async function handleExpand() {
     if (expanded) return
-    // Cancel any active drag/inertia first so the OS region update isn't blocked
-    if (isInFlight || isDraggingHidden) stopInertia()
+    // Cancel any active drag first so the OS region update isn't blocked
+    if (isDraggingHidden) stopInertia()
     clearTimeout(boundsTransitionTimeout)
     targetPendingBounds = { w: 0, h: 0, r: 0 }
     islandAnim = '0.32s cubic-bezier(0.2, 0.8, 0.2, 1)'
@@ -1792,7 +1547,7 @@
   }
 
   function handleIslandClick(e: MouseEvent) {
-    if (dragMovedDistance > 6 || isInFlight) {
+    if (dragMovedDistance > 6) {
       dragMovedDistance = 0
       e.preventDefault()
       e.stopPropagation()
@@ -1981,7 +1736,7 @@
       bind:this={devPillContainerNode}
       style="
         transform: translateX({devClampedOffsetX}px);
-        transition: {isDraggingHidden || isInFlight ? 'none' : islandAnim};
+        transition: {isDraggingHidden ? 'none' : islandAnim};
       "
     >
       <DevPill />

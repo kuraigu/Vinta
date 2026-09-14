@@ -319,14 +319,12 @@ static bool IsValidMediaSession(winrt_media::GlobalSystemMediaTransportControlsS
             return false;
         }
 
-        // Must support playlist navigation (next or previous track)
+        // Must support at least one interactive media playback control
         auto controls = info.Controls();
         if (!controls) return false;
-        if (!controls.IsNextEnabled() && !controls.IsPreviousEnabled()) {
-            return false;
-        }
         bool hasControls = controls.IsPlayEnabled() || controls.IsPauseEnabled() ||
-                           controls.IsStopEnabled();
+                           controls.IsStopEnabled() || controls.IsNextEnabled() ||
+                           controls.IsPreviousEnabled();
         if (!hasControls) return false;
 
         // Must have valid track metadata
@@ -379,12 +377,29 @@ static bool IsValidMediaSession(winrt_media::GlobalSystemMediaTransportControlsS
             std::string lowerTitle = toLower(title);
             std::string lowerAppName = toLower(appName);
 
-            // If the title matches the process name and there are no playlist navigation controls,
-            // this is an application audio stream rather than a media player.
-            if (!lowerAppName.empty() && (lowerTitle == lowerAppName || lowerTitle.find(lowerAppName) != std::string::npos)) {
-                if (!controls.IsNextEnabled() && !controls.IsPreviousEnabled()) {
-                    return false;
+            bool hasThumbnail = false;
+            try {
+                if (props.Thumbnail() != nullptr) {
+                    hasThumbnail = true;
                 }
+            } catch (...) {}
+
+            bool hasDuration = false;
+            try {
+                auto timeline = session.GetTimelineProperties();
+                if (timeline && timeline.EndTime().count() > 0 && timeline.EndTime() > timeline.StartTime()) {
+                    hasDuration = true;
+                }
+            } catch (...) {}
+
+            // If the session has no thumbnail, no timeline duration, or the title simply matches
+            // the process name or launcher, this is an application audio stream rather than a media player.
+            bool titleMatchesApp = !lowerAppName.empty() && (lowerTitle == lowerAppName ||
+                                   lowerTitle.find(lowerAppName) != std::string::npos ||
+                                   lowerAppName.find(lowerTitle) != std::string::npos);
+
+            if (!hasThumbnail && (!hasDuration || titleMatchesApp)) {
+                return false;
             }
         }
 
@@ -778,7 +793,7 @@ static void EmitMediaState(bool includeVolume) {
         }
     } catch (...) {}
 
-    if ((title.empty() && artist.empty()) || (!canGoNext && !canGoPrev)) {
+    if ((title.empty() && artist.empty()) || (!canPlay && !canPause && !canGoNext && !canGoPrev)) {
         g_isMediaPlaying.store(false);
         std::ostringstream json;
         json << "{\"type\":\"media\",\"isAvailable\":false}";

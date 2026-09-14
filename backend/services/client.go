@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"unsafe"
 
@@ -36,7 +37,55 @@ var (
 
 	serviceMu sync.Mutex
 	isStarted bool
+
+	isFrontendReady atomic.Bool
+
+	cachedMediaState   map[string]interface{}
+	cachedMediaStateMu sync.Mutex
+
+	pendingNotifs   []map[string]interface{}
+	pendingNotifsMu sync.Mutex
 )
+
+// SetFrontendReady updates the readiness status of the frontend WebView runtime.
+// When transitioning to ready, buffered initial media updates and pending notifications
+// received during window initialization are dispatched immediately.
+func SetFrontendReady(ready bool) {
+	wasReady := isFrontendReady.Swap(ready)
+	if !ready || wasReady {
+		return
+	}
+
+	pendingNotifsMu.Lock()
+	bufferedNotifs := pendingNotifs
+	pendingNotifs = nil
+	pendingNotifsMu.Unlock()
+
+	if app := application.Get(); app != nil {
+		for _, item := range bufferedNotifs {
+			msgType, _ := item["type"].(string)
+			if msgType == "" {
+				msgType = "notification"
+			}
+			app.Event.Emit(msgType, item)
+		}
+	}
+
+	cachedMediaStateMu.Lock()
+	media := cachedMediaState
+	cachedMediaStateMu.Unlock()
+
+	if media != nil {
+		if app := application.Get(); app != nil {
+			app.Event.Emit("media-update", media)
+		}
+	}
+}
+
+// IsFrontendReady reports whether the frontend WebView is active and accepting events.
+func IsFrontendReady() bool {
+	return isFrontendReady.Load()
+}
 
 func ensureDLLLoadedLocked() bool {
 	if dllHandle != 0 {
@@ -106,6 +155,8 @@ func StartServicesListener() {
 
 // StopServicesListener halts the native WinRT worker threads and unloads the bridge.
 func StopServicesListener() {
+	SetFrontendReady(false)
+
 	serviceMu.Lock()
 	defer serviceMu.Unlock()
 
@@ -339,6 +390,7 @@ func RequeryMediaArt() {
 // the native bridge to immediately emit the current media snapshot.
 // This is called when the frontend mounts or reconnects to avoid stale blank state.
 func RequestMediaUpdate() {
+	SetFrontendReady(true)
 	ResetMediaArtCacheState()
 	serviceMu.Lock()
 	if dllHandle != 0 && procForceEmitNativeMediaState != 0 {
@@ -428,6 +480,15 @@ func onNativeMedia(cStr *byte) uintptr {
 		if hidden && !trackChanged && !playStateChanged {
 			return 0
 		}
+
+		cachedMediaStateMu.Lock()
+		cachedMediaState = payload
+		cachedMediaStateMu.Unlock()
+
+		if !isFrontendReady.Load() {
+			return 0
+		}
+
 		if app := application.Get(); app != nil {
 			app.Event.Emit("media-update", payload)
 		}
@@ -448,8 +509,21 @@ func onNativeNotification(cStr *byte) uintptr {
 
 	var payload map[string]interface{}
 	if err := json.Unmarshal([]byte(str), &payload); err == nil {
+		if !isFrontendReady.Load() {
+			pendingNotifsMu.Lock()
+			if len(pendingNotifs) < 50 {
+				pendingNotifs = append(pendingNotifs, payload)
+			}
+			pendingNotifsMu.Unlock()
+			return 0
+		}
+
 		if app := application.Get(); app != nil {
-			app.Event.Emit("notification", payload)
+			msgType, _ := payload["type"].(string)
+			if msgType == "" {
+				msgType = "notification"
+			}
+			app.Event.Emit(msgType, payload)
 		}
 	}
 
@@ -462,6 +536,9 @@ var (
 )
 
 func onNativeAudioPeak(peakBits uintptr) uintptr {
+	if !isFrontendReady.Load() {
+		return 0
+	}
 
 	hiddenMu.RLock()
 	hidden := isAppHidden

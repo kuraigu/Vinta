@@ -98,7 +98,7 @@ const (
 	//nolint:revive // Windows API constants
 	WS_EX_NOACTIVATE = 0x08000000
 	//nolint:revive // Windows API constants
-	WS_EX_TRANSPARENT = 0x00000020
+	WS_EX_TRANSPARENT    = 0x00000020
 	OutsidePadding       = 10
 	HiddenOutsidePadding = 2
 	rgnOr                = 2
@@ -653,8 +653,10 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 				if a.window != nil {
 					a.window.Hide()
 				}
-				if app := application.Get(); app != nil {
-					app.Event.Emit("game-mode-enter", reason)
+				if services.IsFrontendReady() {
+					if app := application.Get(); app != nil {
+						app.Event.Emit("game-mode-enter", reason)
+					}
 				}
 			}
 			return
@@ -666,8 +668,10 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 			if a.window != nil {
 				a.window.Show()
 			}
-			if app := application.Get(); app != nil {
-				app.Event.Emit("game-mode-exit")
+			if services.IsFrontendReady() {
+				if app := application.Get(); app != nil {
+					app.Event.Emit("game-mode-exit")
+				}
 			}
 		}
 
@@ -862,7 +866,6 @@ func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 			}
 
 			go services.StartServicesListener()
-			go services.StartClipboardListener()
 
 			a.updateWindowRegion()
 		})
@@ -878,6 +881,10 @@ func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 			if h := uintptr(win.NativeWindow()); h != 0 {
 				applyInit(h)
 			}
+			services.SetFrontendReady(true)
+		})
+		win.OnWindowEvent(events.Common.WindowClosing, func(_ *application.WindowEvent) {
+			services.SetFrontendReady(false)
 		})
 	}
 
@@ -929,7 +936,7 @@ func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 		systray.SetMenu(menu)
 
 		wailsApp.OnShutdown(func() {
-			services.StopClipboardListener()
+			services.SetFrontendReady(false)
 			services.StopServicesListener()
 		})
 	}
@@ -942,7 +949,6 @@ func (a *App) Startup(ctx context.Context) {
 
 // Shutdown stops native background listeners.
 func (a *App) Shutdown(_ context.Context) {
-	services.StopClipboardListener()
 	services.StopServicesListener()
 }
 
@@ -959,9 +965,8 @@ func (a *App) SetWidgetBounds(width int, height int, radius int, scale float64, 
 	a.updateWindowRegion()
 }
 
-// SetClipboardMonitoring updates the native clipboard copy and paste monitoring state.
+// SetClipboardMonitoring satisfies existing frontend bindings as clipboard monitoring is retired.
 func (a *App) SetClipboardMonitoring(copyEnabled bool, pasteEnabled bool) {
-	services.SetClipboardMonitoring(copyEnabled, pasteEnabled)
 }
 
 // SetAutostart registers or unregisters the app in Windows Startup Registry
@@ -1312,6 +1317,7 @@ func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, dw int, dh i
 	}
 	if _, _, vWidth, _, _, _ := GetDisplayMetrics(); vWidth > sw {
 		sw = vWidth
+		cachedClientSw = sw
 	}
 
 	// Early exit if identical region is already applied to HWND
@@ -1695,7 +1701,7 @@ func (a *App) RenameNote(oldFileName string, newTitle string) (string, error) {
 	// Avoid clobbering a different existing file
 	if !strings.EqualFold(oldPath, newPath) {
 		if _, statErr := os.Stat(newPath); statErr == nil {
-			// Target exists — append a counter to make it unique
+			// Target exists; append a counter to make it unique
 			base := strings.TrimSuffix(newFileName, ".md")
 			for n := 2; ; n++ {
 				candidate := fmt.Sprintf("%s (%d).md", base, n)
