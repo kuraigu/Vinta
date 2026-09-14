@@ -81,9 +81,9 @@ func (a *App) ResolveNativeAppIcon(sourceApp, aumid string) string {
 	cacheDir := getIconCacheDir()
 	filePath := filepath.Join(cacheDir, hashKey+".png")
 
-	// 3. Check persistent disk cache (rejecting small 1168-byte generic Windows shell placeholders)
-	if info, err := os.Stat(filePath); err == nil && info.Size() > 1200 {
-		if data, err := os.ReadFile(filePath); err == nil {
+	// 3. Check persistent disk cache (rejecting zero-byte or empty files)
+	if info, err := os.Stat(filePath); err == nil && info.Size() > 0 {
+		if data, err := os.ReadFile(filePath); err == nil && len(data) > 0 {
 			uri := "data:image/png;base64," + base64.StdEncoding.EncodeToString(data)
 			iconMemoryCache.Store(hashKey, uri)
 			call.val = uri
@@ -112,8 +112,7 @@ func (a *App) ResolveNativeAppIcon(sourceApp, aumid string) string {
 		// Extraction timed out; degrade gracefully
 	}
 
-	// Negative cache to prevent thrashing on unknown or invalid applications
-	iconMemoryCache.Store(hashKey, "")
+	// Degrade gracefully without permanently poisoning memory cache
 	call.val = ""
 	return ""
 }

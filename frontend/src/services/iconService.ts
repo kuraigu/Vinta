@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store'
-import { GetAppIcon } from '../../wailsjs/go/backend/App.js'
+import { GetAppIcon } from '../../bindings/Vinta/backend/app.js'
 
 // In-memory client cache for native resolved icons (key -> base64 data URI)
 const nativeIconCache = new Map<string, string>()

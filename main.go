@@ -5,12 +5,11 @@ import (
 	"Vinta/backend"
 	"Vinta/backend/devtest"
 	"embed"
+	"net/http"
+	"path/filepath"
+	"strings"
 
-	"github.com/wailsapp/wails/v2"
-	"github.com/wailsapp/wails/v2/pkg/options"
-	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
-	"github.com/wailsapp/wails/v2/pkg/options/mac"
-	"github.com/wailsapp/wails/v2/pkg/options/windows"
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 //go:embed all:frontend/dist
@@ -27,48 +26,82 @@ func main() {
 
 	backend.SetEmbeddedContributors(contributorsMD)
 
-	// Create an instance of the app structure
 	app := backend.NewApp(icon)
 	devTools := devtest.NewDevTest()
 	cache := backend.NewCache()
 
-	// Create application with options
-	// NOTE: AlwaysOnTop must be false to not affect our custom AlwaysOnTop code -Innoh Reloza (20260808)
-	err := wails.Run(&options.App{
-		Title:         "Vinta",
-		Frameless:     true,
-		AlwaysOnTop:   false,
-		DisableResize: true,
-		SingleInstanceLock: &options.SingleInstanceLock{
-			UniqueId: "vinta-dynamic-island",
+	wailsApp := application.New(application.Options{
+		Name:        "Vinta",
+		Description: "Dynamic Island for Windows PC",
+		Icon:        icon,
+		Services: []application.Service{
+			application.NewService(app),
+			application.NewService(devTools),
+			application.NewService(cache),
 		},
-		AssetServer: &assetserver.Options{
-			Assets:  assets,
-			Handler: cache,
+		SingleInstance: &application.SingleInstanceOptions{
+			UniqueID: "vinta-dynamic-island",
+			OnSecondInstanceLaunch: func(_ application.SecondInstanceData) {
+				if a := application.Get(); a != nil {
+					a.Event.Emit("show-pill")
+				}
+			},
 		},
-		BackgroundColour: &options.RGBA{R: 0, G: 0, B: 0, A: 0},
-		OnStartup:        app.Startup,
-		OnShutdown:       app.Shutdown,
-		Bind: []interface{}{
-			app,
-			devTools,
-			cache,
+		Assets: application.AssetOptions{
+			Handler: application.AssetFileServerFS(assets),
+			Middleware: func(next http.Handler) http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					if strings.HasPrefix(r.URL.Path, "/icon-cache/") || strings.HasPrefix(r.URL.Path, "/local/") {
+						cache.ServeHTTP(w, r)
+						return
+					}
+					next.ServeHTTP(w, r)
+				})
+			},
 		},
-		Windows: &windows.Options{
-			WebviewIsTransparent:              true,
-			WindowIsTranslucent:               true,
-			BackdropType:                      windows.None,
-			DisableWindowIcon:                 true,
-			DisableFramelessWindowDecorations: true,
-			WebviewGpuIsDisabled:              !backend.GetHardwareAccelerationConfig(),
-		},
-		Mac: &mac.Options{
-			TitleBar:             mac.TitleBarHiddenInset(),
-			WebviewIsTransparent: true,
-			WindowIsTranslucent:  true,
+		Windows: application.WindowsOptions{
+			WebviewUserDataPath:           filepath.Join(backend.GetAppDataDir(), "webview2"),
+			DisableQuitOnLastWindowClosed: false,
 		},
 	})
 
+	vLeft, vTop, vWidth, vHeight, _, monitors := backend.GetDisplayMetrics()
+	maxTopOffset := 0
+	for _, mon := range monitors {
+		if offset := mon.Top - vTop; offset > maxTopOffset {
+			maxTopOffset = offset
+		}
+	}
+	overlayHeight := maxTopOffset + 680
+	if vHeight > 0 && overlayHeight > vHeight {
+		overlayHeight = vHeight
+	}
+	if vWidth <= 0 {
+		vWidth = 1920
+	}
+
+	win := wailsApp.Window.NewWithOptions(application.WebviewWindowOptions{
+		Title:             "Vinta",
+		Width:             vWidth,
+		Height:            overlayHeight,
+		InitialPosition:   application.WindowXY,
+		X:                 vLeft,
+		Y:                 vTop,
+		Frameless:         true,
+		AlwaysOnTop:       true,
+		DisableResize:     true,
+		BackgroundType:    application.BackgroundTypeTransparent,
+		BackgroundColour:  application.NewRGBA(0, 0, 0, 0),
+		IgnoreMouseEvents: false,
+		Windows: application.WindowsWindow{
+			DisableFramelessWindowDecorations: true,
+			HiddenOnTaskbar:                   true,
+		},
+	})
+
+	app.Setup(wailsApp, win)
+
+	err := wailsApp.Run()
 	if err != nil {
 		println("Error:", err.Error())
 	}

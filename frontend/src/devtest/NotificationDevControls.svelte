@@ -5,7 +5,7 @@
     SendTestLongMessageToast,
     SendTestNoTitleToast,
     SendTestBadge
-  } from '../../wailsjs/go/devtest/DevTest.js'
+  } from '../../bindings/Vinta/backend/devtest/devtest.js'
 
   let selectedAction = $state('native')
   let customAppName = $state('')
@@ -43,7 +43,7 @@
       return
     }
 
-    // No custom name — fire a real Windows toast through the backend.
+    // No custom name: fire a real Windows toast through the backend.
     if (selectedAction === 'native') SendTestNotification()
     if (selectedAction === 'notitle') SendTestNoTitleToast()
     if (selectedAction === 'longmsg') SendTestLongMessageToast()

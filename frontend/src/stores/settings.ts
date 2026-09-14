@@ -2,9 +2,8 @@ import { writable, get } from 'svelte/store'
 import {
   GetSettings,
   SaveSettings,
-  SetAutoHideBorderless,
-  SetClipboardMonitoring
-} from '../../wailsjs/go/backend/App.js'
+  SetAutoHideBorderless
+} from '../../bindings/Vinta/backend/app.js'
 import { devTestingStore } from './appState'
 
 // ============================================================================
@@ -215,25 +214,6 @@ export const notifAutoWakeStore = persistentWritable<boolean>('vinta_notif_autow
 export const mediaAutoWakeStore = persistentWritable<boolean>('vinta_media_autowake', true)
 export const notifSoundStore = persistentWritable<boolean>('vinta_notif_sound', true)
 export const notifVolumeStore = persistentWritable<number>('vinta_notif_volume', 0.8)
-export const clipboardCopyNotifStore = persistentWritable<boolean>('vinta_clipboard_copy_notif', false)
-export const clipboardPasteNotifStore = persistentWritable<boolean>('vinta_clipboard_paste_notif', false)
-
-// Synchronize clipboard notification preferences to native backend listener
-function syncClipboardMonitoringState() {
-  const copyEnabled = get(clipboardCopyNotifStore)
-  const pasteEnabled = get(clipboardPasteNotifStore)
-  if (typeof SetClipboardMonitoring === 'function') {
-    SetClipboardMonitoring(copyEnabled, pasteEnabled).catch(() => {})
-  }
-}
-
-clipboardCopyNotifStore.subscribe(() => {
-  syncClipboardMonitoringState()
-})
-
-clipboardPasteNotifStore.subscribe(() => {
-  syncClipboardMonitoringState()
-})
 
 // ============================================================================
 // 4. Time, Date & Localization

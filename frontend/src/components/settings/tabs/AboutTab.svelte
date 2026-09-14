@@ -14,7 +14,7 @@
   import {
     GetAppInfo,
     GetContributors
-  } from '../../../../wailsjs/go/backend/App.js'
+  } from '../../../../bindings/Vinta/backend/app.js'
 
   interface AppInfoData {
     name: string

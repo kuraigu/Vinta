@@ -1,5 +1,6 @@
 import { defineConfig, type Plugin } from 'vite'
 import { svelte } from '@sveltejs/vite-plugin-svelte'
+import wails from '@wailsio/runtime/plugins/vite'
 import path from 'path'
 
 // Converts PascalCase icon names to kebab-case (e.g., BellRing -> bell-ring, Minimize2 -> minimize-2, Volume2 -> volume-2)
@@ -56,7 +57,12 @@ function optimizeLucideImports(): Plugin {
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [optimizeLucideImports(), svelte()],
+  server: {
+    host: '127.0.0.1',
+    port: Number(process.env.WAILS_VITE_PORT) || 9245,
+    strictPort: true
+  },
+  plugins: [optimizeLucideImports(), svelte(), wails('./bindings')],
   optimizeDeps: {
     include: ['svelte', 'svelte/internal', 'svelte/transition', 'svelte/store'],
     exclude: ['lucide-svelte']

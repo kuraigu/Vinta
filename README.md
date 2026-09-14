@@ -1,9 +1,9 @@
 # Vinta
 
-[![Go Version](https://img.shields.io/badge/Go-1.24%2B-00ADD8?style=flat&logo=go)](https://go.dev/)
+[![Go Version](https://img.shields.io/badge/Go-1.25%2B-00ADD8?style=flat&logo=go)](https://go.dev/)
 [![Svelte Version](https://img.shields.io/badge/Svelte-v5-FF3E00?style=flat&logo=svelte)](https://svelte.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-v5-3178C6?style=flat&logo=typescript)](https://www.typescriptlang.org/)
-[![Wails Framework](https://img.shields.io/badge/Wails-v2-E64A19?style=flat&logo=wails)](https://wails.io/)
+[![Wails Framework](https://img.shields.io/badge/Wails-v3-E64A19?style=flat&logo=wails)](https://wails.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
@@ -46,7 +46,7 @@ Inspired by this heritage, Vinta brings that same fluid grace to your desktop in
 
 ## Development Setup
 
-Prerequisites: **Go 1.24+**, **Node.js 20+**, **Wails v2 CLI**, **CMake**, and **MSVC C++ Build Tools**.
+Prerequisites: **Go 1.25+**, **Node.js 20+**, **Wails v3 CLI (wails3)**, **CMake**, and **MSVC C++ Build Tools**.
 
 ```powershell
 # 1. Clone repository

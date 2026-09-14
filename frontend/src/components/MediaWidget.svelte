@@ -15,7 +15,7 @@
     SelectMediaSession,
     FocusNotificationApp,
     RequeryMediaArt
-  } from '../../wailsjs/go/backend/App.js'
+  } from '../../bindings/Vinta/backend/app.js'
   import Clock from './Clock.svelte'
   import BatteryWidget from './BatteryWidget.svelte'
   import DynamicEqualizer from './DynamicEqualizer.svelte'
@@ -180,6 +180,8 @@
   $effect(handleNotifPulseEffect)
 
   let isSeekingLocked = $state(false)
+  let targetSeekPos = $state(0)
+  let driftError = 0
   let seekLockTimer: ReturnType<typeof setTimeout> | null = null
 
   let playLockTimer: ReturnType<typeof setTimeout> | null = null
@@ -207,21 +209,45 @@
       (curSessionId !== '' && curSessionId !== prevSessionId) ||
       (curSourceApp !== '' && curSourceApp !== prevSourceApp)
 
-    if (!isDraggingSeek && !isSeekingLocked) {
-      if (isTrackChanged || !playing) {
-        // Track change, session switch, or paused: sync directly to backend snapshot
+    if (!isDraggingSeek) {
+      if (isTrackChanged || (!playing && !isSeekingLocked)) {
+        // Track change, session switch, or paused (not actively seeking):
+        // sync directly to backend snapshot
         localPosMs = backendPos
         seekVal = backendPos
+        driftError = 0
+        isSeekingLocked = false
+        if (seekLockTimer) {
+          clearTimeout(seekLockTimer)
+          seekLockTimer = null
+        }
+      } else if (isSeekingLocked) {
+        // While locked after a seek, wait for external player to arrive near target
+        if (Math.abs(backendPos - targetSeekPos) < 2000) {
+          isSeekingLocked = false
+          if (seekLockTimer) {
+            clearTimeout(seekLockTimer)
+            seekLockTimer = null
+          }
+          const currentLocal = untrack(() => localPosMs)
+          driftError = backendPos - currentLocal
+        }
       } else {
-        // While actively playing:
-        // A genuine external seek (Spotify/YouTube/Chrome) jumps by more than 4 seconds.
-        // Routine background updates, Discord events, volume shifts, or clock drift
-        // must not interrupt or jerk the continuous local playhead.
+        // While actively playing, calculate drift between backend and local playhead
         const currentLocal = untrack(() => localPosMs)
         const diff = backendPos - currentLocal
-        if (Math.abs(diff) > 4000 || (currentLocal === 0 && backendPos > 0)) {
+
+        if (Math.abs(diff) > 3000 || (currentLocal === 0 && backendPos > 0)) {
+          // Major seek or skip: snap immediately
           localPosMs = backendPos
           seekVal = backendPos
+          driftError = 0
+        } else if (Math.abs(diff) > 40) {
+          // Routine drift: assign to driftError for smooth damping
+          driftError = diff
+        } else {
+          // In sync within 40ms
+          driftError = 0
         }
       }
     }
@@ -268,8 +294,6 @@
   }
   $effect(handleArtRequeryEffect)
 
-  let lastSeekTimestamp = $state(0)
-
   function handleImgError() {
     globalMediaStore.update((m) => ({ ...m, albumArt: '' }))
   }
@@ -288,17 +312,25 @@
       const elapsed = now - lastTick
       lastTick = now
 
-      const isSettlingAfterSeek = now - lastSeekTimestamp < 500
       const totalDur = untrack(() => durationMsState)
 
-      if (
-        !isDraggingSeek &&
-        !isSettlingAfterSeek &&
-        !isSeekingLocked &&
-        totalDur > 0
-      ) {
-        localPosMs = Math.min(totalDur, localPosMs + elapsed)
-        seekVal = localPosMs
+      if (!isDraggingSeek && totalDur > 0) {
+        // Smooth proportional drift damping: bleed off ~10% of remaining error per frame
+        const err = driftError
+        let correction = 0
+        if (Math.abs(err) > 5) {
+          correction = err * 0.1
+          driftError -= correction
+        } else if (err !== 0) {
+          driftError = 0
+        }
+
+        const nextPos = Math.min(
+          totalDur,
+          Math.max(0, localPosMs + elapsed + correction)
+        )
+        localPosMs = nextPos
+        seekVal = nextPos
       }
 
       if (untrack(() => isPlayingState) && !isDraggingSeek) {
@@ -340,13 +372,14 @@
     } else if (action === 'prev' || action === 'previous') {
       localPosMs = 0
       seekVal = 0
+      targetSeekPos = 0
+      driftError = 0
       isSeekingLocked = true
-      lastSeekTimestamp = performance.now()
       if (seekLockTimer) clearTimeout(seekLockTimer)
       seekLockTimer = setTimeout(() => {
         isSeekingLocked = false
         seekLockTimer = null
-      }, 1800)
+      }, 1000)
     } else if (action === 'shuffle') {
       globalMediaStore.update((m) => ({
         ...m,
@@ -387,21 +420,20 @@
     SendMediaControl(action)
   }
 
-  function handleSeekStart(e: PointerEvent) {
+  function handleSeekStart() {
     if (seekLockTimer) {
       clearTimeout(seekLockTimer)
       seekLockTimer = null
     }
     isDraggingSeek = true
     isSeekingLocked = true
-    const val = Number((e.target as HTMLInputElement).value)
-    seekVal = val
-    localPosMs = val
+    driftError = 0
   }
 
   function handleSeekInput(e: Event) {
     isDraggingSeek = true
     isSeekingLocked = true
+    driftError = 0
     if (seekLockTimer) {
       clearTimeout(seekLockTimer)
       seekLockTimer = null
@@ -409,22 +441,38 @@
     const val = Number((e.target as HTMLInputElement).value)
     seekVal = val
     localPosMs = val
+    targetSeekPos = val
   }
 
+  let lastCommittedSeek = -1
+  let lastCommittedTime = 0
+
   function handleSeekCommit(e: Event) {
+    const now = Date.now()
     const val = Number((e.target as HTMLInputElement).value)
+    if (
+      now - lastCommittedTime < 100 &&
+      Math.abs(val - lastCommittedSeek) < 50
+    ) {
+      return
+    }
+    lastCommittedTime = now
+    lastCommittedSeek = val
+
     seekVal = val
     localPosMs = val
+    targetSeekPos = val
+    driftError = 0
     isDraggingSeek = false
     isSeekingLocked = true
-    lastSeekTimestamp = performance.now()
-    SendMediaControl(`seek:${val}`)
+    const sessionTarget = media.activeSessionId || media.sourceApp || ''
+    SendMediaControl(`seek:${Math.round(val)}:${sessionTarget}`)
 
     if (seekLockTimer) clearTimeout(seekLockTimer)
     seekLockTimer = setTimeout(() => {
       isSeekingLocked = false
       seekLockTimer = null
-    }, 1800)
+    }, 2500)
   }
 
   let volThrottleTimer: ReturnType<typeof setTimeout> | null = null
@@ -903,6 +951,7 @@
               class="scrub-input"
               onpointerdown={handleSeekStart}
               oninput={handleSeekInput}
+              onpointerup={handleSeekCommit}
               onchange={handleSeekCommit}
             />
           </div>

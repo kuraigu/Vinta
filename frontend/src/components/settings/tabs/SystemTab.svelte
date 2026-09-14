@@ -8,7 +8,7 @@
     SetHardwareAcceleration,
     GetCacheSize,
     ClearCache
-  } from '../../../../wailsjs/go/backend/App.js'
+  } from '../../../../bindings/Vinta/backend/app.js'
 
   function handleAutostartEffect() {
     SetAutostart($autostartStore).catch(() => {})

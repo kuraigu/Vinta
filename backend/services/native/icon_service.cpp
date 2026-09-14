@@ -2,6 +2,7 @@
 #include "winrt_common.h"
 
 #include <shlobj.h>
+#include <knownfolders.h>
 #include <shellapi.h>
 #include <wincodec.h>
 #include <tlhelp32.h>
@@ -80,27 +81,11 @@ HBITMAP HIconToHBitmap(HICON hIcon, int width, int height) {
     return hBitmap;
 }
 
-bool SaveBitmapToPngFile(HBITMAP hBitmap, const wchar_t* destFilePath) {
-    if (!hBitmap || !destFilePath) return false;
-
-    winrt::com_ptr<IWICImagingFactory> pWicFactory;
-    HRESULT hr = CoCreateInstance(
-        CLSID_WICImagingFactory,
-        NULL,
-        CLSCTX_INPROC_SERVER,
-        IID_PPV_ARGS(pWicFactory.put())
-    );
-    if (FAILED(hr) || !pWicFactory) return false;
-
-    winrt::com_ptr<IWICBitmap> pWicBitmap;
-    hr = pWicFactory->CreateBitmapFromHBITMAP(hBitmap, NULL, WICBitmapUseAlpha, pWicBitmap.put());
-    if (FAILED(hr) || !pWicBitmap) {
-        hr = pWicFactory->CreateBitmapFromHBITMAP(hBitmap, NULL, WICBitmapIgnoreAlpha, pWicBitmap.put());
-        if (FAILED(hr) || !pWicBitmap) return false;
-    }
+static bool SaveWicSourceToPngFile(IWICBitmapSource* pSource, IWICImagingFactory* pWicFactory, const wchar_t* destFilePath) {
+    if (!pSource || !pWicFactory || !destFilePath) return false;
 
     winrt::com_ptr<IWICStream> pStream;
-    hr = pWicFactory->CreateStream(pStream.put());
+    HRESULT hr = pWicFactory->CreateStream(pStream.put());
     if (FAILED(hr) || !pStream) return false;
 
     hr = pStream->InitializeFromFilename(destFilePath, GENERIC_WRITE);
@@ -121,7 +106,7 @@ bool SaveBitmapToPngFile(HBITMAP hBitmap, const wchar_t* destFilePath) {
     if (FAILED(hr)) return false;
 
     UINT width = 0, height = 0;
-    pWicBitmap->GetSize(&width, &height);
+    pSource->GetSize(&width, &height);
     hr = pFrame->SetSize(width, height);
     if (FAILED(hr)) return false;
 
@@ -129,7 +114,7 @@ bool SaveBitmapToPngFile(HBITMAP hBitmap, const wchar_t* destFilePath) {
     hr = pFrame->SetPixelFormat(&pixelFormat);
     if (FAILED(hr)) return false;
 
-    hr = pFrame->WriteSource(pWicBitmap.get(), NULL);
+    hr = pFrame->WriteSource(pSource, NULL);
     if (FAILED(hr)) return false;
 
     hr = pFrame->Commit();
@@ -139,6 +124,47 @@ bool SaveBitmapToPngFile(HBITMAP hBitmap, const wchar_t* destFilePath) {
     return SUCCEEDED(hr);
 }
 
+bool SaveBitmapToPngFile(HBITMAP hBitmap, const wchar_t* destFilePath) {
+    if (!hBitmap || !destFilePath) return false;
+
+    winrt::com_ptr<IWICImagingFactory> pWicFactory;
+    HRESULT hr = CoCreateInstance(
+        CLSID_WICImagingFactory,
+        NULL,
+        CLSCTX_INPROC_SERVER,
+        IID_PPV_ARGS(pWicFactory.put())
+    );
+    if (FAILED(hr) || !pWicFactory) return false;
+
+    winrt::com_ptr<IWICBitmap> pWicBitmap;
+    hr = pWicFactory->CreateBitmapFromHBITMAP(hBitmap, NULL, WICBitmapUseAlpha, pWicBitmap.put());
+    if (FAILED(hr) || !pWicBitmap) {
+        hr = pWicFactory->CreateBitmapFromHBITMAP(hBitmap, NULL, WICBitmapIgnoreAlpha, pWicBitmap.put());
+        if (FAILED(hr) || !pWicBitmap) return false;
+    }
+
+    return SaveWicSourceToPngFile(pWicBitmap.get(), pWicFactory.get(), destFilePath);
+}
+
+bool SaveIconToPngFile(HICON hIcon, const wchar_t* destFilePath) {
+    if (!hIcon || !destFilePath) return false;
+
+    winrt::com_ptr<IWICImagingFactory> pWicFactory;
+    HRESULT hr = CoCreateInstance(
+        CLSID_WICImagingFactory,
+        NULL,
+        CLSCTX_INPROC_SERVER,
+        IID_PPV_ARGS(pWicFactory.put())
+    );
+    if (FAILED(hr) || !pWicFactory) return false;
+
+    winrt::com_ptr<IWICBitmap> pWicBitmap;
+    hr = pWicFactory->CreateBitmapFromHICON(hIcon, pWicBitmap.put());
+    if (FAILED(hr) || !pWicBitmap) return false;
+
+    return SaveWicSourceToPngFile(pWicBitmap.get(), pWicFactory.get(), destFilePath);
+}
+
 static bool MatchProcessName(const std::wstring& runningExe, const std::wstring& target) {
     if (runningExe.empty() || target.empty()) return false;
     std::wstring r = runningExe;
@@ -146,7 +172,9 @@ static bool MatchProcessName(const std::wstring& runningExe, const std::wstring&
     std::wstring t = target;
     if (t.size() > 4 && t.substr(t.size() - 4) == L".exe") t = t.substr(0, t.size() - 4);
     if (r.empty() || t.empty()) return false;
-    return (r == t);
+    if (r == t) return true;
+    if (r.find(t) != std::wstring::npos || t.find(r) != std::wstring::npos) return true;
+    return false;
 }
 
 // Universally parses Windows SourceAppUserModelId (AUMID) or process strings into clean executable base
@@ -200,6 +228,45 @@ static std::wstring ParseAumidToExecutableBase(const std::wstring& raw) {
 
     std::transform(s.begin(), s.end(), s.begin(), ::towlower);
     return s;
+}
+
+static std::wstring SearchDirectoryForLnk(const std::wstring& dir, const std::vector<std::wstring>& candidates) {
+    if (dir.empty()) return L"";
+    std::wstring searchPattern = dir + L"\\*";
+    WIN32_FIND_DATAW ffd;
+    HANDLE hFind = FindFirstFileW(searchPattern.c_str(), &ffd);
+    if (hFind == INVALID_HANDLE_VALUE) return L"";
+
+    do {
+        if (wcscmp(ffd.cFileName, L".") == 0 || wcscmp(ffd.cFileName, L"..") == 0) continue;
+        std::wstring fullPath = dir + L"\\" + ffd.cFileName;
+        if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+            std::wstring found = SearchDirectoryForLnk(fullPath, candidates);
+            if (!found.empty()) {
+                FindClose(hFind);
+                return found;
+            }
+        } else {
+            std::wstring name = ffd.cFileName;
+            std::transform(name.begin(), name.end(), name.begin(), ::towlower);
+            if (name.size() > 4 && name.substr(name.size() - 4) == L".lnk") {
+                std::wstring base = name.substr(0, name.size() - 4);
+                for (const auto& cand : candidates) {
+                    std::wstring candBase = cand;
+                    if (candBase.size() > 4 && candBase.substr(candBase.size() - 4) == L".exe") {
+                        candBase = candBase.substr(0, candBase.size() - 4);
+                    }
+                    if (MatchProcessName(base, candBase)) {
+                        FindClose(hFind);
+                        return fullPath;
+                    }
+                }
+            }
+        }
+    } while (FindNextFileW(hFind, &ffd));
+
+    FindClose(hFind);
+    return L"";
 }
 
 std::wstring FindProcessExecutablePath(const std::wstring& targetExe) {
@@ -308,6 +375,20 @@ std::wstring FindProcessExecutablePath(const std::wstring& targetExe) {
         }
     }
 
+    // 5. Search Start Menu shortcuts
+    PWSTR userPrograms = nullptr;
+    if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_Programs, 0, NULL, &userPrograms)) && userPrograms) {
+        std::wstring found = SearchDirectoryForLnk(userPrograms, candidates);
+        CoTaskMemFree(userPrograms);
+        if (!found.empty()) return found;
+    }
+    PWSTR commonPrograms = nullptr;
+    if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_CommonPrograms, 0, NULL, &commonPrograms)) && commonPrograms) {
+        std::wstring found = SearchDirectoryForLnk(commonPrograms, candidates);
+        CoTaskMemFree(commonPrograms);
+        if (!found.empty()) return found;
+    }
+
     return L"";
 }
 
@@ -336,8 +417,8 @@ extern "C" int ExtractAppIconNativeToFile(
         HBITMAP hBitmap = nullptr;
         ScopedGdiObject gdiScope(nullptr);
 
-        // Try UWP / Packaged App AUMID via Shell Namespace (Strictly for PackageFamilyName!AppId) ---
-        if (!sAumid.empty() && sAumid.find('!') != std::string::npos) {
+        // Method 1: Try AUMID via Shell Namespace (shell:AppsFolder\<aumid>)
+        if (!sAumid.empty()) {
             std::wstring wAumid = Utf8ToUtf16(sAumid);
             std::wstring parsingName = L"shell:AppsFolder\\" + wAumid;
 
@@ -356,7 +437,27 @@ extern "C" int ExtractAppIconNativeToFile(
             }
         }
 
-        // Try Win32 Executable Path Resolution ---
+        // Try sourceApp in shell:AppsFolder if AUMID did not resolve
+        if (!gdiScope.handle && !sApp.empty()) {
+            std::wstring wApp = Utf8ToUtf16(sApp);
+            std::wstring parsingName = L"shell:AppsFolder\\" + wApp;
+
+            winrt::com_ptr<IShellItem> pItem;
+            HRESULT hr = SHCreateItemFromParsingName(parsingName.c_str(), NULL, IID_PPV_ARGS(pItem.put()));
+            if (SUCCEEDED(hr) && pItem) {
+                winrt::com_ptr<IShellItemImageFactory> pImageFactory;
+                hr = pItem->QueryInterface(IID_PPV_ARGS(pImageFactory.put()));
+                if (SUCCEEDED(hr) && pImageFactory) {
+                    SIZE sz = { targetSize, targetSize };
+                    hr = pImageFactory->GetImage(sz, SIIGBF_ICONONLY | SIIGBF_BIGGERSIZEOK, &hBitmap);
+                    if (SUCCEEDED(hr) && hBitmap) {
+                        gdiScope.handle = hBitmap;
+                    }
+                }
+            }
+        }
+
+        // Method 2: Win32 Executable / Shortcut Path Resolution
         if (!gdiScope.handle) {
             std::string targetSearch = !sApp.empty() ? sApp : sAumid;
             if (!targetSearch.empty()) {
@@ -364,47 +465,7 @@ extern "C" int ExtractAppIconNativeToFile(
                 std::wstring resolvedExe = FindProcessExecutablePath(wSource);
 
                 if (!resolvedExe.empty()) {
-                    // Method 2A (Primary for Win32): Direct resource icon extraction via PrivateExtractIconsW
-                    HICON hIcon = nullptr;
-                UINT extracted = PrivateExtractIconsW(
-                    resolvedExe.c_str(),
-                    0,
-                    targetSize,
-                    targetSize,
-                    &hIcon,
-                    nullptr,
-                    1,
-                    LR_LOADFROMFILE
-                );
-                if (extracted > 0 && hIcon) {
-                    ScopedIcon iconScope(hIcon);
-                    hBitmap = HIconToHBitmap(hIcon, targetSize, targetSize);
-                    if (hBitmap) {
-                        gdiScope.handle = hBitmap;
-                    }
-                }
-
-                // Method 2B: Fallback via SHGetFileInfoW
-                if (!gdiScope.handle) {
-                    SHFILEINFOW sfi = {0};
-                    DWORD_PTR res = SHGetFileInfoW(
-                        resolvedExe.c_str(),
-                        0,
-                        &sfi,
-                        sizeof(sfi),
-                        SHGFI_ICON | SHGFI_LARGEICON
-                    );
-                    if (res != 0 && sfi.hIcon) {
-                        ScopedIcon iconScope(sfi.hIcon);
-                        hBitmap = HIconToHBitmap(sfi.hIcon, targetSize, targetSize);
-                        if (hBitmap) {
-                            gdiScope.handle = hBitmap;
-                        }
-                    }
-                }
-
-                // Method 2C: Shell Item Image Factory fallback
-                if (!gdiScope.handle) {
+                    // Method 2A: Shell Item Image Factory on resolved executable or shortcut
                     winrt::com_ptr<IShellItem> pItem;
                     HRESULT hr = SHCreateItemFromParsingName(resolvedExe.c_str(), NULL, IID_PPV_ARGS(pItem.put()));
                     if (SUCCEEDED(hr) && pItem) {
@@ -418,12 +479,50 @@ extern "C" int ExtractAppIconNativeToFile(
                             }
                         }
                     }
+
+                    // Method 2B: Direct resource icon extraction via PrivateExtractIconsW
+                    if (!gdiScope.handle) {
+                        HICON hIcon = nullptr;
+                        UINT extracted = PrivateExtractIconsW(
+                            resolvedExe.c_str(),
+                            0,
+                            targetSize,
+                            targetSize,
+                            &hIcon,
+                            nullptr,
+                            1,
+                            0
+                        );
+                        if (extracted > 0 && hIcon) {
+                            ScopedIcon iconScope(hIcon);
+                            if (SaveIconToPngFile(hIcon, destFilePath)) {
+                                return 1;
+                            }
+                        }
+                    }
+
+                    // Method 2C: Fallback via SHGetFileInfoW
+                    if (!gdiScope.handle) {
+                        SHFILEINFOW sfi = {0};
+                        DWORD_PTR res = SHGetFileInfoW(
+                            resolvedExe.c_str(),
+                            0,
+                            &sfi,
+                            sizeof(sfi),
+                            SHGFI_ICON | SHGFI_LARGEICON
+                        );
+                        if (res != 0 && sfi.hIcon) {
+                            ScopedIcon iconScope(sfi.hIcon);
+                            if (SaveIconToPngFile(sfi.hIcon, destFilePath)) {
+                                return 1;
+                            }
+                        }
+                    }
                 }
             }
         }
-    }
 
-        // Encode to PNG via WIC
+        // Encode HBITMAP to PNG via WIC
         if (gdiScope.handle) {
             bool saved = SaveBitmapToPngFile(reinterpret_cast<HBITMAP>(gdiScope.handle), destFilePath);
             return saved ? 1 : 0;

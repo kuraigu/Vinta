@@ -31,8 +31,7 @@ if "%~1"=="dev" (
         if errorlevel 1 exit /b !ERRORLEVEL!
     )
     taskkill /IM Vinta.exe /F 2>nul
-    call :increment_build_seq
-    wails dev -tags devtest
+    task dev
     if errorlevel 1 exit /b !ERRORLEVEL!
     exit /b 0
 )
@@ -42,10 +41,7 @@ if "%~1"=="build" (
         echo Error: 'build' does not take extra arguments.
         exit /b 1
     )
-    call :build_native_force
-    if errorlevel 1 exit /b !ERRORLEVEL!
-    call :increment_build_seq
-    wails build
+    task build
     if errorlevel 1 exit /b !ERRORLEVEL!
     exit /b 0
 )
@@ -68,10 +64,7 @@ if "%~1"=="run" (
 
     taskkill /IM Vinta.exe /F 2>nul
     if "!DO_BUILD!"=="1" (
-        call :build_native
-        if errorlevel 1 exit /b !ERRORLEVEL!
-        call :increment_build_seq
-        wails build
+        task build
         if errorlevel 1 exit /b !ERRORLEVEL!
     )
     if defined DEBUG_FLAG (
@@ -96,10 +89,7 @@ if "%~1"=="test" (
     )
     taskkill /IM Vinta.exe /F 2>nul
     if "!DO_BUILD!"=="1" (
-        call :build_native
-        if errorlevel 1 exit /b !ERRORLEVEL!
-        call :increment_build_seq
-        wails build -tags devtest
+        task build DEV=true
         if errorlevel 1 exit /b !ERRORLEVEL!
     )
     start "" "build\bin\Vinta.exe"
@@ -137,6 +127,11 @@ if "%~1"=="lint" (
     exit /b 0
 )
 
+if "%~1"=="installer" (
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\package_installer.ps1"
+    exit /b %ERRORLEVEL%
+)
+
 echo Error: Unknown command '%~1'.
 :usage
 echo Usage: scripts.bat ^<command^> [options]
@@ -148,6 +143,7 @@ echo   dev [no_build]           Runs Vite / Wails live development server (optio
 echo   build                    Builds production binary
 echo   run [no_build] [debug]   Runs binary (optionally skip build, optionally enable debug mode)
 echo   test                     Runs test suite with DevTest panel (-test)
+echo   installer                Builds standalone production binary and Windows NSIS installer
 echo   lint                     Runs Go and Frontend linters and formatters
 exit /b 1
 

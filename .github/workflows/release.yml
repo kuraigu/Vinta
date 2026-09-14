@@ -25,11 +25,15 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 jobs:
   build-and-release:
     name: Build & Release Windows App
     runs-on: windows-latest
+    env:
+      RELEASE_VERSION: ''
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -37,6 +41,7 @@ jobs:
           fetch-depth: 0
 
       - name: Resolve Release Version
+        id: version
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -63,6 +68,7 @@ jobs:
               $version = $inputVersion
           }
           "RELEASE_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       - name: Set up Go
         uses: actions/setup-go@v7
@@ -87,8 +93,10 @@ jobs:
           choco install nsis -y --no-progress
           echo "C:\Program Files (x86)\NSIS" >> $env:GITHUB_PATH
 
-      - name: Install Wails
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.13.0
+      - name: Install Wails v3 CLI & Task
+        run: |
+          go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+          go install github.com/go-task/task/v3/cmd/task@latest
 
       - name: Install Frontend Dependencies
         run: |
@@ -112,8 +120,24 @@ jobs:
           $version = "$env:RELEASE_VERSION"
           $buildDate = (Get-Date -Format 'yy.MMdd')
           $updaterToken = if ($env:UPDATER_TOKEN) { $env:UPDATER_TOKEN.Trim() } else { "" }
-          $ldflags = "-X 'Vinta/backend.BuildType=Official' -X 'Vinta/backend.AppVersion=$version' -X 'Vinta/backend.GitCommit=${{ github.sha }}' -X 'Vinta/backend.BuildTime=$buildDate' -X 'Vinta/backend.UpdaterToken=$updaterToken' -X 'backend.BuildType=Official' -X 'backend.AppVersion=$version' -X 'backend.GitCommit=${{ github.sha }}' -X 'backend.BuildTime=$buildDate' -X 'backend.UpdaterToken=$updaterToken'"
-          wails build -nsis -ldflags $ldflags
+          $ldflags = "-w -s -H windowsgui -X 'Vinta/backend.BuildType=Official' -X 'Vinta/backend.AppVersion=$version' -X 'Vinta/backend.GitCommit=${{ github.sha }}' -X 'Vinta/backend.BuildTime=$buildDate' -X 'Vinta/backend.UpdaterToken=$updaterToken' -X 'backend.BuildType=Official' -X 'backend.AppVersion=$version' -X 'backend.GitCommit=${{ github.sha }}' -X 'backend.BuildTime=$buildDate' -X 'backend.UpdaterToken=$updaterToken'"
+
+          # 1. Build Frontend
+          cmd.exe /c "cd frontend && npm run build"
+
+          # 2. Generate syso resource
+          wails3 generate syso -arch amd64 -icon build/windows/icon.ico -manifest build/windows/wails.exe.manifest -info build/windows/info.json -out wails_windows_amd64.syso
+
+          # 3. Build production binary
+          New-Item -ItemType Directory -Path "build/bin" -Force | Out-Null
+          go build -trimpath -ldflags="$ldflags" -o "build/bin/Vinta.exe" .
+
+          if (Test-Path wails_windows_amd64.syso) {
+              Remove-Item -Force wails_windows_amd64.syso
+          }
+
+          # 4. Compile NSIS Installer
+          ./scripts/package_installer.ps1 -Version $version
 
       - name: Sign Executables and Installer
         shell: pwsh
@@ -122,9 +146,6 @@ jobs:
           SIGNING_CERT_PASSWORD: ${{ secrets.SIGNING_CERT_PASSWORD }}
         run: |
           $pfxPath = "$env:TEMP\signing_cert.pfx"
-          $cert = $null
-          $hasCert = $false
-
           $rawCert = if ($env:SIGNING_CERT_BASE64) { $env:SIGNING_CERT_BASE64.Trim() } else { "" }
           $rawPass = if ($env:SIGNING_CERT_PASSWORD) { $env:SIGNING_CERT_PASSWORD.Trim() } else { "" }
 
@@ -135,63 +156,51 @@ jobs:
                       [System.IO.File]::WriteAllBytes($pfxPath, $certBytes)
                       $secPassword = ConvertTo-SecureString -String $rawPass -AsPlainText -Force
                       $cert = Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation "Cert:\CurrentUser\My" -Password $secPassword -ErrorAction Stop
-                      $hasCert = $true
                       Write-Host "Successfully loaded production Code Signing Certificate."
+
+                      $targets = Get-Item "build/bin/Vinta.exe", "build/bin/Vinta-Setup-x64.exe" -ErrorAction SilentlyContinue
+                      foreach ($file in $targets) {
+                          Write-Host "Signing $($file.FullName)..."
+                          Set-AuthenticodeSignature -FilePath $file.FullName -Certificate $cert -HashAlgorithm SHA256 -TimestampServer "http://timestamp.digicert.com"
+                      }
                   }
               } catch {
-                  Write-Warning "Failed to load production certificate from secrets ($($_.Exception.Message)). Falling back to self-signed certificate."
-                  $hasCert = $false
+                  Write-Warning "Failed to load production certificate from secrets: $($_.Exception.Message)"
               } finally {
                   if (Test-Path $pfxPath) {
                       Remove-Item $pfxPath -Force -ErrorAction SilentlyContinue
                   }
               }
-          }
-
-          if (-not $hasCert) {
-              Write-Host "Creating FreeMatrix Studios Code Signing Certificate..."
-              $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=FreeMatrix Studios, O=FreeMatrix Studios, C=US" -CertStoreLocation "Cert:\CurrentUser\My" -HashAlgorithm SHA256 -NotAfter (Get-Date).AddYears(5)
-              Export-Certificate -Cert $cert -FilePath "build/FreeMatrixStudios.cer" | Out-Null
-          }
-
-          $targets = Get-Item "build/bin/Vinta.exe", "build/bin/Vinta-Setup-x64.exe" -ErrorAction SilentlyContinue
-          foreach ($file in $targets) {
-              Write-Host "Signing $($file.FullName)..."
-              Set-AuthenticodeSignature -FilePath $file.FullName -Certificate $cert -HashAlgorithm SHA256 -TimestampServer "http://timestamp.digicert.com"
+          } else {
+              Write-Host "No production code signing certificate secret provided. Skipping Authenticode signing."
           }
 
       - name: Prepare Release Artifacts
         shell: pwsh
         run: |
-          $version = "$env:RELEASE_VERSION"
           New-Item -ItemType Directory -Path "release-dist" -Force | Out-Null
 
-          # 1. Copy NSIS Installer with version in filename
+          # 1. Copy NSIS Installer with stable filename for reputation and direct download links
           $installerSrc = Get-Item "build/bin/Vinta-Setup-x64.exe", "build/bin/Vinta-*-installer.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
           if ($installerSrc) {
-              Copy-Item $installerSrc.FullName "release-dist/Vinta-$version-Setup-x64.exe"
+              Copy-Item $installerSrc.FullName "release-dist/Vinta-Setup-x64.exe"
           }
 
-          # 2. Package Portable ZIP bundle with version in filename
+          # 2. Package Portable ZIP bundle with stable filename
           $portableDir = "build/portable-bundle"
           New-Item -ItemType Directory -Path $portableDir -Force | Out-Null
           Copy-Item "build/bin/Vinta.exe" "$portableDir/"
 
-          # Copy vintaservices.dll from native build output or backend/services
+          # Copy vintaservices.dll
           $dllSrc = Get-Item "backend/services/vintaservices.dll", "build/bin/vintaservices.dll", "build/native/vintaservices.dll", "build/native/Release/vintaservices.dll" -ErrorAction SilentlyContinue | Select-Object -First 1
           if ($dllSrc) {
               Copy-Item $dllSrc.FullName "$portableDir/vintaservices.dll"
-              Copy-Item $dllSrc.FullName "build/bin/vintaservices.dll" -Force -ErrorAction SilentlyContinue
           }
 
           if (Test-Path "LICENSE") { Copy-Item "LICENSE" "$portableDir/" }
           if (Test-Path "README.md") { Copy-Item "README.md" "$portableDir/" }
 
-          if (Test-Path "build/FreeMatrixStudios.cer") {
-              Copy-Item "build/FreeMatrixStudios.cer" "release-dist/"
-          }
-
-          Compress-Archive -Path "$portableDir/*" -DestinationPath "release-dist/Vinta-$version-Portable-x64.zip" -Force
+          Compress-Archive -Path "$portableDir/*" -DestinationPath "release-dist/Vinta-Portable-x64.zip" -Force
 
           # 3. Generate SHA256 Checksums
           Set-Location release-dist
@@ -336,11 +345,18 @@ jobs:
           Write-Host "Generated Release Notes:"
           Write-Host $finalBody
 
+      - name: Generate Build Provenance Attestations
+        if: ${{ !github.event.repository.private }}
+        continue-on-error: true
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: 'release-dist/*'
+
       - name: Create Release
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ env.RELEASE_VERSION }}
-          name: Release ${{ env.RELEASE_VERSION }}
+          tag_name: ${{ steps.version.outputs.version || env.RELEASE_VERSION }}
+          name: Release ${{ steps.version.outputs.version || env.RELEASE_VERSION }}
           draft: ${{ github.event.inputs.draft }}
           prerelease: ${{ github.event.inputs.prerelease }}
           body_path: release-notes.md

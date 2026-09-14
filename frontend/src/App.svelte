@@ -15,8 +15,17 @@
     SetIsHidden,
     GetDisplayLayout,
     RequestMediaUpdate
-  } from '../wailsjs/go/backend/App.js'
-  import { EventsOn } from '../wailsjs/runtime/runtime.js'
+  } from '../bindings/Vinta/backend/app.js'
+  import { Events } from '@wailsio/runtime'
+
+  function EventsOn<T = unknown>(
+    eventName: string,
+    callback: (data: T) => void
+  ): () => void {
+    return Events.On(eventName, (ev: { data: T }) => {
+      callback(ev?.data)
+    })
+  }
   import NotificationPage, {
     config as notifConfig
   } from './pages/NotificationPage.svelte'
@@ -54,8 +63,6 @@
     allowDragPositionStore,
     notifSoundStore,
     notifVolumeStore,
-    clipboardCopyNotifStore,
-    clipboardPasteNotifStore,
     glowIntensityStore,
     type IslandConfig,
     homeWidgetsVisibilityStore,
@@ -118,14 +125,10 @@
   let hoverShowTimeout: number
 
   let isDraggingHidden = $state(false)
-  let isInFlight = $state(false)
   let hiddenDragStartX = 0
   let hiddenDragStartOffset = 0
   let dragMovedDistance = 0
   let dragResetTimeout: number | undefined
-  let inertiaSafetyTimeout: number | undefined
-  let inertiaAnimFrame: number | undefined
-  let dragHistory: Array<{ x: number; time: number }> = []
 
   let islandNode = $state<HTMLElement>()
   let devPillContainerNode = $state<HTMLElement>()
@@ -161,6 +164,7 @@
     width: number
     height: number
     isPrimary: boolean
+    isPortrait?: boolean
   }
 
   interface DisplayLayoutInfo {
@@ -186,7 +190,8 @@
       top: 0,
       width: 1920,
       height: 1080,
-      isPrimary: true
+      isPrimary: true,
+      isPortrait: false
     },
     monitors: [
       {
@@ -196,15 +201,18 @@
         top: 0,
         width: 1920,
         height: 1080,
-        isPrimary: true
+        isPrimary: true,
+        isPortrait: false
       }
     ]
   })
 
   // Derive the active monitor based on island composite desktop coordinates
-  let activeMonitor = $derived.by(() => {
+  function computeActiveMonitor() {
     const screenCenterX =
-      displayLayout.virtualLeft + displayLayout.primaryCenter + clampedOffsetX
+      displayLayout.virtualLeft +
+      displayLayout.primaryCenter +
+      currentLiveOffsetX
     if (displayLayout.monitors && displayLayout.monitors.length > 0) {
       for (const mon of displayLayout.monitors) {
         if (screenCenterX >= mon.left && screenCenterX < mon.left + mon.width) {
@@ -221,10 +229,12 @@
         top: 0,
         width: 1920,
         height: 1080,
-        isPrimary: true
+        isPrimary: true,
+        isPortrait: false
       }
     )
-  })
+  }
+  let activeMonitor = $derived.by(computeActiveMonitor)
 
   setContext('activeMonitor', () => activeMonitor)
 
@@ -248,8 +258,7 @@
           isTimeoutActive = false
           if (shouldCurrentPageAutoHide) {
             hideWidget()
-          }
-          if (activePage !== HomePage && activePage !== MediaPage) {
+          } else if (activePage !== HomePage && activePage !== MediaPage) {
             const fallback = AppControls.getFallbackPage()
             navigateTo(fallback.page as Component, fallback.config, false)
           }
@@ -268,12 +277,6 @@
   function hideWidget() {
     if (isHidden) return
     islandAnim = '0.35s cubic-bezier(0.2, 0.8, 0.2, 1)'
-    if (inertiaAnimFrame) {
-      cancelAnimationFrame(inertiaAnimFrame)
-      inertiaAnimFrame = undefined
-    }
-    clearTimeout(inertiaSafetyTimeout)
-    isInFlight = false
     isDraggingHidden = false
     isHidden = true
     expanded = false
@@ -302,6 +305,15 @@
       activePage = fallback.page as Component
       islandConfig = fallback.config
     }
+
+    const target = getBoundsForState(islandConfig, false, true)
+    clearTimeout(boundsTransitionTimeout)
+    boundsTransitionTimeout = window.setTimeout(() => {
+      if (isHidden) {
+        applyBounds(target.w, target.h, target.r)
+        targetPendingBounds = { w: 0, h: 0, r: 0 }
+      }
+    }, 380)
   }
 
   // Global reactive fallback sync effect when island is minimized
@@ -372,12 +384,6 @@
     isPageDormant = false
 
     islandAnim = '0.32s cubic-bezier(0.2, 0.8, 0.2, 1)'
-    if (inertiaAnimFrame) {
-      cancelAnimationFrame(inertiaAnimFrame)
-      inertiaAnimFrame = undefined
-    }
-    clearTimeout(inertiaSafetyTimeout)
-    isInFlight = false
     isDraggingHidden = false
 
     // Pre-expand the OS bounds before toggling isHidden so the expanding CSS transition is never clipped
@@ -539,18 +545,25 @@
     return updateBounds(w, h, r, clampedOffsetX)
   }
 
+  let shrinkingRetryCount = 0
+
   function tryCommitShrinkingBounds() {
-    if (targetPendingBounds.w <= 0 || targetPendingBounds.h <= 0) return
+    if (isDraggingHidden || isTrackRegionActive) return
+    if (targetPendingBounds.w <= 0 || targetPendingBounds.h <= 0) {
+      shrinkingRetryCount = 0
+      return
+    }
 
     // If islandNode is still visually animating down, do not shrink the OS region yet!
-    if (islandNode) {
+    if (islandNode && shrinkingRetryCount < 4) {
       const currentVisualW = islandNode.offsetWidth
       const currentVisualH = islandNode.offsetHeight
       if (
-        currentVisualW > targetPendingBounds.w + 1 ||
-        currentVisualH > targetPendingBounds.h + 1
+        currentVisualW > targetPendingBounds.w + 4 ||
+        currentVisualH > targetPendingBounds.h + 4
       ) {
         // Postpone check to let laggy or heavy-load animation finish smoothly
+        shrinkingRetryCount++
         clearTimeout(boundsTransitionTimeout)
         boundsTransitionTimeout = window.setTimeout(
           tryCommitShrinkingBounds,
@@ -560,6 +573,7 @@
       }
     }
 
+    shrinkingRetryCount = 0
     clearTimeout(boundsTransitionTimeout)
     applyBounds(
       targetPendingBounds.w,
@@ -597,28 +611,73 @@
   let currentIslandW = $derived(
     isHidden
       ? hiddenBounds.w
-      : expanded
-        ? islandConfig.expanded.w
-        : currentMinimalW
+      : Math.min(
+          expanded ? islandConfig.expanded.w : currentMinimalW,
+          activeMonitor.width ? activeMonitor.width - 24 : 1920
+        )
   )
 
-  let minAllowedOffsetForCurrentW = $derived.by(() => {
+  function computeVirtualMinOffset() {
     const halfW = currentIslandW / 2
     return Math.floor(12 + halfW - displayLayout.primaryCenter)
-  })
+  }
+  let virtualMinOffset = $derived.by(computeVirtualMinOffset)
 
-  let maxAllowedOffsetForCurrentW = $derived.by(() => {
+  function computeVirtualMaxOffset() {
     const halfW = currentIslandW / 2
     return Math.floor(
       displayLayout.virtualWidth - 12 - halfW - displayLayout.primaryCenter
     )
-  })
+  }
+  let virtualMaxOffset = $derived.by(computeVirtualMaxOffset)
+
+  function computeMonitorSnapOffsets() {
+    if (!displayLayout.monitors || displayLayout.monitors.length === 0) {
+      return [0]
+    }
+    return displayLayout.monitors.map((mon) => {
+      const monClientLeft = mon.left - displayLayout.virtualLeft
+      const monCenter = monClientLeft + mon.width / 2
+      return Math.round(monCenter - displayLayout.primaryCenter)
+    })
+  }
+  let monitorSnapOffsets = $derived.by(computeMonitorSnapOffsets)
+
+  function computeMinAllowedOffsetForCurrentW() {
+    const halfW = currentIslandW / 2
+    const mon = activeMonitor
+    const baseCenter = displayLayout.virtualLeft + displayLayout.primaryCenter
+    const targetLeft = mon.left + 12 + halfW
+    const targetRight = mon.left + mon.width - 12 - halfW
+    if (targetLeft > targetRight) {
+      return Math.floor(mon.left + mon.width / 2 - baseCenter)
+    }
+    return Math.floor(targetLeft - baseCenter)
+  }
+  let minAllowedOffsetForCurrentW = $derived.by(
+    computeMinAllowedOffsetForCurrentW
+  )
+
+  function computeMaxAllowedOffsetForCurrentW() {
+    const halfW = currentIslandW / 2
+    const mon = activeMonitor
+    const baseCenter = displayLayout.virtualLeft + displayLayout.primaryCenter
+    const targetLeft = mon.left + 12 + halfW
+    const targetRight = mon.left + mon.width - 12 - halfW
+    if (targetLeft > targetRight) {
+      return Math.floor(mon.left + mon.width / 2 - baseCenter)
+    }
+    return Math.floor(targetRight - baseCenter)
+  }
+  let maxAllowedOffsetForCurrentW = $derived.by(
+    computeMaxAllowedOffsetForCurrentW
+  )
 
   let currentLiveOffsetX = $state(0)
 
   // Smart offset safety: smoothly clamp main island back into bounds if content expands near screen edge
   function handleSmartEdgeOffsetAdjustment() {
-    if (!isDraggingHidden && !isInFlight) {
+    if (!isDraggingHidden) {
       if (currentLiveOffsetX > maxAllowedOffsetForCurrentW) {
         currentLiveOffsetX = maxAllowedOffsetForCurrentW
         $hiddenPillOffsetXStore = currentLiveOffsetX
@@ -631,9 +690,9 @@
 
   $effect(handleSmartEdgeOffsetAdjustment)
 
-  // Sync store updates into live offset when not actively in flight
+  // Sync store updates into live offset when not dragging
   function syncStoreOffsetToLive(val: number) {
-    if (!isInFlight && !isDraggingHidden) {
+    if (!isDraggingHidden) {
       currentLiveOffsetX = val
     }
   }
@@ -642,33 +701,52 @@
   }
   $effect(handleHiddenPillOffsetSync)
 
-  let clampedOffsetX = $derived.by(() => {
+  function computeClampedOffsetX() {
     if (Math.abs(currentLiveOffsetX) < 3) return 0
+    if (isDraggingHidden) {
+      return currentLiveOffsetX
+    }
     return Math.max(
       minAllowedOffsetForCurrentW,
       Math.min(maxAllowedOffsetForCurrentW, currentLiveOffsetX)
     )
-  })
+  }
+  let clampedOffsetX = $derived.by(computeClampedOffsetX)
 
-  let minDevPillOffset = $derived.by(() => {
+  function computeMinDevPillOffset() {
     const halfW = 430 / 2
-    return Math.floor(12 + halfW - displayLayout.primaryCenter)
-  })
+    const mon = activeMonitor
+    const baseCenter = displayLayout.virtualLeft + displayLayout.primaryCenter
+    const targetLeft = mon.left + 12 + halfW
+    const targetRight = mon.left + mon.width - 12 - halfW
+    if (targetLeft > targetRight) {
+      return Math.floor(mon.left + mon.width / 2 - baseCenter)
+    }
+    return Math.floor(targetLeft - baseCenter)
+  }
+  let minDevPillOffset = $derived.by(computeMinDevPillOffset)
 
-  let maxDevPillOffset = $derived.by(() => {
+  function computeMaxDevPillOffset() {
     const halfW = 430 / 2
-    return Math.floor(
-      displayLayout.virtualWidth - 12 - halfW - displayLayout.primaryCenter
-    )
-  })
+    const mon = activeMonitor
+    const baseCenter = displayLayout.virtualLeft + displayLayout.primaryCenter
+    const targetLeft = mon.left + 12 + halfW
+    const targetRight = mon.left + mon.width - 12 - halfW
+    if (targetLeft > targetRight) {
+      return Math.floor(mon.left + mon.width / 2 - baseCenter)
+    }
+    return Math.floor(targetRight - baseCenter)
+  }
+  let maxDevPillOffset = $derived.by(computeMaxDevPillOffset)
 
-  let devClampedOffsetX = $derived.by(() => {
+  function computeDevClampedOffsetX() {
     if (Math.abs(clampedOffsetX) < 3) return 0
     return Math.max(
       minDevPillOffset,
       Math.min(maxDevPillOffset, clampedOffsetX)
     )
-  })
+  }
+  let devClampedOffsetX = $derived.by(computeDevClampedOffsetX)
 
   let glowOpacity = $derived(
     $glowIntensityStore === 'disabled'
@@ -701,7 +779,9 @@
         ? config.expanded.h
         : config.minimal.h
 
-    const w = baseW + extraDropdownW
+    const maxMonW = activeMonitor?.width ? activeMonitor.width - 24 : 1920
+    const boundedBaseW = isHid ? baseW : Math.min(baseW, maxMonW)
+    const w = boundedBaseW + extraDropdownW
     const h = baseH + extraDropdownH
     const r = isHid
       ? hiddenBounds.r
@@ -1050,82 +1130,6 @@
       }
     )
 
-    EventsOn(
-      'clipboard:event',
-      (payload: {
-        action?: string
-        appName?: string
-        aumid?: string
-        title?: string
-        message?: string
-        contentType?: string
-        contentSnippet?: string
-        canOpen?: boolean
-        timestamp?: number
-      }) => {
-        if (!payload) return
-
-        const isCopy = payload.action === 'copy'
-        const isPaste = payload.action === 'paste'
-        const isCopyAllowed = get(clipboardCopyNotifStore)
-        const isPasteAllowed = get(clipboardPasteNotifStore)
-
-        if ((isCopy && !isCopyAllowed) || (isPaste && !isPasteAllowed)) {
-          return
-        }
-
-        // Consolidated under "Clipboard" regardless of originating application
-        const appName = 'Clipboard'
-        const aumid = 'Clipboard'
-        const title =
-          payload.title ||
-          (isPaste ? 'Pasted from Clipboard' : 'Copied to Clipboard')
-
-        // Enforce strict character limit on preview snippet
-        const rawMsg = (payload.message || '').trim()
-        const charLimit = 100
-        const message =
-          rawMsg.length > charLimit
-            ? rawMsg.slice(0, charLimit - 3) + '...'
-            : rawMsg
-
-        const newNotif = {
-          id: Date.now() + Math.floor(Math.random() * 1000),
-          appName,
-          aumid,
-          title,
-          message,
-          canOpen: false,
-          timestamp: payload.timestamp || Date.now()
-        }
-
-        notifData.update((n) => [newNotif, ...n].slice(0, 99))
-
-        const isNotifEnabled = get(pageVisibilityStore).notifications
-        const mediaIsActive =
-          activePage === MediaPage && $globalMediaStore.isPlaying
-        if (
-          !$dndStore &&
-          $notifAutoWakeStore &&
-          isNotifEnabled &&
-          !expanded &&
-          !mediaIsActive
-        ) {
-          showWidget()
-          navigateTo(NotificationPage, notifConfig, false)
-          triggerGlow()
-        }
-
-        if ($notifSoundStore && !$dndStore && isNotifEnabled) {
-          playNotifChime($notifVolumeStore)
-        }
-        if (isNotifEnabled) {
-          showWidget()
-          hideTrigger++
-        }
-      }
-    )
-
     EventsOn('notification_permission_denied', () => {
       notificationPermissionDenied.set(true)
       if (get(pageVisibilityStore).notifications) {
@@ -1226,10 +1230,7 @@
       }
     }
     const handleWindowKeydownFailsafe = (e: KeyboardEvent) => {
-      if (
-        e.key === 'Escape' &&
-        (isDraggingHidden || isInFlight || isTrackRegionActive)
-      ) {
+      if (e.key === 'Escape' && (isDraggingHidden || isTrackRegionActive)) {
         handleDragFailsafe()
       }
     }
@@ -1293,7 +1294,7 @@
   let hasInitializedBounds = false
 
   function syncOSBoundsOnStateChange() {
-    if (isDraggingHidden || isInFlight || isTrackRegionActive) return
+    if (isDraggingHidden || isTrackRegionActive) return
     const target = getBoundsForState()
 
     if (!hasInitializedBounds) {
@@ -1348,60 +1349,15 @@
   function resetDragWatchdog() {
     clearTimeout(dragWatchdogTimeout)
     dragWatchdogTimeout = window.setTimeout(() => {
-      if (isDraggingHidden || isInFlight || isTrackRegionActive) {
+      if (isDraggingHidden || isTrackRegionActive) {
         handleDragFailsafe()
       }
     }, 6000)
   }
 
-  function runJSInertiaGlide(initialVelocity: number) {
-    if (inertiaAnimFrame) {
-      cancelAnimationFrame(inertiaAnimFrame)
-      inertiaAnimFrame = undefined
-    }
-
-    let velocity = initialVelocity
-    const friction = 0.0038
-    let lastTime = performance.now()
-
-    function step(now: number) {
-      if (!isInFlight) return
-      const dt = Math.min(32, Math.max(1, now - lastTime))
-      lastTime = now
-
-      const decay = Math.exp(-friction * dt)
-      velocity *= decay
-      currentLiveOffsetX += velocity * dt
-
-      if (currentLiveOffsetX >= maxAllowedOffsetForCurrentW) {
-        currentLiveOffsetX = maxAllowedOffsetForCurrentW
-        stopInertia()
-        return
-      }
-      if (currentLiveOffsetX <= minAllowedOffsetForCurrentW) {
-        currentLiveOffsetX = minAllowedOffsetForCurrentW
-        stopInertia()
-        return
-      }
-
-      if (Math.abs(velocity) < 0.035) {
-        stopInertia()
-        return
-      }
-
-      inertiaAnimFrame = requestAnimationFrame(step)
-    }
-
-    inertiaAnimFrame = requestAnimationFrame(step)
-  }
-
   // Failsafe handler to cleanly cancel any drag operation, release OS mouse capture,
   // and guarantee the Win32 window clipping region escapes 100% width mode.
   function handleDragFailsafe() {
-    if (inertiaAnimFrame) {
-      cancelAnimationFrame(inertiaAnimFrame)
-      inertiaAnimFrame = undefined
-    }
     clearTimeout(dragWatchdogTimeout)
     dragWatchdogTimeout = undefined
     isDraggingHidden = false
@@ -1410,25 +1366,22 @@
   }
 
   function stopInertia() {
-    if (inertiaAnimFrame) {
-      cancelAnimationFrame(inertiaAnimFrame)
-      inertiaAnimFrame = undefined
-    }
-    clearTimeout(inertiaSafetyTimeout)
-    inertiaSafetyTimeout = undefined
     clearTimeout(dragWatchdogTimeout)
     dragWatchdogTimeout = undefined
-    isInFlight = false
     isTrackRegionActive = false
-    dragHistory = []
     setOSDragCapture(false)
 
-    // Persist final resting offset to store once motion is fully settled
-    $hiddenPillOffsetXStore = clampedOffsetX
+    // Clamp current offset to active monitor once resting
+    const restingOffset = Math.max(
+      minAllowedOffsetForCurrentW,
+      Math.min(maxAllowedOffsetForCurrentW, currentLiveOffsetX)
+    )
+    currentLiveOffsetX = restingOffset
+    $hiddenPillOffsetXStore = restingOffset
 
     // Commit final exact tight OS window bounds at resting position once
     const { w, h, r } = getBoundsForState()
-    updateBounds(w, h, r, clampedOffsetX)
+    updateBounds(w, h, r, restingOffset)
     currentOSBounds = { w, h, r }
   }
 
@@ -1456,16 +1409,10 @@
       return
     }
 
-    if (inertiaAnimFrame) {
-      cancelAnimationFrame(inertiaAnimFrame)
-      inertiaAnimFrame = undefined
-    }
-    if (isInFlight) {
-      isInFlight = false
-      clearTimeout(inertiaSafetyTimeout)
-      inertiaSafetyTimeout = undefined
-    }
-    setOSDragCapture(true)
+    clearTimeout(boundsTransitionTimeout)
+    targetPendingBounds = { w: 0, h: 0, r: 0 }
+    shrinkingRetryCount = 0
+
     isDraggingHidden = true
     hasPointerCaptured = false
     dragMovedDistance = 0
@@ -1473,7 +1420,18 @@
     resetDragWatchdog()
     hiddenDragStartX = e.screenX
     hiddenDragStartOffset = currentLiveOffsetX
-    dragHistory = [{ x: e.screenX, time: performance.now() }]
+
+    // While mouse is actively held down, expand Win32 clipping region to full width runway
+    isTrackRegionActive = true
+    const { h, r } = getBoundsForState()
+    updateBounds(-1, Math.max(h, 200), r, 0)
+
+    try {
+      ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+      hasPointerCaptured = true
+    } catch {
+      // Ignore
+    }
   }
 
   function handleHiddenPointerMove(e: PointerEvent) {
@@ -1482,14 +1440,6 @@
     if (e.buttons === 0) {
       handleHiddenPointerUp(e)
       return
-    }
-
-    resetDragWatchdog()
-
-    const now = performance.now()
-    dragHistory.push({ x: e.screenX, time: now })
-    if (dragHistory.length > 25) {
-      dragHistory.shift()
     }
 
     const dx = e.screenX - hiddenDragStartX
@@ -1504,33 +1454,20 @@
         }
       }
 
-      // While actively moving with mouse held down, expand Win32 clipping region to 100% width (-1) once.
-      // This provides an unclipped full-width runway across the screen with zero intermediate bounds IPC calls.
-      if (!isTrackRegionActive) {
-        isTrackRegionActive = true
-        const { h, r } = getBoundsForState()
-        updateBounds(-1, h, r, 0)
-      }
-
       const rawOffset = hiddenDragStartOffset + dx
       let targetOffset = rawOffset
 
       // Magnetic snap when near any monitor center (within ±28px)
-      if (displayLayout.monitors && displayLayout.monitors.length > 0) {
-        for (const mon of displayLayout.monitors) {
-          const monClientLeft = mon.left - displayLayout.virtualLeft
-          const monCenter = monClientLeft + mon.width / 2
-          const monSnapOffset = monCenter - displayLayout.primaryCenter
-          if (Math.abs(rawOffset - monSnapOffset) <= 28) {
-            targetOffset = monSnapOffset
-            break
-          }
+      for (const snap of monitorSnapOffsets) {
+        if (Math.abs(rawOffset - snap) <= 28) {
+          targetOffset = snap
+          break
         }
       }
 
       currentLiveOffsetX = Math.max(
-        minAllowedOffsetForCurrentW,
-        Math.min(maxAllowedOffsetForCurrentW, targetOffset)
+        virtualMinOffset,
+        Math.min(virtualMaxOffset, targetOffset)
       )
     }
   }
@@ -1538,6 +1475,7 @@
   function handleHiddenPointerUp(e: PointerEvent) {
     if (!isDraggingHidden) return
     isDraggingHidden = false
+    isTrackRegionActive = false
     clearTimeout(dragWatchdogTimeout)
     dragWatchdogTimeout = undefined
     setOSDragCapture(false)
@@ -1550,87 +1488,17 @@
       }
     }
 
-    if (dragMovedDistance > 6) {
-      const now = e.timeStamp || performance.now()
-      dragHistory.push({ x: e.screenX, time: now })
+    // Direct placement: commit exact tight resting bounds immediately on release
+    stopInertia()
 
-      let velocity = 0
-      const recent = dragHistory.filter((pt) => now - pt.time <= 100)
-
-      if (recent.length >= 2) {
-        const lastMove = recent[recent.length - 1]
-        const secondLast = recent[recent.length - 2]
-        const isStalled =
-          lastMove.time - secondLast.time > 60 &&
-          Math.abs(lastMove.x - secondLast.x) < 3
-
-        if (!isStalled) {
-          let finalDir = 0
-          for (let i = recent.length - 1; i >= 1; i--) {
-            const stepDx = recent[i].x - recent[i - 1].x
-            if (Math.abs(stepDx) >= 2) {
-              finalDir = Math.sign(stepDx)
-              break
-            }
-          }
-
-          if (finalDir !== 0) {
-            let strokeStart = recent[recent.length - 1]
-            for (let i = recent.length - 2; i >= 0; i--) {
-              const pt = recent[i]
-              const nextPt = recent[i + 1]
-              const stepDx = nextPt.x - pt.x
-              if (Math.abs(stepDx) >= 2 && Math.sign(stepDx) !== finalDir) {
-                strokeStart = nextPt
-                break
-              }
-              strokeStart = pt
-            }
-
-            const strokeEnd = recent[recent.length - 1]
-            const strokeDt = strokeEnd.time - strokeStart.time
-            const strokeDx = strokeEnd.x - strokeStart.x
-
-            if (strokeDt >= 18 && Math.abs(strokeDx) >= 4) {
-              velocity = strokeDx / strokeDt
-            } else if (recent.length >= 3) {
-              const first = recent[0]
-              const totalDt = strokeEnd.time - first.time
-              const totalDx = strokeEnd.x - first.x
-              if (totalDt >= 25 && Math.sign(totalDx) === finalDir) {
-                velocity = totalDx / totalDt
-              }
-            }
-          }
-        }
-      }
-
-      if (Math.abs(velocity) >= 0.08) {
-        const maxVelocity = 1.25
-        velocity = Math.max(-maxVelocity, Math.min(maxVelocity, velocity))
-        isInFlight = true
-
-        clearTimeout(inertiaSafetyTimeout)
-        inertiaSafetyTimeout = window.setTimeout(stopInertia, 1600)
-
-        // Keep isTrackRegionActive open during in-flight glide to prevent clipping
-        runJSInertiaGlide(velocity)
-      } else {
-        stopInertia()
-      }
-
-      clearTimeout(dragResetTimeout)
-      dragResetTimeout = window.setTimeout(() => {
-        dragMovedDistance = 0
-      }, 150)
-    } else {
+    clearTimeout(dragResetTimeout)
+    dragResetTimeout = window.setTimeout(() => {
       dragMovedDistance = 0
-      stopInertia()
-    }
+    }, 150)
   }
 
   function handleContextMenu(e: MouseEvent) {
-    if (isDraggingHidden || dragMovedDistance > 6 || isInFlight) {
+    if (isDraggingHidden || dragMovedDistance > 6) {
       isDraggingHidden = false
       dragMovedDistance = 0
       stopInertia()
@@ -1658,8 +1526,10 @@
 
   async function handleExpand() {
     if (expanded) return
-    // Cancel any active drag/inertia first so the OS region update isn't blocked
-    if (isInFlight || isDraggingHidden) stopInertia()
+    // Cancel any active drag first so the OS region update isn't blocked
+    if (isDraggingHidden) stopInertia()
+    clearTimeout(boundsTransitionTimeout)
+    targetPendingBounds = { w: 0, h: 0, r: 0 }
     islandAnim = '0.32s cubic-bezier(0.2, 0.8, 0.2, 1)'
 
     // Open expanded OS bounds before starting CSS expansion to eliminate clipping
@@ -1674,7 +1544,7 @@
   }
 
   function handleIslandClick(e: MouseEvent) {
-    if (dragMovedDistance > 6 || isInFlight) {
+    if (dragMovedDistance > 6) {
       dragMovedDistance = 0
       e.preventDefault()
       e.stopPropagation()
@@ -1730,7 +1600,10 @@
   role="application"
   onfocusin={handleFocusIn}
   onpointerdown={handleGlobalPointerDown}
-  style="position: absolute; left: {displayLayout.primaryCenter}px; transform: translateX(-50%);"
+  style="position: absolute; left: {displayLayout.primaryCenter}px; top: {Math.max(
+    0,
+    activeMonitor.top - displayLayout.virtualTop
+  )}px; transform: translateX(-50%);"
 >
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -1754,9 +1627,10 @@
       filter: {isQuitting ? 'blur(12px)' : 'none'};
       width: {isHidden
       ? hiddenBounds.w
-      : expanded
-        ? islandConfig.expanded.w
-        : currentMinimalW}px;
+      : Math.min(
+          expanded ? islandConfig.expanded.w : currentMinimalW,
+          activeMonitor.width ? activeMonitor.width - 24 : 1920
+        )}px;
       height: {isHidden
       ? hiddenBounds.h
       : expanded
@@ -1819,9 +1693,10 @@
           {@const ActivePage = activePage}
           <div
             class="view"
-            style="width: {expanded
-              ? islandConfig.expanded.w
-              : currentMinimalW}px; height: {expanded
+            style="width: {Math.min(
+              expanded ? islandConfig.expanded.w : currentMinimalW,
+              activeMonitor.width ? activeMonitor.width - 24 : 1920
+            )}px; height: {expanded
               ? islandConfig.expanded.h
               : islandConfig.minimal.h}px;"
           >
@@ -1833,7 +1708,10 @@
       {/if}
 
       {#if expanded}
-        <div in:fade={{ duration: 200, delay: 150 }}>
+        <div
+          class="dock-overlay-wrapper"
+          in:fade={{ duration: 200, delay: 150 }}
+        >
           <Dock {activePage} />
         </div>
       {/if}
@@ -1855,7 +1733,7 @@
       bind:this={devPillContainerNode}
       style="
         transform: translateX({devClampedOffsetX}px);
-        transition: {isDraggingHidden || isInFlight ? 'none' : islandAnim};
+        transition: {isDraggingHidden ? 'none' : islandAnim};
       "
     >
       <DevPill />

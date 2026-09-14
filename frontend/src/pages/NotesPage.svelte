@@ -23,7 +23,7 @@
     DeleteNote,
     OpenNotesFolder,
     RenameNote
-  } from '../../wailsjs/go/backend/App.js'
+  } from '../../bindings/Vinta/backend/app.js'
 
   interface NoteItem {
     id: string

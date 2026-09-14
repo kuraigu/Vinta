@@ -1,12 +1,5 @@
 <script lang="ts">
-  import {
-    Bell,
-    Volume2,
-    BellRing,
-    Trash2,
-    ClipboardCopy,
-    ClipboardPaste
-  } from 'lucide-svelte'
+  import { Bell, Volume2, BellRing, Trash2 } from 'lucide-svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
   import {
@@ -14,8 +7,6 @@
     notifSoundStore,
     notifVolumeStore,
     notifAutoWakeStore,
-    clipboardCopyNotifStore,
-    clipboardPasteNotifStore,
     notifData
   } from '../../../store'
 
@@ -57,28 +48,6 @@
   <SettingItem label="Auto-Wake Island on Notification" icon={Bell}>
     <label class="toggle-switch">
       <input type="checkbox" bind:checked={$notifAutoWakeStore} />
-      <span class="slider"></span>
-    </label>
-  </SettingItem>
-
-  <SettingItem
-    label="Notify on Clipboard Copy"
-    description="Display notification when text, files, or images are copied"
-    icon={ClipboardCopy}
-  >
-    <label class="toggle-switch">
-      <input type="checkbox" bind:checked={$clipboardCopyNotifStore} />
-      <span class="slider"></span>
-    </label>
-  </SettingItem>
-
-  <SettingItem
-    label="Notify on Clipboard Paste"
-    description="Display notification when content is pasted via keyboard"
-    icon={ClipboardPaste}
-  >
-    <label class="toggle-switch">
-      <input type="checkbox" bind:checked={$clipboardPasteNotifStore} />
       <span class="slider"></span>
     </label>
   </SettingItem>

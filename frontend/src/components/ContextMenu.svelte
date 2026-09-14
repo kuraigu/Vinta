@@ -17,8 +17,14 @@
 
   let { x, y, items, onclose }: Props = $props()
 
-  let adjustedX = $state(x)
-  let adjustedY = $state(y)
+  let adjustedX = $state(0)
+  let adjustedY = $state(0)
+
+  function syncCoordsFromProps() {
+    adjustedX = x
+    adjustedY = y
+  }
+  $effect(syncCoordsFromProps)
 
   function portal(node: HTMLElement) {
     document.body.appendChild(node)

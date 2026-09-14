@@ -2,17 +2,17 @@
 package services
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"math"
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"unsafe"
 
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/wailsapp/wails/v3/pkg/application"
 	"golang.org/x/sys/windows"
 )
 
@@ -35,10 +35,57 @@ var (
 	notifCallbackPtr uintptr
 	peakCallbackPtr  uintptr
 
-	wailsCtx  context.Context
 	serviceMu sync.Mutex
 	isStarted bool
+
+	isFrontendReady atomic.Bool
+
+	cachedMediaState   map[string]interface{}
+	cachedMediaStateMu sync.Mutex
+
+	pendingNotifs   []map[string]interface{}
+	pendingNotifsMu sync.Mutex
 )
+
+// SetFrontendReady updates the readiness status of the frontend WebView runtime.
+// When transitioning to ready, buffered initial media updates and pending notifications
+// received during window initialization are dispatched immediately.
+func SetFrontendReady(ready bool) {
+	wasReady := isFrontendReady.Swap(ready)
+	if !ready || wasReady {
+		return
+	}
+
+	pendingNotifsMu.Lock()
+	bufferedNotifs := pendingNotifs
+	pendingNotifs = nil
+	pendingNotifsMu.Unlock()
+
+	if app := application.Get(); app != nil {
+		for _, item := range bufferedNotifs {
+			msgType, _ := item["type"].(string)
+			if msgType == "" {
+				msgType = "notification"
+			}
+			app.Event.Emit(msgType, item)
+		}
+	}
+
+	cachedMediaStateMu.Lock()
+	media := cachedMediaState
+	cachedMediaStateMu.Unlock()
+
+	if media != nil {
+		if app := application.Get(); app != nil {
+			app.Event.Emit("media-update", media)
+		}
+	}
+}
+
+// IsFrontendReady reports whether the frontend WebView is active and accepting events.
+func IsFrontendReady() bool {
+	return isFrontendReady.Load()
+}
 
 func ensureDLLLoadedLocked() bool {
 	if dllHandle != 0 {
@@ -69,15 +116,13 @@ func ensureDLLLoadedLocked() bool {
 }
 
 // StartServicesListener initializes the native C++/WinRT in-process bridge.
-func StartServicesListener(ctx context.Context) {
+func StartServicesListener() {
 	serviceMu.Lock()
 	defer serviceMu.Unlock()
 
 	if isStarted {
 		return
 	}
-
-	wailsCtx = ctx
 
 	if !ensureDLLLoadedLocked() {
 		logMsg("vintaservices.dll not found; native WinRT services disabled")
@@ -110,6 +155,8 @@ func StartServicesListener(ctx context.Context) {
 
 // StopServicesListener halts the native WinRT worker threads and unloads the bridge.
 func StopServicesListener() {
+	SetFrontendReady(false)
+
 	serviceMu.Lock()
 	defer serviceMu.Unlock()
 
@@ -343,6 +390,7 @@ func RequeryMediaArt() {
 // the native bridge to immediately emit the current media snapshot.
 // This is called when the frontend mounts or reconnects to avoid stale blank state.
 func RequestMediaUpdate() {
+	SetFrontendReady(true)
 	ResetMediaArtCacheState()
 	serviceMu.Lock()
 	if dllHandle != 0 && procForceEmitNativeMediaState != 0 {
@@ -352,7 +400,7 @@ func RequestMediaUpdate() {
 }
 
 func onNativeMedia(cStr *byte) uintptr {
-	if cStr == nil || wailsCtx == nil {
+	if cStr == nil {
 		return 0
 	}
 
@@ -368,6 +416,7 @@ func onNativeMedia(cStr *byte) uintptr {
 		sourceApp, _ := payload["sourceApp"].(string)
 		activeSessionID, _ := payload["activeSessionId"].(string)
 		isPlaying, _ := payload["isPlaying"].(bool)
+
 		trackKey := sourceApp + "::" + activeSessionID + "::" + title + "::" + artist
 
 		hiddenMu.RLock()
@@ -408,14 +457,24 @@ func onNativeMedia(cStr *byte) uintptr {
 			return 0
 		}
 
-		runtime.EventsEmit(wailsCtx, "media-update", payload)
+		cachedMediaStateMu.Lock()
+		cachedMediaState = payload
+		cachedMediaStateMu.Unlock()
+
+		if !isFrontendReady.Load() {
+			return 0
+		}
+
+		if app := application.Get(); app != nil {
+			app.Event.Emit("media-update", payload)
+		}
 	}
 
 	return 0
 }
 
 func onNativeNotification(cStr *byte) uintptr {
-	if cStr == nil || wailsCtx == nil {
+	if cStr == nil {
 		return 0
 	}
 
@@ -426,7 +485,22 @@ func onNativeNotification(cStr *byte) uintptr {
 
 	var payload map[string]interface{}
 	if err := json.Unmarshal([]byte(str), &payload); err == nil {
-		runtime.EventsEmit(wailsCtx, "notification", payload)
+		if !isFrontendReady.Load() {
+			pendingNotifsMu.Lock()
+			if len(pendingNotifs) < 50 {
+				pendingNotifs = append(pendingNotifs, payload)
+			}
+			pendingNotifsMu.Unlock()
+			return 0
+		}
+
+		if app := application.Get(); app != nil {
+			msgType, _ := payload["type"].(string)
+			if msgType == "" {
+				msgType = "notification"
+			}
+			app.Event.Emit(msgType, payload)
+		}
 	}
 
 	return 0
@@ -438,7 +512,7 @@ var (
 )
 
 func onNativeAudioPeak(peakBits uintptr) uintptr {
-	if wailsCtx == nil {
+	if !isFrontendReady.Load() {
 		return 0
 	}
 
@@ -467,7 +541,9 @@ func onNativeAudioPeak(peakBits uintptr) uintptr {
 		"type": "audio_peak",
 		"peak": float64(peak),
 	}
-	runtime.EventsEmit(wailsCtx, "audio-peak", payload)
+	if app := application.Get(); app != nil {
+		app.Event.Emit("audio-peak", payload)
+	}
 	return 0
 }
 

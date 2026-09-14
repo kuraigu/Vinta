@@ -9,6 +9,7 @@
 #include <winrt/Windows.Media.Control.h>
 #include <algorithm>
 #include <unordered_map>
+#include <unordered_set>
 
 #include <atomic>
 #include <mutex>
@@ -133,6 +134,10 @@ int SelectMediaSession(const char* sessionId) {
         g_selectedSessionId = (sessionId != nullptr) ? sessionId : "";
         g_selectedSessionTime = std::chrono::steady_clock::now();
     }
+    {
+        std::lock_guard<std::mutex> sLock(g_sessionsJsonMutex);
+        g_lastSessionsFetchTime = {};
+    }
     UpdateCurrentSession();
     return 1;
 }
@@ -148,54 +153,16 @@ static std::string ToLowerStr(std::string s) {
     return s;
 }
 
-/**
- * Universally determines whether an application is a registered web browser on Windows.
- * Rather than maintaining a hardcoded list of browser executable names, this queries
- * the Windows registry under HKLM and HKCU 'SOFTWARE\Clients\StartMenuInternet',
- * where all standard Windows web browsers register their executables and display names.
- * This ensures any installed browser (Chrome, Edge, Firefox, Brave, Arc, Opera, Vivaldi,
- * Zen, or any niche/future browser) is dynamically recognized.
- */
-static bool IsRegisteredWebBrowser(const std::string& sourceApp) {
-    if (sourceApp.empty()) return false;
-
-    std::string needle = ToLowerStr(sourceApp);
-    size_t lastSlash = needle.find_last_of("\\/");
-    if (lastSlash != std::string::npos) needle = needle.substr(lastSlash + 1);
-    if (needle.size() > 4 && needle.substr(needle.size() - 4) == ".exe") {
-        needle = needle.substr(0, needle.size() - 4);
+static void TrimString(std::string& s) {
+    size_t start = s.find_first_not_of(" \t\r\n");
+    if (start == std::string::npos) {
+        s.clear();
+        return;
     }
-
-    const HKEY roots[] = { HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE };
-    for (HKEY root : roots) {
-        HKEY hKey = nullptr;
-        if (RegOpenKeyExW(root, L"SOFTWARE\\Clients\\StartMenuInternet", 0, KEY_READ, &hKey) == ERROR_SUCCESS) {
-            DWORD index = 0;
-            wchar_t subkeyName[256];
-            DWORD subkeyLen = 256;
-            while (RegEnumKeyExW(hKey, index++, subkeyName, &subkeyLen, nullptr, nullptr, nullptr, nullptr) == ERROR_SUCCESS) {
-                subkeyLen = 256;
-                std::wstring cmdPath = std::wstring(subkeyName) + L"\\shell\\open\\command";
-                HKEY hCmd = nullptr;
-                if (RegOpenKeyExW(hKey, cmdPath.c_str(), 0, KEY_READ, &hCmd) == ERROR_SUCCESS) {
-                    wchar_t rawCmd[MAX_PATH];
-                    DWORD cmdSize = sizeof(rawCmd);
-                    if (RegQueryValueExW(hCmd, nullptr, nullptr, nullptr, reinterpret_cast<LPBYTE>(rawCmd), &cmdSize) == ERROR_SUCCESS) {
-                        std::string cmdUtf8 = ToLowerStr(Utf16ToUtf8(rawCmd));
-                        if (cmdUtf8.find(needle) != std::string::npos || needle.find(ToLowerStr(Utf16ToUtf8(subkeyName))) != std::string::npos) {
-                            RegCloseKey(hCmd);
-                            RegCloseKey(hKey);
-                            return true;
-                        }
-                    }
-                    RegCloseKey(hCmd);
-                }
-            }
-            RegCloseKey(hKey);
-        }
-    }
-    return false;
+    size_t end = s.find_last_not_of(" \t\r\n");
+    s = s.substr(start, end - start + 1);
 }
+
 
 int FocusApp(const char* sourceApp, const char* aumid) {
     std::string needle = (sourceApp && strlen(sourceApp) > 0) ? ToLowerStr(sourceApp) : "";
@@ -307,82 +274,73 @@ static void ScheduleEmit() {
     }
 }
 
-static bool IsValidMediaSession(winrt_media::GlobalSystemMediaTransportControlsSession const& session) {
+/**
+ * Evaluates whether a GlobalSystemMediaTransportControlsSession represents a legitimate media player.
+ * Filters out dummy audio sessions created by game launchers or system background processes,
+ * while ensuring valid paused, stopped, or web browser media sessions are retained.
+ */
+static bool IsValidMediaSession(winrt_media::GlobalSystemMediaTransportControlsSession const& session,
+                                winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackInfo const* prefetchedInfo = nullptr,
+                                winrt_media::GlobalSystemMediaTransportControlsSessionMediaProperties const* prefetchedProps = nullptr) {
     if (!session) return false;
     try {
-        auto info = session.GetPlaybackInfo();
+        winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackInfo info{nullptr};
+        if (prefetchedInfo && *prefetchedInfo) {
+            info = *prefetchedInfo;
+        } else {
+            info = session.GetPlaybackInfo();
+        }
         if (!info) return false;
 
         auto status = info.PlaybackStatus();
-        if (status == winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Closed ||
-            status == winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Stopped) {
+        if (status == winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Closed) {
             return false;
         }
 
-        // Must support at least one interactive media playback control
+        // Must support at least one interactive media playback control.
+        // Web browsers commonly expose IsPlayPauseToggleEnabled rather than discrete play or pause.
         auto controls = info.Controls();
         if (!controls) return false;
         bool hasControls = controls.IsPlayEnabled() || controls.IsPauseEnabled() ||
-                           controls.IsStopEnabled() || controls.IsNextEnabled() ||
-                           controls.IsPreviousEnabled();
+                           controls.IsPlayPauseToggleEnabled() || controls.IsStopEnabled() ||
+                           controls.IsNextEnabled() || controls.IsPreviousEnabled();
         if (!hasControls) return false;
 
-        // Must have valid track metadata
-        auto props = session.TryGetMediaPropertiesAsync().get();
+        winrt_media::GlobalSystemMediaTransportControlsSessionMediaProperties props{nullptr};
+        if (prefetchedProps && *prefetchedProps) {
+            props = *prefetchedProps;
+        } else {
+            props = session.TryGetMediaPropertiesAsync().get();
+        }
         if (!props) return false;
 
         std::string title = Utf16ToUtf8(props.Title().c_str());
         std::string artist = Utf16ToUtf8(props.Artist().c_str());
-        std::string album = Utf16ToUtf8(props.AlbumTitle().c_str());
 
-        auto trim = [](std::string& s) {
-            size_t start = s.find_first_not_of(" \t\r\n");
-            if (start == std::string::npos) {
-                s.clear();
-                return;
-            }
-            size_t end = s.find_last_not_of(" \t\r\n");
-            s = s.substr(start, end - start + 1);
-        };
-        trim(title);
-        trim(artist);
-        trim(album);
+        TrimString(title);
+        TrimString(artist);
 
         if (title.empty() && artist.empty()) {
             return false;
         }
 
-        // Non-media applications (e.g. game launchers, screen or audio recorders) may register
-        // a dummy audio session where the title is just the application or window name.
-        std::string sourceApp;
-        try {
-            sourceApp = Utf16ToUtf8(session.SourceAppUserModelId().c_str());
-            trim(sourceApp);
-        } catch (...) {}
-
-        if (artist.empty() && album.empty()) {
-            std::string appName = sourceApp;
+        // If artist is empty, check if title is simply the application or process name.
+        // Dummy background audio streams typically publish their own executable name as the title with no artist.
+        if (artist.empty()) {
+            std::string appName;
+            try {
+                appName = Utf16ToUtf8(session.SourceAppUserModelId().c_str());
+            } catch (...) {}
             size_t slash = appName.find_last_of("\\/");
             if (slash != std::string::npos) appName = appName.substr(slash + 1);
             size_t dot = appName.rfind('.');
             if (dot != std::string::npos) appName = appName.substr(0, dot);
 
-            auto toLower = [](std::string s) {
-                std::transform(s.begin(), s.end(), s.begin(), [](unsigned char c) {
-                    return static_cast<char>(std::tolower(c));
-                });
-                return s;
-            };
+            std::string lowerTitle = ToLowerStr(title);
+            std::string lowerAppName = ToLowerStr(appName);
 
-            std::string lowerTitle = toLower(title);
-            std::string lowerAppName = toLower(appName);
-
-            // If the title matches the process name and there are no playlist navigation controls,
-            // this is an application audio stream rather than a media player.
-            if (!lowerAppName.empty() && (lowerTitle == lowerAppName || lowerTitle.find(lowerAppName) != std::string::npos)) {
-                if (!controls.IsNextEnabled() && !controls.IsPreviousEnabled()) {
-                    return false;
-                }
+            if (!lowerAppName.empty() && lowerTitle == lowerAppName) {
+                return false;
             }
         }
 
@@ -393,6 +351,7 @@ static bool IsValidMediaSession(winrt_media::GlobalSystemMediaTransportControlsS
 }
 
 static void UpdateCurrentSession() {
+    ApartmentScope apt;
     std::lock_guard<std::recursive_mutex> lock(g_sessionMutex);
     if (!g_sessionManager) return;
 
@@ -423,6 +382,8 @@ static void UpdateCurrentSession() {
                             if (props) {
                                 sTitle = Utf16ToUtf8(props.Title().c_str());
                                 sArtist = Utf16ToUtf8(props.Artist().c_str());
+                                TrimString(sTitle);
+                                TrimString(sArtist);
                             }
                         } catch (...) {}
 
@@ -551,6 +512,10 @@ static void UpdateCurrentSession() {
         bool sessionChanged = (g_currentSession != targetSession);
 
         if (sessionChanged) {
+            {
+                std::lock_guard<std::mutex> sLock(g_sessionsJsonMutex);
+                g_lastSessionsFetchTime = {};
+            }
             ++g_artCorrectionGeneration;
             g_mediaPropsDirty.store(true);
             if (g_currentSession) {
@@ -684,11 +649,9 @@ static void EmitMediaState(bool includeVolume) {
                 }
             }
 
-            // Initial retry worker: spawned when a new track starts, artwork is pending,
-            // or when properties change. In addition, browser sessions frequently publish
-            // a generic icon before the web app's MediaSession poster loads.
-            bool isBrowser = IsRegisteredWebBrowser(sourceApp);
-            bool needsWorker = (isNewTrack || albumArt.empty() || propsDirty || isBrowser) && !trackKey.empty();
+            // Initial retry worker: spawned when a new track starts, artwork is pending or small,
+            // or when properties change.
+            bool needsWorker = (isNewTrack || albumArt.empty() || albumArt.size() < 10000 || propsDirty) && !trackKey.empty();
             if (needsWorker) {
                 {
                     std::lock_guard<std::mutex> resyncLock(g_artResyncMutex);
@@ -770,13 +733,20 @@ static void EmitMediaState(bool includeVolume) {
                 canGoPrev = controls.IsPreviousEnabled();
                 canPause = controls.IsPauseEnabled();
                 canPlay = controls.IsPlayEnabled();
+                if (controls.IsPlayPauseToggleEnabled()) {
+                    if (isPlaying) {
+                        canPause = true;
+                    } else {
+                        canPlay = true;
+                    }
+                }
                 isShuffleEnabled = controls.IsShuffleEnabled();
                 isRepeatEnabled = controls.IsRepeatEnabled();
             }
         }
     } catch (...) {}
 
-    if ((title.empty() && artist.empty()) || (!canPlay && !canPause && !canGoNext && !canGoPrev)) {
+    if (title.empty() && artist.empty()) {
         g_isMediaPlaying.store(false);
         std::ostringstream json;
         json << "{\"type\":\"media\",\"isAvailable\":false}";
@@ -795,15 +765,11 @@ static void EmitMediaState(bool includeVolume) {
                 auto now = winrt::clock::now();
                 if (now > lastUpdated) {
                     double elapsedMs = std::chrono::duration<double, std::milli>(now - lastUpdated).count();
-                    // Chrome / Spotify update LastUpdatedTime every 1-5s while actively playing.
-                    // Extrapolate position smoothly while fresh (< 10 seconds) to prevent stale backwards snapshots.
-                    if (elapsedMs > 0.0 && elapsedMs < 10000.0) {
-                        posMs = rawPosMs + elapsedMs;
-                        if (durMs > 0.0 && posMs > durMs) {
-                            posMs = durMs;
-                        }
-                    } else {
-                        posMs = rawPosMs;
+                    // Media players report an anchor Position and LastUpdatedTime. While actively playing,
+                    // extrapolate true position continuously from the anchor without arbitrary cutoff.
+                    posMs = rawPosMs + elapsedMs;
+                    if (durMs > 0.0 && posMs > durMs) {
+                        posMs = durMs;
                     }
                 } else {
                     posMs = rawPosMs;
@@ -815,52 +781,60 @@ static void EmitMediaState(bool includeVolume) {
     } catch (...) {}
 
     std::string sessionsJson = "[]";
-    std::string activeSessionId = sourceApp;
+    std::string activeSessionId = ComputeSessionUniqueId(sourceApp, title, artist);
     try {
         if (g_sessionManager) {
             auto now = std::chrono::steady_clock::now();
             std::lock_guard<std::mutex> sLock(g_sessionsJsonMutex);
             auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - g_lastSessionsFetchTime).count();
 
-            if (elapsedMs < 2500 && g_cachedSessionsJson != "[]") {
+            if (elapsedMs < 1200 && g_cachedSessionsJson != "[]") {
                 sessionsJson = g_cachedSessionsJson;
             } else {
                 auto allSessions = g_sessionManager.GetSessions();
                 std::ostringstream sJson;
                 sJson << "[";
                 bool first = true;
-                int sIndex = 0;
+                std::unordered_set<std::string> seenUniqueIds;
+
                 for (auto const& s : allSessions) {
+                    if (!s) continue;
                     try {
-                        if (!IsValidMediaSession(s)) continue;
+                        auto pInfo = s.GetPlaybackInfo();
+                        if (!pInfo) continue;
+                        if (pInfo.PlaybackStatus() == winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Closed) {
+                            continue;
+                        }
+
+                        winrt_media::GlobalSystemMediaTransportControlsSessionMediaProperties props{nullptr};
+                        try {
+                            props = s.TryGetMediaPropertiesAsync().get();
+                        } catch (...) {}
+                        if (!props) continue;
+
+                        if (!IsValidMediaSession(s, &pInfo, &props)) continue;
 
                         std::string sId = Utf16ToUtf8(s.SourceAppUserModelId().c_str());
                         std::string sApp = sId;
                         size_t slash = sApp.find_last_of("\\/");
                         if (slash != std::string::npos) sApp = sApp.substr(slash + 1);
 
-                        std::string sTitle = "";
-                        std::string sArtist = "";
-                        try {
-                            auto props = s.TryGetMediaPropertiesAsync().get();
-                            if (props) {
-                                sTitle = Utf16ToUtf8(props.Title().c_str());
-                                sArtist = Utf16ToUtf8(props.Artist().c_str());
-                            }
-                        } catch (...) {}
+                        std::string sTitle = Utf16ToUtf8(props.Title().c_str());
+                        std::string sArtist = Utf16ToUtf8(props.Artist().c_str());
+                        TrimString(sTitle);
+                        TrimString(sArtist);
 
                         if (sTitle.empty() && sArtist.empty()) continue;
 
-                        bool sPlaying = false;
-                        try {
-                            auto pInfo = s.GetPlaybackInfo();
-                            if (pInfo) {
-                                sPlaying = (pInfo.PlaybackStatus() == winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing);
-                            }
-                        } catch (...) {}
+                        bool sPlaying = (pInfo.PlaybackStatus() == winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing);
 
                         std::string uniqueId = ComputeSessionUniqueId(sId, sTitle, sArtist);
-                        if (s == session) {
+                        if (seenUniqueIds.find(uniqueId) != seenUniqueIds.end()) {
+                            continue;
+                        }
+                        seenUniqueIds.insert(uniqueId);
+
+                        if (s == session || (sId == sourceApp && sTitle == title && sArtist == artist)) {
                             activeSessionId = uniqueId;
                         }
 
@@ -874,7 +848,6 @@ static void EmitMediaState(bool includeVolume) {
                               << "\"isPlaying\":" << (sPlaying ? "true" : "false")
                               << "}";
                     } catch (...) {}
-                    sIndex++;
                 }
                 sJson << "]";
                 g_cachedSessionsJson = sJson.str();
@@ -1405,6 +1378,7 @@ void StopMediaService() {
 
 int ExecuteMediaCommand(const char* command) {
     if (!command) return 0;
+    ApartmentScope apt;
     std::string cmd(command);
 
     std::string sourceApp;
@@ -1455,17 +1429,80 @@ int ExecuteMediaCommand(const char* command) {
         return 1;
     }
     if (cmd.rfind("seek:", 0) == 0) {
-        double posMs = std::stod(cmd.substr(5));
+        std::string payload = cmd.substr(5);
+        size_t colon = payload.find(':');
+        double posMs = 0.0;
+        std::string explicitTarget;
+        if (colon != std::string::npos) {
+            posMs = std::stod(payload.substr(0, colon));
+            explicitTarget = payload.substr(colon + 1);
+        } else {
+            posMs = std::stod(payload);
+        }
+
         winrt_media::GlobalSystemMediaTransportControlsSession session{nullptr};
-        {
+        if (!explicitTarget.empty() && g_sessionManager) {
+            try {
+                auto sessions = g_sessionManager.GetSessions();
+                for (auto const& s : sessions) {
+                    if (!s) continue;
+                    try {
+                        std::string sId = Utf16ToUtf8(s.SourceAppUserModelId().c_str());
+                        std::string sTitle = "";
+                        std::string sArtist = "";
+                        auto props = s.TryGetMediaPropertiesAsync().get();
+                        if (props) {
+                            sTitle = Utf16ToUtf8(props.Title().c_str());
+                            sArtist = Utf16ToUtf8(props.Artist().c_str());
+                            TrimString(sTitle);
+                            TrimString(sArtist);
+                        }
+                        std::string uniqueId = ComputeSessionUniqueId(sId, sTitle, sArtist);
+                        if (explicitTarget == uniqueId || explicitTarget == sId ||
+                            (!sTitle.empty() && explicitTarget.find(sTitle) != std::string::npos)) {
+                            session = s;
+                            break;
+                        }
+                    } catch (...) {}
+                }
+            } catch (...) {}
+        }
+        if (!session) {
             std::lock_guard<std::recursive_mutex> lock(g_sessionMutex);
             session = g_currentSession;
         }
+
         if (session) {
             try {
                 auto ticks = static_cast<int64_t>(posMs * 10000.0);
-                session.TryChangePlaybackPositionAsync(ticks);
+                auto asyncOp = session.TryChangePlaybackPositionAsync(ticks);
+                if (asyncOp) {
+                    asyncOp.get();
+                }
             } catch (...) {}
+
+            std::thread([session, posMs]() {
+                ApartmentScope apt;
+                // Web browsers do not always trigger push events when scrubbing.
+                // We poll briefly until the session reports near the target position.
+                for (int i = 0; i < 8; ++i) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(80));
+                    try {
+                        auto tl = session.GetTimelineProperties();
+                        if (tl) {
+                            double cur = std::chrono::duration<double, std::milli>(tl.Position()).count();
+                            if (std::abs(cur - posMs) < 1500.0) {
+                                break;
+                            }
+                        }
+                    } catch (...) {}
+                }
+                UpdateCurrentSession();
+
+                // Settle once more after audio and video buffers resume
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                UpdateCurrentSession();
+            }).detach();
         }
         return 1;
     }

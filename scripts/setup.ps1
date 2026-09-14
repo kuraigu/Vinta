@@ -43,9 +43,9 @@ if ($InstallTools) {
         Write-Host "Installing Ninja..." -ForegroundColor Cyan
         winget install Ninja-build.Ninja --accept-source-agreements --accept-package-agreements
     }
-    if (-not (Get-Command "wails" -ErrorAction SilentlyContinue)) {
-        Write-Host "Installing Wails CLI..." -ForegroundColor Cyan
-        go install github.com/wailsapp/wails/v2/cmd/wails@latest
+    if (-not (Get-Command "wails3" -ErrorAction SilentlyContinue)) {
+        Write-Host "Installing Wails v3 CLI..." -ForegroundColor Cyan
+        go install github.com/wailsapp/wails/v3/cmd/wails3@latest
     }
     if (-not (Get-Command "makensis" -ErrorAction SilentlyContinue)) {
         Write-Host "Installing NSIS..." -ForegroundColor Cyan

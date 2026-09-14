@@ -15,8 +15,7 @@
     Globe,
     Play,
     Settings,
-    Terminal,
-    Clipboard
+    Terminal
   } from 'lucide-svelte'
   import { notifData, notificationPermissionDenied, dndStore } from '../store'
   import { swipe } from '../utils/useSwipe'
@@ -31,7 +30,7 @@
   import {
     FocusNotificationApp,
     FocusWindow
-  } from '../../wailsjs/go/backend/App'
+  } from '../../bindings/Vinta/backend/app.js'
 
   export type NotificationItem = {
     id: number
@@ -149,6 +148,7 @@
     if (notif.appLogo && notif.icon === notif.appLogo) return true
     const brand = getDisplayBrand(notif)
     if (brand.appIcon && notif.icon === brand.appIcon) return true
+    if (brand.icon && notif.icon === brand.icon) return true
     return false
   }
 
@@ -190,8 +190,7 @@
 
   /**
    * Asynchronously inspects the natural dimensions of an incoming hero image.
-   * Images having roughly square dimensions up to 512px are promoted to contact avatars,
-   * while wider screenshots, photos, and banners remain classified as hero banners.
+   * When an incoming image is square, promote it to contact avatar and persist it.
    */
   function checkImageSizing(url: string) {
     if (!url || !isImageUrl(url) || imageSizingCache.has(url)) return
@@ -201,8 +200,7 @@
       const h = img.naturalHeight
       if (w > 0 && h > 0) {
         const ratio = w / h
-        const isAvatar =
-          ratio >= 0.75 && ratio <= 1.33 && (w <= 512 || h <= 512)
+        const isAvatar = ratio >= 0.75 && ratio <= 1.33
         imageSizingCache.set(url, isAvatar ? 'avatar' : 'hero')
         if (isAvatar) {
           notifData.update((items) => {
@@ -227,8 +225,8 @@
   }
 
   /**
-   * Derives display properties for notifications: applies cached sizing
-   * and restores persistent sender avatars. Must remain completely pure.
+   * Derives display properties for notifications and restores persistent sender avatars.
+   * Promotes avatar-sized hero images when the notification only has a generic app logo.
    */
   function computeProcessedNotifications() {
     const items = filteredNotifications.map((n) => ({ ...n }))
@@ -236,12 +234,21 @@
     for (const notif of items) {
       const sKey = getSenderKey(notif)
 
-      // Promote cached avatar-sized hero images
+      // Promote avatar hero images when notification lacks a custom avatar
       if (notif.heroImage && isImageUrl(notif.heroImage)) {
+        const isAvatarUrl =
+          notif.heroImage.includes('/avatars/') ||
+          notif.heroImage.includes('/avatar/') ||
+          notif.heroImage.includes('avatar') ||
+          notif.heroImage.includes('profile') ||
+          notif.heroImage.includes('user')
         const sizing = imageSizingCache.get(notif.heroImage)
-        if (sizing === 'avatar') {
+        if (isAvatarUrl || sizing === 'avatar') {
           notif.icon = notif.heroImage
           notif.heroImage = ''
+          if (sKey) {
+            saveSenderAvatar(sKey, notif.icon)
+          }
         } else if (!sizing) {
           checkImageSizing(notif.heroImage)
         }
@@ -306,7 +313,7 @@
 
   // For the pill (minimized view), prefer the most recent IDENTIFIED notification.
   // Unidentified "Notification" entries are shown only when there are zero identified
-  // notifications — this prevents the pill from flashing "Notification" for the ~50s
+  // notifications, which prevents the pill from flashing "Notification" for the ~50s
   // gap before the WPN copy arrives from dual-channel apps like Rise of Kingdoms.
   let latest = $derived.by(() => {
     const identified = processedNotifications.find(
@@ -418,24 +425,20 @@
     }
 
     // Request native extracted icon from Windows (.exe / AUMID)
-    const searchApp = parsed.processName || notif.appName || ''
-    const iconKey = `${searchApp.toLowerCase()}|${(notif.aumid || '').toLowerCase()}`
+    const searchApp = (parsed.processName || notif.appName || '').trim()
+    const searchAumid = (notif.aumid || '').trim()
+    const iconKey = `${searchApp.toLowerCase()}|${searchAumid.toLowerCase()}`
     const nativeUri =
-      nativeIcons[iconKey] || requestNativeAppIcon(searchApp, notif.aumid)
+      nativeIcons[iconKey] || requestNativeAppIcon(searchApp, searchAumid)
 
     const effectiveAppIcon = nativeUri || null
     const effectiveIcon = defaultIcon || nativeUri || null
-
-    const isClipboard =
-      (notif.appName || '').toLowerCase() === 'clipboard' ||
-      (notif.aumid || '').toLowerCase() === 'clipboard'
-    const category = isClipboard ? 'clipboard' : 'system'
 
     return {
       name: displayName,
       icon: effectiveIcon,
       appIcon: effectiveAppIcon,
-      category
+      category: 'system'
     }
   }
 </script>
@@ -459,8 +462,6 @@
     <Settings {size} color="var(--c-text-secondary)" />
   {:else if cat === 'dev'}
     <Terminal {size} color="var(--c-text-secondary)" />
-  {:else if cat === 'clipboard'}
-    <Clipboard {size} color="var(--c-text-secondary)" />
   {:else}
     <MessageSquareDot {size} color="var(--c-text-secondary)" />
   {/if}
@@ -519,6 +520,21 @@
               <span class="banner-message">{latest.message}</span>
             {/if}
           </div>
+          {#if latest.heroImage && isImageUrl(latest.heroImage) && latest.heroImage !== brand.icon && latest.heroImage !== brand.appIcon}
+            <div class="banner-hero-thumb-wrapper">
+              <img
+                src={latest.heroImage}
+                alt="preview"
+                class="banner-hero-thumb"
+                onerror={(e) => {
+                  const target = e.currentTarget as HTMLImageElement
+                  if (target.parentElement) {
+                    target.parentElement.style.display = 'none'
+                  }
+                }}
+              />
+            </div>
+          {/if}
         </div>
       {/key}
     </div>

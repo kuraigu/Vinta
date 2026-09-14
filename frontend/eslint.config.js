@@ -24,6 +24,6 @@ export default ts.config(
     }
   },
   {
-    ignores: ['dist/', 'wailsjs/']
+    ignores: ['dist/', 'wailsjs/', 'bindings/']
   }
 )

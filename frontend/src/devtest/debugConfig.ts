@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store'
-import { IsTestMode } from '../../wailsjs/go/backend/App.js'
+import { IsTestMode } from '../../bindings/Vinta/backend/app.js'
 
 function getInitialDebugFlag(key: string, defaultValue: boolean): boolean {
   if (typeof window === 'undefined') return defaultValue

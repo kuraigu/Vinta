@@ -10,8 +10,16 @@ Unicode true
 !include "LogicLib.nsh"
 
 # Version information
-VIProductVersion "${INFO_PRODUCTVERSION}.0"
-VIFileVersion    "${INFO_PRODUCTVERSION}.0"
+!ifndef INFO_PRODUCTVERSION
+    !define INFO_PRODUCTVERSION "0.1.0"
+!endif
+
+!ifndef INFO_PRODUCTVERSION_NUMERIC
+    !define INFO_PRODUCTVERSION_NUMERIC "0.1.0.0"
+!endif
+
+VIProductVersion "${INFO_PRODUCTVERSION_NUMERIC}"
+VIFileVersion    "${INFO_PRODUCTVERSION_NUMERIC}"
 
 VIAddVersionKey "CompanyName"      "${INFO_COMPANYNAME}"
 VIAddVersionKey "Publisher"        "${INFO_COMPANYNAME}"

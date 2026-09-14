@@ -12,7 +12,7 @@
     isSimulatingBatteryStore,
     type BatteryData
   } from '../store'
-  import { GetBatteryStatus } from '../../wailsjs/go/backend/App.js'
+  import { GetBatteryStatus } from '../../bindings/Vinta/backend/app.js'
 
   let simulatedPercentage = $state($batteryDataStore.percentage || 75)
   let simulatedCharging = $state(true)

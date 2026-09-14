@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store'
-import { CheckForUpdates } from '../../wailsjs/go/backend/App.js'
+import { CheckForUpdates } from '../../bindings/Vinta/backend/app.js'
 
 export interface ReleaseInfo {
   version: string

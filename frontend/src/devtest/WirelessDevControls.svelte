@@ -13,7 +13,7 @@
     isSimulatingWirelessStore,
     type WirelessData
   } from '../store'
-  import { GetWirelessStatus } from '../../wailsjs/go/backend/App.js'
+  import { GetWirelessStatus } from '../../bindings/Vinta/backend/app.js'
 
   let wireless = $derived($wirelessDataStore)
   let isSimulating = $derived($isSimulatingWirelessStore)

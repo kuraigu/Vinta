@@ -60,7 +60,7 @@ function Test-Tool {
 Test-Tool -Name "Go Toolchain" -Command "go" -VersionArg "version" -InstallHint "winget install GoLang.Go"
 Test-Tool -Name "Node.js Runtimes" -Command "node" -VersionArg "-v" -InstallHint "winget install OpenJS.NodeJS.LTS"
 Test-Tool -Name "NPM Package Manager" -Command "npm" -VersionArg "-v" -InstallHint "Included with Node.js"
-Test-Tool -Name "Wails CLI" -Command "wails" -VersionArg "version" -InstallHint "go install github.com/wailsapp/wails/v2/cmd/wails@latest"
+Test-Tool -Name "Wails v3 CLI" -Command "wails3" -VersionArg "version" -InstallHint "go install github.com/wailsapp/wails/v3/cmd/wails3@latest"
 Test-Tool -Name "CMake" -Command "cmake" -VersionArg "--version" -InstallHint "winget install Kitware.CMake"
 Test-Tool -Name "Ninja Build" -Command "ninja" -VersionArg "--version" -InstallHint "winget install Ninja-build.Ninja"
 Test-Tool -Name "NSIS Installer Compiler" -Command "makensis" -VersionArg "/VERSION" -InstallHint "winget install NSIS.NSIS" -Optional
