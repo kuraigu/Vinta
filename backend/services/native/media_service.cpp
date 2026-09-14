@@ -812,15 +812,11 @@ static void EmitMediaState(bool includeVolume) {
                 auto now = winrt::clock::now();
                 if (now > lastUpdated) {
                     double elapsedMs = std::chrono::duration<double, std::milli>(now - lastUpdated).count();
-                    // Chrome / Spotify update LastUpdatedTime every 1-5s while actively playing.
-                    // Extrapolate position smoothly while fresh (< 10 seconds) to prevent stale backwards snapshots.
-                    if (elapsedMs > 0.0 && elapsedMs < 10000.0) {
-                        posMs = rawPosMs + elapsedMs;
-                        if (durMs > 0.0 && posMs > durMs) {
-                            posMs = durMs;
-                        }
-                    } else {
-                        posMs = rawPosMs;
+                    // Media players report an anchor Position and LastUpdatedTime. While actively playing,
+                    // the true playhead position is rawPosMs plus the wall-clock time elapsed since that anchor.
+                    posMs = rawPosMs + elapsedMs;
+                    if (durMs > 0.0 && posMs > durMs) {
+                        posMs = durMs;
                     }
                 } else {
                     posMs = rawPosMs;
@@ -1422,6 +1418,7 @@ void StopMediaService() {
 
 int ExecuteMediaCommand(const char* command) {
     if (!command) return 0;
+    ApartmentScope apt;
     std::string cmd(command);
 
     std::string sourceApp;
@@ -1481,8 +1478,12 @@ int ExecuteMediaCommand(const char* command) {
         if (session) {
             try {
                 auto ticks = static_cast<int64_t>(posMs * 10000.0);
-                session.TryChangePlaybackPositionAsync(ticks);
+                auto asyncOp = session.TryChangePlaybackPositionAsync(ticks);
+                if (asyncOp) {
+                    asyncOp.get();
+                }
             } catch (...) {}
+            ScheduleEmit();
         }
         return 1;
     }
