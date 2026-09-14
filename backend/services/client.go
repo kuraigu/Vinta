@@ -416,30 +416,6 @@ func onNativeMedia(cStr *byte) uintptr {
 		sourceApp, _ := payload["sourceApp"].(string)
 		activeSessionID, _ := payload["activeSessionId"].(string)
 		isPlaying, _ := payload["isPlaying"].(bool)
-		canGoNext, _ := payload["canGoNext"].(bool)
-		canGoPrev, _ := payload["canGoPrev"].(bool)
-		isAvailable, _ := payload["isAvailable"].(bool)
-
-		// Ignore media sessions that do not support next or previous track navigation
-		if isAvailable && !canGoNext && !canGoPrev {
-			payload["isAvailable"] = false
-			payload["isPlaying"] = false
-			isPlaying = false
-		}
-
-		if rawSessions, ok := payload["sessions"].([]interface{}); ok {
-			var filtered []interface{}
-			for _, item := range rawSessions {
-				if sMap, ok := item.(map[string]interface{}); ok {
-					sNext, _ := sMap["canGoNext"].(bool)
-					sPrev, _ := sMap["canGoPrev"].(bool)
-					if sNext || sPrev {
-						filtered = append(filtered, sMap)
-					}
-				}
-			}
-			payload["sessions"] = filtered
-		}
 
 		trackKey := sourceApp + "::" + activeSessionID + "::" + title + "::" + artist
 

@@ -1230,10 +1230,7 @@
       }
     }
     const handleWindowKeydownFailsafe = (e: KeyboardEvent) => {
-      if (
-        e.key === 'Escape' &&
-        (isDraggingHidden || isTrackRegionActive)
-      ) {
+      if (e.key === 'Escape' && (isDraggingHidden || isTrackRegionActive)) {
         handleDragFailsafe()
       }
     }

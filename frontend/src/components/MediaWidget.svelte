@@ -181,7 +181,7 @@
 
   let isSeekingLocked = $state(false)
   let targetSeekPos = $state(0)
-  let driftError = $state(0)
+  let driftError = 0
   let seekLockTimer: ReturnType<typeof setTimeout> | null = null
 
   let playLockTimer: ReturnType<typeof setTimeout> | null = null
@@ -210,8 +210,9 @@
       (curSourceApp !== '' && curSourceApp !== prevSourceApp)
 
     if (!isDraggingSeek) {
-      if (isTrackChanged || !playing) {
-        // Track change, session switch, or paused: sync directly to backend snapshot
+      if (isTrackChanged || (!playing && !isSeekingLocked)) {
+        // Track change, session switch, or paused (not actively seeking):
+        // sync directly to backend snapshot
         localPosMs = backendPos
         seekVal = backendPos
         driftError = 0
@@ -221,8 +222,8 @@
           seekLockTimer = null
         }
       } else if (isSeekingLocked) {
-        // While locked after a seek, check if the external player has arrived near the target
-        if (Math.abs(backendPos - targetSeekPos) < 1500) {
+        // While locked after a seek, wait for external player to arrive near target
+        if (Math.abs(backendPos - targetSeekPos) < 2000) {
           isSeekingLocked = false
           if (seekLockTimer) {
             clearTimeout(seekLockTimer)
@@ -315,7 +316,7 @@
 
       if (!isDraggingSeek && totalDur > 0) {
         // Smooth proportional drift damping: bleed off ~10% of remaining error per frame
-        const err = untrack(() => driftError)
+        const err = driftError
         let correction = 0
         if (Math.abs(err) > 5) {
           correction = err * 0.1
@@ -419,7 +420,7 @@
     SendMediaControl(action)
   }
 
-  function handleSeekStart(e: PointerEvent) {
+  function handleSeekStart() {
     if (seekLockTimer) {
       clearTimeout(seekLockTimer)
       seekLockTimer = null
@@ -427,10 +428,6 @@
     isDraggingSeek = true
     isSeekingLocked = true
     driftError = 0
-    const val = Number((e.target as HTMLInputElement).value)
-    seekVal = val
-    localPosMs = val
-    targetSeekPos = val
   }
 
   function handleSeekInput(e: Event) {
@@ -447,21 +444,35 @@
     targetSeekPos = val
   }
 
+  let lastCommittedSeek = -1
+  let lastCommittedTime = 0
+
   function handleSeekCommit(e: Event) {
+    const now = Date.now()
     const val = Number((e.target as HTMLInputElement).value)
+    if (
+      now - lastCommittedTime < 100 &&
+      Math.abs(val - lastCommittedSeek) < 50
+    ) {
+      return
+    }
+    lastCommittedTime = now
+    lastCommittedSeek = val
+
     seekVal = val
     localPosMs = val
     targetSeekPos = val
     driftError = 0
     isDraggingSeek = false
     isSeekingLocked = true
-    SendMediaControl(`seek:${val}`)
+    const sessionTarget = media.activeSessionId || media.sourceApp || ''
+    SendMediaControl(`seek:${Math.round(val)}:${sessionTarget}`)
 
     if (seekLockTimer) clearTimeout(seekLockTimer)
     seekLockTimer = setTimeout(() => {
       isSeekingLocked = false
       seekLockTimer = null
-    }, 1000)
+    }, 2500)
   }
 
   let volThrottleTimer: ReturnType<typeof setTimeout> | null = null
