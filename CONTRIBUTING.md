@@ -12,7 +12,7 @@ All contributors, whether you write code, update documentation, report bugs, or 
 
 ### Main Application (`Vinta.exe`)
 
-Vinta is built using **Go + Wails v2 + Svelte 5**. The Go backend handles native Win32 window region clipping, click-through bounds, and configuration storage, while Svelte renders the Dynamic Island interface.
+Vinta is built using **Go + Wails v3 + Svelte 5**. The Go backend handles native Win32 window region clipping, click-through bounds, and configuration storage, while Svelte renders the Dynamic Island interface.
 
 ### Native WinRT Services Bridge (`vintaservices.dll`)
 
@@ -143,7 +143,7 @@ Vinta supports both **[go-task / Taskfile](https://taskfile.dev)** (recommended)
 | `task run:nobuild` | `.\scripts.bat run no_build` | Launches pre-built executable directly without rebuilding |
 | `task run:nobuild:debug` | `.\scripts.bat run no_build debug` | Launches pre-built executable directly with debug hotkeys enabled |
 | `task build` | `.\scripts.bat build` | Compiles release binary to `build/bin/Vinta.exe` |
-| `task package:installer` | `wails build -nsis` | Compiles release binary and packages Windows NSIS installer |
+| `task package:installer` | `.\scripts.bat installer` | Compiles release binary and packages Windows NSIS installer |
 | `task test` | `.\scripts.bat test` | Compiles and launches test suite binary with DevTest panel |
 | `task lint` | `.\scripts.bat lint` | Runs Go formatting, `golangci-lint`, and frontend type/style checks |
 | `task doctor` | `.\scripts.bat doctor` | Diagnoses environment toolchains, runtimes, and SDKs |
@@ -166,7 +166,7 @@ Official releases are compiled on isolated GitHub Actions runners to ensure repr
 1. **Triggering a Release (Maintainers Only)**:
    - Navigate to **Actions** > **Release Vinta** in the GitHub repository.
    - Click **Run workflow**, specify the release tag (e.g. `v0.2.0`), and leave **Create as a Private Draft Release** checked.
-   - The workflow compiles the native DLL, builds the NSIS installer (`Vinta-Setup-vX.Y.Z-x64.exe`) and portable package (`Vinta-Portable-vX.Y.Z-x64.zip`), generates `SHA256SUMS.txt`, and cryptographically signs the build provenance.
+   - The workflow compiles the native DLL, builds the NSIS installer (`Vinta-Setup-x64.exe`) and portable package (`Vinta-Portable-x64.zip`), generates `SHA256SUMS.txt`, and cryptographically signs the build provenance.
    - Inspect the private draft release on GitHub, download and test the assets, then click **Publish release** when ready.
 
 2. **Binary Verification (Optional for Developers & Package Managers)**:

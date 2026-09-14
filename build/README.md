@@ -1,35 +1,23 @@
 # Build Directory
 
-The build directory is used to house all the build files and assets for your application. 
+The build directory houses application build configurations, assets, and platform manifests for Vinta (Wails v3).
 
-The structure is:
+## Directory Structure
 
-* bin - Output directory
-* darwin - macOS specific files
-* windows - Windows specific files
+* `bin/` - Output directory for compiled application binaries (`Vinta.exe`) and installers.
+* `config.yml` - Wails v3 application metadata and development mode orchestration.
+* `appicon.png` - Source high-resolution master application icon.
+* `native/` - CMake build tree for the native C++/WinRT bridge (`vintaservices.dll`).
+* `windows/` - Windows platform resource definitions:
+  - `icon.ico` - Multi-resolution icon generated via `scripts/generate_icon.ps1`.
+  - `info.json` - PE VERSIONINFO string table metadata embedded via `wails3 generate syso`.
+  - `wails.exe.manifest` - Windows application execution and HiDPI per-monitor manifest.
+  - `installer/` - NSIS Windows installer script (`project.nsi`) and helper macros (`wails_tools.nsh`).
 
-## Mac
+## Build Commands
 
-The `darwin` directory holds files specific to Mac builds.
-These may be customised and used as part of the build. To return these files to the default state, simply delete them
-and
-build with `wails build`.
+Vinta uses **[Taskfile](https://taskfile.dev)** for standardized build tasks:
 
-The directory contains the following files:
-
-- `Info.plist` - the main plist file used for Mac builds. It is used when building using `wails build`.
-- `Info.dev.plist` - same as the main plist file but used when building using `wails dev`.
-
-## Windows
-
-The `windows` directory contains the manifest and rc files used when building with `wails build`.
-These may be customised for your application. To return these files to the default state, simply delete them and
-build with `wails build`.
-
-- `icon.ico` - The icon used for the application. This is used when building using `wails build`. If you wish to
-  use a different icon, simply replace this file with your own. If it is missing, a new `icon.ico` file
-  will be created using the `appicon.png` file in the build directory.
-- `installer/*` - The files used to create the Windows installer. These are used when building using `wails build`.
-- `info.json` - Application details used for Windows builds. The data here will be used by the Windows installer,
-  as well as the application itself (right click the exe -> properties -> details)
-- `wails.exe.manifest` - The main application manifest file.
+- `task dev` - Starts live development mode with Vite and Wails v3.
+- `task build` - Generates native bridge DLL, multi-res icon, frontend production bundle, Windows syso resource, and compiles `build/bin/Vinta.exe`.
+- `task package:installer` - Builds the application and compiles `build/bin/Vinta-Setup-x64.exe` using NSIS (`makensis`).

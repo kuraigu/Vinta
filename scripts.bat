@@ -127,6 +127,11 @@ if "%~1"=="lint" (
     exit /b 0
 )
 
+if "%~1"=="installer" (
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\package_installer.ps1"
+    exit /b %ERRORLEVEL%
+)
+
 echo Error: Unknown command '%~1'.
 :usage
 echo Usage: scripts.bat ^<command^> [options]
@@ -138,6 +143,7 @@ echo   dev [no_build]           Runs Vite / Wails live development server (optio
 echo   build                    Builds production binary
 echo   run [no_build] [debug]   Runs binary (optionally skip build, optionally enable debug mode)
 echo   test                     Runs test suite with DevTest panel (-test)
+echo   installer                Builds standalone production binary and Windows NSIS installer
 echo   lint                     Runs Go and Frontend linters and formatters
 exit /b 1
 

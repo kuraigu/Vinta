@@ -967,6 +967,7 @@ func (a *App) SetWidgetBounds(width int, height int, radius int, scale float64, 
 
 // SetClipboardMonitoring satisfies existing frontend bindings as clipboard monitoring is retired.
 func (a *App) SetClipboardMonitoring(copyEnabled bool, pasteEnabled bool) {
+	_, _ = copyEnabled, pasteEnabled
 }
 
 // SetAutostart registers or unregisters the app in Windows Startup Registry
