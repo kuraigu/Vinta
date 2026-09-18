@@ -276,7 +276,9 @@ export class ReleaseInfo {
   'htmlUrl': string
   'installerUrl': string
   'portableUrl': string
+  'checksumsUrl': string
   'isPrerelease': boolean
+  'isPortable': boolean
 
   /** Creates a new ReleaseInfo instance. */
   constructor($$source: Partial<ReleaseInfo> = {}) {
@@ -304,8 +306,14 @@ export class ReleaseInfo {
     if (!('portableUrl' in $$source)) {
       this['portableUrl'] = ''
     }
+    if (!('checksumsUrl' in $$source)) {
+      this['checksumsUrl'] = ''
+    }
     if (!('isPrerelease' in $$source)) {
       this['isPrerelease'] = false
+    }
+    if (!('isPortable' in $$source)) {
+      this['isPortable'] = false
     }
 
     Object.assign(this, $$source)
@@ -335,6 +343,8 @@ export class UpdateCheckResult {
   'release': ReleaseInfo
   'checkedAt': string
   'message': string
+  'isPortable': boolean
+  'isCustomRepo': boolean
 
   /** Creates a new UpdateCheckResult instance. */
   constructor($$source: Partial<UpdateCheckResult> = {}) {
@@ -358,6 +368,12 @@ export class UpdateCheckResult {
     }
     if (!('message' in $$source)) {
       this['message'] = ''
+    }
+    if (!('isPortable' in $$source)) {
+      this['isPortable'] = false
+    }
+    if (!('isCustomRepo' in $$source)) {
+      this['isCustomRepo'] = false
     }
 
     Object.assign(this, $$source)

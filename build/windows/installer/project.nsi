@@ -95,11 +95,24 @@ FunctionEnd
 
 Function .onInit
     !insertmacro wails.checkArchitecture
-    # If running with administrator privileges, prefer Program Files
-    UserInfo::GetAccountType
-    Pop $0
-    ${If} $0 == "Admin"
-        StrCpy $INSTDIR "$PROGRAMFILES64\${INFO_COMPANYNAME}\${INFO_PRODUCTNAME}"
+
+    # Check for existing installation path in registry (HKCU or HKLM)
+    SetRegView 64
+    ReadRegStr $0 HKCU "${UNINST_KEY}" "InstallLocation"
+    ${If} $0 == ""
+        ReadRegStr $0 HKLM "${UNINST_KEY}" "InstallLocation"
+    ${EndIf}
+
+    ${If} $0 != ""
+    ${AndIf} ${FileExists} "$0\${PRODUCT_EXECUTABLE}"
+        StrCpy $INSTDIR $0
+    ${Else}
+        # If running with administrator privileges and no previous install found, prefer Program Files
+        UserInfo::GetAccountType
+        Pop $1
+        ${If} $1 == "Admin"
+            StrCpy $INSTDIR "$PROGRAMFILES64\${INFO_COMPANYNAME}\${INFO_PRODUCTNAME}"
+        ${EndIf}
     ${EndIf}
 FunctionEnd
 

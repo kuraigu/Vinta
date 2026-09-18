@@ -15,6 +15,7 @@ export type AppNotification = {
   heroImage?: string
   timestamp: number
   canOpen?: boolean
+  isUpdate?: boolean
 }
 
 export const notifData = writable<AppNotification[]>([])

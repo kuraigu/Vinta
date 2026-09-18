@@ -27,6 +27,7 @@
     parseAumid
   } from '../services/iconService'
   import ScrollView from '../components/ScrollView.svelte'
+  import appIcon from '@appicon'
   import {
     FocusNotificationApp,
     FocusWindow
@@ -44,6 +45,7 @@
     heroImage?: string
     timestamp: number
     canOpen?: boolean
+    isUpdate?: boolean
   }
 
   let { expanded = false, notifications = [] } = $props<{
@@ -99,7 +101,15 @@
   function loadSenderAvatars(): Record<string, string> {
     try {
       const raw = localStorage.getItem(SENDER_AVATAR_STORAGE_KEY)
-      if (raw) return JSON.parse(raw)
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        for (const k of Object.keys(parsed)) {
+          if (k.toLowerCase().includes('vinta')) {
+            delete parsed[k]
+          }
+        }
+        return parsed
+      }
     } catch {
       // Storage unavailable or unparseable
     }
@@ -135,6 +145,7 @@
     title?: string
   }): string {
     const app = (notif.appName || notif.aumid || '').trim().toLowerCase()
+    if (app.includes('vinta')) return ''
     const sender = (notif.title || '').trim().toLowerCase()
     if (!sender) return ''
     return `${app}::${sender}`
@@ -144,6 +155,8 @@
    * Evaluates whether a notification's current icon is simply the generic application logo.
    */
   function isGenericAppLogo(notif: NotificationItem): boolean {
+    const app = (notif.appName || notif.aumid || '').toLowerCase()
+    if (app.includes('vinta')) return false
     if (!notif.icon) return true
     if (notif.appLogo && notif.icon === notif.appLogo) return true
     const brand = getDisplayBrand(notif)
@@ -393,6 +406,7 @@
   }
 
   function canOpenApp(notif: NotificationItem): boolean {
+    if (notif.isUpdate) return true
     if (notif.canOpen === false) return false
     if (notif.canOpen === true) return true
     const name = (notif.appName || '').trim().toLowerCase()
@@ -408,6 +422,7 @@
     title?: string
     message?: string
     icon?: string
+    appLogo?: string
     heroImage?: string
   }): {
     name: string
@@ -416,6 +431,20 @@
     category?: string
   } {
     const rawInput = notif.appName || notif.aumid || 'Notification'
+    const isVinta =
+      rawInput.toLowerCase().includes('vinta') ||
+      (notif.title || '').toLowerCase().includes('vinta')
+
+    if (isVinta) {
+      const vintaIcon = notif.icon || appIcon
+      return {
+        name: 'Vinta System',
+        icon: vintaIcon,
+        appIcon: notif.appLogo || vintaIcon,
+        category: 'system'
+      }
+    }
+
     const parsed = parseAumid(rawInput)
     let defaultIcon = notif.icon || null
 
@@ -798,16 +827,26 @@
                       class="open-app-btn"
                       onclick={(e) => {
                         e.stopPropagation()
+                        if (notif.isUpdate) {
+                          window.dispatchEvent(
+                            new CustomEvent('vinta-navigate-settings', {
+                              detail: { tab: 'updates' }
+                            })
+                          )
+                          return
+                        }
                         FocusNotificationApp(
                           notif.appName ?? '',
                           notif.aumid ?? ''
                         )
                         FocusWindow()
                       }}
-                      title="Open in {notif.appName || brand.brandName}"
+                      title={notif.isUpdate
+                        ? 'View Update Details'
+                        : `Open in ${notif.appName || brand.brandName}`}
                     >
                       <ExternalLink size={11} />
-                      <span>Open</span>
+                      <span>{notif.isUpdate ? 'View Update' : 'Open'}</span>
                     </button>
                   </div>
                 {/if}

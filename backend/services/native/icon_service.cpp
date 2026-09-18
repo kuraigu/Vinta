@@ -173,7 +173,12 @@ static bool MatchProcessName(const std::wstring& runningExe, const std::wstring&
     if (t.size() > 4 && t.substr(t.size() - 4) == L".exe") t = t.substr(0, t.size() - 4);
     if (r.empty() || t.empty()) return false;
     if (r == t) return true;
-    if (r.find(t) != std::wstring::npos || t.find(r) != std::wstring::npos) return true;
+    if (t.size() >= 4 && (r.find(t) != std::wstring::npos || t.find(r) != std::wstring::npos)) {
+        if (t == L"system" || t == L"service" || t == L"helper" || t == L"host" || t == L"app") {
+            return false;
+        }
+        return true;
+    }
     return false;
 }
 
@@ -301,7 +306,10 @@ std::wstring FindProcessExecutablePath(const std::wstring& targetExe) {
         if (lastSpace != std::wstring::npos && lastSpace + 1 < parsedBase.size()) {
             std::wstring lastWord = parsedBase.substr(lastSpace + 1);
             if (!lastWord.empty() && lastWord != parsedBase) {
-                candidates.push_back(lastWord + L".exe");
+                if (lastWord != L"system" && lastWord != L"service" && lastWord != L"helper" &&
+                    lastWord != L"host" && lastWord != L"app") {
+                    candidates.push_back(lastWord + L".exe");
+                }
             }
         }
     }
@@ -408,6 +416,14 @@ extern "C" int ExtractAppIconNativeToFile(
     try {
         std::string sApp = sourceApp ? sourceApp : "";
         std::string sAumid = aumid ? aumid : "";
+
+        std::string lowerApp = sApp;
+        std::transform(lowerApp.begin(), lowerApp.end(), lowerApp.begin(), ::tolower);
+        std::string lowerAumid = sAumid;
+        std::transform(lowerAumid.begin(), lowerAumid.end(), lowerAumid.begin(), ::tolower);
+        if (lowerApp.find("vinta") != std::string::npos || lowerAumid.find("vinta") != std::string::npos) {
+            return 0;
+        }
 
         // Normalize AUMID if embedded in sourceApp
         if (sAumid.empty() && sApp.find('!') != std::string::npos) {
