@@ -295,7 +295,10 @@ func (a *App) CheckForUpdates(force bool) (*UpdateCheckResult, error) {
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode == http.StatusNotFound {
+	switch resp.StatusCode {
+	case http.StatusOK:
+		// Successful response, proceed to decode release payload below
+	case http.StatusNotFound:
 		result := &UpdateCheckResult{
 			Status:          "up-to-date",
 			UpdateAvailable: false,
@@ -308,9 +311,7 @@ func (a *App) CheckForUpdates(force bool) (*UpdateCheckResult, error) {
 		}
 		a.saveUpdateCache(cacheFile, result)
 		return result, nil
-	}
-
-	if resp.StatusCode == http.StatusForbidden {
+	case http.StatusForbidden:
 		return &UpdateCheckResult{
 			Status:          "error",
 			UpdateAvailable: false,
@@ -320,9 +321,7 @@ func (a *App) CheckForUpdates(force bool) (*UpdateCheckResult, error) {
 			IsPortable:      isPortable,
 			IsCustomRepo:    isCustom,
 		}, nil
-	}
-
-	if resp.StatusCode != http.StatusOK {
+	default:
 		return &UpdateCheckResult{
 			Status:          "error",
 			UpdateAvailable: false,
@@ -533,14 +532,15 @@ func (a *App) DownloadUpdate(downloadURL, checksumsURL string) error {
 	var outFile *os.File
 	var totalBytes int64
 
-	if resp.StatusCode == http.StatusPartialContent {
+	switch resp.StatusCode {
+	case http.StatusPartialContent:
 		// Server supports range requests. Append to the existing partial file
 		outFile, err = os.OpenFile(partPath, os.O_APPEND|os.O_WRONLY, 0755)
 		if err != nil {
 			return err
 		}
 		totalBytes = existingBytes + resp.ContentLength
-	} else if resp.StatusCode == http.StatusOK {
+	case http.StatusOK:
 		// Fresh download or server does not support range headers
 		outFile, err = os.OpenFile(partPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
 		if err != nil {
@@ -548,7 +548,7 @@ func (a *App) DownloadUpdate(downloadURL, checksumsURL string) error {
 		}
 		existingBytes = 0
 		totalBytes = resp.ContentLength
-	} else {
+	default:
 		err := fmt.Errorf("server returned status: %d", resp.StatusCode)
 		a.emitDownloadProgress("error", existingBytes, 0, 0, 0, err.Error())
 		return err
