@@ -10,6 +10,11 @@
   gap: 8px;
 }
 
+/* Channel Select in Setting Item */
+.channel-select-wrapper {
+  min-width: 170px;
+}
+
 /* Standard Toggle Switch */
 .toggle-switch {
   position: relative;
@@ -29,7 +34,7 @@
   position: absolute;
   cursor: pointer;
   inset: 0;
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: var(--c-surface-2, rgba(255, 255, 255, 0.1));
   transition: 0.3s;
   border-radius: 20px;
   border: 1px solid var(--c-border, rgba(255, 255, 255, 0.1));
@@ -48,66 +53,183 @@
 }
 
 .toggle-switch input:checked + .slider {
-  background-color: var(--c-primary, #38bdf8);
+  background-color: var(--c-primary);
 }
 
 .toggle-switch input:checked + .slider:before {
   transform: translateX(16px);
 }
 
-/* Update Available Alert Banner */
-.update-alert-card {
+/* Portable Mode Warning/Advice Banner */
+.portable-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--c-surface-1, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--c-border, rgba(255, 255, 255, 0.1));
+}
+
+:global(.portable-icon) {
+  color: var(--c-primary);
+  flex-shrink: 0;
+}
+
+.portable-meta {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 2px;
+  flex: 1;
+}
+
+.portable-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--c-text-primary);
+}
+
+.portable-sub {
+  font-size: 10px;
+  color: var(--c-text-secondary);
+  line-height: 1.4;
+}
+
+/* Update Available Master Card */
+.update-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   padding: 14px;
   border-radius: 12px;
   background: linear-gradient(
     135deg,
-    rgba(56, 189, 248, 0.12) 0%,
+    color-mix(in srgb, var(--c-primary) 12%, transparent) 0%,
     var(--c-surface-1, rgba(255, 255, 255, 0.04)) 100%
   );
-  border: 1px solid var(--c-primary, #38bdf8);
-  box-shadow: 0 4px 16px rgba(56, 189, 248, 0.1);
+  border: 1px solid var(--c-primary);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--c-primary) 15%, transparent);
 }
 
-.update-alert-header {
+.update-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
 }
 
-.update-alert-icon {
+.update-badge-icon {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: rgba(56, 189, 248, 0.2);
-  color: var(--c-primary, #38bdf8);
+  background: color-mix(in srgb, var(--c-primary) 22%, transparent);
+  color: var(--c-primary);
   flex-shrink: 0;
 }
 
-.update-alert-meta {
+.update-header-info {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  text-align: left;
+  flex: 1;
 }
 
-.update-alert-title {
+.update-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.update-title {
   font-size: 13px;
   font-weight: 600;
   color: var(--c-text-primary);
 }
 
-.update-alert-sub {
+.update-sub {
   font-size: 11px;
+  color: var(--c-text-secondary);
+  line-height: 1.4;
+}
+
+/* Progress Bar & Download Section */
+.progress-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.progress-bar-track {
+  width: 100%;
+  height: 6px;
+  background: var(--c-surface-2, rgba(255, 255, 255, 0.1));
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    var(--c-primary) 0%,
+    color-mix(in srgb, var(--c-primary) 80%, #ffffff) 100%
+  );
+  border-radius: 3px;
+  transition: width 0.15s ease-out;
+}
+
+.progress-bar-fill.paused {
+  background: var(--c-text-secondary);
+}
+
+.progress-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
   color: var(--c-text-secondary);
 }
 
-.update-alert-actions {
+.progress-text {
+  font-weight: 500;
+}
+
+.progress-percent {
+  font-weight: 600;
+  color: var(--c-text-primary);
+}
+
+/* Actions Row */
+.update-actions-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.update-error-banner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: color-mix(in srgb, var(--c-danger, #ef4444) 15%, transparent);
+  border: 1px solid var(--c-danger, #ef4444);
+  border-radius: 6px;
+  font-size: 11px;
+  color: var(--c-danger, #ef4444);
+}
+
+/* DevTest Simulation Card */
+.devtest-sim-card {
+  padding: 10px 12px;
+  background: var(--c-surface-1, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--c-border, rgba(255, 255, 255, 0.08));
+  border-radius: 10px;
+}
+
+.devtest-sim-buttons {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -124,10 +246,4 @@
   to {
     transform: rotate(360deg);
   }
-}
-
-.update-error-text {
-  font-size: 11px;
-  color: var(--c-danger, #ef4444);
-  margin-top: 4px;
 }

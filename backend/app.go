@@ -761,6 +761,13 @@ type App struct {
 	isHidden           bool
 	autoHideBorderless bool
 	autoHideMu         sync.RWMutex
+	updaterMu          sync.Mutex
+	downloadCancel     context.CancelFunc
+	downloadPaused     bool
+	activeDownloadURL  string
+	activeChecksumURL  string
+	pendingInstallPath string
+	customUpdateRepo   string
 }
 
 // NewApp creates a new App application struct

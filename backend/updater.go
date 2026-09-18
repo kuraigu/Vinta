@@ -1,7 +1,11 @@
-// Package backend provides in-app update checking, release notes parsing, and post-update notifications.
+// Package backend provides in-app update checking, resumable downloading, release notes handling, and post-update notifications.
 package backend
 
 import (
+	"bufio"
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -35,7 +39,9 @@ type ReleaseInfo struct {
 	HTMLURL      string `json:"htmlUrl"`
 	InstallerURL string `json:"installerUrl"`
 	PortableURL  string `json:"portableUrl"`
+	ChecksumsURL string `json:"checksumsUrl"`
 	IsPrerelease bool   `json:"isPrerelease"`
+	IsPortable   bool   `json:"isPortable"`
 }
 
 // UpdateCheckResult represents the outcome of an update verification query.
@@ -47,6 +53,18 @@ type UpdateCheckResult struct {
 	Release         ReleaseInfo `json:"release"`
 	CheckedAt       string      `json:"checkedAt"`
 	Message         string      `json:"message"`
+	IsPortable      bool        `json:"isPortable"`
+	IsCustomRepo    bool        `json:"isCustomRepo"`
+}
+
+// DownloadProgress represents the real-time progress of an in-flight update download.
+type DownloadProgress struct {
+	Status           string  `json:"status"` // "downloading", "paused", "verifying", "ready", "error", "idle"
+	DownloadedBytes  int64   `json:"downloadedBytes"`
+	TotalBytes       int64   `json:"totalBytes"`
+	Percentage       float64 `json:"percentage"`
+	SpeedBytesPerSec int64   `json:"speedBytesPerSec"`
+	Error            string  `json:"error,omitempty"`
 }
 
 type cachedUpdateData struct {
@@ -91,7 +109,7 @@ func (a *App) CheckPostUpdateInstalled() string {
 		_ = json.Unmarshal(data, &state)
 	}
 
-	// First run on a fresh install: record current version without sending an "upgraded" message
+	// First run on a fresh install: record current version without sending an upgraded message
 	if state.LastVersion == "" {
 		state.LastVersion = current
 		if stateBytes, err := json.Marshal(state); err == nil {
@@ -100,7 +118,7 @@ func (a *App) CheckPostUpdateInstalled() string {
 		return ""
 	}
 
-	// If the version has changed (and isn't identical to the last recorded version)
+	// If the version has changed and is not identical to the last recorded version
 	if state.LastVersion != current {
 		oldVersion := state.LastVersion
 		state.LastVersion = current
@@ -119,9 +137,8 @@ func (a *App) CheckPostUpdateInstalled() string {
 
 // resolveUpdaterToken resolves an authentication token for GitHub API requests.
 // Resolution order:
-// -UpdaterToken injected during compilation via -ldflags (from GitHub Secrets).
-// -VINTA_GITHUB_TOKEN or GITHUB_TOKEN environment variables.
-// -GitHub CLI authentication token via 'gh auth token' during local development.
+// 1. UpdaterToken injected during compilation via -ldflags (from GitHub Secrets).
+// 2. VINTA_GITHUB_TOKEN or GITHUB_TOKEN environment variables.
 func resolveUpdaterToken() string {
 	if strings.TrimSpace(UpdaterToken) != "" {
 		return strings.TrimSpace(UpdaterToken)
@@ -135,6 +152,72 @@ func resolveUpdaterToken() string {
 	return ""
 }
 
+// IsPortableMode determines if Vinta is currently executing from a portable directory.
+func (a *App) IsPortableMode() bool {
+	exePath, err := os.Executable()
+	if err != nil {
+		return false
+	}
+	exeDir := filepath.Dir(exePath)
+
+	// Check for an explicit .portable sentinel file in the executable directory
+	if _, err := os.Stat(filepath.Join(exeDir, ".portable")); err == nil {
+		return true
+	}
+
+	localApp := os.Getenv("LOCALAPPDATA")
+	progFiles := os.Getenv("ProgramFiles")
+	progFilesX86 := os.Getenv("ProgramFiles(x86)")
+	cleanDir := strings.ToLower(filepath.Clean(exeDir))
+
+	if localApp != "" {
+		installedLocal := strings.ToLower(filepath.Join(localApp, "Programs", "Vinta"))
+		if strings.HasPrefix(cleanDir, installedLocal) {
+			return false
+		}
+	}
+	if progFiles != "" {
+		installedProg := strings.ToLower(filepath.Join(progFiles, "FreeMatrix Studios", "Vinta"))
+		if strings.HasPrefix(cleanDir, installedProg) {
+			return false
+		}
+	}
+	if progFilesX86 != "" {
+		installedProgX86 := strings.ToLower(filepath.Join(progFilesX86, "FreeMatrix Studios", "Vinta"))
+		if strings.HasPrefix(cleanDir, installedProgX86) {
+			return false
+		}
+	}
+
+	// Avoid marking local build output folders as portable mode
+	if strings.Contains(cleanDir, "build\\bin") || strings.Contains(cleanDir, "tmp") {
+		return false
+	}
+
+	return true
+}
+
+// GetUpdateRepo returns the repository owner/name used for update queries.
+func (a *App) GetUpdateRepo() string {
+	a.updaterMu.Lock()
+	defer a.updaterMu.Unlock()
+	if a.customUpdateRepo != "" {
+		return a.customUpdateRepo
+	}
+	if envRepo := strings.TrimSpace(os.Getenv("VINTA_UPDATE_REPO")); envRepo != "" {
+		return envRepo
+	}
+	return "kuraigu/Vinta"
+}
+
+// SetCustomUpdateRepo overrides the repository used for update queries.
+func (a *App) SetCustomUpdateRepo(repo string) error {
+	a.updaterMu.Lock()
+	defer a.updaterMu.Unlock()
+	a.customUpdateRepo = strings.TrimSpace(repo)
+	return nil
+}
+
 // CheckForUpdates queries GitHub Releases API to check for newer versions.
 func (a *App) CheckForUpdates(force bool) (*UpdateCheckResult, error) {
 	currentVersion := AppVersion
@@ -143,27 +226,28 @@ func (a *App) CheckForUpdates(force bool) (*UpdateCheckResult, error) {
 	}
 
 	now := time.Now().Format("2006-01-02 15:04:05")
+	isPortable := a.IsPortableMode()
+	repo := a.GetUpdateRepo()
+	isCustom := (repo != "kuraigu/Vinta")
 
-	// 1. In Development Builds: Disable update checking completely
-	if BuildType == "Development" {
-		return &UpdateCheckResult{
-			Status:          "dev-mode",
-			UpdateAvailable: false,
-			CurrentVersion:  currentVersion,
-			LatestVersion:   currentVersion,
-			CheckedAt:       now,
-			Message:         "Update checking is disabled in development mode.",
-		}, nil
+	channel := "stable"
+	settingsPath := filepath.Join(GetAppDataDir(), "settings.json")
+	if data, err := os.ReadFile(settingsPath); err == nil {
+		var settings map[string]interface{}
+		if err := json.Unmarshal(data, &settings); err == nil {
+			if ch, ok := settings["vinta_update_channel"].(string); ok && ch != "" {
+				channel = ch
+			}
+		}
 	}
 
-	cacheFile := filepath.Join(GetAppDataDir(), "cache", "update_check.json")
+	cacheFile := filepath.Join(GetAppDataDir(), "cache", fmt.Sprintf("update_check_%s.json", channel))
 
-	// 2. Check local 1-hour cache unless forced
-	if !force {
+	// Check local 1-hour cache unless forced
+	if !force && !isCustom {
 		if data, err := os.ReadFile(cacheFile); err == nil {
 			var cached cachedUpdateData
 			if err := json.Unmarshal(data, &cached); err == nil {
-				// Cache valid for 1 hour (3600 seconds)
 				if time.Now().Unix()-cached.Timestamp < 3600 {
 					return &cached.Result, nil
 				}
@@ -171,9 +255,13 @@ func (a *App) CheckForUpdates(force bool) (*UpdateCheckResult, error) {
 		}
 	}
 
-	// 3. Query GitHub Releases API (queries release list to accommodate pre-release channels)
-	client := &http.Client{Timeout: 10 * time.Second}
-	req, err := http.NewRequest("GET", "https://api.github.com/repos/kuraigu/Vinta/releases?per_page=5", nil)
+	apiURL := fmt.Sprintf("https://api.github.com/repos/%s/releases?per_page=30", repo)
+	if customURL := strings.TrimSpace(os.Getenv("VINTA_UPDATE_URL")); customURL != "" {
+		apiURL = customURL
+	}
+
+	client := &http.Client{Timeout: 15 * time.Second}
+	req, err := http.NewRequest("GET", apiURL, nil)
 	if err != nil {
 		return &UpdateCheckResult{
 			Status:          "error",
@@ -181,6 +269,8 @@ func (a *App) CheckForUpdates(force bool) (*UpdateCheckResult, error) {
 			CurrentVersion:  currentVersion,
 			CheckedAt:       now,
 			Message:         fmt.Sprintf("Failed to construct update request: %v", err),
+			IsPortable:      isPortable,
+			IsCustomRepo:    isCustom,
 		}, nil
 	}
 
@@ -199,11 +289,16 @@ func (a *App) CheckForUpdates(force bool) (*UpdateCheckResult, error) {
 			CurrentVersion:  currentVersion,
 			CheckedAt:       now,
 			Message:         "Network error while checking for updates. Please check your internet connection.",
+			IsPortable:      isPortable,
+			IsCustomRepo:    isCustom,
 		}, nil
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode == http.StatusNotFound {
+	switch resp.StatusCode {
+	case http.StatusOK:
+		// Successful response, proceed to decode release payload below
+	case http.StatusNotFound:
 		result := &UpdateCheckResult{
 			Status:          "up-to-date",
 			UpdateAvailable: false,
@@ -211,18 +306,30 @@ func (a *App) CheckForUpdates(force bool) (*UpdateCheckResult, error) {
 			LatestVersion:   currentVersion,
 			CheckedAt:       now,
 			Message:         "Vinta is currently up to date.",
+			IsPortable:      isPortable,
+			IsCustomRepo:    isCustom,
 		}
 		a.saveUpdateCache(cacheFile, result)
 		return result, nil
-	}
-
-	if resp.StatusCode != http.StatusOK {
+	case http.StatusForbidden:
+		return &UpdateCheckResult{
+			Status:          "error",
+			UpdateAvailable: false,
+			CurrentVersion:  currentVersion,
+			CheckedAt:       now,
+			Message:         "GitHub API rate limit reached. Please try again later or supply a GitHub token.",
+			IsPortable:      isPortable,
+			IsCustomRepo:    isCustom,
+		}, nil
+	default:
 		return &UpdateCheckResult{
 			Status:          "error",
 			UpdateAvailable: false,
 			CurrentVersion:  currentVersion,
 			CheckedAt:       now,
 			Message:         fmt.Sprintf("GitHub API returned status code %d", resp.StatusCode),
+			IsPortable:      isPortable,
+			IsCustomRepo:    isCustom,
 		}, nil
 	}
 
@@ -234,15 +341,26 @@ func (a *App) CheckForUpdates(force bool) (*UpdateCheckResult, error) {
 			CurrentVersion:  currentVersion,
 			CheckedAt:       now,
 			Message:         "Failed to parse release information.",
+			IsPortable:      isPortable,
+			IsCustomRepo:    isCustom,
 		}, nil
 	}
 
 	var ghRelease *ghReleaseResponse
 	for i := range releases {
-		if !releases[i].Draft {
-			ghRelease = &releases[i]
-			break
+		rel := &releases[i]
+		if channel == "stable" && !isCustom {
+			if rel.Draft || rel.Prerelease {
+				continue
+			}
+		} else if channel == "prerelease" && !isCustom {
+			if rel.Draft {
+				continue
+			}
 		}
+		// For testing builds or custom repos, include drafts and prereleases
+		ghRelease = rel
+		break
 	}
 
 	if ghRelease == nil {
@@ -253,18 +371,22 @@ func (a *App) CheckForUpdates(force bool) (*UpdateCheckResult, error) {
 			LatestVersion:   currentVersion,
 			CheckedAt:       now,
 			Message:         "Vinta is currently up to date.",
+			IsPortable:      isPortable,
+			IsCustomRepo:    isCustom,
 		}
 		a.saveUpdateCache(cacheFile, result)
 		return result, nil
 	}
 
-	var installerURL, portableURL string
+	var installerURL, portableURL, checksumsURL string
 	for _, asset := range ghRelease.Assets {
 		lowerName := strings.ToLower(asset.Name)
 		if strings.HasSuffix(lowerName, ".exe") && (strings.Contains(lowerName, "setup") || strings.Contains(lowerName, "installer")) {
 			installerURL = asset.BrowserDownloadURL
 		} else if strings.HasSuffix(lowerName, ".zip") && strings.Contains(lowerName, "portable") {
 			portableURL = asset.BrowserDownloadURL
+		} else if lowerName == "sha256sums.txt" || strings.HasSuffix(lowerName, ".sha256") {
+			checksumsURL = asset.BrowserDownloadURL
 		}
 	}
 
@@ -293,10 +415,14 @@ func (a *App) CheckForUpdates(force bool) (*UpdateCheckResult, error) {
 			HTMLURL:      ghRelease.HTMLURL,
 			InstallerURL: installerURL,
 			PortableURL:  portableURL,
+			ChecksumsURL: checksumsURL,
 			IsPrerelease: ghRelease.Prerelease,
+			IsPortable:   isPortable,
 		},
-		CheckedAt: now,
-		Message:   msg,
+		CheckedAt:    now,
+		Message:      msg,
+		IsPortable:   isPortable,
+		IsCustomRepo: isCustom,
 	}
 
 	a.saveUpdateCache(cacheFile, result)
@@ -316,17 +442,28 @@ func (a *App) saveUpdateCache(cacheFile string, result *UpdateCheckResult) {
 
 // StartBackgroundUpdateChecker launches a background ticker that checks for updates periodically.
 func (a *App) StartBackgroundUpdateChecker() {
-	if BuildType == "Development" {
-		return
-	}
 	go func() {
 		// Wait 10 seconds after app startup before first check
 		time.Sleep(10 * time.Second)
 
-		// Perform initial check
-		if res, err := a.CheckForUpdates(false); err == nil && res.UpdateAvailable {
-			if app := application.Get(); app != nil {
-				app.Event.Emit("update:available", res)
+		shouldCheck := func() bool {
+			settingsPath := filepath.Join(GetAppDataDir(), "settings.json")
+			if data, err := os.ReadFile(settingsPath); err == nil {
+				var settings map[string]interface{}
+				if err := json.Unmarshal(data, &settings); err == nil {
+					if val, ok := settings["autoCheckUpdates"].(bool); ok && !val {
+						return false
+					}
+				}
+			}
+			return true
+		}
+
+		if shouldCheck() {
+			if res, err := a.CheckForUpdates(false); err == nil && res.UpdateAvailable {
+				if app := application.Get(); app != nil {
+					app.Event.Emit("update:available", res)
+				}
 			}
 		}
 
@@ -335,13 +472,403 @@ func (a *App) StartBackgroundUpdateChecker() {
 		defer ticker.Stop()
 
 		for range ticker.C {
-			if res, err := a.CheckForUpdates(false); err == nil && res.UpdateAvailable {
-				if app := application.Get(); app != nil {
-					app.Event.Emit("update:available", res)
+			if shouldCheck() {
+				if res, err := a.CheckForUpdates(false); err == nil && res.UpdateAvailable {
+					if app := application.Get(); app != nil {
+						app.Event.Emit("update:available", res)
+					}
 				}
 			}
 		}
 	}()
+}
+
+// DownloadUpdate initiates or resumes a chunked download with real-time progress and checksum verification.
+func (a *App) DownloadUpdate(downloadURL, checksumsURL string) error {
+	if downloadURL == "" {
+		return fmt.Errorf("no download URL provided")
+	}
+
+	a.updaterMu.Lock()
+	if a.downloadCancel != nil {
+		a.downloadCancel()
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	a.downloadCancel = cancel
+	a.downloadPaused = false
+	a.activeDownloadURL = downloadURL
+	a.activeChecksumURL = checksumsURL
+	a.updaterMu.Unlock()
+
+	tempDir := os.TempDir()
+	partPath := filepath.Join(tempDir, "Vinta-Setup-Update.exe.part")
+	finalPath := filepath.Join(tempDir, "Vinta-Setup-Update.exe")
+
+	var existingBytes int64
+	if stat, err := os.Stat(partPath); err == nil {
+		existingBytes = stat.Size()
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "GET", downloadURL, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create download request: %w", err)
+	}
+	req.Header.Set("User-Agent", "Vinta-Updater/1.0")
+	if existingBytes > 0 {
+		req.Header.Set("Range", fmt.Sprintf("bytes=%d-", existingBytes))
+	}
+
+	client := &http.Client{Timeout: 30 * time.Minute}
+	resp, err := client.Do(req)
+	if err != nil {
+		if ctx.Err() != nil {
+			return nil
+		}
+		a.emitDownloadProgress("error", existingBytes, 0, 0, 0, fmt.Sprintf("Download failed: %v", err))
+		return err
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	var outFile *os.File
+	var totalBytes int64
+
+	switch resp.StatusCode {
+	case http.StatusPartialContent:
+		// Server supports range requests. Append to the existing partial file
+		outFile, err = os.OpenFile(partPath, os.O_APPEND|os.O_WRONLY, 0755)
+		if err != nil {
+			return err
+		}
+		totalBytes = existingBytes + resp.ContentLength
+	case http.StatusOK:
+		// Fresh download or server does not support range headers
+		outFile, err = os.OpenFile(partPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
+		if err != nil {
+			return err
+		}
+		existingBytes = 0
+		totalBytes = resp.ContentLength
+	default:
+		err := fmt.Errorf("server returned status: %d", resp.StatusCode)
+		a.emitDownloadProgress("error", existingBytes, 0, 0, 0, err.Error())
+		return err
+	}
+	defer func() { _ = outFile.Close() }()
+
+	buffer := make([]byte, 32*1024)
+	downloaded := existingBytes
+	lastEmit := time.Now()
+	bytesSinceLastEmit := int64(0)
+
+	for {
+		select {
+		case <-ctx.Done():
+			a.updaterMu.Lock()
+			paused := a.downloadPaused
+			a.updaterMu.Unlock()
+			if paused {
+				a.emitDownloadProgress("paused", downloaded, totalBytes, calcPercent(downloaded, totalBytes), 0, "")
+			}
+			return nil
+		default:
+		}
+
+		n, rErr := resp.Body.Read(buffer)
+		if n > 0 {
+			if _, wErr := outFile.Write(buffer[:n]); wErr != nil {
+				a.emitDownloadProgress("error", downloaded, totalBytes, calcPercent(downloaded, totalBytes), 0, wErr.Error())
+				return wErr
+			}
+			downloaded += int64(n)
+			bytesSinceLastEmit += int64(n)
+
+			if time.Since(lastEmit) >= 120*time.Millisecond {
+				elapsed := time.Since(lastEmit).Seconds()
+				var speed int64
+				if elapsed > 0 {
+					speed = int64(float64(bytesSinceLastEmit) / elapsed)
+				}
+				a.emitDownloadProgress("downloading", downloaded, totalBytes, calcPercent(downloaded, totalBytes), speed, "")
+				lastEmit = time.Now()
+				bytesSinceLastEmit = 0
+			}
+		}
+
+		if rErr != nil {
+			if rErr == io.EOF {
+				break
+			}
+			if ctx.Err() != nil {
+				return nil
+			}
+			a.emitDownloadProgress("error", downloaded, totalBytes, calcPercent(downloaded, totalBytes), 0, rErr.Error())
+			return rErr
+		}
+	}
+
+	_ = outFile.Close()
+
+	// Download is complete, verify checksum
+	a.emitDownloadProgress("verifying", downloaded, totalBytes, 100, 0, "")
+
+	if checksumsURL != "" {
+		expectedHash, err := a.fetchExpectedChecksum(checksumsURL, filepath.Base(downloadURL))
+		if err == nil && expectedHash != "" {
+			computedHash, err := computeFileSHA256(partPath)
+			if err != nil {
+				_ = os.Remove(partPath)
+				a.emitDownloadProgress("error", downloaded, totalBytes, 0, 0, "Failed to compute checksum: "+err.Error())
+				return err
+			}
+			if !strings.EqualFold(computedHash, expectedHash) {
+				_ = os.Remove(partPath)
+				a.emitDownloadProgress("error", downloaded, totalBytes, 0, 0, "Checksum verification failed: download corrupted.")
+				return fmt.Errorf("checksum mismatch: expected %s, got %s", expectedHash, computedHash)
+			}
+		}
+	}
+
+	// Rename .part file to final executable
+	_ = os.Remove(finalPath)
+	if err := os.Rename(partPath, finalPath); err != nil {
+		a.emitDownloadProgress("error", downloaded, totalBytes, 0, 0, "Failed to finalize download: "+err.Error())
+		return err
+	}
+
+	a.updaterMu.Lock()
+	a.pendingInstallPath = finalPath
+	a.updaterMu.Unlock()
+
+	a.emitDownloadProgress("ready", downloaded, totalBytes, 100, 0, "")
+	return nil
+}
+
+// PauseUpdateDownload pauses the active download stream while preserving written bytes.
+func (a *App) PauseUpdateDownload() error {
+	a.updaterMu.Lock()
+	a.downloadPaused = true
+	if a.downloadCancel != nil {
+		a.downloadCancel()
+	}
+	a.updaterMu.Unlock()
+	return nil
+}
+
+// ResumeUpdateDownload resumes a paused download.
+func (a *App) ResumeUpdateDownload() error {
+	a.updaterMu.Lock()
+	url := a.activeDownloadURL
+	checksumURL := a.activeChecksumURL
+	a.updaterMu.Unlock()
+
+	if url == "" {
+		return fmt.Errorf("no active download to resume")
+	}
+
+	go func() {
+		_ = a.DownloadUpdate(url, checksumURL)
+	}()
+	return nil
+}
+
+// CancelUpdateDownload cancels an update download and removes partial files.
+func (a *App) CancelUpdateDownload() error {
+	a.updaterMu.Lock()
+	a.downloadPaused = false
+	if a.downloadCancel != nil {
+		a.downloadCancel()
+	}
+	a.pendingInstallPath = ""
+	a.updaterMu.Unlock()
+
+	partPath := filepath.Join(os.TempDir(), "Vinta-Setup-Update.exe.part")
+	_ = os.Remove(partPath)
+
+	a.emitDownloadProgress("idle", 0, 0, 0, 0, "")
+	return nil
+}
+
+// ApplyUpdate launches the downloaded installer and gracefully exits Vinta.
+func (a *App) ApplyUpdate() error {
+	a.updaterMu.Lock()
+	installerPath := a.pendingInstallPath
+	a.updaterMu.Unlock()
+
+	if installerPath == "" {
+		installerPath = filepath.Join(os.TempDir(), "Vinta-Setup-Update.exe")
+	}
+
+	if _, err := os.Stat(installerPath); err != nil {
+		return fmt.Errorf("installer binary not found: %w", err)
+	}
+
+	exePath, err := os.Executable()
+	if err != nil {
+		exePath = "C:\\"
+	}
+	exeDir := filepath.Dir(exePath)
+
+	// Launch installer passing current destination directory to maintain existing path
+	cmd := exec.Command(installerPath, "/D="+exeDir)
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("failed to launch installer: %w", err)
+	}
+
+	// Terminate Vinta gracefully so the installer can overwrite binaries without locks
+	go func() {
+		time.Sleep(500 * time.Millisecond)
+		a.Quit()
+	}()
+
+	return nil
+}
+
+// DownloadAndInstallUpdate downloads the installer executable for the update and executes it.
+func (a *App) DownloadAndInstallUpdate(downloadURL string) error {
+	if err := a.DownloadUpdate(downloadURL, ""); err != nil {
+		return err
+	}
+	return a.ApplyUpdate()
+}
+
+// SimulateUpdateAvailable emits a simulated update payload for UI and lifecycle testing.
+func (a *App) SimulateUpdateAvailable(version, notes string) error {
+	if version == "" {
+		version = "v0.4.0-alpha"
+	}
+	if notes == "" {
+		notes = "## What's Changed\n* Added real-time download progress and pause/resume support ([#127](https://github.com/kuraigu/Vinta/pull/127))\n* Added in-app release notes viewer with categorized PR links\n* Enhanced installer with automatic installation path detection"
+	}
+	res := &UpdateCheckResult{
+		Status:          "update-available",
+		UpdateAvailable: true,
+		CurrentVersion:  AppVersion,
+		LatestVersion:   version,
+		Release: ReleaseInfo{
+			Version:      version,
+			TagName:      version,
+			Name:         "Release " + version,
+			Body:         notes,
+			PublishedAt:  time.Now().Format(time.RFC3339),
+			HTMLURL:      "https://github.com/kuraigu/Vinta/releases/tag/" + version,
+			InstallerURL: "https://mock.vinta.app/installer.exe",
+			PortableURL:  "https://mock.vinta.app/portable.zip",
+			ChecksumsURL: "https://mock.vinta.app/sha256sums.txt",
+			IsPrerelease: true,
+			IsPortable:   a.IsPortableMode(),
+		},
+		CheckedAt:    time.Now().Format("2006-01-02 15:04:05"),
+		Message:      "Simulated update available for testing.",
+		IsPortable:   a.IsPortableMode(),
+		IsCustomRepo: true,
+	}
+	if app := application.Get(); app != nil {
+		app.Event.Emit("update:available", res)
+	}
+	return nil
+}
+
+// SimulateDownloadCycle runs a simulated download progress ticker for offline test validation.
+func (a *App) SimulateDownloadCycle(failChecksum bool) error {
+	go func() {
+		total := int64(62914560)
+		step := int64(6291456)
+		current := int64(0)
+
+		for current < total {
+			time.Sleep(250 * time.Millisecond)
+			current += step
+			if current > total {
+				current = total
+			}
+			a.emitDownloadProgress("downloading", current, total, calcPercent(current, total), 2500000, "")
+		}
+
+		a.emitDownloadProgress("verifying", total, total, 100, 0, "")
+		time.Sleep(500 * time.Millisecond)
+
+		if failChecksum {
+			a.emitDownloadProgress("error", total, total, 0, 0, "Simulated checksum mismatch.")
+		} else {
+			a.emitDownloadProgress("ready", total, total, 100, 0, "")
+		}
+	}()
+	return nil
+}
+
+func (a *App) emitDownloadProgress(status string, downloaded, total int64, percent float64, speed int64, errMsg string) {
+	if app := application.Get(); app != nil {
+		app.Event.Emit("update:download-progress", DownloadProgress{
+			Status:           status,
+			DownloadedBytes:  downloaded,
+			TotalBytes:       total,
+			Percentage:       percent,
+			SpeedBytesPerSec: speed,
+			Error:            errMsg,
+		})
+	}
+}
+
+func (a *App) fetchExpectedChecksum(checksumsURL, assetFilename string) (string, error) {
+	req, err := http.NewRequest("GET", checksumsURL, nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("User-Agent", "Vinta-Updater/1.0")
+	if token := resolveUpdaterToken(); token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+
+	client := &http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("checksum server returned %d", resp.StatusCode)
+	}
+
+	scanner := bufio.NewScanner(resp.Body)
+	targetLower := strings.ToLower(assetFilename)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		parts := strings.Fields(line)
+		if len(parts) >= 2 {
+			hash := parts[0]
+			filename := parts[1]
+			if strings.EqualFold(filepath.Base(filename), targetLower) || strings.EqualFold(filepath.Base(filename), "vinta-setup-x64.exe") {
+				return hash, nil
+			}
+		}
+	}
+	return "", fmt.Errorf("asset %s not found in checksums manifest", assetFilename)
+}
+
+func computeFileSHA256(filePath string) (string, error) {
+	f, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = f.Close() }()
+
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+func calcPercent(downloaded, total int64) float64 {
+	if total <= 0 {
+		return 0
+	}
+	p := (float64(downloaded) / float64(total)) * 100
+	if p > 100 {
+		p = 100
+	}
+	return p
 }
 
 // isNewerVersion returns true if candidate is newer than current.
@@ -359,8 +886,8 @@ func isNewerVersion(current, candidate string) bool {
 		return candPatch > currPatch
 	}
 
-	// If base versions are equal:
-	// A release version (no prerelease suffix) is newer than a prerelease version (e.g. 0.1.0 > 0.1.0-alpha)
+	// Base versions are equal
+	// Release version is newer than pre-release version (0.1.0 > 0.1.0-alpha)
 	if currPre != "" && candPre == "" {
 		return true
 	}
@@ -368,10 +895,44 @@ func isNewerVersion(current, candidate string) bool {
 		return false
 	}
 	if currPre != "" && candPre != "" {
-		return candPre > currPre
+		return comparePreRelease(currPre, candPre) < 0
 	}
 
 	return false
+}
+
+// comparePreRelease compares two pre-release strings. Returns negative if a < b, positive if a > b, 0 if equal.
+func comparePreRelease(a, b string) int {
+	if strings.HasPrefix(a, "dev") && !strings.HasPrefix(b, "dev") {
+		return -1
+	}
+	if !strings.HasPrefix(a, "dev") && strings.HasPrefix(b, "dev") {
+		return 1
+	}
+
+	partsA := strings.Split(a, ".")
+	partsB := strings.Split(b, ".")
+	minLen := len(partsA)
+	if len(partsB) < minLen {
+		minLen = len(partsB)
+	}
+
+	for i := 0; i < minLen; i++ {
+		numA, errA := strconv.Atoi(partsA[i])
+		numB, errB := strconv.Atoi(partsB[i])
+
+		if errA == nil && errB == nil {
+			if numA != numB {
+				return numA - numB
+			}
+		} else {
+			if partsA[i] != partsB[i] {
+				return strings.Compare(partsA[i], partsB[i])
+			}
+		}
+	}
+
+	return len(partsA) - len(partsB)
 }
 
 func parseSemVer(v string) (int, int, int, string) {
@@ -395,7 +956,6 @@ func parseSemVer(v string) (int, int, int, string) {
 		patch, _ = strconv.Atoi(nums[2])
 	}
 
-	// Also extract numbers from pre (e.g., dev, alpha.1)
 	cleanPre := regexp.MustCompile(`[^a-zA-Z0-9.]`).ReplaceAllString(pre, "")
 	return major, minor, patch, cleanPre
 }
@@ -406,55 +966,4 @@ func (a *App) OpenURL(targetURL string) error {
 		return nil
 	}
 	return browser.OpenURL(targetURL)
-}
-
-// DownloadAndInstallUpdate downloads the installer executable for the update and executes it.
-func (a *App) DownloadAndInstallUpdate(downloadURL string) error {
-	if downloadURL == "" {
-		return fmt.Errorf("no download URL provided")
-	}
-
-	req, err := http.NewRequest("GET", downloadURL, nil)
-	if err != nil {
-		return fmt.Errorf("failed to create download request: %w", err)
-	}
-	req.Header.Set("User-Agent", "Vinta-Updater/1.0")
-
-	client := &http.Client{Timeout: 10 * time.Minute}
-	resp, err := client.Do(req)
-	if err != nil {
-		return fmt.Errorf("failed to download update: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("download server returned status: %d", resp.StatusCode)
-	}
-
-	tempDir := os.TempDir()
-	installerPath := filepath.Join(tempDir, "Vinta-Setup-Update.exe")
-
-	out, err := os.OpenFile(installerPath, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
-	if err != nil {
-		return fmt.Errorf("failed to create destination file: %w", err)
-	}
-
-	_, err = io.Copy(out, resp.Body)
-	_ = out.Close()
-	if err != nil {
-		return fmt.Errorf("failed to write installer binary: %w", err)
-	}
-
-	cmd := exec.Command(installerPath)
-	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("failed to launch installer: %w", err)
-	}
-
-	// Terminate Vinta gracefully so the installer can overwrite binaries without file locks
-	go func() {
-		time.Sleep(500 * time.Millisecond)
-		a.Quit()
-	}()
-
-	return nil
 }

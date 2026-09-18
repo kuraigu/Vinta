@@ -1,26 +1,81 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { RefreshCw, Download, ExternalLink, FileText } from 'lucide-svelte'
+  import {
+    RefreshCw,
+    Download,
+    ExternalLink,
+    Pause,
+    Play,
+    X,
+    CheckCircle2,
+    ShieldCheck,
+    AlertCircle,
+    Package,
+    GitBranch,
+    SlidersHorizontal
+  } from 'lucide-svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
+  import CustomSelect from '../../CustomSelect.svelte'
   import {
     updateInfoStore,
     updateCheckingStore,
     autoCheckUpdatesStore,
-    triggerUpdateCheck
+    updateChannelStore,
+    downloadProgressStore,
+    updateLifecycleStatusStore,
+    isPortableModeStore,
+    triggerUpdateCheck,
+    triggerDownload,
+    triggerPauseDownload,
+    triggerResumeDownload,
+    triggerCancelDownload,
+    triggerApplyUpdate,
+    detectPortableMode,
+    triggerDevSimulation,
+    triggerDevDownloadCycle
   } from '../../../store'
   import {
     OpenURL,
-    GetAppInfo,
-    DownloadAndInstallUpdate
+    GetAppInfo
   } from '../../../../bindings/Vinta/backend/app.js'
+  import { Events } from '@wailsio/runtime'
 
   let isDevBuild = $state(false)
-  let isDownloadingUpdate = $state(false)
-  let updateDownloadError = $state('')
+  let showDevSimulation = $state(false)
+
+  function formatBytes(bytes: number): string {
+    if (bytes <= 0) return '0 B'
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  }
+
+  function computeChannelOptions() {
+    if (isDevBuild) {
+      return [
+        { value: 'stable', label: 'Stable Releases Only' },
+        { value: 'prerelease', label: 'Pre-release (Alpha / Beta)' },
+        { value: 'testing', label: 'Testing Builds & Drafts' }
+      ]
+    }
+    return [
+      { value: 'stable', label: 'Stable Releases Only' },
+      { value: 'prerelease', label: 'Pre-release (Alpha / Beta)' }
+    ]
+  }
+
+  let channelOptions = $derived.by(computeChannelOptions)
+
+  function enforceValidChannel() {
+    if (!isDevBuild && $updateChannelStore === 'testing') {
+      $updateChannelStore = 'stable'
+    }
+  }
+
+  $effect(enforceValidChannel)
 
   function handleCheckUpdates() {
-    if (isDevBuild) return
     triggerUpdateCheck(true)
   }
 
@@ -30,8 +85,14 @@
     }
   }
 
-  async function handleDownloadAndInstall() {
+  function handleChannelChange(newChannel: string) {
+    $updateChannelStore = newChannel as 'stable' | 'prerelease' | 'testing'
+    triggerUpdateCheck(true)
+  }
+
+  function handleStartDownload() {
     const installerUrl = $updateInfoStore?.release?.installerUrl
+    const checksumsUrl = $updateInfoStore?.release?.checksumsUrl || ''
     if (!installerUrl) {
       handleOpenURL(
         $updateInfoStore?.release?.htmlUrl ||
@@ -39,22 +100,42 @@
       )
       return
     }
+    triggerDownload(installerUrl, checksumsUrl)
+  }
 
-    isDownloadingUpdate = true
-    updateDownloadError = ''
-    try {
-      if (typeof DownloadAndInstallUpdate === 'function') {
-        await DownloadAndInstallUpdate(installerUrl)
-      } else {
-        handleOpenURL(installerUrl)
+  function handleDownloadPortableZip() {
+    const portableUrl = $updateInfoStore?.release?.portableUrl
+    if (portableUrl) {
+      handleOpenURL(portableUrl)
+    } else {
+      handleOpenURL(
+        $updateInfoStore?.release?.htmlUrl ||
+          'https://github.com/kuraigu/Vinta/releases'
+      )
+    }
+  }
+
+  function handleProgressUpdate(ev: { data: typeof $downloadProgressStore }) {
+    if (ev?.data) {
+      const data = ev.data
+      downloadProgressStore.set(data)
+      if (data.status === 'downloading') {
+        updateLifecycleStatusStore.set('downloading')
+      } else if (data.status === 'paused') {
+        updateLifecycleStatusStore.set('paused')
+      } else if (data.status === 'verifying') {
+        updateLifecycleStatusStore.set('verifying')
+      } else if (data.status === 'ready') {
+        updateLifecycleStatusStore.set('ready')
+      } else if (data.status === 'error') {
+        updateLifecycleStatusStore.set('error')
       }
-    } catch (err) {
-      updateDownloadError = `Installation failed: ${err}`
-      isDownloadingUpdate = false
     }
   }
 
   async function initUpdatesTab() {
+    await detectPortableMode()
+
     if (typeof GetAppInfo === 'function') {
       try {
         const info = await GetAppInfo()
@@ -66,34 +147,38 @@
       }
     }
 
-    if (!$updateInfoStore && !isDevBuild) {
+    if (!$updateInfoStore) {
       triggerUpdateCheck(false)
     }
   }
 
   onMount(() => {
     initUpdatesTab()
+    const unsubscribeProgress = Events.On(
+      'update:download-progress',
+      handleProgressUpdate
+    )
+    return () => {
+      unsubscribeProgress()
+    }
   })
 </script>
 
 <div class="updates-container">
-  <!-- Top Settings Rows -->
+  <!-- Settings Group -->
   <div class="setting-group">
     <SettingItem
       label="Check for Updates"
-      description={isDevBuild
-        ? 'Disabled in development mode'
-        : $updateInfoStore?.status === 'error'
-          ? 'Check failed'
-          : $updateInfoStore?.checkedAt
-            ? `Last checked: ${$updateInfoStore.checkedAt}`
-            : 'Check for new versions'}
+      description={$updateInfoStore?.status === 'error'
+        ? $updateInfoStore.message || 'Check failed'
+        : $updateInfoStore?.checkedAt
+          ? `Last checked: ${$updateInfoStore.checkedAt}`
+          : 'Check for new versions'}
       icon={RefreshCw}
-      disabled={isDevBuild}
     >
       <SettingActionButton
         variant="default"
-        disabled={$updateCheckingStore || isDevBuild}
+        disabled={$updateCheckingStore}
         onclick={handleCheckUpdates}
       >
         <RefreshCw
@@ -106,65 +191,185 @@
     </SettingItem>
 
     <SettingItem
-      label="Automatically Check for Updates"
-      description="Check for new releases in the background"
-      icon={Download}
-      disabled={isDevBuild}
+      label="Release Channel"
+      description="Choose the update release stability stream"
+      icon={GitBranch}
     >
-      <label class="toggle-switch">
-        <input
-          type="checkbox"
-          bind:checked={$autoCheckUpdatesStore}
-          disabled={isDevBuild}
+      <div class="channel-select-wrapper">
+        <CustomSelect
+          options={channelOptions}
+          value={$updateChannelStore}
+          onChange={handleChannelChange}
         />
-        <span class="slider"></span>
-      </label>
+      </div>
     </SettingItem>
 
     <SettingItem
-      label="Release Notes & Highlights"
-      description="View release notes and downloads on GitHub"
-      icon={FileText}
+      label="Automatically Check for Updates"
+      description="Periodically query GitHub releases in the background"
+      icon={Download}
     >
-      <SettingActionButton
-        variant="default"
-        onclick={() =>
-          handleOpenURL('https://github.com/kuraigu/Vinta/releases')}
-      >
-        <span>All Releases</span>
-        <ExternalLink size={11} strokeWidth={2} />
-      </SettingActionButton>
+      <label class="toggle-switch">
+        <input type="checkbox" bind:checked={$autoCheckUpdatesStore} />
+        <span class="slider"></span>
+      </label>
     </SettingItem>
   </div>
 
-  <!-- Update Available Banner -->
-  {#if $updateInfoStore?.updateAvailable && !isDevBuild}
-    <div class="update-alert-card">
-      <div class="update-alert-header">
-        <div class="update-alert-icon">
-          <Download size={16} />
-        </div>
-        <div class="update-alert-meta">
-          <span class="update-alert-title">Update Available</span>
-          <span class="update-alert-sub"
-            >Version {$updateInfoStore.latestVersion} is ready to download and install.</span
-          >
-        </div>
+  <!-- Portable Mode Notification Card -->
+  {#if $isPortableModeStore}
+    <div class="portable-banner">
+      <Package size={16} class="portable-icon" />
+      <div class="portable-meta">
+        <span class="portable-title">Portable Edition Detected</span>
+        <span class="portable-sub">
+          Vinta is running from a standalone folder. To update, download the ZIP
+          package directly to keep your portable configuration intact.
+        </span>
       </div>
-      <div class="update-alert-actions">
+      {#if $updateInfoStore?.updateAvailable && $updateInfoStore?.release?.portableUrl}
         <SettingActionButton
           variant="default"
-          disabled={isDownloadingUpdate}
-          onclick={handleDownloadAndInstall}
+          onclick={handleDownloadPortableZip}
         >
-          {#if isDownloadingUpdate}
-            <RefreshCw size={12} strokeWidth={2} class="spinning" />
-            <span>Downloading...</span>
-          {:else}
-            <Download size={12} strokeWidth={2} />
-            <span>Download</span>
-          {/if}
+          <Download size={12} strokeWidth={2} />
+          <span>Download ZIP</span>
         </SettingActionButton>
+      {/if}
+    </div>
+  {/if}
+
+  <!-- Update Available & Download Card -->
+  {#if $updateInfoStore?.updateAvailable}
+    <div class="update-card">
+      <div class="update-header">
+        <div class="update-badge-icon">
+          {#if $updateLifecycleStatusStore === 'ready'}
+            <CheckCircle2 size={18} />
+          {:else if $updateLifecycleStatusStore === 'verifying'}
+            <ShieldCheck size={18} class="spinning" />
+          {:else}
+            <Download size={18} />
+          {/if}
+        </div>
+        <div class="update-header-info">
+          <div class="update-title-row">
+            <span class="update-title"
+              >Vinta {$updateInfoStore.latestVersion}</span
+            >
+          </div>
+          <span class="update-sub">
+            {#if $updateLifecycleStatusStore === 'ready'}
+              Update package downloaded and verified against SHA-256 manifest.
+            {:else if $updateLifecycleStatusStore === 'verifying'}
+              Verifying SHA-256 package checksum against release manifest...
+            {:else if $updateLifecycleStatusStore === 'downloading'}
+              Downloading update package...
+            {:else if $updateLifecycleStatusStore === 'paused'}
+              Download paused. Click resume to continue from current offset.
+            {:else}
+              A new release is available for download and installation.
+            {/if}
+          </span>
+        </div>
+      </div>
+
+      <!-- Progress Bar & Download Stats -->
+      {#if $updateLifecycleStatusStore === 'downloading' || $updateLifecycleStatusStore === 'paused' || $updateLifecycleStatusStore === 'verifying'}
+        <div class="progress-section">
+          <div class="progress-bar-track">
+            <div
+              class="progress-bar-fill {$updateLifecycleStatusStore === 'paused'
+                ? 'paused'
+                : ''}"
+              style="width: {$downloadProgressStore.percentage}%;"
+            ></div>
+          </div>
+          <div class="progress-meta-row">
+            <span class="progress-text">
+              {#if $updateLifecycleStatusStore === 'verifying'}
+                Validating checksums...
+              {:else}
+                {formatBytes($downloadProgressStore.downloadedBytes)} /
+                {$downloadProgressStore.totalBytes > 0
+                  ? formatBytes($downloadProgressStore.totalBytes)
+                  : '...'}
+                {#if $updateLifecycleStatusStore === 'downloading' && $downloadProgressStore.speedBytesPerSec > 0}
+                  ({formatBytes($downloadProgressStore.speedBytesPerSec)}/s)
+                {/if}
+              {/if}
+            </span>
+            <span class="progress-percent">
+              {Math.round($downloadProgressStore.percentage)}%
+            </span>
+          </div>
+        </div>
+      {/if}
+
+      <!-- Action Buttons Row -->
+      <div class="update-actions-row">
+        {#if $updateLifecycleStatusStore === 'ready'}
+          <SettingActionButton variant="default" onclick={triggerApplyUpdate}>
+            <CheckCircle2 size={12} strokeWidth={2} />
+            <span>Restart & Install Now</span>
+          </SettingActionButton>
+          <SettingActionButton
+            variant="default"
+            onclick={() => updateLifecycleStatusStore.set('available')}
+          >
+            <span>Install on Exit</span>
+          </SettingActionButton>
+        {:else if $updateLifecycleStatusStore === 'downloading'}
+          <SettingActionButton variant="default" onclick={triggerPauseDownload}>
+            <Pause size={12} strokeWidth={2} />
+            <span>Pause</span>
+          </SettingActionButton>
+          <SettingActionButton
+            variant="default"
+            onclick={triggerCancelDownload}
+          >
+            <X size={12} strokeWidth={2} />
+            <span>Cancel</span>
+          </SettingActionButton>
+        {:else if $updateLifecycleStatusStore === 'paused'}
+          <SettingActionButton
+            variant="default"
+            onclick={triggerResumeDownload}
+          >
+            <Play size={12} strokeWidth={2} />
+            <span>Resume</span>
+          </SettingActionButton>
+          <SettingActionButton
+            variant="default"
+            onclick={triggerCancelDownload}
+          >
+            <X size={12} strokeWidth={2} />
+            <span>Cancel</span>
+          </SettingActionButton>
+        {:else if $updateLifecycleStatusStore === 'verifying'}
+          <SettingActionButton variant="default" disabled={true}>
+            <RefreshCw size={12} strokeWidth={2} class="spinning" />
+            <span>Verifying Integrity...</span>
+          </SettingActionButton>
+        {:else}
+          {#if !$isPortableModeStore}
+            <SettingActionButton
+              variant="default"
+              onclick={handleStartDownload}
+            >
+              <Download size={12} strokeWidth={2} />
+              <span>Download & Install</span>
+            </SettingActionButton>
+          {:else}
+            <SettingActionButton
+              variant="default"
+              onclick={handleDownloadPortableZip}
+            >
+              <Download size={12} strokeWidth={2} />
+              <span>Download Portable ZIP</span>
+            </SettingActionButton>
+          {/if}
+        {/if}
 
         {#if $updateInfoStore.release?.htmlUrl}
           <SettingActionButton
@@ -176,8 +381,56 @@
           </SettingActionButton>
         {/if}
       </div>
-      {#if updateDownloadError}
-        <span class="update-error-text">{updateDownloadError}</span>
+
+      {#if $downloadProgressStore.error || ($updateInfoStore.status === 'error' && $updateInfoStore.message)}
+        <div class="update-error-banner">
+          <AlertCircle size={14} />
+          <span>{$downloadProgressStore.error || $updateInfoStore.message}</span
+          >
+        </div>
+      {/if}
+    </div>
+  {/if}
+
+  <!-- Local Dev Simulation Controls (Strictly visible only during dev builds) -->
+  {#if isDevBuild}
+    <div class="setting-group">
+      <SettingItem
+        label="Test & Simulation Controls"
+        description="Simulate update states and download lifecycles offline"
+        icon={SlidersHorizontal}
+      >
+        <SettingActionButton
+          variant="default"
+          onclick={() => (showDevSimulation = !showDevSimulation)}
+        >
+          <span>{showDevSimulation ? 'Hide Controls' : 'Show Controls'}</span>
+        </SettingActionButton>
+      </SettingItem>
+
+      {#if showDevSimulation}
+        <div class="devtest-sim-card">
+          <div class="devtest-sim-buttons">
+            <SettingActionButton
+              variant="default"
+              onclick={() => triggerDevSimulation('v0.4.0-alpha')}
+            >
+              <span>Simulate Update Available</span>
+            </SettingActionButton>
+            <SettingActionButton
+              variant="default"
+              onclick={() => triggerDevDownloadCycle(false)}
+            >
+              <span>Simulate Download (Success)</span>
+            </SettingActionButton>
+            <SettingActionButton
+              variant="default"
+              onclick={() => triggerDevDownloadCycle(true)}
+            >
+              <span>Simulate Download (Checksum Fail)</span>
+            </SettingActionButton>
+          </div>
+        </div>
       {/if}
     </div>
   {/if}

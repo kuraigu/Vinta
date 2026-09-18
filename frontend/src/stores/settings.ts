@@ -240,6 +240,9 @@ export const pageVisibilityStore = persistentWritable<PageVisibility>('vinta_pag
 export const autostartStore = persistentWritable<boolean>('vinta_autostart', false)
 export const hardwareAccelStore = persistentWritable<boolean>('vinta_hardware_accel', true)
 export const autoCheckUpdatesStore = persistentWritable<boolean>('autoCheckUpdates', true)
+export type UpdateChannel = 'stable' | 'prerelease' | 'testing'
+export const updateChannelStore = persistentWritable<UpdateChannel>('vinta_update_channel', 'stable')
+export const customUpdateRepoStore = persistentWritable<string>('vinta_custom_update_repo', '')
 
 // ============================================================================
 // Helpers
