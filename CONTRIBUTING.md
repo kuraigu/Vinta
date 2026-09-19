@@ -166,11 +166,11 @@ Official releases are compiled on isolated GitHub Actions runners to ensure repr
 1. **Triggering a Release (Maintainers Only)**:
    - Navigate to **Actions** > **Release Vinta** in the GitHub repository.
    - Click **Run workflow**, specify the release tag (e.g. `v0.2.0`), and leave **Create as a Private Draft Release** checked.
-   - The workflow compiles the native DLL, builds the NSIS installer (`Vinta-Setup-x64.exe`) and portable package (`Vinta-Portable-x64.zip`), generates `SHA256SUMS.txt`, and cryptographically signs the build provenance.
+   - The workflow compiles the native DLL, builds the NSIS installer (`Vinta-Setup-x64.exe`), generates `SHA256SUMS.txt`, and cryptographically signs the build provenance.
    - Inspect the private draft release on GitHub, download and test the assets, then click **Publish release** when ready.
 
 2. **Binary Verification (Optional for Developers & Package Managers)**:
-   - Anyone can cryptographically verify that an official `Vinta-Setup-x64.exe` installer or portable package was compiled unmodified directly from the official commit:
+   - Anyone can cryptographically verify that an official `Vinta-Setup-x64.exe` installer was compiled unmodified directly from the official commit:
      ```bash
      gh attestation verify Vinta-Setup-x64.exe --owner kuraigu
      ```

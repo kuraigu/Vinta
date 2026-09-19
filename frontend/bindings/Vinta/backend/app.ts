@@ -26,6 +26,20 @@ import * as application$0 from '../../github.com/wailsapp/wails/v3/pkg/applicati
 import * as $models from './models.js'
 
 /**
+ * ApplyUpdate launches the downloaded installer and gracefully exits Vinta.
+ */
+export function ApplyUpdate(): $CancellablePromise<void> {
+  return $Call.ByID(3376089888)
+}
+
+/**
+ * CancelUpdateDownload cancels an update download and removes partial files.
+ */
+export function CancelUpdateDownload(): $CancellablePromise<void> {
+  return $Call.ByID(4095139864)
+}
+
+/**
  * CheckForUpdates queries GitHub Releases API to check for newer versions.
  */
 export function CheckForUpdates(
@@ -64,6 +78,16 @@ export function DownloadAndInstallUpdate(
   downloadURL: string
 ): $CancellablePromise<void> {
   return $Call.ByID(1511147558, downloadURL)
+}
+
+/**
+ * DownloadUpdate initiates or resumes a chunked download with real-time progress and checksum verification.
+ */
+export function DownloadUpdate(
+  downloadURL: string,
+  checksumsURL: string
+): $CancellablePromise<void> {
+  return $Call.ByID(521641498, downloadURL, checksumsURL)
 }
 
 /**
@@ -175,6 +199,13 @@ export function GetSettings(): $CancellablePromise<string> {
 }
 
 /**
+ * GetUpdateRepo returns the repository owner/name used for update queries.
+ */
+export function GetUpdateRepo(): $CancellablePromise<string> {
+  return $Call.ByID(2036517204)
+}
+
+/**
  * GetWirelessStatus returns current wireless connectivity and Wi-Fi signal status from the services layer.
  */
 export function GetWirelessStatus(): $CancellablePromise<services$0.WirelessStatus> {
@@ -188,6 +219,13 @@ export function GetWirelessStatus(): $CancellablePromise<services$0.WirelessStat
  */
 export function Greet(name: string): $CancellablePromise<string> {
   return $Call.ByID(2029986440, name)
+}
+
+/**
+ * IsPortableMode determines if Vinta is currently executing from a portable directory.
+ */
+export function IsPortableMode(): $CancellablePromise<boolean> {
+  return $Call.ByID(2364170391)
 }
 
 /**
@@ -225,6 +263,13 @@ export function OpenURL(targetURL: string): $CancellablePromise<void> {
  */
 export function OpenWindowsSettings(target: string): $CancellablePromise<void> {
   return $Call.ByID(1761424149, target)
+}
+
+/**
+ * PauseUpdateDownload pauses the active download stream while preserving written bytes.
+ */
+export function PauseUpdateDownload(): $CancellablePromise<void> {
+  return $Call.ByID(2705463110)
 }
 
 /**
@@ -276,6 +321,13 @@ export function ResolveNativeAppIcon(
   aumid: string
 ): $CancellablePromise<string> {
   return $Call.ByID(181960208, sourceApp, aumid)
+}
+
+/**
+ * ResumeUpdateDownload resumes a paused download.
+ */
+export function ResumeUpdateDownload(): $CancellablePromise<void> {
+  return $Call.ByID(3804646409)
 }
 
 /**
@@ -355,13 +407,20 @@ export function SetBluetoothEnabled(
 }
 
 /**
- * SetClipboardMonitoring updates the native clipboard copy and paste monitoring state.
+ * SetClipboardMonitoring satisfies existing frontend bindings as clipboard monitoring is retired.
  */
 export function SetClipboardMonitoring(
   copyEnabled: boolean,
   pasteEnabled: boolean
 ): $CancellablePromise<void> {
   return $Call.ByID(2757267531, copyEnabled, pasteEnabled)
+}
+
+/**
+ * SetCustomUpdateRepo overrides the repository used for update queries.
+ */
+export function SetCustomUpdateRepo(repo: string): $CancellablePromise<void> {
+  return $Call.ByID(576870143, repo)
 }
 
 /**
@@ -378,8 +437,8 @@ export function SetDevPillBounds(
 
 /**
  * SetDragCapture controls Win32 OS-level mouse capture during drag gestures.
- * When enabled, mouse messages across the monitor are delivered to the window,
- * preventing dropped gestures when bounds tighten or cursor moves rapidly.
+ * Deprecated/No-op: WebView2 child window requires uninterrupted mouse messages to fire DOM pointer capture.
+ * Calling Win32 SetCapture on the parent HWND starves WebView2 of WM_MOUSEMOVE and WM_LBUTTONUP.
  */
 export function SetDragCapture(enable: boolean): $CancellablePromise<void> {
   return $Call.ByID(1965237067, enable)
@@ -447,6 +506,25 @@ export function Setup(
  */
 export function Shutdown(): $CancellablePromise<void> {
   return $Call.ByID(2578565653)
+}
+
+/**
+ * SimulateDownloadCycle runs a simulated download progress ticker for offline test validation.
+ */
+export function SimulateDownloadCycle(
+  failChecksum: boolean
+): $CancellablePromise<void> {
+  return $Call.ByID(2914287533, failChecksum)
+}
+
+/**
+ * SimulateUpdateAvailable emits a simulated update payload for UI and lifecycle testing.
+ */
+export function SimulateUpdateAvailable(
+  version: string,
+  notes: string
+): $CancellablePromise<void> {
+  return $Call.ByID(2832446087, version, notes)
 }
 
 /**

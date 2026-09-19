@@ -54,6 +54,12 @@ func (a *App) ResolveNativeAppIcon(sourceApp, aumid string) string {
 		return ""
 	}
 
+	lowerApp := strings.ToLower(sApp)
+	lowerAumid := strings.ToLower(sAumid)
+	if strings.Contains(lowerApp, "vinta") || strings.Contains(lowerAumid, "vinta") {
+		return ""
+	}
+
 	hashKey := computeIconHashKey(sApp, sAumid)
 
 	// 1. Check in-memory cache

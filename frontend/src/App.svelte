@@ -33,10 +33,13 @@
   import MediaPage, { config as mediaConfig } from './pages/MediaPage.svelte'
   import NotesPage from './pages/NotesPage.svelte'
   import AppsPage from './pages/AppsPage.svelte'
-  import SettingsPage from './pages/SettingsPage.svelte'
+  import SettingsPage, {
+    config as settingsConfig
+  } from './pages/SettingsPage.svelte'
   import Dock from './components/Dock.svelte'
   import Clock from './components/Clock.svelte'
   import DevPill from './devtest/DevPill.svelte'
+  import appIcon from '@appicon'
   import { AppControls } from './utils/navigation'
   import { playNotifChime } from './services/audioService'
   import {
@@ -75,6 +78,7 @@
     devPinnedStore,
     devTestingStore,
     activePageIdStore,
+    activeSettingsTabStore,
     updateInfoStore,
     autoCheckUpdatesStore,
     type UpdateCheckResult,
@@ -1138,6 +1142,16 @@
       }
     })
 
+    const handleNavigateSettings = (e: Event) => {
+      const customEv = e as CustomEvent<{ tab?: string }>
+      if (customEv.detail?.tab) {
+        activeSettingsTabStore.set(customEv.detail.tab)
+      }
+      showWidget()
+      navigateTo(SettingsPage, settingsConfig, true)
+    }
+    window.addEventListener('vinta-navigate-settings', handleNavigateSettings)
+
     EventsOn('update:available', (data: UpdateCheckResult) => {
       if (data && data.updateAvailable) {
         updateInfoStore.set(data)
@@ -1151,7 +1165,10 @@
               message:
                 'A new version of Vinta is ready for download. Open Settings > Updates to review release highlights.',
               timestamp: Date.now(),
-              canOpen: false
+              canOpen: true,
+              isUpdate: true,
+              icon: appIcon,
+              appLogo: appIcon
             },
             ...notifs
           ])
@@ -1173,7 +1190,10 @@
                 message:
                   'Vinta has been successfully updated. Check out the Updates tab in Settings to see what is new.',
                 timestamp: Date.now(),
-                canOpen: false
+                canOpen: true,
+                isUpdate: true,
+                icon: appIcon,
+                appLogo: appIcon
               },
               ...notifs
             ])

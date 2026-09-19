@@ -4,6 +4,9 @@ Unicode true
 ## Vinta NSIS Windows Installer Configuration
 ####
 
+!define WAILS_INSTALL_SCOPE "user"
+!define REQUEST_EXECUTION_LEVEL "user"
+
 !include "wails_tools.nsh"
 !include "MUI2.nsh"
 !include "FileFunc.nsh"
@@ -72,11 +75,18 @@ OutFile "..\..\bin\Vinta-Setup-x64.exe"
 
 # Default install directory: per-user LocalAppData (or ProgramFiles if running elevated)
 InstallDir "$LOCALAPPDATA\Programs\${INFO_PRODUCTNAME}"
+InstallDirRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${INFO_PRODUCTNAME}" "InstallLocation"
 ShowInstDetails show
+
+Var /GLOBAL PathTail
+Var /GLOBAL DetectedPath
 
 # Function to ensure selected directory always ends with \Vinta subfolder
 Function DirectoryLeave
-    Var /GLOBAL PathTail
+    # If the executable already exists in the chosen folder, do not append subfolder
+    ${If} ${FileExists} "$INSTDIR\${PRODUCT_EXECUTABLE}"
+        Return
+    ${EndIf}
 
     # Strip trailing backslash if present
     StrCpy $0 $INSTDIR "" -1
@@ -93,13 +103,118 @@ Function DirectoryLeave
     ${EndIf}
 FunctionEnd
 
+# Macro to verify and extract install directory from registry string
+!macro CheckRegistryPath REG_ROOT REG_KEY REG_VAL
+    ${If} $DetectedPath == ""
+        ReadRegStr $0 ${REG_ROOT} "${REG_KEY}" "${REG_VAL}"
+        ${If} $0 != ""
+            # Strip enclosing quotes if present
+            StrCpy $1 $0 1 0
+            ${If} $1 == '"'
+                StrCpy $0 $0 "" 1
+                StrCpy $1 $0 "" -1
+                ${If} $1 == '"'
+                    StrCpy $0 $0 -1
+                ${EndIf}
+            ${EndIf}
+
+            # Check if directory directly contains executable
+            ${If} ${FileExists} "$0\${PRODUCT_EXECUTABLE}"
+                StrCpy $DetectedPath $0
+            ${Else}
+                # If path pointed to an exe file, check its parent directory
+                ${GetParent} "$0" $2
+                ${If} $2 != ""
+                ${AndIf} ${FileExists} "$2\${PRODUCT_EXECUTABLE}"
+                    StrCpy $DetectedPath $2
+                ${EndIf}
+            ${EndIf}
+        ${EndIf}
+    ${EndIf}
+!macroend
+
 Function .onInit
     !insertmacro wails.checkArchitecture
-    # If running with administrator privileges, prefer Program Files
-    UserInfo::GetAccountType
-    Pop $0
-    ${If} $0 == "Admin"
+
+    # 1. If INSTDIR was specified via /D= or already contains executable, keep it
+    ${If} $INSTDIR != ""
+    ${AndIf} ${FileExists} "$INSTDIR\${PRODUCT_EXECUTABLE}"
+        Return
+    ${EndIf}
+
+    StrCpy $DetectedPath ""
+
+    # 2. Check 64-bit registry entries in HKCU and HKLM
+    SetRegView 64
+    !insertmacro CheckRegistryPath HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${INFO_PRODUCTNAME}" "InstallLocation"
+    !insertmacro CheckRegistryPath HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${UNINST_KEY_NAME}" "InstallLocation"
+    !insertmacro CheckRegistryPath HKCU "Software\${INFO_COMPANYNAME}\${INFO_PRODUCTNAME}" "InstallLocation"
+    !insertmacro CheckRegistryPath HKCU "Software\${INFO_COMPANYNAME}\${INFO_PRODUCTNAME}" "InstallPath"
+    !insertmacro CheckRegistryPath HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${INFO_PRODUCTNAME}" "DisplayIcon"
+    !insertmacro CheckRegistryPath HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${INFO_PRODUCTNAME}" "UninstallString"
+    !insertmacro CheckRegistryPath HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${UNINST_KEY_NAME}" "DisplayIcon"
+    !insertmacro CheckRegistryPath HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${UNINST_KEY_NAME}" "UninstallString"
+
+    !insertmacro CheckRegistryPath HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${INFO_PRODUCTNAME}" "InstallLocation"
+    !insertmacro CheckRegistryPath HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${UNINST_KEY_NAME}" "InstallLocation"
+    !insertmacro CheckRegistryPath HKLM "Software\${INFO_COMPANYNAME}\${INFO_PRODUCTNAME}" "InstallLocation"
+    !insertmacro CheckRegistryPath HKLM "Software\${INFO_COMPANYNAME}\${INFO_PRODUCTNAME}" "InstallPath"
+    !insertmacro CheckRegistryPath HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${INFO_PRODUCTNAME}" "DisplayIcon"
+    !insertmacro CheckRegistryPath HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${INFO_PRODUCTNAME}" "UninstallString"
+    !insertmacro CheckRegistryPath HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${UNINST_KEY_NAME}" "DisplayIcon"
+    !insertmacro CheckRegistryPath HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${UNINST_KEY_NAME}" "UninstallString"
+
+    # 3. Check 32-bit registry entries
+    SetRegView 32
+    !insertmacro CheckRegistryPath HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${INFO_PRODUCTNAME}" "InstallLocation"
+    !insertmacro CheckRegistryPath HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${UNINST_KEY_NAME}" "InstallLocation"
+    !insertmacro CheckRegistryPath HKCU "Software\${INFO_COMPANYNAME}\${INFO_PRODUCTNAME}" "InstallLocation"
+    !insertmacro CheckRegistryPath HKCU "Software\${INFO_COMPANYNAME}\${INFO_PRODUCTNAME}" "InstallPath"
+    !insertmacro CheckRegistryPath HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${INFO_PRODUCTNAME}" "InstallLocation"
+    !insertmacro CheckRegistryPath HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${UNINST_KEY_NAME}" "InstallLocation"
+    !insertmacro CheckRegistryPath HKLM "Software\${INFO_COMPANYNAME}\${INFO_PRODUCTNAME}" "InstallLocation"
+    !insertmacro CheckRegistryPath HKLM "Software\${INFO_COMPANYNAME}\${INFO_PRODUCTNAME}" "InstallPath"
+    SetRegView 64
+
+    # 4. If registry check discovered existing installation path, adopt it
+    ${If} $DetectedPath != ""
+        StrCpy $INSTDIR $DetectedPath
+        Return
+    ${EndIf}
+
+    # 5. Check standard filesystem locations
+    ${If} ${FileExists} "$LOCALAPPDATA\Programs\${INFO_PRODUCTNAME}\${PRODUCT_EXECUTABLE}"
+        StrCpy $INSTDIR "$LOCALAPPDATA\Programs\${INFO_PRODUCTNAME}"
+        Return
+    ${EndIf}
+
+    ${If} ${FileExists} "$PROGRAMFILES64\${INFO_COMPANYNAME}\${INFO_PRODUCTNAME}\${PRODUCT_EXECUTABLE}"
         StrCpy $INSTDIR "$PROGRAMFILES64\${INFO_COMPANYNAME}\${INFO_PRODUCTNAME}"
+        Return
+    ${EndIf}
+
+    ${If} ${FileExists} "$PROGRAMFILES64\${INFO_PRODUCTNAME}\${PRODUCT_EXECUTABLE}"
+        StrCpy $INSTDIR "$PROGRAMFILES64\${INFO_PRODUCTNAME}"
+        Return
+    ${EndIf}
+
+    ${If} ${FileExists} "$PROGRAMFILES\${INFO_COMPANYNAME}\${INFO_PRODUCTNAME}\${PRODUCT_EXECUTABLE}"
+        StrCpy $INSTDIR "$PROGRAMFILES\${INFO_COMPANYNAME}\${INFO_PRODUCTNAME}"
+        Return
+    ${EndIf}
+
+    ${If} ${FileExists} "$PROGRAMFILES\${INFO_PRODUCTNAME}\${PRODUCT_EXECUTABLE}"
+        StrCpy $INSTDIR "$PROGRAMFILES\${INFO_PRODUCTNAME}"
+        Return
+    ${EndIf}
+
+    # 6. Default destination for new installations
+    UserInfo::GetAccountType
+    Pop $1
+    ${If} $1 == "Admin"
+        StrCpy $INSTDIR "$PROGRAMFILES64\${INFO_COMPANYNAME}\${INFO_PRODUCTNAME}"
+    ${Else}
+        StrCpy $INSTDIR "$LOCALAPPDATA\Programs\${INFO_PRODUCTNAME}"
     ${EndIf}
 FunctionEnd
 
@@ -124,6 +239,35 @@ Section "!${INFO_PRODUCTNAME} Core Application" SecCore
     !insertmacro wails.associateCustomProtocols
 
     !insertmacro wails.writeUninstaller
+
+    # Record installation details in HKCU registry for detection and Windows settings
+    SetRegView 64
+    WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${INFO_PRODUCTNAME}" "DisplayName" "${INFO_PRODUCTNAME}"
+    WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${INFO_PRODUCTNAME}" "DisplayVersion" "${INFO_PRODUCTVERSION}"
+    WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${INFO_PRODUCTNAME}" "Publisher" "${INFO_COMPANYNAME}"
+    WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${INFO_PRODUCTNAME}" "DisplayIcon" "$INSTDIR\${PRODUCT_EXECUTABLE}"
+    WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${INFO_PRODUCTNAME}" "InstallLocation" "$INSTDIR"
+    WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${INFO_PRODUCTNAME}" "UninstallString" "$\"$INSTDIR\uninstall.exe$\""
+    WriteRegStr HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${INFO_PRODUCTNAME}" "QuietUninstallString" "$\"$INSTDIR\uninstall.exe$\" /S"
+
+    WriteRegStr HKCU "Software\${INFO_COMPANYNAME}\${INFO_PRODUCTNAME}" "InstallLocation" "$INSTDIR"
+    WriteRegStr HKCU "Software\${INFO_COMPANYNAME}\${INFO_PRODUCTNAME}" "InstallPath" "$INSTDIR"
+
+    # Also record in HKLM if running with administrator privileges
+    UserInfo::GetAccountType
+    Pop $1
+    ${If} $1 == "Admin"
+        WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${INFO_PRODUCTNAME}" "DisplayName" "${INFO_PRODUCTNAME}"
+        WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${INFO_PRODUCTNAME}" "DisplayVersion" "${INFO_PRODUCTVERSION}"
+        WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${INFO_PRODUCTNAME}" "Publisher" "${INFO_COMPANYNAME}"
+        WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${INFO_PRODUCTNAME}" "DisplayIcon" "$INSTDIR\${PRODUCT_EXECUTABLE}"
+        WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${INFO_PRODUCTNAME}" "InstallLocation" "$INSTDIR"
+        WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${INFO_PRODUCTNAME}" "UninstallString" "$\"$INSTDIR\uninstall.exe$\""
+        WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${INFO_PRODUCTNAME}" "QuietUninstallString" "$\"$INSTDIR\uninstall.exe$\" /S"
+
+        WriteRegStr HKLM "Software\${INFO_COMPANYNAME}\${INFO_PRODUCTNAME}" "InstallLocation" "$INSTDIR"
+        WriteRegStr HKLM "Software\${INFO_COMPANYNAME}\${INFO_PRODUCTNAME}" "InstallPath" "$INSTDIR"
+    ${EndIf}
 SectionEnd
 
 # Section 2: Start Menu Shortcut (Checked by default)
@@ -163,4 +307,14 @@ Section "uninstall"
     !insertmacro wails.unassociateCustomProtocols
 
     !insertmacro wails.deleteUninstaller
+
+    # Clean up registry keys
+    SetRegView 64
+    DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${INFO_PRODUCTNAME}"
+    DeleteRegKey HKCU "Software\${INFO_COMPANYNAME}\${INFO_PRODUCTNAME}"
+    DeleteRegKey /ifempty HKCU "Software\${INFO_COMPANYNAME}"
+
+    DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${INFO_PRODUCTNAME}"
+    DeleteRegKey HKLM "Software\${INFO_COMPANYNAME}\${INFO_PRODUCTNAME}"
+    DeleteRegKey /ifempty HKLM "Software\${INFO_COMPANYNAME}"
 SectionEnd

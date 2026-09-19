@@ -186,23 +186,7 @@ jobs:
               Copy-Item $installerSrc.FullName "release-dist/Vinta-Setup-x64.exe"
           }
 
-          # 2. Package Portable ZIP bundle with stable filename
-          $portableDir = "build/portable-bundle"
-          New-Item -ItemType Directory -Path $portableDir -Force | Out-Null
-          Copy-Item "build/bin/Vinta.exe" "$portableDir/"
-
-          # Copy vintaservices.dll
-          $dllSrc = Get-Item "backend/services/vintaservices.dll", "build/bin/vintaservices.dll", "build/native/vintaservices.dll", "build/native/Release/vintaservices.dll" -ErrorAction SilentlyContinue | Select-Object -First 1
-          if ($dllSrc) {
-              Copy-Item $dllSrc.FullName "$portableDir/vintaservices.dll"
-          }
-
-          if (Test-Path "LICENSE") { Copy-Item "LICENSE" "$portableDir/" }
-          if (Test-Path "README.md") { Copy-Item "README.md" "$portableDir/" }
-
-          Compress-Archive -Path "$portableDir/*" -DestinationPath "release-dist/Vinta-Portable-x64.zip" -Force
-
-          # 3. Generate SHA256 Checksums
+          # 2. Generate SHA256 Checksums
           Set-Location release-dist
           Get-ChildItem -File | Where-Object { $_.Name -ne "SHA256SUMS.txt" } | ForEach-Object {
               $hash = (Get-FileHash $_.Name -Algorithm SHA256).Hash.ToLower()
