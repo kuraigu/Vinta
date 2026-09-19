@@ -971,20 +971,31 @@
           const isLocked = Boolean(
             (m as unknown as Record<string, unknown>)._isPlayStateLocked
           )
-          const incomingTitle = (data.title as string) || ''
+          const incomingTitle = ((data.title as string) || '').trim()
+          const incomingArtist = ((data.artist as string) || '').trim()
           const incomingArt = (data.albumArt as string) || ''
-          const incomingSessionId = (data.activeSessionId as string) || ''
           const incomingSourceApp = (data.sourceApp as string) || ''
+          const currentTitle = (m.title || '').trim()
+          const currentArtist = (m.artist || '').trim()
+
           const isSameTrack =
-            incomingTitle === m.title &&
-            data.artist === m.artist &&
-            (!incomingSessionId || incomingSessionId === m.activeSessionId) &&
-            (!incomingSourceApp || incomingSourceApp === m.sourceApp)
+            incomingTitle === currentTitle &&
+            (incomingArtist === currentArtist ||
+              !incomingArtist ||
+              !currentArtist) &&
+            (!incomingSourceApp ||
+              !m.sourceApp ||
+              incomingSourceApp === m.sourceApp)
+
           const resolvedAlbumArt = incomingArt
             ? incomingArt
             : isSameTrack && m.albumArt
               ? m.albumArt
-              : ''
+              : isIncomingAvailable &&
+                  incomingTitle === currentTitle &&
+                  m.albumArt
+                ? m.albumArt
+                : ''
 
           if (!isIncomingAvailable) {
             // Media closed or disconnected: preserve last played metadata in paused state

@@ -35,8 +35,10 @@ static std::atomic<bool> g_isMediaPlaying{false};
 static std::atomic<bool> g_emitPending{false};
 
 static std::unordered_map<std::string, std::string> g_trackArtMap;
+static std::vector<std::string> g_trackArtOrder;
 static std::string g_currentTrackKey;
 static std::string g_previousTrackArt;
+static std::chrono::steady_clock::time_point g_trackStartTime{};
 static std::mutex g_artCacheMutex;
 
 static std::mutex g_audioVolMutex;
@@ -46,6 +48,7 @@ static std::chrono::steady_clock::time_point g_selectedSessionTime;
 static std::mutex g_selectedSessionMutex;
 
 static std::atomic<uint64_t> g_artCorrectionGeneration{0};
+static std::atomic<uint64_t> g_activeWorkerGen{0};
 static std::chrono::steady_clock::time_point g_lastArtResyncTime{};
 static std::mutex g_artResyncMutex;
 static std::atomic<bool> g_mediaPropsDirty{false};
@@ -54,20 +57,29 @@ static void UpdateCurrentSession();
 static void EmitMediaState(bool includeVolume = true);
 static void ScheduleEmit();
 
+static void TrimString(std::string& s);
+
 /**
  * Constructs a deterministic identifier for an audio/media playback session.
  * Binding the source application ID with track title and artist prevents
  * state collisions and loop-index drift when sessions dynamically change.
  */
 static std::string ComputeSessionUniqueId(const std::string& sourceApp, const std::string& title, const std::string& artist) {
-    return sourceApp + "::" + title + "::" + artist;
+    std::string t = title;
+    std::string a = artist;
+    TrimString(t);
+    TrimString(a);
+    return sourceApp + "::" + t + "::" + a;
 }
 
 void FlushMediaArtCache() {
     std::lock_guard<std::mutex> artLock(g_artCacheMutex);
     g_trackArtMap.clear();
+    g_trackArtOrder.clear();
     g_currentTrackKey.clear();
     g_previousTrackArt.clear();
+    g_trackStartTime = {};
+    ++g_artCorrectionGeneration;
 }
 
 /**
@@ -81,8 +93,11 @@ void RequeryMediaArtwork() {
         std::lock_guard<std::mutex> artLock(g_artCacheMutex);
         if (!g_currentTrackKey.empty()) {
             g_trackArtMap.erase(g_currentTrackKey);
+            g_trackArtOrder.erase(std::remove(g_trackArtOrder.begin(), g_trackArtOrder.end(), g_currentTrackKey), g_trackArtOrder.end());
         }
+        g_previousTrackArt.clear();
     }
+    ++g_artCorrectionGeneration;
     ScheduleEmit();
 }
 
@@ -99,16 +114,27 @@ static std::string g_cachedSessionsJson = "[]";
 static std::chrono::steady_clock::time_point g_lastSessionsFetchTime{};
 static std::mutex g_sessionsJsonMutex;
 
-static std::string TryExtractThumbnail(winrt_media::GlobalSystemMediaTransportControlsSessionMediaProperties const& props, const std::string& staleArt = "") {
+static std::string TryExtractThumbnail(winrt_media::GlobalSystemMediaTransportControlsSessionMediaProperties const& props, const std::string& staleArt = "", bool allowStale = false) {
     if (!props) return "";
     try {
         auto thumbRef = props.Thumbnail();
         if (thumbRef) {
-            auto stream = thumbRef.OpenReadAsync().get();
+            winrt_storage::IRandomAccessStreamWithContentType stream{nullptr};
+            try {
+                stream = thumbRef.OpenReadAsync().get();
+            } catch (...) {
+                // Transient sharing violation or stream initialization retry
+                std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                try {
+                    stream = thumbRef.OpenReadAsync().get();
+                } catch (...) {}
+            }
             if (stream) {
                 std::string fetched = StreamToBase64(stream);
-                if (!fetched.empty() && (staleArt.empty() || fetched != staleArt)) {
-                    return fetched;
+                if (!fetched.empty()) {
+                    if (allowStale || staleArt.empty() || fetched != staleArt) {
+                        return fetched;
+                    }
                 }
             }
         }
@@ -587,9 +613,15 @@ static void EmitMediaState(bool includeVolume) {
             artist = Utf16ToUtf8(props.Artist().c_str());
             album = Utf16ToUtf8(props.AlbumTitle().c_str());
 
-            std::string trackKey = title + "_" + artist;
+            std::string t = title;
+            std::string a = artist;
+            TrimString(t);
+            TrimString(a);
+            std::string trackKey = t + "_" + a;
             std::string staleArt;
             bool isNewTrack = false;
+            auto now = std::chrono::steady_clock::now();
+
             {
                 std::lock_guard<std::mutex> artLock(g_artCacheMutex);
                 if (trackKey != g_currentTrackKey) {
@@ -599,6 +631,12 @@ static void EmitMediaState(bool includeVolume) {
                         g_previousTrackArt = prevIt->second;
                     }
                     g_currentTrackKey = trackKey;
+                    g_trackStartTime = now;
+                    ++g_artCorrectionGeneration;
+                } else {
+                    if (std::chrono::duration_cast<std::chrono::milliseconds>(now - g_trackStartTime).count() > 1000) {
+                        g_previousTrackArt.clear();
+                    }
                 }
                 staleArt = g_previousTrackArt;
 
@@ -608,21 +646,28 @@ static void EmitMediaState(bool includeVolume) {
                 }
             }
 
+            bool isInitialWindow = (std::chrono::duration_cast<std::chrono::milliseconds>(now - g_trackStartTime).count() < 400);
+            bool allowStale = !isInitialWindow;
+
             // Attempt immediate extraction from current props if art is missing or properties changed
             bool propsDirty = g_mediaPropsDirty.exchange(false);
             if ((albumArt.empty() || propsDirty) && props.Thumbnail() != nullptr) {
-                std::string fetchedArt = TryExtractThumbnail(props, staleArt);
+                std::string fetchedArt = TryExtractThumbnail(props, staleArt, allowStale);
                 if (!fetchedArt.empty() && fetchedArt != albumArt) {
                     std::lock_guard<std::mutex> artLock(g_artCacheMutex);
                     g_trackArtMap[trackKey] = fetchedArt;
+                    g_trackArtOrder.push_back(trackKey);
+                    while (g_trackArtMap.size() > 30 && !g_trackArtOrder.empty()) {
+                        std::string oldest = g_trackArtOrder.front();
+                        g_trackArtOrder.erase(g_trackArtOrder.begin());
+                        if (oldest != trackKey) g_trackArtMap.erase(oldest);
+                    }
                     albumArt = fetchedArt;
                 }
             }
 
-            // Continuous 10-second auto-resync:
-            // If the song is active and albumArt is still missing, retry at least every 10 seconds
+            // Continuous 10-second auto-resync if playing track is still missing art
             if (albumArt.empty() && !trackKey.empty() && !isNewTrack) {
-                auto now = std::chrono::steady_clock::now();
                 bool shouldResync = false;
                 {
                     std::lock_guard<std::mutex> resyncLock(g_artResyncMutex);
@@ -636,11 +681,12 @@ static void EmitMediaState(bool includeVolume) {
                     try {
                         auto freshProps = session.TryGetMediaPropertiesAsync().get();
                         if (freshProps) {
-                            std::string freshArt = TryExtractThumbnail(freshProps, staleArt);
+                            std::string freshArt = TryExtractThumbnail(freshProps, staleArt, true);
                             if (!freshArt.empty()) {
                                 {
                                     std::lock_guard<std::mutex> artLock(g_artCacheMutex);
                                     g_trackArtMap[trackKey] = freshArt;
+                                    g_trackArtOrder.push_back(trackKey);
                                 }
                                 albumArt = freshArt;
                             }
@@ -649,23 +695,23 @@ static void EmitMediaState(bool includeVolume) {
                 }
             }
 
-            // Initial retry worker: spawned when a new track starts, artwork is pending or small,
-            // or when properties change.
-            bool needsWorker = (isNewTrack || albumArt.empty() || albumArt.size() < 10000 || propsDirty) && !trackKey.empty();
-            if (needsWorker) {
+            // Dedicated background retry worker for asynchronously delivered poster thumbnails (such as YouTube in browsers)
+            uint64_t curGen = g_artCorrectionGeneration.load();
+            bool needsWorker = (albumArt.empty() || albumArt.size() < 10000 || propsDirty) && !trackKey.empty();
+            if (needsWorker && g_activeWorkerGen.load() != curGen) {
+                g_activeWorkerGen.store(curGen);
                 {
                     std::lock_guard<std::mutex> resyncLock(g_artResyncMutex);
-                    g_lastArtResyncTime = std::chrono::steady_clock::now();
+                    g_lastArtResyncTime = now;
                 }
-                uint64_t gen = ++g_artCorrectionGeneration;
                 std::string currentDeliveredArt = albumArt;
-                std::thread([gen, trackKey, staleArt, currentDeliveredArt]() mutable {
+                std::thread([curGen, trackKey, currentDeliveredArt]() mutable {
                     ApartmentScope apt;
-                    const int delaysMs[] = { 300, 600, 1000, 1500, 2200, 3200 };
+                    const int delaysMs[] = { 300, 600, 1000, 1500, 2200, 3200, 4500 };
 
                     for (int delay : delaysMs) {
                         std::this_thread::sleep_for(std::chrono::milliseconds(delay));
-                        if (g_artCorrectionGeneration.load() != gen) return;
+                        if (g_artCorrectionGeneration.load() != curGen) return; // Switched track
 
                         try {
                             winrt_media::GlobalSystemMediaTransportControlsSession curSession{nullptr};
@@ -677,22 +723,32 @@ static void EmitMediaState(bool includeVolume) {
                             if (curSession) {
                                 auto p = curSession.TryGetMediaPropertiesAsync().get();
                                 if (p) {
-                                    std::string curTrackKey = Utf16ToUtf8(p.Title().c_str()) + "_" + Utf16ToUtf8(p.Artist().c_str());
+                                    std::string pTitle = Utf16ToUtf8(p.Title().c_str());
+                                    std::string pArtist = Utf16ToUtf8(p.Artist().c_str());
+                                    TrimString(pTitle);
+                                    TrimString(pArtist);
+                                    std::string curTrackKey = pTitle + "_" + pArtist;
                                     if (curTrackKey != trackKey) return; // Switched track
 
-                                    std::string newArt = TryExtractThumbnail(p, staleArt);
+                                    // After initial settling delay, accept any provided thumbnail as authentic
+                                    bool allowStaleArt = (delay >= 500);
+                                    std::string newArt = TryExtractThumbnail(p, "", allowStaleArt);
                                     if (!newArt.empty() && newArt != currentDeliveredArt) {
                                         bool changed = false;
                                         {
                                             std::lock_guard<std::mutex> artLock(g_artCacheMutex);
                                             if (g_trackArtMap[trackKey] != newArt) {
                                                 g_trackArtMap[trackKey] = newArt;
+                                                g_trackArtOrder.push_back(trackKey);
                                                 changed = true;
                                             }
                                         }
                                         if (changed) {
                                             currentDeliveredArt = newArt;
                                             ScheduleEmit();
+                                            if (newArt.size() > 10000) {
+                                                return; // High-res poster acquired
+                                            }
                                         }
                                     }
                                 }

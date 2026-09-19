@@ -7,6 +7,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -414,10 +415,9 @@ func onNativeMedia(cStr *byte) uintptr {
 		title, _ := payload["title"].(string)
 		artist, _ := payload["artist"].(string)
 		sourceApp, _ := payload["sourceApp"].(string)
-		activeSessionID, _ := payload["activeSessionId"].(string)
 		isPlaying, _ := payload["isPlaying"].(bool)
 
-		trackKey := sourceApp + "::" + activeSessionID + "::" + title + "::" + artist
+		trackKey := strings.TrimSpace(sourceApp) + "::" + strings.TrimSpace(title) + "::" + strings.TrimSpace(artist)
 
 		hiddenMu.RLock()
 		hidden := isAppHidden
@@ -458,7 +458,22 @@ func onNativeMedia(cStr *byte) uintptr {
 		}
 
 		cachedMediaStateMu.Lock()
-		cachedMediaState = payload
+		if art != "" {
+			cachedMediaState = payload
+		} else if cachedMediaState != nil && !trackChanged {
+			if existingArt, ok := cachedMediaState["albumArt"].(string); ok && existingArt != "" {
+				stateCopy := make(map[string]interface{}, len(payload))
+				for k, v := range payload {
+					stateCopy[k] = v
+				}
+				stateCopy["albumArt"] = existingArt
+				cachedMediaState = stateCopy
+			} else {
+				cachedMediaState = payload
+			}
+		} else {
+			cachedMediaState = payload
+		}
 		cachedMediaStateMu.Unlock()
 
 		if !isFrontendReady.Load() {
