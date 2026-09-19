@@ -226,9 +226,15 @@ jobs:
               $prevTag = git tag --sort=-v:refname | Select-Object -First 1
           }
 
+          <#
+            Formats a changelog entry to shorten pull request links.
+            Converts full pull request URLs into PR references and normalizes issue numbers.
+          #>
           function Format-ChangelogEntry([string]$text) {
               if (-not $text) { return $text }
-              return [regex]::Replace($text, '\(#(\d+)\)', '([#$1](https://github.com/${{ github.repository }}/pull/$1))')
+              $text = [regex]::Replace($text, '\bin\s+(https?://github\.com/[^/\s]+/[^/\s]+/pull/(\d+))/?', 'in PR: ([#$2]($1))')
+              $text = [regex]::Replace($text, '(?<!\[)\(#(\d+)\)', '([#$1](https://github.com/${{ github.repository }}/pull/$1))')
+              return $text
           }
 
           # Attempt auto-generation using GitHub Releases API

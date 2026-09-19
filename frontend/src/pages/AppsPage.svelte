@@ -20,7 +20,8 @@
     Search,
     FileText,
     SlidersHorizontal,
-    Download
+    Download,
+    Calculator
   } from 'lucide-svelte'
   import HomePage, { config as homeConfig } from './HomePage.svelte'
   import NotificationPage, {
@@ -29,6 +30,9 @@
   import MediaPage, { config as mediaConfig } from './MediaPage.svelte'
   import SettingsPage, { config as settingsConfig } from './SettingsPage.svelte'
   import NotesPage, { config as notesConfig } from './NotesPage.svelte'
+  import CalculatorPage, {
+    config as calculatorConfig
+  } from './CalculatorPage.svelte'
   import ActionCenterPage, {
     config as actionCenterConfig
   } from './ActionCenterPage.svelte'
@@ -90,6 +94,14 @@
       color: 'gradient-amber',
       visibilityKey: 'notes',
       action: () => openApp(NotesPage, notesConfig)
+    },
+    {
+      id: 'calculator',
+      name: 'Calculator',
+      desc: 'Math & Utilities',
+      icon: Calculator,
+      color: 'gradient-orange',
+      action: () => openApp(CalculatorPage, calculatorConfig)
     },
     {
       id: 'media',

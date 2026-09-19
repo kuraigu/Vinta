@@ -294,8 +294,19 @@
   }
   $effect(handleArtRequeryEffect)
 
+  let imgLoadFailed = $state(false)
+  let lastArtSrc = $state('')
+
+  function handleArtSyncEffect() {
+    if (media.albumArt !== lastArtSrc) {
+      lastArtSrc = media.albumArt
+      imgLoadFailed = false
+    }
+  }
+  $effect(handleArtSyncEffect)
+
   function handleImgError() {
-    globalMediaStore.update((m) => ({ ...m, albumArt: '' }))
+    imgLoadFailed = true
   }
 
   // Smooth local timeline progression between backend SMTC updates.
@@ -546,7 +557,7 @@
         title={media.title}
       >
         <div class="vinyl-groove">
-          {#if media.albumArt}
+          {#if media.albumArt && !imgLoadFailed}
             <img
               src={media.albumArt}
               alt={media.title}
@@ -635,7 +646,7 @@
   {:else}
     <!-- Full-Card Background Image / Procedural Texture -->
     <div class="card-bg-wrapper">
-      {#if media.albumArt}
+      {#if media.albumArt && !imgLoadFailed}
         <img
           src={media.albumArt}
           alt={media.title}

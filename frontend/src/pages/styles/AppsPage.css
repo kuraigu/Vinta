@@ -172,6 +172,10 @@
   background: linear-gradient(135deg, #22d3ee 0%, #0e7490 100%);
 }
 
+.bento-app-card.gradient-orange .card-icon-wrapper {
+  background: linear-gradient(135deg, #fb923c 0%, #ea580c 100%);
+}
+
 .bento-app-card.gradient-dark .card-icon-wrapper {
   background: linear-gradient(135deg, #64748b 0%, #1e293b 100%);
 }

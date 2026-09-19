@@ -258,7 +258,7 @@
   }
 </script>
 
-<SidebarLayout title="Quick Notes">
+<SidebarLayout title="Quick Notes" showBackButton={true}>
   {#snippet sidebar()}
     <NoteSidebar
       notes={filteredNotes}
