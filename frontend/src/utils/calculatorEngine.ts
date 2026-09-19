@@ -1,6 +1,7 @@
 /**
  * Safe, zero-eval arithmetic parser and evaluator for Vinta Calculator.
- * Implements tokenization and recursive-descent parsing with standard operator precedence.
+ * Supports standard arithmetic, superscript powers (e.g. 9⁵, 2³), square roots (√16),
+ * editable nth-roots (e.g. ³√27, ⁴√16), parentheses, and floating-point precision stabilization.
  */
 
 export interface CalculationResult {
@@ -24,7 +25,10 @@ enum TokenType {
   Number,
   Operator,
   LeftParen,
-  RightParen
+  RightParen,
+  Comma,
+  Sqrt,
+  NthRoot
 }
 
 interface Token {
@@ -32,11 +36,50 @@ interface Token {
   value: string
 }
 
-function tokenize(expression: string): Token[] | string {
-  const sanitized = expression
+function fromSuperscript(str: string): string {
+  const map: Record<string, string> = {
+    '⁰': '0',
+    '¹': '1',
+    '²': '2',
+    '³': '3',
+    '⁴': '4',
+    '⁵': '5',
+    '⁶': '6',
+    '⁷': '7',
+    '⁸': '8',
+    '⁹': '9'
+  }
+  return str
+    .split('')
+    .map((c) => map[c] || c)
+    .join('')
+}
+
+function sanitizeExpression(expr: string): string {
+  let s = expr
     .replace(/×/g, '*')
     .replace(/÷/g, '/')
     .replace(/−/g, '-')
+    .replace(/xʸ/g, '^')
+    .replace(/ʸ√/g, '√')
+    .replace(/ⁿ√/g, '√')
+    .replace(/ʸ/g, '')
+
+  // 1. Convert root indices: ³√27 -> 3√27
+  s = s.replace(/([⁰¹²³⁴⁵⁶⁷⁸⁹]+)√/g, (_, p1) => {
+    return fromSuperscript(p1) + '√'
+  })
+
+  // 2. Convert remaining superscripts into powers: 9⁵ -> 9 ^ 5
+  s = s.replace(/([⁰¹²³⁴⁵⁶⁷⁸⁹]+)/g, (_, p1) => {
+    return ' ^ ' + fromSuperscript(p1)
+  })
+
+  return s
+}
+
+function tokenize(expression: string): Token[] | string {
+  const sanitized = sanitizeExpression(expression)
   const tokens: Token[] = []
   let i = 0
 
@@ -48,6 +91,7 @@ function tokenize(expression: string): Token[] | string {
       continue
     }
 
+    // Number literals (including decimals and attached nth-root like 3√27)
     if ((char >= '0' && char <= '9') || char === '.') {
       let numStr = ''
       let hasDot = false
@@ -66,10 +110,39 @@ function tokenize(expression: string): Token[] | string {
         i++
       }
 
+      // Check if this number is directly followed by a root radical, e.g. 3√27
+      if (i < sanitized.length && sanitized[i] === '√') {
+        tokens.push({ type: TokenType.NthRoot, value: numStr })
+        i++ // consume the radical symbol
+        continue
+      }
+
       tokens.push({ type: TokenType.Number, value: numStr })
       continue
     }
 
+    // Standalone radical symbol: square root
+    if (char === '√') {
+      tokens.push({ type: TokenType.Sqrt, value: '2' })
+      i++
+      continue
+    }
+
+    // Cube root radical symbol
+    if (char === '∛') {
+      tokens.push({ type: TokenType.NthRoot, value: '3' })
+      i++
+      continue
+    }
+
+    // Exponentiation operator
+    if (char === '^') {
+      tokens.push({ type: TokenType.Operator, value: '^' })
+      i++
+      continue
+    }
+
+    // Standard arithmetic operators
     if (
       char === '+' ||
       char === '-' ||
@@ -82,6 +155,7 @@ function tokenize(expression: string): Token[] | string {
       continue
     }
 
+    // Parentheses
     if (char === '(') {
       tokens.push({ type: TokenType.LeftParen, value: char })
       i++
@@ -94,10 +168,36 @@ function tokenize(expression: string): Token[] | string {
       continue
     }
 
+    if (char === ',') {
+      tokens.push({ type: TokenType.Comma, value: char })
+      i++
+      continue
+    }
+
     return `Unexpected character: ${char}`
   }
 
   return tokens
+}
+
+/**
+ * Calculates the y-th root of x safely.
+ */
+function calculateNthRoot(base: number, rootIndex: number): number {
+  if (rootIndex === 0) {
+    throw new Error('Cannot take 0th root')
+  }
+  if (base === 0) {
+    return 0
+  }
+  if (base < 0) {
+    // Check if rootIndex is an odd integer
+    if (Math.abs(rootIndex % 2) === 1) {
+      return -Math.pow(-base, 1 / rootIndex)
+    }
+    throw new Error('Invalid root of negative number')
+  }
+  return Math.pow(base, 1 / rootIndex)
 }
 
 export function evaluateExpression(expr: string): EvalOutcome {
@@ -126,6 +226,7 @@ export function evaluateExpression(expr: string): EvalOutcome {
     return tokens[index++]
   }
 
+  // Lowest precedence: Addition and Subtraction
   function parseExpression(): number {
     let left = parseTerm()
 
@@ -151,8 +252,9 @@ export function evaluateExpression(expr: string): EvalOutcome {
     return left
   }
 
+  // Medium precedence: Multiplication, Division, Modulo
   function parseTerm(): number {
-    let left = parseFactor()
+    let left = parsePower()
 
     while (index < tokens.length) {
       const next = peek()
@@ -162,7 +264,7 @@ export function evaluateExpression(expr: string): EvalOutcome {
         (next.value === '*' || next.value === '/' || next.value === '%')
       ) {
         consume()
-        const right = parseFactor()
+        const right = parsePower()
         if (next.value === '*') {
           left = left * right
         } else if (next.value === '/') {
@@ -184,7 +286,26 @@ export function evaluateExpression(expr: string): EvalOutcome {
     return left
   }
 
-  function parseFactor(): number {
+  // Higher precedence: Power (^)
+  function parsePower(): number {
+    let left = parseUnary()
+
+    while (index < tokens.length) {
+      const next = peek()
+      if (next && next.type === TokenType.Operator && next.value === '^') {
+        consume()
+        const right = parseUnary()
+        left = Math.pow(left, right)
+      } else {
+        break
+      }
+    }
+
+    return left
+  }
+
+  // Highest operator precedence: Unary signs, Roots (√ and 3√)
+  function parseUnary(): number {
     const next = peek()
     if (!next) {
       throw new Error('Incomplete expression')
@@ -196,8 +317,36 @@ export function evaluateExpression(expr: string): EvalOutcome {
       (next.value === '+' || next.value === '-')
     ) {
       consume()
-      const factor = parseFactor()
+      const factor = parseUnary()
       return next.value === '-' ? -factor : factor
+    }
+
+    // Square root radical: √16 or √(16)
+    if (next.type === TokenType.Sqrt) {
+      consume()
+      const radicand = parsePrimary()
+      if (radicand < 0) {
+        throw new Error('Cannot take square root of negative number')
+      }
+      return Math.sqrt(radicand)
+    }
+
+    // Nth-root radical: 3√27 or 4√16
+    if (next.type === TokenType.NthRoot) {
+      const rootToken = consume()
+      const rootIdx = parseFloat(rootToken.value)
+      const radicand = parsePrimary()
+      return calculateNthRoot(radicand, rootIdx)
+    }
+
+    // Primary: Parentheses and Numbers
+    return parsePrimary()
+  }
+
+  function parsePrimary(): number {
+    const next = peek()
+    if (!next) {
+      throw new Error('Incomplete expression')
     }
 
     // Parentheses
@@ -222,6 +371,11 @@ export function evaluateExpression(expr: string): EvalOutcome {
       return num
     }
 
+    // If another root immediately follows, parse as nested unary
+    if (next.type === TokenType.Sqrt || next.type === TokenType.NthRoot) {
+      return parseUnary()
+    }
+
     throw new Error('Unexpected token')
   }
 
@@ -231,7 +385,7 @@ export function evaluateExpression(expr: string): EvalOutcome {
       return { error: 'Syntax error' }
     }
 
-    // Normalize floating point quirks e.g. 0.1 + 0.2 = 0.30000000000000004
+    // Normalize floating point quirks e.g. 0.1 + 0.2 = 0.3
     const rounded = parseFloat(rawVal.toPrecision(12))
     return {
       value: rounded,

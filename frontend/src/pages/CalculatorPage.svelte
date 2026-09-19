@@ -3,282 +3,442 @@
 
   export const config: IslandConfig = {
     minimal: { w: 10, h: 10, r: 5 },
-    expanded: { w: 340, h: 480, r: 28 },
+    expanded: { w: 340, h: 470, r: 28 },
     borderColor: 'var(--c-border)',
     glowColor: 'transparent'
   }
 </script>
 
 <script lang="ts">
-  import { onMount, getContext } from 'svelte'
-  import { ArrowLeft, Delete, History } from 'lucide-svelte'
-  import AppsPage, { config as appsConfig } from './AppsPage.svelte'
+  import { Delete } from 'lucide-svelte'
+  import BackButton from '../components/BackButton.svelte'
   import {
     evaluateExpression,
-    formatNumberDisplay,
     isCalculationError
   } from '../utils/calculatorEngine'
 
-  const navigate =
-    getContext<
-      (page: unknown, pageConfig: IslandConfig, expand?: boolean) => void
-    >('navigate')
+  let expression = $state('0')
+  let historyFormula = $state('')
+  let errorMessage = $state('')
+  let isExponentMode = $state(false)
 
-  let expression = $state<string>('')
-  let displayValue = $state<string>('0')
-  let historyExpr = $state<string>('')
-  let historyResult = $state<string>('')
-  let isResultEvaluated = $state<boolean>(false)
-
-  function handleGoBack() {
-    if (navigate) {
-      navigate(AppsPage, appsConfig, true)
+  let livePreview = $derived.by(() => {
+    if (!expression || expression === '0' || errorMessage) return ''
+    const res = evaluateExpression(expression)
+    if (!isCalculationError(res) && res.display !== expression) {
+      return `= ${res.display}`
     }
+    return ''
+  })
+
+  function handleClear() {
+    expression = '0'
+    historyFormula = ''
+    errorMessage = ''
+    isExponentMode = false
   }
 
-  function handleInput(char: string) {
-    if (isResultEvaluated) {
-      if ('0123456789.'.includes(char)) {
-        expression = char === '.' ? '0.' : char
-        displayValue = expression
-        isResultEvaluated = false
-        return
-      } else {
-        // Continue operating on the previous result
-        expression = displayValue
-        isResultEvaluated = false
-      }
-    }
-
-    if (char === '.') {
-      const parts = expression.split(/[+\-×÷%()]/)
-      const currentSegment = parts[parts.length - 1]
-      if (currentSegment.includes('.')) return
-      if (!currentSegment || currentSegment === '') {
-        expression += '0.'
-        displayValue = expression
-        return
-      }
-    }
-
-    expression += char
-    displayValue = expression
+  const SUPERSCRIPT_MAP: Record<string, string> = {
+    '0': '⁰',
+    '1': '¹',
+    '2': '²',
+    '3': '³',
+    '4': '⁴',
+    '5': '⁵',
+    '6': '⁶',
+    '7': '⁷',
+    '8': '⁸',
+    '9': '⁹'
   }
 
-  function handleOperator(op: string) {
-    if (isResultEvaluated) {
-      expression = displayValue
-      isResultEvaluated = false
-    }
-
-    if (!expression) {
-      if (op === '−') {
-        expression = '−'
-        displayValue = '−'
-      }
-      return
-    }
-
-    const lastChar = expression[expression.length - 1]
-    if (['+', '−', '×', '÷'].includes(lastChar)) {
-      expression = expression.slice(0, -1) + op
-    } else {
-      expression += op
-    }
-    displayValue = expression
-  }
-
-  function handleToggleSign() {
-    if (isResultEvaluated) {
-      const num = parseFloat(displayValue.replace(/,/g, ''))
-      if (!isNaN(num)) {
-        const toggled = -num
-        displayValue = formatNumberDisplay(toggled)
-        expression = toggled.toString()
-        return
-      }
-    }
-
-    if (!expression) {
-      expression = '−'
-      displayValue = '−'
-      return
-    }
-
-    if (expression.startsWith('−')) {
-      expression = expression.slice(1)
-    } else if (expression.startsWith('-')) {
-      expression = expression.slice(1)
-    } else {
-      expression = '−' + expression
-    }
-    displayValue = expression
+  function toSuperscript(numStr: string): string {
+    return numStr
+      .split('')
+      .map((c) => SUPERSCRIPT_MAP[c] || c)
+      .join('')
   }
 
   function handleBackspace() {
-    if (isResultEvaluated) {
-      expression = ''
-      displayValue = '0'
-      isResultEvaluated = false
+    errorMessage = ''
+    if (expression.endsWith('ʸ')) {
+      expression = expression.slice(0, -1)
+      isExponentMode = false
+    } else if (expression.endsWith('ⁿ√')) {
+      expression = expression.slice(0, -2)
+      if (!expression) expression = '0'
+    } else if (/[⁰¹²³⁴⁵⁶⁷⁸⁹]+√$/.test(expression)) {
+      // Revert root index from e.g. ³√ back to ⁿ√
+      expression = expression.replace(/[⁰¹²³⁴⁵⁶⁷⁸⁹]+√$/, 'ⁿ√')
+    } else if (/[⁰¹²³⁴⁵⁶⁷⁸⁹]$/.test(expression)) {
+      expression = expression.slice(0, -1)
+      if (!/[⁰¹²³⁴⁵⁶⁷⁸⁹]$/.test(expression)) {
+        isExponentMode = false
+      }
+    } else if (expression.length > 1) {
+      expression = expression.slice(0, -1)
+    } else {
+      expression = '0'
+      isExponentMode = false
+    }
+  }
+
+  function handleDigit(d: string) {
+    errorMessage = ''
+    if (expression === '0') {
+      expression = d
       return
     }
 
-    if (expression.length > 0) {
+    // If expression currently ends with ⁿ√, replace ⁿ with the typed digit in superscript
+    if (expression.endsWith('ⁿ√')) {
+      expression = expression.slice(0, -2) + toSuperscript(d) + '√'
+      return
+    }
+
+    // If in exponent mode and expression ends with ʸ placeholder, replace ʸ with superscript digit
+    if (expression.endsWith('ʸ')) {
+      expression = expression.slice(0, -1) + toSuperscript(d)
+      return
+    }
+
+    // If previous character was a superscript digit and we are still in exponent mode, continue superscript
+    if (isExponentMode && /[⁰¹²³⁴⁵⁶⁷⁸⁹]$/.test(expression)) {
+      expression += toSuperscript(d)
+      return
+    }
+
+    isExponentMode = false
+    expression += d
+  }
+
+  function handleDecimal() {
+    errorMessage = ''
+    // Check if current active number chunk already contains decimal
+    const parts = expression.split(/[\s+−×÷^()]+/)
+    const currentPart = parts[parts.length - 1] || ''
+    if (!currentPart.includes('.')) {
+      expression += '.'
+    }
+  }
+
+  function handleOperator(op: string) {
+    errorMessage = ''
+    isExponentMode = false
+
+    if (expression.endsWith('ʸ')) {
       expression = expression.slice(0, -1)
-      displayValue = expression.length > 0 ? expression : '0'
     }
-  }
 
-  function handleClear() {
-    if (expression || displayValue !== '0') {
-      expression = ''
-      displayValue = '0'
-      isResultEvaluated = false
+    if (expression === '0' && op === '−') {
+      expression = '−'
+      return
+    }
+
+    const trimmed = expression.trim()
+    const lastChar = trimmed[trimmed.length - 1]
+    if (['+', '−', '×', '÷', '^'].includes(lastChar)) {
+      expression = trimmed.slice(0, -1) + op
     } else {
-      historyExpr = ''
-      historyResult = ''
+      expression += ` ${op} `
     }
   }
 
-  function handleCalculate() {
-    if (!expression.trim()) return
+  function handleSquareRoot() {
+    errorMessage = ''
+    if (expression === '0') {
+      expression = '√'
+    } else {
+      const trimmed = expression.trim()
+      const lastChar = trimmed[trimmed.length - 1]
+      if (['+', '−', '×', '÷', '^', '('].includes(lastChar)) {
+        expression += '√'
+      } else {
+        expression = `√(${expression})`
+      }
+    }
+  }
 
+  function handleRoot() {
+    errorMessage = ''
+    if (expression === '0') {
+      // Waiting for root index (e.g. user types 3 -> ³√ or 4 -> ⁴√)
+      expression = 'ⁿ√'
+      return
+    }
+
+    const trimmed = expression.trim()
+    const lastChar = trimmed[trimmed.length - 1]
+
+    // If last token is a number, convert it into the superscript root index
+    if (lastChar >= '0' && lastChar <= '9') {
+      const match = trimmed.match(/(\d+)$/)
+      if (match) {
+        const num = match[1]
+        const before = trimmed.slice(0, -num.length)
+        expression = `${before}${toSuperscript(num)}√`
+        return
+      }
+    }
+
+    if (['+', '−', '×', '÷', '^', '('].includes(lastChar)) {
+      expression += 'ⁿ√'
+    } else {
+      expression += ' × ⁿ√'
+    }
+  }
+
+  function handlePower() {
+    errorMessage = ''
+    if (expression === '0') return
+    const trimmed = expression.trim()
+    const lastChar = trimmed[trimmed.length - 1]
+    if (
+      (lastChar >= '0' && lastChar <= '9') ||
+      lastChar in SUPERSCRIPT_MAP ||
+      lastChar === ')'
+    ) {
+      isExponentMode = true
+      expression += 'ʸ'
+    }
+  }
+
+  function handleParenthesis(p: '(' | ')') {
+    errorMessage = ''
+    if (p === '(') {
+      if (expression === '0') {
+        expression = '('
+      } else {
+        const trimmed = expression.trim()
+        const lastChar = trimmed[trimmed.length - 1]
+        if (lastChar >= '0' && lastChar <= '9') {
+          expression += ' × ('
+        } else {
+          expression += '('
+        }
+      }
+    } else {
+      const openCount = (expression.match(/\(/g) || []).length
+      const closeCount = (expression.match(/\)/g) || []).length
+      if (openCount > closeCount) {
+        expression += ')'
+      }
+    }
+  }
+
+  function handleToggleSign() {
+    errorMessage = ''
+    if (expression === '0') return
+    if (expression.startsWith('-') || expression.startsWith('−')) {
+      expression = expression.slice(1)
+    } else {
+      expression = `−${expression}`
+    }
+  }
+
+  function handleEvaluate() {
+    errorMessage = ''
+    isExponentMode = false
+    if (expression.endsWith('ʸ')) {
+      expression = expression.slice(0, -1)
+    }
     const outcome = evaluateExpression(expression)
     if (isCalculationError(outcome)) {
-      displayValue = outcome.error
-      isResultEvaluated = true
-      return
-    }
-
-    historyExpr = expression
-    historyResult = outcome.display
-    displayValue = outcome.display
-    expression = outcome.value.toString()
-    isResultEvaluated = true
-  }
-
-  function handleRecallHistory() {
-    if (historyResult) {
-      expression = historyResult.replace(/,/g, '')
-      displayValue = historyResult
-      isResultEvaluated = false
+      errorMessage = outcome.error
+    } else {
+      historyFormula = `${expression} =`
+      expression = outcome.value.toString()
     }
   }
 
-  function handleKeyDown(e: KeyboardEvent) {
-    if (
-      e.target instanceof HTMLInputElement ||
-      e.target instanceof HTMLTextAreaElement
-    ) {
-      return
+  function setupKeyboardListener() {
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.defaultPrevented) return
+
+      if (e.key >= '0' && e.key <= '9') {
+        e.preventDefault()
+        handleDigit(e.key)
+      } else if (e.key === '.') {
+        e.preventDefault()
+        handleDecimal()
+      } else if (e.key === '+') {
+        e.preventDefault()
+        handleOperator('+')
+      } else if (e.key === '-') {
+        e.preventDefault()
+        handleOperator('−')
+      } else if (e.key === '*') {
+        e.preventDefault()
+        handleOperator('×')
+      } else if (e.key === '/') {
+        e.preventDefault()
+        handleOperator('÷')
+      } else if (e.key === '^') {
+        e.preventDefault()
+        handlePower()
+      } else if (e.key === '(' || e.key === ')') {
+        e.preventDefault()
+        handleParenthesis(e.key)
+      } else if (e.key === 'Enter' || e.key === '=') {
+        e.preventDefault()
+        handleEvaluate()
+      } else if (e.key === 'Backspace') {
+        e.preventDefault()
+        handleBackspace()
+      } else if (e.key === 'Escape') {
+        e.preventDefault()
+        handleClear()
+      }
     }
 
-    const key = e.key
-
-    if (key >= '0' && key <= '9') {
-      handleInput(key)
-      e.preventDefault()
-    } else if (key === '.') {
-      handleInput('.')
-      e.preventDefault()
-    } else if (key === '+') {
-      handleOperator('+')
-      e.preventDefault()
-    } else if (key === '-') {
-      handleOperator('−')
-      e.preventDefault()
-    } else if (key === '*') {
-      handleOperator('×')
-      e.preventDefault()
-    } else if (key === '/') {
-      handleOperator('÷')
-      e.preventDefault()
-    } else if (key === '%') {
-      handleOperator('%')
-      e.preventDefault()
-    } else if (key === '(' || key === ')') {
-      handleInput(key)
-      e.preventDefault()
-    } else if (key === 'Enter' || key === '=') {
-      handleCalculate()
-      e.preventDefault()
-    } else if (key === 'Backspace') {
-      handleBackspace()
-      e.preventDefault()
-    } else if (key === 'Escape') {
-      handleClear()
-      e.preventDefault()
-    }
-  }
-
-  onMount(() => {
-    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('keydown', onKeyDown)
     return () => {
-      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keydown', onKeyDown)
     }
-  })
+  }
+
+  $effect(setupKeyboardListener)
 </script>
 
-<div class="calc-page">
-  <!-- Header Bar -->
+<div class="calculator-page">
+  <!-- Uniform Reusable Header -->
   <div class="calc-header">
-    <button class="icon-btn" onclick={handleGoBack} title="Back to Apps">
-      <ArrowLeft size={16} />
-    </button>
-    <div class="calc-title">Calculator</div>
-    <button
-      class="icon-btn"
-      onclick={handleClear}
-      title="Clear Expression (Escape)"
-    >
-      <Delete size={15} />
-    </button>
+    <BackButton />
+    <span class="header-title">Calculator</span>
+    <div class="header-spacer"></div>
   </div>
 
-  <!-- Display Section -->
-  <div class="calc-screen">
-    {#if historyExpr}
-      <button
-        class="calc-history"
-        onclick={handleRecallHistory}
-        title="Recall previous calculation"
-      >
-        <History size={11} />
-        <span>{historyExpr} = {historyResult}</span>
-      </button>
-    {:else}
-      <div class="calc-history-placeholder"></div>
-    {/if}
-    <div class="calc-expression">{expression || ' '}</div>
-    <div class="calc-result" title={displayValue}>{displayValue}</div>
+  <!-- Display Panel -->
+  <div class="calc-display-card">
+    <div class="display-history-row">
+      <span class="history-text" title={historyFormula || ''}>
+        {historyFormula}
+      </span>
+      {#if livePreview}
+        <span class="live-preview-text">{livePreview}</span>
+      {/if}
+    </div>
+    <div class="display-main-row">
+      {#if errorMessage}
+        <span class="error-text">{errorMessage}</span>
+      {:else}
+        <span
+          class="main-expression"
+          class:scaled-down={expression.length > 12}
+          title={expression}
+        >
+          {expression}
+        </span>
+      {/if}
+    </div>
   </div>
 
-  <!-- Keypad Grid -->
+  <!-- Keypad: 6 rows x 4 columns -->
   <div class="calc-keypad">
-    <button class="key action-key" onclick={handleClear}>C</button>
-    <button class="key action-key" onclick={() => handleInput('(')}>(</button>
-    <button class="key action-key" onclick={() => handleInput(')')}>)</button>
-    <button class="key op-key" onclick={() => handleOperator('÷')}>÷</button>
+    <!-- Row 1: Clear, Grouping, Backspace -->
+    <button class="calc-btn action-btn" onclick={handleClear} title="All Clear">
+      C
+    </button>
+    <button
+      class="calc-btn action-btn"
+      onclick={() => handleParenthesis('(')}
+      title="Open Parenthesis"
+    >
+      (
+    </button>
+    <button
+      class="calc-btn action-btn"
+      onclick={() => handleParenthesis(')')}
+      title="Close Parenthesis"
+    >
+      )
+    </button>
+    <button
+      class="calc-btn func-btn backspace-btn"
+      onclick={handleBackspace}
+      title="Backspace"
+    >
+      <Delete size={17} />
+    </button>
 
-    <button class="key num-key" onclick={() => handleInput('7')}>7</button>
-    <button class="key num-key" onclick={() => handleInput('8')}>8</button>
-    <button class="key num-key" onclick={() => handleInput('9')}>9</button>
-    <button class="key op-key" onclick={() => handleOperator('×')}>×</button>
+    <!-- Row 2: Math functions & Divide -->
+    <button
+      class="calc-btn func-btn"
+      onclick={handleSquareRoot}
+      title="Square root"
+    >
+      √
+    </button>
+    <button
+      class="calc-btn func-btn"
+      onclick={handleRoot}
+      title="Nth root (e.g. 3√27)"
+    >
+      ⁿ√
+    </button>
+    <button class="calc-btn func-btn" onclick={handlePower} title="Power (xʸ)">
+      xʸ
+    </button>
+    <button
+      class="calc-btn op-btn"
+      onclick={() => handleOperator('÷')}
+      title="Divide"
+    >
+      ÷
+    </button>
 
-    <button class="key num-key" onclick={() => handleInput('4')}>4</button>
-    <button class="key num-key" onclick={() => handleInput('5')}>5</button>
-    <button class="key num-key" onclick={() => handleInput('6')}>6</button>
-    <button class="key op-key" onclick={() => handleOperator('−')}>−</button>
+    <!-- Row 3: 7, 8, 9, Multiply -->
+    <button class="calc-btn num-btn" onclick={() => handleDigit('7')}>7</button>
+    <button class="calc-btn num-btn" onclick={() => handleDigit('8')}>8</button>
+    <button class="calc-btn num-btn" onclick={() => handleDigit('9')}>9</button>
+    <button
+      class="calc-btn op-btn"
+      onclick={() => handleOperator('×')}
+      title="Multiply"
+    >
+      ×
+    </button>
 
-    <button class="key num-key" onclick={() => handleInput('1')}>1</button>
-    <button class="key num-key" onclick={() => handleInput('2')}>2</button>
-    <button class="key num-key" onclick={() => handleInput('3')}>3</button>
-    <button class="key op-key" onclick={() => handleOperator('+')}>+</button>
+    <!-- Row 4: 4, 5, 6, Subtract -->
+    <button class="calc-btn num-btn" onclick={() => handleDigit('4')}>4</button>
+    <button class="calc-btn num-btn" onclick={() => handleDigit('5')}>5</button>
+    <button class="calc-btn num-btn" onclick={() => handleDigit('6')}>6</button>
+    <button
+      class="calc-btn op-btn"
+      onclick={() => handleOperator('−')}
+      title="Subtract"
+    >
+      −
+    </button>
 
-    <button class="key action-key" onclick={handleToggleSign}>±</button>
-    <button class="key num-key" onclick={() => handleInput('0')}>0</button>
-    <button class="key num-key" onclick={() => handleInput('.')}>.</button>
-    <button class="key equals-key" onclick={handleCalculate}>=</button>
+    <!-- Row 5: 1, 2, 3, Add -->
+    <button class="calc-btn num-btn" onclick={() => handleDigit('1')}>1</button>
+    <button class="calc-btn num-btn" onclick={() => handleDigit('2')}>2</button>
+    <button class="calc-btn num-btn" onclick={() => handleDigit('3')}>3</button>
+    <button
+      class="calc-btn op-btn"
+      onclick={() => handleOperator('+')}
+      title="Add"
+    >
+      +
+    </button>
+
+    <!-- Row 6: ±, 0, ., Equals -->
+    <button
+      class="calc-btn num-btn"
+      onclick={handleToggleSign}
+      title="Toggle sign"
+    >
+      ±
+    </button>
+    <button class="calc-btn num-btn" onclick={() => handleDigit('0')}>0</button>
+    <button class="calc-btn num-btn" onclick={handleDecimal}>.</button>
+    <button
+      class="calc-btn equals-btn"
+      onclick={handleEvaluate}
+      title="Calculate"
+    >
+      =
+    </button>
   </div>
 </div>
 

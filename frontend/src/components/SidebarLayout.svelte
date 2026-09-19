@@ -1,8 +1,11 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
+  import BackButton from './BackButton.svelte'
 
   interface Props {
     title?: string
+    showBackButton?: boolean
+    onback?: () => void
     sidebarWidth?: string
     sidebar?: Snippet
     content?: Snippet
@@ -11,6 +14,8 @@
 
   let {
     title = '',
+    showBackButton = false,
+    onback,
     sidebarWidth = '160px',
     sidebar,
     content,
@@ -20,8 +25,14 @@
 
 <div class="sidebar-page-layout">
   {#if title}
-    <div class="page-header">
+    <div class="page-header" class:has-back={showBackButton}>
+      {#if showBackButton}
+        <BackButton {onback} />
+      {/if}
       <div class="page-title">{title}</div>
+      {#if showBackButton}
+        <div class="header-spacer"></div>
+      {/if}
     </div>
   {/if}
 
@@ -53,6 +64,17 @@
     margin-bottom: 12px;
     flex-shrink: 0;
     width: 100%;
+    min-height: 28px;
+  }
+
+  .page-header.has-back {
+    justify-content: space-between;
+  }
+
+  .header-spacer {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
   }
 
   .page-title {

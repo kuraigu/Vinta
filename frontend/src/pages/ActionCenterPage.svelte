@@ -10,9 +10,7 @@
 </script>
 
 <script lang="ts">
-  import { getContext } from 'svelte'
   import {
-    ArrowLeft,
     Wifi,
     WifiOff,
     Bluetooth,
@@ -24,7 +22,7 @@
     Plane,
     ExternalLink
   } from 'lucide-svelte'
-  import AppsPage, { config as appsConfig } from './AppsPage.svelte'
+  import BackButton from '../components/BackButton.svelte'
   import {
     wirelessDataStore,
     batteryDataStore,
@@ -41,14 +39,6 @@
     GetBatteryStatus
   } from '../../bindings/Vinta/backend/app.js'
 
-  const navigate =
-    getContext<
-      (page: unknown, pageConfig: IslandConfig, expand?: boolean) => void
-    >('navigate')
-
-  function handleBack() {
-    navigate(AppsPage, appsConfig, true)
-  }
 
   let wireless = $derived($wirelessDataStore)
   let battery = $derived($batteryDataStore)
@@ -167,9 +157,7 @@
 <div class="action-center-page">
   <!-- Header -->
   <div class="action-header">
-    <button class="back-btn" onclick={handleBack} title="Back to Apps">
-      <ArrowLeft size={14} />
-    </button>
+    <BackButton />
     <span class="header-title">Action Center</span>
     <div class="header-spacer"></div>
   </div>
