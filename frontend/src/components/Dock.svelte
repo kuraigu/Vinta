@@ -33,89 +33,81 @@
 
 <div class="dock-container">
   <div class="dock">
-    <DockButton
-      tooltip="Apps"
-      active={activePage === AppsPage}
-      onclick={(e: MouseEvent) => AppControls.goApps(navigate, e)}
-    >
-      <Grid size={18} />
-    </DockButton>
-
-    <div class="divider"></div>
-
-    <DockButton
-      tooltip="Home"
-      active={activePage === HomePage}
-      onclick={(e: MouseEvent) => AppControls.goHome(navigate, e)}
-    >
-      <House size={18} />
-    </DockButton>
-
-    {#if $pageVisibilityStore.media}
-      <div class="divider"></div>
+    <div class="dock-group">
+      <DockButton
+        tooltip="Apps"
+        active={activePage === AppsPage}
+        onclick={(e: MouseEvent) => AppControls.goApps(navigate, e)}
+      >
+        <Grid size={18} />
+      </DockButton>
 
       <DockButton
-        tooltip="Now Playing"
-        active={activePage === MediaPage}
-        onclick={(e: MouseEvent) => AppControls.goMedia(navigate, e)}
+        tooltip="Home"
+        active={activePage === HomePage}
+        onclick={(e: MouseEvent) => AppControls.goHome(navigate, e)}
       >
-        <Music size={18} />
+        <House size={18} />
       </DockButton>
-    {/if}
 
-    {#if $pageVisibilityStore.notifications}
-      <div class="divider"></div>
+      {#if $pageVisibilityStore.media}
+        <DockButton
+          tooltip="Now Playing"
+          active={activePage === MediaPage}
+          onclick={(e: MouseEvent) => AppControls.goMedia(navigate, e)}
+        >
+          <Music size={18} />
+        </DockButton>
+      {/if}
+
+      {#if $pageVisibilityStore.notifications}
+        <DockButton
+          tooltip="Notifications"
+          active={activePage === NotificationPage}
+          badge={$notifData.length > 0 ? $notifData.length : undefined}
+          onclick={(e: MouseEvent) => AppControls.goNotif(navigate, e)}
+        >
+          <Bell size={18} />
+        </DockButton>
+      {/if}
 
       <DockButton
-        tooltip="Notifications"
-        active={activePage === NotificationPage}
-        badge={$notifData.length > 0 ? $notifData.length : undefined}
-        onclick={(e: MouseEvent) => AppControls.goNotif(navigate, e)}
+        tooltip="Settings"
+        active={activePage === SettingsPage}
+        onclick={(e: MouseEvent) => AppControls.goSettings(navigate, e)}
       >
-        <Bell size={18} />
+        <Settings size={18} />
       </DockButton>
-    {/if}
+    </div>
 
     <div class="divider"></div>
 
-    <DockButton
-      tooltip="Settings"
-      active={activePage === SettingsPage}
-      onclick={(e: MouseEvent) => AppControls.goSettings(navigate, e)}
-    >
-      <Settings size={18} />
-    </DockButton>
+    <div class="dock-group">
+      <DockButton
+        variant="success"
+        tooltip="Hide Widget"
+        onclick={(e: MouseEvent) => AppControls.doHide(navigate, hidePill, e)}
+      >
+        <EyeOff size={18} />
+      </DockButton>
 
-    <div class="divider"></div>
+      <DockButton
+        variant="warning"
+        tooltip="Collapse Island"
+        onclick={(e: MouseEvent) =>
+          AppControls.doMinimize(navigate, e, activePage)}
+      >
+        <Minimize2 size={18} />
+      </DockButton>
 
-    <DockButton
-      variant="success"
-      tooltip="Hide Widget"
-      onclick={(e: MouseEvent) => AppControls.doHide(navigate, hidePill, e)}
-    >
-      <EyeOff size={18} />
-    </DockButton>
-
-    <div class="divider"></div>
-
-    <DockButton
-      variant="warning"
-      tooltip="Collapse Island"
-      onclick={(e: MouseEvent) =>
-        AppControls.doMinimize(navigate, e, activePage)}
-    >
-      <Minimize2 size={18} />
-    </DockButton>
-
-    <div class="divider"></div>
-
-    <DockButton
-      variant="danger"
-      tooltip="Quit Vinta"
-      onclick={(e: MouseEvent) => AppControls.doQuit(e)}
-    >
-      <Power size={18} />
-    </DockButton>
+      <DockButton
+        variant="danger"
+        tooltip="Quit Vinta"
+        onclick={(e: MouseEvent) => AppControls.doQuit(e)}
+      >
+        <Power size={18} />
+      </DockButton>
+    </div>
   </div>
 </div>
 
@@ -135,7 +127,7 @@
   .dock {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 8px;
     padding: 4px 8px;
     border-radius: 20px;
     background: var(--c-dock-popover-bg);
@@ -146,10 +138,17 @@
     pointer-events: auto;
   }
 
+  .dock-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
   .divider {
     width: 1px;
     height: 16px;
     background: var(--c-border);
-    margin: 0 2px;
+    opacity: 0.6;
+    margin: 0 3px;
   }
 </style>
