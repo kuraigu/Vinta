@@ -37,14 +37,19 @@
     config as settingsConfig
   } from './pages/SettingsPage.svelte'
   import Dock from './components/Dock.svelte'
+  import FloatingControls from './components/FloatingControls.svelte'
+  import SatelliteHost from './components/SatelliteHost.svelte'
   import Clock from './components/Clock.svelte'
   import DevPill from './devtest/DevPill.svelte'
   import appIcon from '@appicon'
+  import {
+    satellitesStore,
+    getActiveSatelliteFootprint
+  } from './stores/satellites'
   import { AppControls } from './utils/navigation'
   import { playNotifChime } from './services/audioService'
   import {
     themeStore,
-    shapeStore,
     autoHideStore,
     homeAutoHideStore,
     mediaAutoHideStore,
@@ -445,7 +450,7 @@
   ): Promise<void> {
     const computedW = Math.round(w)
     const computedH = Math.round(h)
-    const computedR = Math.round($shapeStore === 'box' ? 12 : r)
+    const computedR = Math.round(r)
     const scale = window.devicePixelRatio || 1
     const rawOffset =
       explicitOffset !== undefined
@@ -647,12 +652,28 @@
   }
   let monitorSnapOffsets = $derived.by(computeMonitorSnapOffsets)
 
+  function computeActiveLeftSatelliteFootprint() {
+    return getActiveSatelliteFootprint('left', $satellitesStore)
+  }
+  let activeLeftSatelliteFootprint = $derived.by(
+    computeActiveLeftSatelliteFootprint
+  )
+
+  function computeActiveRightSatelliteFootprint() {
+    return getActiveSatelliteFootprint('right', $satellitesStore)
+  }
+  let activeRightSatelliteFootprint = $derived.by(
+    computeActiveRightSatelliteFootprint
+  )
+
   function computeMinAllowedOffsetForCurrentW() {
     const halfW = currentIslandW / 2
     const mon = activeMonitor
     const baseCenter = displayLayout.virtualLeft + displayLayout.primaryCenter
-    const targetLeft = mon.left + 12 + halfW
-    const targetRight = mon.left + mon.width - 12 - halfW
+    const leftMargin = 12 + activeLeftSatelliteFootprint
+    const rightMargin = 12 + activeRightSatelliteFootprint
+    const targetLeft = mon.left + leftMargin + halfW
+    const targetRight = mon.left + mon.width - rightMargin - halfW
     if (targetLeft > targetRight) {
       return Math.floor(mon.left + mon.width / 2 - baseCenter)
     }
@@ -666,8 +687,10 @@
     const halfW = currentIslandW / 2
     const mon = activeMonitor
     const baseCenter = displayLayout.virtualLeft + displayLayout.primaryCenter
-    const targetLeft = mon.left + 12 + halfW
-    const targetRight = mon.left + mon.width - 12 - halfW
+    const leftMargin = 12 + activeLeftSatelliteFootprint
+    const rightMargin = 12 + activeRightSatelliteFootprint
+    const targetLeft = mon.left + leftMargin + halfW
+    const targetRight = mon.left + mon.width - rightMargin - halfW
     if (targetLeft > targetRight) {
       return Math.floor(mon.left + mon.width / 2 - baseCenter)
     }
@@ -789,11 +812,9 @@
     const h = baseH + extraDropdownH
     const r = isHid
       ? hiddenBounds.r
-      : $shapeStore === 'box'
-        ? 12
-        : isExp
-          ? config.expanded.r
-          : config.minimal.r
+      : isExp
+        ? config.expanded.r
+        : config.minimal.r
 
     return { w, h, r }
   }
@@ -909,9 +930,6 @@
     // Listen to systray events
     EventsOn('toggle-theme', () => {
       themeStore.update((t) => (t === 'dark' ? 'light' : 'dark'))
-    })
-    EventsOn('toggle-shape', () => {
-      shapeStore.update((s) => (s === 'pill' ? 'box' : 'pill'))
     })
     EventsOn('show-pill', showWidget)
 
@@ -1669,11 +1687,9 @@
         : islandConfig.minimal.h}px;
       --island-r: {isHidden
       ? hiddenBounds.r
-      : $shapeStore === 'box'
-        ? 12
-        : expanded
-          ? islandConfig.expanded.r
-          : islandConfig.minimal.r}px;
+      : expanded
+        ? islandConfig.expanded.r
+        : islandConfig.minimal.r}px;
       border-radius: var(--island-r);
       --island-border-color: {isHidden
       ? 'var(--c-border)'
@@ -1747,6 +1763,18 @@
         </div>
       {/if}
     </div>
+
+    <SatelliteHost
+      id="controls"
+      anchor="right"
+      width={40}
+      height={124}
+      radius={20}
+      gap={12}
+      active={expanded && !isHidden}
+    >
+      <FloatingControls {activePage} />
+    </SatelliteHost>
 
     <!-- Shrinking Timeout Bar -->
     {#if isTimeoutActive && (shouldCurrentPageAutoHide || (activePage !== HomePage && activePage !== MediaPage)) && !expanded && !isHidden}

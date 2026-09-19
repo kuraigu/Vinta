@@ -1,15 +1,6 @@
 <script lang="ts">
   import { getContext } from 'svelte'
-  import {
-    Grid,
-    Music,
-    Settings,
-    Power,
-    Minimize2,
-    EyeOff,
-    House,
-    Bell
-  } from 'lucide-svelte'
+  import { Grid, Music, Settings, House, Bell } from 'lucide-svelte'
   import { AppControls } from '../utils/AppControls.svelte'
   import DockButton from './DockButton.svelte'
   import AppsPage from '../pages/AppsPage.svelte'
@@ -24,8 +15,6 @@
     getContext<
       (page: unknown, pageConfig: IslandConfig, expand?: boolean) => void
     >('navigate')
-
-  const hidePill = getContext<() => void>('hidePill')
 
   let { activePage }: { activePage: unknown; islandConfig?: IslandConfig } =
     $props()
@@ -79,35 +68,6 @@
         <Settings size={18} />
       </DockButton>
     </div>
-
-    <div class="divider"></div>
-
-    <div class="dock-group">
-      <DockButton
-        variant="success"
-        tooltip="Hide Widget"
-        onclick={(e: MouseEvent) => AppControls.doHide(navigate, hidePill, e)}
-      >
-        <EyeOff size={18} />
-      </DockButton>
-
-      <DockButton
-        variant="warning"
-        tooltip="Collapse Island"
-        onclick={(e: MouseEvent) =>
-          AppControls.doMinimize(navigate, e, activePage)}
-      >
-        <Minimize2 size={18} />
-      </DockButton>
-
-      <DockButton
-        variant="danger"
-        tooltip="Quit Vinta"
-        onclick={(e: MouseEvent) => AppControls.doQuit(e)}
-      >
-        <Power size={18} />
-      </DockButton>
-    </div>
   </div>
 </div>
 
@@ -128,13 +88,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 4px 8px;
-    border-radius: 20px;
-    background: var(--c-dock-popover-bg);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid var(--c-border);
-    box-shadow: var(--c-dock-popover-shadow);
+    padding: 2px 6px;
     pointer-events: auto;
   }
 
@@ -142,13 +96,5 @@
     display: flex;
     align-items: center;
     gap: 6px;
-  }
-
-  .divider {
-    width: 1px;
-    height: 16px;
-    background: var(--c-border);
-    opacity: 0.6;
-    margin: 0 3px;
   }
 </style>

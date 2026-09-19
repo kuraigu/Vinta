@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	goruntime "runtime"
+	"sort"
 	"strings"
 	"sync"
 	"syscall"
@@ -757,6 +758,8 @@ type App struct {
 	devW               int
 	devH               int
 	devExtra           int
+	satellitesMu       sync.RWMutex
+	satellites         map[string]SatelliteBounds
 	scale              float64
 	isHidden           bool
 	autoHideBorderless bool
@@ -928,11 +931,6 @@ func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 		menu.Add("Toggle Theme").OnClick(func(_ *application.Context) {
 			if app := application.Get(); app != nil {
 				app.Event.Emit("toggle-theme")
-			}
-		})
-		menu.Add("Toggle Shape").OnClick(func(_ *application.Context) {
-			if app := application.Get(); app != nil {
-				app.Event.Emit("toggle-shape")
 			}
 		})
 		menu.AddSeparator()
@@ -1263,9 +1261,85 @@ func (a *App) SetDevPillBounds(width int, height int, extraH int, scale float64)
 	a.updateWindowRegion()
 }
 
+// SatelliteBounds represents the position, dimensions, radius, and anchor configuration for a floating satellite dock.
+type SatelliteBounds struct {
+	ID      string `json:"id"`
+	Anchor  string `json:"anchor"`
+	Width   int    `json:"width"`
+	Height  int    `json:"height"`
+	Radius  int    `json:"radius"`
+	Gap     int    `json:"gap"`
+	OffsetX int    `json:"offsetX"`
+	OffsetY int    `json:"offsetY"`
+	Active  bool   `json:"active"`
+}
+
+// SetSatelliteBounds registers or updates a floating satellite dock in the window region manager.
+func (a *App) SetSatelliteBounds(bounds SatelliteBounds) {
+	a.satellitesMu.Lock()
+	if a.satellites == nil {
+		a.satellites = make(map[string]SatelliteBounds)
+	}
+	a.satellites[bounds.ID] = bounds
+	a.satellitesMu.Unlock()
+	a.updateWindowRegion()
+}
+
+// RemoveSatellite removes a floating satellite dock by identifier.
+func (a *App) RemoveSatellite(id string) {
+	a.satellitesMu.Lock()
+	if a.satellites != nil {
+		delete(a.satellites, id)
+	}
+	a.satellitesMu.Unlock()
+	a.updateWindowRegion()
+}
+
+// SetFloatingControlsBounds adapts legacy calls to the generalized satellite dock registry.
+func (a *App) SetFloatingControlsBounds(width int, height int, radius int, gap int) {
+	a.SetSatelliteBounds(SatelliteBounds{
+		ID:     "controls",
+		Anchor: "right",
+		Width:  width,
+		Height: height,
+		Radius: radius,
+		Gap:    gap,
+		Active: width > 0 && height > 0,
+	})
+}
+
+// getActiveSatellites extracts all active satellites sorted deterministically by ID.
+func (a *App) getActiveSatellites() []SatelliteBounds {
+	a.satellitesMu.RLock()
+	defer a.satellitesMu.RUnlock()
+
+	var result []SatelliteBounds
+	for _, sat := range a.satellites {
+		if sat.Active && sat.Width > 0 && sat.Height > 0 {
+			result = append(result, sat)
+		}
+	}
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].ID < result[j].ID
+	})
+	return result
+}
+
+func satellitesSignature(satellites []SatelliteBounds) string {
+	if len(satellites) == 0 {
+		return ""
+	}
+	var sb strings.Builder
+	for _, s := range satellites {
+		fmt.Fprintf(&sb, "%s:%s:%d:%d:%d:%d:%d:%d;", s.ID, s.Anchor, s.Width, s.Height, s.Radius, s.Gap, s.OffsetX, s.OffsetY)
+	}
+	return sb.String()
+}
+
 type regionCache struct {
 	w, h, r, offsetX int
 	dw, dh, extraH   int
+	satellitesHash   string
 	padding          int
 	scale            float64
 	sw               int
@@ -1290,11 +1364,12 @@ func (a *App) updateWindowRegion() {
 		padding = HiddenOutsidePadding
 	}
 
-	setClickRegion(hwnd, a.pillW, a.pillH, a.pillR, a.offsetX, a.devW, a.devH, a.devExtra, padding, a.scale)
+	sats := a.getActiveSatellites()
+	setClickRegion(hwnd, a.pillW, a.pillH, a.pillR, a.offsetX, a.devW, a.devH, a.devExtra, sats, padding, a.scale)
 }
 
-// setClickRegion updates the Win32 window region to combine the main pill and the dev pill.
-func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, dw int, dh int, extraH int, padding int, scale float64) {
+// setClickRegion updates the Win32 window region to combine the main pill, satellites, and dev pill.
+func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, dw int, dh int, extraH int, satellites []SatelliteBounds, padding int, scale float64) {
 	if hwnd == 0 {
 		return
 	}
@@ -1328,24 +1403,37 @@ func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, dw int, dh i
 		cachedClientSw = sw
 	}
 
+	satSig := satellitesSignature(satellites)
+
 	// Early exit if identical region is already applied to HWND
 	if lastRegion.w == w && lastRegion.h == h && lastRegion.r == r &&
 		lastRegion.offsetX == offsetX && lastRegion.dw == dw && lastRegion.dh == dh &&
-		lastRegion.extraH == extraH && lastRegion.padding == padding &&
-		lastRegion.scale == scale && lastRegion.sw == sw {
+		lastRegion.extraH == extraH && lastRegion.satellitesHash == satSig &&
+		lastRegion.padding == padding && lastRegion.scale == scale && lastRegion.sw == sw {
 		return
 	}
 
 	lastRegion = regionCache{
 		w: w, h: h, r: r, offsetX: offsetX,
 		dw: dw, dh: dh, extraH: extraH,
-		padding: padding, scale: scale, sw: sw,
+		satellitesHash: satSig,
+		padding:        padding, scale: scale, sw: sw,
 	}
 
-	hrgnMain := createMainPillRegion(w, h, r, offsetX, sw, padding, scale)
-	hrgnDev := createDevPillRegion(dw, dh, extraH, h, offsetX, sw, scale, w == -1)
+	var regions []uintptr
+	if hrgnMain := createMainPillRegion(w, h, r, offsetX, sw, padding, scale); hrgnMain != 0 {
+		regions = append(regions, hrgnMain)
+	}
+	if hrgnDev := createDevPillRegion(dw, dh, extraH, h, offsetX, sw, scale, w == -1); hrgnDev != 0 {
+		regions = append(regions, hrgnDev)
+	}
+	for _, sat := range satellites {
+		if hrgnSat := createSatelliteRegion(sat, w, h, offsetX, sw, scale); hrgnSat != 0 {
+			regions = append(regions, hrgnSat)
+		}
+	}
 
-	hrgnFinal := combineWindowRegions(hrgnMain, hrgnDev)
+	hrgnFinal := combineWindowRegions(regions...)
 	if hrgnFinal != 0 {
 		_, _, _ = procSetWindowRgn.Call(hwnd, hrgnFinal, 1)
 	}
@@ -1493,6 +1581,89 @@ func createDevPillRegion(dw, dh, extraH, mainH, offsetX, sw int, scale float64, 
 	}
 
 	ellipseSize := scaleInt(14) * 2
+	if hLimit := bottom - top; ellipseSize > hLimit {
+		ellipseSize = hLimit
+	}
+	if wLimit := right - left; ellipseSize > wLimit {
+		ellipseSize = wLimit
+	}
+
+	hrgn, _, _ := procCreateRoundRectRgn.Call(
+		uintptr(left), uintptr(top),
+		uintptr(right), uintptr(bottom),
+		uintptr(ellipseSize), uintptr(ellipseSize),
+	)
+	return hrgn
+}
+
+// createSatelliteRegion generates the Win32 HRGN for an anchored floating satellite dock.
+func createSatelliteRegion(sat SatelliteBounds, mainW, mainH, offsetX, sw int, scale float64) uintptr {
+	if !sat.Active || sat.Width <= 0 || sat.Height <= 0 || mainW <= 0 || mainH <= 0 {
+		return 0
+	}
+	scaleInt := func(v int) int {
+		return int(float64(v) * scale)
+	}
+
+	vLeft, vTop, _, _, pCenter, monitors := GetDisplayMetrics()
+	scaledOffset := scaleInt(offsetX)
+	screenCenterX := vLeft + pCenter + scaledOffset
+	currentMon := resolveCurrentMonitor(screenCenterX, monitors)
+	monitorTopOffset := scaleInt(currentMon.Top - vTop)
+	if monitorTopOffset < 0 {
+		monitorTopOffset = 0
+	}
+	visualTop := monitorTopOffset + scaleInt(5)
+
+	physicalCenterX := pCenter + scaledOffset
+	pw := scaleInt(mainW)
+	ph := scaleInt(mainH)
+	pad := scaleInt(OutsidePadding)
+
+	gapScaled := scaleInt(sat.Gap)
+	wScaled := scaleInt(sat.Width)
+	hScaled := scaleInt(sat.Height)
+	satOffsetScaledX := scaleInt(sat.OffsetX)
+	satOffsetScaledY := scaleInt(sat.OffsetY)
+
+	var left, right, top, bottom int
+
+	switch sat.Anchor {
+	case "left":
+		right = physicalCenterX - (pw / 2) - gapScaled - satOffsetScaledX + pad
+		left = right - wScaled - (pad * 2)
+		top = visualTop + satOffsetScaledY - pad
+		bottom = top + hScaled + (pad * 2)
+	case "bottom":
+		top = visualTop + ph + gapScaled + satOffsetScaledY - pad
+		bottom = top + hScaled + (pad * 2)
+		left = physicalCenterX - (wScaled / 2) + satOffsetScaledX - pad
+		right = left + wScaled + (pad * 2)
+	case "top":
+		bottom = visualTop - gapScaled - satOffsetScaledY + pad
+		top = bottom - hScaled - (pad * 2)
+		left = physicalCenterX - (wScaled / 2) + satOffsetScaledX - pad
+		right = left + wScaled + (pad * 2)
+	case "right":
+		fallthrough
+	default:
+		left = physicalCenterX + (pw / 2) + gapScaled + satOffsetScaledX - pad
+		right = left + wScaled + (pad * 2)
+		top = visualTop + satOffsetScaledY - pad
+		bottom = top + hScaled + (pad * 2)
+	}
+
+	if left < 0 {
+		left = 0
+	}
+	if right > sw {
+		right = sw
+	}
+	if top < 0 {
+		top = 0
+	}
+
+	ellipseSize := scaleInt(sat.Radius) * 2
 	if hLimit := bottom - top; ellipseSize > hLimit {
 		ellipseSize = hLimit
 	}

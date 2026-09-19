@@ -65,3 +65,58 @@ Vinta supports custom community themes (including anime-styled or custom backgro
   - **Components & Sub-groups**: Place extracted stylesheets under `frontend/src/components/styles/` mirroring the folder structure (e.g. `src/components/notes/NoteLive.svelte` ➔ `src/components/styles/notes/NoteLive.css` linked via `<style src="../styles/notes/NoteLive.css"></style>`).
 - **No Global Script Imports**: Never use `import './styles.css'` inside `<script>` for component styling, as it bypasses scoping and leaks styles globally. Always use `<style src="...">` to retain Svelte's compile-time scoping hashes.
 
+### 11. Floating Satellites and Docks
+
+Vinta supports anchored satellite docks that float beside or below the main Dynamic Island while retaining transparent desktop pass-through in visual gaps.
+
+#### Architectural Principles
+
+1. **Single-Window Multi-Region Model:** Rather than spawning multiple OS windows or secondary WebView2 runtimes (which consume 40MB to 90MB of RAM per instance and suffer from mouse drag lag and DWM frame tearing), Vinta renders all floating elements inside a single shared webview. Visual gaps between the main island and satellite docks are truly transparent to mouse clicks via Win32 `CombineRgn(..., RGN_OR)` with `CreateRoundRectRgn`.
+2. **Mounting via `<SatelliteHost>`:** Never use ad-hoc positioned containers for floating widgets. Always mount floating satellites using the declarative `<SatelliteHost>` component (`frontend/src/components/SatelliteHost.svelte`).
+3. **Automatic Backend Synchronization:** `<SatelliteHost>` automatically synchronizes its geometry with the Go backend via `SetSatelliteBounds` and cleans up on unmount via `RemoveSatellite`. The Go compositor creates an `HRGN` for each active satellite and merges it into the primary window hit region.
+4. **Snappy Transitions:** Exit animations must use `cubicOut` easing with short durations (110ms exit, 220ms enter). The non-zero initial slope of `cubicOut` ($f'(0) = 3$) eliminates perceived delay when collapsing.
+
+#### Component Props and Parameters
+
+The `<SatelliteHost>` component accepts the following configuration:
+
+| Prop | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | `string` | **required** | Unique identifier for the satellite (for example, `"controls"` or `"dev-tools"`). |
+| `anchor` | `'left' \| 'right' \| 'bottom' \| 'top'` | `'right'` | The edge of the main island container to anchor against. |
+| `width` | `number` | **required** | Visual width in CSS pixels. |
+| `height` | `number` | **required** | Visual height in CSS pixels. |
+| `radius` | `number` | `20` | Corner radius for the Win32 rounded hit-test region. |
+| `gap` | `number` | `12` | Distance in pixels between the island boundary and the satellite. |
+| `offsetX` | `number` | `0` | Additional horizontal pixel offset (positive values extend outward). |
+| `offsetY` | `number` | `0` | Additional vertical pixel offset. |
+| `active` | `boolean` | **required** | Controls both visual display and backend Win32 click region registration. |
+
+#### Multi-Dock Stacking Model
+
+When multiple satellites share an anchor (for example, two satellites anchored to the right flank), their positions can be coordinated using `offsetX` and `offsetY`:
+
+- **Horizontal Row Stacking (Side by Side):**
+  - First dock: `offsetX = 0`
+  - Second dock: `offsetX = firstWidth + gap`
+  - Total flank footprint: `firstWidth + secondWidth + (gap * 2)`
+- **Vertical Column Stacking (Top to Bottom):**
+  - First dock: `offsetY = 0`
+  - Second dock: `offsetY = firstHeight + gap`
+  - Total flank footprint: `max(firstWidth, secondWidth) + gap`
+
+#### Edge Safety and Clamping
+
+Desktop edge boundaries are dynamically calculated using active satellite footprints. The helper `getActiveSatelliteFootprint(anchor)` in `frontend/src/stores/satellites.ts` scans all active satellites and determines the maximum outward reach. The main island's horizontal drag clamping automatically reserves this margin so that floating satellites never clip off the physical screen.
+
+#### Standard Window Controls Satellite (`FloatingControls.svelte`)
+
+The window controls dock floats on the right flank and provides direct system controls:
+
+1. **Button Order (Top to Bottom):**
+   - **Quit** (`Power` icon, red hover accent): Located at the top to prevent accidental clicks.
+   - **Hide** (`EyeOff` icon, green hover accent): Minimizes the widget to the system notification tray.
+   - **Collapse / Minimize** (`Minimize2` icon, yellow hover accent): Located at the bottom nearest to everyday island content for optimal ergonomics.
+2. **Accessibility Standards:** The controls container must include `role="toolbar"`, `aria-label="Window controls"`, and `tabindex="-1"`.
+3. **Dynamic Tooltips:** Tooltips adapt directionally (`tooltipPosition="left" | "right"`) based on proximity to the right monitor edge to prevent tooltip clipping.
+

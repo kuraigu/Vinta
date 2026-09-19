@@ -115,6 +115,8 @@ if "%~1"=="lint" (
     ) else (
         echo clang-format not found on PATH, skipping native C++ formatting.
     )
+    task generate:bindings
+    if errorlevel 1 exit /b !ERRORLEVEL!
     echo Running Frontend Lint...
     cd frontend
     call npm run check
@@ -125,6 +127,11 @@ if "%~1"=="lint" (
     if errorlevel 1 ( cd .. & exit /b !ERRORLEVEL! )
     cd ..
     exit /b 0
+)
+
+if "%~1"=="bindings" (
+    task generate:bindings
+    exit /b !ERRORLEVEL!
 )
 
 if "%~1"=="installer" (
@@ -143,6 +150,7 @@ echo   dev [no_build]           Runs Vite / Wails live development server (optio
 echo   build                    Builds production binary
 echo   run [no_build] [debug]   Runs binary (optionally skip build, optionally enable debug mode)
 echo   test                     Runs test suite with DevTest panel (-test)
+echo   bindings                 Generates TypeScript bindings for frontend from Go backend
 echo   installer                Builds standalone production binary and Windows NSIS installer
 echo   lint                     Runs Go and Frontend linters and formatters
 exit /b 1

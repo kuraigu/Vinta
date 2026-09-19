@@ -222,7 +222,7 @@ export function Greet(name: string): $CancellablePromise<string> {
 }
 
 /**
- * IsPortableMode determines if Vinta is currently executing from a portable directory.
+ * IsPortableMode returns false as standalone portable packaging has been deprecated in favor of the NSIS installer.
  */
 export function IsPortableMode(): $CancellablePromise<boolean> {
   return $Call.ByID(2364170391)
@@ -284,6 +284,13 @@ export function Quit(): $CancellablePromise<void> {
  */
 export function ReadNote(fileName: string): $CancellablePromise<string> {
   return $Call.ByID(3035600691, fileName)
+}
+
+/**
+ * RemoveSatellite removes a floating satellite dock by identifier.
+ */
+export function RemoveSatellite(id: string): $CancellablePromise<void> {
+  return $Call.ByID(157317808, id)
 }
 
 /**
@@ -445,6 +452,18 @@ export function SetDragCapture(enable: boolean): $CancellablePromise<void> {
 }
 
 /**
+ * SetFloatingControlsBounds adapts legacy calls to the generalized satellite dock registry.
+ */
+export function SetFloatingControlsBounds(
+  width: number,
+  height: number,
+  radius: number,
+  gap: number
+): $CancellablePromise<void> {
+  return $Call.ByID(2706679968, width, height, radius, gap)
+}
+
+/**
  * SetHardwareAcceleration persists the GPU acceleration setting.
  */
 export function SetHardwareAcceleration(
@@ -468,6 +487,15 @@ export function SetIgnoreMouseEvents(
  */
 export function SetIsHidden(hidden: boolean): $CancellablePromise<void> {
   return $Call.ByID(3839965369, hidden)
+}
+
+/**
+ * SetSatelliteBounds registers or updates a floating satellite dock in the window region manager.
+ */
+export function SetSatelliteBounds(
+  bounds: $models.SatelliteBounds
+): $CancellablePromise<void> {
+  return $Call.ByID(479812843, bounds)
 }
 
 /**

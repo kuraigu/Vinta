@@ -4,7 +4,9 @@
   type Props = {
     onclick: (e: MouseEvent) => void
     tooltip: string
+    tooltipPosition?: 'top' | 'left' | 'right' | 'bottom'
     variant?: '' | 'danger' | 'warning' | 'success'
+    shape?: 'rounded' | 'circle'
     active?: boolean
     badge?: number
     children: Snippet
@@ -13,7 +15,9 @@
   let {
     onclick,
     tooltip,
+    tooltipPosition = 'top',
     variant = '',
+    shape = 'rounded',
     active = false,
     badge = undefined,
     children
@@ -22,7 +26,7 @@
 
 <!-- Notice {onclick} replaces on:click={onclick} in Svelte 5 -->
 <button
-  class="dock-btn {variant}"
+  class="dock-btn {variant} shape-{shape} tooltip-{tooltipPosition}"
   class:active
   onclick={(e) => {
     e.stopPropagation()
@@ -52,6 +56,10 @@
     position: relative;
   }
 
+  .dock-btn.shape-circle {
+    border-radius: 50%;
+  }
+
   .dock-btn[data-tooltip]:not([data-tooltip=''])::after {
     content: attr(data-tooltip);
     position: absolute;
@@ -78,6 +86,31 @@
   .dock-btn[data-tooltip]:not([data-tooltip='']):hover::after {
     opacity: 1;
     transform: translateX(-50%) scale(1);
+  }
+
+  /* Right-side tooltip */
+  .dock-btn.tooltip-right[data-tooltip]:not([data-tooltip=''])::after {
+    bottom: auto;
+    top: 50%;
+    left: calc(100% + 10px);
+    transform: translateY(-50%) scale(0.9);
+  }
+
+  .dock-btn.tooltip-right[data-tooltip]:not([data-tooltip='']):hover::after {
+    transform: translateY(-50%) scale(1);
+  }
+
+  /* Left-side tooltip */
+  .dock-btn.tooltip-left[data-tooltip]:not([data-tooltip=''])::after {
+    bottom: auto;
+    top: 50%;
+    left: auto;
+    right: calc(100% + 10px);
+    transform: translateY(-50%) scale(0.9);
+  }
+
+  .dock-btn.tooltip-left[data-tooltip]:not([data-tooltip='']):hover::after {
+    transform: translateY(-50%) scale(1);
   }
 
   .dock-btn:hover {

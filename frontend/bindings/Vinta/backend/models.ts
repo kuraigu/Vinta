@@ -330,6 +330,63 @@ export class ReleaseInfo {
 }
 
 /**
+ * SatelliteBounds represents the position, dimensions, radius, and anchor configuration for a floating satellite dock.
+ */
+export class SatelliteBounds {
+  'id': string
+  'anchor': string
+  'width': number
+  'height': number
+  'radius': number
+  'gap': number
+  'offsetX': number
+  'offsetY': number
+  'active': boolean
+
+  /** Creates a new SatelliteBounds instance. */
+  constructor($$source: Partial<SatelliteBounds> = {}) {
+    if (!('id' in $$source)) {
+      this['id'] = ''
+    }
+    if (!('anchor' in $$source)) {
+      this['anchor'] = ''
+    }
+    if (!('width' in $$source)) {
+      this['width'] = 0
+    }
+    if (!('height' in $$source)) {
+      this['height'] = 0
+    }
+    if (!('radius' in $$source)) {
+      this['radius'] = 0
+    }
+    if (!('gap' in $$source)) {
+      this['gap'] = 0
+    }
+    if (!('offsetX' in $$source)) {
+      this['offsetX'] = 0
+    }
+    if (!('offsetY' in $$source)) {
+      this['offsetY'] = 0
+    }
+    if (!('active' in $$source)) {
+      this['active'] = false
+    }
+
+    Object.assign(this, $$source)
+  }
+
+  /**
+   * Creates a new SatelliteBounds instance from a string or object.
+   */
+  static createFrom($$source: any = {}): SatelliteBounds {
+    let $$parsedSource =
+      typeof $$source === 'string' ? JSON.parse($$source) : $$source
+    return new SatelliteBounds($$parsedSource as Partial<SatelliteBounds>)
+  }
+}
+
+/**
  * UpdateCheckResult represents the outcome of an update verification query.
  */
 export class UpdateCheckResult {

@@ -1,0 +1,19 @@
+.floating-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 4px;
+  border-radius: 20px;
+  background: var(--c-dock-popover-bg);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--c-border);
+  box-shadow: var(--c-dock-popover-shadow);
+  pointer-events: auto;
+  user-select: none;
+}
+
+.floating-controls :global(.dock-btn) {
+  border-radius: 50%;
+}

@@ -11,10 +11,9 @@
     ScrollText,
     Sun,
     Moon,
-    Square,
-    Pill,
     ChevronDown,
-    ChevronUp
+    ChevronUp,
+    RefreshCw
   } from 'lucide-svelte'
 
   import HomePage, { config as homeConfig } from '../pages/HomePage.svelte'
@@ -35,7 +34,6 @@
   import type { IslandConfig } from '../store'
   import {
     themeStore,
-    shapeStore,
     devTestingStore,
     devPinnedStore,
     activePageIdStore
@@ -176,6 +174,13 @@
       navigate(pageData.page, pageData.config, isExpandedMode)
     }
   }
+
+  /**
+   * Forces a full browser reload of the webview to reload Vite modules and styles.
+   */
+  function handleReload() {
+    window.location.reload()
+  }
 </script>
 
 <div
@@ -247,14 +252,10 @@
       </button>
       <button
         class="icon-btn"
-        onclick={() => ($shapeStore = $shapeStore === 'pill' ? 'box' : 'pill')}
-        title="Toggle Shape"
+        onclick={handleReload}
+        title="Reload Webview (Refresh Page)"
       >
-        {#if $shapeStore === 'pill'}
-          <Square size={13} strokeWidth={2.2} />
-        {:else}
-          <Pill size={13} strokeWidth={2.2} />
-        {/if}
+        <RefreshCw size={13} strokeWidth={2.2} />
       </button>
       <button
         class="icon-btn minimize-btn"
