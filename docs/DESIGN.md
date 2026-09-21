@@ -10,7 +10,7 @@ All UI contributions must follow these guidelines to maintain a clean and respon
 
 Never use hardcoded hex or RGB colors like `#ffffff` or `rgb(30, 30, 30)` inside component styles. All visual elements must use theme CSS tokens so themes can switch cleanly.
 
-### 2. Iconography Standards
+### 2. Iconography Standardsp
 
 - **Primary Icon Library:** Always use **Lucide Icons** (`lucide-svelte`) for standard UI icons.
 - **Custom SVG Icons:** If a required icon is not available in Lucide, place custom SVG helpers inside `frontend/src/assets/`. Application icons for notifications and media sessions are extracted authentically at runtime from Windows executables and packaged Store apps via `frontend/src/services/iconService.ts`.
@@ -65,58 +65,60 @@ Vinta supports custom community themes (including anime-styled or custom backgro
   - **Components & Sub-groups**: Place extracted stylesheets under `frontend/src/components/styles/` mirroring the folder structure (e.g. `src/components/notes/NoteLive.svelte` ➔ `src/components/styles/notes/NoteLive.css` linked via `<style src="../styles/notes/NoteLive.css"></style>`).
 - **No Global Script Imports**: Never use `import './styles.css'` inside `<script>` for component styling, as it bypasses scoping and leaks styles globally. Always use `<style src="...">` to retain Svelte's compile-time scoping hashes.
 
-### 11. Floating Satellites and Docks
+### 11. Floating Satellites and Companion Docks
 
-Vinta supports anchored satellite docks that float beside or below the main Dynamic Island while retaining transparent desktop pass-through in visual gaps.
+Satellites are secondary peripheral surfaces that orbit the perimeter of the Dynamic Island. They provide quick-access controls, status indicators, and companion toolbars while keeping the primary island canvas focused and uncluttered.
 
-#### Architectural Principles
+#### 1. Purpose and Visual Hierarchy
 
-1. **Single-Window Multi-Region Model:** Rather than spawning multiple OS windows or secondary WebView2 runtimes (which consume 40MB to 90MB of RAM per instance and suffer from mouse drag lag and DWM frame tearing), Vinta renders all floating elements inside a single shared webview. Visual gaps between the main island and satellite docks are truly transparent to mouse clicks via Win32 `CombineRgn(..., RGN_OR)` with `CreateRoundRectRgn`.
-2. **Mounting via `<SatelliteHost>`:** Never use ad-hoc positioned containers for floating widgets. Always mount floating satellites using the declarative `<SatelliteHost>` component (`frontend/src/components/SatelliteHost.svelte`).
-3. **Automatic Backend Synchronization:** `<SatelliteHost>` automatically synchronizes its geometry with the Go backend via `SetSatelliteBounds` and cleans up on unmount via `RemoveSatellite`. The Go compositor creates an `HRGN` for each active satellite and merges it into the primary window hit region.
-4. **Snappy Transitions:** Exit animations must use `cubicOut` easing with short durations (110ms exit, 220ms enter). The non-zero initial slope of `cubicOut` ($f'(0) = 3$) eliminates perceived delay when collapsing.
+- **Secondary Role:** The Dynamic Island is always the primary visual anchor. Satellites must look and feel secondary in weight, scale, and density.
+- **Visual Separation:** Satellites must remain optically detached from the main island, separated by an intentional air gap (typically `10px` to `12px`), rather than touching or overlapping the main capsule.
+- **Compact Scale:** Interactive targets inside satellites should be scaled down relative to primary island buttons (typically `26px` to `32px` touch targets with `14px` to `18px` iconography) to maintain clear visual hierarchy.
 
-#### Component Props and Parameters
+#### 2. Form Factor and Surface Aesthetics
 
-The `<SatelliteHost>` component accepts the following configuration:
+- **Capsule Curvature:** Satellites must share the island's rounded geometry. Use pill or capsule silhouettes with border radii between `16px` and `20px` (or full circular radius for small single-action toggles).
+- **Surface Tokens:** Satellite containers use a clean, borderless surface without elevations:
+  - Background: `var(--c-dock-popover-bg)`
+  - Border: `none` (satellites omit outer borders and highlights to maintain visual distinction from the primary island)
+  - Elevation: `none` (shadows are omitted on secondary satellites)
+  - Desktop Opacity: Satellites floating over the transparent desktop canvas must use solid opaque surfaces. CSS backdrop blur cannot sample or blur native OS windows beneath transparent webviews, so semi-transparency causes unblurred desktop bleed-through.
 
-| Prop | Type | Default | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | `string` | **required** | Unique identifier for the satellite (for example, `"controls"` or `"dev-tools"`). |
-| `anchor` | `'left' \| 'right' \| 'bottom' \| 'top'` | `'right'` | The edge of the main island container to anchor against. |
-| `width` | `number` | **required** | Visual width in CSS pixels. |
-| `height` | `number` | **required** | Visual height in CSS pixels. |
-| `radius` | `number` | `20` | Corner radius for the Win32 rounded hit-test region. |
-| `gap` | `number` | `12` | Distance in pixels between the island boundary and the satellite. |
-| `offsetX` | `number` | `0` | Additional horizontal pixel offset (positive values extend outward). |
-| `offsetY` | `number` | `0` | Additional vertical pixel offset. |
-| `active` | `boolean` | **required** | Controls both visual display and backend Win32 click region registration. |
+#### 3. Idle vs. Active States
 
-#### Multi-Dock Stacking Model
+- **Subtle Idle Presence:** When persistent or idle alongside the island, collapsed toggles and background tools maintain a quiet visual presence. Subtlety is achieved through subdued iconography (`var(--c-text-secondary)` or `var(--c-text-muted)`) rather than container transparency against the desktop.
+- **Hover Transitions:** On cursor proximity, hover, or focus-within, satellites transition smoothly (`0.2s` cubic-bezier) to full primary iconography (`var(--c-text-primary)`) and elevated button states without container highlights or drop shadows.
 
-When multiple satellites share an anchor (for example, two satellites anchored to the right flank), their positions can be coordinated using `offsetX` and `offsetY`:
+#### 4. Spatial Anchoring and Alignment
 
-- **Horizontal Row Stacking (Side by Side):**
-  - First dock: `offsetX = 0`
-  - Second dock: `offsetX = firstWidth + gap`
-  - Total flank footprint: `firstWidth + secondWidth + (gap * 2)`
-- **Vertical Column Stacking (Top to Bottom):**
-  - First dock: `offsetY = 0`
-  - Second dock: `offsetY = firstHeight + gap`
-  - Total flank footprint: `max(firstWidth, secondWidth) + gap`
+- **Cardinal Anchors:** Satellites anchor along the cardinal flanks of the island (`left`, `right`, `top`, `bottom`).
+- **Flank Alignment:**
+  - When paired with a minimal island pill, flank satellites must be vertically centered relative to the minimal island height to preserve balance and symmetry.
+  - When paired with an expanded card, flank satellites should align with the top edge or upper interactive zone of the card.
+- **Polar Alignment:** Satellites anchored to the `top` or `bottom` must be horizontally centered relative to the island width.
+- **Flank Discipline:** Avoid populating all four flanks simultaneously. Group companion controls onto a single flank to avoid cluttering the desktop workspace.
 
-#### Edge Safety and Clamping
+#### 5. Drawer Morphing and State Transformations
 
-Desktop edge boundaries are dynamically calculated using active satellite footprints. The helper `getActiveSatelliteFootprint(anchor)` in `frontend/src/stores/satellites.ts` scans all active satellites and determines the maximum outward reach. The main island's horizontal drag clamping automatically reserves this margin so that floating satellites never clip off the physical screen.
+- **Compact Toggles to Expanded Drawers:** When a satellite provides multiple actions in a compact footprint, design it with a folded toggle state that expands on interaction:
+  - **Folded State:** A single compact circular or pill toggle (such as a directional glyph or status indicator) that minimizes desktop footprint.
+  - **Unfolded State:** A horizontal or vertical drawer revealing individual action buttons with clear spacing (`4px` to `6px`).
+- **Smooth Container Morphing:** The container width, height, and padding must animate together with a smooth easing curve (`0.22s cubic-bezier(0.22, 1, 0.36, 1)`). Child buttons should transition smoothly without jumping.
+- **Clear Retraction:** Every expandable drawer must provide an intuitive retract or fold trigger so the user can restore the compact idle footprint at any time.
 
-#### Standard Window Controls Satellite (`FloatingControls.svelte`)
+#### 6. Screen Edge Proximity and Margin Safety
 
-The window controls dock floats on the right flank and provides direct system controls:
+- **Display Perimeter Clearance:** Satellites must never clip off the screen edge or intersect the display boundary.
+- **Dynamic Margin Clamping:** The island's allowed movement range must account for the full bounding footprint of all active satellites plus a safety margin (`12px`).
+- **Responsive Edge Evasion:** If a satellite expands horizontally while near a screen edge, the island must smoothly slide inward to maintain full visibility and breathing room for the satellite.
 
-1. **Button Order (Top to Bottom):**
-   - **Quit** (`Power` icon, red hover accent): Located at the top to prevent accidental clicks.
-   - **Hide** (`EyeOff` icon, green hover accent): Minimizes the widget to the system notification tray.
-   - **Collapse / Minimize** (`Minimize2` icon, yellow hover accent): Located at the bottom nearest to everyday island content for optimal ergonomics.
-2. **Accessibility Standards:** The controls container must include `role="toolbar"`, `aria-label="Window controls"`, and `tabindex="-1"`.
-3. **Dynamic Tooltips:** Tooltips adapt directionally (`tooltipPosition="left" | "right"`) based on proximity to the right monitor edge to prevent tooltip clipping.
+#### 7. Tooltips and Popovers on Satellites
 
+- **Directional Awareness:** Tooltips originating from satellites must orient away from the main island or adapt dynamically (`top`, `bottom`, `left`, `right`) depending on proximity to monitor edges.
+- **Clipping Protection:** Satellite tooltips must float cleanly outside the container without being truncated by parent bounding boxes or window boundaries.
+
+#### 8. Accessibility and Hit Targets
+
+- **Accessible Roles:** Satellite toolbars must include appropriate semantic attributes (`role="toolbar"` and a descriptive `aria-label`).
+- **Focus Rings:** All satellite buttons must display standard keyboard focus indicators (`:focus-visible` with `2px` accent outline and `1px` outline offset).
+- **Target Spacing:** Keep at least `4px` of spacing between interactive items to prevent misclicks.

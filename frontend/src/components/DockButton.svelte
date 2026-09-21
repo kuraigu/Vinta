@@ -9,6 +9,7 @@
     shape?: 'rounded' | 'circle'
     active?: boolean
     badge?: number
+    useCustomTooltip?: boolean
     children: Snippet
   }
 
@@ -20,6 +21,7 @@
     shape = 'rounded',
     active = false,
     badge = undefined,
+    useCustomTooltip = true,
     children
   }: Props = $props()
 </script>
@@ -32,7 +34,8 @@
     e.stopPropagation()
     if (onclick) onclick(e)
   }}
-  data-tooltip={tooltip}
+  data-tooltip={useCustomTooltip ? tooltip : ''}
+  title={!useCustomTooltip ? tooltip : undefined}
 >
   {@render children()}
   {#if badge !== undefined && badge > 0}
@@ -67,8 +70,6 @@
     left: 50%;
     transform: translateX(-50%) scale(0.9);
     background: var(--c-dock-popover-bg);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
     color: var(--c-text-primary);
     padding: 6px 10px;
     border-radius: 8px;
@@ -111,6 +112,20 @@
 
   .dock-btn.tooltip-left[data-tooltip]:not([data-tooltip='']):hover::after {
     transform: translateY(-50%) scale(1);
+  }
+
+  /* Bottom-side tooltip */
+  .dock-btn.tooltip-bottom[data-tooltip]:not([data-tooltip=''])::after {
+    bottom: auto;
+    top: calc(100% + 8px);
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%) scale(0.9);
+  }
+
+  .dock-btn.tooltip-bottom[data-tooltip]:not([data-tooltip='']):hover::after {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
   }
 
   .dock-btn:hover {

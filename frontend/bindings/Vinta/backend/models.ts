@@ -341,6 +341,8 @@ export class SatelliteBounds {
   'gap': number
   'offsetX': number
   'offsetY': number
+  'tooltipPad': number
+  'tooltipSide': string
   'active': boolean
 
   /** Creates a new SatelliteBounds instance. */
@@ -368,6 +370,12 @@ export class SatelliteBounds {
     }
     if (!('offsetY' in $$source)) {
       this['offsetY'] = 0
+    }
+    if (!('tooltipPad' in $$source)) {
+      this['tooltipPad'] = 0
+    }
+    if (!('tooltipSide' in $$source)) {
+      this['tooltipSide'] = ''
     }
     if (!('active' in $$source)) {
       this['active'] = false

@@ -1,6 +1,15 @@
 <script lang="ts">
   import { getContext } from 'svelte'
-  import { Grid, Music, Settings, House, Bell } from 'lucide-svelte'
+  import {
+    Grid,
+    Music,
+    Settings,
+    House,
+    Bell,
+    FileText,
+    Calculator,
+    Info
+  } from 'lucide-svelte'
   import { AppControls } from '../utils/AppControls.svelte'
   import DockButton from './DockButton.svelte'
   import AppsPage from '../pages/AppsPage.svelte'
@@ -8,8 +17,14 @@
   import NotificationPage from '../pages/NotificationPage.svelte'
   import MediaPage from '../pages/MediaPage.svelte'
   import SettingsPage from '../pages/SettingsPage.svelte'
+  import NotesPage from '../pages/NotesPage.svelte'
+  import CalculatorPage from '../pages/CalculatorPage.svelte'
   import type { IslandConfig } from '../store'
-  import { notifData, pageVisibilityStore } from '../store'
+  import {
+    notifData,
+    pageVisibilityStore,
+    activeSettingsTabStore
+  } from '../store'
 
   const navigate =
     getContext<
@@ -39,6 +54,24 @@
         <House size={18} />
       </DockButton>
 
+      {#if $pageVisibilityStore.notes !== false}
+        <DockButton
+          tooltip="Notes"
+          active={activePage === NotesPage}
+          onclick={(e: MouseEvent) => AppControls.goNotes(navigate, e)}
+        >
+          <FileText size={18} />
+        </DockButton>
+      {/if}
+
+      <DockButton
+        tooltip="Calculator"
+        active={activePage === CalculatorPage}
+        onclick={(e: MouseEvent) => AppControls.goCalculator(navigate, e)}
+      >
+        <Calculator size={18} />
+      </DockButton>
+
       {#if $pageVisibilityStore.media}
         <DockButton
           tooltip="Now Playing"
@@ -62,10 +95,20 @@
 
       <DockButton
         tooltip="Settings"
-        active={activePage === SettingsPage}
+        active={activePage === SettingsPage &&
+          $activeSettingsTabStore !== 'about'}
         onclick={(e: MouseEvent) => AppControls.goSettings(navigate, e)}
       >
         <Settings size={18} />
+      </DockButton>
+
+      <DockButton
+        tooltip="About"
+        active={activePage === SettingsPage &&
+          $activeSettingsTabStore === 'about'}
+        onclick={(e: MouseEvent) => AppControls.goAbout(navigate, e)}
+      >
+        <Info size={18} />
       </DockButton>
     </div>
   </div>

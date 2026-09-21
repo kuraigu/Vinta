@@ -1,19 +1,259 @@
 .floating-controls {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 4px;
-  border-radius: 20px;
+  align-items: stretch;
+  gap: 0;
+  border-radius: 16px;
   background: var(--c-dock-popover-bg);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--c-border);
-  box-shadow: var(--c-dock-popover-shadow);
+  border: none;
+  box-shadow: none;
   pointer-events: auto;
   user-select: none;
+  cursor: default;
+  opacity: 1;
+  overflow: visible;
+  transition:
+    width 0.24s cubic-bezier(0.2, 0.8, 0.2, 1),
+    height 0.24s cubic-bezier(0.2, 0.8, 0.2, 1),
+    padding 0.24s cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-radius 0.24s cubic-bezier(0.2, 0.8, 0.2, 1),
+    background 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  box-sizing: border-box;
 }
 
+.floating-controls:not(.horizontal) {
+  width: 32px;
+  height: 88px;
+  padding: 0;
+  justify-content: stretch;
+}
+
+.floating-controls:hover,
+.floating-controls:focus-within {
+  opacity: 1;
+}
+
+.button-wrapper {
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  overflow: visible;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  z-index: 1;
+}
+
+.button-wrapper:hover {
+  z-index: 2;
+}
+
+/* Base button fills its entire allocated segment like OS caption controls */
 .floating-controls :global(.dock-btn) {
-  border-radius: 50%;
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  transform: none !important;
+  background: transparent;
+  color: var(--c-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease !important;
+}
+
+/* Prevent internal SVG elements or pseudo-tooltips from capturing pointer events and battling */
+.floating-controls :global(.dock-btn *) {
+  pointer-events: none !important;
+}
+
+.floating-controls :global(.dock-btn::after) {
+  pointer-events: none !important;
+}
+
+.floating-controls :global(.dock-btn:hover) {
+  transform: none !important;
+  box-shadow: none !important;
+  color: var(--c-text-primary);
+  background: color-mix(in srgb, var(--c-dock-popover-bg) 82%, #ffffff 18%);
+}
+
+.floating-controls :global(.dock-btn:active) {
+  transform: none !important;
+  box-shadow: none !important;
+  background: color-mix(in srgb, var(--c-dock-popover-bg) 72%, #ffffff 28%);
+}
+
+.floating-controls :global(.dock-btn.danger:hover) {
+  color: #ffffff;
+  background: var(--c-danger, #ff3b30);
+  box-shadow: none !important;
+}
+
+.floating-controls :global(.dock-btn.danger:active) {
+  color: #ffffff;
+  background: color-mix(in srgb, var(--c-danger, #ff3b30) 80%, #000000 20%);
+}
+
+/* Vertical Dock (Expanded Island): Fixed pixel heights per button to eliminate subpixel rounding jitter */
+.floating-controls:not(.horizontal) .button-wrapper {
+  width: 32px;
+  max-width: 32px;
+}
+
+.floating-controls:not(.horizontal) .button-wrapper:first-child {
+  height: 29px;
+  flex: 0 0 29px;
+}
+
+.floating-controls:not(.horizontal) .button-wrapper:nth-child(2) {
+  height: 30px;
+  flex: 0 0 30px;
+}
+
+.floating-controls:not(.horizontal) .button-wrapper:last-child {
+  height: 29px;
+  flex: 0 0 29px;
+}
+
+/* Vertical Dock: Edge buttons conform to 16px capsule corners */
+.floating-controls:not(.horizontal)
+  .button-wrapper:first-child
+  :global(.dock-btn) {
+  border-top-left-radius: 16px !important;
+  border-top-right-radius: 16px !important;
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+.floating-controls:not(.horizontal)
+  .button-wrapper:last-child
+  :global(.dock-btn) {
+  border-bottom-left-radius: 16px !important;
+  border-bottom-right-radius: 16px !important;
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+}
+
+/* Horizontal Drawer Mode (Minimized Island): Fixed 29px width per button (4 * 29px = 116px) */
+.floating-controls.horizontal {
+  flex-direction: row;
+  width: 116px;
+  height: 32px;
+  padding: 0;
+  gap: 0;
+  border-radius: 16px;
+  opacity: 1;
+}
+
+.floating-controls.horizontal .button-wrapper {
+  width: 29px;
+  height: 32px;
+  flex: 0 0 29px;
+  max-width: 29px;
+}
+
+/* Horizontal Drawer: Edge buttons conform to 16px capsule ends */
+.floating-controls.horizontal:not(.folded)
+  .button-wrapper:first-child
+  :global(.dock-btn) {
+  border-top-left-radius: 16px !important;
+  border-bottom-left-radius: 16px !important;
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+.floating-controls.horizontal:not(.folded)
+  .button-wrapper:last-child
+  :global(.dock-btn) {
+  border-top-right-radius: 16px !important;
+  border-bottom-right-radius: 16px !important;
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+}
+
+/* Folded Compact Toggle: Exact 32px x 32px hit box */
+.floating-controls.horizontal.folded {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  gap: 0;
+  justify-content: center;
+  align-items: center;
+  border-radius: 16px;
+  background: var(--c-dock-popover-bg);
+  border: none;
+  box-shadow: none;
+  opacity: 0.72;
+}
+
+.floating-controls.horizontal.folded:hover,
+.floating-controls.horizontal.folded:focus-within {
+  background: var(--c-dock-popover-bg);
+  opacity: 1;
+}
+
+.floating-controls.horizontal.folded .button-wrapper {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  max-width: 32px;
+}
+
+.floating-controls.horizontal.folded :global(.dock-btn) {
+  border-radius: 16px !important;
+}
+
+/* Enforce clipping during transition or when folded */
+.floating-controls.folded,
+.floating-controls.transitioning {
+  overflow: hidden !important;
+}
+
+/* Bottom tooltip positioning for horizontal controls dock */
+.floating-controls.horizontal
+  :global(
+    .dock-btn.tooltip-bottom[data-tooltip]:not([data-tooltip=''])::after
+  ) {
+  left: 0;
+  right: auto;
+  transform: scale(0.9);
+  transform-origin: top left;
+}
+
+.floating-controls.horizontal
+  :global(
+    .dock-btn.tooltip-bottom[data-tooltip]:not([data-tooltip='']):hover::after
+  ) {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* Align rightmost button in open drawer (Quit) to its right edge so it stays within dock */
+.floating-controls.horizontal:not(.folded)
+  .button-wrapper:last-child
+  :global(
+    .dock-btn.tooltip-bottom[data-tooltip]:not([data-tooltip=''])::after
+  ) {
+  left: auto;
+  right: 0;
+  transform-origin: top right;
+}
+
+/* When near the screen right edge, align tooltips to the right edge to avoid monitor clipping */
+.floating-controls.horizontal.align-right
+  :global(
+    .dock-btn.tooltip-bottom[data-tooltip]:not([data-tooltip=''])::after
+  ) {
+  left: auto;
+  right: 0;
+  transform-origin: top right;
 }

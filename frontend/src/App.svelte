@@ -4,7 +4,6 @@
   import { fade } from 'svelte/transition'
   import {
     SetWidgetBounds,
-    SetDragCapture,
     IsTestMode,
     FocusWindow,
     Quit,
@@ -18,13 +17,17 @@
   } from '../bindings/Vinta/backend/app.js'
   import { Events } from '@wailsio/runtime'
 
+  const appEventUnsubs: (() => void)[] = []
+
   function EventsOn<T = unknown>(
     eventName: string,
     callback: (data: T) => void
   ): () => void {
-    return Events.On(eventName, (ev: { data: T }) => {
+    const unsub = Events.On(eventName, (ev: { data: T }) => {
       callback(ev?.data)
     })
+    appEventUnsubs.push(unsub)
+    return unsub
   }
   import NotificationPage, {
     config as notifConfig
@@ -36,6 +39,7 @@
   import SettingsPage, {
     config as settingsConfig
   } from './pages/SettingsPage.svelte'
+  import CalculatorPage from './pages/CalculatorPage.svelte'
   import Dock from './components/Dock.svelte'
   import FloatingControls from './components/FloatingControls.svelte'
   import SatelliteHost from './components/SatelliteHost.svelte'
@@ -140,6 +144,7 @@
   let dragResetTimeout: number | undefined
 
   let islandNode = $state<HTMLElement>()
+  let islandContainerNode = $state<HTMLElement>()
   let devPillContainerNode = $state<HTMLElement>()
   let isTestMode = $state(false)
 
@@ -248,6 +253,28 @@
   setContext('activeMonitor', () => activeMonitor)
 
   let hideTrigger = $state(0)
+  let isSatelliteHovering = $state(false)
+
+  function computeIsAnyHovered() {
+    return isHovering || isSatelliteHovering
+  }
+  let isAnyHovered = $derived.by(computeIsAnyHovered)
+
+  function handleSatelliteMouseEnter() {
+    isSatelliteHovering = true
+    clearTimeout(hideTimeout)
+    if (isHidden && $wakeMethodStore === 'hover') {
+      hoverShowTimeout = window.setTimeout(showWidget, 150)
+    } else if (!isHidden) {
+      showWidget()
+    }
+  }
+
+  function handleSatelliteMouseLeave() {
+    isSatelliteHovering = false
+    clearTimeout(hoverShowTimeout)
+    hideTrigger++
+  }
 
   function handleAutoHideAndRevert() {
     void hideTrigger
@@ -256,7 +283,7 @@
 
     if ($devPinnedStore) return
 
-    if (!expanded && !isHidden && !isHovering) {
+    if (!expanded && !isHidden && !isAnyHovered && !isControlsDrawerOpen) {
       if (
         shouldCurrentPageAutoHide ||
         (activePage !== HomePage && activePage !== MediaPage)
@@ -316,13 +343,9 @@
     }
 
     const target = getBoundsForState(islandConfig, false, true)
+    targetPendingBounds = target
     clearTimeout(boundsTransitionTimeout)
-    boundsTransitionTimeout = window.setTimeout(() => {
-      if (isHidden) {
-        applyBounds(target.w, target.h, target.r)
-        targetPendingBounds = { w: 0, h: 0, r: 0 }
-      }
-    }, 380)
+    boundsTransitionTimeout = window.setTimeout(tryCommitShrinkingBounds, 600)
   }
 
   // Global reactive fallback sync effect when island is minimized
@@ -460,15 +483,21 @@
           : clampedOffsetX
     const offset = Math.round(rawOffset)
 
-    // Skip redundant IPC if identical rounded bounds are already active on the OS
-    if (
-      lastDispatchedBounds &&
+    const isCorridorUnchanged =
+      computedW === -1 &&
+      lastDispatchedBounds?.w === -1 &&
+      lastDispatchedBounds.h === computedH &&
+      lastDispatchedBounds.scale === scale
+
+    const isTightUnchanged =
+      lastDispatchedBounds !== null &&
       lastDispatchedBounds.w === computedW &&
       lastDispatchedBounds.h === computedH &&
       lastDispatchedBounds.r === computedR &&
       lastDispatchedBounds.offset === offset &&
       lastDispatchedBounds.scale === scale
-    ) {
+
+    if (isCorridorUnchanged || isTightUnchanged) {
       return Promise.resolve()
     }
 
@@ -526,12 +555,6 @@
       })
   }
 
-  function setOSDragCapture(enable: boolean) {
-    if (typeof SetDragCapture === 'function') {
-      SetDragCapture(enable).catch(() => {})
-    }
-  }
-
   function trimOSMemory() {
     if (typeof TrimMemory === 'function') {
       TrimMemory().catch(() => {})
@@ -563,7 +586,7 @@
       return
     }
 
-    // If islandNode is still visually animating down, do not shrink the OS region yet!
+    // If islandNode is still visually animating down, do not shrink the OS region yet
     if (islandNode && shrinkingRetryCount < 4) {
       const currentVisualW = islandNode.offsetWidth
       const currentVisualH = islandNode.offsetHeight
@@ -666,6 +689,104 @@
     computeActiveRightSatelliteFootprint
   )
 
+  let isControlsDrawerOpen = $state(false)
+
+  /**
+   * Tracks open/close state of the minimized horizontal control drawer.
+   */
+  function handleControlsDrawerChange(isOpen: boolean) {
+    if (isControlsDrawerOpen === isOpen) return
+    isControlsDrawerOpen = isOpen
+    if (isOpen) {
+      clearTimeout(hideTimeout)
+      isTimeoutActive = false
+    }
+  }
+
+  /**
+   * Picks the tooltip side for the expanded vertical dock by comparing
+   * available clearance on both flanks. Whichever side of the dock has
+   * more room to render the tooltip label wins.
+   */
+  function computeExpandedTooltipSide(): 'right' | 'left' {
+    const mon = activeMonitor
+    const islandCenterOnScreen =
+      displayLayout.primaryCenter + clampedOffsetX - mon.left
+    const halfExpandedW = (islandConfig.expanded.w || 380) / 2
+    const dockGap = 10
+    const dockWidth = 32
+    const dockRightEdge =
+      islandCenterOnScreen + halfExpandedW + dockGap + dockWidth
+    const dockLeftEdge = dockRightEdge - dockWidth
+
+    const rightClearance = mon.width - dockRightEdge
+    const leftClearance = dockLeftEdge
+    return rightClearance >= leftClearance ? 'right' : 'left'
+  }
+  let expandedTooltipSide = $derived.by(computeExpandedTooltipSide)
+
+  /**
+   * Evaluates screen clearance to determine whether horizontal dock tooltips
+   * should align outward to the right or inward to the left when near screen edges.
+   */
+  function computeHorizontalTooltipAlign(): 'left' | 'right' {
+    const mon = activeMonitor
+    const islandCenterOnScreen =
+      displayLayout.primaryCenter + clampedOffsetX - mon.left
+    const halfMinW = (islandConfig.minimal.w || 300) / 2
+    const dockGap = 8
+    const dockWidth = isControlsDrawerOpen ? 116 : 32
+    const dockRightEdge = islandCenterOnScreen + halfMinW + dockGap + dockWidth
+    const rightClearance = mon.width - dockRightEdge
+
+    return rightClearance < 75 ? 'right' : 'left'
+  }
+  let horizontalTooltipAlign = $derived.by(computeHorizontalTooltipAlign)
+
+  /**
+   * Computes dynamic geometric bounds for the window controls satellite dock
+   * across expanded and minimized states, expanding tooltip padding when hovered.
+   */
+  function computeControlsSatelliteBounds() {
+    const isHovered = isSatelliteHovering
+    if (expanded) {
+      const expH = islandConfig.expanded.h || 400
+      const centerOffsetY = Math.max(0, Math.round((expH - 88) / 2))
+      return {
+        width: 32,
+        height: 88,
+        radius: 16,
+        gap: 10,
+        offsetY: centerOffsetY,
+        tooltipPad: isHovered ? 75 : 0,
+        tooltipSide: expandedTooltipSide
+      }
+    }
+    const minH = islandConfig.minimal.h || 36
+    const centerOffsetY = Math.max(0, Math.round((minH - 32) / 2))
+    if (isControlsDrawerOpen) {
+      return {
+        width: 116,
+        height: 32,
+        radius: 16,
+        gap: 8,
+        offsetY: centerOffsetY,
+        tooltipPad: isHovered ? 45 : 0,
+        tooltipSide: 'bottom' as const
+      }
+    }
+    return {
+      width: 32,
+      height: 32,
+      radius: 16,
+      gap: 8,
+      offsetY: centerOffsetY,
+      tooltipPad: isHovered ? 45 : 0,
+      tooltipSide: 'bottom' as const
+    }
+  }
+  let controlsSatelliteBounds = $derived.by(computeControlsSatelliteBounds)
+
   function computeMinAllowedOffsetForCurrentW() {
     const halfW = currentIslandW / 2
     const mon = activeMonitor
@@ -704,7 +825,7 @@
 
   // Smart offset safety: smoothly clamp main island back into bounds if content expands near screen edge
   function handleSmartEdgeOffsetAdjustment() {
-    if (!isDraggingHidden) {
+    if (!isDraggingHidden && !isControlsDrawerOpen) {
       if (currentLiveOffsetX > maxAllowedOffsetForCurrentW) {
         currentLiveOffsetX = maxAllowedOffsetForCurrentW
         $hiddenPillOffsetXStore = currentLiveOffsetX
@@ -830,7 +951,7 @@
       clearTimeout(memoryTrimTimeout)
       memoryTrimTimeout = undefined
       isPageDormant = false
-      stopInertia()
+      finishDrag()
       const bounds = getBoundsForState(pageConfig, expand, false)
       applyBounds(
         Math.max(bounds.w, currentOSBounds.w),
@@ -854,6 +975,7 @@
     else if (page === NotesPage) $activePageIdStore = 'notes'
     else if (page === AppsPage) $activePageIdStore = 'apps'
     else if (page === SettingsPage) $activePageIdStore = 'settings'
+    else if (page === CalculatorPage) $activePageIdStore = 'calculator'
 
     if (expand) {
       const { w, h, r } = getBoundsForState(pageConfig, true, false)
@@ -920,8 +1042,8 @@
         playNotifChime($notifVolumeStore * 0.4)
       }
       window.setTimeout(() => {
-        Quit()
-      }, 350)
+        Quit().catch(() => {})
+      }, 200)
     }
 
     window.addEventListener('vinta-overlay', handleOverlayChange)
@@ -1279,7 +1401,7 @@
       }
     }
     const handleWindowKeydownFailsafe = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && (isDraggingHidden || isTrackRegionActive)) {
+      if (e.key === 'Escape' && isDraggingHidden) {
         handleDragFailsafe()
       }
     }
@@ -1319,16 +1441,28 @@
     const wirelessInterval = window.setInterval(updateWireless, 10000)
 
     return () => {
-      stopInertia()
+      finishDrag()
       window.clearInterval(batteryInterval)
       window.clearInterval(wirelessInterval)
       window.removeEventListener('contextmenu', disableGlobalContextMenu)
       window.removeEventListener('vinta-overlay', handleOverlayChange)
       window.removeEventListener('vinta-quit', handleQuit)
+      window.removeEventListener(
+        'vinta-navigate-settings',
+        handleNavigateSettings
+      )
       window.removeEventListener('resize', handleResize)
       window.removeEventListener('blur', handleGlobalDragFailsafe)
       window.removeEventListener('pointercancel', handleGlobalDragFailsafe)
       window.removeEventListener('keydown', handleWindowKeydownFailsafe)
+      appEventUnsubs.forEach((unsub) => {
+        try {
+          unsub()
+        } catch {
+          // Ignore unsubscription error
+        }
+      })
+      appEventUnsubs.length = 0
     }
   })
 
@@ -1338,7 +1472,7 @@
   /**
    * Synchronizes OS window bounds when island state changes.
    * In-flight drags skip this to prevent fighting the full-width track region,
-   * but the drag handlers call stopInertia() before any state changes.
+   * but the drag handlers call finishDrag() before any state changes.
    */
   let hasInitializedBounds = false
 
@@ -1398,27 +1532,22 @@
   function resetDragWatchdog() {
     clearTimeout(dragWatchdogTimeout)
     dragWatchdogTimeout = window.setTimeout(() => {
-      if (isDraggingHidden || isTrackRegionActive) {
+      if (isDraggingHidden) {
         handleDragFailsafe()
       }
     }, 6000)
   }
 
-  // Failsafe handler to cleanly cancel any drag operation, release OS mouse capture,
-  // and guarantee the Win32 window clipping region escapes 100% width mode.
+  // Failsafe handler to cleanly cancel any drag operation.
   function handleDragFailsafe() {
+    finishDrag()
+  }
+
+  function finishDrag() {
     clearTimeout(dragWatchdogTimeout)
     dragWatchdogTimeout = undefined
     isDraggingHidden = false
-    setOSDragCapture(false)
-    stopInertia()
-  }
-
-  function stopInertia() {
-    clearTimeout(dragWatchdogTimeout)
-    dragWatchdogTimeout = undefined
     isTrackRegionActive = false
-    setOSDragCapture(false)
 
     // Clamp current offset to active monitor once resting
     const restingOffset = Math.max(
@@ -1428,7 +1557,6 @@
     currentLiveOffsetX = restingOffset
     $hiddenPillOffsetXStore = restingOffset
 
-    // Commit final exact tight OS window bounds at resting position once
     const { w, h, r } = getBoundsForState()
     updateBounds(w, h, r, restingOffset)
     currentOSBounds = { w, h, r }
@@ -1457,10 +1585,6 @@
     ) {
       return
     }
-
-    clearTimeout(boundsTransitionTimeout)
-    targetPendingBounds = { w: 0, h: 0, r: 0 }
-    shrinkingRetryCount = 0
 
     isDraggingHidden = true
     hasPointerCaptured = false
@@ -1523,11 +1647,7 @@
 
   function handleHiddenPointerUp(e: PointerEvent) {
     if (!isDraggingHidden) return
-    isDraggingHidden = false
-    isTrackRegionActive = false
-    clearTimeout(dragWatchdogTimeout)
-    dragWatchdogTimeout = undefined
-    setOSDragCapture(false)
+    finishDrag()
     if (hasPointerCaptured) {
       hasPointerCaptured = false
       try {
@@ -1537,9 +1657,6 @@
       }
     }
 
-    // Direct placement: commit exact tight resting bounds immediately on release
-    stopInertia()
-
     clearTimeout(dragResetTimeout)
     dragResetTimeout = window.setTimeout(() => {
       dragMovedDistance = 0
@@ -1548,9 +1665,8 @@
 
   function handleContextMenu(e: MouseEvent) {
     if (isDraggingHidden || dragMovedDistance > 6) {
-      isDraggingHidden = false
       dragMovedDistance = 0
-      stopInertia()
+      finishDrag()
       e.preventDefault()
       e.stopPropagation()
       return
@@ -1575,8 +1691,7 @@
 
   async function handleExpand() {
     if (expanded) return
-    // Cancel any active drag first so the OS region update isn't blocked
-    if (isDraggingHidden) stopInertia()
+    if (isDraggingHidden) finishDrag()
     clearTimeout(boundsTransitionTimeout)
     targetPendingBounds = { w: 0, h: 0, r: 0 }
     islandAnim = '0.32s cubic-bezier(0.2, 0.8, 0.2, 1)'
@@ -1590,6 +1705,7 @@
     )
 
     expanded = true
+    isControlsDrawerOpen = false
   }
 
   function handleIslandClick(e: MouseEvent) {
@@ -1645,6 +1761,7 @@
 
 <!-- ISLAND DIV HERE -->
 <div
+  bind:this={islandContainerNode}
   class="island-container"
   role="application"
   onfocusin={handleFocusIn}
@@ -1654,142 +1771,165 @@
     activeMonitor.top - displayLayout.virtualTop
   )}px; transform: translateX(-50%);"
 >
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
-    bind:this={islandNode}
-    class="island {expanded ? 'expanded' : ''} {isTransitionGlow
-      ? 'is-transition-glow'
-      : ''} {isHidden ? 'is-hidden' : ''} {isQuitting ? 'is-quitting' : ''}"
-    onmouseenter={handleMouseEnter}
-    onmouseleave={handleMouseLeave}
-    onpointerdown={handleHiddenPointerDown}
-    onpointermove={handleHiddenPointerMove}
-    onpointerup={handleHiddenPointerUp}
-    onpointercancel={handleHiddenPointerUp}
-    oncontextmenu={handleContextMenu}
+    class="island-wrapper {isQuitting ? 'is-quitting' : ''}"
     style="
+      opacity: {isQuitting ? 0 : 1};
+      pointer-events: {isQuitting ? 'none' : 'auto'};
       transform: translateX({clampedOffsetX}px) {isQuitting
       ? 'scale(0.6) translateY(-20px)'
       : ''};
-      opacity: {isQuitting ? 0 : activeOpacity};
-      filter: {isQuitting ? 'blur(12px)' : 'none'};
-      width: {isHidden
-      ? hiddenBounds.w
-      : Math.min(
-          expanded ? islandConfig.expanded.w : currentMinimalW,
-          activeMonitor.width ? activeMonitor.width - 24 : 1920
-        )}px;
-      height: {isHidden
-      ? hiddenBounds.h
-      : expanded
-        ? islandConfig.expanded.h
-        : islandConfig.minimal.h}px;
-      --island-r: {isHidden
-      ? hiddenBounds.r
-      : expanded
-        ? islandConfig.expanded.r
-        : islandConfig.minimal.r}px;
-      border-radius: var(--island-r);
-      --island-border-color: {isHidden
-      ? 'var(--c-border)'
-      : islandConfig.borderColor || 'transparent'};
-      --island-glow-color: {isHidden
-      ? 'transparent'
-      : islandConfig.glowColor || 'transparent'};
-      --island-hidden-glow: {islandConfig.glowColor ||
-      'rgba(255, 255, 255, 0.6)'};
-      --island-glow-opacity: {glowOpacity};
-      --island-anim: {islandAnim};
+      transition: {isDraggingHidden ? 'none' : islandAnim};
     "
-    onclick={handleIslandClick}
-    ontransitionend={handleIslandTransitionEnd}
   >
-    {#if isHidden}
-      {#if $autoHideDisplayStore === 'clock'}
-        <div class="hidden-widget-pill" transition:fade={{ duration: 180 }}>
-          <Clock expanded={false} />
-          <div class="hidden-dash-mini"></div>
-        </div>
-      {:else}
-        <div class="hidden-dash" transition:fade={{ duration: 180 }}></div>
-      {/if}
-    {/if}
-
-    {#if expanded && $allowDragPositionStore}
-      <div
-        class="island-drag-handle"
-        title="Drag to reposition (or Alt + Drag)"
-      >
-        <div class="drag-pill-bar"></div>
-      </div>
-    {/if}
-
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
-      class="content"
-      style="opacity: {isHidden || isBlinking
-        ? 0
-        : 1}; pointer-events: {isHidden
-        ? 'none'
-        : 'auto'}; transition: opacity {isBlinking
-        ? '0s'
-        : '0.22s cubic-bezier(0.2, 0.8, 0.2, 1)'};"
+      bind:this={islandNode}
+      class="island {expanded ? 'expanded' : ''} {isTransitionGlow
+        ? 'is-transition-glow'
+        : ''} {isHidden ? 'is-hidden' : ''} {isQuitting ? 'is-quitting' : ''}"
+      onmouseenter={handleMouseEnter}
+      onmouseleave={handleMouseLeave}
+      onpointerdown={handleHiddenPointerDown}
+      onpointermove={handleHiddenPointerMove}
+      onpointerup={handleHiddenPointerUp}
+      onpointercancel={handleHiddenPointerUp}
+      oncontextmenu={handleContextMenu}
+      ontransitionend={handleIslandTransitionEnd}
+      style="
+        opacity: {isQuitting ? 0 : activeOpacity};
+        filter: {isQuitting ? 'blur(12px)' : 'none'};
+        width: {isHidden
+        ? hiddenBounds.w
+        : Math.min(
+            expanded ? islandConfig.expanded.w : currentMinimalW,
+            activeMonitor.width ? activeMonitor.width - 24 : 1920
+          )}px;
+        height: {isHidden
+        ? hiddenBounds.h
+        : expanded
+          ? islandConfig.expanded.h
+          : islandConfig.minimal.h}px;
+        --island-r: {isHidden
+        ? hiddenBounds.r
+        : expanded
+          ? islandConfig.expanded.r
+          : islandConfig.minimal.r}px;
+        border-radius: var(--island-r);
+        --island-border-color: {isHidden
+        ? 'var(--c-border)'
+        : islandConfig.borderColor || 'transparent'};
+        --island-glow-color: {isHidden
+        ? 'transparent'
+        : islandConfig.glowColor || 'transparent'};
+        --island-hidden-glow: {islandConfig.glowColor ||
+        'rgba(255, 255, 255, 0.6)'};
+        --island-glow-opacity: {glowOpacity};
+        --island-anim: {islandAnim};
+      "
+      onclick={handleIslandClick}
     >
-      {#if !isPageDormant}
-        {#key [activePage, expanded]}
-          {@const ActivePage = activePage}
-          <div
-            class="view"
-            style="width: {Math.min(
-              expanded ? islandConfig.expanded.w : currentMinimalW,
-              activeMonitor.width ? activeMonitor.width - 24 : 1920
-            )}px; height: {expanded
-              ? islandConfig.expanded.h
-              : islandConfig.minimal.h}px;"
-          >
-            {#if ActivePage}
-              <ActivePage {expanded} />
-            {/if}
+      {#if isHidden}
+        {#if $autoHideDisplayStore === 'clock'}
+          <div class="hidden-widget-pill" transition:fade={{ duration: 180 }}>
+            <Clock expanded={false} />
+            <div class="hidden-dash-mini"></div>
           </div>
-        {/key}
+        {:else}
+          <div class="hidden-dash" transition:fade={{ duration: 180 }}></div>
+        {/if}
       {/if}
 
-      {#if expanded}
+      {#if expanded && $allowDragPositionStore}
         <div
-          class="dock-overlay-wrapper"
-          in:fade={{ duration: 200, delay: 150 }}
+          class="island-drag-handle"
+          title="Drag to reposition (or Alt + Drag)"
         >
-          <Dock {activePage} />
+          <div class="drag-pill-bar"></div>
         </div>
+      {/if}
+
+      <div
+        class="content"
+        style="opacity: {isHidden || isBlinking
+          ? 0
+          : 1}; pointer-events: {isHidden
+          ? 'none'
+          : 'auto'}; transition: opacity {isBlinking
+          ? '0s'
+          : '0.22s cubic-bezier(0.2, 0.8, 0.2, 1)'};"
+      >
+        {#if !isPageDormant}
+          {#key [activePage, expanded]}
+            {@const ActivePage = activePage}
+            <div
+              class="view"
+              style="width: {Math.min(
+                expanded ? islandConfig.expanded.w : currentMinimalW,
+                activeMonitor.width ? activeMonitor.width - 24 : 1920
+              )}px; height: {expanded
+                ? islandConfig.expanded.h
+                : islandConfig.minimal.h}px;"
+            >
+              {#if ActivePage}
+                <ActivePage {expanded} />
+              {/if}
+            </div>
+          {/key}
+        {/if}
+
+        {#if expanded}
+          <div
+            class="dock-overlay-wrapper"
+            in:fade={{ duration: 200, delay: 150 }}
+          >
+            <Dock {activePage} />
+          </div>
+        {/if}
+      </div>
+
+      <!-- Shrinking Timeout Bar -->
+      {#if isTimeoutActive && (shouldCurrentPageAutoHide || (activePage !== HomePage && activePage !== MediaPage)) && !expanded && !isHidden}
+        {#key hideTrigger}
+          <div
+            class="timeout-bar"
+            style="animation-duration: {$autoHideDelayStore || 5}s;"
+          ></div>
+        {/key}
       {/if}
     </div>
 
     <SatelliteHost
       id="controls"
       anchor="right"
-      width={40}
-      height={124}
-      radius={20}
-      gap={12}
-      active={expanded && !isHidden}
+      width={controlsSatelliteBounds.width}
+      height={controlsSatelliteBounds.height}
+      radius={controlsSatelliteBounds.radius}
+      gap={controlsSatelliteBounds.gap}
+      offsetY={controlsSatelliteBounds.offsetY}
+      tooltipPad={controlsSatelliteBounds.tooltipPad}
+      tooltipSide={controlsSatelliteBounds.tooltipSide}
+      active={!isHidden && !isQuitting}
+      onmouseenter={handleSatelliteMouseEnter}
+      onmouseleave={handleSatelliteMouseLeave}
     >
-      <FloatingControls {activePage} />
+      <FloatingControls
+        {activePage}
+        {expanded}
+        {expandedTooltipSide}
+        {horizontalTooltipAlign}
+        onDrawerChange={handleControlsDrawerChange}
+      />
     </SatelliteHost>
-
-    <!-- Shrinking Timeout Bar -->
-    {#if isTimeoutActive && (shouldCurrentPageAutoHide || (activePage !== HomePage && activePage !== MediaPage)) && !expanded && !isHidden}
-      {#key hideTrigger}
-        <div
-          class="timeout-bar"
-          style="animation-duration: {$autoHideDelayStore || 5}s;"
-        ></div>
-      {/key}
-    {/if}
   </div>
 
   {#if isTestMode}
     <div
       bind:this={devPillContainerNode}
+      role="none"
+      onmouseenter={handleSatelliteMouseEnter}
+      onmouseleave={handleSatelliteMouseLeave}
       style="
         transform: translateX({devClampedOffsetX}px);
         transition: {isDraggingHidden ? 'none' : islandAnim};

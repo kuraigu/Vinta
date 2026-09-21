@@ -6,6 +6,7 @@ import {
 import { SatelliteBounds } from '../../bindings/Vinta/backend/models.js'
 
 export type SatelliteAnchor = 'left' | 'right' | 'bottom' | 'top'
+export type TooltipSide = 'bottom' | 'right' | 'left' | 'top'
 
 export interface SatelliteConfig {
   id: string
@@ -16,6 +17,8 @@ export interface SatelliteConfig {
   gap: number
   offsetX?: number
   offsetY?: number
+  tooltipPad?: number
+  tooltipSide?: TooltipSide
   active: boolean
 }
 
@@ -51,6 +54,19 @@ export function updateSatellite(
   if (updatedConfig) {
     syncSatelliteWithBackend(updatedConfig)
   }
+}
+
+/**
+ * Adjusts the tooltip padding on a satellite's Win32 hit-test region.
+ * Call this when a custom tooltip becomes visible or hides so the OS region
+ * expands just enough to cover the tooltip without bleeding onto the island.
+ */
+export function setSatelliteTooltipPadding(
+  id: string,
+  pad: number,
+  side: TooltipSide
+) {
+  updateSatellite(id, { tooltipPad: pad, tooltipSide: side })
 }
 
 /**
@@ -102,6 +118,8 @@ function syncSatelliteWithBackend(config: SatelliteConfig) {
       gap: config.gap,
       offsetX: config.offsetX || 0,
       offsetY: config.offsetY || 0,
+      tooltipPad: config.tooltipPad || 0,
+      tooltipSide: config.tooltipSide || '',
       active: config.active
     })
     SetSatelliteBounds(model).catch(() => {})

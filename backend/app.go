@@ -39,10 +39,10 @@ var (
 	procGetClientRect            = user32.NewProc("GetClientRect")
 	procMonitorFromWindow        = user32.NewProc("MonitorFromWindow")
 	procEnumWindows              = user32.NewProc("EnumWindows")
-	procEnumChildWindows         = user32.NewProc("EnumChildWindows")
 	procSetWindowPos             = user32.NewProc("SetWindowPos")
 	procIsWindowVisible          = user32.NewProc("IsWindowVisible")
 	procIsIconic                 = user32.NewProc("IsIconic")
+	procGetAncestor              = user32.NewProc("GetAncestor")
 
 	shell32                          = syscall.NewLazyDLL("shell32.dll")
 	procSHQueryUserNotificationState = shell32.NewProc("SHQueryUserNotificationState")
@@ -286,31 +286,13 @@ func GetDisplayMetrics() (vLeft, vTop, vWidth, vHeight, pCenter int, monitors []
 	pCenter = (0 - vLeft) + (primaryW / 2)
 
 	if procEnumDisplayMonitors.Find() == nil && procGetMonitorInfoW.Find() == nil {
-		id := 0
-		cb := syscall.NewCallback(func(hMonitor, _, _, _ uintptr) uintptr {
-			var mi monitorInfoW
-			mi.CbSize = uint32(unsafe.Sizeof(mi))
-			ret, _, _ := procGetMonitorInfoW.Call(hMonitor, uintptr(unsafe.Pointer(&mi)))
-			if ret != 0 {
-				id++
-				w := int(mi.RcMonitor.Right - mi.RcMonitor.Left)
-				h := int(mi.RcMonitor.Bottom - mi.RcMonitor.Top)
-				isPrimary := (mi.DwFlags & 1) != 0
-				isPortrait := h > w
-				monitors = append(monitors, MonitorInfo{
-					ID:         id,
-					Name:       fmt.Sprintf("Display %d", id),
-					Left:       int(mi.RcMonitor.Left),
-					Top:        int(mi.RcMonitor.Top),
-					Width:      w,
-					Height:     h,
-					IsPrimary:  isPrimary,
-					IsPortrait: isPortrait,
-				})
-			}
-			return 1
-		})
+		enumMonitorsMu.Lock()
+		enumMonitorsID = 0
+		enumMonitorsList = nil
+		cb := getEnumMonitorsCallback()
 		_, _, _ = procEnumDisplayMonitors.Call(0, 0, cb, 0)
+		monitors = enumMonitorsList
+		enumMonitorsMu.Unlock()
 	}
 
 	if len(monitors) == 0 {
@@ -425,6 +407,10 @@ func isBorderlessFullscreen(fgHwnd, vintaHwnd uintptr) bool {
 		return false
 	}
 
+	if isSnippingTool(fgHwnd) || isScreenClippingHost(fgHwnd) {
+		return false
+	}
+
 	var classBuf [256]uint16
 	_, _, _ = procGetClassName.Call(fgHwnd, uintptr(unsafe.Pointer(&classBuf[0])), 256)
 	className := syscall.UTF16ToString(classBuf[:])
@@ -469,36 +455,177 @@ func isBorderlessFullscreen(fgHwnd, vintaHwnd uintptr) bool {
 	return !hasCaption
 }
 
-// isSnippingTool checks whether the given window belongs to Windows Snipping Tool or ScreenClippingHost.
+// isSnippingTool checks whether the given window belongs to Windows Snipping Tool, ScreenClippingHost, or related clipping hosts.
 func isSnippingTool(hwnd uintptr) bool {
+	if hwnd == 0 {
+		return false
+	}
+
+	checkHwnd := func(h uintptr) bool {
+		var pid uint32
+		_, _, _ = procGetWindowThreadProcessID.Call(h, uintptr(unsafe.Pointer(&pid)))
+		if pid != 0 {
+			hProc, _, _ := procOpenProcess.Call(0x1000, 0, uintptr(pid)) // PROCESS_QUERY_LIMITED_INFORMATION
+			if hProc == 0 {
+				hProc, _, _ = procOpenProcess.Call(0x0400, 0, uintptr(pid)) // PROCESS_QUERY_INFORMATION
+			}
+			if hProc != 0 {
+				var buf [1024]uint16
+				size := uint32(len(buf))
+				res, _, _ := procQueryFullProcessImageName.Call(hProc, 0, uintptr(unsafe.Pointer(&buf[0])), uintptr(unsafe.Pointer(&size)))
+				if res == 0 {
+					size = uint32(len(buf))
+					res, _, _ = procQueryFullProcessImageName.Call(hProc, 1, uintptr(unsafe.Pointer(&buf[0])), uintptr(unsafe.Pointer(&size)))
+				}
+				_, _, _ = procCloseHandle.Call(hProc)
+				if res != 0 {
+					exePath := syscall.UTF16ToString(buf[:size])
+					baseName := strings.ToLower(filepath.Base(exePath))
+					if baseName == "screenclippinghost.exe" || baseName == "snippingtool.exe" ||
+						baseName == "screensketch.exe" || baseName == "snippingtoolapp.exe" {
+						return true
+					}
+				}
+			}
+		}
+
+		var titleBuf [256]uint16
+		_, _, _ = procGetWindowTextW.Call(h, uintptr(unsafe.Pointer(&titleBuf[0])), 256)
+		title := strings.ToLower(syscall.UTF16ToString(titleBuf[:]))
+		if strings.Contains(title, "snipping tool") || strings.Contains(title, "screen snipping") ||
+			strings.Contains(title, "snip & sketch") || strings.Contains(title, "screen clipping") {
+			return true
+		}
+
+		var classBuf [256]uint16
+		_, _, _ = procGetClassName.Call(h, uintptr(unsafe.Pointer(&classBuf[0])), 256)
+		className := syscall.UTF16ToString(classBuf[:])
+		if className == "ScreenClippingWindow" || strings.Contains(className, "ScreenClipping") {
+			return true
+		}
+
+		return false
+	}
+
+	if checkHwnd(hwnd) {
+		return true
+	}
+	root, _, _ := procGetAncestor.Call(hwnd, 2) // GA_ROOT = 2
+	if root != 0 && root != hwnd {
+		return checkHwnd(root)
+	}
+	return false
+}
+
+// isScreenClippingHost checks whether the window belongs specifically to the active screen clipping host session.
+func isScreenClippingHost(hwnd uintptr) bool {
 	if hwnd == 0 {
 		return false
 	}
 
 	var pid uint32
 	_, _, _ = procGetWindowThreadProcessID.Call(hwnd, uintptr(unsafe.Pointer(&pid)))
-	if pid == 0 {
-		return false
+	if pid != 0 {
+		hProc, _, _ := procOpenProcess.Call(0x1000, 0, uintptr(pid))
+		if hProc == 0 {
+			hProc, _, _ = procOpenProcess.Call(0x0400, 0, uintptr(pid))
+		}
+		if hProc != 0 {
+			var buf [1024]uint16
+			size := uint32(len(buf))
+			res, _, _ := procQueryFullProcessImageName.Call(hProc, 0, uintptr(unsafe.Pointer(&buf[0])), uintptr(unsafe.Pointer(&size)))
+			if res == 0 {
+				size = uint32(len(buf))
+				res, _, _ = procQueryFullProcessImageName.Call(hProc, 1, uintptr(unsafe.Pointer(&buf[0])), uintptr(unsafe.Pointer(&size)))
+			}
+			_, _, _ = procCloseHandle.Call(hProc)
+			if res != 0 {
+				exePath := syscall.UTF16ToString(buf[:size])
+				baseName := strings.ToLower(filepath.Base(exePath))
+				if baseName == "screenclippinghost.exe" {
+					return true
+				}
+			}
+		}
 	}
 
-	hProc, _, _ := procOpenProcess.Call(0x1000, 0, uintptr(pid)) // PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
-	if hProc == 0 {
-		return false
-	}
-	defer func() {
-		_, _, _ = procCloseHandle.Call(hProc)
-	}()
+	var classBuf [256]uint16
+	_, _, _ = procGetClassName.Call(hwnd, uintptr(unsafe.Pointer(&classBuf[0])), 256)
+	className := syscall.UTF16ToString(classBuf[:])
+	return className == "ScreenClippingWindow" || strings.Contains(className, "ScreenClipping")
+}
 
-	var buf [1024]uint16
-	size := uint32(len(buf))
-	res, _, _ := procQueryFullProcessImageName.Call(hProc, 0, uintptr(unsafe.Pointer(&buf[0])), uintptr(unsafe.Pointer(&size)))
-	if res == 0 {
-		return false
-	}
+var (
+	enumSnipMu         sync.Mutex
+	enumSnipTargetHwnd uintptr
+	cbEnumSnipOnce     sync.Once
+	cbEnumSnipPtr      uintptr
 
-	exePath := syscall.UTF16ToString(buf[:size])
-	baseName := strings.ToLower(filepath.Base(exePath))
-	return baseName == "screenclippinghost.exe" || baseName == "snippingtool.exe"
+	enumMonitorsMu     sync.Mutex
+	enumMonitorsList   []MonitorInfo
+	enumMonitorsID     int
+	cbEnumMonitorsOnce sync.Once
+	cbEnumMonitorsPtr  uintptr
+)
+
+func getEnumSnipCallback() uintptr {
+	cbEnumSnipOnce.Do(func() {
+		cbEnumSnipPtr = syscall.NewCallback(func(h, _ uintptr) uintptr {
+			vis, _, _ := procIsWindowVisible.Call(h)
+			if vis == 0 {
+				return 1
+			}
+
+			iconic, _, _ := procIsIconic.Call(h)
+			if iconic != 0 {
+				return 1
+			}
+
+			var rc struct {
+				Left, Top, Right, Bottom int32
+			}
+			res, _, _ := procGetWindowRect.Call(h, uintptr(unsafe.Pointer(&rc)))
+			if res == 0 || rc.Left <= -10000 || rc.Right <= rc.Left || rc.Bottom <= rc.Top {
+				return 1
+			}
+
+			if isScreenClippingHost(h) {
+				enumSnipTargetHwnd = h
+				return 0
+			}
+			return 1
+		})
+	})
+	return cbEnumSnipPtr
+}
+
+func getEnumMonitorsCallback() uintptr {
+	cbEnumMonitorsOnce.Do(func() {
+		cbEnumMonitorsPtr = syscall.NewCallback(func(hMonitor, _, _, _ uintptr) uintptr {
+			var mi monitorInfoW
+			mi.CbSize = uint32(unsafe.Sizeof(mi))
+			ret, _, _ := procGetMonitorInfoW.Call(hMonitor, uintptr(unsafe.Pointer(&mi)))
+			if ret != 0 {
+				enumMonitorsID++
+				w := int(mi.RcMonitor.Right - mi.RcMonitor.Left)
+				h := int(mi.RcMonitor.Bottom - mi.RcMonitor.Top)
+				isPrimary := (mi.DwFlags & 1) != 0
+				isPortrait := h > w
+				enumMonitorsList = append(enumMonitorsList, MonitorInfo{
+					ID:         enumMonitorsID,
+					Name:       fmt.Sprintf("Display %d", enumMonitorsID),
+					Left:       int(mi.RcMonitor.Left),
+					Top:        int(mi.RcMonitor.Top),
+					Width:      w,
+					Height:     h,
+					IsPrimary:  isPrimary,
+					IsPortrait: isPortrait,
+				})
+			}
+			return 1
+		})
+	})
+	return cbEnumMonitorsPtr
 }
 
 // setupForegroundEventHook registers WinEvent hooks on a dedicated OS-locked thread
@@ -514,7 +641,6 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 	procDispatchMessage := user32.NewProc("DispatchMessageW")
 	procTranslateMessage := user32.NewProc("TranslateMessage")
 	procUnhookWinEvent := user32.NewProc("UnhookWinEvent")
-	procGetAncestor := user32.NewProc("GetAncestor")
 	procGetForegroundWindow := user32.NewProc("GetForegroundWindow")
 
 	myPid := uint32(os.Getpid())
@@ -535,66 +661,64 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 		return pid == myPid
 	}
 
-	var activeSnipHwnd uintptr
-	cbEnumSnip := syscall.NewCallback(func(h, _ uintptr) uintptr {
-		vis, _, _ := procIsWindowVisible.Call(h)
-		if vis == 0 {
-			return 1
+	findActiveSnippingWindow := func(curFg uintptr) uintptr {
+		if curFg != 0 && isSnippingTool(curFg) {
+			return curFg
 		}
 
-		// A minimized window must never be treated as an active overlay.
-		iconic, _, _ := procIsIconic.Call(h)
-		if iconic != 0 {
-			return 1
-		}
-
-		// Snipping overlay toolbars are explicitly WS_EX_TOPMOST (0x00000008).
-		// Normal Snipping Tool application windows or dialogs are not topmost.
-		exStyle, _, _ := procGetWindowLong.Call(h, uintptr(0xFFFFFFEC)) // GWL_EXSTYLE = -20
-		if exStyle&0x00000008 == 0 {
-			return 1
-		}
-
-		var rc struct {
-			Left, Top, Right, Bottom int32
-		}
-		res, _, _ := procGetWindowRect.Call(h, uintptr(unsafe.Pointer(&rc)))
-		if res == 0 || rc.Left <= -10000 || rc.Right <= rc.Left || rc.Bottom <= rc.Top {
-			return 1
-		}
-
-		if isSnippingTool(h) {
-			activeSnipHwnd = h
-			return 0
-		}
-		return 1
-	})
-
-	findActiveSnippingWindow := func() uintptr {
-		activeSnipHwnd = 0
-		_, _, _ = procEnumWindows.Call(cbEnumSnip, 0)
-		return activeSnipHwnd
+		enumSnipMu.Lock()
+		defer enumSnipMu.Unlock()
+		enumSnipTargetHwnd = 0
+		cb := getEnumSnipCallback()
+		_, _, _ = procEnumWindows.Call(cb, 0)
+		return enumSnipTargetHwnd
 	}
 
-	reassertTopmost := func() {
-		snipHwnd := findActiveSnippingWindow()
+	var lastElevatedSnipHwnd uintptr
+
+	reassertTopmost := func(curFg uintptr) {
+		snipHwnd := findActiveSnippingWindow(curFg)
 		if snipHwnd != 0 {
-			// Place Vinta immediately behind Snipping Tool so its top toolbar controls stay on top.
-			_, _, _ = procSetWindowPos.Call(
-				vintaHwnd,
-				snipHwnd,
-				0, 0, 0, 0,
-				0x0001|0x0002|0x0010|0x0400,
-			)
+			// Elevate Snipping Tool to HWND_TOPMOST so it is guaranteed to sit directly on top of Vinta's layer
+			exStyle, _, _ := procGetWindowLong.Call(snipHwnd, uintptr(0xFFFFFFEC))
+			if exStyle&0x00000008 == 0 { // Not yet WS_EX_TOPMOST
+				_, _, _ = procSetWindowPos.Call(
+					snipHwnd,
+					uintptr(^uintptr(0)), // HWND_TOPMOST
+					0, 0, 0, 0,
+					0x0001|0x0002|0x0010, // SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE
+				)
+				lastElevatedSnipHwnd = snipHwnd
+			} else {
+				// Reassert Snipping Tool at the very head of the topmost band
+				_, _, _ = procSetWindowPos.Call(
+					snipHwnd,
+					uintptr(^uintptr(0)), // HWND_TOPMOST
+					0, 0, 0, 0,
+					0x0001|0x0002|0x0010, // SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE
+				)
+			}
+			// While Snipping Tool is active, Vinta stays visible directly beneath Snipping Tool.
+			// Do NOT call SetWindowPos(vintaHwnd, HWND_TOPMOST) here, as that would bring Vinta back over Snipping Tool.
 			return
 		}
 
-		// HWND_TOPMOST = ^uintptr(0), SWP_NOSIZE (0x0001) | SWP_NOMOVE (0x0002) | SWP_NOACTIVATE (0x0010) | SWP_NOOWNERZORDER (0x0200) | SWP_NOSENDCHANGING (0x0400)
+		if lastElevatedSnipHwnd != 0 {
+			_, _, _ = procSetWindowPos.Call(
+				lastElevatedSnipHwnd,
+				uintptr(^uintptr(1)), // HWND_NOTOPMOST
+				0, 0, 0, 0,
+				0x0001|0x0002|0x0010,
+			)
+			lastElevatedSnipHwnd = 0
+		}
+
+		// Normal operation: Reassert Vinta as HWND_TOPMOST above standard desktop windows
 		_, _, _ = procSetWindowPos.Call(
 			vintaHwnd,
 			uintptr(^uintptr(0)),
 			0, 0, 0, 0,
-			0x0001|0x0002|0x0010|0x0200|0x0400,
+			0x0001|0x0002|0x0010|0x0200|0x0400|0x0040, // SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE | SWP_NOOWNERZORDER | SWP_NOSENDCHANGING | SWP_SHOWWINDOW
 		)
 	}
 
@@ -606,7 +730,28 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 	evaluateForegroundState := func() {
 		curFg, _, _ := procGetForegroundWindow.Call()
 		if curFg == 0 || isVintaForeground(curFg) {
-			reassertTopmost()
+			reassertTopmost(curFg)
+			return
+		}
+
+		snipHwnd := findActiveSnippingWindow(curFg)
+		if snipHwnd != 0 {
+			autoHiddenMu.Lock()
+			if autoHiddenByFullscreen {
+				autoHiddenByFullscreen = false
+				services.SetAppHidden(false)
+				if a.window != nil {
+					a.window.Show()
+				}
+				if services.IsFrontendReady() {
+					if app := application.Get(); app != nil {
+						app.Event.Emit("game-mode-exit")
+					}
+				}
+			}
+			autoHiddenMu.Unlock()
+
+			reassertTopmost(curFg)
 			return
 		}
 
@@ -676,11 +821,11 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 			}
 		}
 
-		reassertTopmost()
+		reassertTopmost(curFg)
 	}
 
 	go func() {
-		ticker := time.NewTicker(500 * time.Millisecond)
+		ticker := time.NewTicker(150 * time.Millisecond)
 		defer ticker.Stop()
 		for range ticker.C {
 			evaluateForegroundState()
@@ -754,6 +899,9 @@ type App struct {
 	pillW              int
 	pillH              int
 	pillR              int
+	restingW           int
+	restingH           int
+	restingR           int
 	offsetX            int
 	devW               int
 	devH               int
@@ -963,6 +1111,11 @@ func (a *App) SetWidgetBounds(width int, height int, radius int, scale float64, 
 	a.pillW = width
 	a.pillH = height
 	a.pillR = radius
+	if width > 0 && height > 0 {
+		a.restingW = width
+		a.restingH = height
+		a.restingR = radius
+	}
 	a.offsetX = offsetX
 	if scale > 0 {
 		a.scale = scale
@@ -1087,11 +1240,18 @@ func (a *App) GetCurrentMonitor() MonitorInfo {
 // Quit terminates the application
 func (a *App) Quit() {
 	services.StopServicesListener()
+	if a.window != nil {
+		a.window.Close()
+	}
 	if a.wailsApp != nil {
 		a.wailsApp.Quit()
 	} else if app := application.Get(); app != nil {
 		app.Quit()
 	}
+	go func() {
+		time.Sleep(150 * time.Millisecond)
+		os.Exit(0)
+	}()
 }
 
 // FocusWindow requests OS input focus so typing and keyboard events work immediately on click/focus
@@ -1168,30 +1328,6 @@ func (a *App) SetIgnoreMouseEvents(ignore bool) {
 		return
 	}
 
-	setExStyle := func(h uintptr) {
-		gwl := int32(GWL_EXSTYLE)
-		style, _, _ := procGetWindowLong.Call(h, uintptr(gwl))
-		if ignore {
-			style = (style | WS_EX_TRANSPARENT) &^ WS_EX_LAYERED
-		} else {
-			style = style &^ WS_EX_TRANSPARENT &^ WS_EX_LAYERED
-		}
-		_, _, _ = procSetWindowLong.Call(h, uintptr(gwl), style)
-		_, _, _ = procSetWindowPos.Call(
-			h, 0, 0, 0, 0, 0,
-			uintptr(SWP_NOSIZE|SWP_NOMOVE|SWP_NOZORDER|SWP_NOACTIVATE|SWP_FRAMECHANGED),
-		)
-	}
-
-	setExStyle(hwnd)
-
-	// Propagate to all child windows (e.g. WebView2 Chrome_WidgetWin_0 and intermediate windows)
-	cb := syscall.NewCallback(func(childHwnd uintptr, _ uintptr) uintptr {
-		setExStyle(childHwnd)
-		return 1
-	})
-	_, _, _ = procEnumChildWindows.Call(hwnd, cb, 0)
-
 	if ignore {
 		// Lift clipping region completely so island renders seamlessly without edge clipping during flight
 		_, _, _ = procSetWindowRgn.Call(hwnd, 0, 0)
@@ -1263,15 +1399,17 @@ func (a *App) SetDevPillBounds(width int, height int, extraH int, scale float64)
 
 // SatelliteBounds represents the position, dimensions, radius, and anchor configuration for a floating satellite dock.
 type SatelliteBounds struct {
-	ID      string `json:"id"`
-	Anchor  string `json:"anchor"`
-	Width   int    `json:"width"`
-	Height  int    `json:"height"`
-	Radius  int    `json:"radius"`
-	Gap     int    `json:"gap"`
-	OffsetX int    `json:"offsetX"`
-	OffsetY int    `json:"offsetY"`
-	Active  bool   `json:"active"`
+	ID          string `json:"id"`
+	Anchor      string `json:"anchor"`
+	Width       int    `json:"width"`
+	Height      int    `json:"height"`
+	Radius      int    `json:"radius"`
+	Gap         int    `json:"gap"`
+	OffsetX     int    `json:"offsetX"`
+	OffsetY     int    `json:"offsetY"`
+	TooltipPad  int    `json:"tooltipPad"`
+	TooltipSide string `json:"tooltipSide"`
+	Active      bool   `json:"active"`
 }
 
 // SetSatelliteBounds registers or updates a floating satellite dock in the window region manager.
@@ -1331,7 +1469,7 @@ func satellitesSignature(satellites []SatelliteBounds) string {
 	}
 	var sb strings.Builder
 	for _, s := range satellites {
-		fmt.Fprintf(&sb, "%s:%s:%d:%d:%d:%d:%d:%d;", s.ID, s.Anchor, s.Width, s.Height, s.Radius, s.Gap, s.OffsetX, s.OffsetY)
+		fmt.Fprintf(&sb, "%s:%s:%t:%d:%d:%d:%d:%d:%d:%d:%s;", s.ID, s.Anchor, s.Active, s.Width, s.Height, s.Radius, s.Gap, s.OffsetX, s.OffsetY, s.TooltipPad, s.TooltipSide)
 	}
 	return sb.String()
 }
@@ -1339,6 +1477,7 @@ func satellitesSignature(satellites []SatelliteBounds) string {
 type regionCache struct {
 	w, h, r, offsetX int
 	dw, dh, extraH   int
+	totalVintaH      int
 	satellitesHash   string
 	padding          int
 	scale            float64
@@ -1350,6 +1489,57 @@ var (
 	lastRegion     regionCache
 	cachedClientSw int
 )
+
+// computeTotalVintaHeight calculates the total vertical span in physical pixels
+// required to cover all currently visible Vinta elements (island, satellites, dev panel).
+func (a *App) computeTotalVintaHeight(effectiveMainH int, scale float64) int {
+	scaleInt := func(v int) int {
+		return int(float64(v) * scale)
+	}
+
+	totalH := scaleInt(effectiveMainH)
+	if totalH <= 0 {
+		totalH = scaleInt(36)
+	}
+
+	// DevTest panel anchored below the main island
+	if a.devW > 0 && a.devH > 0 {
+		gap := scaleInt(15)
+		devBottom := totalH + gap + scaleInt(a.devH+a.devExtra)
+		if devBottom > totalH {
+			totalH = devBottom
+		}
+	}
+
+	// Floating satellites anchored around the main island
+	a.satellitesMu.RLock()
+	for _, sat := range a.satellites {
+		if !sat.Active || sat.Width <= 0 || sat.Height <= 0 {
+			continue
+		}
+		var satBottom int
+		switch sat.Anchor {
+		case "bottom":
+			gapScaled := scaleInt(sat.Gap)
+			hScaled := scaleInt(sat.Height)
+			satOffsetScaledY := scaleInt(sat.OffsetY)
+			satBottom = totalH + gapScaled + satOffsetScaledY + hScaled
+		default:
+			satOffsetScaledY := scaleInt(sat.OffsetY)
+			hScaled := scaleInt(sat.Height)
+			tPad := scaleInt(sat.TooltipPad)
+			satBottom = satOffsetScaledY + hScaled + tPad
+		}
+		if satBottom > totalH {
+			totalH = satBottom
+		}
+	}
+	a.satellitesMu.RUnlock()
+
+	// Add outside margin padding so shadows and hovering margins are never clipped
+	pad := scaleInt(OutsidePadding + 8)
+	return totalH + pad
+}
 
 // updateWindowRegion updates the Win32 window clipping region for click-through.
 func (a *App) updateWindowRegion() {
@@ -1364,12 +1554,22 @@ func (a *App) updateWindowRegion() {
 		padding = HiddenOutsidePadding
 	}
 
+	effectiveMainW := a.pillW
+	effectiveMainH := a.pillH
+	if effectiveMainW <= 0 && a.restingW > 0 {
+		effectiveMainW = a.restingW
+	}
+	if effectiveMainH <= 0 && a.restingH > 0 {
+		effectiveMainH = a.restingH
+	}
+
+	totalVintaH := a.computeTotalVintaHeight(effectiveMainH, a.scale)
 	sats := a.getActiveSatellites()
-	setClickRegion(hwnd, a.pillW, a.pillH, a.pillR, a.offsetX, a.devW, a.devH, a.devExtra, sats, padding, a.scale)
+	setClickRegion(hwnd, a.pillW, a.pillH, a.pillR, a.offsetX, a.devW, a.devH, a.devExtra, effectiveMainW, effectiveMainH, totalVintaH, sats, padding, a.scale)
 }
 
 // setClickRegion updates the Win32 window region to combine the main pill, satellites, and dev pill.
-func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, dw int, dh int, extraH int, satellites []SatelliteBounds, padding int, scale float64) {
+func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, dw int, dh int, extraH int, effectiveMainW int, effectiveMainH int, totalVintaH int, satellites []SatelliteBounds, padding int, scale float64) {
 	if hwnd == 0 {
 		return
 	}
@@ -1408,7 +1608,8 @@ func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, dw int, dh i
 	// Early exit if identical region is already applied to HWND
 	if lastRegion.w == w && lastRegion.h == h && lastRegion.r == r &&
 		lastRegion.offsetX == offsetX && lastRegion.dw == dw && lastRegion.dh == dh &&
-		lastRegion.extraH == extraH && lastRegion.satellitesHash == satSig &&
+		lastRegion.extraH == extraH && lastRegion.totalVintaH == totalVintaH &&
+		lastRegion.satellitesHash == satSig &&
 		lastRegion.padding == padding && lastRegion.scale == scale && lastRegion.sw == sw {
 		return
 	}
@@ -1416,19 +1617,27 @@ func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, dw int, dh i
 	lastRegion = regionCache{
 		w: w, h: h, r: r, offsetX: offsetX,
 		dw: dw, dh: dh, extraH: extraH,
+		totalVintaH:    totalVintaH,
 		satellitesHash: satSig,
 		padding:        padding, scale: scale, sw: sw,
 	}
 
 	var regions []uintptr
-	if hrgnMain := createMainPillRegion(w, h, r, offsetX, sw, padding, scale); hrgnMain != 0 {
+	if w == -1 {
+		if hrgnMain := createMainPillRegion(w, h, r, offsetX, sw, padding, totalVintaH, scale); hrgnMain != 0 {
+			_, _, _ = procSetWindowRgn.Call(hwnd, hrgnMain, 1)
+		}
+		return
+	}
+
+	if hrgnMain := createMainPillRegion(w, h, r, offsetX, sw, padding, totalVintaH, scale); hrgnMain != 0 {
 		regions = append(regions, hrgnMain)
 	}
-	if hrgnDev := createDevPillRegion(dw, dh, extraH, h, offsetX, sw, scale, w == -1); hrgnDev != 0 {
+	if hrgnDev := createDevPillRegion(dw, dh, extraH, effectiveMainH, offsetX, sw, scale); hrgnDev != 0 {
 		regions = append(regions, hrgnDev)
 	}
 	for _, sat := range satellites {
-		if hrgnSat := createSatelliteRegion(sat, w, h, offsetX, sw, scale); hrgnSat != 0 {
+		if hrgnSat := createSatelliteRegion(sat, effectiveMainW, effectiveMainH, offsetX, sw, scale); hrgnSat != 0 {
 			regions = append(regions, hrgnSat)
 		}
 	}
@@ -1440,7 +1649,7 @@ func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, dw int, dh i
 }
 
 // createMainPillRegion generates the Win32 HRGN for the primary dynamic island.
-func createMainPillRegion(w, h, r, offsetX, sw, padding int, scale float64) uintptr {
+func createMainPillRegion(w, h, r, offsetX, sw, padding, totalVintaH int, scale float64) uintptr {
 	scaleInt := func(v int) int {
 		return int(float64(v) * scale)
 	}
@@ -1449,7 +1658,7 @@ func createMainPillRegion(w, h, r, offsetX, sw, padding int, scale float64) uint
 	scaledOffset := scaleInt(offsetX)
 	screenCenterX := vLeft + pCenter + scaledOffset
 	currentMon := resolveCurrentMonitor(screenCenterX, monitors)
-	monitorTopOffset := scaleInt(currentMon.Top - vTop)
+	monitorTopOffset := currentMon.Top - vTop
 	if monitorTopOffset < 0 {
 		monitorTopOffset = 0
 	}
@@ -1462,7 +1671,17 @@ func createMainPillRegion(w, h, r, offsetX, sw, padding int, scale float64) uint
 				maxTopOffset = offset
 			}
 		}
-		overlayHeight := maxTopOffset + 680
+
+		targetHeight := totalVintaH
+		if targetHeight <= 0 {
+			if h > 0 {
+				targetHeight = scaleInt(h)
+			} else {
+				targetHeight = scaleInt(680)
+			}
+		}
+
+		overlayHeight := maxTopOffset + targetHeight
 		_, _, _, vHeight, _, _ := GetDisplayMetrics()
 		if vHeight > 0 && overlayHeight > vHeight {
 			overlayHeight = vHeight
@@ -1509,7 +1728,7 @@ func createMainPillRegion(w, h, r, offsetX, sw, padding int, scale float64) uint
 }
 
 // createDevPillRegion generates the Win32 HRGN for the secondary dev panel anchored below the main island.
-func createDevPillRegion(dw, dh, extraH, mainH, offsetX, sw int, scale float64, fullWidth bool) uintptr {
+func createDevPillRegion(dw, dh, extraH, mainH, offsetX, sw int, scale float64) uintptr {
 	if dw <= 0 || dh <= 0 {
 		return 0
 	}
@@ -1521,7 +1740,7 @@ func createDevPillRegion(dw, dh, extraH, mainH, offsetX, sw int, scale float64, 
 	scaledOffset := scaleInt(offsetX)
 	screenCenterX := vLeft + pCenter + scaledOffset
 	currentMon := resolveCurrentMonitor(screenCenterX, monitors)
-	monitorTopOffset := scaleInt(currentMon.Top - vTop)
+	monitorTopOffset := currentMon.Top - vTop
 	if monitorTopOffset < 0 {
 		monitorTopOffset = 0
 	}
@@ -1546,21 +1765,12 @@ func createDevPillRegion(dw, dh, extraH, mainH, offsetX, sw int, scale float64, 
 	}
 	bottom := devTopOffset + pdh + pad + extraMargin
 
-	// When runway mode is active (w == -1), expand dev pill region across full monitor width
-	if fullWidth {
-		hrgn, _, _ := procCreateRectRgn.Call(
-			0, uintptr(top),
-			uintptr(sw), uintptr(bottom),
-		)
-		return hrgn
-	}
-
-	monLeftClient := scaleInt(currentMon.Left - vLeft)
-	monRightClient := scaleInt(currentMon.Left + currentMon.Width - vLeft)
+	monLeftClient := currentMon.Left - vLeft
+	monRightClient := currentMon.Left + currentMon.Width - vLeft
 	minDevCenter := monLeftClient + scaleInt(12) + (pdw / 2)
 	maxDevCenter := monRightClient - scaleInt(12) - (pdw / 2)
 	if minDevCenter > maxDevCenter {
-		minDevCenter = monLeftClient + (scaleInt(currentMon.Width) / 2)
+		minDevCenter = monLeftClient + (currentMon.Width / 2)
 		maxDevCenter = minDevCenter
 	}
 
@@ -1609,7 +1819,7 @@ func createSatelliteRegion(sat SatelliteBounds, mainW, mainH, offsetX, sw int, s
 	scaledOffset := scaleInt(offsetX)
 	screenCenterX := vLeft + pCenter + scaledOffset
 	currentMon := resolveCurrentMonitor(screenCenterX, monitors)
-	monitorTopOffset := scaleInt(currentMon.Top - vTop)
+	monitorTopOffset := currentMon.Top - vTop
 	if monitorTopOffset < 0 {
 		monitorTopOffset = 0
 	}
@@ -1618,7 +1828,8 @@ func createSatelliteRegion(sat SatelliteBounds, mainW, mainH, offsetX, sw int, s
 	physicalCenterX := pCenter + scaledOffset
 	pw := scaleInt(mainW)
 	ph := scaleInt(mainH)
-	pad := scaleInt(OutsidePadding)
+	satOutsidePad := 4
+	pad := scaleInt(satOutsidePad)
 
 	gapScaled := scaleInt(sat.Gap)
 	wScaled := scaleInt(sat.Width)
@@ -1653,6 +1864,46 @@ func createSatelliteRegion(sat SatelliteBounds, mainW, mainH, offsetX, sw int, s
 		bottom = top + hScaled + (pad * 2)
 	}
 
+	// For flank satellites situated near the monitor top edge, extend top up to monitorTopOffset
+	// to eliminate any narrow sliver gap where background browser tabs might receive hover.
+	if sat.Anchor != "bottom" && visualTop+satOffsetScaledY <= monitorTopOffset+scaleInt(15) {
+		top = monitorTopOffset
+	}
+
+	// Directional tooltip padding: expand the hit-test region strictly outward
+	// (away from the island) so DWM's window shadow never bleeds onto adjacent elements.
+	if sat.TooltipPad > 0 {
+		tPad := scaleInt(sat.TooltipPad)
+		switch sat.TooltipSide {
+		case "bottom":
+			bottom += tPad
+			horizPad := scaleInt(36)
+			left -= horizPad
+			right += horizPad
+		case "top":
+			top -= tPad
+			horizPad := scaleInt(36)
+			left -= horizPad
+			right += horizPad
+		case "right":
+			right += tPad
+		case "left":
+			left -= tPad
+		default:
+			// Fallback: expand away from the island based on anchor direction
+			switch sat.Anchor {
+			case "right":
+				right += tPad
+			case "left":
+				left -= tPad
+			case "bottom":
+				bottom += tPad
+			case "top":
+				top -= tPad
+			}
+		}
+	}
+
 	if left < 0 {
 		left = 0
 	}
@@ -1664,6 +1915,9 @@ func createSatelliteRegion(sat SatelliteBounds, mainW, mainH, offsetX, sw int, s
 	}
 
 	ellipseSize := scaleInt(sat.Radius) * 2
+	if sat.TooltipPad > 0 {
+		ellipseSize = scaleInt(10) * 2
+	}
 	if hLimit := bottom - top; ellipseSize > hLimit {
 		ellipseSize = hLimit
 	}

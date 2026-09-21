@@ -5,7 +5,8 @@
   import {
     registerSatellite,
     unregisterSatellite,
-    type SatelliteAnchor
+    type SatelliteAnchor,
+    type TooltipSide
   } from '../stores/satellites'
 
   /**
@@ -28,10 +29,18 @@
     offsetX?: number
     /** Additional vertical coordinate offset for stacking. */
     offsetY?: number
+    /** Permanent tooltip region padding in pixels. */
+    tooltipPad?: number
+    /** Direction the tooltip extends from the satellite. */
+    tooltipSide?: TooltipSide
     /** Whether the satellite is currently active and clickable. */
     active: boolean
     /** Slotted child content to render inside the satellite host. */
     children?: Snippet
+    /** Optional mouse enter callback for peripheral hover tracking. */
+    onmouseenter?: (e: MouseEvent) => void
+    /** Optional mouse leave callback for peripheral hover tracking. */
+    onmouseleave?: (e: MouseEvent) => void
   }
 
   let {
@@ -43,8 +52,12 @@
     gap = 12,
     offsetX = 0,
     offsetY = 0,
+    tooltipPad = 0,
+    tooltipSide,
     active,
-    children
+    children,
+    onmouseenter,
+    onmouseleave
   }: Props = $props()
 
   /**
@@ -60,6 +73,8 @@
       gap,
       offsetX,
       offsetY,
+      tooltipPad,
+      tooltipSide,
       active
     })
   }
@@ -115,11 +130,14 @@
   <div
     class="satellite-host"
     data-anchor={anchor}
+    role="none"
     style="
       --sat-gap: {gap}px;
       --sat-offset-x: {offsetX}px;
       --sat-offset-y: {offsetY}px;
     "
+    {onmouseenter}
+    {onmouseleave}
     in:fly={{
       x: flyParams.inX,
       y: flyParams.inY,
@@ -145,6 +163,11 @@
     position: absolute;
     z-index: 110;
     pointer-events: auto;
+    cursor: default;
+    transition:
+      top 0.26s cubic-bezier(0.2, 0.8, 0.2, 1),
+      left 0.26s cubic-bezier(0.2, 0.8, 0.2, 1),
+      right 0.26s cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 
   .satellite-host[data-anchor='right'] {

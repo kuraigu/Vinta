@@ -13,7 +13,8 @@
     Moon,
     ChevronDown,
     ChevronUp,
-    RefreshCw
+    RefreshCw,
+    X
   } from 'lucide-svelte'
 
   import HomePage, { config as homeConfig } from '../pages/HomePage.svelte'
@@ -44,6 +45,8 @@
   let devH = $state(0)
   let extraH = $state(0)
   let isExpandedMode = $state(false)
+  let isMinimized = $state(false)
+  let isDevPillDismissed = $state(false)
 
   const navigate =
     getContext<
@@ -51,9 +54,16 @@
     >('navigate')
 
   function syncDevPillBounds() {
+    const scale = window.devicePixelRatio || 1
+    if (isDevPillDismissed) {
+      SetDevPillBounds(0, 0, 0, scale)
+      return
+    }
     if (devW > 0 && devH > 0) {
-      const scale = window.devicePixelRatio || 1
-      SetDevPillBounds(devW, devH, extraH, scale)
+      const activeExtra = isMinimized ? 0 : extraH
+      SetDevPillBounds(devW, devH, activeExtra, scale)
+    } else {
+      SetDevPillBounds(0, 0, 0, scale)
     }
   }
 
@@ -67,12 +77,30 @@
   onMount(() => {
     devTestingStore.set(true)
     const handleToggle = (e: Event) => {
+      const target = e.target as HTMLElement | null
+      // Only react to dropdown overlays originating from within DevPill
+      if (target && !target.closest?.('.dev-pill')) return
       const detail = (e as CustomEvent).detail
       extraH = detail?.open ? 250 : 0
       syncDevPillBounds()
     }
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && e.key === 'D')) {
+        isDevPillDismissed = !isDevPillDismissed
+        const scale = window.devicePixelRatio || 1
+        if (isDevPillDismissed) {
+          devTestingStore.set(false)
+          devPinnedStore.set(false)
+          SetDevPillBounds(0, 0, 0, scale)
+        } else {
+          devTestingStore.set(true)
+          syncDevPillBounds()
+        }
+      }
+    }
     window.addEventListener('vinta-overlay', handleToggle)
     window.addEventListener('resize', syncDevPillBounds)
+    window.addEventListener('keydown', handleKeyDown)
 
     return () => {
       devTestingStore.set(false)
@@ -81,6 +109,7 @@
       SetDevPillBounds(0, 0, 0, scale)
       window.removeEventListener('vinta-overlay', handleToggle)
       window.removeEventListener('resize', syncDevPillBounds)
+      window.removeEventListener('keydown', handleKeyDown)
     }
   })
 
@@ -140,7 +169,6 @@
   )
 
   let targetMode = $state($activePageIdStore || 'home')
-  let isMinimized = $state(false)
 
   // Bidirectional sync: when page changes on the Island, update targetMode without reacting to targetMode itself
   function handleExternalPageSync() {
@@ -183,113 +211,129 @@
   }
 </script>
 
-<div
-  class="dev-pill"
-  in:fade={{ duration: 300 }}
-  bind:clientWidth={devW}
-  bind:clientHeight={devH}
->
-  <div class="top-toolbar">
-    <div class="toolbar-left">
-      <span class="label">DEV TEST</span>
-      <CustomSelect
-        options={pageOptions}
-        bind:value={targetMode}
-        onChange={handlePageSelect}
-      />
+{#if !isDevPillDismissed}
+  <div
+    class="dev-pill"
+    in:fade={{ duration: 300 }}
+    bind:clientWidth={devW}
+    bind:clientHeight={devH}
+  >
+    <div class="top-toolbar">
+      <div class="toolbar-left">
+        <span class="label">DEV TEST</span>
+        <CustomSelect
+          options={pageOptions}
+          bind:value={targetMode}
+          onChange={handlePageSelect}
+        />
+      </div>
+
+      <div class="quick-toggles">
+        <button
+          class="icon-btn {$devPinnedStore ? 'active' : ''}"
+          onclick={() => ($devPinnedStore = !$devPinnedStore)}
+          title={$devPinnedStore
+            ? 'Unpin Page (Auto-hide Active)'
+            : 'Pin Page (Freeze Auto-hide & Routing)'}
+        >
+          <Pin size={13} strokeWidth={2.2} />
+        </button>
+        <button
+          class="icon-btn {isExpandedMode ? 'active' : ''}"
+          onclick={toggleExpandedMode}
+          title={isExpandedMode
+            ? 'Switch to Minimal Island'
+            : 'Switch to Expanded Card'}
+        >
+          {#if isExpandedMode}
+            <Minimize2 size={13} strokeWidth={2.2} />
+          {:else}
+            <Maximize2 size={13} strokeWidth={2.2} />
+          {/if}
+        </button>
+        <button
+          class="icon-btn {$debugBoundsOverlay ? 'active' : ''}"
+          onclick={() => ($debugBoundsOverlay = !$debugBoundsOverlay)}
+          title={$debugBoundsOverlay
+            ? 'Hide Bounds Overlay'
+            : 'Show Bounds Overlay'}
+        >
+          <Crosshair size={13} strokeWidth={2.2} />
+        </button>
+        <button
+          class="icon-btn {$debugLogs ? 'active' : ''}"
+          onclick={() => ($debugLogs = !$debugLogs)}
+          title={$debugLogs ? 'Disable Verbose Logs' : 'Enable Verbose Logs'}
+        >
+          <ScrollText size={13} strokeWidth={2.2} />
+        </button>
+        <button
+          class="icon-btn"
+          onclick={() =>
+            ($themeStore = $themeStore === 'dark' ? 'light' : 'dark')}
+          title="Toggle Theme"
+        >
+          {#if $themeStore === 'dark'}
+            <Sun size={13} strokeWidth={2.2} />
+          {:else}
+            <Moon size={13} strokeWidth={2.2} />
+          {/if}
+        </button>
+        <button
+          class="icon-btn"
+          onclick={handleReload}
+          title="Reload Webview (Refresh Page)"
+        >
+          <RefreshCw size={13} strokeWidth={2.2} />
+        </button>
+        <button
+          class="icon-btn minimize-btn"
+          onclick={() => (isMinimized = !isMinimized)}
+          title={isMinimized
+            ? 'Expand DevTest Panel'
+            : 'Minimize DevTest Panel'}
+        >
+          {#if isMinimized}
+            <ChevronDown size={13} strokeWidth={2.2} />
+          {:else}
+            <ChevronUp size={13} strokeWidth={2.2} />
+          {/if}
+        </button>
+        <button
+          class="icon-btn"
+          onclick={() => {
+            isDevPillDismissed = true
+            devTestingStore.set(false)
+            devPinnedStore.set(false)
+            SetDevPillBounds(0, 0, 0, window.devicePixelRatio || 1)
+          }}
+          title="Dismiss DevTest Panel (Press F12 to restore)"
+        >
+          <X size={13} strokeWidth={2.2} />
+        </button>
+      </div>
     </div>
 
-    <div class="quick-toggles">
-      <button
-        class="icon-btn {$devPinnedStore ? 'active' : ''}"
-        onclick={() => ($devPinnedStore = !$devPinnedStore)}
-        title={$devPinnedStore
-          ? 'Unpin Page (Auto-hide Active)'
-          : 'Pin Page (Freeze Auto-hide & Routing)'}
-      >
-        <Pin size={13} strokeWidth={2.2} />
-      </button>
-      <button
-        class="icon-btn {isExpandedMode ? 'active' : ''}"
-        onclick={toggleExpandedMode}
-        title={isExpandedMode
-          ? 'Switch to Minimal Island'
-          : 'Switch to Expanded Card'}
-      >
-        {#if isExpandedMode}
-          <Minimize2 size={13} strokeWidth={2.2} />
+    {#if !isMinimized}
+      <div class="divider"></div>
+      <div class="actions-scroll">
+        {#if pages[targetMode]?.controls}
+          {@const Controls = pages[targetMode].controls}
+          <Controls />
         {:else}
-          <Maximize2 size={13} strokeWidth={2.2} />
+          <div class="empty-controls">
+            <span class="empty-title"
+              >{pages[targetMode]?.label || 'Active Page'}</span
+            >
+            <span class="empty-desc"
+              >No specialized simulation controls for this view.</span
+            >
+          </div>
         {/if}
-      </button>
-      <button
-        class="icon-btn {$debugBoundsOverlay ? 'active' : ''}"
-        onclick={() => ($debugBoundsOverlay = !$debugBoundsOverlay)}
-        title={$debugBoundsOverlay
-          ? 'Hide Bounds Overlay'
-          : 'Show Bounds Overlay'}
-      >
-        <Crosshair size={13} strokeWidth={2.2} />
-      </button>
-      <button
-        class="icon-btn {$debugLogs ? 'active' : ''}"
-        onclick={() => ($debugLogs = !$debugLogs)}
-        title={$debugLogs ? 'Disable Verbose Logs' : 'Enable Verbose Logs'}
-      >
-        <ScrollText size={13} strokeWidth={2.2} />
-      </button>
-      <button
-        class="icon-btn"
-        onclick={() =>
-          ($themeStore = $themeStore === 'dark' ? 'light' : 'dark')}
-        title="Toggle Theme"
-      >
-        {#if $themeStore === 'dark'}
-          <Sun size={13} strokeWidth={2.2} />
-        {:else}
-          <Moon size={13} strokeWidth={2.2} />
-        {/if}
-      </button>
-      <button
-        class="icon-btn"
-        onclick={handleReload}
-        title="Reload Webview (Refresh Page)"
-      >
-        <RefreshCw size={13} strokeWidth={2.2} />
-      </button>
-      <button
-        class="icon-btn minimize-btn"
-        onclick={() => (isMinimized = !isMinimized)}
-        title={isMinimized ? 'Expand DevTest Panel' : 'Minimize DevTest Panel'}
-      >
-        {#if isMinimized}
-          <ChevronDown size={13} strokeWidth={2.2} />
-        {:else}
-          <ChevronUp size={13} strokeWidth={2.2} />
-        {/if}
-      </button>
-    </div>
+      </div>
+    {/if}
   </div>
-
-  {#if !isMinimized}
-    <div class="divider"></div>
-    <div class="actions-scroll">
-      {#if pages[targetMode]?.controls}
-        {@const Controls = pages[targetMode].controls}
-        <Controls />
-      {:else}
-        <div class="empty-controls">
-          <span class="empty-title"
-            >{pages[targetMode]?.label || 'Active Page'}</span
-          >
-          <span class="empty-desc"
-            >No specialized simulation controls for this view.</span
-          >
-        </div>
-      {/if}
-    </div>
-  {/if}
-</div>
+{/if}
 
 <style>
   .dev-pill {

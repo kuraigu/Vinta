@@ -33,6 +33,19 @@
   position: relative;
 }
 
+.island-wrapper {
+  margin-top: 5px;
+  position: relative;
+  display: inline-flex;
+  align-items: flex-start;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.island-wrapper > * {
+  pointer-events: auto;
+}
+
 .island {
   box-sizing: border-box;
   --island-border-color: transparent;
@@ -47,7 +60,7 @@
     inset 0 0 0 var(--island-border-width) var(--island-border-color);
   --island-hover-glow: 0 0 8px var(--island-border-color);
 
-  margin-top: 5px;
+  margin-top: 0;
   position: relative;
   background: var(--c-bg);
 
@@ -109,8 +122,6 @@
 .island.is-hidden {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
   border: 1px solid var(--c-border);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   background-color: var(--c-bg);
 }
 

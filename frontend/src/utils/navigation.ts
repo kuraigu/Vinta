@@ -8,9 +8,13 @@ import NotificationPage, {
   config as notifConfig
 } from '../pages/NotificationPage.svelte'
 import NotesPage, { config as notesConfig } from '../pages/NotesPage.svelte'
+import CalculatorPage, {
+  config as calculatorConfig
+} from '../pages/CalculatorPage.svelte'
 import {
   globalMediaStore,
   pageVisibilityStore,
+  activeSettingsTabStore,
   type IslandConfig
 } from '../store'
 import { get } from 'svelte/store'
@@ -58,12 +62,26 @@ export const AppControls = {
 
   goSettings: (navigate: NavFn, e?: Event) => {
     if (e) e.stopPropagation()
+    if (get(activeSettingsTabStore) === 'about') {
+      activeSettingsTabStore.set('appearance')
+    }
     navigate(SettingsPage, settingsConfig, true)
   },
 
   goNotes: (navigate: NavFn, e?: Event) => {
     if (e) e.stopPropagation()
     navigate(NotesPage, notesConfig, true)
+  },
+
+  goCalculator: (navigate: NavFn, e?: Event) => {
+    if (e) e.stopPropagation()
+    navigate(CalculatorPage, calculatorConfig, true)
+  },
+
+  goAbout: (navigate: NavFn, e?: Event) => {
+    if (e) e.stopPropagation()
+    activeSettingsTabStore.set('about')
+    navigate(SettingsPage, settingsConfig, true)
   },
 
   doMinimize: (navigate: NavFn, e?: Event, currentPage?: unknown) => {
@@ -77,6 +95,19 @@ export const AppControls = {
     }
     const fallback = getFallbackPage()
     navigate(fallback.page, fallback.config, false)
+  },
+
+  doExpand: (navigate: NavFn, e?: Event, currentPage?: unknown) => {
+    if (e) {
+      e.stopPropagation()
+      e.preventDefault()
+    }
+    if (currentPage === MediaPage) {
+      navigate(MediaPage, mediaConfig, true)
+      return
+    }
+    const fallback = getFallbackPage()
+    navigate(fallback.page, fallback.config, true)
   },
 
   doHide: (_navigate: NavFn, hidePill: () => void, e?: Event) => {
