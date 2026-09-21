@@ -4,11 +4,11 @@
     Grid,
     Music,
     Settings,
-    Power,
-    Minimize2,
-    EyeOff,
     House,
-    Bell
+    Bell,
+    FileText,
+    Calculator,
+    Info
   } from 'lucide-svelte'
   import { AppControls } from '../utils/AppControls.svelte'
   import DockButton from './DockButton.svelte'
@@ -17,15 +17,19 @@
   import NotificationPage from '../pages/NotificationPage.svelte'
   import MediaPage from '../pages/MediaPage.svelte'
   import SettingsPage from '../pages/SettingsPage.svelte'
+  import NotesPage from '../pages/NotesPage.svelte'
+  import CalculatorPage from '../pages/CalculatorPage.svelte'
   import type { IslandConfig } from '../store'
-  import { notifData, pageVisibilityStore } from '../store'
+  import {
+    notifData,
+    pageVisibilityStore,
+    activeSettingsTabStore
+  } from '../store'
 
   const navigate =
     getContext<
       (page: unknown, pageConfig: IslandConfig, expand?: boolean) => void
     >('navigate')
-
-  const hidePill = getContext<() => void>('hidePill')
 
   let { activePage }: { activePage: unknown; islandConfig?: IslandConfig } =
     $props()
@@ -48,6 +52,24 @@
         onclick={(e: MouseEvent) => AppControls.goHome(navigate, e)}
       >
         <House size={18} />
+      </DockButton>
+
+      {#if $pageVisibilityStore.notes !== false}
+        <DockButton
+          tooltip="Notes"
+          active={activePage === NotesPage}
+          onclick={(e: MouseEvent) => AppControls.goNotes(navigate, e)}
+        >
+          <FileText size={18} />
+        </DockButton>
+      {/if}
+
+      <DockButton
+        tooltip="Calculator"
+        active={activePage === CalculatorPage}
+        onclick={(e: MouseEvent) => AppControls.goCalculator(navigate, e)}
+      >
+        <Calculator size={18} />
       </DockButton>
 
       {#if $pageVisibilityStore.media}
@@ -73,39 +95,20 @@
 
       <DockButton
         tooltip="Settings"
-        active={activePage === SettingsPage}
+        active={activePage === SettingsPage &&
+          $activeSettingsTabStore !== 'about'}
         onclick={(e: MouseEvent) => AppControls.goSettings(navigate, e)}
       >
         <Settings size={18} />
       </DockButton>
-    </div>
-
-    <div class="divider"></div>
-
-    <div class="dock-group">
-      <DockButton
-        variant="success"
-        tooltip="Hide Widget"
-        onclick={(e: MouseEvent) => AppControls.doHide(navigate, hidePill, e)}
-      >
-        <EyeOff size={18} />
-      </DockButton>
 
       <DockButton
-        variant="warning"
-        tooltip="Collapse Island"
-        onclick={(e: MouseEvent) =>
-          AppControls.doMinimize(navigate, e, activePage)}
+        tooltip="About"
+        active={activePage === SettingsPage &&
+          $activeSettingsTabStore === 'about'}
+        onclick={(e: MouseEvent) => AppControls.goAbout(navigate, e)}
       >
-        <Minimize2 size={18} />
-      </DockButton>
-
-      <DockButton
-        variant="danger"
-        tooltip="Quit Vinta"
-        onclick={(e: MouseEvent) => AppControls.doQuit(e)}
-      >
-        <Power size={18} />
+        <Info size={18} />
       </DockButton>
     </div>
   </div>
@@ -128,13 +131,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 4px 8px;
-    border-radius: 20px;
-    background: var(--c-dock-popover-bg);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    border: 1px solid var(--c-border);
-    box-shadow: var(--c-dock-popover-shadow);
+    padding: 2px 6px;
     pointer-events: auto;
   }
 
@@ -142,13 +139,5 @@
     display: flex;
     align-items: center;
     gap: 6px;
-  }
-
-  .divider {
-    width: 1px;
-    height: 16px;
-    background: var(--c-border);
-    opacity: 0.6;
-    margin: 0 3px;
   }
 </style>

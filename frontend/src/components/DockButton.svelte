@@ -4,31 +4,38 @@
   type Props = {
     onclick: (e: MouseEvent) => void
     tooltip: string
+    tooltipPosition?: 'top' | 'left' | 'right' | 'bottom'
     variant?: '' | 'danger' | 'warning' | 'success'
+    shape?: 'rounded' | 'circle'
     active?: boolean
     badge?: number
+    useCustomTooltip?: boolean
     children: Snippet
   }
 
   let {
     onclick,
     tooltip,
+    tooltipPosition = 'top',
     variant = '',
+    shape = 'rounded',
     active = false,
     badge = undefined,
+    useCustomTooltip = true,
     children
   }: Props = $props()
 </script>
 
 <!-- Notice {onclick} replaces on:click={onclick} in Svelte 5 -->
 <button
-  class="dock-btn {variant}"
+  class="dock-btn {variant} shape-{shape} tooltip-{tooltipPosition}"
   class:active
   onclick={(e) => {
     e.stopPropagation()
     if (onclick) onclick(e)
   }}
-  data-tooltip={tooltip}
+  data-tooltip={useCustomTooltip ? tooltip : ''}
+  title={!useCustomTooltip ? tooltip : undefined}
 >
   {@render children()}
   {#if badge !== undefined && badge > 0}
@@ -52,6 +59,10 @@
     position: relative;
   }
 
+  .dock-btn.shape-circle {
+    border-radius: 50%;
+  }
+
   .dock-btn[data-tooltip]:not([data-tooltip=''])::after {
     content: attr(data-tooltip);
     position: absolute;
@@ -59,8 +70,6 @@
     left: 50%;
     transform: translateX(-50%) scale(0.9);
     background: var(--c-dock-popover-bg);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
     color: var(--c-text-primary);
     padding: 6px 10px;
     border-radius: 8px;
@@ -76,6 +85,45 @@
   }
 
   .dock-btn[data-tooltip]:not([data-tooltip='']):hover::after {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+
+  /* Right-side tooltip */
+  .dock-btn.tooltip-right[data-tooltip]:not([data-tooltip=''])::after {
+    bottom: auto;
+    top: 50%;
+    left: calc(100% + 10px);
+    transform: translateY(-50%) scale(0.9);
+  }
+
+  .dock-btn.tooltip-right[data-tooltip]:not([data-tooltip='']):hover::after {
+    transform: translateY(-50%) scale(1);
+  }
+
+  /* Left-side tooltip */
+  .dock-btn.tooltip-left[data-tooltip]:not([data-tooltip=''])::after {
+    bottom: auto;
+    top: 50%;
+    left: auto;
+    right: calc(100% + 10px);
+    transform: translateY(-50%) scale(0.9);
+  }
+
+  .dock-btn.tooltip-left[data-tooltip]:not([data-tooltip='']):hover::after {
+    transform: translateY(-50%) scale(1);
+  }
+
+  /* Bottom-side tooltip */
+  .dock-btn.tooltip-bottom[data-tooltip]:not([data-tooltip=''])::after {
+    bottom: auto;
+    top: calc(100% + 8px);
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%) scale(0.9);
+  }
+
+  .dock-btn.tooltip-bottom[data-tooltip]:not([data-tooltip='']):hover::after {
     opacity: 1;
     transform: translateX(-50%) scale(1);
   }

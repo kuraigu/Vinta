@@ -1,11 +1,10 @@
 <script lang="ts">
-  import { Moon, Maximize2, Sparkles, Eye } from 'lucide-svelte'
+  import { Moon, Sparkles, Eye, Maximize2 } from 'lucide-svelte'
   import CustomSelect from '../../CustomSelect.svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingSlider from '../SettingSlider.svelte'
   import {
     themeStore,
-    shapeStore,
     glowIntensityStore,
     opacityMinimalStore,
     opacityExpandedStore
@@ -28,19 +27,6 @@
       fullWidth={true}
       direction="auto"
     />
-  </SettingItem>
-
-  <SettingItem label="Shape" icon={Maximize2}>
-    <div class="segment-control">
-      <button
-        class:active={$shapeStore === 'pill'}
-        onclick={() => ($shapeStore = 'pill')}>Pill</button
-      >
-      <button
-        class:active={$shapeStore === 'box'}
-        onclick={() => ($shapeStore = 'box')}>Box</button
-      >
-    </div>
   </SettingItem>
 
   <SettingItem label="Ambient Glow Intensity" icon={Sparkles} flexCol={true}>
@@ -76,30 +62,5 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
-  }
-
-  .segment-control {
-    display: flex;
-    background: rgba(255, 255, 255, 0.06);
-    padding: 2px;
-    border-radius: 8px;
-    border: 1px solid var(--c-border);
-  }
-
-  .segment-control button {
-    background: transparent;
-    border: none;
-    color: var(--c-text-secondary);
-    padding: 4px 10px;
-    font-size: 11px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-
-  .segment-control button.active {
-    background: rgba(255, 255, 255, 0.12);
-    color: var(--c-text-primary);
-    font-weight: 600;
   }
 </style>

@@ -26,7 +26,6 @@
 
   const SETTINGS_KEYS = new Set([
     'vinta_theme',
-    'vinta_shape',
     'vinta_glow_intensity',
     'vinta_opacity_minimal',
     'vinta_opacity_expanded',

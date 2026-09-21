@@ -2,10 +2,8 @@
   import type { IslandConfig } from '../store'
 
   export const config: IslandConfig = {
-    minimal: { w: 10, h: 10, r: 5 },
-    expanded: { w: 340, h: 470, r: 28 },
-    borderColor: 'var(--c-border)',
-    glowColor: 'transparent'
+    minimal: { w: 220, h: 36, r: 18 },
+    expanded: { w: 340, h: 470, r: 28 }
   }
 </script>
 

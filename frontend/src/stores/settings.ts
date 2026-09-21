@@ -10,7 +10,6 @@ import { devTestingStore } from './appState'
 // Types
 // ============================================================================
 export type AppTheme = 'dark' | 'light'
-export type IslandShape = 'pill' | 'box'
 export type GlowIntensity = 'disabled' | 'subtle' | 'vibrant'
 export type AutoHideDisplayWidget = 'dash' | 'clock'
 export type HiddenPillPosition = 'center' | 'top-left' | 'top-right'
@@ -180,7 +179,6 @@ export function getInitialTimezone(): string {
 // 1. Appearance & Customization
 // ============================================================================
 export const themeStore = persistentWritable<AppTheme>('vinta_theme', 'dark')
-export const shapeStore = persistentWritable<IslandShape>('vinta_shape', 'pill')
 export const glowIntensityStore = persistentWritable<GlowIntensity>('vinta_glow_intensity', 'subtle')
 export const opacityMinimalStore = persistentWritable<number>('vinta_opacity_minimal', 1.0)
 export const opacityExpandedStore = persistentWritable<number>('vinta_opacity_expanded', 1.0)

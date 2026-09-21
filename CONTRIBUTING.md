@@ -21,6 +21,13 @@ Vinta is built using **Go + Wails v3 + Svelte 5**. The Go backend handles native
 - **Why C++/WinRT is used:** Windows provides native WinRT APIs (`Windows.UI.Notifications` for system toast listeners, `Windows.Media.Control` for Global System Media Transport Controls, and CoreAudio COM APIs for real-time peak audio metering). Native C++/WinRT provides direct access with zero inter-process overhead, instant event dispatching, and a minimal memory footprint (~3MB).
 - **Direct Event Callbacks & Media Controls:** The bridge directly invokes Go callbacks for real-time media metadata, album art streams, toast notifications, and dynamic audio visualizer peaks. Control commands (`seek`, `play_pause`, `next`, `prev`, `set_volume`) are executed immediately on the active media session.
 
+### Satellite Dock System (Multi-Region Window Compositing)
+
+- **What it is:** An extensible satellite dock engine supporting floating utility panels, window action controls, and companion docks placed along the perimeter of the Dynamic Island.
+- **Why Single-Window Multi-Region:** Rather than spawning multiple WebView2 instances (which consume 40MB to 90MB of RAM per satellite and introduce mouse drag latency and DWM frame tearing), Vinta uses Win32 `CombineRgn(..., RGN_OR)` with `CreateRoundRectRgn`. All floating docks render inside the same high-performance webview while visual gaps remain completely transparent to background mouse clicks.
+- **Declarative Host Component:** Satellites are declared via `<SatelliteHost>` in Svelte, which automatically registers geometry (`anchor`, `width`, `height`, `radius`, `gap`, `offsetX`, `offsetY`, `active`) with the Go backend via IPC.
+- **Dynamic Edge Margin Clamping:** Horizontal screen bounds dynamically adapt to active satellite footprints (`getActiveSatelliteFootprint`) so floating docks never clip outside the physical monitor display.
+
 ### Vinta Component vs Page
 
 #### Vinta Component

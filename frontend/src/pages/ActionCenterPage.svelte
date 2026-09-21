@@ -39,7 +39,6 @@
     GetBatteryStatus
   } from '../../bindings/Vinta/backend/app.js'
 
-
   let wireless = $derived($wirelessDataStore)
   let battery = $derived($batteryDataStore)
 

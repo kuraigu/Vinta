@@ -12,5 +12,6 @@ export {
   MonitorInfo,
   NoteFileInfo,
   ReleaseInfo,
+  SatelliteBounds,
   UpdateCheckResult
 } from './models.js'
