@@ -6,10 +6,11 @@
   flex-direction: column;
   position: relative;
   overflow: hidden;
+  border-radius: inherit;
 }
 
 .media-page-layout.expanded {
-  padding-bottom: 54px; /* Integrated space above Dock */
+  padding-bottom: 0;
 }
 
 .expanded-content {

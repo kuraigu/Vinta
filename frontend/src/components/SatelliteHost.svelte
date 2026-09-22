@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy, type Snippet } from 'svelte'
-  import { fly } from 'svelte/transition'
+  import { fly, scale } from 'svelte/transition'
   import { cubicOut } from 'svelte/easing'
   import {
     registerSatellite,
@@ -94,7 +94,7 @@
       case 'left':
         return {
           inX: 16,
-          outX: 8,
+          outX: 12,
           inY: 0,
           outY: 0
         }
@@ -103,20 +103,20 @@
           inX: 0,
           outX: 0,
           inY: -16,
-          outY: -8
+          outY: -12
         }
       case 'top':
         return {
           inX: 0,
           outX: 0,
           inY: 16,
-          outY: 8
+          outY: 12
         }
       case 'right':
       default:
         return {
           inX: -16,
-          outX: -8,
+          outX: -12,
           inY: 0,
           outY: 0
         }
@@ -141,14 +141,13 @@
     in:fly={{
       x: flyParams.inX,
       y: flyParams.inY,
-      duration: 220,
-      delay: 60,
+      duration: 200,
+      delay: 40,
       easing: cubicOut
     }}
-    out:fly={{
-      x: flyParams.outX,
-      y: flyParams.outY,
-      duration: 110,
+    out:scale={{
+      duration: 180,
+      start: 0.6,
       easing: cubicOut
     }}
   >
@@ -168,6 +167,39 @@
       top 0.26s cubic-bezier(0.2, 0.8, 0.2, 1),
       left 0.26s cubic-bezier(0.2, 0.8, 0.2, 1),
       right 0.26s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  /* Bridge across the gap to ensure continuous pointer capture during hover transition */
+  .satellite-host::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    pointer-events: auto;
+  }
+
+  .satellite-host[data-anchor='right']::before {
+    right: 100%;
+    width: calc(var(--sat-gap) + 4px);
+  }
+
+  .satellite-host[data-anchor='left']::before {
+    left: 100%;
+    width: calc(var(--sat-gap) + 4px);
+  }
+
+  .satellite-host[data-anchor='bottom']::before {
+    bottom: 100%;
+    left: 0;
+    right: 0;
+    height: calc(var(--sat-gap) + 4px);
+  }
+
+  .satellite-host[data-anchor='top']::before {
+    top: 100%;
+    left: 0;
+    right: 0;
+    height: calc(var(--sat-gap) + 4px);
   }
 
   .satellite-host[data-anchor='right'] {

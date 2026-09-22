@@ -1,6 +1,6 @@
 <script module lang="ts">
   export const config = {
-    minimal: { w: 330, h: 35, r: 35 },
+    minimal: { w: 330, h: 35, r: 16 },
     expanded: { w: 440, h: 380, r: 30 },
     borderColor: 'var(--c-island-border-idle)',
     glowColor: 'var(--c-island-glow-idle)'

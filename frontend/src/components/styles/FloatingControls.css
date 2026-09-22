@@ -3,7 +3,7 @@
   flex-direction: column;
   align-items: stretch;
   gap: 0;
-  border-radius: 16px;
+  width: 32px;
   background: var(--c-dock-popover-bg);
   border: none;
   box-shadow: none;
@@ -11,34 +11,105 @@
   user-select: none;
   cursor: default;
   opacity: 1;
-  overflow: visible;
-  transition:
-    width 0.24s cubic-bezier(0.2, 0.8, 0.2, 1),
-    height 0.24s cubic-bezier(0.2, 0.8, 0.2, 1),
-    padding 0.24s cubic-bezier(0.2, 0.8, 0.2, 1),
-    border-radius 0.24s cubic-bezier(0.2, 0.8, 0.2, 1),
-    background 0.2s cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  overflow: hidden;
   box-sizing: border-box;
 }
 
-.floating-controls:not(.horizontal) {
-  width: 32px;
+.floating-controls:not(.minimized) {
   height: 88px;
-  padding: 0;
   justify-content: stretch;
 }
 
-.floating-controls:hover,
-.floating-controls:focus-within {
+.floating-controls:not(.minimized) .button-wrapper {
+  width: 32px;
+  max-width: 32px;
+}
+
+.floating-controls:not(.minimized) .button-wrapper:first-child {
+  height: 29px;
+  flex: 0 0 29px;
+}
+
+.floating-controls:not(.minimized) .button-wrapper:nth-child(2) {
+  height: 30px;
+  flex: 0 0 30px;
+}
+
+.floating-controls:not(.minimized) .button-wrapper:last-child {
+  height: 29px;
+  flex: 0 0 29px;
+}
+
+.floating-controls:not(.minimized)
+  .button-wrapper:first-child
+  :global(.dock-btn) {
+  border-top-left-radius: 16px !important;
+  border-top-right-radius: 16px !important;
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+.floating-controls:not(.minimized)
+  .button-wrapper:last-child
+  :global(.dock-btn) {
+  border-bottom-left-radius: 16px !important;
+  border-bottom-right-radius: 16px !important;
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+}
+
+.floating-controls.minimized {
+  flex-direction: column;
+  width: 32px;
+  height: 116px; /* 4 items * 29px */
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.floating-controls.minimized .button-wrapper {
+  width: 32px;
+  height: 29px;
+  flex: 0 0 29px;
+}
+
+/* Bottom-most button rounds to match the drawer bottom edge */
+.floating-controls.minimized .button-wrapper:last-child :global(.dock-btn) {
+  border-bottom-left-radius: 12px !important;
+  border-bottom-right-radius: 12px !important;
+}
+
+/* --- Folded Pull-down Handle State --- */
+.floating-controls.minimized.folded {
+  height: 24px; /* Slim notch/pull-tab hanging from top edge */
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  border-bottom-left-radius: 8px;
+  border-bottom-right-radius: 8px;
+  opacity: 0.85;
+  cursor: pointer;
+}
+
+.floating-controls.minimized.folded:hover {
   opacity: 1;
+}
+
+.floating-controls.minimized.folded .button-wrapper {
+  height: 24px;
+  flex: 0 0 24px;
+}
+
+.floating-controls.minimized.folded :global(.dock-btn) {
+  border-bottom-left-radius: 8px !important;
+  border-bottom-right-radius: 8px !important;
 }
 
 .button-wrapper {
   display: flex;
   align-items: stretch;
   justify-content: stretch;
-  overflow: visible;
   position: relative;
   min-width: 0;
   min-height: 0;
@@ -49,7 +120,6 @@
   z-index: 2;
 }
 
-/* Base button fills its entire allocated segment like OS caption controls */
 .floating-controls :global(.dock-btn) {
   width: 100% !important;
   height: 100% !important;
@@ -65,195 +135,27 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition:
-    background 0.12s ease,
-    color 0.12s ease !important;
 }
 
-/* Prevent internal SVG elements or pseudo-tooltips from capturing pointer events and battling */
 .floating-controls :global(.dock-btn *) {
   pointer-events: none !important;
 }
 
-.floating-controls :global(.dock-btn::after) {
-  pointer-events: none !important;
-}
-
 .floating-controls :global(.dock-btn:hover) {
-  transform: none !important;
-  box-shadow: none !important;
   color: var(--c-text-primary);
   background: color-mix(in srgb, var(--c-dock-popover-bg) 82%, #ffffff 18%);
 }
 
 .floating-controls :global(.dock-btn:active) {
-  transform: none !important;
-  box-shadow: none !important;
   background: color-mix(in srgb, var(--c-dock-popover-bg) 72%, #ffffff 28%);
 }
 
 .floating-controls :global(.dock-btn.danger:hover) {
   color: #ffffff;
   background: var(--c-danger, #ff3b30);
-  box-shadow: none !important;
 }
 
 .floating-controls :global(.dock-btn.danger:active) {
   color: #ffffff;
   background: color-mix(in srgb, var(--c-danger, #ff3b30) 80%, #000000 20%);
-}
-
-/* Vertical Dock (Expanded Island): Fixed pixel heights per button to eliminate subpixel rounding jitter */
-.floating-controls:not(.horizontal) .button-wrapper {
-  width: 32px;
-  max-width: 32px;
-}
-
-.floating-controls:not(.horizontal) .button-wrapper:first-child {
-  height: 29px;
-  flex: 0 0 29px;
-}
-
-.floating-controls:not(.horizontal) .button-wrapper:nth-child(2) {
-  height: 30px;
-  flex: 0 0 30px;
-}
-
-.floating-controls:not(.horizontal) .button-wrapper:last-child {
-  height: 29px;
-  flex: 0 0 29px;
-}
-
-/* Vertical Dock: Edge buttons conform to 16px capsule corners */
-.floating-controls:not(.horizontal)
-  .button-wrapper:first-child
-  :global(.dock-btn) {
-  border-top-left-radius: 16px !important;
-  border-top-right-radius: 16px !important;
-  border-bottom-left-radius: 0 !important;
-  border-bottom-right-radius: 0 !important;
-}
-
-.floating-controls:not(.horizontal)
-  .button-wrapper:last-child
-  :global(.dock-btn) {
-  border-bottom-left-radius: 16px !important;
-  border-bottom-right-radius: 16px !important;
-  border-top-left-radius: 0 !important;
-  border-top-right-radius: 0 !important;
-}
-
-/* Horizontal Drawer Mode (Minimized Island): Fixed 29px width per button (4 * 29px = 116px) */
-.floating-controls.horizontal {
-  flex-direction: row;
-  width: 116px;
-  height: 32px;
-  padding: 0;
-  gap: 0;
-  border-radius: 16px;
-  opacity: 1;
-}
-
-.floating-controls.horizontal .button-wrapper {
-  width: 29px;
-  height: 32px;
-  flex: 0 0 29px;
-  max-width: 29px;
-}
-
-/* Horizontal Drawer: Edge buttons conform to 16px capsule ends */
-.floating-controls.horizontal:not(.folded)
-  .button-wrapper:first-child
-  :global(.dock-btn) {
-  border-top-left-radius: 16px !important;
-  border-bottom-left-radius: 16px !important;
-  border-top-right-radius: 0 !important;
-  border-bottom-right-radius: 0 !important;
-}
-
-.floating-controls.horizontal:not(.folded)
-  .button-wrapper:last-child
-  :global(.dock-btn) {
-  border-top-right-radius: 16px !important;
-  border-bottom-right-radius: 16px !important;
-  border-top-left-radius: 0 !important;
-  border-bottom-left-radius: 0 !important;
-}
-
-/* Folded Compact Toggle: Exact 32px x 32px hit box */
-.floating-controls.horizontal.folded {
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  gap: 0;
-  justify-content: center;
-  align-items: center;
-  border-radius: 16px;
-  background: var(--c-dock-popover-bg);
-  border: none;
-  box-shadow: none;
-  opacity: 0.72;
-}
-
-.floating-controls.horizontal.folded:hover,
-.floating-controls.horizontal.folded:focus-within {
-  background: var(--c-dock-popover-bg);
-  opacity: 1;
-}
-
-.floating-controls.horizontal.folded .button-wrapper {
-  width: 32px;
-  height: 32px;
-  flex: 0 0 32px;
-  max-width: 32px;
-}
-
-.floating-controls.horizontal.folded :global(.dock-btn) {
-  border-radius: 16px !important;
-}
-
-/* Enforce clipping during transition or when folded */
-.floating-controls.folded,
-.floating-controls.transitioning {
-  overflow: hidden !important;
-}
-
-/* Bottom tooltip positioning for horizontal controls dock */
-.floating-controls.horizontal
-  :global(
-    .dock-btn.tooltip-bottom[data-tooltip]:not([data-tooltip=''])::after
-  ) {
-  left: 0;
-  right: auto;
-  transform: scale(0.9);
-  transform-origin: top left;
-}
-
-.floating-controls.horizontal
-  :global(
-    .dock-btn.tooltip-bottom[data-tooltip]:not([data-tooltip='']):hover::after
-  ) {
-  opacity: 1;
-  transform: scale(1);
-}
-
-/* Align rightmost button in open drawer (Quit) to its right edge so it stays within dock */
-.floating-controls.horizontal:not(.folded)
-  .button-wrapper:last-child
-  :global(
-    .dock-btn.tooltip-bottom[data-tooltip]:not([data-tooltip=''])::after
-  ) {
-  left: auto;
-  right: 0;
-  transform-origin: top right;
-}
-
-/* When near the screen right edge, align tooltips to the right edge to avoid monitor clipping */
-.floating-controls.horizontal.align-right
-  :global(
-    .dock-btn.tooltip-bottom[data-tooltip]:not([data-tooltip=''])::after
-  ) {
-  left: auto;
-  right: 0;
-  transform-origin: top right;
 }

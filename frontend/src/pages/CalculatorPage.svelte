@@ -2,7 +2,7 @@
   import type { IslandConfig } from '../store'
 
   export const config: IslandConfig = {
-    minimal: { w: 220, h: 36, r: 18 },
+    minimal: { w: 220, h: 36, r: 16 },
     expanded: { w: 340, h: 470, r: 28 }
   }
 </script>

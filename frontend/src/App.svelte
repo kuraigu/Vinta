@@ -115,6 +115,29 @@
   let islandConfig = $state<IslandConfig>(homeConfig)
 
   let expanded = $state(false)
+  let isIslandTransitioning = $state(false)
+  let isDockVisible = $state(false)
+  let islandTransitionTimeout: number | undefined
+
+  /**
+   * Tracks island expand and collapse animations to hide navigation and control docks
+   * until geometry changes are fully completed.
+   */
+  function handleExpandedTransitionEffect() {
+    const isExp = expanded
+    clearTimeout(islandTransitionTimeout)
+    isIslandTransitioning = true
+    isDockVisible = false
+
+    islandTransitionTimeout = window.setTimeout(() => {
+      isIslandTransitioning = false
+      if (isExp) {
+        isDockVisible = true
+      }
+    }, 340)
+  }
+
+  $effect(handleExpandedTransitionEffect)
   let isBlinking = $state(false)
 
   function triggerBlink() {
@@ -254,6 +277,14 @@
 
   let hideTrigger = $state(0)
   let isSatelliteHovering = $state(false)
+  let hoverGraceTimeout: number | undefined
+
+  function clearHoverGrace() {
+    if (hoverGraceTimeout) {
+      clearTimeout(hoverGraceTimeout)
+      hoverGraceTimeout = undefined
+    }
+  }
 
   function computeIsAnyHovered() {
     return isHovering || isSatelliteHovering
@@ -261,7 +292,9 @@
   let isAnyHovered = $derived.by(computeIsAnyHovered)
 
   function handleSatelliteMouseEnter() {
+    clearHoverGrace()
     isSatelliteHovering = true
+    isHovering = false
     clearTimeout(hideTimeout)
     if (isHidden && $wakeMethodStore === 'hover') {
       hoverShowTimeout = window.setTimeout(showWidget, 150)
@@ -270,10 +303,16 @@
     }
   }
 
+  const HOVER_GRACE_MS = 800
+
   function handleSatelliteMouseLeave() {
-    isSatelliteHovering = false
-    clearTimeout(hoverShowTimeout)
-    hideTrigger++
+    clearHoverGrace()
+    hoverGraceTimeout = window.setTimeout(() => {
+      isHovering = false
+      isSatelliteHovering = false
+      clearTimeout(hoverShowTimeout)
+      hideTrigger++
+    }, HOVER_GRACE_MS)
   }
 
   function handleAutoHideAndRevert() {
@@ -628,8 +667,8 @@
 
   let hiddenBounds = $derived(
     $autoHideDisplayStore === 'clock'
-      ? { w: 105, h: 24, r: 12 }
-      : { w: 60, h: 8, r: 4 }
+      ? { w: 116, h: 28, r: 14 }
+      : { w: 72, h: 12, r: 6 }
   )
 
   let hasBattery = $derived($batteryDataStore.hasBattery)
@@ -726,24 +765,6 @@
   let expandedTooltipSide = $derived.by(computeExpandedTooltipSide)
 
   /**
-   * Evaluates screen clearance to determine whether horizontal dock tooltips
-   * should align outward to the right or inward to the left when near screen edges.
-   */
-  function computeHorizontalTooltipAlign(): 'left' | 'right' {
-    const mon = activeMonitor
-    const islandCenterOnScreen =
-      displayLayout.primaryCenter + clampedOffsetX - mon.left
-    const halfMinW = (islandConfig.minimal.w || 300) / 2
-    const dockGap = 8
-    const dockWidth = isControlsDrawerOpen ? 116 : 32
-    const dockRightEdge = islandCenterOnScreen + halfMinW + dockGap + dockWidth
-    const rightClearance = mon.width - dockRightEdge
-
-    return rightClearance < 75 ? 'right' : 'left'
-  }
-  let horizontalTooltipAlign = $derived.by(computeHorizontalTooltipAlign)
-
-  /**
    * Computes dynamic geometric bounds for the window controls satellite dock
    * across expanded and minimized states, expanding tooltip padding when hovered.
    */
@@ -766,23 +787,23 @@
     const centerOffsetY = Math.max(0, Math.round((minH - 32) / 2))
     if (isControlsDrawerOpen) {
       return {
-        width: 116,
-        height: 32,
-        radius: 16,
-        gap: 8,
+        width: 32,
+        height: 116,
+        radius: 0,
+        gap: 10,
         offsetY: centerOffsetY,
         tooltipPad: isHovered ? 45 : 0,
-        tooltipSide: 'bottom' as const
+        tooltipSide: 'right' as const
       }
     }
     return {
       width: 32,
       height: 32,
-      radius: 16,
-      gap: 8,
+      radius: 0,
+      gap: 10,
       offsetY: centerOffsetY,
       tooltipPad: isHovered ? 45 : 0,
-      tooltipSide: 'bottom' as const
+      tooltipSide: 'right' as const
     }
   }
   let controlsSatelliteBounds = $derived.by(computeControlsSatelliteBounds)
@@ -1727,7 +1748,9 @@
   }
 
   function handleMouseEnter() {
+    clearHoverGrace()
     isHovering = true
+    isSatelliteHovering = false
     clearTimeout(hideTimeout)
     if (isHidden && $wakeMethodStore === 'hover') {
       hoverShowTimeout = window.setTimeout(showWidget, 150)
@@ -1737,9 +1760,13 @@
   }
 
   function handleMouseLeave() {
-    isHovering = false
-    clearTimeout(hoverShowTimeout)
-    hideTrigger++
+    clearHoverGrace()
+    hoverGraceTimeout = window.setTimeout(() => {
+      isHovering = false
+      isSatelliteHovering = false
+      clearTimeout(hoverShowTimeout)
+      hideTrigger++
+    }, HOVER_GRACE_MS)
   }
 
   function handleFocusIn(e: FocusEvent) {
@@ -1816,7 +1843,7 @@
         : expanded
           ? islandConfig.expanded.r
           : islandConfig.minimal.r}px;
-        border-radius: var(--island-r);
+        border-radius: 0 0 var(--island-r) var(--island-r);
         --island-border-color: {isHidden
         ? 'var(--c-border)'
         : islandConfig.borderColor || 'transparent'};
@@ -1879,10 +1906,11 @@
           {/key}
         {/if}
 
-        {#if expanded}
+        {#if expanded && isDockVisible}
           <div
             class="dock-overlay-wrapper"
-            in:fade={{ duration: 200, delay: 150 }}
+            in:fade={{ duration: 160 }}
+            out:fade={{ duration: 80 }}
           >
             <Dock {activePage} />
           </div>
@@ -1900,28 +1928,29 @@
       {/if}
     </div>
 
-    <SatelliteHost
-      id="controls"
-      anchor="right"
-      width={controlsSatelliteBounds.width}
-      height={controlsSatelliteBounds.height}
-      radius={controlsSatelliteBounds.radius}
-      gap={controlsSatelliteBounds.gap}
-      offsetY={controlsSatelliteBounds.offsetY}
-      tooltipPad={controlsSatelliteBounds.tooltipPad}
-      tooltipSide={controlsSatelliteBounds.tooltipSide}
-      active={!isHidden && !isQuitting}
-      onmouseenter={handleSatelliteMouseEnter}
-      onmouseleave={handleSatelliteMouseLeave}
-    >
-      <FloatingControls
-        {activePage}
-        {expanded}
-        {expandedTooltipSide}
-        {horizontalTooltipAlign}
-        onDrawerChange={handleControlsDrawerChange}
-      />
-    </SatelliteHost>
+    {#if !isQuitting && !isIslandTransitioning && !isHidden}
+      <SatelliteHost
+        id="controls"
+        anchor="right"
+        width={controlsSatelliteBounds.width}
+        height={controlsSatelliteBounds.height}
+        radius={controlsSatelliteBounds.radius}
+        gap={controlsSatelliteBounds.gap}
+        offsetY={controlsSatelliteBounds.offsetY}
+        tooltipPad={controlsSatelliteBounds.tooltipPad}
+        tooltipSide={controlsSatelliteBounds.tooltipSide}
+        active={true}
+        onmouseenter={handleSatelliteMouseEnter}
+        onmouseleave={handleSatelliteMouseLeave}
+      >
+        <FloatingControls
+          {activePage}
+          {expanded}
+          {expandedTooltipSide}
+          onDrawerChange={handleControlsDrawerChange}
+        />
+      </SatelliteHost>
+    {/if}
   </div>
 
   {#if isTestMode}

@@ -28,15 +28,21 @@
   let cssHeight = 0
   let dpr = 1
 
-  const MIN_HEIGHT = 0.25 // 25% baseline height when quiet/paused
+  function getMinHeight(): number {
+    return variant === 'full' ? 0.28 : 0.25
+  }
+
   let currentHeights: number[] = []
 
-  $effect(() => {
+  function handleBarCountChangeEffect() {
     const count = barCount || 24
+    const minH = getMinHeight()
     if (currentHeights.length !== count) {
-      currentHeights = Array(count).fill(MIN_HEIGHT)
+      currentHeights = Array(count).fill(minH)
     }
-  })
+  }
+
+  $effect(handleBarCountChangeEffect)
 
   function updateCanvasSize() {
     if (!canvasRef) return
@@ -54,7 +60,7 @@
     }
   }
 
-  $effect(() => {
+  function handlePlayStateEffect() {
     if (isPlaying) {
       if (!animFrame) {
         animFrame = requestAnimationFrame(renderLoop)
@@ -66,7 +72,18 @@
       }
       renderStatic()
     }
-  })
+  }
+
+  $effect(handlePlayStateEffect)
+
+  function handleProgressChangeEffect() {
+    void progressPercent
+    if (!isPlaying) {
+      renderStatic()
+    }
+  }
+
+  $effect(handleProgressChangeEffect)
 
   function renderLoop(time: number) {
     if (!canvasRef) return
@@ -79,8 +96,9 @@
   function renderStatic() {
     if (!canvasRef) return
     const count = barCount || 24
+    const minH = getMinHeight()
     for (let i = 0; i < count; i++) {
-      currentHeights[i] = MIN_HEIGHT
+      currentHeights[i] = minH
     }
     drawFrame(0)
   }
@@ -123,38 +141,42 @@
     } else {
       const g = ctx.createLinearGradient(0, height, 0, 0)
       g.addColorStop(0, '#00f0ff')
-      g.addColorStop(0.5, '#a855f7')
-      g.addColorStop(1, '#ff007f')
+      g.addColorStop(0.5, '#818cf8')
+      g.addColorStop(1, '#c084fc')
       activeFill = g
     }
 
+    const minH = getMinHeight()
+
     for (let i = 0; i < count; i++) {
-      let targetH = MIN_HEIGHT
+      let targetH = minH
       if (isPlaying && amplitude > 0) {
         const wave1 = Math.sin(t * 2.8 + i * 0.45)
         const wave2 = Math.cos(t * 4.2 + i * 0.75) * 0.5
         const wave3 = Math.sin(t * 6.5 + i * 1.3) * 0.25
         const combined = Math.abs(wave1 + wave2 + wave3) / 1.75
-        targetH = MIN_HEIGHT + combined * 0.75 * amplitude
-        targetH = Math.max(MIN_HEIGHT, Math.min(1.0, targetH))
+        targetH = minH + combined * (1.0 - minH) * amplitude
+        targetH = Math.max(minH, Math.min(1.0, targetH))
       }
 
-      currentHeights[i] += (targetH - (currentHeights[i] || MIN_HEIGHT)) * 0.25
+      currentHeights[i] += (targetH - (currentHeights[i] || minH)) * 0.25
       const hVal = currentHeights[i]
 
-      const barH = Math.max(3, height * hVal)
+      const minPixelH = variant === 'full' ? 5 : 3
+      const barH = Math.max(minPixelH, height * hVal)
       const x = i * (barWidth + gap)
-      const y = height - barH
+      const y = variant === 'full' ? (height - barH) / 2 : height - barH
 
       const barPercent = (i / Math.max(1, count - 1)) * 100
       const isPlayed =
         progressPercent === undefined || barPercent <= progressPercent
 
-      ctx.fillStyle = isPlayed ? activeFill : 'rgba(255, 255, 255, 0.22)'
+      ctx.fillStyle = isPlayed ? activeFill : 'rgba(255, 255, 255, 0.2)'
 
+      const barRadius = Math.min(radius, barH / 2)
       if (typeof ctx.roundRect === 'function') {
         ctx.beginPath()
-        ctx.roundRect(x, y, barWidth, barH, [radius, radius, 0, 0])
+        ctx.roundRect(x, y, barWidth, barH, barRadius)
         ctx.fill()
       } else {
         ctx.fillRect(x, y, barWidth, barH)

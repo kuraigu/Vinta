@@ -2,8 +2,8 @@
   import type { IslandConfig } from '../store'
 
   export const config: IslandConfig = {
-    minimal: { w: 368, h: 44, r: 22 },
-    expanded: { w: 440, h: 235, r: 28 },
+    minimal: { w: 368, h: 44, r: 16 },
+    expanded: { w: 400, h: 225, r: 28 },
     borderColor: 'rgba(255, 60, 100, 0.4)',
     glowColor: 'rgba(255, 60, 100, 0.35)'
   }
@@ -44,6 +44,7 @@
     config as notifConfig
   } from '../pages/NotificationPage.svelte'
   import { resolveAppBrand, nativeIconsStore } from '../services/iconService'
+  import { enhanceArtwork } from '../utils/imageUpscaler'
 
   const navigate =
     getContext<
@@ -296,11 +297,33 @@
 
   let imgLoadFailed = $state(false)
   let lastArtSrc = $state('')
+  let displayAlbumArt = $state('')
+  let isArtUpscaled = $state(false)
 
+  /**
+   * Synchronizes album artwork and initiates non-AI detail enhancement for low-resolution thumbnails.
+   */
   function handleArtSyncEffect() {
-    if (media.albumArt !== lastArtSrc) {
-      lastArtSrc = media.albumArt
+    const rawArt = media.albumArt
+    if (rawArt !== lastArtSrc) {
+      lastArtSrc = rawArt
       imgLoadFailed = false
+
+      if (!rawArt) {
+        displayAlbumArt = ''
+        isArtUpscaled = false
+        return
+      }
+
+      displayAlbumArt = rawArt
+      isArtUpscaled = false
+
+      enhanceArtwork(rawArt).then((res) => {
+        if (media.albumArt === rawArt && res.isUpscaled) {
+          displayAlbumArt = res.url
+          isArtUpscaled = true
+        }
+      })
     }
   }
   $effect(handleArtSyncEffect)
@@ -545,6 +568,88 @@
     void nativeIcons
     return resolveAppBrand(sourceApp, sessionId)
   }
+
+  let miniTitleNode = $state<HTMLElement | null>(null)
+  let expandedTitleNode = $state<HTMLElement | null>(null)
+
+  let isMiniTitleOverflowing = $state(false)
+  let miniTitleDist = $state(0)
+  let miniTitleDuration = $state(8)
+
+  let isExpandedTitleOverflowing = $state(false)
+  let expandedTitleDist = $state(0)
+  let expandedTitleDuration = $state(8)
+
+  /**
+   * Calculates text overflow metrics and configures the marquee animation speed.
+   *
+   * @param node Target element to evaluate
+   * @returns Object containing overflow status, slide distance, and duration
+   */
+  function measureMarquee(node: HTMLElement | null): {
+    overflowing: boolean
+    dist: number
+    duration: number
+  } {
+    if (!node || !node.parentElement) {
+      return { overflowing: false, dist: 0, duration: 8 }
+    }
+    const containerWidth = node.parentElement.clientWidth
+    const contentWidth = node.scrollWidth
+    const diff = contentWidth - containerWidth
+
+    if (diff > 2 && containerWidth > 0) {
+      const dist = Math.ceil(diff + 8)
+      const duration = Math.max(6, Math.min(24, Math.round(dist / 22 + 4.5)))
+      return { overflowing: true, dist, duration }
+    }
+    return { overflowing: false, dist: 0, duration: 8 }
+  }
+
+  /**
+   * Observes and updates marquee metrics when track information or element bounds change.
+   */
+  function handleTitleMarqueeEffect() {
+    const _title = media.title
+    const _expanded = expanded
+    const _mini = miniTitleNode
+    const _exp = expandedTitleNode
+
+    let rafId: number | null = null
+
+    function evaluate() {
+      if (!_expanded && _mini) {
+        const res = measureMarquee(_mini)
+        isMiniTitleOverflowing = res.overflowing
+        miniTitleDist = res.dist
+        miniTitleDuration = res.duration
+      } else if (_expanded && _exp) {
+        const res = measureMarquee(_exp)
+        isExpandedTitleOverflowing = res.overflowing
+        expandedTitleDist = res.dist
+        expandedTitleDuration = res.duration
+      }
+    }
+
+    rafId = requestAnimationFrame(evaluate)
+
+    const ro = new ResizeObserver(() => {
+      evaluate()
+    })
+
+    if (_mini?.parentElement) {
+      ro.observe(_mini.parentElement)
+    }
+    if (_exp?.parentElement) {
+      ro.observe(_exp.parentElement)
+    }
+
+    return () => {
+      if (rafId !== null) cancelAnimationFrame(rafId)
+      ro.disconnect()
+    }
+  }
+  $effect(handleTitleMarqueeEffect)
 </script>
 
 <div class="media-container {expanded ? 'expanded' : 'minimal'}">
@@ -557,9 +662,9 @@
         title={media.title}
       >
         <div class="vinyl-groove">
-          {#if media.albumArt && !imgLoadFailed}
+          {#if displayAlbumArt && !imgLoadFailed}
             <img
-              src={media.albumArt}
+              src={displayAlbumArt}
               alt={media.title}
               class="vinyl-art"
               draggable="false"
@@ -591,8 +696,21 @@
 
       <!-- Track Info -->
       <div class="track-info-minimal">
-        <span class="track-title-mini">{media.title || 'No Media Playing'}</span
+        <div
+          class="track-title-mini-wrapper"
+          class:is-overflowing={isMiniTitleOverflowing}
+          style={isMiniTitleOverflowing
+            ? `--marquee-dist: ${miniTitleDist}px; --marquee-duration: ${miniTitleDuration}s;`
+            : undefined}
         >
+          <span
+            bind:this={miniTitleNode}
+            class="track-title-mini"
+            class:is-marquee={isMiniTitleOverflowing}
+            title={media.title || 'No Media Playing'}
+            >{media.title || 'No Media Playing'}</span
+          >
+        </div>
         {#if media.artist}
           <span class="artist-name-mini">{media.artist}</span>
         {:else if !media.title}
@@ -640,17 +758,17 @@
           class="mini-progress-fill"
           style="width: {progressPercent}%;"
         ></div>
-        <div class="mini-progress-head" style="left: {progressPercent}%;"></div>
       </div>
     </div>
   {:else}
     <!-- Full-Card Background Image / Procedural Texture -->
     <div class="card-bg-wrapper">
-      {#if media.albumArt && !imgLoadFailed}
+      {#if displayAlbumArt && !imgLoadFailed}
         <img
-          src={media.albumArt}
+          src={displayAlbumArt}
           alt={media.title}
           class="card-bg-image"
+          class:is-upscaled={isArtUpscaled}
           draggable="false"
           decoding="async"
           onerror={handleImgError}
@@ -770,8 +888,21 @@
         <!-- Middle Row: Left-aligned Track Title/Artist + Hero Play/Pause Button -->
         <div class="middle-section">
           <div class="track-details">
-            <div class="track-title" title={media.title || 'No Media Playing'}>
-              {media.title || 'No Media Playing'}
+            <div
+              class="track-title-wrapper"
+              class:is-overflowing={isExpandedTitleOverflowing}
+              style={isExpandedTitleOverflowing
+                ? `--marquee-dist: ${expandedTitleDist}px; --marquee-duration: ${expandedTitleDuration}s;`
+                : undefined}
+            >
+              <div
+                bind:this={expandedTitleNode}
+                class="track-title"
+                class:is-marquee={isExpandedTitleOverflowing}
+                title={media.title || 'No Media Playing'}
+              >
+                {media.title || 'No Media Playing'}
+              </div>
             </div>
             {#if media.artist}
               <div class="artist-name" title={media.artist}>{media.artist}</div>
@@ -932,7 +1063,25 @@
         <div class="scrub-container">
           <span class="time-label">{formatTime(currentPos)}</span>
           <div class="waveform-scrub-wrapper">
-            <div class="spectrum-bars-container">
+            <!-- Inactive State: Sleek Single Block Progress Bar -->
+            <div
+              class="single-block-progress {isDraggingSeek
+                ? 'is-dragging'
+                : ''}"
+              class:is-active={media.isPlaying}
+            >
+              <div class="single-block-ghost"></div>
+              <div
+                class="single-block-fill"
+                style="width: {progressPercent}%;"
+              ></div>
+            </div>
+
+            <!-- Active State: Dynamic Equalizer Waveform -->
+            <div
+              class="spectrum-bars-container"
+              class:is-active={media.isPlaying}
+            >
               <DynamicEqualizer
                 isPlaying={media.isPlaying}
                 audioPeak={$audioPeakStore}
@@ -940,19 +1089,6 @@
                 barCount={32}
                 {progressPercent}
               />
-            </div>
-            <div
-              class="whole-capsule-track {isDraggingSeek ? 'is-dragging' : ''}"
-            >
-              <div class="capsule-track-ghost"></div>
-              <div
-                class="capsule-track-fill"
-                style="width: {progressPercent}%;"
-              ></div>
-              <div
-                class="capsule-track-head"
-                style="left: {progressPercent}%;"
-              ></div>
             </div>
             <input
               type="range"

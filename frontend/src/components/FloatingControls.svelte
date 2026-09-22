@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { getContext, onDestroy } from 'svelte'
+  import { getContext } from 'svelte'
   import {
     EyeOff,
     Minimize2,
     Maximize2,
     Power,
-    ChevronRight,
-    ChevronLeft
+    ChevronDown,
+    ChevronUp
   } from 'lucide-svelte'
   import { AppControls } from '../utils/AppControls.svelte'
   import DockButton from './DockButton.svelte'
@@ -23,7 +23,6 @@
     activePage: unknown
     expanded?: boolean
     expandedTooltipSide?: 'right' | 'left'
-    horizontalTooltipAlign?: 'left' | 'right'
     onDrawerChange?: (isOpen: boolean) => void
   }
 
@@ -31,73 +30,46 @@
     activePage,
     expanded = false,
     expandedTooltipSide = 'right',
-    horizontalTooltipAlign = 'left',
     onDrawerChange
   }: Props = $props()
 
-  let containerNode = $state<HTMLElement>()
   let isDrawerOpen = $state(false)
-  let isTransitioning = $state(false)
-  let transitionTimeout: number | undefined
-
-  function triggerTransitionGuard(duration = 260) {
-    clearTimeout(transitionTimeout)
-    isTransitioning = true
-    transitionTimeout = window.setTimeout(() => {
-      isTransitioning = false
-    }, duration)
-  }
 
   function handleOpenDrawer(e: MouseEvent) {
     e.stopPropagation()
     isDrawerOpen = true
-    triggerTransitionGuard(260)
     onDrawerChange?.(true)
   }
 
   function handleCloseDrawer(e: MouseEvent) {
     e.stopPropagation()
     isDrawerOpen = false
-    triggerTransitionGuard(260)
     onDrawerChange?.(false)
   }
 
-  /**
-   * Resets the drawer state and activates transition clipping when expanded changes.
-   */
-  function handleExpandedStateSync() {
-    const isExp = expanded
-    triggerTransitionGuard(320)
-    if (isExp && isDrawerOpen) {
+  $effect(() => {
+    if (expanded && isDrawerOpen) {
       isDrawerOpen = false
       onDrawerChange?.(false)
     }
-  }
-
-  $effect(handleExpandedStateSync)
-
-  onDestroy(() => {
-    clearTimeout(transitionTimeout)
   })
 </script>
 
+<!-- svelte-ignore a11y_click_events_have_key_events -->
 <div
   class="floating-controls"
-  class:horizontal={!expanded}
+  class:minimized={!expanded}
   class:folded={!expanded && !isDrawerOpen}
-  class:transitioning={isTransitioning}
-  class:align-right={horizontalTooltipAlign === 'right'}
   role="toolbar"
   aria-label="Window controls"
   tabindex="-1"
-  bind:this={containerNode}
+  onclick={!expanded && !isDrawerOpen ? handleOpenDrawer : undefined}
 >
   {#if expanded}
-    <!-- Expanded Card State: Vertical Dock (Order: Collapse, Hide, Quit) -->
+    <!-- Expanded Card State: Vertical Dock attached to parent window -->
     <div class="button-wrapper">
       <DockButton
         shape="rounded"
-        tooltip=""
         tooltipPosition={expandedTooltipSide}
         onclick={(e: MouseEvent) =>
           AppControls.doMinimize(navigate, e, activePage)}
@@ -109,7 +81,6 @@
     <div class="button-wrapper">
       <DockButton
         shape="rounded"
-        tooltip=""
         tooltipPosition={expandedTooltipSide}
         onclick={(e: MouseEvent) => AppControls.doHide(navigate, hidePill, e)}
       >
@@ -121,7 +92,6 @@
       <DockButton
         shape="rounded"
         variant="danger"
-        tooltip=""
         tooltipPosition={expandedTooltipSide}
         onclick={(e: MouseEvent) => AppControls.doQuit(e)}
       >
@@ -129,35 +99,32 @@
       </DockButton>
     </div>
   {:else if !isDrawerOpen}
-    <!-- Minimized Island State: Folded Compact Toggle -->
+    <!-- Minimized Island: Top-edge Pull-down Tab -->
     <div class="button-wrapper">
       <DockButton
         shape="rounded"
-        tooltip=""
-        tooltipPosition="bottom"
+        tooltipPosition={expandedTooltipSide}
         onclick={handleOpenDrawer}
       >
-        <ChevronRight size={13.5} strokeWidth={2.2} />
+        <ChevronDown size={13.5} strokeWidth={2.2} />
       </DockButton>
     </div>
   {:else}
-    <!-- Minimized Island State: Unfolded Horizontal Drawer (Order: Fold, Expand, Hide, Quit) -->
+    <!-- Minimized Island: Dropped-down Vertical Drawer (Order: Retract, Expand, Hide, Quit) -->
     <div class="button-wrapper">
       <DockButton
         shape="rounded"
-        tooltip=""
-        tooltipPosition="bottom"
+        tooltipPosition={expandedTooltipSide}
         onclick={handleCloseDrawer}
       >
-        <ChevronLeft size={13.5} strokeWidth={2.2} />
+        <ChevronUp size={13.5} strokeWidth={2.2} />
       </DockButton>
     </div>
 
     <div class="button-wrapper">
       <DockButton
         shape="rounded"
-        tooltip=""
-        tooltipPosition="bottom"
+        tooltipPosition={expandedTooltipSide}
         onclick={(e: MouseEvent) =>
           AppControls.doExpand(navigate, e, activePage)}
       >
@@ -168,8 +135,7 @@
     <div class="button-wrapper">
       <DockButton
         shape="rounded"
-        tooltip=""
-        tooltipPosition="bottom"
+        tooltipPosition={expandedTooltipSide}
         onclick={(e: MouseEvent) => AppControls.doHide(navigate, hidePill, e)}
       >
         <EyeOff size={13.5} strokeWidth={2.2} />
@@ -180,8 +146,7 @@
       <DockButton
         shape="rounded"
         variant="danger"
-        tooltip=""
-        tooltipPosition="bottom"
+        tooltipPosition={expandedTooltipSide}
         onclick={(e: MouseEvent) => AppControls.doQuit(e)}
       >
         <Power size={13.5} strokeWidth={2.2} />

@@ -34,7 +34,7 @@
 }
 
 .island-wrapper {
-  margin-top: 5px;
+  margin-top: 0px;
   position: relative;
   display: inline-flex;
   align-items: flex-start;
@@ -53,12 +53,17 @@
   --island-border-width: 1.5px;
   --island-glow-width: 1.5px;
   --ambient-glow-ring:
-    inset 0 0 0 var(--island-glow-width) var(--island-glow-color),
-    inset 0 0 0 var(--island-glow-width) var(--island-glow-color);
+    inset var(--island-glow-width) 0 0 0 var(--island-glow-color),
+    inset calc(-1 * var(--island-glow-width)) 0 0 0 var(--island-glow-color),
+    inset 0 calc(-1 * var(--island-glow-width)) 0 0 var(--island-glow-color),
+    inset calc(var(--island-glow-width) * 1.5) 0 0 0 var(--island-glow-color),
+    inset calc(-1.5 * var(--island-glow-width)) 0 0 0 var(--island-glow-color),
+    inset 0 calc(-1.5 * var(--island-glow-width)) 0 0 var(--island-glow-color);
   --island-hover-border:
-    inset 0 0 0 var(--island-border-width) var(--island-border-color),
-    inset 0 0 0 var(--island-border-width) var(--island-border-color);
-  --island-hover-glow: 0 0 8px var(--island-border-color);
+    inset var(--island-border-width) 0 0 0 var(--island-border-color),
+    inset calc(-1 * var(--island-border-width)) 0 0 0 var(--island-border-color),
+    inset 0 calc(-1 * var(--island-border-width)) 0 0 var(--island-border-color);
+  --island-hover-glow: 0 2px 6px var(--island-border-color);
 
   margin-top: 0;
   position: relative;
@@ -68,6 +73,8 @@
   -webkit-background-clip: padding-box;
 
   border: none;
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
   box-shadow: var(--island-box-shadow);
 
   transition:
@@ -96,32 +103,60 @@
   font-variant-numeric: tabular-nums;
 }
 
+
 .timeout-bar {
   position: absolute;
-  bottom: 2px;
+  bottom: 2.5px;
   left: 50%;
   transform: translateX(-50%);
-  height: 3px;
-  border-radius: 1.5px;
+  height: 2px;
+  border-radius: 9999px;
   background-color: var(--island-hidden-glow);
+  box-shadow:
+    0 0 6px 1px var(--island-hidden-glow),
+    0 0 12px 2px var(--island-hidden-glow);
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 14%,
+    black 86%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 14%,
+    black 86%,
+    transparent 100%
+  );
   animation: shrinkBar 10s linear forwards;
-  opacity: 0.7;
   z-index: 20;
   pointer-events: none;
+  filter: blur(0.2px);
 }
 
 @keyframes shrinkBar {
   0% {
     width: 40%;
+    opacity: 0;
+  }
+  6% {
+    opacity: 0.75;
+  }
+  85% {
+    width: 6%;
+    opacity: 0.75;
   }
   100% {
     width: 0%;
+    opacity: 0;
   }
 }
 
 .island.is-hidden {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
   border: 1px solid var(--c-border);
+  border-top: none;
   background-color: var(--c-bg);
 }
 
@@ -241,11 +276,11 @@
 
 .hidden-dash {
   position: absolute;
-  bottom: 2px;
+  bottom: 3px;
   left: 50%;
   transform: translateX(-50%);
-  width: 20px;
-  height: 2px;
+  width: 24px;
+  height: 2.5px;
   border-radius: 2px;
   background-color: var(--island-hidden-glow);
   box-shadow: 0 0 4px var(--island-hidden-glow);
@@ -288,6 +323,7 @@
   inset: 0;
   border-radius: inherit;
   box-shadow: var(--ambient-glow-ring);
+  clip-path: inset(0 -30px -30px -30px);
   -webkit-mask: conic-gradient(
     from var(--angle),
     rgba(0, 0, 0, 0) 0%,
@@ -302,7 +338,8 @@
   );
   pointer-events: none;
   opacity: 0;
-  filter: drop-shadow(0 0 5px var(--island-glow-color));
+  filter: drop-shadow(0 4px 10px var(--island-glow-color))
+    drop-shadow(0 2px 4px var(--island-glow-color));
   z-index: 10;
 }
 
@@ -328,7 +365,7 @@
 }
 
 .island.is-hidden:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
 }
 
 .content {
@@ -348,6 +385,7 @@
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
+  border-radius: inherit;
   transition:
     width var(--island-anim),
     height var(--island-anim);

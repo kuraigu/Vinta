@@ -1550,7 +1550,7 @@ func (a *App) updateWindowRegion() {
 
 	padding := OutsidePadding
 	// Use minimal padding when in hidden state so click-through around the small pill is precise
-	if a.isHidden || (a.pillW > 0 && a.pillW <= 110 && a.pillH <= 30) {
+	if a.isHidden || (a.pillW > 0 && a.pillW <= 130 && a.pillH <= 36) {
 		padding = HiddenOutsidePadding
 	}
 
@@ -1662,7 +1662,7 @@ func createMainPillRegion(w, h, r, offsetX, sw, padding, totalVintaH int, scale 
 	if monitorTopOffset < 0 {
 		monitorTopOffset = 0
 	}
-	visualTop := monitorTopOffset + scaleInt(5)
+	visualTop := monitorTopOffset + scaleInt(0)
 
 	if w == -1 {
 		maxTopOffset := 0
@@ -1722,6 +1722,18 @@ func createMainPillRegion(w, h, r, offsetX, sw, padding, totalVintaH int, scale 
 			uintptr(right), uintptr(bottom),
 			uintptr(ellipseSize), uintptr(ellipseSize),
 		)
+		// Flat top corners to match zero top border-radius
+		halfH := (bottom - top) / 2
+		if halfH > 0 {
+			hrgnTop, _, _ := procCreateRectRgn.Call(
+				uintptr(left), uintptr(top),
+				uintptr(right), uintptr(top+halfH),
+			)
+			if hrgnTop != 0 {
+				_, _, _ = procCombineRgn.Call(hrgn, hrgn, hrgnTop, uintptr(rgnOr))
+				_, _, _ = procDeleteObject.Call(hrgnTop)
+			}
+		}
 		return hrgn
 	}
 	return 0
@@ -1746,7 +1758,7 @@ func createDevPillRegion(dw, dh, extraH, mainH, offsetX, sw int, scale float64) 
 	}
 
 	gap := scaleInt(15)
-	visualTop := monitorTopOffset + scaleInt(5)
+	visualTop := monitorTopOffset + scaleInt(0)
 	devTopOffset := visualTop
 	if mainH > 0 {
 		ph := scaleInt(mainH)
@@ -1823,7 +1835,7 @@ func createSatelliteRegion(sat SatelliteBounds, mainW, mainH, offsetX, sw int, s
 	if monitorTopOffset < 0 {
 		monitorTopOffset = 0
 	}
-	visualTop := monitorTopOffset + scaleInt(5)
+	visualTop := monitorTopOffset + scaleInt(0)
 
 	physicalCenterX := pCenter + scaledOffset
 	pw := scaleInt(mainW)

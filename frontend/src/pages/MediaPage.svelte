@@ -1,7 +1,7 @@
 <script module lang="ts">
   export const config = {
-    minimal: { w: 368, h: 44, r: 22 },
-    expanded: { w: 440, h: 235, r: 28 },
+    minimal: { w: 368, h: 44, r: 16 },
+    expanded: { w: 400, h: 225, r: 28 },
     borderColor: 'rgba(255, 60, 100, 0.4)',
     glowColor: 'rgba(255, 60, 100, 0.35)'
   }

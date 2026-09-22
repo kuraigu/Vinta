@@ -3,7 +3,7 @@
 
   type Props = {
     onclick: (e: MouseEvent) => void
-    tooltip: string
+    tooltip?: string
     tooltipPosition?: 'top' | 'left' | 'right' | 'bottom'
     variant?: '' | 'danger' | 'warning' | 'success'
     shape?: 'rounded' | 'circle'
