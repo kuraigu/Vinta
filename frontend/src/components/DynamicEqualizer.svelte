@@ -139,14 +139,22 @@
         .trim()
       activeFill = computed || '#00f0ff'
     } else {
-      const g = ctx.createLinearGradient(0, height, 0, 0)
+      const g = ctx.createLinearGradient(0, 0, width, 0)
       g.addColorStop(0, '#00f0ff')
-      g.addColorStop(0.5, '#818cf8')
+      g.addColorStop(0.55, '#818cf8')
       g.addColorStop(1, '#c084fc')
       activeFill = g
     }
 
     const minH = getMinHeight()
+
+    const progressPx =
+      progressPercent !== undefined
+        ? Math.max(0, Math.min(width, (progressPercent / 100) * width))
+        : width
+
+    const barData: { x: number; y: number; w: number; h: number; r: number }[] =
+      []
 
     for (let i = 0; i < count; i++) {
       let targetH = minH
@@ -166,21 +174,44 @@
       const barH = Math.max(minPixelH, height * hVal)
       const x = i * (barWidth + gap)
       const y = variant === 'full' ? (height - barH) / 2 : height - barH
-
-      const barPercent = (i / Math.max(1, count - 1)) * 100
-      const isPlayed =
-        progressPercent === undefined || barPercent <= progressPercent
-
-      ctx.fillStyle = isPlayed ? activeFill : 'rgba(255, 255, 255, 0.2)'
-
       const barRadius = Math.min(radius, barH / 2)
+
+      barData.push({ x, y, w: barWidth, h: barH, r: barRadius })
+    }
+
+    // 1. Draw all unplayed bars in translucent backdrop
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)'
+    for (let i = 0; i < count; i++) {
+      const b = barData[i]
       if (typeof ctx.roundRect === 'function') {
         ctx.beginPath()
-        ctx.roundRect(x, y, barWidth, barH, barRadius)
+        ctx.roundRect(b.x, b.y, b.w, b.h, b.r)
         ctx.fill()
       } else {
-        ctx.fillRect(x, y, barWidth, barH)
+        ctx.fillRect(b.x, b.y, b.w, b.h)
       }
+    }
+
+    // 2. Draw played bars with precision clipping at progressPx
+    if (progressPx > 0) {
+      ctx.save()
+      ctx.beginPath()
+      ctx.rect(0, 0, progressPx, height)
+      ctx.clip()
+
+      ctx.fillStyle = activeFill
+      for (let i = 0; i < count; i++) {
+        const b = barData[i]
+        if (b.x > progressPx) break
+        if (typeof ctx.roundRect === 'function') {
+          ctx.beginPath()
+          ctx.roundRect(b.x, b.y, b.w, b.h, b.r)
+          ctx.fill()
+        } else {
+          ctx.fillRect(b.x, b.y, b.w, b.h)
+        }
+      }
+      ctx.restore()
     }
   }
 

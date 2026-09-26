@@ -59,6 +59,13 @@ export function ClearCache(): $CancellablePromise<void> {
 }
 
 /**
+ * ClearTooltipBounds is a no-op kept for frontend binding compatibility.
+ */
+export function ClearTooltipBounds(id: string): $CancellablePromise<void> {
+    return $Call.ByID(561175078, id);
+}
+
+/**
  * DeleteNote deletes a markdown note file from disk.
  */
 export function DeleteNote(fileName: string): $CancellablePromise<void> {
@@ -256,7 +263,7 @@ export function PauseUpdateDownload(): $CancellablePromise<void> {
 }
 
 /**
- * Quit terminates the application
+ * Quit terminates the application and all child windows.
  */
 export function Quit(): $CancellablePromise<void> {
     return $Call.ByID(1291806680);
@@ -399,6 +406,13 @@ export function SetDevPillBounds(width: number, height: number, extraH: number, 
 }
 
 /**
+ * SetDevWindow registers the developer tools window for lifecycle management.
+ */
+export function SetDevWindow(win: application$0.WebviewWindow | null): $CancellablePromise<void> {
+    return $Call.ByID(256862160, win);
+}
+
+/**
  * SetDragCapture controls Win32 OS-level mouse capture during drag gestures.
  * Deprecated/No-op: WebView2 child window requires uninterrupted mouse messages to fire DOM pointer capture.
  * Calling Win32 SetCapture on the parent HWND starves WebView2 of WM_MOUSEMOVE and WM_LBUTTONUP.
@@ -441,6 +455,13 @@ export function SetIsHidden(hidden: boolean): $CancellablePromise<void> {
  */
 export function SetSatelliteBounds(bounds: $models.SatelliteBounds): $CancellablePromise<void> {
     return $Call.ByID(479812843, bounds);
+}
+
+/**
+ * SetTooltipBounds is a no-op kept for frontend binding compatibility.
+ */
+export function SetTooltipBounds(bounds: $models.TooltipBounds): $CancellablePromise<void> {
+    return $Call.ByID(4008192705, bounds);
 }
 
 /**

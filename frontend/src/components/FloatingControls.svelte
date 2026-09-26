@@ -47,12 +47,17 @@
     onDrawerChange?.(false)
   }
 
-  $effect(() => {
+  /**
+   * Automatically retracts drawer when the parent island expands.
+   */
+  function handleExpandedDrawerClose() {
     if (expanded && isDrawerOpen) {
       isDrawerOpen = false
       onDrawerChange?.(false)
     }
-  })
+  }
+
+  $effect(handleExpandedDrawerClose)
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -70,6 +75,7 @@
     <div class="button-wrapper">
       <DockButton
         shape="rounded"
+        tooltip=""
         tooltipPosition={expandedTooltipSide}
         onclick={(e: MouseEvent) =>
           AppControls.doMinimize(navigate, e, activePage)}
@@ -81,6 +87,7 @@
     <div class="button-wrapper">
       <DockButton
         shape="rounded"
+        tooltip=""
         tooltipPosition={expandedTooltipSide}
         onclick={(e: MouseEvent) => AppControls.doHide(navigate, hidePill, e)}
       >
@@ -92,6 +99,7 @@
       <DockButton
         shape="rounded"
         variant="danger"
+        tooltip=""
         tooltipPosition={expandedTooltipSide}
         onclick={(e: MouseEvent) => AppControls.doQuit(e)}
       >
@@ -103,7 +111,8 @@
     <div class="button-wrapper">
       <DockButton
         shape="rounded"
-        tooltipPosition={expandedTooltipSide}
+        tooltip=""
+        tooltipPosition="bottom"
         onclick={handleOpenDrawer}
       >
         <ChevronDown size={13.5} strokeWidth={2.2} />
@@ -114,7 +123,8 @@
     <div class="button-wrapper">
       <DockButton
         shape="rounded"
-        tooltipPosition={expandedTooltipSide}
+        tooltip=""
+        tooltipPosition="bottom"
         onclick={handleCloseDrawer}
       >
         <ChevronUp size={13.5} strokeWidth={2.2} />
@@ -124,7 +134,8 @@
     <div class="button-wrapper">
       <DockButton
         shape="rounded"
-        tooltipPosition={expandedTooltipSide}
+        tooltip=""
+        tooltipPosition="bottom"
         onclick={(e: MouseEvent) =>
           AppControls.doExpand(navigate, e, activePage)}
       >
@@ -135,7 +146,8 @@
     <div class="button-wrapper">
       <DockButton
         shape="rounded"
-        tooltipPosition={expandedTooltipSide}
+        tooltip=""
+        tooltipPosition="bottom"
         onclick={(e: MouseEvent) => AppControls.doHide(navigate, hidePill, e)}
       >
         <EyeOff size={13.5} strokeWidth={2.2} />
@@ -146,7 +158,8 @@
       <DockButton
         shape="rounded"
         variant="danger"
-        tooltipPosition={expandedTooltipSide}
+        tooltip=""
+        tooltipPosition="bottom"
         onclick={(e: MouseEvent) => AppControls.doQuit(e)}
       >
         <Power size={13.5} strokeWidth={2.2} />

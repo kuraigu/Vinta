@@ -43,6 +43,7 @@ var (
 	procIsWindowVisible          = user32.NewProc("IsWindowVisible")
 	procIsIconic                 = user32.NewProc("IsIconic")
 	procGetAncestor              = user32.NewProc("GetAncestor")
+	procShowWindow               = user32.NewProc("ShowWindow")
 
 	shell32                          = syscall.NewLazyDLL("shell32.dll")
 	procSHQueryUserNotificationState = shell32.NewProc("SHQueryUserNotificationState")
@@ -54,6 +55,7 @@ var (
 	gdi32                  = syscall.NewLazyDLL("gdi32.dll")
 	procCreateRectRgn      = gdi32.NewProc("CreateRectRgn")
 	procCreateRoundRectRgn = gdi32.NewProc("CreateRoundRectRgn")
+	procCreateEllipticRgn  = gdi32.NewProc("CreateEllipticRgn")
 	procCombineRgn         = gdi32.NewProc("CombineRgn")
 	procSetWindowRgn       = user32.NewProc("SetWindowRgn")
 	procDeleteObject       = gdi32.NewProc("DeleteObject")
@@ -100,7 +102,7 @@ const (
 	WS_EX_NOACTIVATE = 0x08000000
 	//nolint:revive // Windows API constants
 	WS_EX_TRANSPARENT    = 0x00000020
-	OutsidePadding       = 10
+	OutsidePadding       = 6
 	HiddenOutsidePadding = 2
 	rgnOr                = 2
 
@@ -895,6 +897,7 @@ type App struct {
 	ctx                context.Context
 	wailsApp           *application.App
 	window             *application.WebviewWindow
+	devWindow          *application.WebviewWindow
 	icon               []byte
 	pillW              int
 	pillH              int
@@ -1111,7 +1114,11 @@ func (a *App) SetWidgetBounds(width int, height int, radius int, scale float64, 
 	a.pillW = width
 	a.pillH = height
 	a.pillR = radius
-	if width > 0 && height > 0 {
+	if width >= 180 && a.isHidden {
+		a.isHidden = false
+		services.SetAppHidden(false)
+	}
+	if !a.isHidden && width >= 180 && height >= 24 && height <= 52 {
 		a.restingW = width
 		a.restingH = height
 		a.restingR = radius
@@ -1237,18 +1244,33 @@ func (a *App) GetCurrentMonitor() MonitorInfo {
 	return resolveCurrentMonitor(screenCenterX, monitors)
 }
 
-// Quit terminates the application
+// SetDevWindow registers the developer tools window for lifecycle management.
+func (a *App) SetDevWindow(win *application.WebviewWindow) {
+	a.devWindow = win
+}
+
+// Quit terminates the application and all child windows.
 func (a *App) Quit() {
 	services.StopServicesListener()
-	if a.window != nil {
-		a.window.Close()
-	}
-	if a.wailsApp != nil {
-		a.wailsApp.Quit()
-	} else if app := application.Get(); app != nil {
-		app.Quit()
-	}
+
+	// Defer window teardown slightly so the active RPC call resolves cleanly in WebView2 before destruction
 	go func() {
+		time.Sleep(50 * time.Millisecond)
+
+		if a.devWindow != nil {
+			a.devWindow.Close()
+		}
+
+		if a.wailsApp != nil {
+			a.wailsApp.Quit()
+		} else if app := application.Get(); app != nil {
+			app.Quit()
+		}
+
+		if a.window != nil {
+			a.window.Close()
+		}
+
 		time.Sleep(150 * time.Millisecond)
 		os.Exit(0)
 	}()
@@ -1397,14 +1419,36 @@ func (a *App) SetDevPillBounds(width int, height int, extraH int, scale float64)
 	a.updateWindowRegion()
 }
 
+// TooltipBounds holds the screen-relative bounding box and corner radius for an active tooltip.
+type TooltipBounds struct {
+	ID     string  `json:"id"`
+	X      int     `json:"x"`
+	Y      int     `json:"y"`
+	Width  int     `json:"width"`
+	Height int     `json:"height"`
+	Radius int     `json:"radius"`
+	Scale  float64 `json:"scale"`
+	Active bool    `json:"active"`
+}
+
+// SetTooltipBounds is a no-op kept for frontend binding compatibility.
+func (a *App) SetTooltipBounds(bounds TooltipBounds) {}
+
+// ClearTooltipBounds is a no-op kept for frontend binding compatibility.
+func (a *App) ClearTooltipBounds(id string) {}
+
 // SatelliteBounds represents the position, dimensions, radius, and anchor configuration for a floating satellite dock.
 type SatelliteBounds struct {
 	ID          string `json:"id"`
 	Anchor      string `json:"anchor"`
+	X           int    `json:"x"`
+	Y           int    `json:"y"`
 	Width       int    `json:"width"`
 	Height      int    `json:"height"`
 	Radius      int    `json:"radius"`
+	Radii       [4]int `json:"radii,omitempty"`
 	Gap         int    `json:"gap"`
+	Gaps        [4]int `json:"gaps,omitempty"`
 	OffsetX     int    `json:"offsetX"`
 	OffsetY     int    `json:"offsetY"`
 	TooltipPad  int    `json:"tooltipPad"`
@@ -1417,6 +1461,11 @@ func (a *App) SetSatelliteBounds(bounds SatelliteBounds) {
 	a.satellitesMu.Lock()
 	if a.satellites == nil {
 		a.satellites = make(map[string]SatelliteBounds)
+	}
+	existing, exists := a.satellites[bounds.ID]
+	if exists && existing == bounds {
+		a.satellitesMu.Unlock()
+		return
 	}
 	a.satellites[bounds.ID] = bounds
 	a.satellitesMu.Unlock()
@@ -1469,14 +1518,13 @@ func satellitesSignature(satellites []SatelliteBounds) string {
 	}
 	var sb strings.Builder
 	for _, s := range satellites {
-		fmt.Fprintf(&sb, "%s:%s:%t:%d:%d:%d:%d:%d:%d:%d:%s;", s.ID, s.Anchor, s.Active, s.Width, s.Height, s.Radius, s.Gap, s.OffsetX, s.OffsetY, s.TooltipPad, s.TooltipSide)
+		fmt.Fprintf(&sb, "%s:%s:%t:%d:%d:%d:%d:%d:%v:%d:%v:%d:%d:%d:%s;", s.ID, s.Anchor, s.Active, s.X, s.Y, s.Width, s.Height, s.Radius, s.Radii, s.Gap, s.Gaps, s.OffsetX, s.OffsetY, s.TooltipPad, s.TooltipSide)
 	}
 	return sb.String()
 }
 
 type regionCache struct {
 	w, h, r, offsetX int
-	dw, dh, extraH   int
 	totalVintaH      int
 	satellitesHash   string
 	padding          int
@@ -1491,7 +1539,7 @@ var (
 )
 
 // computeTotalVintaHeight calculates the total vertical span in physical pixels
-// required to cover all currently visible Vinta elements (island, satellites, dev panel).
+// required to cover all currently visible Vinta elements (island, satellites).
 func (a *App) computeTotalVintaHeight(effectiveMainH int, scale float64) int {
 	scaleInt := func(v int) int {
 		return int(float64(v) * scale)
@@ -1500,15 +1548,6 @@ func (a *App) computeTotalVintaHeight(effectiveMainH int, scale float64) int {
 	totalH := scaleInt(effectiveMainH)
 	if totalH <= 0 {
 		totalH = scaleInt(36)
-	}
-
-	// DevTest panel anchored below the main island
-	if a.devW > 0 && a.devH > 0 {
-		gap := scaleInt(15)
-		devBottom := totalH + gap + scaleInt(a.devH+a.devExtra)
-		if devBottom > totalH {
-			totalH = devBottom
-		}
 	}
 
 	// Floating satellites anchored around the main island
@@ -1521,6 +1560,9 @@ func (a *App) computeTotalVintaHeight(effectiveMainH int, scale float64) int {
 		switch sat.Anchor {
 		case "bottom":
 			gapScaled := scaleInt(sat.Gap)
+			if sat.Gaps[0] > 0 {
+				gapScaled = scaleInt(sat.Gaps[0])
+			}
 			hScaled := scaleInt(sat.Height)
 			satOffsetScaledY := scaleInt(sat.OffsetY)
 			satBottom = totalH + gapScaled + satOffsetScaledY + hScaled
@@ -1537,7 +1579,7 @@ func (a *App) computeTotalVintaHeight(effectiveMainH int, scale float64) int {
 	a.satellitesMu.RUnlock()
 
 	// Add outside margin padding so shadows and hovering margins are never clipped
-	pad := scaleInt(OutsidePadding + 8)
+	pad := scaleInt(OutsidePadding + 4)
 	return totalH + pad
 }
 
@@ -1554,22 +1596,43 @@ func (a *App) updateWindowRegion() {
 		padding = HiddenOutsidePadding
 	}
 
+	mainW := a.pillW
+	mainH := a.pillH
+	mainR := a.pillR
 	effectiveMainW := a.pillW
 	effectiveMainH := a.pillH
-	if effectiveMainW <= 0 && a.restingW > 0 {
-		effectiveMainW = a.restingW
-	}
-	if effectiveMainH <= 0 && a.restingH > 0 {
-		effectiveMainH = a.restingH
+
+	if a.isHidden {
+		if mainW <= 0 {
+			mainW = 72
+		}
+		if mainH <= 0 {
+			mainH = 12
+		}
+		if mainR <= 0 {
+			mainR = 6
+		}
+		effectiveMainW = mainW
+		effectiveMainH = mainH
+	} else {
+		if effectiveMainW <= 0 && a.restingW > 0 {
+			effectiveMainW = a.restingW
+		}
+		if effectiveMainH <= 0 && a.restingH > 0 {
+			effectiveMainH = a.restingH
+		}
 	}
 
 	totalVintaH := a.computeTotalVintaHeight(effectiveMainH, a.scale)
-	sats := a.getActiveSatellites()
-	setClickRegion(hwnd, a.pillW, a.pillH, a.pillR, a.offsetX, a.devW, a.devH, a.devExtra, effectiveMainW, effectiveMainH, totalVintaH, sats, padding, a.scale)
+	var sats []SatelliteBounds
+	if !a.isHidden {
+		sats = a.getActiveSatellites()
+	}
+	setClickRegion(hwnd, mainW, mainH, mainR, a.offsetX, effectiveMainW, effectiveMainH, totalVintaH, sats, padding, a.scale)
 }
 
-// setClickRegion updates the Win32 window region to combine the main pill, satellites, and dev pill.
-func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, dw int, dh int, extraH int, effectiveMainW int, effectiveMainH int, totalVintaH int, satellites []SatelliteBounds, padding int, scale float64) {
+// setClickRegion updates the Win32 window region to combine the main pill and satellites.
+func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, effectiveMainW int, effectiveMainH int, totalVintaH int, satellites []SatelliteBounds, padding int, scale float64) {
 	if hwnd == 0 {
 		return
 	}
@@ -1607,8 +1670,7 @@ func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, dw int, dh i
 
 	// Early exit if identical region is already applied to HWND
 	if lastRegion.w == w && lastRegion.h == h && lastRegion.r == r &&
-		lastRegion.offsetX == offsetX && lastRegion.dw == dw && lastRegion.dh == dh &&
-		lastRegion.extraH == extraH && lastRegion.totalVintaH == totalVintaH &&
+		lastRegion.offsetX == offsetX && lastRegion.totalVintaH == totalVintaH &&
 		lastRegion.satellitesHash == satSig &&
 		lastRegion.padding == padding && lastRegion.scale == scale && lastRegion.sw == sw {
 		return
@@ -1616,10 +1678,14 @@ func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, dw int, dh i
 
 	lastRegion = regionCache{
 		w: w, h: h, r: r, offsetX: offsetX,
-		dw: dw, dh: dh, extraH: extraH,
 		totalVintaH:    totalVintaH,
 		satellitesHash: satSig,
 		padding:        padding, scale: scale, sw: sw,
+	}
+
+	if w <= 0 && h <= 0 {
+		_, _, _ = procSetWindowRgn.Call(hwnd, 0, 1)
+		return
 	}
 
 	var regions []uintptr
@@ -1632,9 +1698,6 @@ func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, dw int, dh i
 
 	if hrgnMain := createMainPillRegion(w, h, r, offsetX, sw, padding, totalVintaH, scale); hrgnMain != 0 {
 		regions = append(regions, hrgnMain)
-	}
-	if hrgnDev := createDevPillRegion(dw, dh, extraH, effectiveMainH, offsetX, sw, scale); hrgnDev != 0 {
-		regions = append(regions, hrgnDev)
 	}
 	for _, sat := range satellites {
 		if hrgnSat := createSatelliteRegion(sat, effectiveMainW, effectiveMainH, offsetX, sw, scale); hrgnSat != 0 {
@@ -1709,26 +1772,78 @@ func createMainPillRegion(w, h, r, offsetX, sw, padding, totalVintaH int, scale 
 		}
 		bottom := visualTop + ph + pad
 
-		ellipseSize := scaleInt(r) * 2
-		if hLimit := bottom - top; ellipseSize > hLimit {
-			ellipseSize = hLimit
-		}
-		if wLimit := right - left; ellipseSize > wLimit {
-			ellipseSize = wLimit
-		}
+		rScaled := scaleInt(r)
+		// Primary island attaches to top edge: flat top corners (0, 0) and rounded bottom corners (r, r)
+		return createComplexRoundRectRgn(left, top, right, bottom, 0, 0, rScaled, rScaled)
+	}
+	return 0
+}
 
-		hrgn, _, _ := procCreateRoundRectRgn.Call(
-			uintptr(left), uintptr(top),
-			uintptr(right), uintptr(bottom),
-			uintptr(ellipseSize), uintptr(ellipseSize),
-		)
-		// Flat top corners to match zero top border-radius
-		halfH := (bottom - top) / 2
-		if halfH > 0 {
-			hrgnTop, _, _ := procCreateRectRgn.Call(
-				uintptr(left), uintptr(top),
-				uintptr(right), uintptr(top+halfH),
-			)
+// createComplexRoundRectRgn constructs a Win32 HRGN with independent corner radii [tl, tr, br, bl].
+func createComplexRoundRectRgn(left, top, right, bottom int, tl, tr, br, bl int) uintptr {
+	if left >= right || top >= bottom {
+		return 0
+	}
+	w := right - left
+	h := bottom - top
+	if tl < 0 {
+		tl = 0
+	}
+	if tr < 0 {
+		tr = 0
+	}
+	if br < 0 {
+		br = 0
+	}
+	if bl < 0 {
+		bl = 0
+	}
+
+	// Clamp radii to dimensions
+	if maxR := h / 2; tl > maxR {
+		tl = maxR
+	}
+	if maxR := h / 2; tr > maxR {
+		tr = maxR
+	}
+	if maxR := h / 2; br > maxR {
+		br = maxR
+	}
+	if maxR := h / 2; bl > maxR {
+		bl = maxR
+	}
+	if maxR := w / 2; tl > maxR {
+		tl = maxR
+	}
+	if maxR := w / 2; tr > maxR {
+		tr = maxR
+	}
+	if maxR := w / 2; br > maxR {
+		br = maxR
+	}
+	if maxR := w / 2; bl > maxR {
+		bl = maxR
+	}
+
+	// Uniform zero
+	if tl == 0 && tr == 0 && br == 0 && bl == 0 {
+		hrgn, _, _ := procCreateRectRgn.Call(uintptr(left), uintptr(top), uintptr(right), uintptr(bottom))
+		return hrgn
+	}
+
+	// Uniform rounded
+	if tl == tr && tr == br && br == bl {
+		ellipse := tl * 2
+		hrgn, _, _ := procCreateRoundRectRgn.Call(uintptr(left), uintptr(top), uintptr(right), uintptr(bottom), uintptr(ellipse), uintptr(ellipse))
+		return hrgn
+	}
+
+	// Flat top, rounded bottom
+	if tl == 0 && tr == 0 && br > 0 && bl > 0 && br == bl {
+		ellipse := br * 2
+		hrgn, _, _ := procCreateRoundRectRgn.Call(uintptr(left), uintptr(top), uintptr(right), uintptr(bottom), uintptr(ellipse), uintptr(ellipse))
+		if halfH := h / 2; halfH > 0 {
+			hrgnTop, _, _ := procCreateRectRgn.Call(uintptr(left), uintptr(top), uintptr(right), uintptr(top+halfH))
 			if hrgnTop != 0 {
 				_, _, _ = procCombineRgn.Call(hrgn, hrgn, hrgnTop, uintptr(rgnOr))
 				_, _, _ = procDeleteObject.Call(hrgnTop)
@@ -1736,86 +1851,68 @@ func createMainPillRegion(w, h, r, offsetX, sw, padding, totalVintaH int, scale 
 		}
 		return hrgn
 	}
-	return 0
-}
 
-// createDevPillRegion generates the Win32 HRGN for the secondary dev panel anchored below the main island.
-func createDevPillRegion(dw, dh, extraH, mainH, offsetX, sw int, scale float64) uintptr {
-	if dw <= 0 || dh <= 0 {
-		return 0
-	}
-	scaleInt := func(v int) int {
-		return int(float64(v) * scale)
-	}
-
-	vLeft, vTop, _, _, pCenter, monitors := GetDisplayMetrics()
-	scaledOffset := scaleInt(offsetX)
-	screenCenterX := vLeft + pCenter + scaledOffset
-	currentMon := resolveCurrentMonitor(screenCenterX, monitors)
-	monitorTopOffset := currentMon.Top - vTop
-	if monitorTopOffset < 0 {
-		monitorTopOffset = 0
+	// Flat bottom, rounded top
+	if bl == 0 && br == 0 && tl > 0 && tr > 0 && tl == tr {
+		ellipse := tl * 2
+		hrgn, _, _ := procCreateRoundRectRgn.Call(uintptr(left), uintptr(top), uintptr(right), uintptr(bottom), uintptr(ellipse), uintptr(ellipse))
+		if halfH := h / 2; halfH > 0 {
+			hrgnBottom, _, _ := procCreateRectRgn.Call(uintptr(left), uintptr(bottom-halfH), uintptr(right), uintptr(bottom))
+			if hrgnBottom != 0 {
+				_, _, _ = procCombineRgn.Call(hrgn, hrgn, hrgnBottom, uintptr(rgnOr))
+				_, _, _ = procDeleteObject.Call(hrgnBottom)
+			}
+		}
+		return hrgn
 	}
 
-	gap := scaleInt(15)
-	visualTop := monitorTopOffset + scaleInt(0)
-	devTopOffset := visualTop
-	if mainH > 0 {
-		ph := scaleInt(mainH)
-		devTopOffset = visualTop + ph + gap
+	// General quadrant-based composite region
+	midX := left + (w / 2)
+	midY := top + (h / 2)
+
+	createQuadrant := func(qLeft, qTop, qRight, qBottom, r int, corner string) uintptr {
+		if r <= 0 {
+			hrgn, _, _ := procCreateRectRgn.Call(uintptr(qLeft), uintptr(qTop), uintptr(qRight), uintptr(qBottom))
+			return hrgn
+		}
+		var elLeft, elTop, elRight, elBottom int
+		var strip1, strip2 uintptr
+		switch corner {
+		case "tl":
+			elLeft, elTop, elRight, elBottom = qLeft, qTop, qLeft+r*2, qTop+r*2
+			strip1, _, _ = procCreateRectRgn.Call(uintptr(qLeft+r), uintptr(qTop), uintptr(qRight), uintptr(qBottom))
+			strip2, _, _ = procCreateRectRgn.Call(uintptr(qLeft), uintptr(qTop+r), uintptr(qRight), uintptr(qBottom))
+		case "tr":
+			elLeft, elTop, elRight, elBottom = qRight-r*2, qTop, qRight, qTop+r*2
+			strip1, _, _ = procCreateRectRgn.Call(uintptr(qLeft), uintptr(qTop), uintptr(qRight-r), uintptr(qBottom))
+			strip2, _, _ = procCreateRectRgn.Call(uintptr(qLeft), uintptr(qTop+r), uintptr(qRight), uintptr(qBottom))
+		case "br":
+			elLeft, elTop, elRight, elBottom = qRight-r*2, qBottom-r*2, qRight, qBottom
+			strip1, _, _ = procCreateRectRgn.Call(uintptr(qLeft), uintptr(qTop), uintptr(qRight-r), uintptr(qBottom))
+			strip2, _, _ = procCreateRectRgn.Call(uintptr(qLeft), uintptr(qTop), uintptr(qRight), uintptr(qBottom-r))
+		case "bl":
+			elLeft, elTop, elRight, elBottom = qLeft, qBottom-r*2, qLeft+r*2, qBottom
+			strip1, _, _ = procCreateRectRgn.Call(uintptr(qLeft+r), uintptr(qTop), uintptr(qRight), uintptr(qBottom))
+			strip2, _, _ = procCreateRectRgn.Call(uintptr(qLeft), uintptr(qTop), uintptr(qRight), uintptr(qBottom-r))
+		}
+		elRgn, _, _ := procCreateEllipticRgn.Call(uintptr(elLeft), uintptr(elTop), uintptr(elRight), uintptr(elBottom))
+		if strip1 != 0 {
+			_, _, _ = procCombineRgn.Call(elRgn, elRgn, strip1, uintptr(rgnOr))
+			_, _, _ = procDeleteObject.Call(strip1)
+		}
+		if strip2 != 0 {
+			_, _, _ = procCombineRgn.Call(elRgn, elRgn, strip2, uintptr(rgnOr))
+			_, _, _ = procDeleteObject.Call(strip2)
+		}
+		return elRgn
 	}
 
-	pad := scaleInt(OutsidePadding)
-	extraMargin := scaleInt(extraH)
+	qTL := createQuadrant(left, top, midX, midY, tl, "tl")
+	qTR := createQuadrant(midX, top, right, midY, tr, "tr")
+	qBR := createQuadrant(midX, midY, right, bottom, br, "br")
+	qBL := createQuadrant(left, midY, midX, bottom, bl, "bl")
 
-	pdw := scaleInt(dw)
-	pdh := scaleInt(dh)
-
-	top := devTopOffset - pad
-	if top < 0 {
-		top = 0
-	}
-	bottom := devTopOffset + pdh + pad + extraMargin
-
-	monLeftClient := currentMon.Left - vLeft
-	monRightClient := currentMon.Left + currentMon.Width - vLeft
-	minDevCenter := monLeftClient + scaleInt(12) + (pdw / 2)
-	maxDevCenter := monRightClient - scaleInt(12) - (pdw / 2)
-	if minDevCenter > maxDevCenter {
-		minDevCenter = monLeftClient + (currentMon.Width / 2)
-		maxDevCenter = minDevCenter
-	}
-
-	physicalCenterX := pCenter + scaledOffset
-	if physicalCenterX < minDevCenter {
-		physicalCenterX = minDevCenter
-	} else if physicalCenterX > maxDevCenter {
-		physicalCenterX = maxDevCenter
-	}
-
-	left := physicalCenterX - (pdw / 2) - pad
-	if left < 0 {
-		left = 0
-	}
-	right := physicalCenterX + (pdw / 2) + pad
-	if right > sw {
-		right = sw
-	}
-
-	ellipseSize := scaleInt(14) * 2
-	if hLimit := bottom - top; ellipseSize > hLimit {
-		ellipseSize = hLimit
-	}
-	if wLimit := right - left; ellipseSize > wLimit {
-		ellipseSize = wLimit
-	}
-
-	hrgn, _, _ := procCreateRoundRectRgn.Call(
-		uintptr(left), uintptr(top),
-		uintptr(right), uintptr(bottom),
-		uintptr(ellipseSize), uintptr(ellipseSize),
-	)
-	return hrgn
+	return combineWindowRegions(qTL, qTR, qBR, qBL)
 }
 
 // createSatelliteRegion generates the Win32 HRGN for an anchored floating satellite dock.
@@ -1825,6 +1922,32 @@ func createSatelliteRegion(sat SatelliteBounds, mainW, mainH, offsetX, sw int, s
 	}
 	scaleInt := func(v int) int {
 		return int(float64(v) * scale)
+	}
+
+	tl := scaleInt(sat.Radii[0])
+	tr := scaleInt(sat.Radii[1])
+	br := scaleInt(sat.Radii[2])
+	bl := scaleInt(sat.Radii[3])
+	if tl == 0 && tr == 0 && br == 0 && bl == 0 && sat.Radius > 0 {
+		rScaled := scaleInt(sat.Radius)
+		tl, tr, br, bl = rScaled, rScaled, rScaled, rScaled
+	}
+
+	// If direct viewport coordinates were provided by an unanchored satellite,
+	// follow the satellite element pixel-perfectly with standard outside padding.
+	if sat.Anchor == "" && sat.X > 0 {
+		pad := scaleInt(OutsidePadding)
+		left := scaleInt(sat.X) - pad
+		if left < 0 {
+			left = 0
+		}
+		top := scaleInt(sat.Y) - pad
+		if top < 0 {
+			top = 0
+		}
+		right := scaleInt(sat.X) + scaleInt(sat.Width) + pad
+		bottom := scaleInt(sat.Y) + scaleInt(sat.Height) + pad
+		return createComplexRoundRectRgn(left, top, right, bottom, tl, tr, br, bl)
 	}
 
 	vLeft, vTop, _, _, pCenter, monitors := GetDisplayMetrics()
@@ -1840,29 +1963,53 @@ func createSatelliteRegion(sat SatelliteBounds, mainW, mainH, offsetX, sw int, s
 	physicalCenterX := pCenter + scaledOffset
 	pw := scaleInt(mainW)
 	ph := scaleInt(mainH)
-	satOutsidePad := 4
+	satOutsidePad := OutsidePadding
 	pad := scaleInt(satOutsidePad)
 
-	gapScaled := scaleInt(sat.Gap)
+	// Directional gaps: [top, right, bottom, left]
+	gapTop := sat.Gaps[0]
+	gapRight := sat.Gaps[1]
+	gapBottom := sat.Gaps[2]
+	gapLeft := sat.Gaps[3]
+	if gapTop == 0 && gapRight == 0 && gapBottom == 0 && gapLeft == 0 && sat.Gap > 0 {
+		gapTop = sat.Gap
+		gapRight = sat.Gap
+		gapBottom = sat.Gap
+		gapLeft = sat.Gap
+	}
+
 	wScaled := scaleInt(sat.Width)
 	hScaled := scaleInt(sat.Height)
 	satOffsetScaledX := scaleInt(sat.OffsetX)
 	satOffsetScaledY := scaleInt(sat.OffsetY)
+	gapTopScaled := scaleInt(gapTop)
 
 	var left, right, top, bottom int
 
 	switch sat.Anchor {
 	case "left":
-		right = physicalCenterX - (pw / 2) - gapScaled - satOffsetScaledX + pad
-		left = right - wScaled - (pad * 2)
-		top = visualTop + satOffsetScaledY - pad
+		gapScaled := scaleInt(gapRight)
+		if gapScaled == 0 {
+			gapScaled = scaleInt(sat.Gap)
+		}
+		right = physicalCenterX - (pw / 2) - satOffsetScaledX + pad
+		left = physicalCenterX - (pw / 2) - gapScaled - satOffsetScaledX - wScaled - pad
+		top = visualTop + gapTopScaled + satOffsetScaledY - pad
 		bottom = top + hScaled + (pad * 2)
 	case "bottom":
+		gapScaled := scaleInt(gapTop)
+		if gapScaled == 0 {
+			gapScaled = scaleInt(sat.Gap)
+		}
 		top = visualTop + ph + gapScaled + satOffsetScaledY - pad
 		bottom = top + hScaled + (pad * 2)
 		left = physicalCenterX - (wScaled / 2) + satOffsetScaledX - pad
 		right = left + wScaled + (pad * 2)
 	case "top":
+		gapScaled := scaleInt(gapBottom)
+		if gapScaled == 0 {
+			gapScaled = scaleInt(sat.Gap)
+		}
 		bottom = visualTop - gapScaled - satOffsetScaledY + pad
 		top = bottom - hScaled - (pad * 2)
 		left = physicalCenterX - (wScaled / 2) + satOffsetScaledX - pad
@@ -1870,16 +2017,22 @@ func createSatelliteRegion(sat SatelliteBounds, mainW, mainH, offsetX, sw int, s
 	case "right":
 		fallthrough
 	default:
-		left = physicalCenterX + (pw / 2) + gapScaled + satOffsetScaledX - pad
-		right = left + wScaled + (pad * 2)
-		top = visualTop + satOffsetScaledY - pad
+		gapScaled := scaleInt(gapLeft)
+		if gapScaled == 0 {
+			gapScaled = scaleInt(sat.Gap)
+		}
+		left = physicalCenterX + (pw / 2) + satOffsetScaledX - pad
+		right = physicalCenterX + (pw / 2) + gapScaled + satOffsetScaledX + wScaled + pad
+		top = visualTop + gapTopScaled + satOffsetScaledY - pad
 		bottom = top + hScaled + (pad * 2)
 	}
 
 	// For flank satellites situated near the monitor top edge, extend top up to monitorTopOffset
 	// to eliminate any narrow sliver gap where background browser tabs might receive hover.
+	isTopFlush := false
 	if sat.Anchor != "bottom" && visualTop+satOffsetScaledY <= monitorTopOffset+scaleInt(15) {
 		top = monitorTopOffset
+		isTopFlush = true
 	}
 
 	// Directional tooltip padding: expand the hit-test region strictly outward
@@ -1889,20 +2042,13 @@ func createSatelliteRegion(sat SatelliteBounds, mainW, mainH, offsetX, sw int, s
 		switch sat.TooltipSide {
 		case "bottom":
 			bottom += tPad
-			horizPad := scaleInt(36)
-			left -= horizPad
-			right += horizPad
 		case "top":
 			top -= tPad
-			horizPad := scaleInt(36)
-			left -= horizPad
-			right += horizPad
 		case "right":
 			right += tPad
 		case "left":
 			left -= tPad
 		default:
-			// Fallback: expand away from the island based on anchor direction
 			switch sat.Anchor {
 			case "right":
 				right += tPad
@@ -1926,24 +2072,26 @@ func createSatelliteRegion(sat SatelliteBounds, mainW, mainH, offsetX, sw int, s
 		top = 0
 	}
 
-	ellipseSize := scaleInt(sat.Radius) * 2
+	tl = scaleInt(sat.Radii[0])
+	tr = scaleInt(sat.Radii[1])
+	br = scaleInt(sat.Radii[2])
+	bl = scaleInt(sat.Radii[3])
+	if tl == 0 && tr == 0 && br == 0 && bl == 0 && sat.Radius > 0 {
+		rScaled := scaleInt(sat.Radius)
+		tl, tr, br, bl = rScaled, rScaled, rScaled, rScaled
+	}
 	if sat.TooltipPad > 0 {
-		ellipseSize = scaleInt(10) * 2
+		tl, tr, br, bl = scaleInt(10), scaleInt(10), scaleInt(10), scaleInt(10)
 	}
-	if hLimit := bottom - top; ellipseSize > hLimit {
-		ellipseSize = hLimit
-	}
-	if wLimit := right - left; ellipseSize > wLimit {
-		ellipseSize = wLimit
+	// When flush against monitor top, top corners stay flat
+	if isTopFlush && sat.Anchor != "bottom" {
+		tl = 0
+		tr = 0
 	}
 
-	hrgn, _, _ := procCreateRoundRectRgn.Call(
-		uintptr(left), uintptr(top),
-		uintptr(right), uintptr(bottom),
-		uintptr(ellipseSize), uintptr(ellipseSize),
-	)
-	return hrgn
+	return createComplexRoundRectRgn(left, top, right, bottom, tl, tr, br, bl)
 }
+
 
 // combineWindowRegions merges a slice of Win32 HRGNs into a single composite region.
 func combineWindowRegions(regions ...uintptr) uintptr {
