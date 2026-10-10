@@ -350,6 +350,15 @@ static bool IsValidMediaSession(winrt_media::GlobalSystemMediaTransportControlsS
             return false;
         }
 
+        // Exclude dummy sources that lack an artist and lack either album artwork or prev/next controls.
+        // Genuine sources (Spotify, YouTube with uploader as artist) always provide an artist.
+        bool hasAlbumArt = (props.Thumbnail() != nullptr);
+        bool hasArtist = !artist.empty();
+        bool hasPrevNext = (controls.IsNextEnabled() || controls.IsPreviousEnabled());
+        if (!hasArtist && (!hasAlbumArt || !hasPrevNext)) {
+            return false;
+        }
+
         // If artist is empty, check if title is simply the application or process name.
         // Dummy background audio streams typically publish their own executable name as the title with no artist.
         if (artist.empty()) {

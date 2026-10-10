@@ -31,7 +31,11 @@ export function getFallbackPage(): {
 } {
   const mediaState = get(globalMediaStore)
   const isMediaEnabled = get(pageVisibilityStore).media
-  if (mediaState.isPlaying && mediaState.isAvailable && isMediaEnabled) {
+  const isPlaying =
+    Boolean(mediaState.isPlaying) ||
+    (Array.isArray(mediaState.sessions) &&
+      mediaState.sessions.some((s) => Boolean(s.isPlaying)))
+  if (isPlaying && mediaState.isAvailable && isMediaEnabled) {
     return { page: MediaPage, config: mediaConfig }
   }
   return { page: HomePage, config: homeConfig }

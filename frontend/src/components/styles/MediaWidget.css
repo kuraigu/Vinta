@@ -1158,14 +1158,14 @@
 
 @keyframes androidMarquee {
   0%,
-  15% {
+  24% {
     transform: translateX(0);
   }
-  55%,
-  70% {
+  68%,
+  82% {
     transform: translateX(calc(-1 * var(--marquee-dist, 0px)));
   }
-  92%,
+  96%,
   100% {
     transform: translateX(0);
   }

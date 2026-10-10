@@ -47,6 +47,7 @@
     notifSoundStore,
     notifVolumeStore,
     glowIntensityStore,
+    globalMediaStore,
     type IslandConfig,
     homeWidgetsVisibilityStore,
     calculateHomeMinimalWidth,
@@ -198,19 +199,33 @@
     if (isOpen) {
       clearTimeout(hideTimeout)
       isTimeoutActive = false
+    } else {
+      hideTrigger++
     }
   }
 
   let isTimeoutActive = $state(false)
   let hideTimeout: number | undefined
 
-  let shouldCurrentPageAutoHide = $derived(
-    activePage === HomePage
-      ? $homeAutoHideStore
-      : activePage === MediaPage
-        ? $mediaAutoHideStore
-        : $autoHideStore
-  )
+  let isMediaActive = $derived.by(() => {
+    if (!$globalMediaStore.isAvailable) return false
+    if ($globalMediaStore.isPlaying) return true
+    if (Array.isArray($globalMediaStore.sessions)) {
+      return $globalMediaStore.sessions.some((s) => Boolean(s.isPlaying))
+    }
+    return false
+  })
+
+  let shouldCurrentPageAutoHide = $derived.by(() => {
+    if (activePage === HomePage) {
+      return $homeAutoHideStore
+    }
+    if (activePage === MediaPage) {
+      if (!isMediaActive) return true
+      return $mediaAutoHideStore
+    }
+    return $autoHideStore
+  })
 
   function triggerGlow() {
     clearTimeout(glowTimeout)
@@ -246,17 +261,24 @@
     const delaySeconds = $autoHideDelayStore || 5
     isTimeoutActive = true
     hideTimeout = window.setTimeout(() => {
-      hideWidget()
+      isTimeoutActive = false
+      if (activePage === MediaPage && !isMediaActive) {
+        navigateTo(HomePage, homeConfig, false)
+      } else {
+        hideWidget()
+      }
     }, delaySeconds * 1000)
   }
 
   function handleAutoHideSync() {
+    void activePage
     void hideTrigger
     void isHovering
     void isSatelliteHovering
     void isHidden
     void expanded
     void shouldCurrentPageAutoHide
+    void isMediaActive
     void $devPinnedStore
     void $autoHideDelayStore
     resetHideTimer()
@@ -452,6 +474,7 @@
     activePage = page
     islandConfig = pageConfig
     expanded = expand
+    hideTrigger++
 
     let pageId = 'home'
     if (page === HomePage) pageId = 'home'
@@ -492,11 +515,11 @@
     wasExpandedBeforeHide = false
     expanded = false
 
-    if (activePage !== HomePage && activePage !== MediaPage) {
-      const fallback = getFallbackPage()
+    const fallback = getFallbackPage()
+    if (activePage !== fallback.page) {
       activePage = fallback.page as Component
       islandConfig = fallback.config
-      $activePageIdStore = 'home'
+      $activePageIdStore = fallback.page === HomePage ? 'home' : 'media'
     }
 
     islandAnim = '0.32s cubic-bezier(0.2, 0.8, 0.2, 1)'
@@ -530,11 +553,11 @@
       if (isHidden && !isHovering) {
         isPageDormant = true
         expanded = false
-        if (activePage !== HomePage && activePage !== MediaPage) {
-          const fallback = getFallbackPage()
+        const fallback = getFallbackPage()
+        if (activePage !== fallback.page) {
           activePage = fallback.page as Component
           islandConfig = fallback.config
-          $activePageIdStore = 'home'
+          $activePageIdStore = fallback.page === HomePage ? 'home' : 'media'
         }
         bounds.notifyHidden(true)
       }
@@ -893,6 +916,7 @@
       {isDockVisible}
       {isTimeoutActive}
       {shouldCurrentPageAutoHide}
+      {isMediaActive}
       {hideTrigger}
       {islandConfig}
       {currentMinimalW}

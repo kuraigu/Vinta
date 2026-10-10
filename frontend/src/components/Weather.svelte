@@ -11,9 +11,7 @@
   import {
     weatherLocationStore,
     weatherUnitStore,
-    simulateOfflineStore,
-    type WeatherLocation,
-    type TemperatureUnit
+    simulateOfflineStore
   } from '../store'
   import {
     fetchWeatherData,
@@ -27,58 +25,25 @@
     simulateOffline?: boolean
   }>()
 
-  let currentLocation = $state<WeatherLocation>({
-    name: 'Manila',
-    lat: 14.5995,
-    lon: 120.9842
-  })
-
-  let currentUnit = $state<TemperatureUnit>('celsius')
-  let offlineSim = $state<boolean>(false)
   let weather = $state<WeatherData | null>(null)
   let loading = $state<boolean>(true)
   let error = $state<boolean>(false)
+  let lastFetchKey = ''
 
-  // Subscribe to persistent stores safely in onMount
-  onMount(() => {
-    const unsubLocation = weatherLocationStore.subscribe((loc) => {
-      currentLocation = loc
-      loadWeather()
-    })
-    const unsubUnit = weatherUnitStore.subscribe((unit) => {
-      currentUnit = unit
-    })
-    const unsubOffline = simulateOfflineStore.subscribe((off) => {
-      offlineSim = off
-      loadWeather()
-    })
-
-    return () => {
-      unsubLocation()
-      unsubUnit()
-      unsubOffline()
-    }
-  })
-
-  $effect(() => {
-    // Re-fetch when simulateOffline prop toggles in DevTest
-    if (simulateOffline !== undefined) {
-      loadWeather()
-    }
-  })
-
-  async function loadWeather() {
+  /**
+   * Fetches weather metrics for the active location.
+   */
+  async function loadWeather(
+    name: string,
+    lat: number,
+    lon: number,
+    offline: boolean
+  ) {
     loading = true
     error = false
 
     try {
-      const data = await fetchWeatherData(
-        currentLocation.name,
-        currentLocation.lat,
-        currentLocation.lon,
-        offlineSim || simulateOffline
-      )
-
+      const data = await fetchWeatherData(name, lat, lon, offline)
       if (data) {
         weather = data
         error = false
@@ -92,20 +57,50 @@
     }
   }
 
+  /**
+   * Manually retries fetching weather data for the current location.
+   */
+  function handleRetry() {
+    const isOffline = Boolean($simulateOfflineStore || simulateOffline)
+    const loc = $weatherLocationStore
+    loadWeather(loc.name, loc.lat, loc.lon, isOffline)
+  }
+
+  onMount(() => {
+    function checkAndFetch() {
+      const isOffline = Boolean($simulateOfflineStore || simulateOffline)
+      const loc = $weatherLocationStore
+      const key = `${loc.lat.toFixed(4)}_${loc.lon.toFixed(4)}_${isOffline}`
+      if (key === lastFetchKey) return
+      lastFetchKey = key
+      loadWeather(loc.name, loc.lat, loc.lon, isOffline)
+    }
+
+    checkAndFetch()
+
+    const unsubLoc = weatherLocationStore.subscribe(checkAndFetch)
+    const unsubOff = simulateOfflineStore.subscribe(checkAndFetch)
+
+    return () => {
+      unsubLoc()
+      unsubOff()
+    }
+  })
+
   // Reactive temperature conversions
   let displayTemp = $derived.by(() => {
     if (!weather) return { val: 0, symbol: '', str: '--' }
-    return convertTemp(weather.temp, currentUnit)
+    return convertTemp(weather.temp, $weatherUnitStore)
   })
 
   let displayHigh = $derived.by(() => {
     if (!weather) return { val: 0, symbol: '', str: '--' }
-    return convertTemp(weather.high, currentUnit)
+    return convertTemp(weather.high, $weatherUnitStore)
   })
 
   let displayLow = $derived.by(() => {
     if (!weather) return { val: 0, symbol: '', str: '--' }
-    return convertTemp(weather.low, currentUnit)
+    return convertTemp(weather.low, $weatherUnitStore)
   })
 
   let weatherInfo = $derived.by(() => {
@@ -151,7 +146,7 @@
         <WifiOff size={32} class="offline-hero-icon" />
         <span class="error-title">Connection Offline</span>
         <span class="error-desc">Unable to fetch live weather data</span>
-        <button class="retry-btn" onclick={loadWeather}>
+        <button class="retry-btn" onclick={handleRetry}>
           <RefreshCw size={12} /> Retry
         </button>
       </div>
@@ -161,9 +156,9 @@
       <!-- Top Main Overview Row -->
       <div class="top-row">
         <div class="main-left">
-          <div class="location" title={currentLocation.name}>
+          <div class="location" title={$weatherLocationStore.name}>
             <MapPin size={12} class="location-pin-icon" />
-            <span>{currentLocation.name}</span>
+            <span>{$weatherLocationStore.name}</span>
           </div>
           <div class="temp-group">
             <span class="temp-val"
@@ -220,7 +215,7 @@
           <div class="forecast-item">
             <span class="f-day">{f.day}</span>
             <ForecastIcon size={18} class="f-icon" />
-            <span class="f-temp">{convertTemp(f.tempMax, currentUnit).str}</span
+            <span class="f-temp">{convertTemp(f.tempMax, $weatherUnitStore).str}</span
             >
           </div>
         {/each}

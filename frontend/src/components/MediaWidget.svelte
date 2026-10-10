@@ -687,9 +687,9 @@
     const contentWidth = node.scrollWidth
     const diff = contentWidth - containerWidth
 
-    if (diff > 2 && containerWidth > 0) {
+    if (diff > 14 && containerWidth > 0) {
       const dist = Math.ceil(diff + 8)
-      const duration = Math.max(6, Math.min(24, Math.round(dist / 22 + 4.5)))
+      const duration = Math.max(10, Math.min(38, Math.round(dist / 14 + 7)))
       return { overflowing: true, dist, duration }
     }
     return { overflowing: false, dist: 0, duration: 8 }

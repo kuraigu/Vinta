@@ -27,6 +27,7 @@
     isDockVisible?: boolean
     isTimeoutActive?: boolean
     shouldCurrentPageAutoHide?: boolean
+    isMediaActive?: boolean
     hideTrigger?: number
     islandConfig: IslandConfig
     currentMinimalW: number
@@ -63,6 +64,7 @@
     isDockVisible = true,
     isTimeoutActive = false,
     shouldCurrentPageAutoHide = false,
+    isMediaActive = false,
     hideTrigger = 0,
     islandConfig,
     currentMinimalW,
@@ -225,7 +227,8 @@
     --island-glow-color: {isHidden
     ? 'transparent'
     : islandConfig.glowColor || 'transparent'};
-    --island-hidden-glow: {islandConfig.glowColor || 'rgba(255, 255, 255, 0.6)'};
+    --island-hidden-glow: {islandConfig.glowColor ||
+    'rgba(255, 255, 255, 0.6)'};
     --island-glow-opacity: {glowOpacity};
     --island-anim: {islandAnim};
   "
@@ -264,9 +267,7 @@
 
   <div
     class="content"
-    style="opacity: {isHidden || isBlinking
-      ? 0
-      : 1}; pointer-events: {isHidden
+    style="opacity: {isHidden || isBlinking ? 0 : 1}; pointer-events: {isHidden
       ? 'none'
       : 'auto'}; transition: opacity {isBlinking
       ? '0s'
@@ -303,7 +304,7 @@
   </div>
 
   <!-- Shrinking Timeout Bar -->
-  {#if isTimeoutActive && (shouldCurrentPageAutoHide || (activePage !== HomePage && activePage !== MediaPage)) && !expanded && !isHidden}
+  {#if isTimeoutActive && (shouldCurrentPageAutoHide || (activePage !== HomePage && (activePage !== MediaPage || !isMediaActive))) && !expanded && !isHidden}
     {#key hideTrigger}
       <div
         class="timeout-bar"

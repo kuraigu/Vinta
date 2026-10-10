@@ -210,6 +210,8 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
       get(pageVisibilityStore).media
     ) {
       callbacks.navigateTo(MediaPage, mediaConfig, false)
+    } else if (!isPlaying && prevIsPlaying) {
+      callbacks.onHideTrigger()
     }
     prevIsPlaying = isPlaying
   })
