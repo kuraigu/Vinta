@@ -24,6 +24,11 @@ jobs:
           script: |
             const { owner, repo } = context.repo;
 
+            // Do not re-triage on bot comments to avoid recursive loops
+            if (context.eventName === 'issue_comment' && context.payload.comment?.user?.type === 'Bot') {
+              return;
+            }
+
             // Helper to automatically create label if missing in repository
             async function ensureLabel(name, color, description) {
               try {
@@ -100,9 +105,32 @@ jobs:
 
               // C. Activity Calculation for Assignees
               const assigneeLogins = new Set(assignees.map(a => a.login));
-              let lastActivityTime = new Date(issue.updated_at).getTime();
 
-              // Fetch comments to find latest comment timestamp by an assignee
+              // Fetch timeline events to find assignment timestamp and PR/commit cross-references
+              const timelineEvents = await github.paginate(github.rest.issues.listEventsForTimeline, {
+                owner,
+                repo,
+                issue_number: issue.number,
+                per_page: 100
+              }).catch(() => []);
+
+              // Find the latest assignment timestamp among currently assigned users
+              let latestAssignmentTime = 0;
+              for (const event of timelineEvents) {
+                if (event.event === 'assigned' && event.assignee && assigneeLogins.has(event.assignee.login)) {
+                  const eventTime = new Date(event.created_at).getTime();
+                  if (eventTime > latestAssignmentTime) {
+                    latestAssignmentTime = eventTime;
+                  }
+                }
+              }
+
+              // Baseline activity timestamp: when the user was assigned (or issue creation time if no event)
+              let lastActivityTime = latestAssignmentTime > 0
+                ? latestAssignmentTime
+                : new Date(issue.created_at).getTime();
+
+              // Fetch comments to find latest comment timestamp by an assignee (excluding bot comments)
               const comments = await github.paginate(github.rest.issues.listComments, {
                 owner,
                 repo,
@@ -111,7 +139,7 @@ jobs:
               }).catch(() => []);
 
               for (const comment of comments) {
-                if (comment.user && assigneeLogins.has(comment.user.login)) {
+                if (comment.user && assigneeLogins.has(comment.user.login) && comment.user.type !== 'Bot') {
                   const commentTime = new Date(comment.created_at).getTime();
                   if (commentTime > lastActivityTime) {
                     lastActivityTime = commentTime;
@@ -119,17 +147,13 @@ jobs:
                 }
               }
 
-              // Fetch timeline events to account for commits / cross-reference PR activity by assignees
-              const timelineEvents = await github.paginate(github.rest.issues.listEventsForTimeline, {
-                owner,
-                repo,
-                issue_number: issue.number,
-                per_page: 100
-              }).catch(() => []);
-
+              // Check timeline events (commits, PR cross-references, reviews) by assignees
               for (const event of timelineEvents) {
+                if (['assigned', 'unassigned', 'labeled', 'unlabeled', 'locked', 'unlocked', 'milestoned', 'demilestoned'].includes(event.event)) {
+                  continue;
+                }
                 const actor = event.actor || event.user;
-                if (actor && assigneeLogins.has(actor.login)) {
+                if (actor && assigneeLogins.has(actor.login) && actor.type !== 'Bot') {
                   const eventTime = new Date(event.created_at || event.submitted_at).getTime();
                   if (eventTime > lastActivityTime) {
                     lastActivityTime = eventTime;
