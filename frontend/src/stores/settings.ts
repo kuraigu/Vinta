@@ -52,13 +52,15 @@ export interface PageVisibility {
   media: boolean
   notifications: boolean
   actioncenter: boolean
+  calculator: boolean
 }
 
 export const defaultPageVisibility: PageVisibility = {
   notes: true,
   media: true,
   notifications: true,
-  actioncenter: true
+  actioncenter: true,
+  calculator: true
 }
 
 // ============================================================================

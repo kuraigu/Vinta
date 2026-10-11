@@ -118,8 +118,8 @@
     />
   </SettingItem>
 
-  <SettingItem label="Temperature Unit" icon={Thermometer}>
-    <div class="segment-control">
+  <SettingItem label="Temperature Unit" icon={Thermometer} flexCol={true}>
+    <div class="segment-control full-width">
       <button
         class:active={$weatherUnitStore === 'celsius'}
         onclick={() => ($weatherUnitStore = 'celsius')}>°C (Celsius)</button
@@ -148,6 +148,13 @@
     border: 1px solid var(--c-border);
   }
 
+  .segment-control.full-width {
+    width: 100%;
+    box-sizing: border-box;
+    height: 32px;
+    align-items: center;
+  }
+
   .segment-control button {
     background: transparent;
     border: none;
@@ -157,6 +164,14 @@
     border-radius: 6px;
     cursor: pointer;
     transition: all 0.15s ease;
+  }
+
+  .segment-control.full-width button {
+    flex: 1;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   .segment-control button.active {

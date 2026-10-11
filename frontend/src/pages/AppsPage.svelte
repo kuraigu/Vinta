@@ -99,6 +99,7 @@
       name: 'Calculator',
       desc: 'Calculator',
       icon: Calculator,
+      visibilityKey: 'calculator',
       action: () => openApp(CalculatorPage, calculatorConfig)
     },
     {

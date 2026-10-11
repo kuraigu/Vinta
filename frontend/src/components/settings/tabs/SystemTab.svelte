@@ -150,13 +150,15 @@
     label="Clear Application Cache"
     description={`Calculated cache size: ${cacheSizeStr}`}
     icon={Database}
+    flexCol={true}
   >
     <SettingActionButton
       variant={cacheCleared ? 'success' : 'default'}
+      fullWidth={true}
       onclick={handleClearCache}
     >
       {#if cacheCleared}
-        <Check size={12} /> Cleared
+        <Check size={13} /> Cleared
       {:else}
         Clear Cache
       {/if}
@@ -167,9 +169,14 @@
     label="Reset All Settings to Default"
     description="Restores all settings and layout states"
     icon={RotateCcw}
+    flexCol={true}
   >
-    <SettingActionButton variant="danger" onclick={handleResetSettings}>
-      Reset All
+    <SettingActionButton
+      variant="danger"
+      fullWidth={true}
+      onclick={handleResetSettings}
+    >
+      Reset All Settings
     </SettingActionButton>
   </SettingItem>
 </div>

@@ -122,3 +122,22 @@ Satellites are secondary peripheral surfaces that orbit the perimeter of the Dyn
 - **Accessible Roles:** Satellite toolbars must include appropriate semantic attributes (`role="toolbar"` and a descriptive `aria-label`).
 - **Focus Rings:** All satellite buttons must display standard keyboard focus indicators (`:focus-visible` with `2px` accent outline and `1px` outline offset).
 - **Target Spacing:** Keep at least `4px` of spacing between interactive items to prevent misclicks.
+
+### 12. Bento Cards and Settings Standardization
+
+#### 1. Bento Card Architecture and Surface Depth
+- **Curvature Radii:** Primary dashboard and feed widgets use a generous `22px` squircle border radius. Settings items, action center tiles, and secondary cards use `16px` to `20px`.
+- **Luminous Mesh Surfaces:** Bento cards avoid flat opaque grey backgrounds. Instead, cards use multi-stop dark surface mesh gradients (`linear-gradient(145deg, rgba(255, 255, 255, 0.065) 0%, rgba(255, 255, 255, 0.02) 100%), #15161c`).
+- **Specular Rim Lighting:** Every bento card incorporates a subtle top specular rim highlight (`box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.12), 0 4px 18px rgba(0, 0, 0, 0.18)`), creating tactile elevation.
+- **Micro-Interaction Hover Lift:** On hover, interactive cards transition with GPU-accelerated lift (`transform: translateY(-1px)`) and deepened ambient shadows (`0 6px 22px rgba(0, 0, 0, 0.24)`).
+
+#### 2. Control Layout Standardization in Settings
+- **Full-Width Action Placement:** Action buttons inside settings cards sit directly beneath the title and description using `flexCol={true}` and `fullWidth={true}`. This guarantees uniform interactive hit areas regardless of button label length.
+- **Unified 32px Control Height:** Interactive action buttons (`SettingActionButton`) standardize on a `32px` height, matching `CustomSelect` dropdown triggers and text input fields.
+- **Grouped Multi-Action Bentos:** When multiple actions relate to the same topic (such as documentation links or repository resources), group them under a single bento item with split or flex controls rather than creating fragmented individual cards.
+
+#### 3. Contextual Atmospheric Gradient Banners
+- **Banner Architecture:** Dynamic informational cards (such as the Weather widget, update available notices, and build warnings) feature rich, multi-stop atmospheric gradients.
+- **Deep Luminance for Contrast:** Gradients must use deep, subdued color stops rather than neon or overly saturated hues. This preserves crisp text legibility in dark mode and eliminates glaring contrast fatigue.
+- **Frosted Glass Accents:** Internal chips, badges, and action buttons within gradient banners use translucent frosted glass styling (`background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.2)`) with white typography to maintain contrast and visual cohesion.
+- **Left-Aligned Content Flow:** Informational text, badges, and status descriptions inside atmospheric banners remain strictly left-aligned alongside their action buttons to sustain clean vertical reading lines.

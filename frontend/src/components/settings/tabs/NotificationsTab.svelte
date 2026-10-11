@@ -56,9 +56,14 @@
     label="Clear Notification History"
     description={`${$notifData?.length || 0} active notifications`}
     icon={Trash2}
+    flexCol={true}
   >
-    <SettingActionButton variant="danger" onclick={clearAllNotifications}>
-      Clear History
+    <SettingActionButton
+      variant="danger"
+      fullWidth={true}
+      onclick={clearAllNotifications}
+    >
+      Clear Notification History
     </SettingActionButton>
   </SettingItem>
 </div>

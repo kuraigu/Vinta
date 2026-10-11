@@ -11,7 +11,9 @@
     ShieldCheck,
     AlertCircle,
     GitBranch,
-    SlidersHorizontal
+    SlidersHorizontal,
+    Info,
+    Cpu
   } from 'lucide-svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
@@ -38,6 +40,7 @@
   } from '../../../../bindings/Vinta/backend/app.js'
   import { Events } from '@wailsio/runtime'
 
+  let appInfo = $state<any>(null)
   let isDevBuild = $state(false)
   let isOfficialBuild = $state(true)
   let showDevSimulation = $state(false)
@@ -127,6 +130,7 @@
       try {
         const info = await GetAppInfo()
         if (info) {
+          appInfo = info
           isDevBuild = info.buildType === 'Development'
           isOfficialBuild = Boolean(info.isOfficialBuild)
         }
@@ -154,6 +158,19 @@
 </script>
 
 <div class="updates-container">
+  <!-- Non-Official Release Information Banner: placed at the very top of the Updates page -->
+  {#if !isOfficialBuild}
+    <div class="dev-banner">
+      <div class="dev-banner-icon-box">
+        <AlertCircle size={16} />
+      </div>
+      <span class="dev-banner-text">
+        <strong>Non-Official Release:</strong> Automatic update checking is disabled
+        on non-official and development builds.
+      </span>
+    </div>
+  {/if}
+
   <!-- Settings Group -->
   <div class="setting-group">
     <SettingItem
@@ -166,28 +183,160 @@
             ? `Last checked: ${$updateInfoStore.checkedAt}`
             : 'Check for new versions'}
       icon={RefreshCw}
+      flexCol={true}
     >
       <SettingActionButton
         variant="default"
+        fullWidth={true}
         disabled={!isOfficialBuild || $updateCheckingStore}
         onclick={handleCheckUpdates}
       >
         <RefreshCw
-          size={12}
+          size={13}
           strokeWidth={2}
           class={$updateCheckingStore ? 'spinning' : ''}
         />
-        <span>{$updateCheckingStore ? 'Checking...' : 'Check Now'}</span>
+        <span>{$updateCheckingStore ? 'Checking for updates...' : 'Check for Updates Now'}</span>
       </SettingActionButton>
     </SettingItem>
 
-    {#if !isOfficialBuild}
-      <div class="dev-banner">
-        <AlertCircle size={14} class="dev-banner-icon" />
-        <span class="dev-banner-text">
-          <strong>Non-Official Release:</strong> Automatic update checking is disabled
-          on non-official and development builds.
-        </span>
+    <!-- Update Available & Download Card: directly below Check for Updates -->
+    {#if $updateInfoStore?.updateAvailable}
+      <div class="update-card">
+        <div class="update-header">
+          <div class="update-badge-icon">
+            {#if $updateLifecycleStatusStore === 'ready'}
+              <CheckCircle2 size={16} />
+            {:else if $updateLifecycleStatusStore === 'verifying'}
+              <ShieldCheck size={16} class="spinning" />
+            {:else}
+              <Download size={16} />
+            {/if}
+          </div>
+          <div class="update-header-info">
+            <div class="update-title-row">
+              <span class="update-title"
+                >Vinta {$updateInfoStore.latestVersion}</span
+              >
+            </div>
+            <span class="update-sub">
+              {#if $updateLifecycleStatusStore === 'ready'}
+                Update package downloaded and verified against SHA-256 manifest.
+              {:else if $updateLifecycleStatusStore === 'verifying'}
+                Verifying SHA-256 package checksum against release manifest...
+              {:else if $updateLifecycleStatusStore === 'downloading'}
+                Downloading update package...
+              {:else if $updateLifecycleStatusStore === 'paused'}
+                Download paused. Click resume to continue from current offset.
+              {:else}
+                A new release is available for download and installation.
+              {/if}
+            </span>
+          </div>
+        </div>
+
+        <!-- Progress Bar & Download Stats -->
+        {#if $updateLifecycleStatusStore === 'downloading' || $updateLifecycleStatusStore === 'paused' || $updateLifecycleStatusStore === 'verifying'}
+          <div class="progress-section">
+            <div class="progress-bar-track">
+              <div
+                class="progress-bar-fill {$updateLifecycleStatusStore === 'paused'
+                  ? 'paused'
+                  : ''}"
+                style="width: {$downloadProgressStore.percentage}%;"
+              ></div>
+            </div>
+            <div class="progress-meta-row">
+              <span class="progress-text">
+                {#if $updateLifecycleStatusStore === 'verifying'}
+                  Validating checksums...
+                {:else}
+                  {formatBytes($downloadProgressStore.downloadedBytes)} /
+                  {$downloadProgressStore.totalBytes > 0
+                    ? formatBytes($downloadProgressStore.totalBytes)
+                    : '...'}
+                  {#if $updateLifecycleStatusStore === 'downloading' && $downloadProgressStore.speedBytesPerSec > 0}
+                    ({formatBytes($downloadProgressStore.speedBytesPerSec)}/s)
+                  {/if}
+                {/if}
+              </span>
+              <span class="progress-percent">
+                {Math.round($downloadProgressStore.percentage)}%
+              </span>
+            </div>
+          </div>
+        {/if}
+
+        <!-- Action Buttons Row -->
+        <div class="update-actions-row">
+          {#if $updateLifecycleStatusStore === 'ready'}
+            <SettingActionButton variant="default" onclick={triggerApplyUpdate}>
+              <CheckCircle2 size={12} strokeWidth={2} />
+              <span>Restart & Install Now</span>
+            </SettingActionButton>
+            <SettingActionButton
+              variant="default"
+              onclick={() => updateLifecycleStatusStore.set('available')}
+            >
+              <span>Install on Exit</span>
+            </SettingActionButton>
+          {:else if $updateLifecycleStatusStore === 'downloading'}
+            <SettingActionButton variant="default" onclick={triggerPauseDownload}>
+              <Pause size={12} strokeWidth={2} />
+              <span>Pause</span>
+            </SettingActionButton>
+            <SettingActionButton
+              variant="default"
+              onclick={triggerCancelDownload}
+            >
+              <X size={12} strokeWidth={2} />
+              <span>Cancel</span>
+            </SettingActionButton>
+          {:else if $updateLifecycleStatusStore === 'paused'}
+            <SettingActionButton
+              variant="default"
+              onclick={triggerResumeDownload}
+            >
+              <Play size={12} strokeWidth={2} />
+              <span>Resume</span>
+            </SettingActionButton>
+            <SettingActionButton
+              variant="default"
+              onclick={triggerCancelDownload}
+            >
+              <X size={12} strokeWidth={2} />
+              <span>Cancel</span>
+            </SettingActionButton>
+          {:else if $updateLifecycleStatusStore === 'verifying'}
+            <SettingActionButton variant="default" disabled={true}>
+              <RefreshCw size={12} strokeWidth={2} class="spinning" />
+              <span>Verifying Integrity...</span>
+            </SettingActionButton>
+          {:else}
+            <SettingActionButton variant="default" onclick={handleStartDownload}>
+              <Download size={12} strokeWidth={2} />
+              <span>Download & Install</span>
+            </SettingActionButton>
+          {/if}
+
+          {#if $updateInfoStore.release?.htmlUrl}
+            <SettingActionButton
+              variant="default"
+              onclick={() => handleOpenURL($updateInfoStore.release.htmlUrl)}
+            >
+              <ExternalLink size={12} strokeWidth={2} />
+              <span>GitHub</span>
+            </SettingActionButton>
+          {/if}
+        </div>
+
+        {#if $downloadProgressStore.error || ($updateInfoStore.status === 'error' && $updateInfoStore.message)}
+          <div class="update-error-banner">
+            <AlertCircle size={14} />
+            <span>{$downloadProgressStore.error || $updateInfoStore.message}</span
+            >
+          </div>
+        {/if}
       </div>
     {/if}
 
@@ -195,14 +344,14 @@
       label="Release Channel"
       description="Choose the update release stability stream"
       icon={GitBranch}
+      flexCol={true}
     >
-      <div class="channel-select-wrapper">
-        <CustomSelect
-          options={channelOptions}
-          value={$updateChannelStore}
-          onChange={handleChannelChange}
-        />
-      </div>
+      <CustomSelect
+        options={channelOptions}
+        value={$updateChannelStore}
+        fullWidth={true}
+        onChange={handleChannelChange}
+      />
     </SettingItem>
 
     <SettingItem
@@ -223,146 +372,6 @@
     </SettingItem>
   </div>
 
-  <!-- Update Available & Download Card -->
-  {#if $updateInfoStore?.updateAvailable}
-    <div class="update-card">
-      <div class="update-header">
-        <div class="update-badge-icon">
-          {#if $updateLifecycleStatusStore === 'ready'}
-            <CheckCircle2 size={18} />
-          {:else if $updateLifecycleStatusStore === 'verifying'}
-            <ShieldCheck size={18} class="spinning" />
-          {:else}
-            <Download size={18} />
-          {/if}
-        </div>
-        <div class="update-header-info">
-          <div class="update-title-row">
-            <span class="update-title"
-              >Vinta {$updateInfoStore.latestVersion}</span
-            >
-          </div>
-          <span class="update-sub">
-            {#if $updateLifecycleStatusStore === 'ready'}
-              Update package downloaded and verified against SHA-256 manifest.
-            {:else if $updateLifecycleStatusStore === 'verifying'}
-              Verifying SHA-256 package checksum against release manifest...
-            {:else if $updateLifecycleStatusStore === 'downloading'}
-              Downloading update package...
-            {:else if $updateLifecycleStatusStore === 'paused'}
-              Download paused. Click resume to continue from current offset.
-            {:else}
-              A new release is available for download and installation.
-            {/if}
-          </span>
-        </div>
-      </div>
-
-      <!-- Progress Bar & Download Stats -->
-      {#if $updateLifecycleStatusStore === 'downloading' || $updateLifecycleStatusStore === 'paused' || $updateLifecycleStatusStore === 'verifying'}
-        <div class="progress-section">
-          <div class="progress-bar-track">
-            <div
-              class="progress-bar-fill {$updateLifecycleStatusStore === 'paused'
-                ? 'paused'
-                : ''}"
-              style="width: {$downloadProgressStore.percentage}%;"
-            ></div>
-          </div>
-          <div class="progress-meta-row">
-            <span class="progress-text">
-              {#if $updateLifecycleStatusStore === 'verifying'}
-                Validating checksums...
-              {:else}
-                {formatBytes($downloadProgressStore.downloadedBytes)} /
-                {$downloadProgressStore.totalBytes > 0
-                  ? formatBytes($downloadProgressStore.totalBytes)
-                  : '...'}
-                {#if $updateLifecycleStatusStore === 'downloading' && $downloadProgressStore.speedBytesPerSec > 0}
-                  ({formatBytes($downloadProgressStore.speedBytesPerSec)}/s)
-                {/if}
-              {/if}
-            </span>
-            <span class="progress-percent">
-              {Math.round($downloadProgressStore.percentage)}%
-            </span>
-          </div>
-        </div>
-      {/if}
-
-      <!-- Action Buttons Row -->
-      <div class="update-actions-row">
-        {#if $updateLifecycleStatusStore === 'ready'}
-          <SettingActionButton variant="default" onclick={triggerApplyUpdate}>
-            <CheckCircle2 size={12} strokeWidth={2} />
-            <span>Restart & Install Now</span>
-          </SettingActionButton>
-          <SettingActionButton
-            variant="default"
-            onclick={() => updateLifecycleStatusStore.set('available')}
-          >
-            <span>Install on Exit</span>
-          </SettingActionButton>
-        {:else if $updateLifecycleStatusStore === 'downloading'}
-          <SettingActionButton variant="default" onclick={triggerPauseDownload}>
-            <Pause size={12} strokeWidth={2} />
-            <span>Pause</span>
-          </SettingActionButton>
-          <SettingActionButton
-            variant="default"
-            onclick={triggerCancelDownload}
-          >
-            <X size={12} strokeWidth={2} />
-            <span>Cancel</span>
-          </SettingActionButton>
-        {:else if $updateLifecycleStatusStore === 'paused'}
-          <SettingActionButton
-            variant="default"
-            onclick={triggerResumeDownload}
-          >
-            <Play size={12} strokeWidth={2} />
-            <span>Resume</span>
-          </SettingActionButton>
-          <SettingActionButton
-            variant="default"
-            onclick={triggerCancelDownload}
-          >
-            <X size={12} strokeWidth={2} />
-            <span>Cancel</span>
-          </SettingActionButton>
-        {:else if $updateLifecycleStatusStore === 'verifying'}
-          <SettingActionButton variant="default" disabled={true}>
-            <RefreshCw size={12} strokeWidth={2} class="spinning" />
-            <span>Verifying Integrity...</span>
-          </SettingActionButton>
-        {:else}
-          <SettingActionButton variant="default" onclick={handleStartDownload}>
-            <Download size={12} strokeWidth={2} />
-            <span>Download & Install</span>
-          </SettingActionButton>
-        {/if}
-
-        {#if $updateInfoStore.release?.htmlUrl}
-          <SettingActionButton
-            variant="default"
-            onclick={() => handleOpenURL($updateInfoStore.release.htmlUrl)}
-          >
-            <ExternalLink size={12} strokeWidth={2} />
-            <span>GitHub</span>
-          </SettingActionButton>
-        {/if}
-      </div>
-
-      {#if $downloadProgressStore.error || ($updateInfoStore.status === 'error' && $updateInfoStore.message)}
-        <div class="update-error-banner">
-          <AlertCircle size={14} />
-          <span>{$downloadProgressStore.error || $updateInfoStore.message}</span
-          >
-        </div>
-      {/if}
-    </div>
-  {/if}
-
   <!-- Local Dev Simulation Controls (Strictly visible only during dev builds) -->
   {#if isDevBuild}
     <div class="setting-group">
@@ -370,9 +379,11 @@
         label="Test & Simulation Controls"
         description="Simulate update states and download lifecycles offline"
         icon={SlidersHorizontal}
+        flexCol={true}
       >
         <SettingActionButton
           variant="default"
+          fullWidth={true}
           onclick={() => (showDevSimulation = !showDevSimulation)}
         >
           <span>{showDevSimulation ? 'Hide Controls' : 'Show Controls'}</span>
@@ -384,18 +395,21 @@
           <div class="devtest-sim-buttons">
             <SettingActionButton
               variant="default"
+              fullWidth={true}
               onclick={() => triggerDevSimulation('v0.4.0-alpha')}
             >
               <span>Simulate Update Available</span>
             </SettingActionButton>
             <SettingActionButton
               variant="default"
+              fullWidth={true}
               onclick={() => triggerDevDownloadCycle(false)}
             >
               <span>Simulate Download (Success)</span>
             </SettingActionButton>
             <SettingActionButton
               variant="default"
+              fullWidth={true}
               onclick={() => triggerDevDownloadCycle(true)}
             >
               <span>Simulate Download (Checksum Fail)</span>

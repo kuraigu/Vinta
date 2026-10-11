@@ -2,6 +2,7 @@
   import { Layout, EyeOff, Timer, MousePointer, RotateCcw } from 'lucide-svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingSlider from '../SettingSlider.svelte'
+  import SettingActionButton from '../SettingActionButton.svelte'
   import CustomSelect from '../../CustomSelect.svelte'
   import {
     homeAutoHideStore,
@@ -70,8 +71,8 @@
     />
   </SettingItem>
 
-  <SettingItem label="Wake Trigger Method" icon={MousePointer}>
-    <div class="segment-control">
+  <SettingItem label="Wake Trigger Method" icon={MousePointer} flexCol={true}>
+    <div class="segment-control full-width">
       <button
         class:active={$wakeMethodStore === 'hover'}
         onclick={() => ($wakeMethodStore = 'hover')}>Hover</button
@@ -90,10 +91,20 @@
     </label>
   </SettingItem>
 
-  <SettingItem label="Center Island Position" icon={RotateCcw}>
-    <button class="action-btn" onclick={handleResetOffset}>
-      {isResettingOffset ? 'Centered' : 'Reset Offset'}
-    </button>
+  <SettingItem
+    label="Center Island Position"
+    description="Resets the horizontal offset of the Dynamic Island to monitor center"
+    icon={RotateCcw}
+    flexCol={true}
+  >
+    <SettingActionButton
+      variant="default"
+      fullWidth={true}
+      onclick={handleResetOffset}
+    >
+      <RotateCcw size={13} />
+      <span>{isResettingOffset ? 'Centered' : 'Reset Offset to Center'}</span>
+    </SettingActionButton>
   </SettingItem>
 </div>
 
@@ -155,6 +166,13 @@
     border: 1px solid var(--c-border);
   }
 
+  .segment-control.full-width {
+    width: 100%;
+    box-sizing: border-box;
+    height: 32px;
+    align-items: center;
+  }
+
   .segment-control button {
     background: transparent;
     border: none;
@@ -166,25 +184,17 @@
     transition: all 0.15s ease;
   }
 
+  .segment-control.full-width button {
+    flex: 1;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
   .segment-control button.active {
     background: rgba(255, 255, 255, 0.12);
     color: var(--c-text-primary);
     font-weight: 600;
-  }
-
-  .action-btn {
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid var(--c-border);
-    color: var(--c-text-primary);
-    padding: 4px 12px;
-    font-size: 11.5px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-
-  .action-btn:hover {
-    background: rgba(255, 255, 255, 0.14);
-    border-color: var(--c-primary, #6366f1);
   }
 </style>
