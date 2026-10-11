@@ -1,6 +1,10 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { ExternalLink } from 'lucide-svelte'
+  import {
+    ExternalLink,
+    ShieldCheck,
+    GitBranch
+  } from 'lucide-svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
   import appIcon from '@appicon'
@@ -47,6 +51,42 @@
 
   let contributors = $state<ContributorItem[]>([])
 
+  /**
+   * Formats the application version for display.
+   *
+   * @param ver - Raw version string from app info
+   * @returns Cleaned version number
+   */
+  function getDisplayVersion(ver: string | undefined): string {
+    if (!ver) return '0.1.0'
+    const trimmed = ver.replace(/^v/, '').replace(/-dev$/i, '')
+    return trimmed || '0.1.0'
+  }
+  let displayVersion = $derived(getDisplayVersion(appInfo.version))
+
+  /**
+   * Formats the build identifier for display.
+   *
+   * @param buildTime - Raw build time stamp
+   * @param commit - Git commit hash or branch
+   * @returns Formatted build string
+   */
+  function getDisplayBuild(
+    buildTime: string | undefined,
+    commit: string | undefined
+  ): string {
+    if (buildTime && buildTime !== 'Development' && buildTime !== 'Unknown') {
+      return buildTime
+    }
+    if (commit && commit !== 'dev' && commit !== 'Unknown') {
+      return commit.slice(0, 7)
+    }
+    return buildTime || 'local'
+  }
+  let displayBuild = $derived(
+    getDisplayBuild(appInfo.buildTime, appInfo.gitCommit)
+  )
+
   function getMaintainers() {
     return contributors.filter(
       (c) => c.role === 'Founder' || c.role === 'Maintainer'
@@ -78,50 +118,35 @@
 </script>
 
 <div class="setting-group about-page">
-  <!-- Brand Hero -->
+  <!-- Brand Hero with Consolidated Version and Build Specs -->
   <div class="about-hero-card">
     <div class="about-logo-wrapper">
       <img src={appIcon} alt="Vinta" class="about-logo-img" />
     </div>
     <div class="about-hero-details">
-      <div class="about-brand-row">
-        <span class="about-brand-title">{appInfo.name}</span>
+      <span class="about-brand-title">{appInfo.name}</span>
+
+      <div class="about-release-capsule">
         <span
-          class="build-badge"
+          class="capsule-channel"
           class:official={appInfo.isOfficialBuild}
           class:dev={!appInfo.isOfficialBuild}
         >
-          {appInfo.buildType}
+          {#if appInfo.isOfficialBuild}
+            <ShieldCheck size={11} strokeWidth={2.2} />
+            <span>Official</span>
+          {:else}
+            <GitBranch size={11} strokeWidth={2.2} />
+            <span>Dev</span>
+          {/if}
         </span>
+        <span class="capsule-divider"></span>
+        <span class="capsule-version">v{displayVersion}</span>
+        <span class="capsule-divider"></span>
+        <span class="capsule-build">build {displayBuild}</span>
       </div>
-      <span class="about-version-text">
-        {appInfo.version?.startsWith('v')
-          ? appInfo.version
-          : 'v' + (appInfo.version || '0.1.0-dev')}
-      </span>
     </div>
   </div>
-
-  <!-- System Specifications Bento -->
-  <SettingItem
-    label="System Specifications"
-    flexCol={true}
-  >
-    <div class="specs-compact-list">
-      <div class="spec-compact-row">
-        <span class="spec-compact-label">Version</span>
-        <span class="spec-compact-val">
-          {appInfo.version?.startsWith('v')
-            ? appInfo.version
-            : 'v' + (appInfo.version || '0.1.0-dev')}
-        </span>
-      </div>
-      <div class="spec-compact-row">
-        <span class="spec-compact-label">Build</span>
-        <span class="spec-compact-val">{appInfo.buildTime || 'Development Build'}</span>
-      </div>
-    </div>
-  </SettingItem>
 
   <!-- Project Links Bento -->
   <SettingItem
@@ -197,7 +222,7 @@
 
   .about-hero-card {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 14px;
     padding: 15px 17px;
     border-radius: 18px;
@@ -236,16 +261,10 @@
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 3px;
+    gap: 4px;
     flex: 1;
     min-width: 0;
     text-align: left;
-  }
-
-  .about-brand-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
   }
 
   .about-brand-title {
@@ -256,38 +275,55 @@
     line-height: 1.2;
   }
 
-  .build-badge {
+  .about-release-capsule {
     display: inline-flex;
     align-items: center;
-    font-size: 9px;
-    font-weight: 700;
-    padding: 2px 7px;
-    border-radius: 6px;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-  }
-
-  .build-badge.official {
-    background: rgba(16, 185, 129, 0.15);
-    color: #10b981;
-    border: 1px solid rgba(16, 185, 129, 0.3);
-  }
-
-  .build-badge.dev {
-    background: rgba(245, 158, 11, 0.15);
-    color: #f59e0b;
-    border: 1px solid rgba(245, 158, 11, 0.3);
-  }
-
-  .about-version-text {
+    gap: 7px;
+    padding: 3px 9px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--c-border);
     font-size: 11px;
+    line-height: 1.2;
+    user-select: text;
+  }
+
+  .capsule-channel {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
     font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--c-text-secondary);
+  }
+
+  .capsule-channel.official {
+    color: #4ade80;
+  }
+
+  .capsule-channel.dev {
+    color: #a5b4fc;
+  }
+
+  .capsule-divider {
+    width: 1px;
+    height: 9px;
+    background: rgba(255, 255, 255, 0.14);
+  }
+
+  .capsule-version {
+    font-weight: 600;
+    color: var(--c-text-primary);
+    font-variant-numeric: tabular-nums;
+    font-size: 11px;
+  }
+
+  .capsule-build {
     color: var(--c-text-muted);
     font-variant-numeric: tabular-nums;
-    line-height: 1.2;
+    font-size: 10.5px;
   }
-
-
 
   .about-card {
     display: flex;
@@ -304,36 +340,6 @@
     box-shadow:
       inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
       0 3px 12px rgba(0, 0, 0, 0.12);
-  }
-
-  .specs-compact-list {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    width: 100%;
-    padding: 8px 10px;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    box-sizing: border-box;
-  }
-
-  .spec-compact-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    font-size: 11px;
-  }
-
-  .spec-compact-label {
-    color: var(--c-text-muted);
-    font-weight: 500;
-  }
-
-  .spec-compact-val {
-    color: var(--c-text-primary);
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
   }
 
   .about-links-row {

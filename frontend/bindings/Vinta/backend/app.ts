@@ -66,7 +66,7 @@ export function ClearTooltipBounds(id: string): $CancellablePromise<void> {
 }
 
 /**
- * DeleteNote deletes a markdown note file from disk.
+ * DeleteNote deletes a .vnote file from disk.
  */
 export function DeleteNote(fileName: string): $CancellablePromise<void> {
     return $Call.ByID(1941640120, fileName);
@@ -226,7 +226,7 @@ export function IsTestMode(): $CancellablePromise<boolean> {
 }
 
 /**
- * ListNotes scans the notes directory and returns all markdown note files metadata.
+ * ListNotes scans the notes directory, migrates legacy notes, and returns all .vnote metadata.
  */
 export function ListNotes(): $CancellablePromise<$models.NoteFileInfo[]> {
     return $Call.ByID(2184398716).then(($result: any) => {
@@ -270,7 +270,7 @@ export function Quit(): $CancellablePromise<void> {
 }
 
 /**
- * ReadNote reads and returns the text content of a note file.
+ * ReadNote reads and returns the JSON content of a .vnote file.
  */
 export function ReadNote(fileName: string): $CancellablePromise<string> {
     return $Call.ByID(3035600691, fileName);
@@ -284,7 +284,7 @@ export function RemoveSatellite(id: string): $CancellablePromise<void> {
 }
 
 /**
- * RenameNote renames an existing note file using the new title as the filename.
+ * RenameNote renames an existing .vnote file using the new title as the filename.
  * Returns the new filename on success.
  */
 export function RenameNote(oldFileName: string, newTitle: string): $CancellablePromise<string> {
@@ -322,7 +322,7 @@ export function ResumeUpdateDownload(): $CancellablePromise<void> {
 }
 
 /**
- * SaveNote writes or updates a markdown note file.
+ * SaveNote writes or updates a .vnote file.
  */
 export function SaveNote(fileName: string, content: string): $CancellablePromise<void> {
     return $Call.ByID(1034640134, fileName, content);

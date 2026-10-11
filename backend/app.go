@@ -3,6 +3,7 @@ package backend
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -2276,13 +2277,17 @@ func (a *App) SetHardwareAcceleration(enabled bool) error {
 	return os.WriteFile(filePath, []byte(val), 0644)
 }
 
-// NoteFileInfo describes a saved markdown note file.
+// NoteFileInfo describes a saved sticky note file.
 type NoteFileInfo struct {
 	ID       string `json:"id"`
 	Title    string `json:"title"`
 	FileName string `json:"fileName"`
 	ModTime  int64  `json:"modTime"`
 	Size     int64  `json:"size"`
+}
+
+type noteTitleParser struct {
+	Title string `json:"title"`
 }
 
 func getNotesDir() (string, error) {
@@ -2293,7 +2298,46 @@ func getNotesDir() (string, error) {
 	return notesDir, nil
 }
 
-// ListNotes scans the notes directory and returns all markdown note files metadata.
+// migrateLegacyNotes scans for older .md notes and converts them into .vnote format.
+func migrateLegacyNotes(dir string, entries []os.DirEntry) {
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(strings.ToLower(entry.Name()), ".md") {
+			continue
+		}
+		info, err := entry.Info()
+		if err != nil {
+			continue
+		}
+		oldPath := filepath.Join(dir, entry.Name())
+		mdContent, err := os.ReadFile(oldPath)
+		if err != nil {
+			continue
+		}
+
+		baseName := strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name()))
+		newFileName := baseName + ".vnote"
+		newPath := filepath.Join(dir, newFileName)
+
+		if _, statErr := os.Stat(newPath); os.IsNotExist(statErr) {
+			payload := map[string]interface{}{
+				"id":        baseName,
+				"title":     baseName,
+				"color":     "yellow",
+				"content":   string(mdContent),
+				"pinned":    false,
+				"modTime":   info.ModTime().UnixMilli(),
+				"createdAt": info.ModTime().UnixMilli(),
+			}
+			if data, err := json.MarshalIndent(payload, "", "  "); err == nil {
+				_ = os.WriteFile(newPath, data, 0644)
+			}
+		}
+
+		_ = os.Remove(oldPath)
+	}
+}
+
+// ListNotes scans the notes directory, migrates legacy notes, and returns all .vnote metadata.
 func (a *App) ListNotes() ([]NoteFileInfo, error) {
 	dir, err := getNotesDir()
 	if err != nil {
@@ -2303,9 +2347,17 @@ func (a *App) ListNotes() ([]NoteFileInfo, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	migrateLegacyNotes(dir, entries)
+
+	entries, err = os.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+
 	var notes []NoteFileInfo
 	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(strings.ToLower(entry.Name()), ".md") {
+		if entry.IsDir() || !strings.HasSuffix(strings.ToLower(entry.Name()), ".vnote") {
 			continue
 		}
 		info, err := entry.Info()
@@ -2314,9 +2366,19 @@ func (a *App) ListNotes() ([]NoteFileInfo, error) {
 		}
 		fileName := entry.Name()
 		id := strings.TrimSuffix(fileName, filepath.Ext(fileName))
+		title := id
+
+		filePath := filepath.Join(dir, fileName)
+		if fileBytes, readErr := os.ReadFile(filePath); readErr == nil {
+			var parsed noteTitleParser
+			if parseErr := json.Unmarshal(fileBytes, &parsed); parseErr == nil && strings.TrimSpace(parsed.Title) != "" {
+				title = strings.TrimSpace(parsed.Title)
+			}
+		}
+
 		notes = append(notes, NoteFileInfo{
 			ID:       id,
-			Title:    id,
+			Title:    title,
 			FileName: fileName,
 			ModTime:  info.ModTime().UnixMilli(),
 			Size:     info.Size(),
@@ -2325,15 +2387,15 @@ func (a *App) ListNotes() ([]NoteFileInfo, error) {
 	return notes, nil
 }
 
-// ReadNote reads and returns the text content of a note file.
+// ReadNote reads and returns the JSON content of a .vnote file.
 func (a *App) ReadNote(fileName string) (string, error) {
 	dir, err := getNotesDir()
 	if err != nil {
 		return "", err
 	}
 	cleanName := filepath.Base(fileName)
-	if !strings.HasSuffix(strings.ToLower(cleanName), ".md") {
-		cleanName += ".md"
+	if !strings.HasSuffix(strings.ToLower(cleanName), ".vnote") {
+		cleanName = strings.TrimSuffix(cleanName, filepath.Ext(cleanName)) + ".vnote"
 	}
 	filePath := filepath.Join(dir, cleanName)
 	data, err := os.ReadFile(filePath)
@@ -2343,28 +2405,27 @@ func (a *App) ReadNote(fileName string) (string, error) {
 	return string(data), nil
 }
 
-// SaveNote writes or updates a markdown note file.
+// SaveNote writes or updates a .vnote file.
 func (a *App) SaveNote(fileName string, content string) error {
 	dir, err := getNotesDir()
 	if err != nil {
 		return err
 	}
 	cleanName := filepath.Base(fileName)
-	if !strings.HasSuffix(strings.ToLower(cleanName), ".md") {
-		cleanName += ".md"
+	if !strings.HasSuffix(strings.ToLower(cleanName), ".vnote") {
+		cleanName = strings.TrimSuffix(cleanName, filepath.Ext(cleanName)) + ".vnote"
 	}
 	filePath := filepath.Join(dir, cleanName)
 	return os.WriteFile(filePath, []byte(content), 0644)
 }
 
-// RenameNote renames an existing note file using the new title as the filename.
+// RenameNote renames an existing .vnote file using the new title as the filename.
 // Returns the new filename on success.
 func (a *App) RenameNote(oldFileName string, newTitle string) (string, error) {
 	dir, err := getNotesDir()
 	if err != nil {
 		return "", err
 	}
-	// Sanitize the new title into a safe filename
 	sanitized := strings.NewReplacer(
 		"/", "-", "\\", "-", ":", "-", "*", "-",
 		"?", "-", "\"", "-", "<", "-", ">", "-", "|", "-",
@@ -2372,23 +2433,21 @@ func (a *App) RenameNote(oldFileName string, newTitle string) (string, error) {
 	if sanitized == "" {
 		sanitized = "untitled"
 	}
-	newFileName := sanitized + ".md"
+	newFileName := sanitized + ".vnote"
 
 	oldClean := filepath.Base(oldFileName)
-	if !strings.HasSuffix(strings.ToLower(oldClean), ".md") {
-		oldClean += ".md"
+	if !strings.HasSuffix(strings.ToLower(oldClean), ".vnote") {
+		oldClean = strings.TrimSuffix(oldClean, filepath.Ext(oldClean)) + ".vnote"
 	}
 
 	oldPath := filepath.Join(dir, oldClean)
 	newPath := filepath.Join(dir, newFileName)
 
-	// Avoid clobbering a different existing file
 	if !strings.EqualFold(oldPath, newPath) {
 		if _, statErr := os.Stat(newPath); statErr == nil {
-			// Target exists; append a counter to make it unique
-			base := strings.TrimSuffix(newFileName, ".md")
+			base := strings.TrimSuffix(newFileName, ".vnote")
 			for n := 2; ; n++ {
-				candidate := fmt.Sprintf("%s (%d).md", base, n)
+				candidate := fmt.Sprintf("%s (%d).vnote", base, n)
 				if _, e := os.Stat(filepath.Join(dir, candidate)); os.IsNotExist(e) {
 					newFileName = candidate
 					newPath = filepath.Join(dir, newFileName)
@@ -2403,15 +2462,15 @@ func (a *App) RenameNote(oldFileName string, newTitle string) (string, error) {
 	return newFileName, nil
 }
 
-// DeleteNote deletes a markdown note file from disk.
+// DeleteNote deletes a .vnote file from disk.
 func (a *App) DeleteNote(fileName string) error {
 	dir, err := getNotesDir()
 	if err != nil {
 		return err
 	}
 	cleanName := filepath.Base(fileName)
-	if !strings.HasSuffix(strings.ToLower(cleanName), ".md") {
-		cleanName += ".md"
+	if !strings.HasSuffix(strings.ToLower(cleanName), ".vnote") {
+		cleanName = strings.TrimSuffix(cleanName, filepath.Ext(cleanName)) + ".vnote"
 	}
 	filePath := filepath.Join(dir, cleanName)
 	return os.Remove(filePath)

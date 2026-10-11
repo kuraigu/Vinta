@@ -218,7 +218,7 @@ export class MonitorInfo {
 }
 
 /**
- * NoteFileInfo describes a saved markdown note file.
+ * NoteFileInfo describes a saved sticky note file.
  */
 export class NoteFileInfo {
     "id": string;
