@@ -59,6 +59,7 @@ export interface IslandEventCallbacks {
   onHideTrigger: () => void
   onMonitorChanged: (mon: MonitorInfo) => void
   onRefreshDisplay: () => void
+  onNotificationWake?: () => void
 }
 
 /**
@@ -274,6 +275,7 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
         !callbacks.getIsExpanded() &&
         !mediaIsActive
       ) {
+        callbacks.onNotificationWake?.()
         callbacks.showWidget()
         callbacks.navigateTo(NotificationPage, notifConfig, false)
         callbacks.triggerGlow()

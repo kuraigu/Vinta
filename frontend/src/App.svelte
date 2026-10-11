@@ -217,7 +217,14 @@
     return false
   })
 
-  let shouldCurrentPageAutoHide = $derived.by(() => {
+  /**
+   * Evaluates whether the current page should engage auto-hide countdown.
+   * Notifications always auto-dismiss, while Home and Media follow user settings.
+   */
+  function computeShouldCurrentPageAutoHide() {
+    if (activePage === NotificationPage) {
+      return true
+    }
     if (activePage === HomePage) {
       return $homeAutoHideStore
     }
@@ -226,7 +233,8 @@
       return $mediaAutoHideStore
     }
     return $autoHideStore
-  })
+  }
+  let shouldCurrentPageAutoHide = $derived.by(computeShouldCurrentPageAutoHide)
 
   function triggerGlow() {
     clearTimeout(glowTimeout)
@@ -263,7 +271,15 @@
     isTimeoutActive = true
     hideTimeout = window.setTimeout(() => {
       isTimeoutActive = false
-      if (activePage === MediaPage && !isMediaActive) {
+      if (activePage === NotificationPage) {
+        if (wasHiddenBeforeNotif) {
+          wasHiddenBeforeNotif = false
+          hideWidget()
+        } else {
+          const fallback = getFallbackPage()
+          navigateTo(fallback.page as Component, fallback.config, false)
+        }
+      } else if (activePage === MediaPage && !isMediaActive) {
         navigateTo(HomePage, homeConfig, false)
       } else {
         hideWidget()
@@ -411,9 +427,11 @@
       config === homeConfig || (config === islandConfig && activePage === HomePage)
     const isTargetMedia =
       config === mediaConfig || (config === islandConfig && activePage === MediaPage)
+    const isTargetNotif =
+      config === notifConfig || (config === islandConfig && activePage === NotificationPage)
 
     const effectiveConfig =
-      !isExp && !isHid && !isTargetHome && !isTargetMedia
+      !isExp && !isHid && !isTargetHome && !isTargetMedia && !isTargetNotif
         ? getFallbackPage().config
         : config
 
@@ -449,18 +467,15 @@
   }
 
   let wasExpandedBeforeHide = $state(false)
+  let wasHiddenBeforeNotif = $state(false)
 
-  async function navigateTo(
+  function navigateTo(
     page: Component,
     pageConfig: IslandConfig,
     expand: boolean = false
   ) {
-    const nextBounds = getBoundsForState(pageConfig, expand, false)
-    if (
-      nextBounds.w > bounds.currentOSBounds.w ||
-      nextBounds.h > bounds.currentOSBounds.h
-    ) {
-      await bounds.prepareExpansion(nextBounds, clampedOffsetX)
+    if (page !== NotificationPage) {
+      wasHiddenBeforeNotif = false
     }
 
     if (isHidden) {
@@ -499,6 +514,7 @@
       Events.Emit('devtest-sync-page', { pageId })
     } catch {}
 
+    const nextBounds = getBoundsForState(pageConfig, expand, false)
     bounds.syncBounds(nextBounds, clampedOffsetX, islandNode, false, false)
 
     triggerGlow()
@@ -540,6 +556,7 @@
 
   function hideWidget() {
     if (isHidden) return
+    wasHiddenBeforeNotif = false
     clearHoverGrace()
     clearTimeout(hideTimeout)
     isTimeoutActive = false
@@ -760,7 +777,10 @@
           currentMonitor: mon
         }
       },
-      onRefreshDisplay: refreshDisplay
+      onRefreshDisplay: refreshDisplay,
+      onNotificationWake: () => {
+        wasHiddenBeforeNotif = isHidden
+      }
     })
 
     const unsubDevTestNavigate = Events.On(
@@ -893,7 +913,10 @@
   role="application"
   onfocusin={(e: FocusEvent) => {
     const t = e.target as HTMLElement
-    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) {
+    if (
+      t &&
+      (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)
+    ) {
       FocusWindow().catch(() => {})
     }
   }}
