@@ -3,7 +3,7 @@
 
   type Props = {
     onclick: (e: MouseEvent) => void
-    tooltip: string
+    tooltip?: string
     tooltipPosition?: 'top' | 'left' | 'right' | 'bottom'
     variant?: '' | 'danger' | 'warning' | 'success'
     shape?: 'rounded' | 'circle'
@@ -26,7 +26,6 @@
   }: Props = $props()
 </script>
 
-<!-- Notice {onclick} replaces on:click={onclick} in Svelte 5 -->
 <button
   class="dock-btn {variant} shape-{shape} tooltip-{tooltipPosition}"
   class:active
@@ -36,6 +35,7 @@
   }}
   data-tooltip={useCustomTooltip ? tooltip : ''}
   title={!useCustomTooltip ? tooltip : undefined}
+  aria-label={tooltip}
 >
   {@render children()}
   {#if badge !== undefined && badge > 0}

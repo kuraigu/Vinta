@@ -7,6 +7,7 @@
     Plug,
     RefreshCw
   } from 'lucide-svelte'
+  import { Events } from '@wailsio/runtime'
   import {
     batteryDataStore,
     isSimulatingBatteryStore,
@@ -22,9 +23,15 @@
     'charging' | 'discharging' | 'full' | 'desktop' | 'unknown'
   >('charging')
 
+  function broadcastBattery(isSimulating: boolean, data?: BatteryData) {
+    try {
+      Events.Emit('devtest-battery', { isSimulating, data })
+    } catch {}
+  }
+
   function applySimulation() {
     isSimulatingBatteryStore.set(true)
-    batteryDataStore.set({
+    const data: BatteryData = {
       hasBattery: simulatedHasBattery,
       isCharging: simulatedCharging,
       percentage: simulatedPercentage,
@@ -33,11 +40,14 @@
         ? 3600
         : Math.round((simulatedPercentage / 100) * 14400),
       state: simulatedHasBattery ? simulatedState : 'desktop'
-    })
+    }
+    batteryDataStore.set(data)
+    broadcastBattery(true, data)
   }
 
   async function resetToHardware() {
     isSimulatingBatteryStore.set(false)
+    broadcastBattery(false)
     try {
       if (typeof GetBatteryStatus === 'function') {
         const live = await GetBatteryStatus()
@@ -51,6 +61,7 @@
             (live.state as
               'charging' | 'discharging' | 'full' | 'desktop' | 'unknown') ||
             'desktop'
+          broadcastBattery(false, live as BatteryData)
         }
       }
     } catch {

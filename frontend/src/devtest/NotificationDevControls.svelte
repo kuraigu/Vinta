@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Events } from '@wailsio/runtime'
   import { parseAumid } from '../services/iconService'
   import {
     SendTestNotification,
@@ -23,17 +24,7 @@
 
     if (mockApp !== '') {
       const parsed = parseAumid(mockApp)
-      ;(
-        window as Window &
-          typeof globalThis & {
-            runtime: {
-              EventsEmit: (
-                eventName: string,
-                payload: Record<string, string>
-              ) => void
-            }
-          }
-      ).runtime.EventsEmit('notification', {
+      Events.Emit('notification', {
         appName: mockApp,
         title: 'Mock App Notification',
         message: `Parsed to: ${parsed.displayName} (${parsed.processName})`,

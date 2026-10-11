@@ -2,8 +2,8 @@
   import type { IslandConfig } from '../store'
 
   export const config: IslandConfig = {
-    minimal: { w: 368, h: 44, r: 22 },
-    expanded: { w: 440, h: 235, r: 28 },
+    minimal: { w: 368, h: 44, r: 16 },
+    expanded: { w: 400, h: 225, r: 28 },
     borderColor: 'rgba(255, 60, 100, 0.4)',
     glowColor: 'rgba(255, 60, 100, 0.35)'
   }
@@ -43,7 +43,9 @@
   import NotificationPage, {
     config as notifConfig
   } from '../pages/NotificationPage.svelte'
+  import { islandTooltip } from '../services/islandTooltip'
   import { resolveAppBrand, nativeIconsStore } from '../services/iconService'
+  import { enhanceArtwork } from '../utils/imageUpscaler'
 
   const navigate =
     getContext<
@@ -296,14 +298,97 @@
 
   let imgLoadFailed = $state(false)
   let lastArtSrc = $state('')
+  let displayAlbumArt = $state('')
+  let isArtUpscaled = $state(false)
 
+  /**
+   * Synchronizes album artwork and initiates non-AI detail enhancement for low-resolution thumbnails.
+   */
   function handleArtSyncEffect() {
-    if (media.albumArt !== lastArtSrc) {
-      lastArtSrc = media.albumArt
+    const rawArt = media.albumArt
+    if (rawArt !== lastArtSrc) {
+      lastArtSrc = rawArt
       imgLoadFailed = false
+
+      if (!rawArt) {
+        displayAlbumArt = ''
+        isArtUpscaled = false
+        return
+      }
+
+      displayAlbumArt = rawArt
+      isArtUpscaled = false
+
+      enhanceArtwork(rawArt).then((res) => {
+        if (media.albumArt === rawArt && res.isUpscaled) {
+          displayAlbumArt = res.url
+          isArtUpscaled = true
+        }
+      })
     }
   }
   $effect(handleArtSyncEffect)
+
+  let cardTintColor = $state('')
+
+  /**
+   * Samples dominant artwork hue across downsampled pixels to supply ambient backdrop tinting.
+   *
+   * @param src - Base64 data URI or image URL of the album artwork.
+   */
+  function extractArtworkColor(src: string) {
+    if (!src) {
+      cardTintColor = trackTexture.accentColor
+      return
+    }
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas')
+        canvas.width = 16
+        canvas.height = 16
+        const ctx = canvas.getContext('2d')
+        if (!ctx) {
+          cardTintColor = trackTexture.accentColor
+          return
+        }
+        ctx.drawImage(img, 0, 0, 16, 16)
+        const data = ctx.getImageData(0, 0, 16, 16).data
+        let r = 0
+        let g = 0
+        let b = 0
+        let count = 0
+        for (let i = 0; i < data.length; i += 4) {
+          r += data[i]
+          g += data[i + 1]
+          b += data[i + 2]
+          count++
+        }
+        if (count > 0) {
+          cardTintColor = `rgba(${Math.round(r / count)}, ${Math.round(g / count)}, ${Math.round(b / count)}, 0.45)`
+        }
+      } catch {
+        cardTintColor = trackTexture.accentColor
+      }
+    }
+    img.onerror = () => {
+      cardTintColor = trackTexture.accentColor
+    }
+    img.src = src
+  }
+
+  /**
+   * Harmonizes dynamic background scrim tint with active album artwork or procedural texture palette.
+   */
+  function handleCardTintEffect() {
+    if (displayAlbumArt && !imgLoadFailed) {
+      extractArtworkColor(displayAlbumArt)
+    } else {
+      cardTintColor = trackTexture.accentColor
+    }
+  }
+  $effect(handleCardTintEffect)
 
   function handleImgError() {
     imgLoadFailed = true
@@ -521,6 +606,33 @@
     lockVolumeWithGracePeriod()
   }
 
+  let isScrubHovering = $state(false)
+  let scrubHoverPercent = $state(0)
+  let scrubHoverTimeMs = $state(0)
+
+  /**
+   * Tracks cursor/pointer position along the timeline scrubber to render a live timestamp preview bubble.
+   *
+   * @param e - Pointer movement event over the scrubber container.
+   */
+  function handleScrubPointerMove(e: PointerEvent) {
+    if (media.durationMs <= 0) return
+    const target = e.currentTarget as HTMLElement
+    const rect = target.getBoundingClientRect()
+    if (rect.width <= 0) return
+    const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width))
+    scrubHoverPercent = ratio * 100
+    scrubHoverTimeMs = Math.round(ratio * media.durationMs)
+    isScrubHovering = true
+  }
+
+  /**
+   * Hides the timestamp preview bubble when pointer departs the waveform scrubber track.
+   */
+  function handleScrubPointerLeave() {
+    isScrubHovering = false
+  }
+
   function formatTime(ms: number): string {
     if (!ms || isNaN(ms) || ms <= 0) return '0:00'
     const totalSecs = Math.floor(ms / 1000)
@@ -545,6 +657,90 @@
     void nativeIcons
     return resolveAppBrand(sourceApp, sessionId)
   }
+
+  let miniTitleNode = $state<HTMLElement | null>(null)
+  let expandedTitleNode = $state<HTMLElement | null>(null)
+
+  let isMiniTitleOverflowing = $state(false)
+  let miniTitleDist = $state(0)
+  let miniTitleDuration = $state(8)
+
+  let isExpandedTitleOverflowing = $state(false)
+  let expandedTitleDist = $state(0)
+  let expandedTitleDuration = $state(8)
+
+  /**
+   * Calculates text overflow metrics and configures the marquee animation speed.
+   *
+   * @param node Target element to evaluate
+   * @returns Object containing overflow status, slide distance, and duration
+   */
+  function measureMarquee(node: HTMLElement | null): {
+    overflowing: boolean
+    dist: number
+    duration: number
+  } {
+    if (!node || !node.parentElement) {
+      return { overflowing: false, dist: 0, duration: 8 }
+    }
+    const containerWidth = node.parentElement.clientWidth
+    const contentWidth = node.scrollWidth
+    const diff = contentWidth - containerWidth
+
+    if (diff > 14 && containerWidth > 0) {
+      const dist = Math.ceil(diff + 8)
+      // Calm reading cadence (~20px/sec) with 3.5s initial pause and 2.5s terminal pause
+      const scrollTime = dist / 20
+      const duration = Math.max(12, Math.min(45, Math.round(scrollTime + 6)))
+      return { overflowing: true, dist, duration }
+    }
+    return { overflowing: false, dist: 0, duration: 8 }
+  }
+
+  /**
+   * Observes and updates marquee metrics when track information or element bounds change.
+   */
+  function handleTitleMarqueeEffect() {
+    const _title = media.title
+    const _expanded = expanded
+    const _mini = miniTitleNode
+    const _exp = expandedTitleNode
+
+    let rafId: number | null = null
+
+    function evaluate() {
+      if (!_expanded && _mini) {
+        const res = measureMarquee(_mini)
+        isMiniTitleOverflowing = res.overflowing
+        miniTitleDist = res.dist
+        miniTitleDuration = res.duration
+      } else if (_expanded && _exp) {
+        const res = measureMarquee(_exp)
+        isExpandedTitleOverflowing = res.overflowing
+        expandedTitleDist = res.dist
+        expandedTitleDuration = res.duration
+      }
+    }
+
+    rafId = requestAnimationFrame(evaluate)
+
+    const ro = new ResizeObserver(() => {
+      evaluate()
+    })
+
+    if (_mini?.parentElement) {
+      ro.observe(_mini.parentElement)
+    }
+    if (_exp?.parentElement) {
+      ro.observe(_exp.parentElement)
+    }
+
+    return () => {
+      if (rafId !== null) cancelAnimationFrame(rafId)
+      ro.disconnect()
+    }
+  }
+  $effect(handleTitleMarqueeEffect)
 </script>
 
 <div class="media-container {expanded ? 'expanded' : 'minimal'}">
@@ -552,14 +748,11 @@
     <!-- Compact Minimal View with Spinning Vinyl Disc, Track Info, Clock, and Audio Wave Bars -->
     <div class="minimal-layout">
       <!-- Spinning Vinyl Disc Album Art -->
-      <div
-        class="vinyl-disc {media.isPlaying ? 'spinning' : 'paused'}"
-        title={media.title}
-      >
+      <div class="vinyl-disc {media.isPlaying ? 'spinning' : 'paused'}">
         <div class="vinyl-groove">
-          {#if media.albumArt && !imgLoadFailed}
+          {#if displayAlbumArt && !imgLoadFailed}
             <img
-              src={media.albumArt}
+              src={displayAlbumArt}
               alt={media.title}
               class="vinyl-art"
               draggable="false"
@@ -591,8 +784,20 @@
 
       <!-- Track Info -->
       <div class="track-info-minimal">
-        <span class="track-title-mini">{media.title || 'No Media Playing'}</span
+        <div
+          class="track-title-mini-wrapper"
+          class:is-overflowing={isMiniTitleOverflowing}
+          style={isMiniTitleOverflowing
+            ? `--marquee-dist: ${miniTitleDist}px; --marquee-duration: ${miniTitleDuration}s;`
+            : undefined}
         >
+          <span
+            bind:this={miniTitleNode}
+            class="track-title-mini"
+            class:is-marquee={isMiniTitleOverflowing}
+            >{media.title || 'No Media Playing'}</span
+          >
+        </div>
         {#if media.artist}
           <span class="artist-name-mini">{media.artist}</span>
         {:else if !media.title}
@@ -605,7 +810,6 @@
         {#if $notifData.length > 0}
           <button
             class="mini-notif-indicator {isNewNotif ? 'pulse-new' : ''}"
-            title="{$notifData.length} unread notification(s)"
             onclick={(e) => {
               e.stopPropagation()
               if (navigate) navigate(NotificationPage, notifConfig, true)
@@ -640,17 +844,17 @@
           class="mini-progress-fill"
           style="width: {progressPercent}%;"
         ></div>
-        <div class="mini-progress-head" style="left: {progressPercent}%;"></div>
       </div>
     </div>
   {:else}
     <!-- Full-Card Background Image / Procedural Texture -->
-    <div class="card-bg-wrapper">
-      {#if media.albumArt && !imgLoadFailed}
+    <div class="card-bg-wrapper" style="--card-tint: {cardTintColor};">
+      {#if displayAlbumArt && !imgLoadFailed}
         <img
-          src={media.albumArt}
+          src={displayAlbumArt}
           alt={media.title}
           class="card-bg-image"
+          class:is-upscaled={isArtUpscaled}
           draggable="false"
           decoding="async"
           onerror={handleImgError}
@@ -683,7 +887,11 @@
 
         <button
           class="device-badge clickable"
-          title="Switch to {appBrand.name}"
+          use:islandTooltip={{
+            text: `Switch to ${appBrand.name}`,
+            position: 'bottom'
+          }}
+          aria-label="Switch to {appBrand.name}"
           onclick={handleFocusApp}
         >
           <span>{appBrand.name}</span>
@@ -700,7 +908,8 @@
             </div>
             <button
               class="session-close-btn"
-              title="Close Sources"
+              use:islandTooltip={{ text: 'Close Sources', align: 'right' }}
+              aria-label="Close Sources"
               onclick={(e) => {
                 e.stopPropagation()
                 isSessionMenuOpen = false
@@ -767,22 +976,38 @@
           </div>
         </div>
       {:else}
-        <!-- Middle Row: Left-aligned Track Title/Artist + Hero Play/Pause Button -->
+        <!-- Middle Row: Left-aligned Artist (Line 1) + Track Title (Line 2) + Hero Play/Pause Button -->
         <div class="middle-section">
           <div class="track-details">
-            <div class="track-title" title={media.title || 'No Media Playing'}>
-              {media.title || 'No Media Playing'}
+            <!-- Line 1: Artist / Album Name (Subtle Subtitle Style) -->
+            <div class="artist-name">
+              {media.artist ||
+                media.album ||
+                (media.title ? 'Unknown Artist' : 'Media Player')}
             </div>
-            {#if media.artist}
-              <div class="artist-name" title={media.artist}>{media.artist}</div>
-            {:else if !media.title}
-              <div class="artist-name">Connect Media Player</div>
-            {/if}
+
+            <!-- Line 2: Track Title (Prominent Headline Style with marquee support) -->
+            <div
+              class="track-title-wrapper"
+              class:is-overflowing={isExpandedTitleOverflowing}
+              style={isExpandedTitleOverflowing
+                ? `--marquee-dist: ${expandedTitleDist}px; --marquee-duration: ${expandedTitleDuration}s;`
+                : undefined}
+            >
+              <div
+                bind:this={expandedTitleNode}
+                class="track-title"
+                class:is-marquee={isExpandedTitleOverflowing}
+              >
+                {media.title || 'Connect Media Player'}
+              </div>
+            </div>
           </div>
 
           <button
             class="hero-play-btn"
-            title={media.isPlaying ? 'Pause' : 'Play'}
+            use:islandTooltip={media.isPlaying ? 'Pause' : 'Play'}
+            aria-label={media.isPlaying ? 'Pause' : 'Play'}
             onclick={(e) => handleControl('play_pause', e)}
           >
             {#if media.isPlaying}
@@ -815,11 +1040,16 @@
                 class="action-btn"
                 class:is-active={media.isShuffleActive}
                 disabled={media.isShuffleActive === undefined}
-                title={media.isShuffleActive === undefined
-                  ? 'Shuffle: Not supported by current playback'
-                  : media.isShuffleActive
-                    ? 'Shuffle: On'
-                    : 'Shuffle: Off'}
+                use:islandTooltip={{
+                  text:
+                    media.isShuffleActive === undefined
+                      ? 'Shuffle: Not supported'
+                      : media.isShuffleActive
+                        ? 'Shuffle: On'
+                        : 'Shuffle: Off',
+                  align: 'left'
+                }}
+                aria-label="Shuffle"
                 onclick={(e) => handleControl('shuffle', e)}
               >
                 <Shuffle size={13} />
@@ -828,7 +1058,8 @@
 
             <button
               class="action-btn"
-              title="Previous Track"
+              use:islandTooltip={{ text: 'Previous Track', align: 'left' }}
+              aria-label="Previous Track"
               onclick={(e) => handleControl('prev', e)}
             >
               <svg
@@ -843,7 +1074,8 @@
 
             <button
               class="action-btn"
-              title="Next Track"
+              use:islandTooltip={'Next Track'}
+              aria-label="Next Track"
               onclick={(e) => handleControl('next', e)}
             >
               <svg
@@ -865,13 +1097,17 @@
                 class:is-active={media.autoRepeatMode &&
                   media.autoRepeatMode > 0}
                 disabled={media.autoRepeatMode === undefined}
-                title={media.autoRepeatMode === undefined
-                  ? 'Repeat: Not supported by current playback'
-                  : media.autoRepeatMode === 1
-                    ? 'Repeat: One Track'
-                    : media.autoRepeatMode === 2
-                      ? 'Repeat: All Tracks'
-                      : 'Repeat: Off'}
+                use:islandTooltip={{
+                  text:
+                    media.autoRepeatMode === undefined
+                      ? 'Repeat: Not supported'
+                      : media.autoRepeatMode === 1
+                        ? 'Repeat: One Track'
+                        : media.autoRepeatMode === 2
+                          ? 'Repeat: All Tracks'
+                          : 'Repeat: Off'
+                }}
+                aria-label="Repeat"
                 onclick={(e) => handleControl('repeat', e)}
               >
                 {#if media.autoRepeatMode === 1}
@@ -886,7 +1122,10 @@
               <button
                 class="action-btn session-btn"
                 class:is-active={isSessionMenuOpen}
-                title="Media Sources ({media.sessions.length})"
+                use:islandTooltip={{
+                  text: `Media Sources (${media.sessions.length})`
+                }}
+                aria-label="Media Sources"
                 onclick={toggleSessionMenu}
               >
                 <ListMusic size={14} />
@@ -899,7 +1138,11 @@
           <div class="volume-control">
             <button
               class="vol-icon-btn"
-              title={media.isMuted ? 'Unmute' : 'Mute'}
+              use:islandTooltip={{
+                text: media.isMuted ? 'Unmute' : 'Mute',
+                align: 'right'
+              }}
+              aria-label={media.isMuted ? 'Unmute' : 'Mute'}
               onclick={(e) => handleControl('toggle_mute', e)}
             >
               {#if media.isMuted || currentVol === 0}
@@ -931,8 +1174,28 @@
         <!-- Bottom Audio Spectrum Waveform Scrub Bar with aligned Time Labels -->
         <div class="scrub-container">
           <span class="time-label">{formatTime(currentPos)}</span>
-          <div class="waveform-scrub-wrapper">
-            <div class="spectrum-bars-container">
+          <div
+            class="waveform-scrub-wrapper"
+            role="presentation"
+            onpointermove={handleScrubPointerMove}
+            onpointerleave={handleScrubPointerLeave}
+          >
+            {#if (isScrubHovering || isDraggingSeek) && media.durationMs > 0}
+              <div
+                class="scrub-preview-bubble"
+                style="left: {isDraggingSeek
+                  ? (seekVal / media.durationMs) * 100
+                  : scrubHoverPercent}%;"
+              >
+                {formatTime(isDraggingSeek ? seekVal : scrubHoverTimeMs)}
+              </div>
+            {/if}
+            <!-- Dynamic Equalizer Waveform Timeline Scrubber -->
+            <div
+              class="spectrum-bars-container {isDraggingSeek
+                ? 'is-dragging'
+                : ''}"
+            >
               <DynamicEqualizer
                 isPlaying={media.isPlaying}
                 audioPeak={$audioPeakStore}
@@ -940,19 +1203,6 @@
                 barCount={32}
                 {progressPercent}
               />
-            </div>
-            <div
-              class="whole-capsule-track {isDraggingSeek ? 'is-dragging' : ''}"
-            >
-              <div class="capsule-track-ghost"></div>
-              <div
-                class="capsule-track-fill"
-                style="width: {progressPercent}%;"
-              ></div>
-              <div
-                class="capsule-track-head"
-                style="left: {progressPercent}%;"
-              ></div>
             </div>
             <input
               type="range"

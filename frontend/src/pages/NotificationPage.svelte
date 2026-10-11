@@ -1,6 +1,6 @@
 <script module lang="ts">
   export const config = {
-    minimal: { w: 360, h: 65, r: 24 },
+    minimal: { w: 360, h: 65, r: 18 },
     expanded: { w: 440, h: 380, r: 30 },
     borderColor: 'var(--c-island-border-notification)',
     glowColor: 'var(--c-island-glow-notification)'
@@ -10,10 +10,10 @@
 <script lang="ts">
   import { getContext } from 'svelte'
   import { ChevronUp } from 'lucide-svelte'
-  import { AppControls } from '../utils/AppControls.svelte'
   import Notification from '../components/Notification.svelte'
   import { notifData } from '../store'
   import type { IslandConfig } from '../store'
+  import HomePage, { config as homeConfig } from './HomePage.svelte'
 
   let { expanded = false }: { expanded?: boolean } = $props()
 
@@ -33,7 +33,10 @@
       <button
         class="collapse-btn"
         title="Collapse notification"
-        onclick={(e: MouseEvent) => AppControls.doMinimize(navigate, e)}
+        onclick={(e: MouseEvent) => {
+          if (e) e.stopPropagation()
+          navigate(HomePage, homeConfig, false)
+        }}
       >
         <ChevronUp size={14} />
       </button>

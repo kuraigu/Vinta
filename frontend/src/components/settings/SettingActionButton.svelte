@@ -63,14 +63,15 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    height: 28px;
-    padding: 0 12px;
-    border-radius: 8px;
+    gap: 7px;
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 9px;
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid var(--c-border);
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
     color: var(--c-text-primary);
-    font-size: 11px;
+    font-size: 11.5px;
     font-weight: 600;
     cursor: pointer;
     white-space: nowrap;
@@ -81,11 +82,17 @@
 
   .setting-btn:hover {
     background: rgba(255, 255, 255, 0.12);
+    border-color: var(--c-border-hover, rgba(255, 255, 255, 0.18));
+  }
+
+  .setting-btn:active {
+    transform: scale(0.99);
   }
 
   .setting-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    transform: none;
   }
 
   .setting-btn.full-width {
@@ -105,6 +112,7 @@
 
   .setting-btn.danger:hover {
     background: rgba(239, 68, 68, 0.25);
+    border-color: rgba(239, 68, 68, 0.45);
   }
 
   .setting-btn.success {
@@ -115,5 +123,6 @@
 
   .setting-btn.success:hover {
     background: rgba(16, 185, 129, 0.25);
+    border-color: rgba(16, 185, 129, 0.45);
   }
 </style>

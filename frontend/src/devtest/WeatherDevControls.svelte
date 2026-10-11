@@ -8,6 +8,7 @@
     type WeatherLocation,
     type TemperatureUnit
   } from '../store'
+  import { Events } from '@wailsio/runtime'
   import {
     searchCities,
     type GeocodingResult
@@ -20,6 +21,22 @@
     Globe,
     Trash2
   } from 'lucide-svelte'
+
+  function broadcastWeatherEffect() {
+    const location = $weatherLocationStore
+    const unit = $weatherUnitStore
+    const timezone = $timezoneStore
+    const simulateOffline = $simulateOfflineStore
+    try {
+      Events.Emit('devtest-weather', {
+        location,
+        unit,
+        timezone,
+        simulateOffline
+      })
+    } catch {}
+  }
+  $effect(broadcastWeatherEffect)
 
   let currentLocation = $state<WeatherLocation>({
     name: 'Manila',

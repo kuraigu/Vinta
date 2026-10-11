@@ -101,6 +101,23 @@ func main() {
 
 	app.Setup(wailsApp, win)
 
+	if app.IsTestMode() {
+		devWin := wailsApp.Window.NewWithOptions(application.WebviewWindowOptions{
+			Title:            "Vinta Dev Tools",
+			Width:            500,
+			Height:           600,
+			InitialPosition:  application.WindowCenter,
+			Frameless:        false,
+			AlwaysOnTop:      true,
+			DisableResize:    false,
+			URL:              "/?window=devtest",
+			BackgroundType:   application.BackgroundTypeSolid,
+			BackgroundColour: application.NewRGBA(24, 24, 27, 255),
+		})
+		app.SetDevWindow(devWin)
+		devWin.Show()
+	}
+
 	err := wailsApp.Run()
 	if err != nil {
 		println("Error:", err.Error())

@@ -265,7 +265,7 @@
     display: flex;
     width: 100%;
     height: 100%;
-    padding: 0.8rem 1rem;
+    padding: 10px 14px;
     box-sizing: border-box;
     color: var(--c-text-primary, #ffffff);
   }
@@ -276,7 +276,8 @@
     width: 100%;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    justify-content: flex-start;
+    gap: 4px;
     min-width: 0;
   }
 
@@ -284,24 +285,26 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 6px;
+    margin-bottom: 2px;
   }
 
   .header-title-btn {
-    font-size: 0.95rem;
+    font-size: 0.88rem;
     font-weight: 700;
     letter-spacing: -0.01em;
     background: transparent;
     border: none;
     color: var(--c-text-primary, #ffffff);
     cursor: pointer;
-    padding: 2px 6px;
-    border-radius: 6px;
-    transition: background 0.2s ease;
+    padding: 2px 8px;
+    border-radius: 8px;
+    transition:
+      background 0.2s ease,
+      color 0.2s ease;
   }
 
   .header-title-btn:hover {
-    background: var(--c-hover);
+    background: rgba(255, 255, 255, 0.08);
   }
 
   .nav-actions {
@@ -317,38 +320,40 @@
   }
 
   .today-btn {
-    font-size: 0.68rem;
+    font-size: 0.66rem;
     font-weight: 600;
-    padding: 2px 8px;
-    border-radius: 10px;
-    background: var(--c-hover);
-    color: var(--c-primary);
-    border: 1px solid var(--c-border);
+    padding: 2px 9px;
+    border-radius: 9999px;
+    background: rgba(56, 189, 248, 0.12);
+    color: var(--c-primary, #38bdf8);
+    border: 1px solid rgba(56, 189, 248, 0.28);
     cursor: pointer;
-    transition: background 0.2s ease;
+    transition: all 0.2s ease;
   }
 
   .today-btn:hover {
-    background: var(--c-item-bg);
+    background: rgba(56, 189, 248, 0.2);
+    border-color: rgba(56, 189, 248, 0.45);
   }
 
   .icon-nav-btn {
     width: 24px;
     height: 24px;
-    border-radius: 50%;
-    background: var(--c-item-bg);
-    border: 1px solid var(--c-border);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     color: var(--c-text-primary);
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     padding: 0;
-    transition: background 0.2s ease;
+    transition: all 0.2s ease;
   }
 
   .icon-nav-btn:hover {
-    background: var(--c-hover);
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.16);
   }
 
   /* WEEKDAYS */
@@ -356,22 +361,24 @@
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     text-align: center;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
   }
 
   .weekday-cell {
-    font-size: 0.68rem;
+    font-size: 0.65rem;
     font-weight: 600;
     color: var(--c-text-muted);
+    opacity: 0.75;
     text-transform: uppercase;
+    letter-spacing: 0.02em;
   }
 
   /* DAYS GRID */
   .days-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    grid-auto-rows: 1fr;
-    gap: 3px;
+    grid-auto-rows: 24px;
+    gap: 2px;
     flex: 1;
   }
 
@@ -381,17 +388,21 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    border-radius: 8px;
+    width: 24px;
+    height: 24px;
+    margin: 0 auto;
+    border-radius: 7px;
     background: transparent;
     border: none;
     color: var(--c-text-primary);
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     font-weight: 500;
     cursor: pointer;
     padding: 0;
     transition:
       background 0.2s ease,
-      transform 0.15s ease;
+      transform 0.15s ease,
+      color 0.2s ease;
   }
 
   .day-cell.empty {
@@ -400,19 +411,33 @@
   }
 
   .day-cell:hover:not(.empty) {
-    background: var(--c-hover);
+    background: rgba(255, 255, 255, 0.08);
   }
 
   .day-cell.today {
-    color: var(--c-success);
+    color: var(--c-primary, #38bdf8);
     font-weight: 700;
   }
 
+  .day-cell.today::after {
+    content: '';
+    position: absolute;
+    bottom: 2px;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: var(--c-primary, #38bdf8);
+  }
+
   .day-cell.selected {
-    background: var(--c-primary) !important;
+    background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%) !important;
     color: #ffffff !important;
     font-weight: 700;
-    box-shadow: var(--c-calendar-today-glow);
+    box-shadow: 0 2px 8px rgba(56, 189, 248, 0.4);
+  }
+
+  .day-cell.selected::after {
+    display: none;
   }
 
   /* MONTHS & YEARS PICKER GRIDS */
@@ -430,31 +455,30 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 10px;
-    background: var(--c-item-bg);
-    border: 1px solid var(--c-border);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.07);
     color: var(--c-text-primary);
     font-size: 0.82rem;
     font-weight: 600;
     cursor: pointer;
-    transition:
-      background 0.2s ease,
-      border-color 0.2s ease;
+    transition: all 0.2s ease;
   }
 
   .grid-picker-cell:hover {
-    background: var(--c-hover);
-    border-color: var(--c-border);
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.14);
   }
 
   .grid-picker-cell.today {
-    color: var(--c-success);
-    border-color: var(--c-success);
+    color: var(--c-primary, #38bdf8);
+    border-color: rgba(56, 189, 248, 0.4);
   }
 
   .grid-picker-cell.selected {
-    background: var(--c-primary) !important;
+    background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%) !important;
     color: #ffffff !important;
     border-color: transparent;
+    box-shadow: 0 2px 8px rgba(56, 189, 248, 0.35);
   }
 </style>

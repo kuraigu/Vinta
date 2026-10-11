@@ -50,7 +50,7 @@
   class:charging={battery.isCharging}
   class:saver={!battery.isCharging && battery.batterySaver}
   class:low={!battery.isCharging && battery.percentage <= 15}
-  title="{stateLabel} - {battery.percentage}%{remainingTimeStr
+  aria-label="{stateLabel} - {battery.percentage}%{remainingTimeStr
     ? ` (${remainingTimeStr})`
     : ''}"
 >

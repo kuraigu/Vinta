@@ -224,7 +224,7 @@ export class MonitorInfo {
 }
 
 /**
- * NoteFileInfo describes a saved markdown note file.
+ * NoteFileInfo describes a saved sticky note file.
  */
 export class NoteFileInfo {
   'id': string
@@ -335,10 +335,14 @@ export class ReleaseInfo {
 export class SatelliteBounds {
   'id': string
   'anchor': string
+  'x': number
+  'y': number
   'width': number
   'height': number
   'radius': number
+  'radii'?: number[]
   'gap': number
+  'gaps'?: number[]
   'offsetX': number
   'offsetY': number
   'tooltipPad': number
@@ -352,6 +356,12 @@ export class SatelliteBounds {
     }
     if (!('anchor' in $$source)) {
       this['anchor'] = ''
+    }
+    if (!('x' in $$source)) {
+      this['x'] = 0
+    }
+    if (!('y' in $$source)) {
+      this['y'] = 0
     }
     if (!('width' in $$source)) {
       this['width'] = 0
@@ -391,6 +401,59 @@ export class SatelliteBounds {
     let $$parsedSource =
       typeof $$source === 'string' ? JSON.parse($$source) : $$source
     return new SatelliteBounds($$parsedSource as Partial<SatelliteBounds>)
+  }
+}
+
+/**
+ * TooltipBounds holds the screen-relative bounding box and corner radius for an active tooltip.
+ */
+export class TooltipBounds {
+  'id': string
+  'x': number
+  'y': number
+  'width': number
+  'height': number
+  'radius': number
+  'scale': number
+  'active': boolean
+
+  /** Creates a new TooltipBounds instance. */
+  constructor($$source: Partial<TooltipBounds> = {}) {
+    if (!('id' in $$source)) {
+      this['id'] = ''
+    }
+    if (!('x' in $$source)) {
+      this['x'] = 0
+    }
+    if (!('y' in $$source)) {
+      this['y'] = 0
+    }
+    if (!('width' in $$source)) {
+      this['width'] = 0
+    }
+    if (!('height' in $$source)) {
+      this['height'] = 0
+    }
+    if (!('radius' in $$source)) {
+      this['radius'] = 0
+    }
+    if (!('scale' in $$source)) {
+      this['scale'] = 0
+    }
+    if (!('active' in $$source)) {
+      this['active'] = false
+    }
+
+    Object.assign(this, $$source)
+  }
+
+  /**
+   * Creates a new TooltipBounds instance from a string or object.
+   */
+  static createFrom($$source: any = {}): TooltipBounds {
+    let $$parsedSource =
+      typeof $$source === 'string' ? JSON.parse($$source) : $$source
+    return new TooltipBounds($$parsedSource as Partial<TooltipBounds>)
   }
 }
 

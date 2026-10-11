@@ -13,10 +13,20 @@
     isSimulatingWirelessStore,
     type WirelessData
   } from '../store'
+  import { Events } from '@wailsio/runtime'
   import { GetWirelessStatus } from '../../bindings/Vinta/backend/app.js'
 
   let wireless = $derived($wirelessDataStore)
   let isSimulating = $derived($isSimulatingWirelessStore)
+
+  function broadcastWirelessEffect() {
+    const isSim = $isSimulatingWirelessStore
+    const data = $wirelessDataStore
+    try {
+      Events.Emit('devtest-wireless', { isSimulating: isSim, data })
+    } catch {}
+  }
+  $effect(broadcastWirelessEffect)
 
   function resetToDefaults() {
     isSimulatingWirelessStore.set(true)

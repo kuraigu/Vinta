@@ -10,11 +10,6 @@
   gap: 8px;
 }
 
-/* Channel Select in Setting Item */
-.channel-select-wrapper {
-  min-width: 170px;
-}
-
 /* Standard Toggle Switch */
 .toggle-switch {
   position: relative;
@@ -60,56 +55,88 @@
   transform: translateX(16px);
 }
 
-/* Non-Official Release Information Banner */
+/* Non-Official Release Information Banner (Vibrant Sunset Amber Banner) */
 .dev-banner {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-radius: 10px;
-  background: var(--c-warning-hover-bg, rgba(255, 204, 0, 0.12));
-  border: 1px solid
-    color-mix(in srgb, var(--c-warning, #ffcc00) 25%, transparent);
+  gap: 12px;
+  padding: 13px 16px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #b45309 0%, #d97706 50%, #ea580c 100%);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.22),
+    0 4px 18px rgba(0, 0, 0, 0.22);
+  color: #ffffff;
   text-align: left;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
-:global(.dev-banner-icon) {
-  color: var(--c-warning, #ffcc00);
+.dev-banner:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.3),
+    0 6px 22px rgba(0, 0, 0, 0.28);
+}
+
+.dev-banner-icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.22);
+  color: #ffffff;
   flex-shrink: 0;
 }
 
 .dev-banner-text {
-  font-size: 11px;
-  color: var(--c-text-secondary);
-  line-height: 1.4;
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.95);
+  line-height: 1.45;
   text-align: left;
 }
 
 .dev-banner-text strong {
-  color: var(--c-warning, #ffcc00);
-  font-weight: 600;
+  color: #ffffff;
+  font-weight: 700;
 }
 
-/* Update Available Master Card */
+/* Update Available Master Card (Vibrant Royal Sapphire Atmospheric Card) */
 .update-card {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 14px;
-  border-radius: 12px;
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--c-primary) 12%, transparent) 0%,
-    var(--c-surface-1, rgba(255, 255, 255, 0.04)) 100%
-  );
-  border: 1px solid var(--c-primary);
-  box-shadow: 0 4px 16px color-mix(in srgb, var(--c-primary) 15%, transparent);
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 50%, #1d4ed8 100%);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.25),
+    0 4px 18px rgba(0, 0, 0, 0.25);
+  color: #ffffff;
+  text-align: left;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.update-card:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.35),
+    0 6px 22px rgba(0, 0, 0, 0.32);
 }
 
 .update-header {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
 }
 
 .update-badge-icon {
@@ -118,35 +145,53 @@
   justify-content: center;
   width: 32px;
   height: 32px;
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--c-primary) 22%, transparent);
-  color: var(--c-primary);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
   flex-shrink: 0;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .update-header-info {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  align-items: flex-start;
+  text-align: left;
+  gap: 3px;
   flex: 1;
+  min-width: 0;
+  width: 100%;
 }
 
 .update-title-row {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
+  text-align: left;
   gap: 8px;
+  width: 100%;
 }
 
 .update-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--c-text-primary);
+  display: block;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+  text-align: left;
+  margin: 0;
+  padding: 0;
 }
 
 .update-sub {
-  font-size: 11px;
-  color: var(--c-text-secondary);
+  display: block;
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.86);
   line-height: 1.4;
+  text-align: left;
+  width: 100%;
+  margin: 0;
+  padding: 0;
 }
 
 /* Progress Bar & Download Section */
@@ -159,32 +204,29 @@
 .progress-bar-track {
   width: 100%;
   height: 6px;
-  background: var(--c-surface-2, rgba(255, 255, 255, 0.1));
+  background: rgba(0, 0, 0, 0.2);
   border-radius: 3px;
   overflow: hidden;
 }
 
 .progress-bar-fill {
   height: 100%;
-  background: linear-gradient(
-    90deg,
-    var(--c-primary) 0%,
-    color-mix(in srgb, var(--c-primary) 80%, #ffffff) 100%
-  );
+  background: #ffffff;
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.6);
   border-radius: 3px;
   transition: width 0.15s ease-out;
 }
 
 .progress-bar-fill.paused {
-  background: var(--c-text-secondary);
+  background: rgba(255, 255, 255, 0.6);
 }
 
 .progress-meta-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 10px;
-  color: var(--c-text-secondary);
+  font-size: 10.5px;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .progress-text {
@@ -192,8 +234,8 @@
 }
 
 .progress-percent {
-  font-weight: 600;
-  color: var(--c-text-primary);
+  font-weight: 700;
+  color: #ffffff;
 }
 
 /* Actions Row */
@@ -202,6 +244,28 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
+  width: 100%;
+  margin-top: 2px;
+}
+
+.update-actions-row > :global(*) {
+  flex: 1;
+  min-width: 110px;
+}
+
+.update-actions-row :global(.setting-btn) {
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.update-actions-row :global(.setting-btn:hover:not(:disabled)) {
+  background: rgba(255, 255, 255, 0.28);
+  border-color: rgba(255, 255, 255, 0.45);
+  color: #ffffff;
 }
 
 .update-error-banner {
@@ -209,11 +273,11 @@
   align-items: center;
   gap: 6px;
   padding: 6px 10px;
-  background: color-mix(in srgb, var(--c-danger, #ef4444) 15%, transparent);
-  border: 1px solid var(--c-danger, #ef4444);
-  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
   font-size: 11px;
-  color: var(--c-danger, #ef4444);
+  color: #ffffff;
 }
 
 /* DevTest Simulation Card */

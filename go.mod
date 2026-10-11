@@ -1,11 +1,11 @@
 module Vinta
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
-	github.com/wailsapp/wails/v3 v3.0.0-beta.20
-	golang.org/x/sys v0.47.0
+	github.com/wailsapp/wails/v3 v3.0.0-beta.26
+	golang.org/x/sys v0.48.0
 )
 
 require (

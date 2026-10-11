@@ -32,7 +32,7 @@
 {#if $notifData.length > 0}
   <button
     class="mini-notif-indicator {isNewNotif ? 'pulse-new' : ''}"
-    title="{$notifData.length} unread notification(s)"
+    aria-label="{$notifData.length} unread notification(s)"
     onclick={(e) => {
       e.stopPropagation()
       if (navigate) navigate(NotificationPage, notifConfig, true)

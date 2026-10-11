@@ -52,13 +52,15 @@ export interface PageVisibility {
   media: boolean
   notifications: boolean
   actioncenter: boolean
+  calculator: boolean
 }
 
 export const defaultPageVisibility: PageVisibility = {
   notes: true,
   media: true,
   notifications: true,
-  actioncenter: true
+  actioncenter: true,
+  calculator: true
 }
 
 // ============================================================================
@@ -179,6 +181,7 @@ export function getInitialTimezone(): string {
 // 1. Appearance & Customization
 // ============================================================================
 export const themeStore = persistentWritable<AppTheme>('vinta_theme', 'dark')
+export const userNameStore = persistentWritable<string>('vinta_user_name', 'User')
 export const glowIntensityStore = persistentWritable<GlowIntensity>('vinta_glow_intensity', 'subtle')
 export const opacityMinimalStore = persistentWritable<number>('vinta_opacity_minimal', 1.0)
 export const opacityExpandedStore = persistentWritable<number>('vinta_opacity_expanded', 1.0)

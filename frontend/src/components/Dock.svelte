@@ -64,13 +64,15 @@
         </DockButton>
       {/if}
 
-      <DockButton
-        tooltip="Calculator"
-        active={activePage === CalculatorPage}
-        onclick={(e: MouseEvent) => AppControls.goCalculator(navigate, e)}
-      >
-        <Calculator size={18} />
-      </DockButton>
+      {#if $pageVisibilityStore.calculator !== false}
+        <DockButton
+          tooltip="Calculator"
+          active={activePage === CalculatorPage}
+          onclick={(e: MouseEvent) => AppControls.goCalculator(navigate, e)}
+        >
+          <Calculator size={18} />
+        </DockButton>
+      {/if}
 
       {#if $pageVisibilityStore.media}
         <DockButton

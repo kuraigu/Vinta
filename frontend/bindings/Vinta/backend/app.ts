@@ -65,7 +65,14 @@ export function ClearCache(): $CancellablePromise<void> {
 }
 
 /**
- * DeleteNote deletes a markdown note file from disk.
+ * ClearTooltipBounds removes an active floating tooltip region from the Win32 window clipping mask.
+ */
+export function ClearTooltipBounds(id: string): $CancellablePromise<void> {
+  return $Call.ByID(561175078, id)
+}
+
+/**
+ * DeleteNote deletes a .vnote file from disk.
  */
 export function DeleteNote(fileName: string): $CancellablePromise<void> {
   return $Call.ByID(1941640120, fileName)
@@ -236,7 +243,7 @@ export function IsTestMode(): $CancellablePromise<boolean> {
 }
 
 /**
- * ListNotes scans the notes directory and returns all markdown note files metadata.
+ * ListNotes scans the notes directory, migrates legacy notes, and returns all .vnote metadata.
  */
 export function ListNotes(): $CancellablePromise<$models.NoteFileInfo[]> {
   return $Call.ByID(2184398716).then(($result: any) => {
@@ -273,14 +280,14 @@ export function PauseUpdateDownload(): $CancellablePromise<void> {
 }
 
 /**
- * Quit terminates the application
+ * Quit terminates the application and all child windows.
  */
 export function Quit(): $CancellablePromise<void> {
   return $Call.ByID(1291806680)
 }
 
 /**
- * ReadNote reads and returns the text content of a note file.
+ * ReadNote reads and returns the JSON content of a .vnote file.
  */
 export function ReadNote(fileName: string): $CancellablePromise<string> {
   return $Call.ByID(3035600691, fileName)
@@ -294,7 +301,7 @@ export function RemoveSatellite(id: string): $CancellablePromise<void> {
 }
 
 /**
- * RenameNote renames an existing note file using the new title as the filename.
+ * RenameNote renames an existing .vnote file using the new title as the filename.
  * Returns the new filename on success.
  */
 export function RenameNote(
@@ -338,7 +345,7 @@ export function ResumeUpdateDownload(): $CancellablePromise<void> {
 }
 
 /**
- * SaveNote writes or updates a markdown note file.
+ * SaveNote writes or updates a .vnote file.
  */
 export function SaveNote(
   fileName: string,
@@ -443,6 +450,15 @@ export function SetDevPillBounds(
 }
 
 /**
+ * SetDevWindow registers the developer tools window for lifecycle management.
+ */
+export function SetDevWindow(
+  win: application$0.WebviewWindow | null
+): $CancellablePromise<void> {
+  return $Call.ByID(256862160, win)
+}
+
+/**
  * SetDragCapture controls Win32 OS-level mouse capture during drag gestures.
  * Deprecated/No-op: WebView2 child window requires uninterrupted mouse messages to fire DOM pointer capture.
  * Calling Win32 SetCapture on the parent HWND starves WebView2 of WM_MOUSEMOVE and WM_LBUTTONUP.
@@ -496,6 +512,15 @@ export function SetSatelliteBounds(
   bounds: $models.SatelliteBounds
 ): $CancellablePromise<void> {
   return $Call.ByID(479812843, bounds)
+}
+
+/**
+ * SetTooltipBounds registers an active floating tooltip region to permit Win32 painting beyond the main pill.
+ */
+export function SetTooltipBounds(
+  bounds: $models.TooltipBounds
+): $CancellablePromise<void> {
+  return $Call.ByID(4008192705, bounds)
 }
 
 /**

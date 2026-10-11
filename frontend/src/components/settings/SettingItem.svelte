@@ -60,11 +60,38 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    padding: 10px 12px;
-    border-radius: 12px;
-    background: var(--c-item-bg, rgba(255, 255, 255, 0.05));
-    border: 1px solid var(--c-border);
-    transition: opacity 0.2s ease;
+    padding: 13px 15px;
+    border-radius: 16px;
+    background:
+      linear-gradient(
+        145deg,
+        rgba(255, 255, 255, 0.055) 0%,
+        rgba(255, 255, 255, 0.018) 100%
+      ),
+      #15161c;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
+      0 3px 12px rgba(0, 0, 0, 0.12);
+    transition:
+      opacity 0.2s ease,
+      border-color 0.2s ease,
+      box-shadow 0.2s ease,
+      background 0.2s ease;
+  }
+
+  .setting-item:hover {
+    border-color: rgba(255, 255, 255, 0.15);
+    background:
+      linear-gradient(
+        145deg,
+        rgba(255, 255, 255, 0.075) 0%,
+        rgba(255, 255, 255, 0.028) 100%
+      ),
+      #15161c;
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.14),
+      0 5px 16px rgba(0, 0, 0, 0.16);
   }
 
   .setting-item.item-disabled {
@@ -74,13 +101,21 @@
   .setting-item.flex-col {
     flex-direction: column;
     align-items: stretch;
-    gap: 8px;
+    gap: 10px;
+  }
+
+  .setting-item.flex-col .setting-control {
+    width: 100%;
+  }
+
+  .setting-item.flex-col .setting-control > :global(*) {
+    width: 100%;
   }
 
   .setting-label-group {
     display: flex;
-    align-items: flex-start;
-    gap: 8px;
+    align-items: center;
+    gap: 10px;
     flex: 1;
     min-width: 0;
     text-align: left;
@@ -90,7 +125,12 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding-top: 1px;
+    width: 28px;
+    height: 28px;
+    border-radius: 9px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
     flex-shrink: 0;
   }
 
@@ -107,10 +147,11 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 12px;
+    font-size: 12.5px;
     font-weight: 600;
     color: var(--c-text-primary);
     text-align: left;
+    line-height: 1.25;
   }
 
   .setting-badge {
@@ -118,11 +159,11 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    padding: 2px 6px;
-    border-radius: 6px;
-    background: var(--c-contrast-bg, rgba(255, 255, 255, 0.08));
-    color: var(--c-text-muted);
-    border: 1px solid var(--c-border);
+    padding: 2px 7px;
+    border-radius: 9999px;
+    background: rgba(56, 189, 248, 0.12);
+    color: var(--c-primary, #38bdf8);
+    border: 1px solid rgba(56, 189, 248, 0.25);
   }
 
   .setting-icon-col :global(.item-icon) {
@@ -130,7 +171,7 @@
   }
 
   .setting-description {
-    font-size: 10px;
+    font-size: 10.5px;
     line-height: 1.4;
     color: var(--c-text-muted);
     text-align: left;

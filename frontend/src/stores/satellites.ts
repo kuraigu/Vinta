@@ -7,14 +7,18 @@ import { SatelliteBounds } from '../../bindings/Vinta/backend/models.js'
 
 export type SatelliteAnchor = 'left' | 'right' | 'bottom' | 'top'
 export type TooltipSide = 'bottom' | 'right' | 'left' | 'top'
+export type FourPartRadii = [number, number, number, number]
+export type FourPartGaps = [number, number, number, number]
 
 export interface SatelliteConfig {
   id: string
   anchor: SatelliteAnchor
+  x?: number
+  y?: number
   width: number
   height: number
-  radius: number
-  gap: number
+  radius: number | FourPartRadii
+  gap: number | FourPartGaps
   offsetX?: number
   offsetY?: number
   tooltipPad?: number
@@ -25,15 +29,54 @@ export interface SatelliteConfig {
 export const satellitesStore = writable<Record<string, SatelliteConfig>>({})
 
 /**
+ * Checks whether two satellite configurations are geometrically and functionally identical.
+ */
+function isConfigEqual(a: SatelliteConfig, b: SatelliteConfig): boolean {
+  if (
+    a.id !== b.id ||
+    a.anchor !== b.anchor ||
+    a.active !== b.active ||
+    a.width !== b.width ||
+    a.height !== b.height ||
+    a.x !== b.x ||
+    a.y !== b.y ||
+    a.offsetX !== b.offsetX ||
+    a.offsetY !== b.offsetY ||
+    a.tooltipPad !== b.tooltipPad ||
+    a.tooltipSide !== b.tooltipSide
+  ) {
+    return false
+  }
+
+  const radA = JSON.stringify(a.radius)
+  const radB = JSON.stringify(b.radius)
+  if (radA !== radB) return false
+
+  const gapA = JSON.stringify(a.gap)
+  const gapB = JSON.stringify(b.gap)
+  if (gapA !== gapB) return false
+
+  return true
+}
+
+/**
  * Registers or updates a floating satellite dock in the local store
  * and synchronizes the region configuration with the Win32 backend.
  */
 export function registerSatellite(config: SatelliteConfig) {
+  let isChanged = false
   satellitesStore.update((store) => {
+    const existing = store[config.id]
+    if (existing && isConfigEqual(existing, config)) {
+      return store
+    }
+    isChanged = true
     store[config.id] = { ...config }
     return store
   })
-  syncSatelliteWithBackend(config)
+  if (isChanged) {
+    syncSatelliteWithBackend(config)
+  }
 }
 
 /**
@@ -97,7 +140,10 @@ export function getActiveSatelliteFootprint(
     const sat = store[key]
     if (sat && sat.active && sat.anchor === anchor && sat.width > 0) {
       const horizontalOffset = Math.max(0, sat.offsetX || 0)
-      const footprint = sat.width + sat.gap + horizontalOffset
+      const gapVal = Array.isArray(sat.gap)
+        ? (anchor === 'left' ? sat.gap[1] : sat.gap[3])
+        : sat.gap
+      const footprint = sat.width + gapVal + horizontalOffset
       if (footprint > maxFootprint) {
         maxFootprint = footprint
       }
@@ -109,19 +155,33 @@ export function getActiveSatelliteFootprint(
 
 function syncSatelliteWithBackend(config: SatelliteConfig) {
   if (typeof SetSatelliteBounds === 'function') {
+    const singleRadius = typeof config.radius === 'number' ? config.radius : 0
+    const radiiArray = Array.isArray(config.radius)
+      ? config.radius
+      : [config.radius, config.radius, config.radius, config.radius]
+
+    const singleGap = typeof config.gap === 'number' ? config.gap : 0
+    const gapsArray = Array.isArray(config.gap)
+      ? config.gap
+      : [config.gap, config.gap, config.gap, config.gap]
+
     const model = new SatelliteBounds({
       id: config.id,
       anchor: config.anchor,
+      x: config.x !== undefined ? Math.round(config.x) : 0,
+      y: config.y !== undefined ? Math.round(config.y) : 0,
       width: config.width,
       height: config.height,
-      radius: config.radius,
-      gap: config.gap,
+      radius: singleRadius,
+      radii: radiiArray,
+      gap: singleGap,
+      gaps: gapsArray,
       offsetX: config.offsetX || 0,
       offsetY: config.offsetY || 0,
       tooltipPad: config.tooltipPad || 0,
       tooltipSide: config.tooltipSide || '',
       active: config.active
-    })
+    } as unknown as Partial<SatelliteBounds>)
     SetSatelliteBounds(model).catch(() => {})
   }
 }

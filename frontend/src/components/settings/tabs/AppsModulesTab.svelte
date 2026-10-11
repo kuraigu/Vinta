@@ -5,7 +5,9 @@
     Bell,
     Layers,
     AlertCircle,
-    SlidersHorizontal
+    SlidersHorizontal,
+    Calculator,
+    LayoutGrid
   } from 'lucide-svelte'
   import SettingItem from '../SettingItem.svelte'
   import {
@@ -81,19 +83,12 @@
   <div class="section-header">
     <div class="section-title">
       <Layers size={13} />
-      <span>Apps</span>
+      <span>Apps & Features</span>
     </div>
-    <span class="section-desc">
-      Toggle showing of apps in the App Drawer and Dock
-    </span>
   </div>
 
   <div class="setting-group">
-    <SettingItem
-      label="Action Center"
-      description="Quick wireless toggles, Bluetooth devices, battery status, and airplane mode"
-      icon={SlidersHorizontal}
-    >
+    <SettingItem label="Action Center" icon={SlidersHorizontal}>
       <label class="toggle-switch">
         <input
           type="checkbox"
@@ -104,11 +99,18 @@
       </label>
     </SettingItem>
 
-    <SettingItem
-      label="Now Playing / Media"
-      description="System media playback controls and audio peak visualizer"
-      icon={Music}
-    >
+    <SettingItem label="Calculator" icon={Calculator}>
+      <label class="toggle-switch">
+        <input
+          type="checkbox"
+          checked={$pageVisibilityStore.calculator}
+          onchange={() => togglePage('calculator')}
+        />
+        <span class="slider"></span>
+      </label>
+    </SettingItem>
+
+    <SettingItem label="Now Playing / Media" icon={Music}>
       <label class="toggle-switch">
         <input
           type="checkbox"
@@ -119,11 +121,7 @@
       </label>
     </SettingItem>
 
-    <SettingItem
-      label="Quick Notes"
-      description="Scratchpad notes with Markdown support and clipboard exports"
-      icon={FileText}
-    >
+    <SettingItem label="Quick Notes" icon={FileText}>
       <label class="toggle-switch">
         <input
           type="checkbox"
@@ -134,11 +132,7 @@
       </label>
     </SettingItem>
 
-    <SettingItem
-      label="Notifications"
-      description="Desktop alert feeds, sound chimes, and system notifications"
-      icon={Bell}
-    >
+    <SettingItem label="Notifications" icon={Bell}>
       <label class="toggle-switch">
         <input
           type="checkbox"
@@ -155,6 +149,7 @@
   <!-- Section 2: Home Widgets -->
   <div class="section-header">
     <div class="section-title">
+      <LayoutGrid size={13} />
       <span>Home Widgets</span>
     </div>
   </div>
@@ -162,10 +157,7 @@
   <div class="setting-group">
     <!-- Clock Widget -->
     <div class="item-wrapper" class:shake={shakeKey === 'clock'}>
-      <SettingItem
-        label="Clock & Time"
-        description="Live clock with customizable timezones and 12h/24h formats"
-      >
+      <SettingItem label="Clock & Time">
         <div
           class="toggle-container"
           class:locked={isClockLocked}
@@ -200,10 +192,7 @@
 
     <!-- Calendar Widget -->
     <div class="item-wrapper" class:shake={shakeKey === 'calendar'}>
-      <SettingItem
-        label="Calendar & Date"
-        description="Date indicator and interactive month/year calendar picker"
-      >
+      <SettingItem label="Calendar & Date">
         <div
           class="toggle-container"
           class:locked={isCalLocked}
@@ -238,10 +227,7 @@
 
     <!-- Weather Widget -->
     <div class="item-wrapper" class:shake={shakeKey === 'weather'}>
-      <SettingItem
-        label="Weather & Forecast"
-        description="Live temperature, condition icons, and 7-day forecast cards"
-      >
+      <SettingItem label="Weather & Forecast">
         <div
           class="toggle-container"
           class:locked={isWeatherLocked}
@@ -278,9 +264,6 @@
     <div class="item-wrapper" class:shake={shakeKey === 'battery'}>
       <SettingItem
         label="Battery & Power"
-        description={hasBattery
-          ? 'Battery percentage, charging animations, and power saver indicator'
-          : 'Battery hardware is not available on this device'}
         badge={hasBattery ? undefined : 'Unavailable'}
         disabled={!hasBattery}
       >
@@ -323,10 +306,7 @@
 
     <!-- Wireless & Connectivity Widget -->
     <div class="item-wrapper" class:shake={shakeKey === 'wireless'}>
-      <SettingItem
-        label="Wireless & Connectivity"
-        description="Wi-Fi signal, Bluetooth devices, and Airplane mode status capsule"
-      >
+      <SettingItem label="Wireless & Connectivity">
         <div
           class="toggle-container"
           class:locked={isWirelessLocked}
@@ -361,147 +341,4 @@
   </div>
 </div>
 
-<style>
-  .apps-modules-tab {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    text-align: left;
-  }
-
-  .section-header {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    text-align: left;
-    gap: 2px;
-    margin-bottom: 2px;
-  }
-
-  .section-title {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--c-text-primary);
-    text-align: left;
-  }
-
-  .section-desc {
-    font-size: 10px;
-    color: var(--c-text-muted);
-    text-align: left;
-  }
-
-  .divider {
-    height: 1px;
-    background: var(--c-border);
-    margin: 4px 0;
-  }
-
-  .setting-group {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .item-wrapper {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    transition: transform 0.2s ease;
-  }
-
-  .item-wrapper.shake {
-    animation: shakeAnim 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
-  }
-
-  @keyframes shakeAnim {
-    10%,
-    90% {
-      transform: translateX(-2px);
-    }
-    20%,
-    80% {
-      transform: translateX(3px);
-    }
-    30%,
-    50%,
-    70% {
-      transform: translateX(-4px);
-    }
-    40%,
-    60% {
-      transform: translateX(4px);
-    }
-  }
-
-  .locked-warning {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 10px;
-    color: var(--c-danger, #ef4444);
-    padding: 4px 10px;
-    border-radius: 8px;
-    background: rgba(239, 68, 68, 0.1);
-    border: 1px solid rgba(239, 68, 68, 0.2);
-  }
-
-  .toggle-container.locked {
-    cursor: not-allowed;
-  }
-
-  .toggle-switch {
-    position: relative;
-    display: inline-block;
-    width: 34px;
-    height: 18px;
-  }
-
-  .toggle-switch.disabled-switch {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .toggle-switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-  }
-
-  .slider {
-    position: absolute;
-    cursor: pointer;
-    inset: 0;
-    background-color: rgba(255, 255, 255, 0.2);
-    transition: 0.3s;
-    border-radius: 20px;
-    border: 1px solid var(--c-border);
-  }
-
-  .slider:before {
-    position: absolute;
-    content: '';
-    height: 14px;
-    width: 14px;
-    left: 2px;
-    bottom: 1px;
-    background-color: white;
-    transition: 0.3s;
-    border-radius: 50%;
-  }
-
-  input:checked + .slider {
-    background-color: var(--c-primary, #6366f1);
-  }
-
-  input:checked + .slider:before {
-    transform: translateX(14px);
-  }
-
-  .toggle-switch.disabled-switch .slider {
-    cursor: not-allowed;
-  }
-</style>
+<style src="../../styles/settings/AppsModulesTab.css"></style>

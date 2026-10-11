@@ -13,5 +13,6 @@ export {
   NoteFileInfo,
   ReleaseInfo,
   SatelliteBounds,
+  TooltipBounds,
   UpdateCheckResult
 } from './models.js'

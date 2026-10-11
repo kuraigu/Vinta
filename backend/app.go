@@ -3,6 +3,7 @@ package backend
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -54,6 +55,7 @@ var (
 	gdi32                  = syscall.NewLazyDLL("gdi32.dll")
 	procCreateRectRgn      = gdi32.NewProc("CreateRectRgn")
 	procCreateRoundRectRgn = gdi32.NewProc("CreateRoundRectRgn")
+	procCreateEllipticRgn  = gdi32.NewProc("CreateEllipticRgn")
 	procCombineRgn         = gdi32.NewProc("CombineRgn")
 	procSetWindowRgn       = user32.NewProc("SetWindowRgn")
 	procDeleteObject       = gdi32.NewProc("DeleteObject")
@@ -100,7 +102,7 @@ const (
 	WS_EX_NOACTIVATE = 0x08000000
 	//nolint:revive // Windows API constants
 	WS_EX_TRANSPARENT    = 0x00000020
-	OutsidePadding       = 10
+	OutsidePadding       = 8
 	HiddenOutsidePadding = 2
 	rgnOr                = 2
 
@@ -895,6 +897,7 @@ type App struct {
 	ctx                context.Context
 	wailsApp           *application.App
 	window             *application.WebviewWindow
+	devWindow          *application.WebviewWindow
 	icon               []byte
 	pillW              int
 	pillH              int
@@ -908,6 +911,8 @@ type App struct {
 	devExtra           int
 	satellitesMu       sync.RWMutex
 	satellites         map[string]SatelliteBounds
+	tooltipsMu         sync.RWMutex
+	tooltips           map[string]TooltipBounds
 	scale              float64
 	isHidden           bool
 	autoHideBorderless bool
@@ -943,6 +948,7 @@ func NewApp(icon []byte) *App {
 		pillR:              24,
 		scale:              1.0,
 		autoHideBorderless: false,
+		tooltips:           make(map[string]TooltipBounds),
 	}
 }
 
@@ -1111,7 +1117,11 @@ func (a *App) SetWidgetBounds(width int, height int, radius int, scale float64, 
 	a.pillW = width
 	a.pillH = height
 	a.pillR = radius
-	if width > 0 && height > 0 {
+	if (width >= 130 || height >= 24) && a.isHidden {
+		a.isHidden = false
+		services.SetAppHidden(false)
+	}
+	if !a.isHidden && (width >= 130 || height >= 24) && height <= 52 {
 		a.restingW = width
 		a.restingH = height
 		a.restingR = radius
@@ -1237,18 +1247,33 @@ func (a *App) GetCurrentMonitor() MonitorInfo {
 	return resolveCurrentMonitor(screenCenterX, monitors)
 }
 
-// Quit terminates the application
+// SetDevWindow registers the developer tools window for lifecycle management.
+func (a *App) SetDevWindow(win *application.WebviewWindow) {
+	a.devWindow = win
+}
+
+// Quit terminates the application and all child windows.
 func (a *App) Quit() {
 	services.StopServicesListener()
-	if a.window != nil {
-		a.window.Close()
-	}
-	if a.wailsApp != nil {
-		a.wailsApp.Quit()
-	} else if app := application.Get(); app != nil {
-		app.Quit()
-	}
+
+	// Defer window teardown slightly so the active RPC call resolves cleanly in WebView2 before destruction
 	go func() {
+		time.Sleep(50 * time.Millisecond)
+
+		if a.devWindow != nil {
+			a.devWindow.Close()
+		}
+
+		if a.wailsApp != nil {
+			a.wailsApp.Quit()
+		} else if app := application.Get(); app != nil {
+			app.Quit()
+		}
+
+		if a.window != nil {
+			a.window.Close()
+		}
+
 		time.Sleep(150 * time.Millisecond)
 		os.Exit(0)
 	}()
@@ -1397,14 +1422,70 @@ func (a *App) SetDevPillBounds(width int, height int, extraH int, scale float64)
 	a.updateWindowRegion()
 }
 
+// TooltipBounds holds the screen-relative bounding box and corner radius for an active tooltip.
+type TooltipBounds struct {
+	ID     string  `json:"id"`
+	X      int     `json:"x"`
+	Y      int     `json:"y"`
+	Width  int     `json:"width"`
+	Height int     `json:"height"`
+	Radius int     `json:"radius"`
+	Scale  float64 `json:"scale"`
+	Active bool    `json:"active"`
+}
+
+// SetTooltipBounds registers an active floating tooltip region to permit Win32 painting beyond the main pill.
+func (a *App) SetTooltipBounds(bounds TooltipBounds) {
+	a.tooltipsMu.Lock()
+	if a.tooltips == nil {
+		a.tooltips = make(map[string]TooltipBounds)
+	}
+	if bounds.Active && bounds.Width > 0 && bounds.Height > 0 {
+		a.tooltips[bounds.ID] = bounds
+	} else {
+		delete(a.tooltips, bounds.ID)
+	}
+	a.tooltipsMu.Unlock()
+	a.updateWindowRegion()
+}
+
+// ClearTooltipBounds removes an active floating tooltip region from the Win32 window clipping mask.
+func (a *App) ClearTooltipBounds(id string) {
+	a.tooltipsMu.Lock()
+	if a.tooltips != nil {
+		delete(a.tooltips, id)
+	}
+	a.tooltipsMu.Unlock()
+	a.updateWindowRegion()
+}
+
+func (a *App) getActiveTooltips() []TooltipBounds {
+	a.tooltipsMu.RLock()
+	defer a.tooltipsMu.RUnlock()
+	if len(a.tooltips) == 0 {
+		return nil
+	}
+	list := make([]TooltipBounds, 0, len(a.tooltips))
+	for _, tt := range a.tooltips {
+		if tt.Active && tt.Width > 0 && tt.Height > 0 {
+			list = append(list, tt)
+		}
+	}
+	return list
+}
+
 // SatelliteBounds represents the position, dimensions, radius, and anchor configuration for a floating satellite dock.
 type SatelliteBounds struct {
 	ID          string `json:"id"`
 	Anchor      string `json:"anchor"`
+	X           int    `json:"x"`
+	Y           int    `json:"y"`
 	Width       int    `json:"width"`
 	Height      int    `json:"height"`
 	Radius      int    `json:"radius"`
+	Radii       [4]int `json:"radii,omitempty"`
 	Gap         int    `json:"gap"`
+	Gaps        [4]int `json:"gaps,omitempty"`
 	OffsetX     int    `json:"offsetX"`
 	OffsetY     int    `json:"offsetY"`
 	TooltipPad  int    `json:"tooltipPad"`
@@ -1417,6 +1498,11 @@ func (a *App) SetSatelliteBounds(bounds SatelliteBounds) {
 	a.satellitesMu.Lock()
 	if a.satellites == nil {
 		a.satellites = make(map[string]SatelliteBounds)
+	}
+	existing, exists := a.satellites[bounds.ID]
+	if exists && existing == bounds {
+		a.satellitesMu.Unlock()
+		return
 	}
 	a.satellites[bounds.ID] = bounds
 	a.satellitesMu.Unlock()
@@ -1469,16 +1555,27 @@ func satellitesSignature(satellites []SatelliteBounds) string {
 	}
 	var sb strings.Builder
 	for _, s := range satellites {
-		fmt.Fprintf(&sb, "%s:%s:%t:%d:%d:%d:%d:%d:%d:%d:%s;", s.ID, s.Anchor, s.Active, s.Width, s.Height, s.Radius, s.Gap, s.OffsetX, s.OffsetY, s.TooltipPad, s.TooltipSide)
+		fmt.Fprintf(&sb, "%s:%s:%t:%d:%d:%d:%d:%d:%v:%d:%v:%d:%d:%d:%s;", s.ID, s.Anchor, s.Active, s.X, s.Y, s.Width, s.Height, s.Radius, s.Radii, s.Gap, s.Gaps, s.OffsetX, s.OffsetY, s.TooltipPad, s.TooltipSide)
+	}
+	return sb.String()
+}
+
+func tooltipsSignature(tooltips []TooltipBounds) string {
+	if len(tooltips) == 0 {
+		return ""
+	}
+	var sb strings.Builder
+	for _, t := range tooltips {
+		fmt.Fprintf(&sb, "%s:%d:%d:%d:%d:%d;", t.ID, t.X, t.Y, t.Width, t.Height, t.Radius)
 	}
 	return sb.String()
 }
 
 type regionCache struct {
 	w, h, r, offsetX int
-	dw, dh, extraH   int
 	totalVintaH      int
 	satellitesHash   string
+	tooltipsHash     string
 	padding          int
 	scale            float64
 	sw               int
@@ -1491,7 +1588,7 @@ var (
 )
 
 // computeTotalVintaHeight calculates the total vertical span in physical pixels
-// required to cover all currently visible Vinta elements (island, satellites, dev panel).
+// required to cover all currently visible Vinta elements (island, satellites).
 func (a *App) computeTotalVintaHeight(effectiveMainH int, scale float64) int {
 	scaleInt := func(v int) int {
 		return int(float64(v) * scale)
@@ -1500,15 +1597,6 @@ func (a *App) computeTotalVintaHeight(effectiveMainH int, scale float64) int {
 	totalH := scaleInt(effectiveMainH)
 	if totalH <= 0 {
 		totalH = scaleInt(36)
-	}
-
-	// DevTest panel anchored below the main island
-	if a.devW > 0 && a.devH > 0 {
-		gap := scaleInt(15)
-		devBottom := totalH + gap + scaleInt(a.devH+a.devExtra)
-		if devBottom > totalH {
-			totalH = devBottom
-		}
 	}
 
 	// Floating satellites anchored around the main island
@@ -1521,6 +1609,9 @@ func (a *App) computeTotalVintaHeight(effectiveMainH int, scale float64) int {
 		switch sat.Anchor {
 		case "bottom":
 			gapScaled := scaleInt(sat.Gap)
+			if sat.Gaps[0] > 0 {
+				gapScaled = scaleInt(sat.Gaps[0])
+			}
 			hScaled := scaleInt(sat.Height)
 			satOffsetScaledY := scaleInt(sat.OffsetY)
 			satBottom = totalH + gapScaled + satOffsetScaledY + hScaled
@@ -1537,7 +1628,7 @@ func (a *App) computeTotalVintaHeight(effectiveMainH int, scale float64) int {
 	a.satellitesMu.RUnlock()
 
 	// Add outside margin padding so shadows and hovering margins are never clipped
-	pad := scaleInt(OutsidePadding + 8)
+	pad := scaleInt(OutsidePadding + 4)
 	return totalH + pad
 }
 
@@ -1550,26 +1641,51 @@ func (a *App) updateWindowRegion() {
 
 	padding := OutsidePadding
 	// Use minimal padding when in hidden state so click-through around the small pill is precise
-	if a.isHidden || (a.pillW > 0 && a.pillW <= 110 && a.pillH <= 30) {
+	if a.isHidden || (a.pillW > 0 && a.pillW <= 130 && a.pillH <= 36) {
 		padding = HiddenOutsidePadding
 	}
 
+	mainW := a.pillW
+	mainH := a.pillH
+	mainR := a.pillR
 	effectiveMainW := a.pillW
 	effectiveMainH := a.pillH
-	if effectiveMainW <= 0 && a.restingW > 0 {
-		effectiveMainW = a.restingW
-	}
-	if effectiveMainH <= 0 && a.restingH > 0 {
-		effectiveMainH = a.restingH
+
+	if a.isHidden {
+		if mainW <= 0 {
+			mainW = 72
+		}
+		if mainH <= 0 {
+			mainH = 12
+		}
+		if mainR <= 0 {
+			mainR = 6
+		}
+		effectiveMainW = mainW
+		effectiveMainH = mainH
+	} else {
+		if effectiveMainW <= 0 && a.restingW > 0 {
+			effectiveMainW = a.restingW
+		}
+		if effectiveMainH <= 0 && a.restingH > 0 {
+			effectiveMainH = a.restingH
+		}
 	}
 
 	totalVintaH := a.computeTotalVintaHeight(effectiveMainH, a.scale)
-	sats := a.getActiveSatellites()
-	setClickRegion(hwnd, a.pillW, a.pillH, a.pillR, a.offsetX, a.devW, a.devH, a.devExtra, effectiveMainW, effectiveMainH, totalVintaH, sats, padding, a.scale)
+	var sats []SatelliteBounds
+	if !a.isHidden {
+		sats = a.getActiveSatellites()
+	}
+	var tooltips []TooltipBounds
+	if !a.isHidden {
+		tooltips = a.getActiveTooltips()
+	}
+	setClickRegion(hwnd, mainW, mainH, mainR, a.offsetX, effectiveMainW, effectiveMainH, totalVintaH, sats, tooltips, padding, a.scale)
 }
 
-// setClickRegion updates the Win32 window region to combine the main pill, satellites, and dev pill.
-func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, dw int, dh int, extraH int, effectiveMainW int, effectiveMainH int, totalVintaH int, satellites []SatelliteBounds, padding int, scale float64) {
+// setClickRegion updates the Win32 window region to combine the main pill, satellites, and active tooltips.
+func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, effectiveMainW int, effectiveMainH int, totalVintaH int, satellites []SatelliteBounds, tooltips []TooltipBounds, padding int, scale float64) {
 	if hwnd == 0 {
 		return
 	}
@@ -1604,22 +1720,28 @@ func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, dw int, dh i
 	}
 
 	satSig := satellitesSignature(satellites)
+	ttSig := tooltipsSignature(tooltips)
 
 	// Early exit if identical region is already applied to HWND
 	if lastRegion.w == w && lastRegion.h == h && lastRegion.r == r &&
-		lastRegion.offsetX == offsetX && lastRegion.dw == dw && lastRegion.dh == dh &&
-		lastRegion.extraH == extraH && lastRegion.totalVintaH == totalVintaH &&
+		lastRegion.offsetX == offsetX && lastRegion.totalVintaH == totalVintaH &&
 		lastRegion.satellitesHash == satSig &&
+		lastRegion.tooltipsHash == ttSig &&
 		lastRegion.padding == padding && lastRegion.scale == scale && lastRegion.sw == sw {
 		return
 	}
 
 	lastRegion = regionCache{
 		w: w, h: h, r: r, offsetX: offsetX,
-		dw: dw, dh: dh, extraH: extraH,
 		totalVintaH:    totalVintaH,
 		satellitesHash: satSig,
+		tooltipsHash:   ttSig,
 		padding:        padding, scale: scale, sw: sw,
+	}
+
+	if w <= 0 && h <= 0 {
+		_, _, _ = procSetWindowRgn.Call(hwnd, 0, 1)
+		return
 	}
 
 	var regions []uintptr
@@ -1633,12 +1755,14 @@ func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, dw int, dh i
 	if hrgnMain := createMainPillRegion(w, h, r, offsetX, sw, padding, totalVintaH, scale); hrgnMain != 0 {
 		regions = append(regions, hrgnMain)
 	}
-	if hrgnDev := createDevPillRegion(dw, dh, extraH, effectiveMainH, offsetX, sw, scale); hrgnDev != 0 {
-		regions = append(regions, hrgnDev)
-	}
 	for _, sat := range satellites {
 		if hrgnSat := createSatelliteRegion(sat, effectiveMainW, effectiveMainH, offsetX, sw, scale); hrgnSat != 0 {
 			regions = append(regions, hrgnSat)
+		}
+	}
+	for _, tt := range tooltips {
+		if hrgnTt := createTooltipRegion(tt, scale); hrgnTt != 0 {
+			regions = append(regions, hrgnTt)
 		}
 	}
 
@@ -1646,6 +1770,36 @@ func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, dw int, dh i
 	if hrgnFinal != 0 {
 		_, _, _ = procSetWindowRgn.Call(hwnd, hrgnFinal, 1)
 	}
+}
+
+// createTooltipRegion creates a Win32 HRGN for an active floating tooltip overlay.
+func createTooltipRegion(tt TooltipBounds, scale float64) uintptr {
+	scaleInt := func(v int) int {
+		return int(float64(v) * scale)
+	}
+
+	pad := scaleInt(OutsidePadding)
+	left := scaleInt(tt.X) - pad
+	if left < 0 {
+		left = 0
+	}
+	top := scaleInt(tt.Y) - pad
+	if top < 0 {
+		top = 0
+	}
+	right := scaleInt(tt.X) + scaleInt(tt.Width) + pad
+	bottom := scaleInt(tt.Y) + scaleInt(tt.Height) + pad
+	r := scaleInt(tt.Radius)
+	if r <= 0 {
+		r = scaleInt(7)
+	}
+
+	hrgn, _, _ := procCreateRoundRectRgn.Call(
+		uintptr(left), uintptr(top),
+		uintptr(right), uintptr(bottom),
+		uintptr(r*2), uintptr(r*2),
+	)
+	return hrgn
 }
 
 // createMainPillRegion generates the Win32 HRGN for the primary dynamic island.
@@ -1662,7 +1816,7 @@ func createMainPillRegion(w, h, r, offsetX, sw, padding, totalVintaH int, scale 
 	if monitorTopOffset < 0 {
 		monitorTopOffset = 0
 	}
-	visualTop := monitorTopOffset + scaleInt(5)
+	visualTop := monitorTopOffset + scaleInt(0)
 
 	if w == -1 {
 		maxTopOffset := 0
@@ -1709,101 +1863,147 @@ func createMainPillRegion(w, h, r, offsetX, sw, padding, totalVintaH int, scale 
 		}
 		bottom := visualTop + ph + pad
 
-		ellipseSize := scaleInt(r) * 2
-		if hLimit := bottom - top; ellipseSize > hLimit {
-			ellipseSize = hLimit
-		}
-		if wLimit := right - left; ellipseSize > wLimit {
-			ellipseSize = wLimit
-		}
-
-		hrgn, _, _ := procCreateRoundRectRgn.Call(
-			uintptr(left), uintptr(top),
-			uintptr(right), uintptr(bottom),
-			uintptr(ellipseSize), uintptr(ellipseSize),
-		)
-		return hrgn
+		rScaled := scaleInt(r)
+		// Primary island attaches to top edge: flat top corners (0, 0) and rounded bottom corners (r, r)
+		return createComplexRoundRectRgn(left, top, right, bottom, 0, 0, rScaled, rScaled)
 	}
 	return 0
 }
 
-// createDevPillRegion generates the Win32 HRGN for the secondary dev panel anchored below the main island.
-func createDevPillRegion(dw, dh, extraH, mainH, offsetX, sw int, scale float64) uintptr {
-	if dw <= 0 || dh <= 0 {
+// createComplexRoundRectRgn constructs a Win32 HRGN with independent corner radii [tl, tr, br, bl].
+func createComplexRoundRectRgn(left, top, right, bottom int, tl, tr, br, bl int) uintptr {
+	if left >= right || top >= bottom {
 		return 0
 	}
-	scaleInt := func(v int) int {
-		return int(float64(v) * scale)
+	w := right - left
+	h := bottom - top
+	if tl < 0 {
+		tl = 0
+	}
+	if tr < 0 {
+		tr = 0
+	}
+	if br < 0 {
+		br = 0
+	}
+	if bl < 0 {
+		bl = 0
 	}
 
-	vLeft, vTop, _, _, pCenter, monitors := GetDisplayMetrics()
-	scaledOffset := scaleInt(offsetX)
-	screenCenterX := vLeft + pCenter + scaledOffset
-	currentMon := resolveCurrentMonitor(screenCenterX, monitors)
-	monitorTopOffset := currentMon.Top - vTop
-	if monitorTopOffset < 0 {
-		monitorTopOffset = 0
+	// Clamp radii to dimensions
+	if maxR := h / 2; tl > maxR {
+		tl = maxR
+	}
+	if maxR := h / 2; tr > maxR {
+		tr = maxR
+	}
+	if maxR := h / 2; br > maxR {
+		br = maxR
+	}
+	if maxR := h / 2; bl > maxR {
+		bl = maxR
+	}
+	if maxR := w / 2; tl > maxR {
+		tl = maxR
+	}
+	if maxR := w / 2; tr > maxR {
+		tr = maxR
+	}
+	if maxR := w / 2; br > maxR {
+		br = maxR
+	}
+	if maxR := w / 2; bl > maxR {
+		bl = maxR
 	}
 
-	gap := scaleInt(15)
-	visualTop := monitorTopOffset + scaleInt(5)
-	devTopOffset := visualTop
-	if mainH > 0 {
-		ph := scaleInt(mainH)
-		devTopOffset = visualTop + ph + gap
+	// Uniform zero
+	if tl == 0 && tr == 0 && br == 0 && bl == 0 {
+		hrgn, _, _ := procCreateRectRgn.Call(uintptr(left), uintptr(top), uintptr(right), uintptr(bottom))
+		return hrgn
 	}
 
-	pad := scaleInt(OutsidePadding)
-	extraMargin := scaleInt(extraH)
-
-	pdw := scaleInt(dw)
-	pdh := scaleInt(dh)
-
-	top := devTopOffset - pad
-	if top < 0 {
-		top = 0
-	}
-	bottom := devTopOffset + pdh + pad + extraMargin
-
-	monLeftClient := currentMon.Left - vLeft
-	monRightClient := currentMon.Left + currentMon.Width - vLeft
-	minDevCenter := monLeftClient + scaleInt(12) + (pdw / 2)
-	maxDevCenter := monRightClient - scaleInt(12) - (pdw / 2)
-	if minDevCenter > maxDevCenter {
-		minDevCenter = monLeftClient + (currentMon.Width / 2)
-		maxDevCenter = minDevCenter
+	// Uniform rounded
+	if tl == tr && tr == br && br == bl {
+		ellipse := tl * 2
+		hrgn, _, _ := procCreateRoundRectRgn.Call(uintptr(left), uintptr(top), uintptr(right), uintptr(bottom), uintptr(ellipse), uintptr(ellipse))
+		return hrgn
 	}
 
-	physicalCenterX := pCenter + scaledOffset
-	if physicalCenterX < minDevCenter {
-		physicalCenterX = minDevCenter
-	} else if physicalCenterX > maxDevCenter {
-		physicalCenterX = maxDevCenter
+	// Flat top, rounded bottom
+	if tl == 0 && tr == 0 && br > 0 && bl > 0 && br == bl {
+		ellipse := br * 2
+		hrgn, _, _ := procCreateRoundRectRgn.Call(uintptr(left), uintptr(top), uintptr(right), uintptr(bottom), uintptr(ellipse), uintptr(ellipse))
+		if halfH := h / 2; halfH > 0 {
+			hrgnTop, _, _ := procCreateRectRgn.Call(uintptr(left), uintptr(top), uintptr(right), uintptr(top+halfH))
+			if hrgnTop != 0 {
+				_, _, _ = procCombineRgn.Call(hrgn, hrgn, hrgnTop, uintptr(rgnOr))
+				_, _, _ = procDeleteObject.Call(hrgnTop)
+			}
+		}
+		return hrgn
 	}
 
-	left := physicalCenterX - (pdw / 2) - pad
-	if left < 0 {
-		left = 0
-	}
-	right := physicalCenterX + (pdw / 2) + pad
-	if right > sw {
-		right = sw
-	}
-
-	ellipseSize := scaleInt(14) * 2
-	if hLimit := bottom - top; ellipseSize > hLimit {
-		ellipseSize = hLimit
-	}
-	if wLimit := right - left; ellipseSize > wLimit {
-		ellipseSize = wLimit
+	// Flat bottom, rounded top
+	if bl == 0 && br == 0 && tl > 0 && tr > 0 && tl == tr {
+		ellipse := tl * 2
+		hrgn, _, _ := procCreateRoundRectRgn.Call(uintptr(left), uintptr(top), uintptr(right), uintptr(bottom), uintptr(ellipse), uintptr(ellipse))
+		if halfH := h / 2; halfH > 0 {
+			hrgnBottom, _, _ := procCreateRectRgn.Call(uintptr(left), uintptr(bottom-halfH), uintptr(right), uintptr(bottom))
+			if hrgnBottom != 0 {
+				_, _, _ = procCombineRgn.Call(hrgn, hrgn, hrgnBottom, uintptr(rgnOr))
+				_, _, _ = procDeleteObject.Call(hrgnBottom)
+			}
+		}
+		return hrgn
 	}
 
-	hrgn, _, _ := procCreateRoundRectRgn.Call(
-		uintptr(left), uintptr(top),
-		uintptr(right), uintptr(bottom),
-		uintptr(ellipseSize), uintptr(ellipseSize),
-	)
-	return hrgn
+	// General quadrant-based composite region
+	midX := left + (w / 2)
+	midY := top + (h / 2)
+
+	createQuadrant := func(qLeft, qTop, qRight, qBottom, r int, corner string) uintptr {
+		if r <= 0 {
+			hrgn, _, _ := procCreateRectRgn.Call(uintptr(qLeft), uintptr(qTop), uintptr(qRight), uintptr(qBottom))
+			return hrgn
+		}
+		var elLeft, elTop, elRight, elBottom int
+		var strip1, strip2 uintptr
+		switch corner {
+		case "tl":
+			elLeft, elTop, elRight, elBottom = qLeft, qTop, qLeft+r*2, qTop+r*2
+			strip1, _, _ = procCreateRectRgn.Call(uintptr(qLeft+r), uintptr(qTop), uintptr(qRight), uintptr(qBottom))
+			strip2, _, _ = procCreateRectRgn.Call(uintptr(qLeft), uintptr(qTop+r), uintptr(qRight), uintptr(qBottom))
+		case "tr":
+			elLeft, elTop, elRight, elBottom = qRight-r*2, qTop, qRight, qTop+r*2
+			strip1, _, _ = procCreateRectRgn.Call(uintptr(qLeft), uintptr(qTop), uintptr(qRight-r), uintptr(qBottom))
+			strip2, _, _ = procCreateRectRgn.Call(uintptr(qLeft), uintptr(qTop+r), uintptr(qRight), uintptr(qBottom))
+		case "br":
+			elLeft, elTop, elRight, elBottom = qRight-r*2, qBottom-r*2, qRight, qBottom
+			strip1, _, _ = procCreateRectRgn.Call(uintptr(qLeft), uintptr(qTop), uintptr(qRight-r), uintptr(qBottom))
+			strip2, _, _ = procCreateRectRgn.Call(uintptr(qLeft), uintptr(qTop), uintptr(qRight), uintptr(qBottom-r))
+		case "bl":
+			elLeft, elTop, elRight, elBottom = qLeft, qBottom-r*2, qLeft+r*2, qBottom
+			strip1, _, _ = procCreateRectRgn.Call(uintptr(qLeft+r), uintptr(qTop), uintptr(qRight), uintptr(qBottom))
+			strip2, _, _ = procCreateRectRgn.Call(uintptr(qLeft), uintptr(qTop), uintptr(qRight), uintptr(qBottom-r))
+		}
+		elRgn, _, _ := procCreateEllipticRgn.Call(uintptr(elLeft), uintptr(elTop), uintptr(elRight), uintptr(elBottom))
+		if strip1 != 0 {
+			_, _, _ = procCombineRgn.Call(elRgn, elRgn, strip1, uintptr(rgnOr))
+			_, _, _ = procDeleteObject.Call(strip1)
+		}
+		if strip2 != 0 {
+			_, _, _ = procCombineRgn.Call(elRgn, elRgn, strip2, uintptr(rgnOr))
+			_, _, _ = procDeleteObject.Call(strip2)
+		}
+		return elRgn
+	}
+
+	qTL := createQuadrant(left, top, midX, midY, tl, "tl")
+	qTR := createQuadrant(midX, top, right, midY, tr, "tr")
+	qBR := createQuadrant(midX, midY, right, bottom, br, "br")
+	qBL := createQuadrant(left, midY, midX, bottom, bl, "bl")
+
+	return combineWindowRegions(qTL, qTR, qBR, qBL)
 }
 
 // createSatelliteRegion generates the Win32 HRGN for an anchored floating satellite dock.
@@ -1815,6 +2015,32 @@ func createSatelliteRegion(sat SatelliteBounds, mainW, mainH, offsetX, sw int, s
 		return int(float64(v) * scale)
 	}
 
+	tl := scaleInt(sat.Radii[0])
+	tr := scaleInt(sat.Radii[1])
+	br := scaleInt(sat.Radii[2])
+	bl := scaleInt(sat.Radii[3])
+	if tl == 0 && tr == 0 && br == 0 && bl == 0 && sat.Radius > 0 {
+		rScaled := scaleInt(sat.Radius)
+		tl, tr, br, bl = rScaled, rScaled, rScaled, rScaled
+	}
+
+	// If direct viewport coordinates were provided by an unanchored satellite,
+	// follow the satellite element pixel-perfectly with standard outside padding.
+	if sat.Anchor == "" && sat.X > 0 {
+		pad := scaleInt(OutsidePadding)
+		left := scaleInt(sat.X) - pad
+		if left < 0 {
+			left = 0
+		}
+		top := scaleInt(sat.Y) - pad
+		if top < 0 {
+			top = 0
+		}
+		right := scaleInt(sat.X) + scaleInt(sat.Width) + pad
+		bottom := scaleInt(sat.Y) + scaleInt(sat.Height) + pad
+		return createComplexRoundRectRgn(left, top, right, bottom, tl, tr, br, bl)
+	}
+
 	vLeft, vTop, _, _, pCenter, monitors := GetDisplayMetrics()
 	scaledOffset := scaleInt(offsetX)
 	screenCenterX := vLeft + pCenter + scaledOffset
@@ -1823,34 +2049,58 @@ func createSatelliteRegion(sat SatelliteBounds, mainW, mainH, offsetX, sw int, s
 	if monitorTopOffset < 0 {
 		monitorTopOffset = 0
 	}
-	visualTop := monitorTopOffset + scaleInt(5)
+	visualTop := monitorTopOffset + scaleInt(0)
 
 	physicalCenterX := pCenter + scaledOffset
 	pw := scaleInt(mainW)
 	ph := scaleInt(mainH)
-	satOutsidePad := 4
+	satOutsidePad := OutsidePadding
 	pad := scaleInt(satOutsidePad)
 
-	gapScaled := scaleInt(sat.Gap)
+	// Directional gaps: [top, right, bottom, left]
+	gapTop := sat.Gaps[0]
+	gapRight := sat.Gaps[1]
+	gapBottom := sat.Gaps[2]
+	gapLeft := sat.Gaps[3]
+	if gapTop == 0 && gapRight == 0 && gapBottom == 0 && gapLeft == 0 && sat.Gap > 0 {
+		gapTop = sat.Gap
+		gapRight = sat.Gap
+		gapBottom = sat.Gap
+		gapLeft = sat.Gap
+	}
+
 	wScaled := scaleInt(sat.Width)
 	hScaled := scaleInt(sat.Height)
 	satOffsetScaledX := scaleInt(sat.OffsetX)
 	satOffsetScaledY := scaleInt(sat.OffsetY)
+	gapTopScaled := scaleInt(gapTop)
 
 	var left, right, top, bottom int
 
 	switch sat.Anchor {
 	case "left":
-		right = physicalCenterX - (pw / 2) - gapScaled - satOffsetScaledX + pad
-		left = right - wScaled - (pad * 2)
-		top = visualTop + satOffsetScaledY - pad
+		gapScaled := scaleInt(gapRight)
+		if gapScaled == 0 {
+			gapScaled = scaleInt(sat.Gap)
+		}
+		right = physicalCenterX - (pw / 2) - satOffsetScaledX + pad
+		left = physicalCenterX - (pw / 2) - gapScaled - satOffsetScaledX - wScaled - pad
+		top = visualTop + gapTopScaled + satOffsetScaledY - pad
 		bottom = top + hScaled + (pad * 2)
 	case "bottom":
+		gapScaled := scaleInt(gapTop)
+		if gapScaled == 0 {
+			gapScaled = scaleInt(sat.Gap)
+		}
 		top = visualTop + ph + gapScaled + satOffsetScaledY - pad
 		bottom = top + hScaled + (pad * 2)
 		left = physicalCenterX - (wScaled / 2) + satOffsetScaledX - pad
 		right = left + wScaled + (pad * 2)
 	case "top":
+		gapScaled := scaleInt(gapBottom)
+		if gapScaled == 0 {
+			gapScaled = scaleInt(sat.Gap)
+		}
 		bottom = visualTop - gapScaled - satOffsetScaledY + pad
 		top = bottom - hScaled - (pad * 2)
 		left = physicalCenterX - (wScaled / 2) + satOffsetScaledX - pad
@@ -1858,16 +2108,22 @@ func createSatelliteRegion(sat SatelliteBounds, mainW, mainH, offsetX, sw int, s
 	case "right":
 		fallthrough
 	default:
-		left = physicalCenterX + (pw / 2) + gapScaled + satOffsetScaledX - pad
-		right = left + wScaled + (pad * 2)
-		top = visualTop + satOffsetScaledY - pad
+		gapScaled := scaleInt(gapLeft)
+		if gapScaled == 0 {
+			gapScaled = scaleInt(sat.Gap)
+		}
+		left = physicalCenterX + (pw / 2) + satOffsetScaledX - pad
+		right = physicalCenterX + (pw / 2) + gapScaled + satOffsetScaledX + wScaled + pad
+		top = visualTop + gapTopScaled + satOffsetScaledY - pad
 		bottom = top + hScaled + (pad * 2)
 	}
 
 	// For flank satellites situated near the monitor top edge, extend top up to monitorTopOffset
 	// to eliminate any narrow sliver gap where background browser tabs might receive hover.
+	isTopFlush := false
 	if sat.Anchor != "bottom" && visualTop+satOffsetScaledY <= monitorTopOffset+scaleInt(15) {
 		top = monitorTopOffset
+		isTopFlush = true
 	}
 
 	// Directional tooltip padding: expand the hit-test region strictly outward
@@ -1877,20 +2133,13 @@ func createSatelliteRegion(sat SatelliteBounds, mainW, mainH, offsetX, sw int, s
 		switch sat.TooltipSide {
 		case "bottom":
 			bottom += tPad
-			horizPad := scaleInt(36)
-			left -= horizPad
-			right += horizPad
 		case "top":
 			top -= tPad
-			horizPad := scaleInt(36)
-			left -= horizPad
-			right += horizPad
 		case "right":
 			right += tPad
 		case "left":
 			left -= tPad
 		default:
-			// Fallback: expand away from the island based on anchor direction
 			switch sat.Anchor {
 			case "right":
 				right += tPad
@@ -1914,23 +2163,24 @@ func createSatelliteRegion(sat SatelliteBounds, mainW, mainH, offsetX, sw int, s
 		top = 0
 	}
 
-	ellipseSize := scaleInt(sat.Radius) * 2
+	tl = scaleInt(sat.Radii[0])
+	tr = scaleInt(sat.Radii[1])
+	br = scaleInt(sat.Radii[2])
+	bl = scaleInt(sat.Radii[3])
+	if tl == 0 && tr == 0 && br == 0 && bl == 0 && sat.Radius > 0 {
+		rScaled := scaleInt(sat.Radius)
+		tl, tr, br, bl = rScaled, rScaled, rScaled, rScaled
+	}
 	if sat.TooltipPad > 0 {
-		ellipseSize = scaleInt(10) * 2
+		tl, tr, br, bl = scaleInt(10), scaleInt(10), scaleInt(10), scaleInt(10)
 	}
-	if hLimit := bottom - top; ellipseSize > hLimit {
-		ellipseSize = hLimit
-	}
-	if wLimit := right - left; ellipseSize > wLimit {
-		ellipseSize = wLimit
+	// When flush against monitor top, top corners stay flat
+	if isTopFlush && sat.Anchor != "bottom" {
+		tl = 0
+		tr = 0
 	}
 
-	hrgn, _, _ := procCreateRoundRectRgn.Call(
-		uintptr(left), uintptr(top),
-		uintptr(right), uintptr(bottom),
-		uintptr(ellipseSize), uintptr(ellipseSize),
-	)
-	return hrgn
+	return createComplexRoundRectRgn(left, top, right, bottom, tl, tr, br, bl)
 }
 
 // combineWindowRegions merges a slice of Win32 HRGNs into a single composite region.
@@ -2025,13 +2275,17 @@ func (a *App) SetHardwareAcceleration(enabled bool) error {
 	return os.WriteFile(filePath, []byte(val), 0644)
 }
 
-// NoteFileInfo describes a saved markdown note file.
+// NoteFileInfo describes a saved sticky note file.
 type NoteFileInfo struct {
 	ID       string `json:"id"`
 	Title    string `json:"title"`
 	FileName string `json:"fileName"`
 	ModTime  int64  `json:"modTime"`
 	Size     int64  `json:"size"`
+}
+
+type noteTitleParser struct {
+	Title string `json:"title"`
 }
 
 func getNotesDir() (string, error) {
@@ -2042,7 +2296,46 @@ func getNotesDir() (string, error) {
 	return notesDir, nil
 }
 
-// ListNotes scans the notes directory and returns all markdown note files metadata.
+// migrateLegacyNotes scans for older .md notes and converts them into .vnote format.
+func migrateLegacyNotes(dir string, entries []os.DirEntry) {
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(strings.ToLower(entry.Name()), ".md") {
+			continue
+		}
+		info, err := entry.Info()
+		if err != nil {
+			continue
+		}
+		oldPath := filepath.Join(dir, entry.Name())
+		mdContent, err := os.ReadFile(oldPath)
+		if err != nil {
+			continue
+		}
+
+		baseName := strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name()))
+		newFileName := baseName + ".vnote"
+		newPath := filepath.Join(dir, newFileName)
+
+		if _, statErr := os.Stat(newPath); os.IsNotExist(statErr) {
+			payload := map[string]interface{}{
+				"id":        baseName,
+				"title":     baseName,
+				"color":     "yellow",
+				"content":   string(mdContent),
+				"pinned":    false,
+				"modTime":   info.ModTime().UnixMilli(),
+				"createdAt": info.ModTime().UnixMilli(),
+			}
+			if data, err := json.MarshalIndent(payload, "", "  "); err == nil {
+				_ = os.WriteFile(newPath, data, 0644)
+			}
+		}
+
+		_ = os.Remove(oldPath)
+	}
+}
+
+// ListNotes scans the notes directory, migrates legacy notes, and returns all .vnote metadata.
 func (a *App) ListNotes() ([]NoteFileInfo, error) {
 	dir, err := getNotesDir()
 	if err != nil {
@@ -2052,9 +2345,17 @@ func (a *App) ListNotes() ([]NoteFileInfo, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	migrateLegacyNotes(dir, entries)
+
+	entries, err = os.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+
 	var notes []NoteFileInfo
 	for _, entry := range entries {
-		if entry.IsDir() || !strings.HasSuffix(strings.ToLower(entry.Name()), ".md") {
+		if entry.IsDir() || !strings.HasSuffix(strings.ToLower(entry.Name()), ".vnote") {
 			continue
 		}
 		info, err := entry.Info()
@@ -2063,9 +2364,19 @@ func (a *App) ListNotes() ([]NoteFileInfo, error) {
 		}
 		fileName := entry.Name()
 		id := strings.TrimSuffix(fileName, filepath.Ext(fileName))
+		title := id
+
+		filePath := filepath.Join(dir, fileName)
+		if fileBytes, readErr := os.ReadFile(filePath); readErr == nil {
+			var parsed noteTitleParser
+			if parseErr := json.Unmarshal(fileBytes, &parsed); parseErr == nil && strings.TrimSpace(parsed.Title) != "" {
+				title = strings.TrimSpace(parsed.Title)
+			}
+		}
+
 		notes = append(notes, NoteFileInfo{
 			ID:       id,
-			Title:    id,
+			Title:    title,
 			FileName: fileName,
 			ModTime:  info.ModTime().UnixMilli(),
 			Size:     info.Size(),
@@ -2074,15 +2385,15 @@ func (a *App) ListNotes() ([]NoteFileInfo, error) {
 	return notes, nil
 }
 
-// ReadNote reads and returns the text content of a note file.
+// ReadNote reads and returns the JSON content of a .vnote file.
 func (a *App) ReadNote(fileName string) (string, error) {
 	dir, err := getNotesDir()
 	if err != nil {
 		return "", err
 	}
 	cleanName := filepath.Base(fileName)
-	if !strings.HasSuffix(strings.ToLower(cleanName), ".md") {
-		cleanName += ".md"
+	if !strings.HasSuffix(strings.ToLower(cleanName), ".vnote") {
+		cleanName = strings.TrimSuffix(cleanName, filepath.Ext(cleanName)) + ".vnote"
 	}
 	filePath := filepath.Join(dir, cleanName)
 	data, err := os.ReadFile(filePath)
@@ -2092,28 +2403,27 @@ func (a *App) ReadNote(fileName string) (string, error) {
 	return string(data), nil
 }
 
-// SaveNote writes or updates a markdown note file.
+// SaveNote writes or updates a .vnote file.
 func (a *App) SaveNote(fileName string, content string) error {
 	dir, err := getNotesDir()
 	if err != nil {
 		return err
 	}
 	cleanName := filepath.Base(fileName)
-	if !strings.HasSuffix(strings.ToLower(cleanName), ".md") {
-		cleanName += ".md"
+	if !strings.HasSuffix(strings.ToLower(cleanName), ".vnote") {
+		cleanName = strings.TrimSuffix(cleanName, filepath.Ext(cleanName)) + ".vnote"
 	}
 	filePath := filepath.Join(dir, cleanName)
 	return os.WriteFile(filePath, []byte(content), 0644)
 }
 
-// RenameNote renames an existing note file using the new title as the filename.
+// RenameNote renames an existing .vnote file using the new title as the filename.
 // Returns the new filename on success.
 func (a *App) RenameNote(oldFileName string, newTitle string) (string, error) {
 	dir, err := getNotesDir()
 	if err != nil {
 		return "", err
 	}
-	// Sanitize the new title into a safe filename
 	sanitized := strings.NewReplacer(
 		"/", "-", "\\", "-", ":", "-", "*", "-",
 		"?", "-", "\"", "-", "<", "-", ">", "-", "|", "-",
@@ -2121,23 +2431,21 @@ func (a *App) RenameNote(oldFileName string, newTitle string) (string, error) {
 	if sanitized == "" {
 		sanitized = "untitled"
 	}
-	newFileName := sanitized + ".md"
+	newFileName := sanitized + ".vnote"
 
 	oldClean := filepath.Base(oldFileName)
-	if !strings.HasSuffix(strings.ToLower(oldClean), ".md") {
-		oldClean += ".md"
+	if !strings.HasSuffix(strings.ToLower(oldClean), ".vnote") {
+		oldClean = strings.TrimSuffix(oldClean, filepath.Ext(oldClean)) + ".vnote"
 	}
 
 	oldPath := filepath.Join(dir, oldClean)
 	newPath := filepath.Join(dir, newFileName)
 
-	// Avoid clobbering a different existing file
 	if !strings.EqualFold(oldPath, newPath) {
 		if _, statErr := os.Stat(newPath); statErr == nil {
-			// Target exists; append a counter to make it unique
-			base := strings.TrimSuffix(newFileName, ".md")
+			base := strings.TrimSuffix(newFileName, ".vnote")
 			for n := 2; ; n++ {
-				candidate := fmt.Sprintf("%s (%d).md", base, n)
+				candidate := fmt.Sprintf("%s (%d).vnote", base, n)
 				if _, e := os.Stat(filepath.Join(dir, candidate)); os.IsNotExist(e) {
 					newFileName = candidate
 					newPath = filepath.Join(dir, newFileName)
@@ -2152,15 +2460,15 @@ func (a *App) RenameNote(oldFileName string, newTitle string) (string, error) {
 	return newFileName, nil
 }
 
-// DeleteNote deletes a markdown note file from disk.
+// DeleteNote deletes a .vnote file from disk.
 func (a *App) DeleteNote(fileName string) error {
 	dir, err := getNotesDir()
 	if err != nil {
 		return err
 	}
 	cleanName := filepath.Base(fileName)
-	if !strings.HasSuffix(strings.ToLower(cleanName), ".md") {
-		cleanName += ".md"
+	if !strings.HasSuffix(strings.ToLower(cleanName), ".vnote") {
+		cleanName = strings.TrimSuffix(cleanName, filepath.Ext(cleanName)) + ".vnote"
 	}
 	filePath := filepath.Join(dir, cleanName)
 	return os.Remove(filePath)
