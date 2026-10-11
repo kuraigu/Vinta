@@ -39,6 +39,7 @@ export class WindowBoundsManager {
   private boundsTransitionTimeout: number | undefined
   private activeTransitionEndHandler: ((e: TransitionEvent) => void) | null = null
   private activeIslandNode: HTMLElement | null = null
+  private resizeObserver: ResizeObserver | null = null
 
   public currentOSBounds: WindowBounds = { w: 0, h: 0, r: 0 }
   public targetPendingBounds: WindowBounds = { w: 0, h: 0, r: 0 }
@@ -188,16 +189,37 @@ export class WindowBoundsManager {
       return
     }
 
+    // Safety guard against clipping under heavy load:
+    // If islandNode has not reached target dimensions yet, retain a safe envelope
+    // so Windows DWM does not clip the visible animated element.
+    if (islandNode) {
+      const liveW = islandNode.offsetWidth
+      const liveH = islandNode.offsetHeight
+      if (liveW > toApply.w + 6 || liveH > toApply.h + 6) {
+        this.applyBounds(
+          Math.max(toApply.w, liveW),
+          Math.max(toApply.h, liveH),
+          toApply.r,
+          offset
+        )
+        return
+      }
+    }
+
     this.applyBounds(toApply.w, toApply.h, toApply.r, offset)
   }
 
   /**
-   * Resets active shrinking timeout and removes lingering transition listeners.
+   * Resets active shrinking timeout, disconnects observers, and removes lingering transition listeners.
    */
   public cancelPendingTransition(): void {
     clearTimeout(this.boundsTransitionTimeout)
     this.boundsTransitionTimeout = undefined
     this.targetPendingBounds = { w: 0, h: 0, r: 0 }
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect()
+      this.resizeObserver = null
+    }
     if (this.activeIslandNode && this.activeTransitionEndHandler) {
       this.activeIslandNode.removeEventListener(
         'transitionend',
@@ -210,6 +232,39 @@ export class WindowBoundsManager {
     }
     this.activeIslandNode = null
     this.activeTransitionEndHandler = null
+  }
+
+  /**
+   * Pre-expands the Win32 window clipping region before an expanding CSS transition begins.
+   * This guarantees that hardware DWM paint masks are already large enough before DOM elements
+   * start growing, preventing any boundary clipping under heavy system load.
+   */
+  public async prepareExpansion(
+    target: WindowBounds,
+    explicitOffset?: number
+  ): Promise<void> {
+    const currW = this.currentOSBounds.w
+    const currH = this.currentOSBounds.h
+
+    const isGrowing = target.w > currW || target.h > currH
+    if (!isGrowing) {
+      return
+    }
+
+    const envelopeW = Math.max(currW, target.w)
+    const envelopeH = Math.max(currH, target.h)
+    const offset =
+      explicitOffset !== undefined ? explicitOffset : this.getLiveOffset()
+
+    this.cancelPendingTransition()
+    this.currentOSBounds = { w: envelopeW, h: envelopeH, r: target.r }
+
+    try {
+      await Promise.race([
+        this.updateBounds(envelopeW, envelopeH, target.r, offset),
+        new Promise<void>((resolve) => window.setTimeout(resolve, 60))
+      ])
+    } catch {}
   }
 
   /**
@@ -268,21 +323,16 @@ export class WindowBoundsManager {
       const immediateW = Math.max(currW, target.w)
       const immediateH = Math.max(currH, target.h)
 
-      if (!isShrinking) {
-        this.applyBounds(target.w, target.h, target.r, offset)
-        return
-      }
-
-      // Asymmetric change: one axis expands while the other contracts
       this.applyBounds(immediateW, immediateH, target.r, offset)
+      return
     }
 
     // Shrinking: defer clipping region commit until CSS transition completes
     if (isShrinking) {
       const isNodeAtTarget =
         islandNode &&
-        Math.abs(islandNode.offsetWidth - target.w) <= 2 &&
-        Math.abs(islandNode.offsetHeight - target.h) <= 2
+        Math.abs(islandNode.offsetWidth - target.w) <= 3 &&
+        Math.abs(islandNode.offsetHeight - target.h) <= 3
 
       if (isNodeAtTarget || !islandNode) {
         this.cancelPendingTransition()
@@ -290,43 +340,28 @@ export class WindowBoundsManager {
         return
       }
 
+      this.cancelPendingTransition()
       this.targetPendingBounds = { ...target }
-      clearTimeout(this.boundsTransitionTimeout)
-      if (this.activeIslandNode && this.activeTransitionEndHandler) {
-        this.activeIslandNode.removeEventListener(
-          'transitionend',
-          this.activeTransitionEndHandler
-        )
-        this.activeIslandNode.removeEventListener(
-          'transitioncancel',
-          this.activeTransitionEndHandler
-        )
-      }
 
       let hasCommitted = false
       const commitOnce = () => {
         if (hasCommitted) return
         hasCommitted = true
-        clearTimeout(this.boundsTransitionTimeout)
-        this.boundsTransitionTimeout = undefined
-        if (islandNode && onTransitionEnd) {
-          islandNode.removeEventListener('transitionend', onTransitionEnd)
-          islandNode.removeEventListener('transitioncancel', onTransitionEnd)
-        }
-        this.activeIslandNode = null
-        this.activeTransitionEndHandler = null
         this.tryCommitShrinkingBounds(islandNode, offset, false)
+      }
+
+      const checkDimensions = () => {
+        if (!islandNode) return
+        const wDiff = Math.abs(islandNode.offsetWidth - target.w)
+        const hDiff = Math.abs(islandNode.offsetHeight - target.h)
+        if (wDiff <= 3 && hDiff <= 3) {
+          commitOnce()
+        }
       }
 
       const onTransitionEnd = (e: TransitionEvent) => {
         if (e.target !== islandNode) return
-        if (isHeightShrinking && e.propertyName !== 'height') {
-          return
-        }
-        if (!isHeightShrinking && isWidthShrinking && e.propertyName !== 'width') {
-          return
-        }
-        commitOnce()
+        checkDimensions()
       }
 
       this.activeIslandNode = islandNode
@@ -334,7 +369,14 @@ export class WindowBoundsManager {
       islandNode.addEventListener('transitionend', onTransitionEnd)
       islandNode.addEventListener('transitioncancel', onTransitionEnd)
 
-      this.boundsTransitionTimeout = window.setTimeout(commitOnce, 380)
+      if (typeof ResizeObserver !== 'undefined') {
+        this.resizeObserver = new ResizeObserver(() => {
+          checkDimensions()
+        })
+        this.resizeObserver.observe(islandNode)
+      }
+
+      this.boundsTransitionTimeout = window.setTimeout(commitOnce, 850)
       return
     }
 

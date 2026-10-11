@@ -450,11 +450,19 @@
 
   let wasExpandedBeforeHide = $state(false)
 
-  function navigateTo(
+  async function navigateTo(
     page: Component,
     pageConfig: IslandConfig,
     expand: boolean = false
   ) {
+    const nextBounds = getBoundsForState(pageConfig, expand, false)
+    if (
+      nextBounds.w > bounds.currentOSBounds.w ||
+      nextBounds.h > bounds.currentOSBounds.h
+    ) {
+      await bounds.prepareExpansion(nextBounds, clampedOffsetX)
+    }
+
     if (isHidden) {
       clearTimeout(dormantUnmountTimeout)
       dormantUnmountTimeout = undefined
@@ -491,7 +499,6 @@
       Events.Emit('devtest-sync-page', { pageId })
     } catch {}
 
-    const nextBounds = getBoundsForState(pageConfig, expand, false)
     bounds.syncBounds(nextBounds, clampedOffsetX, islandNode, false, false)
 
     triggerGlow()
@@ -601,17 +608,18 @@
     })
   }
 
-  function handleExpand() {
+  async function handleExpand() {
     if (expanded) return
     if (gestures.isDragging) finishDragGesture()
     if (isHidden) {
       isHidden = false
       bounds.notifyHidden(false)
     }
+    const nextBounds = getBoundsForState(islandConfig, true, false)
+    await bounds.prepareExpansion(nextBounds, clampedOffsetX)
     islandAnim = '0.32s cubic-bezier(0.2, 0.8, 0.2, 1)'
     expanded = true
     isControlsDrawerOpen = false
-    const nextBounds = getBoundsForState(islandConfig, true, false)
     bounds.syncBounds(nextBounds, clampedOffsetX, islandNode, false, false)
   }
 

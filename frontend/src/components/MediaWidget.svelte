@@ -689,7 +689,9 @@
 
     if (diff > 14 && containerWidth > 0) {
       const dist = Math.ceil(diff + 8)
-      const duration = Math.max(10, Math.min(38, Math.round(dist / 14 + 7)))
+      // Calm reading cadence (~20px/sec) with 3.5s initial pause and 2.5s terminal pause
+      const scrollTime = dist / 20
+      const duration = Math.max(12, Math.min(45, Math.round(scrollTime + 6)))
       return { overflowing: true, dist, duration }
     }
     return { overflowing: false, dist: 0, duration: 8 }
@@ -1178,24 +1180,9 @@
                 {formatTime(isDraggingSeek ? seekVal : scrubHoverTimeMs)}
               </div>
             {/if}
-            <!-- Inactive State: Sleek Single Block Progress Bar -->
+            <!-- Dynamic Equalizer Waveform Timeline Scrubber -->
             <div
-              class="single-block-progress {isDraggingSeek
-                ? 'is-dragging'
-                : ''}"
-              class:is-active={media.isPlaying}
-            >
-              <div class="single-block-ghost"></div>
-              <div
-                class="single-block-fill"
-                style="width: {progressPercent}%;"
-              ></div>
-            </div>
-
-            <!-- Active State: Dynamic Equalizer Waveform -->
-            <div
-              class="spectrum-bars-container"
-              class:is-active={media.isPlaying}
+              class="spectrum-bars-container {isDraggingSeek ? 'is-dragging' : ''}"
             >
               <DynamicEqualizer
                 isPlaying={media.isPlaying}

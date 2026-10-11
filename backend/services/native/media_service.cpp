@@ -72,6 +72,18 @@ static std::string ComputeSessionUniqueId(const std::string& sourceApp, const st
     return sourceApp + "::" + t + "::" + a;
 }
 
+struct ValidTrackSnapshot {
+    std::string sourceApp;
+    std::string title;
+    std::string artist;
+    std::string album;
+    std::string albumArt;
+    std::chrono::steady_clock::time_point timestamp;
+    bool hasValue{false};
+};
+static std::mutex g_validSnapshotMutex;
+static ValidTrackSnapshot g_lastValidTrackSnapshot;
+
 void FlushMediaArtCache() {
     std::lock_guard<std::mutex> artLock(g_artCacheMutex);
     g_trackArtMap.clear();
@@ -80,6 +92,15 @@ void FlushMediaArtCache() {
     g_previousTrackArt.clear();
     g_trackStartTime = {};
     ++g_artCorrectionGeneration;
+    {
+        std::lock_guard<std::mutex> snapLock(g_validSnapshotMutex);
+        g_lastValidTrackSnapshot.hasValue = false;
+        g_lastValidTrackSnapshot.title.clear();
+        g_lastValidTrackSnapshot.artist.clear();
+        g_lastValidTrackSnapshot.album.clear();
+        g_lastValidTrackSnapshot.albumArt.clear();
+        g_lastValidTrackSnapshot.sourceApp.clear();
+    }
 }
 
 /**
@@ -385,6 +406,44 @@ static bool IsValidMediaSession(winrt_media::GlobalSystemMediaTransportControlsS
     }
 }
 
+/**
+ * Checks whether a session is alive and valid.
+ * If transient web interactions (such as video elements or ads on X/Twitter) clobber
+ * session metadata, falls back to the recent valid track snapshot to prevent dropping active media.
+ */
+static bool IsSessionAliveAndValid(winrt_media::GlobalSystemMediaTransportControlsSession const& session,
+                                  winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackInfo const* prefetchedInfo = nullptr,
+                                  winrt_media::GlobalSystemMediaTransportControlsSessionMediaProperties const* prefetchedProps = nullptr) {
+    if (!session) return false;
+    try {
+        winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackInfo info{nullptr};
+        if (prefetchedInfo && *prefetchedInfo) {
+            info = *prefetchedInfo;
+        } else {
+            info = session.GetPlaybackInfo();
+        }
+        if (!info || info.PlaybackStatus() == winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Closed) {
+            return false;
+        }
+
+        if (IsValidMediaSession(session, &info, prefetchedProps)) {
+            return true;
+        }
+
+        std::lock_guard<std::mutex> snapLock(g_validSnapshotMutex);
+        if (g_lastValidTrackSnapshot.hasValue) {
+            auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
+                std::chrono::steady_clock::now() - g_lastValidTrackSnapshot.timestamp).count();
+            if (elapsed < 15) {
+                return true;
+            }
+        }
+        return false;
+    } catch (...) {
+        return false;
+    }
+}
+
 static void UpdateCurrentSession() {
     ApartmentScope apt;
     std::lock_guard<std::recursive_mutex> lock(g_sessionMutex);
@@ -452,7 +511,7 @@ static void UpdateCurrentSession() {
          * back to an active session after 4 seconds.
          * If the chosen session was closed or terminated, clear the selection and resume auto-detection.
          */
-        if (chosenSession && IsValidMediaSession(chosenSession)) {
+        if (chosenSession && IsSessionAliveAndValid(chosenSession)) {
             targetSession = chosenSession;
         } else {
             if (!selectedId.empty()) {
@@ -462,9 +521,9 @@ static void UpdateCurrentSession() {
 
             // Hysteresis Rule 1:
             // If the current session is valid and actively Playing, prefer keeping it.
-            // Do NOT let background tabs or focus shifts interrupt active playback.
+            // Do NOT let background tabs, ads, or focus shifts on social feeds (e.g. X/Twitter) interrupt active playback.
             bool currentIsPlaying = false;
-            if (g_currentSession && IsValidMediaSession(g_currentSession)) {
+            if (g_currentSession && IsSessionAliveAndValid(g_currentSession)) {
                 try {
                     auto curInfo = g_currentSession.GetPlaybackInfo();
                     if (curInfo && curInfo.PlaybackStatus() == winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing) {
@@ -473,7 +532,7 @@ static void UpdateCurrentSession() {
                 } catch (...) {}
             }
 
-            // Check if Windows's focused session is actively playing and valid
+            // Check if Windows's focused session is actively playing and strictly valid on its own merits
             winrt_media::GlobalSystemMediaTransportControlsSession focusedPlayingSession{nullptr};
             try {
                 winrt_media::GlobalSystemMediaTransportControlsSession focused = g_sessionManager.GetCurrentSession();
@@ -519,7 +578,7 @@ static void UpdateCurrentSession() {
             // When paused (no session is playing), do NOT randomly bounce between background browser tabs.
             // Retain the existing session if it is still alive and valid.
             if (!targetSession) {
-                if (g_currentSession && IsValidMediaSession(g_currentSession)) {
+                if (g_currentSession && IsSessionAliveAndValid(g_currentSession)) {
                     targetSession = g_currentSession;
                 } else {
                     winrt_media::GlobalSystemMediaTransportControlsSession focusedSession{nullptr};
@@ -603,20 +662,45 @@ static void EmitMediaState(bool includeVolume) {
         session = g_currentSession;
     }
 
+    bool useSnapshot = false;
     if (!session || !IsValidMediaSession(session)) {
-        g_isMediaPlaying.store(false);
-        std::ostringstream json;
-        json << "{\"type\":\"media\",\"isAvailable\":false}";
-        g_mediaCb(json.str().c_str());
-        return;
+        std::lock_guard<std::mutex> snapLock(g_validSnapshotMutex);
+        if (session && g_lastValidTrackSnapshot.hasValue) {
+            try {
+                auto info = session.GetPlaybackInfo();
+                if (info && info.PlaybackStatus() != winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Closed) {
+                    auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
+                        std::chrono::steady_clock::now() - g_lastValidTrackSnapshot.timestamp).count();
+                    if (elapsed < 15) {
+                        useSnapshot = true;
+                    }
+                }
+            } catch (...) {}
+        }
+
+        if (!useSnapshot) {
+            g_isMediaPlaying.store(false);
+            std::ostringstream json;
+            json << "{\"type\":\"media\",\"isAvailable\":false}";
+            g_mediaCb(json.str().c_str());
+            return;
+        }
     }
 
-    try {
-        sourceApp = Utf16ToUtf8(session.SourceAppUserModelId().c_str());
-    } catch (...) {}
+    if (useSnapshot) {
+        std::lock_guard<std::mutex> snapLock(g_validSnapshotMutex);
+        sourceApp = g_lastValidTrackSnapshot.sourceApp;
+        title = g_lastValidTrackSnapshot.title;
+        artist = g_lastValidTrackSnapshot.artist;
+        album = g_lastValidTrackSnapshot.album;
+        albumArt = g_lastValidTrackSnapshot.albumArt;
+    } else {
+        try {
+            sourceApp = Utf16ToUtf8(session.SourceAppUserModelId().c_str());
+        } catch (...) {}
 
-    try {
-        auto props = session.TryGetMediaPropertiesAsync().get();
+        try {
+            auto props = session.TryGetMediaPropertiesAsync().get();
         if (props) {
             title = Utf16ToUtf8(props.Title().c_str());
             artist = Utf16ToUtf8(props.Artist().c_str());
@@ -766,8 +850,21 @@ static void EmitMediaState(bool includeVolume) {
                     }
                 }).detach();
             }
+
+            // If valid properties, record snapshot for session persistence
+            if (!title.empty() && (!artist.empty() || !albumArt.empty())) {
+                std::lock_guard<std::mutex> snapLock(g_validSnapshotMutex);
+                g_lastValidTrackSnapshot.sourceApp = sourceApp;
+                g_lastValidTrackSnapshot.title = title;
+                g_lastValidTrackSnapshot.artist = artist;
+                g_lastValidTrackSnapshot.album = album;
+                g_lastValidTrackSnapshot.albumArt = albumArt;
+                g_lastValidTrackSnapshot.timestamp = std::chrono::steady_clock::now();
+                g_lastValidTrackSnapshot.hasValue = true;
+            }
         }
     } catch (...) {}
+    }
 
     try {
         auto info = session.GetPlaybackInfo();

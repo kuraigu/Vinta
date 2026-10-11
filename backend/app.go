@@ -102,7 +102,7 @@ const (
 	WS_EX_NOACTIVATE = 0x08000000
 	//nolint:revive // Windows API constants
 	WS_EX_TRANSPARENT    = 0x00000020
-	OutsidePadding       = 6
+	OutsidePadding       = 8
 	HiddenOutsidePadding = 2
 	rgnOr                = 2
 
@@ -1117,11 +1117,11 @@ func (a *App) SetWidgetBounds(width int, height int, radius int, scale float64, 
 	a.pillW = width
 	a.pillH = height
 	a.pillR = radius
-	if width >= 180 && a.isHidden {
+	if (width >= 130 || height >= 24) && a.isHidden {
 		a.isHidden = false
 		services.SetAppHidden(false)
 	}
-	if !a.isHidden && width >= 180 && height >= 24 && height <= 52 {
+	if !a.isHidden && (width >= 130 || height >= 24) && height <= 52 {
 		a.restingW = width
 		a.restingH = height
 		a.restingR = radius
