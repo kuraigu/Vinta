@@ -59,7 +59,7 @@ export function ClearCache(): $CancellablePromise<void> {
 }
 
 /**
- * ClearTooltipBounds is a no-op kept for frontend binding compatibility.
+ * ClearTooltipBounds removes an active floating tooltip region from the Win32 window clipping mask.
  */
 export function ClearTooltipBounds(id: string): $CancellablePromise<void> {
     return $Call.ByID(561175078, id);
@@ -458,7 +458,7 @@ export function SetSatelliteBounds(bounds: $models.SatelliteBounds): $Cancellabl
 }
 
 /**
- * SetTooltipBounds is a no-op kept for frontend binding compatibility.
+ * SetTooltipBounds registers an active floating tooltip region to permit Win32 painting beyond the main pill.
  */
 export function SetTooltipBounds(bounds: $models.TooltipBounds): $CancellablePromise<void> {
     return $Call.ByID(4008192705, bounds);

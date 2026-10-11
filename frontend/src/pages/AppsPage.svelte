@@ -2,8 +2,8 @@
   import type { IslandConfig } from '../store'
 
   export const config: IslandConfig = {
-    minimal: { w: 10, h: 10, r: 5 }, // Apps page is never minimal
-    expanded: { w: 440, h: 380, r: 30 }, // Standardized dimensions
+    minimal: { w: 10, h: 10, r: 5 },
+    expanded: { w: 440, h: 380, r: 30 },
     borderColor: 'var(--c-border)',
     glowColor: 'transparent'
   }
@@ -21,7 +21,8 @@
     FileText,
     SlidersHorizontal,
     Download,
-    Calculator
+    Calculator,
+    X
   } from 'lucide-svelte'
   import HomePage, { config as homeConfig } from './HomePage.svelte'
   import NotificationPage, {
@@ -37,6 +38,7 @@
     config as actionCenterConfig
   } from './ActionCenterPage.svelte'
   import ScrollView from '../components/ScrollView.svelte'
+  import { islandTooltip } from '../services/islandTooltip'
   import {
     notifData,
     activeSettingsTabStore,
@@ -50,8 +52,14 @@
       (page: unknown, pageConfig: IslandConfig, expand?: boolean) => void
     >('navigate')
 
-  function openApp(page: unknown, config: IslandConfig) {
-    navigate(page, config, true)
+  /**
+   * Opens the targeted page in expanded mode.
+   *
+   * @param page - Component to navigate to.
+   * @param pageConfig - Island geometry config for the target page.
+   */
+  function openApp(page: unknown, pageConfig: IslandConfig) {
+    navigate(page, pageConfig, true)
   }
 
   let searchQuery = $state('')
@@ -62,7 +70,6 @@
     desc: string
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     icon: any
-    color: string
     badge?: boolean
     visibilityKey?: keyof PageVisibility
     action: () => void
@@ -70,86 +77,77 @@
 
   const allApps: AppItem[] = [
     {
-      id: 'home',
-      name: 'Home',
-      desc: 'Widgets & Clock',
-      icon: House,
-      color: 'gradient-green',
-      action: () => openApp(HomePage, homeConfig)
-    },
-    {
-      id: 'actioncenter',
-      name: 'Action Center',
-      desc: 'Quick Controls',
-      icon: SlidersHorizontal,
-      color: 'gradient-indigo',
-      visibilityKey: 'actioncenter',
-      action: () => openApp(ActionCenterPage, actionCenterConfig)
-    },
-    {
-      id: 'notes',
-      name: 'Quick Notes',
-      desc: 'Scratchpad & Notes',
-      icon: FileText,
-      color: 'gradient-amber',
-      visibilityKey: 'notes',
-      action: () => openApp(NotesPage, notesConfig)
-    },
-    {
-      id: 'calculator',
-      name: 'Calculator',
-      desc: 'Math & Utilities',
-      icon: Calculator,
-      color: 'gradient-orange',
-      action: () => openApp(CalculatorPage, calculatorConfig)
-    },
-    {
-      id: 'media',
-      name: 'Media',
-      desc: 'Now Playing',
-      icon: Music,
-      color: 'gradient-pink',
-      visibilityKey: 'media',
-      action: () => openApp(MediaPage, mediaConfig)
-    },
-    {
-      id: 'notifs',
-      name: 'Notifications',
-      desc: 'System Alerts',
-      icon: Bell,
-      color: 'gradient-blue',
-      badge: true,
-      visibilityKey: 'notifications',
-      action: () => openApp(NotificationPage, notifConfig)
-    },
-    {
-      id: 'settings',
-      name: 'Settings',
-      desc: 'Customization',
-      icon: Settings,
-      color: 'gradient-dark',
-      action: () => {
-        activeSettingsTabStore.set('appearance')
-        openApp(SettingsPage, settingsConfig)
-      }
-    },
-    {
       id: 'about',
       name: 'About',
-      desc: 'Check Vinta Information',
+      desc: 'About Vinta',
       icon: Info,
-      color: 'gradient-purple',
       action: () => {
         activeSettingsTabStore.set('about')
         openApp(SettingsPage, settingsConfig)
       }
     },
     {
+      id: 'actioncenter',
+      name: 'Action Center',
+      desc: 'Quick settings',
+      icon: SlidersHorizontal,
+      visibilityKey: 'actioncenter',
+      action: () => openApp(ActionCenterPage, actionCenterConfig)
+    },
+    {
+      id: 'calculator',
+      name: 'Calculator',
+      desc: 'Calculator',
+      icon: Calculator,
+      action: () => openApp(CalculatorPage, calculatorConfig)
+    },
+    {
+      id: 'home',
+      name: 'Home',
+      desc: 'Widgets & clock',
+      icon: House,
+      action: () => openApp(HomePage, homeConfig)
+    },
+    {
+      id: 'media',
+      name: 'Media',
+      desc: 'Now playing',
+      icon: Music,
+      visibilityKey: 'media',
+      action: () => openApp(MediaPage, mediaConfig)
+    },
+    {
+      id: 'notifs',
+      name: 'Notifications',
+      desc: 'Notifications',
+      icon: Bell,
+      badge: true,
+      visibilityKey: 'notifications',
+      action: () => openApp(NotificationPage, notifConfig)
+    },
+    {
+      id: 'notes',
+      name: 'Quick Notes',
+      desc: 'Quick notes',
+      icon: FileText,
+      visibilityKey: 'notes',
+      action: () => openApp(NotesPage, notesConfig)
+    },
+    {
+      id: 'settings',
+      name: 'Settings',
+      desc: 'Settings',
+      icon: Settings,
+      action: () => {
+        activeSettingsTabStore.set('appearance')
+        openApp(SettingsPage, settingsConfig)
+      }
+    },
+    {
       id: 'updates',
-      name: 'Check for Updates',
-      desc: 'Releases & Highlights',
+      name: 'Updates',
+      desc: 'Check for updates',
       icon: Download,
-      color: 'gradient-cyan',
       badge: $updateInfoStore?.updateAvailable,
       action: () => {
         activeSettingsTabStore.set('updates')
@@ -170,7 +168,9 @@
 
 <div class="apps-page">
   <div class="header">
-    <div class="title">Apps</div>
+    <div class="header-left">
+      <span class="title">Apps</span>
+    </div>
     <div class="search-box">
       <Search size={13} class="search-icon" />
       <input
@@ -178,22 +178,46 @@
         placeholder="Search apps..."
         bind:value={searchQuery}
         onclick={(e) => e.stopPropagation()}
+        onkeydown={(e) => {
+          if (e.key === 'Escape') {
+            searchQuery = ''
+          }
+        }}
       />
+      {#if searchQuery.trim().length > 0}
+        <button
+          class="clear-search-btn"
+          aria-label="Clear search query"
+          onclick={(e) => {
+            e.stopPropagation()
+            searchQuery = ''
+          }}
+        >
+          <X size={11} />
+        </button>
+      {/if}
     </div>
   </div>
 
-  <ScrollView class="bento-container">
+  <ScrollView class="apps-scroll-area">
     {#if filteredApps.length === 0}
-      <div class="empty-state">No apps matching "{searchQuery}"</div>
+      <div class="empty-state">
+        <Search size={22} class="empty-icon" />
+        <span class="empty-title">No apps found</span>
+        <span class="empty-desc">No applications match "{searchQuery}"</span>
+      </div>
     {:else}
-      <div class="bento-grid">
+      <div class="apps-grid">
         {#each filteredApps as app (app.id)}
           {@const isEnabled =
             !app.visibilityKey || $pageVisibilityStore[app.visibilityKey]}
           <button
-            class="bento-app-card {app.color}"
+            class="app-tile app-{app.id}"
             class:is-disabled={!isEnabled}
-            title={!isEnabled ? `${app.name} (Disabled in Settings)` : app.name}
+            use:islandTooltip={{
+              text: isEnabled ? app.desc : `${app.desc} (Disabled)`,
+              position: 'bottom'
+            }}
             onclick={(e) => {
               e.stopPropagation()
               if (isEnabled) {
@@ -201,18 +225,17 @@
               }
             }}
           >
-            <div class="card-icon-wrapper">
-              <app.icon size={19} />
+            <div class="tile-icon-box">
+              <app.icon size={22} strokeWidth={2} class="tile-icon" />
               {#if isEnabled && app.badge && $notifData.length > 0}
-                <span class="card-badge">
+                <span class="tile-badge">
                   {$notifData.length > 9 ? '9+' : $notifData.length}
                 </span>
+              {:else if isEnabled && app.id === 'updates' && $updateInfoStore?.updateAvailable}
+                <span class="tile-badge-dot"></span>
               {/if}
             </div>
-            <div class="card-text">
-              <span class="card-title">{app.name}</span>
-              <span class="card-desc">{isEnabled ? app.desc : 'Disabled'}</span>
-            </div>
+            <span class="tile-title">{app.name}</span>
           </button>
         {/each}
       </div>

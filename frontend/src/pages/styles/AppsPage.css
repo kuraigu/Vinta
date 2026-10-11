@@ -3,23 +3,31 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding: 18px 16px 58px 16px;
+  padding: 16px 16px 56px 16px;
   box-sizing: border-box;
   overflow: hidden;
+  user-select: none;
 }
 
+/* Header */
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   flex-shrink: 0;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .title {
   margin: 0;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: -0.01em;
   color: var(--c-text-primary);
@@ -30,13 +38,20 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  background: var(--c-item-bg, rgba(255, 255, 255, 0.08));
-  border: 1px solid var(--c-border, rgba(255, 255, 255, 0.1));
+  background: var(--c-item-bg, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--c-border, rgba(255, 255, 255, 0.08));
   border-radius: 8px;
   padding: 4px 8px;
-  flex: 0 0 160px;
-  max-width: 160px;
+  flex: 0 0 170px;
+  max-width: 170px;
   box-sizing: border-box;
+  transition: all 0.18s ease;
+}
+
+.search-box:focus-within {
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.09);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
 :global(.search-icon) {
@@ -51,178 +66,232 @@
   color: var(--c-text-primary);
   font-size: 11px;
   width: 100%;
+  padding: 0;
 }
 
 .search-box input::placeholder {
   color: var(--c-text-muted);
 }
 
-.bento-container {
-  flex: 1;
-  min-height: 0;
-  width: 100%;
-  overflow-y: auto;
-  overflow-x: hidden;
-}
-
-.bento-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px 12px;
-  padding: 2px 2px 14px 2px;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.bento-app-card {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  border-radius: 12px;
+.clear-search-btn {
   background: transparent;
-  border: 1px solid transparent;
-  color: var(--c-text-primary);
-  cursor: pointer;
-  text-align: left;
-  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
-  min-width: 0;
-  width: 100%;
-  box-sizing: border-box;
-  overflow: hidden;
-}
-
-.bento-app-card:hover {
-  background: var(--c-hover, rgba(255, 255, 255, 0.09));
-  transform: translateY(-1px);
-  border-color: var(--c-border, rgba(255, 255, 255, 0.12));
-}
-
-.bento-app-card:active {
-  background: rgba(255, 255, 255, 0.14);
-  transform: scale(0.98);
-}
-
-.bento-app-card.is-disabled {
-  opacity: 0.42;
-  filter: grayscale(0.65);
-  cursor: not-allowed;
-}
-
-.bento-app-card.is-disabled:hover {
-  transform: none;
-  background: transparent;
-  border-color: transparent;
-}
-
-.card-icon-wrapper {
-  position: relative;
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
+  border: none;
+  padding: 2px;
+  margin: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  color: #ffffff;
-  box-shadow:
-    inset 0 1.5px 1px rgba(255, 255, 255, 0.45),
-    inset 0 -3px 6px rgba(0, 0, 0, 0.35),
-    0 3px 8px rgba(0, 0, 0, 0.3);
+  color: var(--c-text-muted);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: color 0.15s ease;
+}
+
+.clear-search-btn:hover {
+  color: var(--c-text-primary);
+}
+
+/* Scroll Area & Balanced 3-Column Grid */
+:global(.apps-scroll-area) {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+}
+
+.apps-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px 8px;
+  padding: 4px 4px 14px 4px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* App Tile Button */
+.app-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 4px;
+  border-radius: 14px;
+  background: transparent;
   border: none;
-  transition:
-    transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
-    box-shadow 0.18s ease;
+  color: var(--c-text-primary);
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  box-sizing: border-box;
+  min-width: 0;
+  position: relative;
 }
 
-.bento-app-card:hover .card-icon-wrapper {
-  transform: scale(1.05);
+.app-tile:active {
+  transform: scale(0.95);
+}
+
+.app-tile.is-disabled {
+  opacity: 0.38;
+  filter: grayscale(0.85);
+  cursor: not-allowed;
+  pointer-events: auto;
+}
+
+.app-tile.is-disabled:hover {
+  transform: none;
+}
+
+/* Vibrant Tactile Squircle Icon Box */
+.tile-icon-box {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-sizing: border-box;
+  transition: all 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
   box-shadow:
-    inset 0 1.5px 1px rgba(255, 255, 255, 0.6),
-    inset 0 -3px 6px rgba(0, 0, 0, 0.4),
-    0 4px 12px rgba(0, 0, 0, 0.4);
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 2px 6px rgba(0, 0, 0, 0.22);
 }
 
-.bento-app-card.gradient-green .card-icon-wrapper {
-  background: linear-gradient(135deg, #34d399 0%, #059669 100%);
+.app-tile :global(.tile-icon) {
+  color: #ffffff;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25));
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.bento-app-card.gradient-indigo .card-icon-wrapper {
-  background: linear-gradient(135deg, #818cf8 0%, #4338ca 100%);
+.app-tile:hover .tile-icon-box {
+  transform: translateY(-2px) scale(1.04);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.5),
+    0 6px 18px var(--glow-color, rgba(0, 0, 0, 0.35));
 }
 
-.bento-app-card.gradient-amber .card-icon-wrapper {
-  background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+.app-tile:hover :global(.tile-icon) {
+  transform: scale(1.06);
 }
 
-.bento-app-card.gradient-pink .card-icon-wrapper {
-  background: linear-gradient(135deg, #fb7185 0%, #be123c 100%);
+/* Distinct Curated Brand Gradients for Each App */
+.app-tile.app-about .tile-icon-box {
+  background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+  --glow-color: rgba(139, 92, 246, 0.4);
 }
 
-.bento-app-card.gradient-blue .card-icon-wrapper {
-  background: linear-gradient(135deg, #38bdf8 0%, #1d4ed8 100%);
+.app-tile.app-actioncenter .tile-icon-box {
+  background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
+  --glow-color: rgba(99, 102, 241, 0.4);
 }
 
-.bento-app-card.gradient-purple .card-icon-wrapper {
-  background: linear-gradient(135deg, #c084fc 0%, #6b21a8 100%);
+.app-tile.app-calculator .tile-icon-box {
+  background: linear-gradient(135deg, #f97316 0%, #c2410c 100%);
+  --glow-color: rgba(249, 115, 22, 0.4);
 }
 
-.bento-app-card.gradient-cyan .card-icon-wrapper {
-  background: linear-gradient(135deg, #22d3ee 0%, #0e7490 100%);
+.app-tile.app-home .tile-icon-box {
+  background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+  --glow-color: rgba(16, 185, 129, 0.4);
 }
 
-.bento-app-card.gradient-orange .card-icon-wrapper {
-  background: linear-gradient(135deg, #fb923c 0%, #ea580c 100%);
+.app-tile.app-media .tile-icon-box {
+  background: linear-gradient(135deg, #f43f5e 0%, #be123c 100%);
+  --glow-color: rgba(244, 63, 94, 0.4);
 }
 
-.bento-app-card.gradient-dark .card-icon-wrapper {
-  background: linear-gradient(135deg, #64748b 0%, #1e293b 100%);
+.app-tile.app-notifs .tile-icon-box {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  --glow-color: rgba(14, 165, 233, 0.4);
 }
 
-.card-badge {
+.app-tile.app-notes .tile-icon-box {
+  background: linear-gradient(135deg, #eab308 0%, #b45309 100%);
+  --glow-color: rgba(234, 179, 8, 0.4);
+}
+
+.app-tile.app-settings .tile-icon-box {
+  background: linear-gradient(135deg, #64748b 0%, #334155 100%);
+  --glow-color: rgba(100, 116, 139, 0.4);
+}
+
+.app-tile.app-updates .tile-icon-box {
+  background: linear-gradient(135deg, #06b6d4 0%, #0e7490 100%);
+  --glow-color: rgba(6, 182, 212, 0.4);
+}
+
+/* Badge on App Tile */
+.tile-badge {
   position: absolute;
   top: -3px;
   right: -3px;
-  background: var(--c-danger);
-  color: var(--c-text-primary);
+  background: var(--c-danger, #ff3b30);
+  color: #ffffff;
   font-size: 8px;
   font-weight: 700;
   padding: 1px 4px;
   border-radius: 6px;
   line-height: 1;
   border: 1px solid rgba(0, 0, 0, 0.4);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
-.card-text {
+.tile-badge-dot {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--c-primary, #38bdf8);
+  border: 1.5px solid var(--c-bg, #141414);
+  box-shadow: 0 0 6px var(--c-primary, #38bdf8);
+}
+
+/* Typography */
+.tile-title {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--c-text-secondary, rgba(255, 255, 255, 0.75));
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 104px;
+  text-align: center;
+  transition: color 0.15s ease;
+}
+
+.app-tile:hover .tile-title {
+  color: var(--c-text-primary, #ffffff);
+}
+
+
+/* Empty State */
+.empty-state {
   display: flex;
   flex-direction: column;
-  min-width: 0;
-  flex: 1 1 0;
-  overflow: hidden;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 48px 0;
+  text-align: center;
 }
 
-.card-title {
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
-}
-
-.card-desc {
-  font-size: 9px;
+:global(.empty-icon) {
   color: var(--c-text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  min-width: 0;
+  opacity: 0.6;
+  margin-bottom: 4px;
 }
 
-.empty-state {
+.empty-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--c-text-primary);
+}
+
+.empty-desc {
   font-size: 11px;
   color: var(--c-text-muted);
-  text-align: center;
-  padding: 24px 0;
 }

@@ -1,30 +1,50 @@
+import {
+  SetTooltipBounds,
+  ClearTooltipBounds
+} from '../../bindings/Vinta/backend/app.js'
+
 /**
  * Tooltip bounds synchronization service.
- * Visual tooltips have pointer-events disabled and do not need Win32 click regions.
+ * Dispatches active tooltip bounding boxes to the native layer so Win32 SetWindowRgn
+ * includes the tooltip area, preventing OS-level window clipping when tooltips extend
+ * beyond the main island pill.
  */
 
 /**
  * Dispatches an active tooltip's viewport bounding box.
- * Kept as a no-op so visual hover overlays do not manipulate native window regions.
  *
- * @param _id - Unique identifier for the tooltip.
- * @param _rect - Viewport bounding box of the tooltip element.
- * @param _radius - Optional corner radius in pixels.
+ * @param id - Unique identifier for the tooltip.
+ * @param rect - Viewport bounding box of the tooltip element.
+ * @param radius - Corner radius in pixels.
  */
 export function dispatchTooltipBounds(
-  _id: string,
-  _rect: DOMRect | { left: number; top: number; width: number; height: number },
-  _radius: number = 7
+  id: string,
+  rect: DOMRect | { left: number; top: number; width: number; height: number },
+  radius: number = 7
 ): void {
-  // No-op: tooltips are non-interactive visual overlays and do not require Win32 window regions.
+  const scale = window.devicePixelRatio || 1
+  if (typeof SetTooltipBounds === 'function') {
+    SetTooltipBounds({
+      id,
+      x: Math.round(rect.left),
+      y: Math.round(rect.top),
+      width: Math.round(rect.width),
+      height: Math.round(rect.height),
+      radius,
+      scale,
+      active: true
+    }).catch(() => {})
+  }
 }
 
 /**
- * Removes an active tooltip's bounding region.
- * Kept as a no-op so visual hover overlays do not manipulate native window regions.
+ * Removes an active tooltip's bounding region from the native window mask.
  *
- * @param _id - Unique identifier for the tooltip.
+ * @param id - Unique identifier for the tooltip.
  */
-export function dismissTooltipBounds(_id: string): void {
-  // No-op: tooltips are non-interactive visual overlays and do not require Win32 window regions.
+export function dismissTooltipBounds(id: string): void {
+  if (typeof ClearTooltipBounds === 'function') {
+    ClearTooltipBounds(id).catch(() => {})
+  }
 }
+

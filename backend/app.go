@@ -911,6 +911,8 @@ type App struct {
 	devExtra           int
 	satellitesMu       sync.RWMutex
 	satellites         map[string]SatelliteBounds
+	tooltipsMu         sync.RWMutex
+	tooltips           map[string]TooltipBounds
 	scale              float64
 	isHidden           bool
 	autoHideBorderless bool
@@ -946,6 +948,7 @@ func NewApp(icon []byte) *App {
 		pillR:              24,
 		scale:              1.0,
 		autoHideBorderless: false,
+		tooltips:           make(map[string]TooltipBounds),
 	}
 }
 
@@ -1431,11 +1434,45 @@ type TooltipBounds struct {
 	Active bool    `json:"active"`
 }
 
-// SetTooltipBounds is a no-op kept for frontend binding compatibility.
-func (a *App) SetTooltipBounds(bounds TooltipBounds) {}
+// SetTooltipBounds registers an active floating tooltip region to permit Win32 painting beyond the main pill.
+func (a *App) SetTooltipBounds(bounds TooltipBounds) {
+	a.tooltipsMu.Lock()
+	if a.tooltips == nil {
+		a.tooltips = make(map[string]TooltipBounds)
+	}
+	if bounds.Active && bounds.Width > 0 && bounds.Height > 0 {
+		a.tooltips[bounds.ID] = bounds
+	} else {
+		delete(a.tooltips, bounds.ID)
+	}
+	a.tooltipsMu.Unlock()
+	a.updateWindowRegion()
+}
 
-// ClearTooltipBounds is a no-op kept for frontend binding compatibility.
-func (a *App) ClearTooltipBounds(id string) {}
+// ClearTooltipBounds removes an active floating tooltip region from the Win32 window clipping mask.
+func (a *App) ClearTooltipBounds(id string) {
+	a.tooltipsMu.Lock()
+	if a.tooltips != nil {
+		delete(a.tooltips, id)
+	}
+	a.tooltipsMu.Unlock()
+	a.updateWindowRegion()
+}
+
+func (a *App) getActiveTooltips() []TooltipBounds {
+	a.tooltipsMu.RLock()
+	defer a.tooltipsMu.RUnlock()
+	if len(a.tooltips) == 0 {
+		return nil
+	}
+	list := make([]TooltipBounds, 0, len(a.tooltips))
+	for _, tt := range a.tooltips {
+		if tt.Active && tt.Width > 0 && tt.Height > 0 {
+			list = append(list, tt)
+		}
+	}
+	return list
+}
 
 // SatelliteBounds represents the position, dimensions, radius, and anchor configuration for a floating satellite dock.
 type SatelliteBounds struct {
@@ -1523,10 +1560,22 @@ func satellitesSignature(satellites []SatelliteBounds) string {
 	return sb.String()
 }
 
+func tooltipsSignature(tooltips []TooltipBounds) string {
+	if len(tooltips) == 0 {
+		return ""
+	}
+	var sb strings.Builder
+	for _, t := range tooltips {
+		fmt.Fprintf(&sb, "%s:%d:%d:%d:%d:%d;", t.ID, t.X, t.Y, t.Width, t.Height, t.Radius)
+	}
+	return sb.String()
+}
+
 type regionCache struct {
 	w, h, r, offsetX int
 	totalVintaH      int
 	satellitesHash   string
+	tooltipsHash     string
 	padding          int
 	scale            float64
 	sw               int
@@ -1628,11 +1677,15 @@ func (a *App) updateWindowRegion() {
 	if !a.isHidden {
 		sats = a.getActiveSatellites()
 	}
-	setClickRegion(hwnd, mainW, mainH, mainR, a.offsetX, effectiveMainW, effectiveMainH, totalVintaH, sats, padding, a.scale)
+	var tooltips []TooltipBounds
+	if !a.isHidden {
+		tooltips = a.getActiveTooltips()
+	}
+	setClickRegion(hwnd, mainW, mainH, mainR, a.offsetX, effectiveMainW, effectiveMainH, totalVintaH, sats, tooltips, padding, a.scale)
 }
 
-// setClickRegion updates the Win32 window region to combine the main pill and satellites.
-func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, effectiveMainW int, effectiveMainH int, totalVintaH int, satellites []SatelliteBounds, padding int, scale float64) {
+// setClickRegion updates the Win32 window region to combine the main pill, satellites, and active tooltips.
+func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, effectiveMainW int, effectiveMainH int, totalVintaH int, satellites []SatelliteBounds, tooltips []TooltipBounds, padding int, scale float64) {
 	if hwnd == 0 {
 		return
 	}
@@ -1667,11 +1720,13 @@ func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, effectiveMai
 	}
 
 	satSig := satellitesSignature(satellites)
+	ttSig := tooltipsSignature(tooltips)
 
 	// Early exit if identical region is already applied to HWND
 	if lastRegion.w == w && lastRegion.h == h && lastRegion.r == r &&
 		lastRegion.offsetX == offsetX && lastRegion.totalVintaH == totalVintaH &&
 		lastRegion.satellitesHash == satSig &&
+		lastRegion.tooltipsHash == ttSig &&
 		lastRegion.padding == padding && lastRegion.scale == scale && lastRegion.sw == sw {
 		return
 	}
@@ -1680,6 +1735,7 @@ func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, effectiveMai
 		w: w, h: h, r: r, offsetX: offsetX,
 		totalVintaH:    totalVintaH,
 		satellitesHash: satSig,
+		tooltipsHash:   ttSig,
 		padding:        padding, scale: scale, sw: sw,
 	}
 
@@ -1704,11 +1760,46 @@ func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, effectiveMai
 			regions = append(regions, hrgnSat)
 		}
 	}
+	for _, tt := range tooltips {
+		if hrgnTt := createTooltipRegion(tt, scale); hrgnTt != 0 {
+			regions = append(regions, hrgnTt)
+		}
+	}
 
 	hrgnFinal := combineWindowRegions(regions...)
 	if hrgnFinal != 0 {
 		_, _, _ = procSetWindowRgn.Call(hwnd, hrgnFinal, 1)
 	}
+}
+
+// createTooltipRegion creates a Win32 HRGN for an active floating tooltip overlay.
+func createTooltipRegion(tt TooltipBounds, scale float64) uintptr {
+	scaleInt := func(v int) int {
+		return int(float64(v) * scale)
+	}
+
+	pad := scaleInt(OutsidePadding)
+	left := scaleInt(tt.X) - pad
+	if left < 0 {
+		left = 0
+	}
+	top := scaleInt(tt.Y) - pad
+	if top < 0 {
+		top = 0
+	}
+	right := scaleInt(tt.X) + scaleInt(tt.Width) + pad
+	bottom := scaleInt(tt.Y) + scaleInt(tt.Height) + pad
+	r := scaleInt(tt.Radius)
+	if r <= 0 {
+		r = scaleInt(7)
+	}
+
+	hrgn, _, _ := procCreateRoundRectRgn.Call(
+		uintptr(left), uintptr(top),
+		uintptr(right), uintptr(bottom),
+		uintptr(r*2), uintptr(r*2),
+	)
+	return hrgn
 }
 
 // createMainPillRegion generates the Win32 HRGN for the primary dynamic island.

@@ -19,6 +19,7 @@
 
   import MainIsland from './components/MainIsland.svelte'
   import ControlsSatellite from './components/ControlsSatellite.svelte'
+  import CustomTooltip from './components/CustomTooltip.svelte'
   import { getFallbackPage } from './utils/navigation'
   import { initIslandEvents } from './services/islandEvents'
   import { WindowBoundsManager } from './services/windowBounds'
@@ -964,5 +965,7 @@
     {/if}
   </div>
 </div>
+
+<CustomTooltip />
 
 <style src="./App.css"></style>
