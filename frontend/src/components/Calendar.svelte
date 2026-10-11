@@ -265,7 +265,7 @@
     display: flex;
     width: 100%;
     height: 100%;
-    padding: 0.8rem 1rem;
+    padding: 8px 12px;
     box-sizing: border-box;
     color: var(--c-text-primary, #ffffff);
   }
@@ -276,7 +276,8 @@
     width: 100%;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
+    justify-content: flex-start;
+    gap: 4px;
     min-width: 0;
   }
 
@@ -284,11 +285,11 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 6px;
+    margin-bottom: 2px;
   }
 
   .header-title-btn {
-    font-size: 0.95rem;
+    font-size: 0.88rem;
     font-weight: 700;
     letter-spacing: -0.01em;
     background: transparent;
@@ -317,9 +318,9 @@
   }
 
   .today-btn {
-    font-size: 0.68rem;
+    font-size: 0.65rem;
     font-weight: 600;
-    padding: 2px 8px;
+    padding: 1px 7px;
     border-radius: 10px;
     background: var(--c-hover);
     color: var(--c-primary);
@@ -333,8 +334,8 @@
   }
 
   .icon-nav-btn {
-    width: 24px;
-    height: 24px;
+    width: 22px;
+    height: 22px;
     border-radius: 50%;
     background: var(--c-item-bg);
     border: 1px solid var(--c-border);
@@ -356,11 +357,11 @@
     display: grid;
     grid-template-columns: repeat(7, 1fr);
     text-align: center;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
   }
 
   .weekday-cell {
-    font-size: 0.68rem;
+    font-size: 0.64rem;
     font-weight: 600;
     color: var(--c-text-muted);
     text-transform: uppercase;
@@ -370,8 +371,8 @@
   .days-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    grid-auto-rows: 1fr;
-    gap: 3px;
+    grid-auto-rows: 24px;
+    gap: 2px;
     flex: 1;
   }
 
@@ -381,11 +382,14 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    border-radius: 8px;
+    width: 24px;
+    height: 24px;
+    margin: 0 auto;
+    border-radius: 6px;
     background: transparent;
     border: none;
     color: var(--c-text-primary);
-    font-size: 0.8rem;
+    font-size: 0.74rem;
     font-weight: 500;
     cursor: pointer;
     padding: 0;
