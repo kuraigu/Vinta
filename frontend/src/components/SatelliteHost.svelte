@@ -117,7 +117,16 @@
    * Synchronizes bounds whenever geometry properties or offset change.
    */
   function syncSatelliteBoundsEffect() {
-    void { width, height, gap, offsetX, offsetY, clampedOffsetX, active, radius }
+    void {
+      width,
+      height,
+      gap,
+      offsetX,
+      offsetY,
+      clampedOffsetX,
+      active,
+      radius
+    }
     syncSatelliteBounds()
   }
 
@@ -286,7 +295,8 @@
     z-index: 110;
     pointer-events: auto;
     cursor: default;
-    border-radius: var(--sat-radius-tl) var(--sat-radius-tr) var(--sat-radius-br) var(--sat-radius-bl);
+    border-radius: var(--sat-radius-tl) var(--sat-radius-tr)
+      var(--sat-radius-br) var(--sat-radius-bl);
     transition: height 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   }
 

@@ -57,7 +57,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 13px 15px;
-  background: linear-gradient(
+  background:
+    linear-gradient(
       145deg,
       rgba(255, 255, 255, 0.055) 0%,
       rgba(255, 255, 255, 0.018) 100%
@@ -73,7 +74,8 @@
 }
 
 .bento-action-card:hover {
-  background: linear-gradient(
+  background:
+    linear-gradient(
       145deg,
       rgba(255, 255, 255, 0.075) 0%,
       rgba(255, 255, 255, 0.028) 100%

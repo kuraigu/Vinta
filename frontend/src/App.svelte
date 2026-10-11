@@ -1,6 +1,10 @@
 <script lang="ts">
   import { onMount, setContext, type Component } from 'svelte'
-  import { FocusWindow, Quit, GetDisplayLayout } from '../bindings/Vinta/backend/app.js'
+  import {
+    FocusWindow,
+    Quit,
+    GetDisplayLayout
+  } from '../bindings/Vinta/backend/app.js'
   import { Events } from '@wailsio/runtime'
 
   import NotificationPage, {
@@ -412,10 +416,10 @@
 
   let activeOpacity = $derived(
     isHidden
-      ? $opacityHiddenStore ?? 1.0
+      ? ($opacityHiddenStore ?? 1.0)
       : expanded
-        ? $opacityExpandedStore ?? 1.0
-        : $opacityMinimalStore ?? 1.0
+        ? ($opacityExpandedStore ?? 1.0)
+        : ($opacityMinimalStore ?? 1.0)
   )
 
   function getBoundsForState(
@@ -424,11 +428,14 @@
     isHid: boolean = isHidden
   ) {
     const isTargetHome =
-      config === homeConfig || (config === islandConfig && activePage === HomePage)
+      config === homeConfig ||
+      (config === islandConfig && activePage === HomePage)
     const isTargetMedia =
-      config === mediaConfig || (config === islandConfig && activePage === MediaPage)
+      config === mediaConfig ||
+      (config === islandConfig && activePage === MediaPage)
     const isTargetNotif =
-      config === notifConfig || (config === islandConfig && activePage === NotificationPage)
+      config === notifConfig ||
+      (config === islandConfig && activePage === NotificationPage)
 
     const effectiveConfig =
       !isExp && !isHid && !isTargetHome && !isTargetMedia && !isTargetNotif
@@ -810,72 +817,94 @@
       }
     )
 
-    const unsubDevTestPin = Events.On('devtest-pin', (ev: { data: unknown }) => {
-      const data = ev?.data as { pinned?: boolean }
-      if (typeof data?.pinned === 'boolean') {
-        $devPinnedStore = data.pinned
-      }
-    })
-
-    const unsubDevTestTheme = Events.On('devtest-theme', (ev: { data: unknown }) => {
-      const data = ev?.data as { theme?: 'dark' | 'light' }
-      if (data?.theme === 'dark' || data?.theme === 'light') {
-        $themeStore = data.theme
-        document.documentElement.setAttribute('data-theme', data.theme)
-      }
-    })
-
-    const unsubDevTestBounds = Events.On('devtest-bounds-overlay', (ev: { data: unknown }) => {
-      const data = ev?.data as { show?: boolean }
-      if (typeof data?.show === 'boolean') {
-        $debugBoundsOverlay = data.show
-        if (data.show) {
-          document.body.classList.add('debug-bounds-overlay')
-        } else {
-          document.body.classList.remove('debug-bounds-overlay')
+    const unsubDevTestPin = Events.On(
+      'devtest-pin',
+      (ev: { data: unknown }) => {
+        const data = ev?.data as { pinned?: boolean }
+        if (typeof data?.pinned === 'boolean') {
+          $devPinnedStore = data.pinned
         }
       }
-    })
+    )
 
-    const unsubDevTestLogs = Events.On('devtest-logs', (ev: { data: unknown }) => {
-      const data = ev?.data as { enabled?: boolean }
-      if (typeof data?.enabled === 'boolean') {
-        $debugLogs = data.enabled
-      }
-    })
-
-    const unsubDevTestBattery = Events.On('devtest-battery', (ev: { data: unknown }) => {
-      const data = ev?.data as { isSimulating?: boolean; data?: BatteryData }
-      if (typeof data?.isSimulating === 'boolean') {
-        isSimulatingBatteryStore.set(data.isSimulating)
-        if (data.data) {
-          batteryDataStore.set(data.data)
+    const unsubDevTestTheme = Events.On(
+      'devtest-theme',
+      (ev: { data: unknown }) => {
+        const data = ev?.data as { theme?: 'dark' | 'light' }
+        if (data?.theme === 'dark' || data?.theme === 'light') {
+          $themeStore = data.theme
+          document.documentElement.setAttribute('data-theme', data.theme)
         }
       }
-    })
+    )
 
-    const unsubDevTestWireless = Events.On('devtest-wireless', (ev: { data: unknown }) => {
-      const data = ev?.data as { isSimulating?: boolean; data?: WirelessData }
-      if (typeof data?.isSimulating === 'boolean') {
-        isSimulatingWirelessStore.set(data.isSimulating)
-        if (data.data) {
-          wirelessDataStore.set(data.data)
+    const unsubDevTestBounds = Events.On(
+      'devtest-bounds-overlay',
+      (ev: { data: unknown }) => {
+        const data = ev?.data as { show?: boolean }
+        if (typeof data?.show === 'boolean') {
+          $debugBoundsOverlay = data.show
+          if (data.show) {
+            document.body.classList.add('debug-bounds-overlay')
+          } else {
+            document.body.classList.remove('debug-bounds-overlay')
+          }
         }
       }
-    })
+    )
 
-    const unsubDevTestWeather = Events.On('devtest-weather', (ev: { data: unknown }) => {
-      const data = ev?.data as {
-        location?: WeatherLocation
-        unit?: TemperatureUnit
-        timezone?: string
-        simulateOffline?: boolean
+    const unsubDevTestLogs = Events.On(
+      'devtest-logs',
+      (ev: { data: unknown }) => {
+        const data = ev?.data as { enabled?: boolean }
+        if (typeof data?.enabled === 'boolean') {
+          $debugLogs = data.enabled
+        }
       }
-      if (data?.location) weatherLocationStore.set(data.location)
-      if (data?.unit) weatherUnitStore.set(data.unit)
-      if (data?.timezone) timezoneStore.set(data.timezone)
-      if (typeof data?.simulateOffline === 'boolean') simulateOfflineStore.set(data.simulateOffline)
-    })
+    )
+
+    const unsubDevTestBattery = Events.On(
+      'devtest-battery',
+      (ev: { data: unknown }) => {
+        const data = ev?.data as { isSimulating?: boolean; data?: BatteryData }
+        if (typeof data?.isSimulating === 'boolean') {
+          isSimulatingBatteryStore.set(data.isSimulating)
+          if (data.data) {
+            batteryDataStore.set(data.data)
+          }
+        }
+      }
+    )
+
+    const unsubDevTestWireless = Events.On(
+      'devtest-wireless',
+      (ev: { data: unknown }) => {
+        const data = ev?.data as { isSimulating?: boolean; data?: WirelessData }
+        if (typeof data?.isSimulating === 'boolean') {
+          isSimulatingWirelessStore.set(data.isSimulating)
+          if (data.data) {
+            wirelessDataStore.set(data.data)
+          }
+        }
+      }
+    )
+
+    const unsubDevTestWeather = Events.On(
+      'devtest-weather',
+      (ev: { data: unknown }) => {
+        const data = ev?.data as {
+          location?: WeatherLocation
+          unit?: TemperatureUnit
+          timezone?: string
+          simulateOffline?: boolean
+        }
+        if (data?.location) weatherLocationStore.set(data.location)
+        if (data?.unit) weatherUnitStore.set(data.unit)
+        if (data?.timezone) timezoneStore.set(data.timezone)
+        if (typeof data?.simulateOffline === 'boolean')
+          simulateOfflineStore.set(data.simulateOffline)
+      }
+    )
 
     return () => {
       finishDragGesture()

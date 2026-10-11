@@ -748,9 +748,7 @@
     <!-- Compact Minimal View with Spinning Vinyl Disc, Track Info, Clock, and Audio Wave Bars -->
     <div class="minimal-layout">
       <!-- Spinning Vinyl Disc Album Art -->
-      <div
-        class="vinyl-disc {media.isPlaying ? 'spinning' : 'paused'}"
-      >
+      <div class="vinyl-disc {media.isPlaying ? 'spinning' : 'paused'}">
         <div class="vinyl-groove">
           {#if displayAlbumArt && !imgLoadFailed}
             <img
@@ -889,7 +887,10 @@
 
         <button
           class="device-badge clickable"
-          use:islandTooltip={{ text: `Switch to ${appBrand.name}`, position: 'bottom' }}
+          use:islandTooltip={{
+            text: `Switch to ${appBrand.name}`,
+            position: 'bottom'
+          }}
           aria-label="Switch to {appBrand.name}"
           onclick={handleFocusApp}
         >
@@ -980,7 +981,9 @@
           <div class="track-details">
             <!-- Line 1: Artist / Album Name (Subtle Subtitle Style) -->
             <div class="artist-name">
-              {media.artist || media.album || (media.title ? 'Unknown Artist' : 'Media Player')}
+              {media.artist ||
+                media.album ||
+                (media.title ? 'Unknown Artist' : 'Media Player')}
             </div>
 
             <!-- Line 2: Track Title (Prominent Headline Style with marquee support) -->
@@ -1038,11 +1041,12 @@
                 class:is-active={media.isShuffleActive}
                 disabled={media.isShuffleActive === undefined}
                 use:islandTooltip={{
-                  text: media.isShuffleActive === undefined
-                    ? 'Shuffle: Not supported'
-                    : media.isShuffleActive
-                      ? 'Shuffle: On'
-                      : 'Shuffle: Off',
+                  text:
+                    media.isShuffleActive === undefined
+                      ? 'Shuffle: Not supported'
+                      : media.isShuffleActive
+                        ? 'Shuffle: On'
+                        : 'Shuffle: Off',
                   align: 'left'
                 }}
                 aria-label="Shuffle"
@@ -1094,13 +1098,14 @@
                   media.autoRepeatMode > 0}
                 disabled={media.autoRepeatMode === undefined}
                 use:islandTooltip={{
-                  text: media.autoRepeatMode === undefined
-                    ? 'Repeat: Not supported'
-                    : media.autoRepeatMode === 1
-                      ? 'Repeat: One Track'
-                      : media.autoRepeatMode === 2
-                        ? 'Repeat: All Tracks'
-                        : 'Repeat: Off'
+                  text:
+                    media.autoRepeatMode === undefined
+                      ? 'Repeat: Not supported'
+                      : media.autoRepeatMode === 1
+                        ? 'Repeat: One Track'
+                        : media.autoRepeatMode === 2
+                          ? 'Repeat: All Tracks'
+                          : 'Repeat: Off'
                 }}
                 aria-label="Repeat"
                 onclick={(e) => handleControl('repeat', e)}
@@ -1117,7 +1122,9 @@
               <button
                 class="action-btn session-btn"
                 class:is-active={isSessionMenuOpen}
-                use:islandTooltip={{ text: `Media Sources (${media.sessions.length})` }}
+                use:islandTooltip={{
+                  text: `Media Sources (${media.sessions.length})`
+                }}
                 aria-label="Media Sources"
                 onclick={toggleSessionMenu}
               >
@@ -1131,7 +1138,10 @@
           <div class="volume-control">
             <button
               class="vol-icon-btn"
-              use:islandTooltip={{ text: media.isMuted ? 'Unmute' : 'Mute', align: 'right' }}
+              use:islandTooltip={{
+                text: media.isMuted ? 'Unmute' : 'Mute',
+                align: 'right'
+              }}
               aria-label={media.isMuted ? 'Unmute' : 'Mute'}
               onclick={(e) => handleControl('toggle_mute', e)}
             >
@@ -1182,7 +1192,9 @@
             {/if}
             <!-- Dynamic Equalizer Waveform Timeline Scrubber -->
             <div
-              class="spectrum-bars-container {isDraggingSeek ? 'is-dragging' : ''}"
+              class="spectrum-bars-container {isDraggingSeek
+                ? 'is-dragging'
+                : ''}"
             >
               <DynamicEqualizer
                 isPlaying={media.isPlaying}

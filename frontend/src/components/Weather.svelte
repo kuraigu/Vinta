@@ -217,7 +217,9 @@
         <div class="banner-left">
           <span class="condition-name">{bannerConditionTitle}</span>
           <div class="metrics-split">
-            <span class="banner-temp">{displayTemp.val}<span class="temp-degree">°</span></span>
+            <span class="banner-temp"
+              >{displayTemp.val}<span class="temp-degree">°</span></span
+            >
             <div class="metrics-divider"></div>
             <div class="meta-stack">
               <span class="meta-date">{bannerDate}</span>
@@ -232,7 +234,12 @@
         <!-- Right Illustrated Vector Graphic -->
         <div class="banner-right">
           {#if illustrationType === 'sunny'}
-            <svg class="weather-art-svg" viewBox="0 0 110 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg
+              class="weather-art-svg"
+              viewBox="0 0 110 80"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
               <defs>
                 <radialGradient id="sunOuterAura" cx="0.5" cy="0.5" r="0.5">
                   <stop offset="0%" stop-color="#ffffff" stop-opacity="0.25" />
@@ -244,16 +251,39 @@
                   <stop offset="45%" stop-color="#fde047" />
                   <stop offset="100%" stop-color="#f59e0b" />
                 </radialGradient>
-                <filter id="sunBloom" x="-30%" y="-30%" width="160%" height="160%">
-                  <feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#f59e0b" flood-opacity="0.5" />
+                <filter
+                  id="sunBloom"
+                  x="-30%"
+                  y="-30%"
+                  width="160%"
+                  height="160%"
+                >
+                  <feDropShadow
+                    dx="0"
+                    dy="0"
+                    stdDeviation="6"
+                    flood-color="#f59e0b"
+                    flood-opacity="0.5"
+                  />
                 </filter>
               </defs>
               <circle cx="78" cy="38" r="38" fill="url(#sunOuterAura)" />
               <circle cx="78" cy="38" r="26" fill="rgba(255, 255, 255, 0.15)" />
-              <circle cx="78" cy="38" r="18" fill="url(#sunCore)" filter="url(#sunBloom)" />
+              <circle
+                cx="78"
+                cy="38"
+                r="18"
+                fill="url(#sunCore)"
+                filter="url(#sunBloom)"
+              />
             </svg>
           {:else if illustrationType === 'night'}
-            <svg class="weather-art-svg" viewBox="0 0 110 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg
+              class="weather-art-svg"
+              viewBox="0 0 110 80"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
               <defs>
                 <radialGradient id="moonGlow" cx="0.5" cy="0.5" r="0.5">
                   <stop offset="0%" stop-color="#fef08a" stop-opacity="0.75" />
@@ -261,16 +291,36 @@
                 </radialGradient>
                 <linearGradient id="cloudGradNight" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stop-color="#ffffff" stop-opacity="0.96" />
-                  <stop offset="100%" stop-color="#e0e7ff" stop-opacity="0.88" />
+                  <stop
+                    offset="100%"
+                    stop-color="#e0e7ff"
+                    stop-opacity="0.88"
+                  />
                 </linearGradient>
-                <filter id="cloudSoftShadow" x="-15%" y="-15%" width="130%" height="130%">
-                  <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#1e1b4b" flood-opacity="0.25" />
+                <filter
+                  id="cloudSoftShadow"
+                  x="-15%"
+                  y="-15%"
+                  width="130%"
+                  height="130%"
+                >
+                  <feDropShadow
+                    dx="0"
+                    dy="3"
+                    stdDeviation="4"
+                    flood-color="#1e1b4b"
+                    flood-opacity="0.25"
+                  />
                 </filter>
               </defs>
               <!-- Star Sparkles -->
               <circle cx="24" cy="18" r="1.5" fill="#ffffff" opacity="0.8" />
               <circle cx="48" cy="12" r="1" fill="#ffffff" opacity="0.6" />
-              <path d="M 38 26 Q 38 29 40 29 Q 38 29 38 32 Q 38 29 36 29 Q 38 29 38 26 Z" fill="#ffffff" opacity="0.85" />
+              <path
+                d="M 38 26 Q 38 29 40 29 Q 38 29 38 32 Q 38 29 36 29 Q 38 29 38 26 Z"
+                fill="#ffffff"
+                opacity="0.85"
+              />
               <!-- Crescent Moon -->
               <circle cx="78" cy="28" r="24" fill="url(#moonGlow)" />
               <path
@@ -285,14 +335,31 @@
               />
             </svg>
           {:else if illustrationType === 'rain' || illustrationType === 'thunder'}
-            <svg class="weather-art-svg" viewBox="0 0 110 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg
+              class="weather-art-svg"
+              viewBox="0 0 110 80"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
               <defs>
                 <linearGradient id="rainCloudGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stop-color="#f1f5f9" stop-opacity="0.95" />
                   <stop offset="100%" stop-color="#94a3b8" stop-opacity="0.9" />
                 </linearGradient>
-                <filter id="rainCloudShadow" x="-15%" y="-15%" width="130%" height="130%">
-                  <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#0f172a" flood-opacity="0.25" />
+                <filter
+                  id="rainCloudShadow"
+                  x="-15%"
+                  y="-15%"
+                  width="130%"
+                  height="130%"
+                >
+                  <feDropShadow
+                    dx="0"
+                    dy="3"
+                    stdDeviation="4"
+                    flood-color="#0f172a"
+                    flood-opacity="0.25"
+                  />
                 </filter>
               </defs>
               <path
@@ -307,24 +374,79 @@
                   filter="drop-shadow(0 0 4px #eab308)"
                 />
               {/if}
-              <line x1="36" y1="52" x2="31" y2="63" stroke="rgba(255,255,255,0.7)" stroke-width="2.5" stroke-linecap="round" />
-              <line x1="48" y1="54" x2="43" y2="65" stroke="rgba(255,255,255,0.7)" stroke-width="2.5" stroke-linecap="round" />
-              <line x1="60" y1="52" x2="55" y2="63" stroke="rgba(255,255,255,0.7)" stroke-width="2.5" stroke-linecap="round" />
-              <line x1="72" y1="54" x2="67" y2="65" stroke="rgba(255,255,255,0.7)" stroke-width="2.5" stroke-linecap="round" />
+              <line
+                x1="36"
+                y1="52"
+                x2="31"
+                y2="63"
+                stroke="rgba(255,255,255,0.7)"
+                stroke-width="2.5"
+                stroke-linecap="round"
+              />
+              <line
+                x1="48"
+                y1="54"
+                x2="43"
+                y2="65"
+                stroke="rgba(255,255,255,0.7)"
+                stroke-width="2.5"
+                stroke-linecap="round"
+              />
+              <line
+                x1="60"
+                y1="52"
+                x2="55"
+                y2="63"
+                stroke="rgba(255,255,255,0.7)"
+                stroke-width="2.5"
+                stroke-linecap="round"
+              />
+              <line
+                x1="72"
+                y1="54"
+                x2="67"
+                y2="65"
+                stroke="rgba(255,255,255,0.7)"
+                stroke-width="2.5"
+                stroke-linecap="round"
+              />
             </svg>
           {:else}
             <!-- Default Cloud Art -->
-            <svg class="weather-art-svg" viewBox="0 0 110 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg
+              class="weather-art-svg"
+              viewBox="0 0 110 80"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+            >
               <defs>
                 <linearGradient id="cloudGradDay" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stop-color="#ffffff" stop-opacity="0.98" />
                   <stop offset="100%" stop-color="#e2e8f0" stop-opacity="0.9" />
                 </linearGradient>
-                <filter id="dayCloudShadow" x="-15%" y="-15%" width="130%" height="130%">
-                  <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#0f172a" flood-opacity="0.2" />
+                <filter
+                  id="dayCloudShadow"
+                  x="-15%"
+                  y="-15%"
+                  width="130%"
+                  height="130%"
+                >
+                  <feDropShadow
+                    dx="0"
+                    dy="3"
+                    stdDeviation="4"
+                    flood-color="#0f172a"
+                    flood-opacity="0.2"
+                  />
                 </filter>
               </defs>
-              <circle cx="72" cy="24" r="14" fill="#fde047" filter="drop-shadow(0 0 8px rgba(250, 204, 21, 0.6))" />
+              <circle
+                cx="72"
+                cy="24"
+                r="14"
+                fill="#fde047"
+                filter="drop-shadow(0 0 8px rgba(250, 204, 21, 0.6))"
+              />
               <path
                 d="M 36 52 A 10 10 0 0 1 36 32 A 13 13 0 0 1 56 24 A 14 14 0 0 1 78 34 A 10 10 0 0 1 78 52 Z"
                 fill="url(#cloudGradDay)"
@@ -338,8 +460,13 @@
       <!-- Expand Indicator Toggle -->
       <div class="expand-indicator-row">
         <div class="expand-indicator">
-          <span class="expand-hint">{isForecastOpen ? 'Hide forecast' : 'Forecast'}</span>
-          <ChevronDown size={12} class="chevron-icon {isForecastOpen ? 'open' : ''}" />
+          <span class="expand-hint"
+            >{isForecastOpen ? 'Hide forecast' : 'Forecast'}</span
+          >
+          <ChevronDown
+            size={12}
+            class="chevron-icon {isForecastOpen ? 'open' : ''}"
+          />
         </div>
       </div>
 
@@ -370,7 +497,9 @@
               <div class="f-day-item">
                 <span class="f-day-title">{f.day}</span>
                 <FIcon size={18} class="f-day-icon" />
-                <span class="f-day-temp">{convertTemp(f.tempMax, $weatherUnitStore).str}</span>
+                <span class="f-day-temp"
+                  >{convertTemp(f.tempMax, $weatherUnitStore).str}</span
+                >
               </div>
             {/each}
           </div>
@@ -398,8 +527,12 @@
   }
 
   @keyframes pulse {
-    0% { opacity: 0.4; }
-    100% { opacity: 0.8; }
+    0% {
+      opacity: 0.4;
+    }
+    100% {
+      opacity: 0.8;
+    }
   }
 
   .temp-minimal {
@@ -427,7 +560,9 @@
     cursor: pointer;
     user-select: none;
     box-shadow: 0 4px 18px rgba(0, 0, 0, 0.18);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease;
     color: #ffffff;
   }
 
@@ -599,7 +734,9 @@
     font-size: 0.68rem;
     font-weight: 500;
     color: rgba(255, 255, 255, 0.92);
-    transition: opacity 0.2s ease, background 0.2s ease;
+    transition:
+      opacity 0.2s ease,
+      background 0.2s ease;
   }
 
   .weather-banner-card:hover .expand-indicator {
@@ -735,7 +872,11 @@
   }
 
   @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
   }
 </style>

@@ -10,7 +10,6 @@
   gap: 8px;
 }
 
-
 /* Standard Toggle Switch */
 .toggle-switch {
   position: relative;
@@ -70,7 +69,9 @@
     0 4px 18px rgba(0, 0, 0, 0.22);
   color: #ffffff;
   text-align: left;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .dev-banner:hover {
@@ -118,7 +119,9 @@
     0 4px 18px rgba(0, 0, 0, 0.25);
   color: #ffffff;
   text-align: left;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .update-card:hover {

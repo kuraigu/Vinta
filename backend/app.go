@@ -44,7 +44,6 @@ var (
 	procIsWindowVisible          = user32.NewProc("IsWindowVisible")
 	procIsIconic                 = user32.NewProc("IsIconic")
 	procGetAncestor              = user32.NewProc("GetAncestor")
-	procShowWindow               = user32.NewProc("ShowWindow")
 
 	shell32                          = syscall.NewLazyDLL("shell32.dll")
 	procSHQueryUserNotificationState = shell32.NewProc("SHQueryUserNotificationState")
@@ -2183,7 +2182,6 @@ func createSatelliteRegion(sat SatelliteBounds, mainW, mainH, offsetX, sw int, s
 
 	return createComplexRoundRectRgn(left, top, right, bottom, tl, tr, br, bl)
 }
-
 
 // combineWindowRegions merges a slice of Win32 HRGNs into a single composite region.
 func combineWindowRegions(regions ...uintptr) uintptr {

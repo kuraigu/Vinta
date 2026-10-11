@@ -14,11 +14,7 @@
   import CustomSelect from '../components/CustomSelect.svelte'
   import NotificationDevControls from './NotificationDevControls.svelte'
   import HomeDevControls from './HomeDevControls.svelte'
-  import {
-    themeStore,
-    devPinnedStore,
-    activePageIdStore
-  } from '../store'
+  import { themeStore, devPinnedStore, activePageIdStore } from '../store'
   import { debugBoundsOverlay, debugLogs } from './debugConfig'
 
   let isExpandedMode = $state(false)
@@ -89,12 +85,15 @@
   onMount(() => {
     document.documentElement.setAttribute('data-theme', 'dark')
 
-    const unsubSync = Events.On('devtest-sync-page', (ev: { data: unknown }) => {
-      const pageId = (ev?.data as { pageId?: string })?.pageId
-      if (pageId && pageId !== targetMode) {
-        targetMode = pageId
+    const unsubSync = Events.On(
+      'devtest-sync-page',
+      (ev: { data: unknown }) => {
+        const pageId = (ev?.data as { pageId?: string })?.pageId
+        if (pageId && pageId !== targetMode) {
+          targetMode = pageId
+        }
       }
-    })
+    )
 
     return () => {
       unsubSync()
@@ -121,7 +120,9 @@
       <button
         class="action-btn {isExpandedMode ? 'active' : ''}"
         onclick={toggleExpandedMode}
-        title={isExpandedMode ? 'Switch to Minimal Island' : 'Switch to Expanded Card'}
+        title={isExpandedMode
+          ? 'Switch to Minimal Island'
+          : 'Switch to Expanded Card'}
       >
         {#if isExpandedMode}
           <Minimize2 size={14} strokeWidth={2.2} />
@@ -133,7 +134,9 @@
       <button
         class="action-btn {$debugBoundsOverlay ? 'active' : ''}"
         onclick={toggleBoundsOverlay}
-        title={$debugBoundsOverlay ? 'Hide Bounds Overlay' : 'Show Bounds Overlay'}
+        title={$debugBoundsOverlay
+          ? 'Hide Bounds Overlay'
+          : 'Show Bounds Overlay'}
       >
         <Crosshair size={14} strokeWidth={2.2} />
       </button>
@@ -146,11 +149,7 @@
         <ScrollText size={14} strokeWidth={2.2} />
       </button>
 
-      <button
-        class="action-btn"
-        onclick={toggleTheme}
-        title="Toggle Theme"
-      >
+      <button class="action-btn" onclick={toggleTheme} title="Toggle Theme">
         {#if $themeStore === 'dark'}
           <Sun size={14} strokeWidth={2.2} />
         {:else}
@@ -190,7 +189,8 @@
         {:else}
           <div class="empty-state">
             <span class="empty-title">
-              {pageOptions.find((p) => p.value === targetMode)?.label || 'Active Page'}
+              {pageOptions.find((p) => p.value === targetMode)?.label ||
+                'Active Page'}
             </span>
             <p class="empty-description">
               No specialized mock event controls are configured for this view.
@@ -272,7 +272,10 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    transition:
+      background 0.15s ease,
+      color 0.15s ease,
+      border-color 0.15s ease;
   }
 
   .action-btn:hover {

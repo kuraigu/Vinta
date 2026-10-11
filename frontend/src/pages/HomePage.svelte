@@ -240,9 +240,14 @@
                 <span class="time-subtle-ampm">{amPm}</span>
               {/if}
               <span class="meta-bullet">•</span>
-              <div class="meta-location-group" title={timezoneDetails.timezoneName}>
+              <div
+                class="meta-location-group"
+                title={timezoneDetails.timezoneName}
+              >
                 <MapPin size={11} class="meta-pin-icon" />
-                <span class="meta-city-name">{timezoneDetails.timezoneName}</span>
+                <span class="meta-city-name"
+                  >{timezoneDetails.timezoneName}</span
+                >
                 {#if timezoneDetails.gmtOffset}
                   <span class="meta-offset">({timezoneDetails.gmtOffset})</span>
                 {/if}

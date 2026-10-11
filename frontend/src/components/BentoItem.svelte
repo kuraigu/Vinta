@@ -15,7 +15,8 @@
     height: 100%;
     box-sizing: border-box;
 
-    background: linear-gradient(
+    background:
+      linear-gradient(
         145deg,
         rgba(255, 255, 255, 0.065) 0%,
         rgba(255, 255, 255, 0.02) 100%

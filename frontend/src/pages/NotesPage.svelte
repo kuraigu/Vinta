@@ -9,12 +9,7 @@
   }
 
   export type StickyColor =
-    | 'yellow'
-    | 'green'
-    | 'pink'
-    | 'purple'
-    | 'blue'
-    | 'charcoal'
+    'yellow' | 'green' | 'pink' | 'purple' | 'blue' | 'charcoal'
 
   export interface VNote {
     id: string
@@ -36,14 +31,12 @@
     FolderOpen,
     Trash2,
     List,
-    X,
     Bold,
     Italic,
     Underline,
     Strikethrough,
     ListOrdered,
-    Image as ImageIcon,
-    Check
+    Image as ImageIcon
   } from 'lucide-svelte'
   import BackButton from '../components/BackButton.svelte'
   import ScrollView from '../components/ScrollView.svelte'
@@ -145,7 +138,9 @@
           loaded.push(noteObj)
         }
 
-        loaded.sort((a, b) => (b.modTime || b.createdAt) - (a.modTime || a.createdAt))
+        loaded.sort(
+          (a, b) => (b.modTime || b.createdAt) - (a.modTime || a.createdAt)
+        )
         notes = loaded
         activeIndex = 0
         syncEditorContent()
@@ -183,8 +178,7 @@
       newTitle = `Untitled (${counter})`
     }
 
-    const nextColor =
-      colorPaletteCycle[notes.length % colorPaletteCycle.length]
+    const nextColor = colorPaletteCycle[notes.length % colorPaletteCycle.length]
     const newFileName = `${newTitle}.vnote`
     const now = Date.now()
 
@@ -260,7 +254,10 @@
       if (!activeNote) return
       const cleanTitle = activeNote.title.trim() || 'Untitled'
       try {
-        const updatedFileName = await RenameNote(activeNote.fileName, cleanTitle)
+        const updatedFileName = await RenameNote(
+          activeNote.fileName,
+          cleanTitle
+        )
         activeNote.fileName = updatedFileName
         activeNote.id = updatedFileName.replace(/\.vnote$/i, '')
         persistNote(activeNote)
@@ -527,18 +524,6 @@
   }
 
   /**
-   * Switches the active note from the drawer.
-   *
-   * @param idx - Index of note to open.
-   */
-  function selectNoteFromDrawer(idx: number) {
-    activeIndex = idx
-    isDrawerOpen = false
-    viewMode = 'editor'
-    syncEditorContent()
-  }
-
-  /**
    * Relative time formatter.
    *
    * @param timestamp - Millisecond epoch timestamp.
@@ -558,7 +543,9 @@
 </script>
 
 <div
-  class="notes-page-container {viewMode === 'editor' ? `color-${activeNote?.color || 'yellow'}` : ''}"
+  class="notes-page-container {viewMode === 'editor'
+    ? `color-${activeNote?.color || 'yellow'}`
+    : ''}"
   ondragover={handleDragOver}
   ondragleave={handleDragLeave}
   ondrop={handleDrop}
@@ -640,7 +627,8 @@
                 {@const realIndex = notes.findIndex((item) => item.id === n.id)}
                 <div
                   class="note-card card-{n.color || 'yellow'}"
-                  onclick={() => openNoteEditor(realIndex >= 0 ? realIndex : idx)}
+                  onclick={() =>
+                    openNoteEditor(realIndex >= 0 ? realIndex : idx)}
                   role="button"
                   tabindex="0"
                   onkeydown={(e) => {
@@ -653,7 +641,8 @@
                     <button
                       class="note-card-delete-btn"
                       title="Delete note"
-                      onclick={(e) => deleteNoteByIndex(e, realIndex >= 0 ? realIndex : idx)}
+                      onclick={(e) =>
+                        deleteNoteByIndex(e, realIndex >= 0 ? realIndex : idx)}
                     >
                       <Trash2 size={12} />
                     </button>
@@ -665,7 +654,9 @@
                   </div>
 
                   <div class="note-card-footer">
-                    <span class="note-card-date">{formatTimeAgo(n.modTime || n.createdAt)}</span>
+                    <span class="note-card-date"
+                      >{formatTimeAgo(n.modTime || n.createdAt)}</span
+                    >
                     {#if hasImage(n.content)}
                       <span class="note-card-has-img" title="Contains image">
                         <ImageIcon size={11} />
@@ -694,11 +685,7 @@
           <List size={15} />
         </button>
 
-        <button
-          class="banner-btn"
-          title="New note"
-          onclick={createNewNote}
-        >
+        <button class="banner-btn" title="New note" onclick={createNewNote}>
           <Plus size={16} />
         </button>
       </div>
@@ -719,9 +706,11 @@
       <!-- Right: Colors, Folder, Delete -->
       <div class="banner-right-group">
         <div class="banner-color-picker">
-          {#each colorPaletteCycle as c}
+          {#each colorPaletteCycle as c (c)}
             <button
-              class="swatch-dot-btn dot-{c} {activeNote?.color === c ? 'selected' : ''}"
+              class="swatch-dot-btn dot-{c} {activeNote?.color === c
+                ? 'selected'
+                : ''}"
               title="{c} color"
               onclick={() => handleSelectColor(c)}
             ></button>

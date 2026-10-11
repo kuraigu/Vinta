@@ -29,7 +29,8 @@
   transform: translateX(-50%);
   border-width: 4px 4px 0 4px;
   border-style: solid;
-  border-color: var(--c-dock-popover-border, rgba(255, 255, 255, 0.12)) transparent transparent transparent;
+  border-color: var(--c-dock-popover-border, rgba(255, 255, 255, 0.12))
+    transparent transparent transparent;
 }
 
 .custom-tooltip.pos-top.align-left::after {
@@ -51,7 +52,8 @@
   transform: translateX(-50%);
   border-width: 0 4px 4px 4px;
   border-style: solid;
-  border-color: transparent transparent var(--c-dock-popover-border, rgba(255, 255, 255, 0.12)) transparent;
+  border-color: transparent transparent
+    var(--c-dock-popover-border, rgba(255, 255, 255, 0.12)) transparent;
 }
 
 .custom-tooltip.pos-bottom.align-left::after {

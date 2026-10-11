@@ -1,10 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import {
-    ExternalLink,
-    ShieldCheck,
-    GitBranch
-  } from 'lucide-svelte'
+  import { ExternalLink, ShieldCheck, GitBranch } from 'lucide-svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
   import appIcon from '@appicon'
@@ -149,10 +145,7 @@
   </div>
 
   <!-- Project Links Bento -->
-  <SettingItem
-    label="Project Resources"
-    flexCol={true}
-  >
+  <SettingItem label="Project Resources" flexCol={true}>
     <div class="about-links-row">
       <SettingActionButton
         href={appInfo.repoUrl}
@@ -226,7 +219,8 @@
     gap: 14px;
     padding: 15px 17px;
     border-radius: 18px;
-    background: linear-gradient(
+    background:
+      linear-gradient(
         145deg,
         rgba(255, 255, 255, 0.07) 0%,
         rgba(255, 255, 255, 0.02) 100%
@@ -330,7 +324,8 @@
     flex-direction: column;
     padding: 13px 15px;
     border-radius: 16px;
-    background: linear-gradient(
+    background:
+      linear-gradient(
         145deg,
         rgba(255, 255, 255, 0.055) 0%,
         rgba(255, 255, 255, 0.018) 100%
@@ -379,7 +374,9 @@
     border: 1px solid var(--c-border);
     text-decoration: none;
     color: var(--c-text-primary);
-    transition: background 0.15s ease, border-color 0.15s ease;
+    transition:
+      background 0.15s ease,
+      border-color 0.15s ease;
     width: 100%;
     box-sizing: border-box;
   }

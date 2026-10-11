@@ -13,6 +13,9 @@ export default ts.config(
         ...globals.browser,
         ...globals.node
       }
+    },
+    linterOptions: {
+      reportUnusedDisableDirectives: 'off'
     }
   },
   {
@@ -21,6 +24,24 @@ export default ts.config(
       parserOptions: {
         parser: ts.parser
       }
+    }
+  },
+  {
+    files: ['**/*.svelte', '**/*.ts', '**/*.js'],
+    rules: {
+      'no-empty': ['error', { allowEmptyCatch: true }],
+      'no-useless-assignment': 'off',
+      '@typescript-eslint/no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_'
+        }
+      ],
+      '@typescript-eslint/no-explicit-any': 'off',
+      'svelte/no-dom-manipulating': 'off',
+      'svelte/no-unused-svelte-ignore': 'off'
     }
   },
   {

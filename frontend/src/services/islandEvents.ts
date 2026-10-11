@@ -170,9 +170,7 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
         ? incomingArt
         : isSameTrack && m.albumArt
           ? m.albumArt
-          : isIncomingAvailable &&
-              incomingTitle === currentTitle &&
-              m.albumArt
+          : isIncomingAvailable && incomingTitle === currentTitle && m.albumArt
             ? m.albumArt
             : ''
 
@@ -266,7 +264,8 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
 
       const isNotifEnabled = get(pageVisibilityStore).notifications
       const mediaIsActive =
-        callbacks.getActivePage() === MediaPage && get(globalMediaStore).isPlaying
+        callbacks.getActivePage() === MediaPage &&
+        get(globalMediaStore).isPlaying
 
       if (
         !get(dndStore) &&
@@ -448,7 +447,10 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
   return () => {
     window.clearInterval(batteryInterval)
     window.clearInterval(wirelessInterval)
-    window.removeEventListener('vinta-navigate-settings', handleNavigateSettings)
+    window.removeEventListener(
+      'vinta-navigate-settings',
+      handleNavigateSettings
+    )
     unsubs.forEach((unsub) => {
       try {
         unsub()

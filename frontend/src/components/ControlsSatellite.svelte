@@ -94,7 +94,8 @@
     const halfExpandedW = expandedWidth / 2
     const dockGap = 6
     const dockWidth = 32
-    const dockRightEdge = islandCenterOnScreen + halfExpandedW + dockGap + dockWidth
+    const dockRightEdge =
+      islandCenterOnScreen + halfExpandedW + dockGap + dockWidth
     const dockLeftEdge = dockRightEdge - dockWidth
 
     const rightClearance = activeMonitorWidth - dockRightEdge

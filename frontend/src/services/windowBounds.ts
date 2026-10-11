@@ -37,7 +37,8 @@ export class WindowBoundsManager {
   private pendingBoundsResolver: (() => void) | null = null
 
   private boundsTransitionTimeout: number | undefined
-  private activeTransitionEndHandler: ((e: TransitionEvent) => void) | null = null
+  private activeTransitionEndHandler: ((e: TransitionEvent) => void) | null =
+    null
   private activeIslandNode: HTMLElement | null = null
   private resizeObserver: ResizeObserver | null = null
 

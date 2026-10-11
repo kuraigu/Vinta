@@ -62,7 +62,8 @@
     gap: 12px;
     padding: 13px 15px;
     border-radius: 16px;
-    background: linear-gradient(
+    background:
+      linear-gradient(
         145deg,
         rgba(255, 255, 255, 0.055) 0%,
         rgba(255, 255, 255, 0.018) 100%
@@ -81,7 +82,8 @@
 
   .setting-item:hover {
     border-color: rgba(255, 255, 255, 0.15);
-    background: linear-gradient(
+    background:
+      linear-gradient(
         145deg,
         rgba(255, 255, 255, 0.075) 0%,
         rgba(255, 255, 255, 0.028) 100%

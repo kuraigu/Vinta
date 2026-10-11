@@ -184,7 +184,8 @@
       {#if isClockLocked && shakeKey === 'clock'}
         <div class="locked-warning">
           <AlertCircle size={12} />
-          <span>At least one widget must remain visible on the home island</span>
+          <span>At least one widget must remain visible on the home island</span
+          >
         </div>
       {/if}
     </div>
@@ -218,7 +219,8 @@
       {#if isCalLocked && shakeKey === 'calendar'}
         <div class="locked-warning">
           <AlertCircle size={12} />
-          <span>At least one widget must remain visible on the home island</span>
+          <span>At least one widget must remain visible on the home island</span
+          >
         </div>
       {/if}
     </div>
@@ -252,7 +254,8 @@
       {#if isWeatherLocked && shakeKey === 'weather'}
         <div class="locked-warning">
           <AlertCircle size={12} />
-          <span>At least one widget must remain visible on the home island</span>
+          <span>At least one widget must remain visible on the home island</span
+          >
         </div>
       {/if}
     </div>
@@ -295,7 +298,8 @@
       {#if isBatteryLocked && shakeKey === 'battery'}
         <div class="locked-warning">
           <AlertCircle size={12} />
-          <span>At least one widget must remain visible on the home island</span>
+          <span>At least one widget must remain visible on the home island</span
+          >
         </div>
       {/if}
     </div>
@@ -329,7 +333,8 @@
       {#if isWirelessLocked && shakeKey === 'wireless'}
         <div class="locked-warning">
           <AlertCircle size={12} />
-          <span>At least one widget must remain visible on the home island</span>
+          <span>At least one widget must remain visible on the home island</span
+          >
         </div>
       {/if}
     </div>

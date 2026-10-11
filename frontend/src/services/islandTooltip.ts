@@ -30,7 +30,10 @@ export function islandTooltip(
   node.addEventListener('pointerenter', handleEnter)
   node.addEventListener('pointerleave', handleLeave)
   node.addEventListener('click', handleLeave)
-  window.addEventListener('scroll', handleLeave, { capture: true, passive: true })
+  window.addEventListener('scroll', handleLeave, {
+    capture: true,
+    passive: true
+  })
 
   return {
     update(newOptions: string | IslandTooltipOptions) {

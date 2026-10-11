@@ -47,4 +47,3 @@ export function dismissTooltipBounds(id: string): void {
     ClearTooltipBounds(id).catch(() => {})
   }
 }
-

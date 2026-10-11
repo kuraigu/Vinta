@@ -196,7 +196,11 @@
           strokeWidth={2}
           class={$updateCheckingStore ? 'spinning' : ''}
         />
-        <span>{$updateCheckingStore ? 'Checking for updates...' : 'Check for Updates Now'}</span>
+        <span
+          >{$updateCheckingStore
+            ? 'Checking for updates...'
+            : 'Check for Updates Now'}</span
+        >
       </SettingActionButton>
     </SettingItem>
 
@@ -240,7 +244,8 @@
           <div class="progress-section">
             <div class="progress-bar-track">
               <div
-                class="progress-bar-fill {$updateLifecycleStatusStore === 'paused'
+                class="progress-bar-fill {$updateLifecycleStatusStore ===
+                'paused'
                   ? 'paused'
                   : ''}"
                 style="width: {$downloadProgressStore.percentage}%;"
@@ -281,7 +286,10 @@
               <span>Install on Exit</span>
             </SettingActionButton>
           {:else if $updateLifecycleStatusStore === 'downloading'}
-            <SettingActionButton variant="default" onclick={triggerPauseDownload}>
+            <SettingActionButton
+              variant="default"
+              onclick={triggerPauseDownload}
+            >
               <Pause size={12} strokeWidth={2} />
               <span>Pause</span>
             </SettingActionButton>
@@ -313,7 +321,10 @@
               <span>Verifying Integrity...</span>
             </SettingActionButton>
           {:else}
-            <SettingActionButton variant="default" onclick={handleStartDownload}>
+            <SettingActionButton
+              variant="default"
+              onclick={handleStartDownload}
+            >
               <Download size={12} strokeWidth={2} />
               <span>Download & Install</span>
             </SettingActionButton>
@@ -333,7 +344,8 @@
         {#if $downloadProgressStore.error || ($updateInfoStore.status === 'error' && $updateInfoStore.message)}
           <div class="update-error-banner">
             <AlertCircle size={14} />
-            <span>{$downloadProgressStore.error || $updateInfoStore.message}</span
+            <span
+              >{$downloadProgressStore.error || $updateInfoStore.message}</span
             >
           </div>
         {/if}

@@ -267,7 +267,6 @@
   color: var(--c-text-primary, #ffffff);
 }
 
-
 /* Empty State */
 .empty-state {
   display: flex;

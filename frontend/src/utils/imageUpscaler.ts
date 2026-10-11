@@ -91,7 +91,12 @@ export async function enhanceArtwork(
 
   const cached = artCache.get(src)
   if (cached) {
-    return { url: cached, isUpscaled: true, width: minDisplayWidth, height: minDisplayWidth }
+    return {
+      url: cached,
+      isUpscaled: true,
+      width: minDisplayWidth,
+      height: minDisplayWidth
+    }
   }
 
   // Fetch as blob to avoid CORS canvas tainting on remote URLs
@@ -146,7 +151,11 @@ export async function enhanceArtwork(
         // Stage 2: upsample to 2× source width, capped at 800px
         const targetW = Math.min(Math.round(srcW * 2), 800)
         const targetH = Math.round((targetW / srcW) * srcH)
-        const finalCanvas = bilinearUpscaleStage(currentCanvas, targetW, targetH)
+        const finalCanvas = bilinearUpscaleStage(
+          currentCanvas,
+          targetW,
+          targetH
+        )
 
         // Prefer WebP for compact high-quality encoding; fall back to JPEG
         let enhancedUrl = finalCanvas.toDataURL('image/webp', 0.92)
@@ -161,7 +170,12 @@ export async function enhanceArtwork(
         }
         artCache.set(src, enhancedUrl)
 
-        resolve({ url: enhancedUrl, isUpscaled: true, width: targetW, height: targetH })
+        resolve({
+          url: enhancedUrl,
+          isUpscaled: true,
+          width: targetW,
+          height: targetH
+        })
       } catch {
         resolve({ url: src, isUpscaled: false, width: srcW, height: srcH })
       }

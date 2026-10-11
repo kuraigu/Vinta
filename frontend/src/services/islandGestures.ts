@@ -179,10 +179,7 @@ export class IslandGestureController {
   /**
    * Concludes the dragging gesture and restores resting boundaries.
    */
-  public finishDrag(
-    e?: PointerEvent,
-    onComplete?: () => void
-  ): void {
+  public finishDrag(e?: PointerEvent, onComplete?: () => void): void {
     clearTimeout(this.dragWatchdogTimeout)
     this.dragWatchdogTimeout = undefined
     this.isDragging = false

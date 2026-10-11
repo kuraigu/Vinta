@@ -70,7 +70,8 @@
       transform = tip.position === 'top' ? 'translateY(-100%)' : 'none'
     } else if (tip.align === 'right') {
       left = target.right
-      transform = tip.position === 'top' ? 'translate(-100%, -100%)' : 'translateX(-100%)'
+      transform =
+        tip.position === 'top' ? 'translate(-100%, -100%)' : 'translateX(-100%)'
     } else {
       left = target.left + target.width / 2
     }
