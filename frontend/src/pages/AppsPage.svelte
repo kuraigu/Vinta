@@ -22,6 +22,7 @@
     SlidersHorizontal,
     Download,
     Calculator,
+    Timer,
     X
   } from 'lucide-svelte'
   import HomePage, { config as homeConfig } from './HomePage.svelte'
@@ -34,6 +35,7 @@
   import CalculatorPage, {
     config as calculatorConfig
   } from './CalculatorPage.svelte'
+  import TimerPage, { config as timerConfig } from './TimerPage.svelte'
   import ActionCenterPage, {
     config as actionCenterConfig
   } from './ActionCenterPage.svelte'
@@ -145,6 +147,14 @@
       }
     },
     {
+      id: 'timer',
+      name: 'Timer',
+      desc: 'Timer, stopwatch & focus',
+      icon: Timer,
+      visibilityKey: 'timer',
+      action: () => openApp(TimerPage, timerConfig)
+    },
+    {
       id: 'updates',
       name: 'Updates',
       desc: 'Check for updates',
@@ -157,14 +167,22 @@
     }
   ]
 
-  let filteredApps = $derived.by(() => {
+  /**
+   * Computes the list of apps sorted alphabetically and filtered by the active search query.
+   *
+   * @returns Filtered and alphabetically sorted array of applications.
+   */
+  function getFilteredApps(): AppItem[] {
     const q = searchQuery.trim().toLowerCase()
-    if (!q) return allApps
-    return allApps.filter(
+    const sorted = [...allApps].sort((a, b) => a.name.localeCompare(b.name))
+    if (!q) return sorted
+    return sorted.filter(
       (app) =>
         app.name.toLowerCase().includes(q) || app.desc.toLowerCase().includes(q)
     )
-  })
+  }
+
+  let filteredApps = $derived.by(getFilteredApps)
 </script>
 
 <div class="apps-page">

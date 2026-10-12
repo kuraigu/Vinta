@@ -7,6 +7,7 @@
     AlertCircle,
     SlidersHorizontal,
     Calculator,
+    Timer,
     LayoutGrid
   } from 'lucide-svelte'
   import SettingItem from '../SettingItem.svelte'
@@ -105,6 +106,24 @@
           type="checkbox"
           checked={$pageVisibilityStore.calculator}
           onchange={() => togglePage('calculator')}
+        />
+        <span class="slider"></span>
+      </label>
+    </SettingItem>
+
+    <SettingItem label="Timer" icon={Timer}>
+      <label class="toggle-switch">
+        <input
+          type="checkbox"
+          checked={$pageVisibilityStore.timer !== false}
+          onchange={() => {
+            const next = !($pageVisibilityStore.timer !== false)
+            $pageVisibilityStore = {
+              ...$pageVisibilityStore,
+              timer: next,
+              focus: next
+            }
+          }}
         />
         <span class="slider"></span>
       </label>

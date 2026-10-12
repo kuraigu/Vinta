@@ -1,0 +1,1716 @@
+/* ============================================================================
+   Unified Timer Application Stylesheet (Timer, Stopwatch, Focus, Alarms)
+   ============================================================================ */
+
+.timer-page {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  color: var(--c-text-primary, #ffffff);
+  box-sizing: border-box;
+  user-select: none;
+  -webkit-user-select: none;
+  overflow: hidden;
+}
+
+/* ============================================================================
+   Minimal Mode Capsule
+   ============================================================================ */
+.timer-minimal {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 10px;
+  gap: 8px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* Ambient dot matrix background pattern with organic radial fade */
+.minimal-dots-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(
+    circle,
+    currentColor 1.2px,
+    transparent 1.2px
+  );
+  background-size: 6px 6px;
+  opacity: 0.16;
+  mask-image: radial-gradient(
+    ellipse 80% 150% at 0% 50%,
+    rgba(0, 0, 0, 0.95) 0%,
+    rgba(0, 0, 0, 0.5) 45%,
+    transparent 85%
+  );
+  -webkit-mask-image: radial-gradient(
+    ellipse 80% 150% at 0% 50%,
+    rgba(0, 0, 0, 0.95) 0%,
+    rgba(0, 0, 0, 0.5) 45%,
+    transparent 85%
+  );
+  z-index: 0;
+  color: var(--c-primary, #38bdf8);
+  transition: color 0.3s ease;
+}
+
+.minimal-dots-bg.mode-timer {
+  color: #38bdf8;
+}
+
+.minimal-dots-bg.mode-stopwatch {
+  color: #a78bfa;
+}
+
+.minimal-dots-bg.mode-focus {
+  color: #fb923c;
+}
+
+.minimal-dots-bg.mode-break {
+  color: #34d399;
+}
+
+.minimal-info-trigger {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: inherit;
+  cursor: pointer;
+  outline: none;
+  flex: 1;
+  min-width: 0;
+}
+
+.minimal-info-trigger:focus-visible {
+  outline: 2px solid var(--c-primary, #38bdf8);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+.minimal-mode-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--c-text-secondary, #b0b0b0);
+  flex-shrink: 0;
+}
+
+.minimal-center-group {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.minimal-digits {
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.5px;
+  color: var(--c-text-primary, #ffffff);
+}
+
+.minimal-cycle-dots {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.cycle-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--c-border, rgba(255, 255, 255, 0.2));
+  transition: all 0.2s ease;
+}
+
+.cycle-dot.active {
+  background: #fb923c;
+  box-shadow: 0 0 6px rgba(251, 146, 60, 0.6);
+}
+
+.minimal-actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.mini-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--c-border, rgba(255, 255, 255, 0.1));
+  background: var(--c-item-bg, rgba(255, 255, 255, 0.06));
+  color: var(--c-text-secondary, #b0b0b0);
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+  outline: none;
+  padding: 0;
+}
+
+.mini-btn:hover {
+  background: var(--c-hover, rgba(255, 255, 255, 0.12));
+  color: var(--c-text-primary, #ffffff);
+  transform: scale(1.05);
+}
+
+.mini-btn:active {
+  transform: scale(0.95);
+}
+
+.mini-btn.primary {
+  background: var(--c-primary, #38bdf8);
+  color: #0b0f19;
+  border-color: transparent;
+}
+
+.mini-btn.primary.phase-focus {
+  background: #fb923c;
+  color: #1a0800;
+}
+
+.mini-btn.primary.phase-break {
+  background: #34d399;
+  color: #001f12;
+}
+
+.mini-btn.primary.phase-stopwatch {
+  background: #a78bfa;
+  color: #120a24;
+}
+
+/* ============================================================================
+   Ringing Alarm Minimal Capsule
+   ============================================================================ */
+.ringing-capsule {
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(245, 158, 11, 0.45);
+}
+
+.minimal-ringing-pulse {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    ellipse at left,
+    rgba(245, 158, 11, 0.24) 0%,
+    rgba(239, 68, 68, 0.12) 50%,
+    transparent 80%
+  );
+  animation: ringing-pulse 1.8s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+@keyframes ringing-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 0.95;
+  }
+}
+
+@keyframes bell-shake {
+  0% {
+    transform: rotate(0);
+  }
+  15% {
+    transform: rotate(14deg);
+  }
+  30% {
+    transform: rotate(-12deg);
+  }
+  45% {
+    transform: rotate(10deg);
+  }
+  60% {
+    transform: rotate(-8deg);
+  }
+  75% {
+    transform: rotate(4deg);
+  }
+  100% {
+    transform: rotate(0);
+  }
+}
+
+.bell-shake {
+  animation: bell-shake 0.8s ease-in-out infinite;
+  transform-origin: top center;
+  display: inline-block;
+}
+
+.minimal-ringing-info {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: inherit;
+  cursor: pointer;
+  outline: none;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.ringing-bell-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(245, 158, 11, 0.22);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  flex-shrink: 0;
+}
+
+.ringing-text-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.15;
+}
+
+.ringing-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--c-text-primary, #ffffff);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100px;
+}
+
+.ringing-subtitle {
+  font-size: 10px;
+  font-weight: 600;
+  color: #fbbf24;
+  font-variant-numeric: tabular-nums;
+}
+
+.ringing-capsule-actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.ringing-action-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  height: 24px;
+  border-radius: 8px;
+  font-size: 10.5px;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+}
+
+.ringing-action-pill.snooze {
+  background: rgba(245, 158, 11, 0.18);
+  border-color: rgba(245, 158, 11, 0.35);
+  color: #fbbf24;
+}
+
+.ringing-action-pill.snooze:hover {
+  background: rgba(245, 158, 11, 0.3);
+  color: #fef08a;
+}
+
+.ringing-action-pill.stop {
+  background: rgba(239, 68, 68, 0.18);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #f87171;
+}
+
+.ringing-action-pill.stop:hover {
+  background: rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+
+/* ============================================================================
+   Expanded Maximized Canvas View
+   ============================================================================ */
+.timer-expanded {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 16px 58px 16px; /* Guaranteed dock clearance */
+  box-sizing: border-box;
+  justify-content: space-between;
+  overflow: hidden;
+}
+
+/* ============================================================================
+   Expanded Ringing Alarm Banner
+   ============================================================================ */
+.expanded-ringing-banner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  margin: 4px 0 6px;
+  border-radius: 12px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  overflow: hidden;
+  z-index: 2;
+  flex-shrink: 0;
+}
+
+.ringing-banner-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at 20% 50%,
+    rgba(245, 158, 11, 0.2) 0%,
+    rgba(239, 68, 68, 0.08) 60%,
+    transparent 100%
+  );
+  animation: ringing-pulse 1.8s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.ringing-banner-left {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  flex: 1;
+}
+
+.banner-bell-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(245, 158, 11, 0.22);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  flex-shrink: 0;
+}
+
+.banner-info-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+}
+
+.banner-title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.banner-alarm-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--c-text-primary, #ffffff);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.banner-alarm-time {
+  font-size: 13px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #fbbf24;
+}
+
+.banner-alarm-meta {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--c-text-secondary, #b0b0b0);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.banner-actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.banner-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+}
+
+.banner-action-btn.snooze {
+  background: rgba(245, 158, 11, 0.2);
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+}
+
+.banner-action-btn.snooze:hover {
+  background: rgba(245, 158, 11, 0.35);
+  color: #fef08a;
+}
+
+.banner-action-btn.stop {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #f87171;
+}
+
+.banner-action-btn.stop:hover {
+  background: rgba(239, 68, 68, 0.35);
+  color: #fca5a5;
+}
+
+/* Ambient dot matrix background pattern on maximized page */
+.expanded-dots-bg {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 170px;
+  height: 130px;
+  pointer-events: none;
+  background-image: radial-gradient(
+    circle,
+    currentColor 1.2px,
+    transparent 1.2px
+  );
+  background-size: 8px 8px;
+  opacity: 0.15;
+  mask-image: radial-gradient(
+    ellipse at top right,
+    rgba(0, 0, 0, 1) 15%,
+    transparent 75%
+  );
+  -webkit-mask-image: radial-gradient(
+    ellipse at top right,
+    rgba(0, 0, 0, 1) 15%,
+    transparent 75%
+  );
+  z-index: 0;
+  color: var(--c-primary, #38bdf8);
+  transition: color 0.3s ease;
+}
+
+.expanded-dots-bg.mode-timer {
+  color: #38bdf8;
+}
+
+.expanded-dots-bg.mode-stopwatch {
+  color: #a78bfa;
+}
+
+.expanded-dots-bg.mode-focus {
+  color: #fb923c;
+}
+
+.expanded-dots-bg.mode-break {
+  color: #34d399;
+}
+
+/* Header */
+.app-header {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 34px;
+  flex-shrink: 0;
+}
+
+.tabs-nav {
+  display: flex;
+  align-items: center;
+  background: var(--c-item-bg, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--c-border, rgba(255, 255, 255, 0.08));
+  padding: 3px;
+  border-radius: 12px;
+  gap: 2px;
+}
+
+.tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 9px;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  color: var(--c-text-secondary, #b0b0b0);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+  outline: none;
+}
+
+.tab-btn:hover {
+  color: var(--c-text-primary, #ffffff);
+}
+
+.tab-btn.active {
+  background: var(--c-hover, rgba(255, 255, 255, 0.12));
+  color: var(--c-text-primary, #ffffff);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+.header-tool-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  border: 1px solid var(--c-border, rgba(255, 255, 255, 0.1));
+  background: var(--c-item-bg, rgba(255, 255, 255, 0.05));
+  color: var(--c-text-secondary, #b0b0b0);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  outline: none;
+}
+
+.header-tool-btn:hover {
+  background: var(--c-hover, rgba(255, 255, 255, 0.1));
+  color: var(--c-text-primary, #ffffff);
+}
+
+.header-tool-btn.active {
+  background: var(--c-item-active, rgba(255, 255, 255, 0.14));
+  color: var(--c-text-primary, #ffffff);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.tab-panel {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  justify-content: space-between;
+  margin-top: 4px;
+}
+
+/* ============================================================================
+   Radial Dial Stage (Enlarged and Proportional)
+   ============================================================================ */
+.dial-stage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 156px;
+  height: 156px;
+  margin: 0 auto;
+  flex-shrink: 0;
+}
+
+.dial-svg {
+  transform: rotate(-90deg);
+  width: 100%;
+  height: 100%;
+}
+
+.dial-track {
+  fill: none;
+  stroke: var(--c-border, rgba(255, 255, 255, 0.08));
+  stroke-width: 5;
+}
+
+.dial-progress {
+  fill: none;
+  stroke-width: 5.5;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.dial-progress.timer-stroke {
+  stroke: #38bdf8;
+  filter: drop-shadow(0 0 7px rgba(56, 189, 248, 0.55));
+}
+
+.dial-progress.phase-focus {
+  stroke: #fb923c;
+  filter: drop-shadow(0 0 7px rgba(251, 146, 60, 0.55));
+}
+
+.dial-progress.phase-shortBreak {
+  stroke: #34d399;
+  filter: drop-shadow(0 0 7px rgba(52, 211, 153, 0.55));
+}
+
+.dial-progress.phase-longBreak {
+  stroke: #818cf8;
+  filter: drop-shadow(0 0 7px rgba(129, 140, 248, 0.55));
+}
+
+.dial-center-btn {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 50%;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.dial-center-btn:hover {
+  transform: scale(1.03);
+  filter: brightness(1.1);
+}
+
+.dial-center-content {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+}
+
+.dial-large-digits {
+  font-size: 33px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.5px;
+  line-height: 1;
+}
+
+.dial-subtitle {
+  margin-top: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--c-text-muted, #888888);
+}
+
+/* ============================================================================
+   Presets & Custom Trigger
+   ============================================================================ */
+.bottom-controls-cluster {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  width: 100%;
+  padding-bottom: 2px;
+}
+
+.bottom-controls-cluster .controls-row {
+  margin-top: 0;
+  padding-bottom: 0;
+}
+
+.presets-scroll-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  max-width: 360px;
+  margin: 0 auto;
+}
+
+.preset-chip {
+  padding: 4px 10px;
+  border-radius: 11px;
+  background: var(--c-item-bg, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--c-border, rgba(255, 255, 255, 0.08));
+  color: var(--c-text-secondary, #b0b0b0);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.preset-chip:hover {
+  background: var(--c-hover, rgba(255, 255, 255, 0.1));
+  color: var(--c-text-primary, #ffffff);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.preset-chip.active {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.35);
+}
+
+.preset-chip.custom-trigger {
+  color: var(--c-primary, #38bdf8);
+  border-style: dashed;
+}
+
+/* ============================================================================
+   Controls Bar
+   ============================================================================ */
+.controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: auto;
+  padding-bottom: 2px;
+}
+
+.ctrl-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid var(--c-border, rgba(255, 255, 255, 0.12));
+  background: var(--c-item-bg, rgba(255, 255, 255, 0.06));
+  color: var(--c-text-secondary, #b0b0b0);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  outline: none;
+}
+
+.ctrl-btn:hover:not(:disabled) {
+  background: var(--c-hover, rgba(255, 255, 255, 0.12));
+  color: var(--c-text-primary, #ffffff);
+  transform: translateY(-1px);
+}
+
+.ctrl-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.ctrl-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.primary-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 24px;
+  height: 38px;
+  border-radius: 19px;
+  border: none;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  outline: none;
+  background: var(--c-primary, #38bdf8);
+  color: #0b0f19;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+}
+
+.primary-pill-btn:hover {
+  transform: translateY(-1.5px);
+  filter: brightness(1.08);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+.primary-pill-btn:active {
+  transform: translateY(0.5px);
+}
+
+.primary-pill-btn.phase-focus {
+  background: linear-gradient(135deg, #f97316 0%, #fb923c 100%);
+  color: #1a0800;
+}
+
+.primary-pill-btn.phase-break {
+  background: linear-gradient(135deg, #059669 0%, #34d399 100%);
+  color: #001f12;
+}
+
+.primary-pill-btn.phase-stopwatch {
+  background: linear-gradient(135deg, #7c3aed 0%, #a78bfa 100%);
+  color: #0e0524;
+}
+
+/* ============================================================================
+   Stopwatch Tab
+   ============================================================================ */
+.stopwatch-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 0;
+}
+
+.stopwatch-stage.has-laps {
+  flex: none;
+  margin: 6px 0 4px;
+}
+
+.stopwatch-digits-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+}
+
+.stopwatch-main-digits {
+  font-size: 48px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -1px;
+  line-height: 1;
+}
+
+.stopwatch-fraction-digits {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--c-text-muted, #888888);
+  margin-left: 2px;
+}
+
+.laps-container {
+  flex: 1;
+  min-height: 0;
+  max-height: 120px;
+  border-radius: 14px;
+  background: var(--c-item-bg, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--c-border, rgba(255, 255, 255, 0.06));
+  padding: 4px 8px;
+  margin: 4px 0 8px;
+  overflow: hidden;
+}
+
+.lap-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 6px;
+  font-size: 11.5px;
+  border-bottom: 1px solid var(--c-border, rgba(255, 255, 255, 0.04));
+  font-variant-numeric: tabular-nums;
+}
+
+.lap-item:last-child {
+  border-bottom: none;
+}
+
+.lap-number {
+  font-weight: 600;
+  color: var(--c-text-muted, #888888);
+}
+
+.lap-split {
+  font-weight: 700;
+  color: var(--c-text-primary, #ffffff);
+}
+
+.lap-total {
+  color: var(--c-text-secondary, #b0b0b0);
+}
+
+/* ============================================================================
+   Focus Sessions Tab (Unboxed Clean Dial)
+   ============================================================================ */
+.focus-cycle-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 320px;
+  margin: 0 auto 2px;
+  padding: 0 4px;
+}
+
+.cycle-text {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--c-text-muted, #888888);
+}
+
+.cycle-dots-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.focus-dial-stage {
+  margin: 0 auto;
+}
+
+.timer-top-placeholder {
+  visibility: hidden;
+  height: 16px;
+  margin: 0 auto 2px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.phase-switch-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0 auto;
+}
+
+.phase-pill-toggle {
+  padding: 4px 11px;
+  border-radius: 10px;
+  border: 1px solid var(--c-border, rgba(255, 255, 255, 0.08));
+  background: var(--c-item-bg, rgba(255, 255, 255, 0.04));
+  color: var(--c-text-secondary, #b0b0b0);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  outline: none;
+}
+
+.phase-pill-toggle:hover {
+  background: var(--c-hover, rgba(255, 255, 255, 0.08));
+  color: var(--c-text-primary, #ffffff);
+}
+
+.phase-pill-toggle.active.phase-focus {
+  background: rgba(251, 146, 60, 0.15);
+  color: #fb923c;
+  border-color: rgba(251, 146, 60, 0.3);
+}
+
+.phase-pill-toggle.active.phase-shortBreak {
+  background: rgba(52, 211, 153, 0.15);
+  color: #34d399;
+  border-color: rgba(52, 211, 153, 0.3);
+}
+
+.phase-pill-toggle.active.phase-longBreak {
+  background: rgba(129, 140, 248, 0.15);
+  color: #818cf8;
+  border-color: rgba(129, 140, 248, 0.3);
+}
+
+/* ============================================================================
+   Alarms & Reminders Tab
+   ============================================================================ */
+.alarms-panel {
+  justify-content: flex-start;
+  gap: 8px;
+}
+
+.alarm-create-card {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 9px 12px;
+  border-radius: 14px;
+  background: var(--c-item-bg, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--c-border, rgba(255, 255, 255, 0.1));
+}
+
+.create-card-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--c-text-primary, #ffffff);
+}
+
+.create-inputs-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.alarm-time-steppers {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--c-bg, rgba(0, 0, 0, 0.35));
+  border: 1px solid var(--c-border, rgba(255, 255, 255, 0.12));
+  border-radius: 9px;
+  padding: 3px 6px;
+  flex-shrink: 0;
+}
+
+.stepper-unit {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.unit-stepper-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 20px;
+  border-radius: 4px;
+  border: none;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--c-text-secondary, #b0b0b0);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.unit-stepper-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--c-text-primary, #ffffff);
+}
+
+.unit-stepper-input {
+  width: 24px;
+  border: none;
+  background: transparent;
+  color: var(--c-text-primary, #ffffff);
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  outline: none;
+  padding: 0;
+  margin: 0;
+  -moz-appearance: textfield;
+}
+
+.unit-stepper-input::-webkit-outer-spin-button,
+.unit-stepper-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.stepper-separator {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--c-text-muted, #888888);
+  margin: 0 1px;
+  user-select: none;
+}
+
+.ampm-pill-btn {
+  padding: 2px 6px;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--c-text-primary, #ffffff);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+  margin-left: 2px;
+  transition: all 0.15s ease;
+}
+
+.ampm-pill-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.alarm-label-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--c-bg, rgba(0, 0, 0, 0.35));
+  border: 1px solid var(--c-border, rgba(255, 255, 255, 0.12));
+  color: var(--c-text-primary, #ffffff);
+  border-radius: 9px;
+  padding: 5px 8px;
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.alarm-label-input:focus {
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.alarm-repeat-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.repeat-row-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--c-text-muted, #888888);
+}
+
+.repeat-pills-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.repeat-pill {
+  padding: 3px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--c-border, rgba(255, 255, 255, 0.08));
+  background: var(--c-item-bg, rgba(255, 255, 255, 0.04));
+  color: var(--c-text-secondary, #b0b0b0);
+  font-size: 10.5px;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.repeat-pill:hover {
+  background: var(--c-hover, rgba(255, 255, 255, 0.1));
+}
+
+.repeat-pill.active {
+  background: var(--c-item-active, rgba(255, 255, 255, 0.14));
+  color: var(--c-text-primary, #ffffff);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.custom-days-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin: 1px 0;
+}
+
+.day-toggle-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid var(--c-border, rgba(255, 255, 255, 0.1));
+  background: var(--c-item-bg, rgba(255, 255, 255, 0.04));
+  color: var(--c-text-secondary, #b0b0b0);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.day-toggle-btn:hover {
+  background: var(--c-hover, rgba(255, 255, 255, 0.12));
+}
+
+.day-toggle-btn.active {
+  background: rgba(255, 255, 255, 0.18);
+  color: var(--c-text-primary, #ffffff);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.create-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.card-act-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.card-act-btn.save {
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  color: var(--c-text-primary, #ffffff);
+}
+
+.card-act-btn.save:hover {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.38);
+}
+
+.card-act-btn.cancel {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--c-text-secondary, #b0b0b0);
+}
+
+.card-act-btn.cancel:hover {
+  background: var(--c-hover, rgba(255, 255, 255, 0.08));
+  color: var(--c-text-primary, #ffffff);
+}
+
+.alarms-list-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  max-height: 195px;
+  overflow: hidden;
+  padding-right: 2px;
+}
+
+.alarms-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: auto;
+  color: var(--c-text-muted, #888888);
+}
+
+.empty-text {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.add-first-alarm-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 10px;
+  background: var(--c-item-bg, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--c-border, rgba(255, 255, 255, 0.12));
+  color: var(--c-text-primary, #ffffff);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.add-first-alarm-btn:hover {
+  background: var(--c-hover, rgba(255, 255, 255, 0.14));
+}
+
+.alarm-item-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 12px;
+  border-radius: 12px;
+  background: var(--c-item-bg, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--c-border, rgba(255, 255, 255, 0.08));
+  margin-bottom: 6px;
+  transition: all 0.2s ease;
+}
+
+.alarm-item-card.disabled {
+  opacity: 0.5;
+}
+
+.alarm-item-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.alarm-time-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-start;
+  text-align: left;
+  gap: 6px;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.alarm-item-time {
+  font-size: 16px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--c-text-primary, #ffffff);
+  text-align: left;
+  margin: 0;
+  padding: 0;
+  line-height: 1.2;
+}
+
+.alarm-repeat-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.1);
+  padding: 1px 6px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
+.alarm-item-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--c-text-muted, #888888);
+  text-align: left;
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  line-height: 1.3;
+}
+
+button.alarm-item-info {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+}
+
+button.alarm-item-info:hover .alarm-item-time {
+  color: var(--c-primary, #38bdf8);
+}
+
+.alarm-item-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.alarm-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: var(--c-text-muted, #888888);
+  cursor: pointer;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.alarm-action-btn:hover {
+  background: var(--c-hover, rgba(255, 255, 255, 0.1));
+  color: var(--c-text-primary, #ffffff);
+}
+
+.alarm-delete-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  border: none;
+  background: transparent;
+  color: var(--c-text-muted, #888888);
+  cursor: pointer;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.alarm-delete-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+/* ============================================================================
+   Drawer Overlays (Focus Settings & Custom Duration Drawer)
+   ============================================================================ */
+.drawer-overlay {
+  position: absolute;
+  inset: 0;
+  background: var(--c-bg, #141414);
+  padding: 16px 20px 58px 20px; /* Respects dock clearance */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  z-index: 50;
+  box-sizing: border-box;
+  animation: drawerSlide 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes drawerSlide {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.drawer-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--c-text-primary, #ffffff);
+}
+
+.drawer-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.drawer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--c-item-bg, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--c-border, rgba(255, 255, 255, 0.08));
+}
+
+.drawer-row-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--c-text-primary, #ffffff);
+}
+
+.drawer-stepper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stepper-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid var(--c-border, rgba(255, 255, 255, 0.12));
+  background: var(--c-item-bg, rgba(255, 255, 255, 0.08));
+  color: var(--c-text-primary, #ffffff);
+  cursor: pointer;
+  outline: none;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 0;
+  transition: background 0.15s ease;
+}
+
+.stepper-btn:hover {
+  background: var(--c-hover, rgba(255, 255, 255, 0.16));
+}
+
+.stepper-input {
+  width: 44px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid var(--c-border, rgba(255, 255, 255, 0.12));
+  background: var(--c-bg, rgba(0, 0, 0, 0.3));
+  color: var(--c-text-primary, #ffffff);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  outline: none;
+  padding: 0;
+  -moz-appearance: textfield;
+}
+
+.stepper-input::-webkit-outer-spin-button,
+.stepper-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.stepper-input:focus {
+  border-color: var(--c-primary, #38bdf8);
+}
+
+.stepper-value {
+  font-size: 12px;
+  font-weight: 700;
+  min-width: 36px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: var(--c-text-primary, #ffffff);
+}
+
+.quick-seconds-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  flex-wrap: wrap;
+  margin: 2px 0 6px;
+}
+
+.quick-sec-chip {
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: var(--c-item-bg, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--c-border, rgba(255, 255, 255, 0.08));
+  color: var(--c-text-secondary, #b0b0b0);
+  font-size: 10.5px;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.quick-sec-chip:hover {
+  background: var(--c-hover, rgba(255, 255, 255, 0.12));
+  color: var(--c-text-primary, #ffffff);
+}
+
+.drawer-confirm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 38px;
+  border-radius: 12px;
+  border: none;
+  background: var(--c-primary, #38bdf8);
+  color: #0b0f19;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+  margin-top: auto;
+  transition: all 0.18s ease;
+}
+
+.drawer-confirm-btn:hover {
+  filter: brightness(1.08);
+}
+
+/* Switch */
+.drawer-switch {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+  cursor: pointer;
+}
+
+.drawer-switch.mini-switch {
+  width: 32px;
+  height: 18px;
+}
+
+.drawer-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.switch-slider {
+  position: absolute;
+  inset: 0;
+  background-color: var(--c-border, rgba(255, 255, 255, 0.2));
+  border-radius: 20px;
+  transition: 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.switch-slider:before {
+  position: absolute;
+  content: '';
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  border-radius: 50%;
+  transition: 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.mini-switch .switch-slider:before {
+  height: 12px;
+  width: 12px;
+}
+
+.drawer-switch input:checked + .switch-slider {
+  background-color: var(--c-primary, #38bdf8);
+}
+
+.drawer-switch input:checked + .switch-slider:before {
+  transform: translateX(16px);
+}
+
+.mini-switch input:checked + .switch-slider:before {
+  transform: translateX(14px);
+}

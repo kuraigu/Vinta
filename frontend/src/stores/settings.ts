@@ -53,6 +53,8 @@ export interface PageVisibility {
   notifications: boolean
   actioncenter: boolean
   calculator: boolean
+  focus?: boolean
+  timer: boolean
 }
 
 export const defaultPageVisibility: PageVisibility = {
@@ -60,7 +62,9 @@ export const defaultPageVisibility: PageVisibility = {
   media: true,
   notifications: true,
   actioncenter: true,
-  calculator: true
+  calculator: true,
+  focus: true,
+  timer: true
 }
 
 // ============================================================================
