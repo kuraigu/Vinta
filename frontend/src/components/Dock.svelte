@@ -8,6 +8,7 @@
     Bell,
     FileText,
     Calculator,
+    Timer,
     Info
   } from 'lucide-svelte'
   import { AppControls } from '../utils/AppControls.svelte'
@@ -19,6 +20,7 @@
   import SettingsPage from '../pages/SettingsPage.svelte'
   import NotesPage from '../pages/NotesPage.svelte'
   import CalculatorPage from '../pages/CalculatorPage.svelte'
+  import TimerPage from '../pages/TimerPage.svelte'
   import type { IslandConfig } from '../store'
   import {
     notifData,
@@ -71,6 +73,16 @@
           onclick={(e: MouseEvent) => AppControls.goCalculator(navigate, e)}
         >
           <Calculator size={18} />
+        </DockButton>
+      {/if}
+
+      {#if $pageVisibilityStore.timer !== false}
+        <DockButton
+          tooltip="Timer"
+          active={activePage === TimerPage}
+          onclick={(e: MouseEvent) => AppControls.goTimer(navigate, e)}
+        >
+          <Timer size={18} />
         </DockButton>
       {/if}
 

@@ -20,6 +20,7 @@
   import CalculatorPage, {
     config as calcConfig
   } from './pages/CalculatorPage.svelte'
+  import TimerPage, { config as timerConfig } from './pages/TimerPage.svelte'
 
   import MainIsland from './components/MainIsland.svelte'
   import ControlsSatellite from './components/ControlsSatellite.svelte'
@@ -66,6 +67,8 @@
     isSimulatingWirelessStore,
     devPinnedStore,
     activePageIdStore,
+    timerAppStore,
+    isAnyTimerRunning,
     type BatteryData,
     type WirelessData,
     type WeatherLocation,
@@ -236,6 +239,10 @@
       if (!isMediaActive) return true
       return $mediaAutoHideStore
     }
+    if (activePage === TimerPage) {
+      if (!isAnyTimerRunning($timerAppStore)) return true
+      return false
+    }
     return $autoHideStore
   }
   let shouldCurrentPageAutoHide = $derived.by(computeShouldCurrentPageAutoHide)
@@ -283,6 +290,12 @@
           const fallback = getFallbackPage()
           navigateTo(fallback.page as Component, fallback.config, false)
         }
+      } else if (
+        activePage === TimerPage &&
+        !isAnyTimerRunning($timerAppStore)
+      ) {
+        const fallback = getFallbackPage()
+        navigateTo(fallback.page as Component, fallback.config, false)
       } else if (activePage === MediaPage && !isMediaActive) {
         navigateTo(HomePage, homeConfig, false)
       } else {
@@ -515,6 +528,7 @@
     else if (page === AppsPage) pageId = 'apps'
     else if (page === SettingsPage) pageId = 'settings'
     else if (page === CalculatorPage) pageId = 'calculator'
+    else if (page === TimerPage) pageId = 'timer'
 
     $activePageIdStore = pageId
     try {
@@ -560,6 +574,22 @@
     bounds.syncBounds(nextBounds, clampedOffsetX, islandNode, false, false)
     resetHideTimer()
   }
+
+  /**
+   * Automatically reveals the island and displays the ringing alarm when triggered.
+   */
+  function handleRingingAlarmNavigation(): void {
+    const ringing = $timerAppStore.ringingAlarm
+    if (ringing) {
+      if (isHidden) {
+        showWidget()
+      }
+      if (activePage !== TimerPage) {
+        navigateTo(TimerPage, timerConfig, false)
+      }
+    }
+  }
+  $effect(handleRingingAlarmNavigation)
 
   function hideWidget() {
     if (isHidden) return
@@ -806,7 +836,8 @@
           notes: { page: NotesPage, config: notesConfig },
           apps: { page: AppsPage, config: appsConfig },
           settings: { page: SettingsPage, config: settingsConfig },
-          calculator: { page: CalculatorPage, config: calcConfig }
+          calculator: { page: CalculatorPage, config: calcConfig },
+          timer: { page: TimerPage, config: timerConfig }
         }
 
         const match = pageMappings[data.mode]
@@ -978,6 +1009,7 @@
       {isTimeoutActive}
       {shouldCurrentPageAutoHide}
       {isMediaActive}
+      isTimerActive={isAnyTimerRunning($timerAppStore)}
       {hideTrigger}
       {islandConfig}
       {currentMinimalW}

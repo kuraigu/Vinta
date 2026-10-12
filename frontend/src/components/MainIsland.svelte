@@ -5,6 +5,7 @@
   import Dock from './Dock.svelte'
   import HomePage from '../pages/HomePage.svelte'
   import MediaPage from '../pages/MediaPage.svelte'
+  import TimerPage from '../pages/TimerPage.svelte'
   import {
     autoHideDisplayStore,
     allowDragPositionStore,
@@ -28,6 +29,7 @@
     isTimeoutActive?: boolean
     shouldCurrentPageAutoHide?: boolean
     isMediaActive?: boolean
+    isTimerActive?: boolean
     hideTrigger?: number
     islandConfig: IslandConfig
     currentMinimalW: number
@@ -65,6 +67,7 @@
     isTimeoutActive = false,
     shouldCurrentPageAutoHide = false,
     isMediaActive = false,
+    isTimerActive = false,
     hideTrigger = 0,
     islandConfig,
     currentMinimalW,
@@ -304,7 +307,7 @@
   </div>
 
   <!-- Shrinking Timeout Bar -->
-  {#if isTimeoutActive && (shouldCurrentPageAutoHide || (activePage !== HomePage && (activePage !== MediaPage || !isMediaActive))) && !expanded && !isHidden}
+  {#if isTimeoutActive && (shouldCurrentPageAutoHide || (activePage !== HomePage && (activePage !== MediaPage || !isMediaActive) && (activePage !== TimerPage || !isTimerActive))) && !expanded && !isHidden}
     {#key hideTrigger}
       <div
         class="timeout-bar"

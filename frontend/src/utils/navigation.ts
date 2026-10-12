@@ -11,10 +11,13 @@ import NotesPage, { config as notesConfig } from '../pages/NotesPage.svelte'
 import CalculatorPage, {
   config as calculatorConfig
 } from '../pages/CalculatorPage.svelte'
+import TimerPage, { config as timerConfig } from '../pages/TimerPage.svelte'
 import {
   globalMediaStore,
   pageVisibilityStore,
   activeSettingsTabStore,
+  timerAppStore,
+  isAnyTimerRunning,
   type IslandConfig
 } from '../store'
 import { get } from 'svelte/store'
@@ -29,6 +32,12 @@ export function getFallbackPage(): {
   page: unknown
   config: IslandConfig
 } {
+  const timerState = get(timerAppStore)
+  const isTimerEnabled = get(pageVisibilityStore).timer !== false
+  if (isAnyTimerRunning(timerState) && isTimerEnabled) {
+    return { page: TimerPage, config: timerConfig }
+  }
+
   const mediaState = get(globalMediaStore)
   const isMediaEnabled = get(pageVisibilityStore).media
   const isPlaying =
@@ -82,6 +91,16 @@ export const AppControls = {
     navigate(CalculatorPage, calculatorConfig, true)
   },
 
+  goTimer: (navigate: NavFn, e?: Event) => {
+    if (e) e.stopPropagation()
+    navigate(TimerPage, timerConfig, true)
+  },
+
+  goFocus: (navigate: NavFn, e?: Event) => {
+    if (e) e.stopPropagation()
+    navigate(TimerPage, timerConfig, true)
+  },
+
   goAbout: (navigate: NavFn, e?: Event) => {
     if (e) e.stopPropagation()
     activeSettingsTabStore.set('about')
@@ -97,6 +116,10 @@ export const AppControls = {
       navigate(MediaPage, mediaConfig, false)
       return
     }
+    if (currentPage === TimerPage) {
+      navigate(TimerPage, timerConfig, false)
+      return
+    }
     const fallback = getFallbackPage()
     navigate(fallback.page, fallback.config, false)
   },
@@ -108,6 +131,10 @@ export const AppControls = {
     }
     if (currentPage === MediaPage) {
       navigate(MediaPage, mediaConfig, true)
+      return
+    }
+    if (currentPage === TimerPage) {
+      navigate(TimerPage, timerConfig, true)
       return
     }
     const fallback = getFallbackPage()
