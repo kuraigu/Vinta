@@ -685,7 +685,8 @@
       return { overflowing: false, duration: 8 }
     }
     const containerWidth = node.parentElement.clientWidth
-    const textNode = (node.querySelector('.marquee-text') as HTMLElement) || node
+    const textNode =
+      (node.querySelector('.marquee-text') as HTMLElement) || node
     const contentWidth = textNode.scrollWidth || node.scrollWidth
     const diff = contentWidth - containerWidth
 
@@ -807,9 +808,12 @@
             class="track-title-mini"
             class:is-marquee={isMiniTitleOverflowing}
           >
-            <span class="marquee-text">{media.title || 'No Media Playing'}</span>
+            <span class="marquee-text">{media.title || 'No Media Playing'}</span
+            >
             {#if isMiniTitleOverflowing}
-              <span class="marquee-spacer" aria-hidden="true">{media.title || 'No Media Playing'}</span>
+              <span class="marquee-spacer" aria-hidden="true"
+                >{media.title || 'No Media Playing'}</span
+              >
             {/if}
           </span>
         </div>
@@ -1035,9 +1039,13 @@
                 class="track-title"
                 class:is-marquee={isExpandedTitleOverflowing}
               >
-                <span class="marquee-text">{media.title || 'Connect Media Player'}</span>
+                <span class="marquee-text"
+                  >{media.title || 'Connect Media Player'}</span
+                >
                 {#if isExpandedTitleOverflowing}
-                  <span class="marquee-spacer" aria-hidden="true">{media.title || 'Connect Media Player'}</span>
+                  <span class="marquee-spacer" aria-hidden="true"
+                    >{media.title || 'Connect Media Player'}</span
+                  >
                 {/if}
               </div>
             </div>

@@ -8,7 +8,9 @@
     Clock
   } from 'lucide-svelte'
   import { calendarStore } from '../stores/calendarStore'
-  import CalendarPage, { config as calendarConfig } from '../pages/CalendarPage.svelte'
+  import CalendarPage, {
+    config as calendarConfig
+  } from '../pages/CalendarPage.svelte'
   import type { IslandConfig } from '../store'
 
   let {
@@ -19,10 +21,9 @@
     onOpenCalendar?: () => void
   } = $props()
 
-  const navigate =
-    getContext<((page: unknown, pageConfig: IslandConfig) => void) | undefined>(
-      'navigate'
-    )
+  const navigate = getContext<
+    ((page: unknown, pageConfig: IslandConfig) => void) | undefined
+  >('navigate')
 
   let realToday = $state(new Date())
   let viewDate = $state(new Date())
@@ -70,8 +71,18 @@
   let isCurrentMonth = $derived.by(computeIsCurrentMonth)
 
   const monthNames = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec'
   ]
 
   /**
@@ -310,8 +321,8 @@
               <button
                 class="today-btn"
                 onclick={resetToToday}
-                title="Jump to Today"
-              >Today</button>
+                title="Jump to Today">Today</button
+              >
             {/if}
 
             <button
@@ -343,7 +354,9 @@
               {@const isToday = isCurrentMonth && day === realToday.getDate()}
               {@const isSelected = day === selectedDay}
               {@const dayKey = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`}
-              {@const dayEvts = $calendarStore.events.filter((e) => e.date === dayKey)}
+              {@const dayEvts = $calendarStore.events.filter(
+                (e) => e.date === dayKey
+              )}
               <button
                 class="day-cell"
                 class:today={isToday}
@@ -370,7 +383,9 @@
                 <span>{selectedDateLabel}</span>
               </div>
               {#if selectedDateEvents.length > 0}
-                <span class="home-agenda-count">{selectedDateEvents.length}</span>
+                <span class="home-agenda-count"
+                  >{selectedDateEvents.length}</span
+                >
               {/if}
             </div>
 
@@ -672,12 +687,24 @@
     flex-shrink: 0;
   }
 
-  .mini-day-dot.indigo { background: #818cf8; }
-  .mini-day-dot.emerald { background: #34d399; }
-  .mini-day-dot.amber { background: #fbbf24; }
-  .mini-day-dot.purple { background: #c084fc; }
-  .mini-day-dot.rose { background: #fb7185; }
-  .mini-day-dot.sky { background: #38bdf8; }
+  .mini-day-dot.indigo {
+    background: #818cf8;
+  }
+  .mini-day-dot.emerald {
+    background: #34d399;
+  }
+  .mini-day-dot.amber {
+    background: #fbbf24;
+  }
+  .mini-day-dot.purple {
+    background: #c084fc;
+  }
+  .mini-day-dot.rose {
+    background: #fb7185;
+  }
+  .mini-day-dot.sky {
+    background: #38bdf8;
+  }
 
   /* HOME CALENDAR AGENDA TRAY (Clean subtle bento surface without divider line) */
   .home-calendar-agenda {
@@ -745,12 +772,24 @@
     flex-shrink: 0;
   }
 
-  .item-color-dot.indigo { background: #818cf8; }
-  .item-color-dot.emerald { background: #34d399; }
-  .item-color-dot.amber { background: #fbbf24; }
-  .item-color-dot.purple { background: #c084fc; }
-  .item-color-dot.rose { background: #fb7185; }
-  .item-color-dot.sky { background: #38bdf8; }
+  .item-color-dot.indigo {
+    background: #818cf8;
+  }
+  .item-color-dot.emerald {
+    background: #34d399;
+  }
+  .item-color-dot.amber {
+    background: #fbbf24;
+  }
+  .item-color-dot.purple {
+    background: #c084fc;
+  }
+  .item-color-dot.rose {
+    background: #fb7185;
+  }
+  .item-color-dot.sky {
+    background: #38bdf8;
+  }
 
   .item-time {
     font-weight: 600;

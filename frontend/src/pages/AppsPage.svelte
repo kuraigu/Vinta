@@ -37,9 +37,7 @@
     config as calculatorConfig
   } from './CalculatorPage.svelte'
   import TimerPage, { config as timerConfig } from './TimerPage.svelte'
-  import CalendarPage, {
-    config as calendarConfig
-  } from './CalendarPage.svelte'
+  import CalendarPage, { config as calendarConfig } from './CalendarPage.svelte'
   import ActionCenterPage, {
     config as actionCenterConfig
   } from './ActionCenterPage.svelte'

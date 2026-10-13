@@ -14,9 +14,7 @@
   import Weather from '../components/Weather.svelte'
   import DeviceStatusWidget from '../components/DeviceStatusWidget.svelte'
   import ScrollView from '../components/ScrollView.svelte'
-  import CalendarPage, {
-    config as calendarConfig
-  } from './CalendarPage.svelte'
+  import CalendarPage, { config as calendarConfig } from './CalendarPage.svelte'
   import {
     homeWidgetsVisibilityStore,
     userNameStore,

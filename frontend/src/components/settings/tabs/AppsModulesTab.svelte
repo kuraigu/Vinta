@@ -303,10 +303,7 @@
 
     <!-- Battery Widget -->
     <div class="item-wrapper" class:shake={shakeKey === 'battery'}>
-      <SettingItem
-        label="Battery & Power"
-        disabled={!hasBattery}
-      >
+      <SettingItem label="Battery & Power" disabled={!hasBattery}>
         <div
           class="toggle-container"
           class:locked={isBatteryLocked || !hasBattery}

@@ -42,6 +42,8 @@ export class WindowBoundsManager {
     null
   private activeIslandNode: HTMLElement | null = null
   private resizeObserver: ResizeObserver | null = null
+  private recoveryDebounceTimer?: number
+  private transitionEndDebounceTimer?: number
 
   public currentOSBounds: WindowBounds = { w: 0, h: 0, r: 0 }
   public targetPendingBounds: WindowBounds = { w: 0, h: 0, r: 0 }
@@ -206,6 +208,10 @@ export class WindowBoundsManager {
    * Resets active shrinking timeout, disconnects observers, and removes lingering transition listeners.
    */
   public cancelPendingTransition(): void {
+    clearTimeout(this.recoveryDebounceTimer)
+    this.recoveryDebounceTimer = undefined
+    clearTimeout(this.transitionEndDebounceTimer)
+    this.transitionEndDebounceTimer = undefined
     clearTimeout(this.boundsTransitionTimeout)
     this.boundsTransitionTimeout = undefined
     this.targetPendingBounds = { w: 0, h: 0, r: 0 }
@@ -234,7 +240,8 @@ export class WindowBoundsManager {
    */
   public async prepareExpansion(
     target: WindowBounds,
-    explicitOffset?: number
+    explicitOffset?: number,
+    islandNode?: HTMLElement | null
   ): Promise<void> {
     const currW = this.currentOSBounds.w
     const currH = this.currentOSBounds.h
@@ -258,6 +265,14 @@ export class WindowBoundsManager {
         new Promise<void>((resolve) => window.setTimeout(resolve, 60))
       ])
     } catch {}
+
+    this.scheduleAnimationRecovery(
+      target,
+      offset,
+      islandNode || null,
+      false,
+      380
+    )
   }
 
   /**
@@ -312,30 +327,35 @@ export class WindowBoundsManager {
   public async recoverRestingBounds(
     target: WindowBounds,
     offset: number,
-    islandNode?: HTMLElement | null,
-    isHidden: boolean = false
+    _islandNode?: HTMLElement | null,
+    _isHidden: boolean = false
   ): Promise<void> {
     if (this.getIsDragging()) return
     this.cancelPendingTransition()
-    this.isBoundsIpcPending = false
-    this.pendingBoundsArgs = null
-    this.lastDispatchedBounds = null
 
-    const finalW = Math.round(target.w)
-    const finalH = Math.round(target.h)
-    const finalR = Math.round(target.r)
-
-    this.currentOSBounds = { w: finalW, h: finalH, r: finalR }
-    await this.updateBounds(finalW, finalH, finalR, offset)
-    resyncAllSatellites()
-
-    // Post-animation secondary verification to bust Windows DWM cache under lag
-    window.setTimeout(() => {
+    clearTimeout(this.recoveryDebounceTimer)
+    this.recoveryDebounceTimer = window.setTimeout(async () => {
       if (this.getIsDragging()) return
+      this.isBoundsIpcPending = false
+      this.pendingBoundsArgs = null
+      this.lastDispatchedBounds = null
+
+      const finalW = Math.round(target.w)
+      const finalH = Math.round(target.h)
+      const finalR = Math.round(target.r)
+
+      this.currentOSBounds = { w: finalW, h: finalH, r: finalR }
+      await this.updateBounds(finalW, finalH, finalR, offset)
       resyncAllSatellites()
-      // Use radius -999 to bust native cache in Go and guarantee SetWindowRgn
-      this.updateBounds(finalW, finalH, -999, offset)
-    }, 100)
+
+      // Post-animation secondary verification to bust Windows DWM cache under lag
+      window.setTimeout(() => {
+        if (this.getIsDragging()) return
+        resyncAllSatellites()
+        // Pass -finalR to bust native cache in Go and guarantee SetWindowRgn
+        this.updateBounds(finalW, finalH, -finalR, offset)
+      }, 80)
+    }, 25)
   }
 
   /**
@@ -356,8 +376,17 @@ export class WindowBoundsManager {
     const commitRecovery = () => {
       if (hasRecovered) return
       hasRecovered = true
+      clearTimeout(this.transitionEndDebounceTimer)
+      this.transitionEndDebounceTimer = undefined
       this.cancelPendingTransition()
       this.recoverRestingBounds(target, offset, islandNode, isHidden)
+    }
+
+    const triggerDebouncedCommit = () => {
+      clearTimeout(this.transitionEndDebounceTimer)
+      this.transitionEndDebounceTimer = window.setTimeout(() => {
+        commitRecovery()
+      }, 40)
     }
 
     if (islandNode) {
@@ -367,9 +396,11 @@ export class WindowBoundsManager {
           e.propertyName === 'width' ||
           e.propertyName === 'height' ||
           e.propertyName === 'border-radius' ||
+          e.propertyName === 'border-bottom-left-radius' ||
+          e.propertyName === 'border-bottom-right-radius' ||
           e.propertyName === 'transform'
         ) {
-          commitRecovery()
+          triggerDebouncedCommit()
         }
       }
 

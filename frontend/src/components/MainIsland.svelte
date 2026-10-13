@@ -102,7 +102,10 @@
     if (
       e.propertyName === 'width' ||
       e.propertyName === 'height' ||
-      e.propertyName === 'border-radius'
+      e.propertyName === 'border-radius' ||
+      e.propertyName === 'border-bottom-left-radius' ||
+      e.propertyName === 'border-bottom-right-radius' ||
+      e.propertyName === 'transform'
     ) {
       onAnimationDone?.()
       onRecoverBounds?.()

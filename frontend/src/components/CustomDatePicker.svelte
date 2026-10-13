@@ -33,12 +33,32 @@
   let jumpYearInput = $state('')
 
   const MONTH_NAMES = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December'
   ]
   const MONTH_SHORT = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec'
   ]
   const WEEK_DAYS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
 
@@ -355,7 +375,7 @@
           {/each}
         </div>
 
-      <!-- View Mode 2: 12 Months Grid -->
+        <!-- View Mode 2: 12 Months Grid -->
       {:else if viewMode === 'months'}
         <div class="months-selector-grid">
           {#each MONTH_SHORT as mName, idx (mName)}
@@ -370,7 +390,7 @@
           {/each}
         </div>
 
-      <!-- View Mode 3: 12-Year Decade Grid with Fast Year Jump -->
+        <!-- View Mode 3: 12-Year Decade Grid with Fast Year Jump -->
       {:else if viewMode === 'decade'}
         <!-- Fast Year Jump input for far years -->
         <form class="decade-jump-form" onsubmit={handleJumpYearSubmit}>

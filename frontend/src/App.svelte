@@ -102,7 +102,6 @@
   let islandConfig = $state<IslandConfig>(homeConfig)
 
   let expanded = $state(false)
-  let isIslandTransitioning = $state(false)
   let isDockVisible = $state(false)
   let islandTransitionTimeout: number | undefined
 
@@ -120,15 +119,19 @@
     previousExpanded = isExp
 
     clearTimeout(islandTransitionTimeout)
-    isIslandTransitioning = true
     isDockVisible = false
     const transitionDuration = isExp ? 340 : 280
 
     islandTransitionTimeout = window.setTimeout(() => {
-      isIslandTransitioning = false
       if (isExp) {
         isDockVisible = true
       }
+      bounds.recoverRestingBounds(
+        getBoundsForState(),
+        clampedOffsetX,
+        islandNode,
+        isHidden
+      )
     }, transitionDuration)
   }
   $effect(handleExpandedTransitionEffect)
@@ -214,6 +217,12 @@
     } else {
       hideTrigger++
     }
+    bounds.recoverRestingBounds(
+      getBoundsForState(),
+      clampedOffsetX,
+      islandNode,
+      isHidden
+    )
   }
 
   let isTimeoutActive = $state(false)
@@ -627,6 +636,12 @@
           $activePageIdStore = fallback.page === HomePage ? 'home' : 'media'
         }
         bounds.notifyHidden(true)
+        bounds.recoverRestingBounds(
+          getBoundsForState(islandConfig, false, true),
+          clampedOffsetX,
+          islandNode,
+          true
+        )
       }
     }, duration + 50)
 
@@ -698,11 +713,10 @@
       bounds.notifyHidden(false)
     }
     const nextBounds = getBoundsForState(islandConfig, true, false)
-    await bounds.prepareExpansion(nextBounds, clampedOffsetX)
+    await bounds.prepareExpansion(nextBounds, clampedOffsetX, islandNode)
     islandAnim = '0.32s cubic-bezier(0.2, 0.8, 0.2, 1)'
     expanded = true
     isControlsDrawerOpen = false
-    bounds.syncBounds(nextBounds, clampedOffsetX, islandNode, false, false)
   }
 
   function handleMouseEnter() {
@@ -1182,7 +1196,7 @@
         monitorLeft={activeMonitor.left}
         primaryCenter={displayLayout.primaryCenter}
         {clampedOffsetX}
-        active={!isIslandTransitioning}
+        active={!isQuitting && !isHidden}
         onmouseenter={handleSatelliteMouseEnter}
         onmouseleave={handleSatelliteMouseLeave}
         onDrawerChange={handleControlsDrawerChange}

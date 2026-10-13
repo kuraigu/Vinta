@@ -33,7 +33,9 @@
   import BackButton from '../components/BackButton.svelte'
   import ScrollView from '../components/ScrollView.svelte'
   import CustomTimePicker from '../components/CustomTimePicker.svelte'
-  import HorizontalTabSelection, { type TabItem } from '../components/HorizontalTabSelection.svelte'
+  import HorizontalTabSelection, {
+    type TabItem
+  } from '../components/HorizontalTabSelection.svelte'
   import { islandTooltip } from '../services/islandTooltip'
   import {
     timerAppStore,
@@ -325,10 +327,30 @@
   }
 
   const TIMER_TABS: TabItem<TimerAppTab>[] = [
-    { id: 'timer', label: 'Timer', icon: Hourglass, tooltip: 'Countdown timer' },
-    { id: 'stopwatch', label: 'Stopwatch', icon: Clock, tooltip: 'Precision stopwatch' },
-    { id: 'focus', label: 'Focus', icon: Flame, tooltip: 'Focus sprints & breaks' },
-    { id: 'alarms', label: 'Alarms', icon: Bell, tooltip: 'Scheduled reminders' }
+    {
+      id: 'timer',
+      label: 'Timer',
+      icon: Hourglass,
+      tooltip: 'Countdown timer'
+    },
+    {
+      id: 'stopwatch',
+      label: 'Stopwatch',
+      icon: Clock,
+      tooltip: 'Precision stopwatch'
+    },
+    {
+      id: 'focus',
+      label: 'Focus',
+      icon: Flame,
+      tooltip: 'Focus sprints & breaks'
+    },
+    {
+      id: 'alarms',
+      label: 'Alarms',
+      icon: Bell,
+      tooltip: 'Scheduled reminders'
+    }
   ]
 
   /**
@@ -1002,7 +1024,10 @@
               </span>
               <div class="create-inputs-row">
                 <!-- Custom Time Steppers (No native OS flyouts) -->
-                <CustomTimePicker bind:value={newAlarmTime} ariaLabel="Alarm time" />
+                <CustomTimePicker
+                  bind:value={newAlarmTime}
+                  ariaLabel="Alarm time"
+                />
 
                 <input
                   type="text"

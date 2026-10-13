@@ -10,6 +10,7 @@
 </script>
 
 <script lang="ts">
+  import { SvelteSet } from 'svelte/reactivity'
   import {
     Calendar as CalendarIcon,
     CalendarDays,
@@ -29,7 +30,9 @@
   import ScrollView from '../components/ScrollView.svelte'
   import CustomTimePicker from '../components/CustomTimePicker.svelte'
   import CustomDatePicker from '../components/CustomDatePicker.svelte'
-  import HorizontalTabSelection, { type TabItem } from '../components/HorizontalTabSelection.svelte'
+  import HorizontalTabSelection, {
+    type TabItem
+  } from '../components/HorizontalTabSelection.svelte'
   import { islandTooltip } from '../services/islandTooltip'
   import {
     calendarStore,
@@ -47,8 +50,18 @@
   let activeTab = $state<'calendar' | 'agenda'>('calendar')
 
   const CALENDAR_TABS: TabItem<'calendar' | 'agenda'>[] = [
-    { id: 'calendar', label: 'Calendar', icon: CalendarDays, tooltip: 'Month overview' },
-    { id: 'agenda', label: 'Agenda', icon: ListFilter, tooltip: 'Scheduled events agenda' }
+    {
+      id: 'calendar',
+      label: 'Calendar',
+      icon: CalendarDays,
+      tooltip: 'Month overview'
+    },
+    {
+      id: 'agenda',
+      label: 'Agenda',
+      icon: ListFilter,
+      tooltip: 'Scheduled events agenda'
+    }
   ]
 
   // Calendar view navigation state
@@ -86,12 +99,32 @@
   let formDescription = $state('')
 
   const monthNames = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December'
   ]
   const monthShortNames = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec'
   ]
   const weekDays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
 
@@ -179,7 +212,7 @@
    * Derives distinct years represented across scheduled events for agenda filtering.
    */
   function computeAgendaYears(): number[] {
-    const yearsSet = new Set<number>()
+    const yearsSet = new SvelteSet<number>()
     const currentY = new Date().getFullYear()
     yearsSet.add(currentY)
     yearsSet.add(currentY + 1)
@@ -198,7 +231,9 @@
     if (agendaYearFilter === 'all') {
       return allAgendaEvents
     }
-    return allAgendaEvents.filter((e) => e.date.startsWith(`${agendaYearFilter}-`))
+    return allAgendaEvents.filter((e) =>
+      e.date.startsWith(`${agendaYearFilter}-`)
+    )
   }
   let filteredAgendaEvents = $derived.by(computeFilteredAgendaEvents)
 
@@ -457,7 +492,12 @@
     <div class="minimal-calendar-pill">
       <div class="pill-date-badge">
         <CalendarIcon size={13} />
-        <span>{new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+        <span
+          >{new Date().toLocaleDateString(undefined, {
+            month: 'short',
+            day: 'numeric'
+          })}</span
+        >
       </div>
 
       <div class="pill-event-marquee">
@@ -525,7 +565,9 @@
               </div>
 
               {#if !isCurrentMonth || calViewMode !== 'month'}
-                <button class="today-chip-btn" onclick={handleJumpToday}>Today</button>
+                <button class="today-chip-btn" onclick={handleJumpToday}
+                  >Today</button
+                >
               {/if}
             </div>
 
@@ -578,21 +620,24 @@
                     <Clock size={12} />
                     <span>{selectedDateLabel}</span>
                     <span class="agenda-tray-subtitle">
-                      • {selectedDayEvents.length} {selectedDayEvents.length === 1 ? 'event' : 'events'}
+                      • {selectedDayEvents.length}
+                      {selectedDayEvents.length === 1 ? 'event' : 'events'}
                     </span>
                   </div>
                   <div class="agenda-tray-actions">
                     <button
                       type="button"
                       class="tray-agenda-jump-btn"
-                      onclick={() => handleJumpToAgenda($calendarStore.selectedDate)}
+                      onclick={() =>
+                        handleJumpToAgenda($calendarStore.selectedDate)}
                     >
                       <span>View in Agenda</span>
                     </button>
                     <button
                       type="button"
                       class="tray-add-btn"
-                      onclick={() => handleOpenAddModal($calendarStore.selectedDate)}
+                      onclick={() =>
+                        handleOpenAddModal($calendarStore.selectedDate)}
                     >
                       <Plus size={13} />
                       <span>Add Event</span>
@@ -613,7 +658,9 @@
                             {#if event.isAllDay}
                               All Day
                             {:else if event.startTime}
-                              {event.startTime}{event.endTime ? ` - ${event.endTime}` : ''}
+                              {event.startTime}{event.endTime
+                                ? ` - ${event.endTime}`
+                                : ''}
                             {:else}
                               Event
                             {/if}
@@ -730,7 +777,9 @@
               </div>
               <span class="empty-primary-text">No Scheduled Events</span>
               <p class="empty-secondary-text">
-                No events scheduled for {agendaYearFilter === 'all' ? 'the selected period' : agendaYearFilter}. Click "Add Event" to plan an activity.
+                No events scheduled for {agendaYearFilter === 'all'
+                  ? 'the selected period'
+                  : agendaYearFilter}. Click "Add Event" to plan an activity.
               </p>
             </div>
           {:else}
@@ -741,7 +790,9 @@
                     <div class="agenda-card-top">
                       <div class="agenda-card-heading">
                         <span class="agenda-card-title">{event.title}</span>
-                        <span class="agenda-date-chip">{formatAgendaDateHeader(event.date)}</span>
+                        <span class="agenda-date-chip"
+                          >{formatAgendaDateHeader(event.date)}</span
+                        >
                       </div>
                       <div class="agenda-card-actions">
                         {#if event.locationUrl}
@@ -784,7 +835,9 @@
                         {#if event.isAllDay}
                           All Day
                         {:else if event.startTime}
-                          {event.startTime}{event.endTime ? ` - ${event.endTime}` : ''}
+                          {event.startTime}{event.endTime
+                            ? ` - ${event.endTime}`
+                            : ''}
                         {:else}
                           Scheduled
                         {/if}
@@ -865,18 +918,29 @@
 
               <div class="form-group">
                 <span class="form-label">Date</span>
-                <CustomDatePicker bind:value={formDate} ariaLabel="Event date" />
+                <CustomDatePicker
+                  bind:value={formDate}
+                  ariaLabel="Event date"
+                />
               </div>
 
               {#if !formIsAllDay}
                 <div class="form-row time-pickers-row">
                   <div class="form-group time-field">
                     <span class="form-label">Start Time</span>
-                    <CustomTimePicker bind:value={formStartTime} ariaLabel="Start time" align="left" />
+                    <CustomTimePicker
+                      bind:value={formStartTime}
+                      ariaLabel="Start time"
+                      align="left"
+                    />
                   </div>
                   <div class="form-group time-field">
                     <span class="form-label">End Time</span>
-                    <CustomTimePicker bind:value={formEndTime} ariaLabel="End time" align="right" />
+                    <CustomTimePicker
+                      bind:value={formEndTime}
+                      ariaLabel="End time"
+                      align="right"
+                    />
                   </div>
                 </div>
               {/if}
@@ -888,7 +952,8 @@
                     <button
                       class="color-pill-btn {color}"
                       class:active={formColor === color}
-                      onclick={() => (formColor = color as CalendarEvent['color'])}
+                      onclick={() =>
+                        (formColor = color as CalendarEvent['color'])}
                       type="button"
                       aria-label="{color} category"
                     ></button>
@@ -898,7 +963,9 @@
 
               <div class="form-group">
                 <div class="form-label-row">
-                  <label class="form-label" for="cal-event-loc">Location (Optional)</label>
+                  <label class="form-label" for="cal-event-loc"
+                    >Location (Optional)</label
+                  >
                   <span class="char-count">{formLocation.length}/80</span>
                 </div>
                 <input
@@ -913,7 +980,9 @@
 
               <div class="form-group">
                 <div class="form-label-row">
-                  <label class="form-label" for="cal-event-desc">Description (Optional)</label>
+                  <label class="form-label" for="cal-event-desc"
+                    >Description (Optional)</label
+                  >
                   <span class="char-count">{formDescription.length}/200</span>
                 </div>
                 <textarea
@@ -922,8 +991,7 @@
                   placeholder="Additional notes"
                   maxlength="200"
                   rows="2"
-                  bind:value={formDescription}
-                ></textarea>
+                  bind:value={formDescription}></textarea>
               </div>
             </div>
           </ScrollView>

@@ -69,7 +69,10 @@
       }
     }
     const hh = String(Math.max(0, Math.min(23, h24))).padStart(2, '0')
-    const mm = String(Math.max(0, Math.min(59, selectedMinute))).padStart(2, '0')
+    const mm = String(Math.max(0, Math.min(59, selectedMinute))).padStart(
+      2,
+      '0'
+    )
     value = `${hh}:${mm}`
   }
 
