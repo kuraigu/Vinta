@@ -8,15 +8,19 @@
     SlidersHorizontal,
     Calculator,
     Timer,
-    LayoutGrid
+    LayoutGrid,
+    Calendar,
+    Pin
   } from 'lucide-svelte'
   import SettingItem from '../SettingItem.svelte'
   import {
     pageVisibilityStore,
     homeWidgetsVisibilityStore,
+    dockPinnedAppsStore,
     batteryDataStore,
     type HomeWidgetsVisibility,
-    type PageVisibility
+    type PageVisibility,
+    type DockPinnedApps
   } from '../../../store'
 
   let shakeKey = $state<string | null>(null)
@@ -77,6 +81,13 @@
       [key]: !$pageVisibilityStore[key]
     }
   }
+
+  function toggleDockPinned(key: keyof DockPinnedApps) {
+    $dockPinnedAppsStore = {
+      ...$dockPinnedAppsStore,
+      [key]: !$dockPinnedAppsStore[key]
+    }
+  }
 </script>
 
 <div class="apps-modules-tab">
@@ -100,6 +111,17 @@
       </label>
     </SettingItem>
 
+    <SettingItem label="Calendar" icon={Calendar}>
+      <label class="toggle-switch">
+        <input
+          type="checkbox"
+          checked={$pageVisibilityStore.calendar !== false}
+          onchange={() => togglePage('calendar')}
+        />
+        <span class="slider"></span>
+      </label>
+    </SettingItem>
+
     <SettingItem label="Calculator" icon={Calculator}>
       <label class="toggle-switch">
         <input
@@ -111,7 +133,7 @@
       </label>
     </SettingItem>
 
-    <SettingItem label="Timer" icon={Timer}>
+    <SettingItem label="Timer & Focus" icon={Timer}>
       <label class="toggle-switch">
         <input
           type="checkbox"
@@ -283,7 +305,6 @@
     <div class="item-wrapper" class:shake={shakeKey === 'battery'}>
       <SettingItem
         label="Battery & Power"
-        badge={hasBattery ? undefined : 'Unavailable'}
         disabled={!hasBattery}
       >
         <div
@@ -357,6 +378,62 @@
         </div>
       {/if}
     </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- Section 3: Dock Pinned Favorites -->
+  <div class="section-header">
+    <div class="section-title">
+      <Pin size={13} />
+      <span>Dock Pinned Favorites</span>
+    </div>
+  </div>
+
+  <div class="setting-group">
+    <SettingItem label="Pin Calendar" icon={Calendar}>
+      <label class="toggle-switch">
+        <input
+          type="checkbox"
+          checked={$dockPinnedAppsStore.calendar}
+          onchange={() => toggleDockPinned('calendar')}
+        />
+        <span class="slider"></span>
+      </label>
+    </SettingItem>
+
+    <SettingItem label="Pin Quick Notes" icon={FileText}>
+      <label class="toggle-switch">
+        <input
+          type="checkbox"
+          checked={$dockPinnedAppsStore.notes}
+          onchange={() => toggleDockPinned('notes')}
+        />
+        <span class="slider"></span>
+      </label>
+    </SettingItem>
+
+    <SettingItem label="Pin Calculator" icon={Calculator}>
+      <label class="toggle-switch">
+        <input
+          type="checkbox"
+          checked={$dockPinnedAppsStore.calculator}
+          onchange={() => toggleDockPinned('calculator')}
+        />
+        <span class="slider"></span>
+      </label>
+    </SettingItem>
+
+    <SettingItem label="Pin Timer" icon={Timer}>
+      <label class="toggle-switch">
+        <input
+          type="checkbox"
+          checked={$dockPinnedAppsStore.timer}
+          onchange={() => toggleDockPinned('timer')}
+        />
+        <span class="slider"></span>
+      </label>
+    </SettingItem>
   </div>
 </div>
 

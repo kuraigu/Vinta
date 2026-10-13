@@ -179,8 +179,8 @@
       barData.push({ x, y, w: barWidth, h: barH, r: barRadius })
     }
 
-    // 1. Draw all unplayed bars in translucent backdrop
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)'
+    // Draw all unplayed bars with clean, lighter translucent white for clear visibility across dark backdrop
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.42)'
     for (let i = 0; i < count; i++) {
       const b = barData[i]
       if (typeof ctx.roundRect === 'function') {
@@ -192,7 +192,7 @@
       }
     }
 
-    // 2. Draw played bars with precision clipping at progressPx
+    // Draw played bars with precision clipping at progressPx
     if (progressPx > 0) {
       ctx.save()
       ctx.beginPath()

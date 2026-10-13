@@ -106,7 +106,12 @@
 </script>
 
 <div class="setting-group">
-  <SettingItem label="Weather Location" icon={MapPin} flexCol={true}>
+  <SettingItem
+    label="Weather Location"
+    description="Target location for forecasts (Default: Auto-detect)"
+    icon={MapPin}
+    flexCol={true}
+  >
     <CustomSelect
       options={weatherOptions}
       value={selectedWeatherCity}
@@ -118,7 +123,12 @@
     />
   </SettingItem>
 
-  <SettingItem label="Temperature Unit" icon={Thermometer} flexCol={true}>
+  <SettingItem
+    label="Temperature Unit"
+    description="Measurement unit for temperatures (Default: Celsius)"
+    icon={Thermometer}
+    flexCol={true}
+  >
     <div class="segment-control full-width">
       <button
         class:active={$weatherUnitStore === 'celsius'}

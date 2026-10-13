@@ -14,7 +14,12 @@
   import CustomSelect from '../components/CustomSelect.svelte'
   import NotificationDevControls from './NotificationDevControls.svelte'
   import HomeDevControls from './HomeDevControls.svelte'
-  import { themeStore, devPinnedStore, activePageIdStore } from '../store'
+  import {
+    themeStore,
+    devPinnedStore,
+    addCalendarEvent,
+    syncAllCalendarFeeds
+  } from '../store'
   import { debugBoundsOverlay, debugLogs } from './debugConfig'
 
   let isExpandedMode = $state(false)
@@ -22,6 +27,7 @@
 
   const pageOptions = [
     { value: 'home', label: 'Home Page' },
+    { value: 'calendar', label: 'Calendar' },
     { value: 'media', label: 'Media Player' },
     { value: 'notifications', label: 'Notifications' },
     { value: 'notes', label: 'Scratchpad' },
@@ -186,6 +192,30 @@
           <NotificationDevControls />
         {:else if targetMode === 'home'}
           <HomeDevControls />
+        {:else if targetMode === 'calendar'}
+          <div class="mock-card">
+            <span class="mock-title">Calendar & Event Feeds</span>
+            <div class="mock-btn-row">
+              <button
+                class="mock-btn primary"
+                onclick={() =>
+                  addCalendarEvent({
+                    title: 'Live Product Demo',
+                    description: 'Simulated dev calendar event',
+                    date: new Date().toISOString().split('T')[0],
+                    startTime: '16:00',
+                    endTime: '17:00',
+                    location: 'Virtual Room',
+                    color: 'indigo'
+                  })}
+              >
+                Add Today's Event
+              </button>
+              <button class="mock-btn" onclick={syncAllCalendarFeeds}>
+                Sync Remote Feeds
+              </button>
+            </div>
+          </div>
         {:else}
           <div class="empty-state">
             <span class="empty-title">
@@ -345,5 +375,56 @@
     margin: 0;
     font-size: 0.75rem;
     color: #71717a;
+  }
+
+  .mock-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 12px;
+  }
+
+  .mock-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #e4e4e7;
+    letter-spacing: -0.01em;
+  }
+
+  .mock-btn-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .mock-btn {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.06);
+    color: #e4e4e7;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .mock-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  .mock-btn.primary {
+    background: #3b82f6;
+    border-color: #60a5fa;
+    color: #ffffff;
+  }
+
+  .mock-btn.primary:hover {
+    background: #2563eb;
   }
 </style>

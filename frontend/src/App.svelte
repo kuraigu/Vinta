@@ -21,6 +21,9 @@
     config as calcConfig
   } from './pages/CalculatorPage.svelte'
   import TimerPage, { config as timerConfig } from './pages/TimerPage.svelte'
+  import CalendarPage, {
+    config as calendarConfig
+  } from './pages/CalendarPage.svelte'
 
   import MainIsland from './components/MainIsland.svelte'
   import ControlsSatellite from './components/ControlsSatellite.svelte'
@@ -529,6 +532,7 @@
     else if (page === SettingsPage) pageId = 'settings'
     else if (page === CalculatorPage) pageId = 'calculator'
     else if (page === TimerPage) pageId = 'timer'
+    else if (page === CalendarPage) pageId = 'calendar'
 
     $activePageIdStore = pageId
     try {
@@ -837,7 +841,8 @@
           apps: { page: AppsPage, config: appsConfig },
           settings: { page: SettingsPage, config: settingsConfig },
           calculator: { page: CalculatorPage, config: calcConfig },
-          timer: { page: TimerPage, config: timerConfig }
+          timer: { page: TimerPage, config: timerConfig },
+          calendar: { page: CalendarPage, config: calendarConfig }
         }
 
         const match = pageMappings[data.mode]

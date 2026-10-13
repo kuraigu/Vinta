@@ -67,7 +67,12 @@
 </script>
 
 <div class="setting-group">
-  <SettingItem label="Time Format" icon={Clock} flexCol={true}>
+  <SettingItem
+    label="Time Format"
+    description="Clock presentation style (Default: 12-Hour)"
+    icon={Clock}
+    flexCol={true}
+  >
     <CustomSelect
       options={timeFormatOptions}
       bind:value={$timeFormatStore}
@@ -76,7 +81,12 @@
     />
   </SettingItem>
 
-  <SettingItem label="Timezone" icon={Globe} flexCol={true}>
+  <SettingItem
+    label="Timezone"
+    description="Active timezone for clock and agenda calculations (Default: Auto-detect)"
+    icon={Globe}
+    flexCol={true}
+  >
     <CustomSelect
       options={timezoneOptions}
       bind:value={selectedTz}
@@ -86,7 +96,12 @@
     />
   </SettingItem>
 
-  <SettingItem label="Date Display Format" icon={Calendar} flexCol={true}>
+  <SettingItem
+    label="Date Display Format"
+    description="Format used across date widgets (Default: Short)"
+    icon={Calendar}
+    flexCol={true}
+  >
     <CustomSelect
       options={dateFormatOptions}
       bind:value={$dateFormatStore}

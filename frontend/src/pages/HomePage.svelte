@@ -8,19 +8,37 @@
 </script>
 
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte'
+  import { onMount, onDestroy, getContext } from 'svelte'
   import { MapPin } from 'lucide-svelte'
   import Calendar from '../components/Calendar.svelte'
   import Weather from '../components/Weather.svelte'
   import DeviceStatusWidget from '../components/DeviceStatusWidget.svelte'
   import ScrollView from '../components/ScrollView.svelte'
+  import CalendarPage, {
+    config as calendarConfig
+  } from './CalendarPage.svelte'
   import {
     homeWidgetsVisibilityStore,
     userNameStore,
     timeFormatStore,
     timezoneStore,
-    dateFormatStore
+    dateFormatStore,
+    type IslandConfig
   } from '../store'
+
+  const navigate =
+    getContext<
+      (page: unknown, pageConfig: IslandConfig, expand?: boolean) => void
+    >('navigate')
+
+  /**
+   * Navigates directly to the dedicated Calendar application page.
+   */
+  function openCalendar() {
+    if (navigate) {
+      navigate(CalendarPage, calendarConfig, true)
+    }
+  }
 
   let { expanded = false } = $props<{ expanded?: boolean }>()
 
@@ -207,7 +225,17 @@
         </div>
       {/if}
       {#if $homeWidgetsVisibilityStore.calendar}
-        <div class="minimal-slot">
+        <div
+          class="minimal-slot clickable-slot"
+          role="button"
+          tabindex="0"
+          onclick={(e) => {
+            e.stopPropagation()
+            openCalendar()
+          }}
+          onkeydown={(e) => e.key === 'Enter' && openCalendar()}
+          title="Open Calendar"
+        >
           <Calendar expanded={false} />
         </div>
       {/if}
@@ -262,10 +290,10 @@
             </section>
           {/if}
 
-          <!-- Calendar Overview Card -->
+          <!-- Calendar Overview Card with interactive day selection and Go to Calendar button -->
           {#if $homeWidgetsVisibilityStore.calendar}
             <section class="calendar-card-feed">
-              <Calendar expanded={true} />
+              <Calendar expanded={true} onOpenCalendar={openCalendar} />
             </section>
           {/if}
         </div>

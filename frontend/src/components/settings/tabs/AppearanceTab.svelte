@@ -23,7 +23,7 @@
 <div class="setting-group">
   <SettingItem
     label="Display Name"
-    description="Personalizes the greeting on the Home feed (defaults to User)"
+    description="Personalizes the greeting on the Home feed (Default: User)"
     icon={User}
     flexCol={true}
   >
@@ -45,7 +45,12 @@
     </div>
   </SettingItem>
 
-  <SettingItem label="Theme" icon={Moon} flexCol={true}>
+  <SettingItem
+    label="Theme"
+    description="Color scheme for UI surfaces (Default: OLED Dark)"
+    icon={Moon}
+    flexCol={true}
+  >
     <CustomSelect
       options={themeOptions}
       bind:value={$themeStore}
@@ -54,7 +59,12 @@
     />
   </SettingItem>
 
-  <SettingItem label="Ambient Glow Intensity" icon={Sparkles} flexCol={true}>
+  <SettingItem
+    label="Ambient Glow Intensity"
+    description="Edge glow accents around the dynamic island (Default: Subtle)"
+    icon={Sparkles}
+    flexCol={true}
+  >
     <CustomSelect
       options={glowIntensityOptions}
       bind:value={$glowIntensityStore}
@@ -63,7 +73,12 @@
     />
   </SettingItem>
 
-  <SettingItem label="Compact Opacity" icon={Eye} flexCol={true}>
+  <SettingItem
+    label="Compact Opacity"
+    description="Background opacity when collapsed (Default: 100%)"
+    icon={Eye}
+    flexCol={true}
+  >
     <SettingSlider
       min={0.2}
       max={1.0}
@@ -72,7 +87,12 @@
     />
   </SettingItem>
 
-  <SettingItem label="Expanded Opacity" icon={Maximize2} flexCol={true}>
+  <SettingItem
+    label="Expanded Opacity"
+    description="Background opacity when expanded (Default: 100%)"
+    icon={Maximize2}
+    flexCol={true}
+  >
     <SettingSlider
       min={0.2}
       max={1.0}

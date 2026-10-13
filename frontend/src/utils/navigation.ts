@@ -12,6 +12,9 @@ import CalculatorPage, {
   config as calculatorConfig
 } from '../pages/CalculatorPage.svelte'
 import TimerPage, { config as timerConfig } from '../pages/TimerPage.svelte'
+import CalendarPage, {
+  config as calendarConfig
+} from '../pages/CalendarPage.svelte'
 import {
   globalMediaStore,
   pageVisibilityStore,
@@ -99,6 +102,11 @@ export const AppControls = {
   goFocus: (navigate: NavFn, e?: Event) => {
     if (e) e.stopPropagation()
     navigate(TimerPage, timerConfig, true)
+  },
+
+  goCalendar: (navigate: NavFn, e?: Event) => {
+    if (e) e.stopPropagation()
+    navigate(CalendarPage, calendarConfig, true)
   },
 
   goAbout: (navigate: NavFn, e?: Event) => {

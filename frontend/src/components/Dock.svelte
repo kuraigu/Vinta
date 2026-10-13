@@ -2,30 +2,34 @@
   import { getContext } from 'svelte'
   import {
     Grid,
-    Music,
-    Settings,
     House,
-    Bell,
+    Calendar,
     FileText,
     Calculator,
     Timer,
-    Info
+    Music,
+    Bell,
+    Settings
   } from 'lucide-svelte'
   import { AppControls } from '../utils/AppControls.svelte'
   import DockButton from './DockButton.svelte'
   import AppsPage from '../pages/AppsPage.svelte'
   import HomePage from '../pages/HomePage.svelte'
-  import NotificationPage from '../pages/NotificationPage.svelte'
-  import MediaPage from '../pages/MediaPage.svelte'
-  import SettingsPage from '../pages/SettingsPage.svelte'
+  import CalendarPage from '../pages/CalendarPage.svelte'
   import NotesPage from '../pages/NotesPage.svelte'
   import CalculatorPage from '../pages/CalculatorPage.svelte'
   import TimerPage from '../pages/TimerPage.svelte'
+  import MediaPage from '../pages/MediaPage.svelte'
+  import NotificationPage from '../pages/NotificationPage.svelte'
+  import SettingsPage from '../pages/SettingsPage.svelte'
   import type { IslandConfig } from '../store'
   import {
     notifData,
     pageVisibilityStore,
-    activeSettingsTabStore
+    dockPinnedAppsStore,
+    globalMediaStore,
+    timerAppStore,
+    isAnyTimerRunning
   } from '../store'
 
   const navigate =
@@ -35,11 +39,56 @@
 
   let { activePage }: { activePage: unknown; islandConfig?: IslandConfig } =
     $props()
+
+  /**
+   * Evaluates if any timer, stopwatch, or focus session is currently running.
+   */
+  const checkTimerRunning = () => isAnyTimerRunning($timerAppStore)
+  const isTimerRunning = $derived.by(checkTimerRunning)
+
+  /**
+   * Evaluates whether the timer widget should appear dynamically when unpinned.
+   */
+  const checkShowTimerDynamic = () =>
+    Boolean(
+      !$dockPinnedAppsStore.timer &&
+      $pageVisibilityStore.timer !== false &&
+      (isTimerRunning || activePage === TimerPage)
+    )
+  const showTimerDynamic = $derived.by(checkShowTimerDynamic)
+
+  /**
+   * Evaluates whether the now-playing media widget should appear dynamically.
+   */
+  const checkShowMedia = () =>
+    Boolean(
+      $pageVisibilityStore.media !== false &&
+      (Boolean($globalMediaStore?.isPlaying) || activePage === MediaPage)
+    )
+  const showMedia = $derived.by(checkShowMedia)
+
+  /**
+   * Evaluates whether the notifications widget should appear dynamically.
+   */
+  const checkShowNotifs = () =>
+    Boolean(
+      $pageVisibilityStore.notifications !== false &&
+      ($notifData.length > 0 || activePage === NotificationPage)
+    )
+  const showNotifs = $derived.by(checkShowNotifs)
+
+  /**
+   * Checks if any dynamic task items are active.
+   */
+  const checkHasDynamicTasks = () =>
+    Boolean(showTimerDynamic || showMedia || showNotifs)
+  const hasDynamicTasks = $derived.by(checkHasDynamicTasks)
 </script>
 
 <div class="dock-container">
-  <div class="dock">
-    <div class="dock-group">
+  <div class="dock" role="toolbar" aria-label="Quick Access Dock">
+    <!-- Core Anchors -->
+    <div class="dock-group core-group">
       <DockButton
         tooltip="Apps"
         active={activePage === AppsPage}
@@ -55,8 +104,21 @@
       >
         <House size={18} />
       </DockButton>
+    </div>
 
-      {#if $pageVisibilityStore.notes !== false}
+    <!-- Pinned Favorites -->
+    <div class="dock-group pinned-group">
+      {#if $dockPinnedAppsStore.calendar && $pageVisibilityStore.calendar !== false}
+        <DockButton
+          tooltip="Calendar"
+          active={activePage === CalendarPage}
+          onclick={(e: MouseEvent) => AppControls.goCalendar(navigate, e)}
+        >
+          <Calendar size={18} />
+        </DockButton>
+      {/if}
+
+      {#if $dockPinnedAppsStore.notes && $pageVisibilityStore.notes !== false}
         <DockButton
           tooltip="Notes"
           active={activePage === NotesPage}
@@ -66,7 +128,7 @@
         </DockButton>
       {/if}
 
-      {#if $pageVisibilityStore.calculator !== false}
+      {#if $dockPinnedAppsStore.calculator && $pageVisibilityStore.calculator !== false}
         <DockButton
           tooltip="Calculator"
           active={activePage === CalculatorPage}
@@ -76,7 +138,7 @@
         </DockButton>
       {/if}
 
-      {#if $pageVisibilityStore.timer !== false}
+      {#if $dockPinnedAppsStore.timer && $pageVisibilityStore.timer !== false}
         <DockButton
           tooltip="Timer"
           active={activePage === TimerPage}
@@ -85,44 +147,56 @@
           <Timer size={18} />
         </DockButton>
       {/if}
+    </div>
 
-      {#if $pageVisibilityStore.media}
-        <DockButton
-          tooltip="Now Playing"
-          active={activePage === MediaPage}
-          onclick={(e: MouseEvent) => AppControls.goMedia(navigate, e)}
-        >
-          <Music size={18} />
-        </DockButton>
-      {/if}
+    <!-- Dynamic Activity Section (Surfaces running Timer, Playing Media, Notifications) -->
+    {#if hasDynamicTasks}
+      <div class="dock-divider" aria-hidden="true"></div>
 
-      {#if $pageVisibilityStore.notifications}
-        <DockButton
-          tooltip="Notifications"
-          active={activePage === NotificationPage}
-          badge={$notifData.length > 0 ? $notifData.length : undefined}
-          onclick={(e: MouseEvent) => AppControls.goNotif(navigate, e)}
-        >
-          <Bell size={18} />
-        </DockButton>
-      {/if}
+      <div class="dock-group dynamic-group">
+        {#if showTimerDynamic}
+          <DockButton
+            tooltip="Timer"
+            active={activePage === TimerPage}
+            onclick={(e: MouseEvent) => AppControls.goTimer(navigate, e)}
+          >
+            <Timer size={18} />
+          </DockButton>
+        {/if}
 
+        {#if showMedia}
+          <DockButton
+            tooltip="Now Playing"
+            active={activePage === MediaPage}
+            onclick={(e: MouseEvent) => AppControls.goMedia(navigate, e)}
+          >
+            <Music size={18} />
+          </DockButton>
+        {/if}
+
+        {#if showNotifs}
+          <DockButton
+            tooltip="Notifications"
+            active={activePage === NotificationPage}
+            badge={$notifData.length > 0 ? $notifData.length : undefined}
+            onclick={(e: MouseEvent) => AppControls.goNotif(navigate, e)}
+          >
+            <Bell size={18} />
+          </DockButton>
+        {/if}
+      </div>
+
+      <div class="dock-divider" aria-hidden="true"></div>
+    {/if}
+
+    <!-- Trailing Settings Anchor -->
+    <div class="dock-group settings-group">
       <DockButton
         tooltip="Settings"
-        active={activePage === SettingsPage &&
-          $activeSettingsTabStore !== 'about'}
+        active={activePage === SettingsPage}
         onclick={(e: MouseEvent) => AppControls.goSettings(navigate, e)}
       >
         <Settings size={18} />
-      </DockButton>
-
-      <DockButton
-        tooltip="About"
-        active={activePage === SettingsPage &&
-          $activeSettingsTabStore === 'about'}
-        onclick={(e: MouseEvent) => AppControls.goAbout(navigate, e)}
-      >
-        <Info size={18} />
       </DockButton>
     </div>
   </div>
@@ -144,7 +218,7 @@
   .dock {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     padding: 2px 6px;
     pointer-events: auto;
   }
@@ -152,6 +226,15 @@
   .dock-group {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
+  }
+
+  .dock-divider {
+    width: 1px;
+    height: 18px;
+    background: var(--c-border, rgba(255, 255, 255, 0.12));
+    margin: 0 2px;
+    flex-shrink: 0;
+    opacity: 0.8;
   }
 </style>

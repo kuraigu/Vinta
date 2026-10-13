@@ -32,6 +32,8 @@
   } from 'lucide-svelte'
   import BackButton from '../components/BackButton.svelte'
   import ScrollView from '../components/ScrollView.svelte'
+  import CustomTimePicker from '../components/CustomTimePicker.svelte'
+  import HorizontalTabSelection, { type TabItem } from '../components/HorizontalTabSelection.svelte'
   import { islandTooltip } from '../services/islandTooltip'
   import {
     timerAppStore,
@@ -83,103 +85,6 @@
   let newAlarmLabel = $state('')
   let newAlarmRepeat = $state<AlarmRepeat>('once')
   let newAlarmDays = $state<number[]>([1, 2, 3, 4, 5])
-
-  // Custom alarm time picker state
-  let alarmHour = $state(9)
-  let alarmMinute = $state(0)
-  let alarmAmPm = $state<'AM' | 'PM'>('AM')
-
-  /**
-   * Syncs custom alarm picker components to the stored 24h HH:MM string.
-   */
-  function syncAlarmTimeFromComponents(): void {
-    let h24 = alarmHour
-    if (!is24H) {
-      if (alarmAmPm === 'AM') {
-        h24 = alarmHour === 12 ? 0 : alarmHour
-      } else {
-        h24 = alarmHour === 12 ? 12 : alarmHour + 12
-      }
-    }
-    const hh = Math.max(0, Math.min(23, h24)).toString().padStart(2, '0')
-    const mm = Math.max(0, Math.min(59, alarmMinute))
-      .toString()
-      .padStart(2, '0')
-    newAlarmTime = `${hh}:${mm}`
-  }
-
-  /**
-   * Populates custom alarm time picker from a 24h HH:MM string.
-   *
-   * @param timeStr Stored 24h HH:MM string.
-   */
-  function populateAlarmTimeComponents(timeStr: string): void {
-    const [hStr, mStr] = (timeStr || '09:00').split(':')
-    const h24 = parseInt(hStr, 10) || 0
-    const m = parseInt(mStr, 10) || 0
-
-    alarmMinute = Math.max(0, Math.min(59, m))
-    if (is24H) {
-      alarmHour = Math.max(0, Math.min(23, h24))
-    } else {
-      alarmHour = h24 % 12 || 12
-      alarmAmPm = h24 >= 12 ? 'PM' : 'AM'
-    }
-    syncAlarmTimeFromComponents()
-  }
-
-  function incrementAlarmHour(): void {
-    if (is24H) {
-      alarmHour = (alarmHour + 1) % 24
-    } else {
-      alarmHour = alarmHour >= 12 ? 1 : alarmHour + 1
-    }
-    syncAlarmTimeFromComponents()
-  }
-
-  function decrementAlarmHour(): void {
-    if (is24H) {
-      alarmHour = alarmHour <= 0 ? 23 : alarmHour - 1
-    } else {
-      alarmHour = alarmHour <= 1 ? 12 : alarmHour - 1
-    }
-    syncAlarmTimeFromComponents()
-  }
-
-  function incrementAlarmMinute(): void {
-    alarmMinute = (alarmMinute + 1) % 60
-    syncAlarmTimeFromComponents()
-  }
-
-  function decrementAlarmMinute(): void {
-    alarmMinute = alarmMinute <= 0 ? 59 : alarmMinute - 1
-    syncAlarmTimeFromComponents()
-  }
-
-  function toggleAlarmAmPm(): void {
-    alarmAmPm = alarmAmPm === 'AM' ? 'PM' : 'AM'
-    syncAlarmTimeFromComponents()
-  }
-
-  function handleHourInput(e: Event): void {
-    const val = parseInt((e.target as HTMLInputElement).value, 10)
-    if (!isNaN(val)) {
-      if (is24H) {
-        alarmHour = Math.max(0, Math.min(23, val))
-      } else {
-        alarmHour = Math.max(1, Math.min(12, val))
-      }
-      syncAlarmTimeFromComponents()
-    }
-  }
-
-  function handleMinuteInput(e: Event): void {
-    const val = parseInt((e.target as HTMLInputElement).value, 10)
-    if (!isNaN(val)) {
-      alarmMinute = Math.max(0, Math.min(59, val))
-      syncAlarmTimeFromComponents()
-    }
-  }
 
   function computeIs24H(): boolean {
     return $timeFormatStore === '24h'
@@ -419,6 +324,13 @@
     setActiveTimerTab(tab)
   }
 
+  const TIMER_TABS: TabItem<TimerAppTab>[] = [
+    { id: 'timer', label: 'Timer', icon: Hourglass, tooltip: 'Countdown timer' },
+    { id: 'stopwatch', label: 'Stopwatch', icon: Clock, tooltip: 'Precision stopwatch' },
+    { id: 'focus', label: 'Focus', icon: Flame, tooltip: 'Focus sprints & breaks' },
+    { id: 'alarms', label: 'Alarms', icon: Bell, tooltip: 'Scheduled reminders' }
+  ]
+
   /**
    * Switches focus phase directly.
    *
@@ -493,7 +405,6 @@
     newAlarmLabel = ''
     newAlarmRepeat = 'once'
     newAlarmDays = [1, 2, 3, 4, 5]
-    populateAlarmTimeComponents('09:00')
     isNewAlarmOpen = true
   }
 
@@ -511,7 +422,6 @@
       Array.isArray(alarm.days) && alarm.days.length > 0
         ? [...alarm.days]
         : [1, 2, 3, 4, 5]
-    populateAlarmTimeComponents(alarm.time)
     isNewAlarmOpen = true
   }
 
@@ -698,47 +608,12 @@
       <div class="app-header">
         <BackButton />
 
-        <nav class="tabs-nav" aria-label="Timer utilities">
-          <button
-            class="tab-btn"
-            class:active={$timerAppStore.activeTab === 'timer'}
-            onclick={() => handleTabSelect('timer')}
-            use:islandTooltip={'Countdown timer'}
-          >
-            <Hourglass size={12} />
-            <span>Timer</span>
-          </button>
-
-          <button
-            class="tab-btn"
-            class:active={$timerAppStore.activeTab === 'stopwatch'}
-            onclick={() => handleTabSelect('stopwatch')}
-            use:islandTooltip={'Precision stopwatch'}
-          >
-            <Clock size={12} />
-            <span>Stopwatch</span>
-          </button>
-
-          <button
-            class="tab-btn"
-            class:active={$timerAppStore.activeTab === 'focus'}
-            onclick={() => handleTabSelect('focus')}
-            use:islandTooltip={'Focus sprints & breaks'}
-          >
-            <Flame size={12} />
-            <span>Focus</span>
-          </button>
-
-          <button
-            class="tab-btn"
-            class:active={$timerAppStore.activeTab === 'alarms'}
-            onclick={() => handleTabSelect('alarms')}
-            use:islandTooltip={'Scheduled reminders'}
-          >
-            <Bell size={12} />
-            <span>Alarms</span>
-          </button>
-        </nav>
+        <HorizontalTabSelection
+          tabs={TIMER_TABS}
+          value={$timerAppStore.activeTab}
+          onchange={handleTabSelect}
+          ariaLabel="Timer utilities"
+        />
 
         {#if $timerAppStore.activeTab === 'focus'}
           <button
@@ -1127,68 +1002,7 @@
               </span>
               <div class="create-inputs-row">
                 <!-- Custom Time Steppers (No native OS flyouts) -->
-                <div class="alarm-time-steppers">
-                  <div class="stepper-unit">
-                    <button
-                      type="button"
-                      class="unit-stepper-btn"
-                      onclick={decrementAlarmHour}
-                      aria-label="Decrease hour">-</button
-                    >
-                    <input
-                      type="number"
-                      min={is24H ? 0 : 1}
-                      max={is24H ? 23 : 12}
-                      class="unit-stepper-input"
-                      value={alarmHour}
-                      oninput={handleHourInput}
-                      aria-label="Hour"
-                    />
-                    <button
-                      type="button"
-                      class="unit-stepper-btn"
-                      onclick={incrementAlarmHour}
-                      aria-label="Increase hour">+</button
-                    >
-                  </div>
-
-                  <span class="stepper-separator">:</span>
-
-                  <div class="stepper-unit">
-                    <button
-                      type="button"
-                      class="unit-stepper-btn"
-                      onclick={decrementAlarmMinute}
-                      aria-label="Decrease minute">-</button
-                    >
-                    <input
-                      type="number"
-                      min={0}
-                      max={59}
-                      class="unit-stepper-input"
-                      value={alarmMinute.toString().padStart(2, '0')}
-                      oninput={handleMinuteInput}
-                      aria-label="Minute"
-                    />
-                    <button
-                      type="button"
-                      class="unit-stepper-btn"
-                      onclick={incrementAlarmMinute}
-                      aria-label="Increase minute">+</button
-                    >
-                  </div>
-
-                  {#if !is24H}
-                    <button
-                      type="button"
-                      class="ampm-pill-btn"
-                      onclick={toggleAlarmAmPm}
-                      aria-label="Toggle AM/PM"
-                    >
-                      {alarmAmPm}
-                    </button>
-                  {/if}
-                </div>
+                <CustomTimePicker bind:value={newAlarmTime} ariaLabel="Alarm time" />
 
                 <input
                   type="text"

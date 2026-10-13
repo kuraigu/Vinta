@@ -1083,6 +1083,11 @@
   gap: 8px;
 }
 
+.create-inputs-row :global(.custom-time-picker) {
+  width: 110px;
+  flex-shrink: 0;
+}
+
 .alarm-time-steppers {
   display: flex;
   align-items: center;

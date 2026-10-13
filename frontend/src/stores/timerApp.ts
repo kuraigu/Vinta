@@ -5,7 +5,7 @@ import {
   startAlarmRingingChime,
   stopAlarmRingingChime
 } from '../services/audioService'
-import { notifData } from './system'
+import { sendVintaNotification } from '../services/vintaNotification'
 import { timeFormatStore } from './settings'
 
 export type TimerAppTab = 'timer' | 'stopwatch' | 'focus' | 'alarms'
@@ -241,27 +241,11 @@ function persistFocusSettings(settings: FocusTimerSettings): void {
  * @param message Notification body.
  */
 function sendToastNotification(title: string, message: string): void {
-  notifData.update((items) => [
-    {
-      id: Date.now(),
-      appName: 'Timer',
-      title,
-      message,
-      timestamp: Date.now()
-    },
-    ...items.slice(0, 98)
-  ])
-
-  if (
-    typeof Notification !== 'undefined' &&
-    Notification.permission === 'granted'
-  ) {
-    try {
-      new Notification(title, { body: message })
-    } catch {
-      // Ignore desktop notification failure
-    }
-  }
+  sendVintaNotification({
+    title,
+    message,
+    subApp: 'Timer'
+  })
 }
 
 // ============================================================================
