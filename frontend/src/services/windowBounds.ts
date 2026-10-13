@@ -5,6 +5,7 @@ import {
 } from '../../bindings/Vinta/backend/app.js'
 import { get } from 'svelte/store'
 import { debugLogs } from '../devtest/debugConfig'
+import { resyncAllSatellites } from '../stores/satellites'
 
 /**
  * Window region boundary dimensions and corner radius.
@@ -118,9 +119,17 @@ export class WindowBoundsManager {
 
     this.isBoundsIpcPending = true
 
-    return Promise.resolve(
+    const ipcCall = Promise.resolve(
       SetWidgetBounds(computedW, computedH, computedR, scale, offset)
     )
+    const timeoutCall = new Promise<void>((_, reject) => {
+      window.setTimeout(
+        () => reject(new Error('SetWidgetBounds timeout')),
+        1800
+      )
+    })
+
+    return Promise.race([ipcCall, timeoutCall])
       .then(() => {
         this.lastDispatchedBounds = {
           w: computedW,
@@ -269,6 +278,115 @@ export class WindowBoundsManager {
   }
 
   /**
+   * Smoothly settles bounds when leaving horizontal dragging runway mode.
+   * Keeps the wide corridor clipping envelope active while the island finishes translating
+   * to its resting offset, preventing Win32 clipping during slower or frame-dropped animations.
+   */
+  public settleRunwayBounds(
+    target: WindowBounds,
+    offset: number,
+    wrapperNode?: HTMLElement | null,
+    islandNode?: HTMLElement | null,
+    onSettled?: () => void
+  ): void {
+    this.cancelPendingTransition()
+
+    let hasSettled = false
+    const commitSettled = () => {
+      if (hasSettled) return
+      hasSettled = true
+      this.cancelPendingTransition()
+      this.applyBounds(target.w, target.h, target.r, offset)
+      resyncAllSatellites()
+      onSettled?.()
+
+      // Post-settle recovery verification in case of frame drops or slow DWM paint
+      window.setTimeout(() => {
+        if (islandNode) {
+          const rect = islandNode.getBoundingClientRect()
+          if (rect.width > target.w + 4 || rect.height > target.h + 4) {
+            this.applyBounds(
+              Math.max(target.w, Math.round(rect.width)),
+              Math.max(target.h, Math.round(rect.height)),
+              target.r,
+              offset
+            )
+            resyncAllSatellites()
+          }
+        }
+      }, 120)
+    }
+
+    if (!wrapperNode) {
+      commitSettled()
+      return
+    }
+
+    const onTransitionEnd = (e: TransitionEvent) => {
+      if (e.target === wrapperNode) {
+        commitSettled()
+      }
+    }
+
+    this.activeIslandNode = wrapperNode
+    this.activeTransitionEndHandler = onTransitionEnd
+    wrapperNode.addEventListener('transitionend', onTransitionEnd)
+    wrapperNode.addEventListener('transitioncancel', onTransitionEnd)
+
+    // Fallback timer matching islandAnim duration plus safety buffer
+    this.boundsTransitionTimeout = window.setTimeout(commitSettled, 400)
+  }
+
+  /**
+   * Recovers and re-synchronizes the OS window clipping region.
+   * Clears stuck IPC queues, cancels any stale transitions, and forcibly commits
+   * the true resting bounds, live offset, and all active satellites to the Win32 window manager.
+   */
+  public async recoverBounds(
+    target: WindowBounds,
+    offset: number,
+    islandNode?: HTMLElement | null,
+    force: boolean = true
+  ): Promise<void> {
+    this.cancelPendingTransition()
+    this.isBoundsIpcPending = false
+    this.pendingBoundsArgs = null
+    this.lastDispatchedBounds = null
+
+    let effectiveW = target.w
+    let effectiveH = target.h
+    const effectiveR = force ? -999 : target.r
+
+    if (islandNode) {
+      const rect = islandNode.getBoundingClientRect()
+      if (rect.width > 0 && rect.height > 0) {
+        effectiveW = Math.max(target.w, Math.round(rect.width))
+        effectiveH = Math.max(target.h, Math.round(rect.height))
+      }
+    }
+
+    resyncAllSatellites()
+
+    this.currentOSBounds = { w: effectiveW, h: effectiveH, r: target.r }
+    await this.updateBounds(effectiveW, effectiveH, effectiveR, offset)
+
+    window.setTimeout(() => {
+      resyncAllSatellites()
+      if (islandNode) {
+        const rect = islandNode.getBoundingClientRect()
+        if (rect.width > effectiveW + 4 || rect.height > effectiveH + 4) {
+          this.applyBounds(
+            Math.max(effectiveW, Math.round(rect.width)),
+            Math.max(effectiveH, Math.round(rect.height)),
+            target.r,
+            offset
+          )
+        }
+      }
+    }, 120)
+  }
+
+  /**
    * Consolidated window bounds synchronizer.
    * Compares the target bounds against current OS bounds and determines
    * whether to expand immediately (to prevent clipping), defer shrinking
@@ -283,8 +401,13 @@ export class WindowBoundsManager {
   ): void {
     if (isDragging || this.getIsDragging()) return
 
-    // Restore tight hit-testing bounds immediately when leaving dragging runway
+    // Settle bounds safely when leaving dragging runway
     if (this.lastDispatchedBounds?.w === -1) {
+      const parentWrapper = islandNode?.parentElement
+      if (parentWrapper) {
+        this.settleRunwayBounds(target, offset, parentWrapper, islandNode)
+        return
+      }
       this.cancelPendingTransition()
       this.applyBounds(target.w, target.h, target.r, offset)
       return

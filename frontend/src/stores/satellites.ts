@@ -153,6 +153,20 @@ export function getActiveSatelliteFootprint(
   return maxFootprint
 }
 
+/**
+ * Forcibly resynchronizes all active satellites with the native Win32 backend.
+ * Clears desynchronizations or missed IPC calls after drag or lag events.
+ */
+export function resyncAllSatellites() {
+  const store = get(satellitesStore)
+  for (const id of Object.keys(store)) {
+    const config = store[id]
+    if (config && config.active) {
+      syncSatelliteWithBackend(config)
+    }
+  }
+}
+
 function syncSatelliteWithBackend(config: SatelliteConfig) {
   if (typeof SetSatelliteBounds === 'function') {
     const singleRadius = typeof config.radius === 'number' ? config.radius : 0

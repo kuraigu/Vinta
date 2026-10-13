@@ -53,6 +53,7 @@
     onHideWidget?: () => void
     onMouseEnter?: () => void
     onMouseLeave?: () => void
+    onRecoverBounds?: () => void
   }
 
   let {
@@ -90,7 +91,8 @@
     onShowWidget,
     onHideWidget,
     onMouseEnter,
-    onMouseLeave
+    onMouseLeave,
+    onRecoverBounds
   }: Props = $props()
 
   function handlePointerDown(e: PointerEvent) {
@@ -158,6 +160,11 @@
     if (!expanded) {
       onExpand?.()
     }
+  }
+
+  function handleDragHandleDblClick(e: MouseEvent) {
+    e.stopPropagation()
+    onRecoverBounds?.()
   }
 
   onMount(() => {
@@ -263,6 +270,7 @@
     <div
       class="island-drag-handle"
       aria-label="Drag to reposition (or Alt + Drag)"
+      ondblclick={handleDragHandleDblClick}
     >
       <div class="drag-pill-bar"></div>
     </div>

@@ -1114,6 +1114,18 @@ func (a *App) Shutdown(_ context.Context) {
 // SetWidgetBounds is called by the frontend whenever the widget dimensions change.
 // It updates the native Win32 click-through region so only the visible widget is clickable.
 func (a *App) SetWidgetBounds(width int, height int, radius int, scale float64, offsetX int) {
+	if radius == -999 {
+		regionMu.Lock()
+		lastRegion = regionCache{}
+		regionMu.Unlock()
+		if height > 52 {
+			radius = 30
+		} else if a.restingR > 0 {
+			radius = a.restingR
+		} else {
+			radius = 20
+		}
+	}
 	a.pillW = width
 	a.pillH = height
 	a.pillR = radius
@@ -1498,11 +1510,6 @@ func (a *App) SetSatelliteBounds(bounds SatelliteBounds) {
 	a.satellitesMu.Lock()
 	if a.satellites == nil {
 		a.satellites = make(map[string]SatelliteBounds)
-	}
-	existing, exists := a.satellites[bounds.ID]
-	if exists && existing == bounds {
-		a.satellitesMu.Unlock()
-		return
 	}
 	a.satellites[bounds.ID] = bounds
 	a.satellitesMu.Unlock()
@@ -2185,17 +2192,13 @@ func createSatelliteRegion(sat SatelliteBounds, mainW, mainH, offsetX, sw int, s
 
 // combineWindowRegions merges a slice of Win32 HRGNs into a single composite region.
 func combineWindowRegions(regions ...uintptr) uintptr {
-	var finalRgn uintptr
+	finalRgn, _, _ := procCreateRectRgn.Call(0, 0, 0, 0)
 	for _, rgn := range regions {
 		if rgn == 0 {
 			continue
 		}
-		if finalRgn == 0 {
-			finalRgn = rgn
-		} else {
-			_, _, _ = procCombineRgn.Call(finalRgn, finalRgn, rgn, uintptr(rgnOr))
-			_, _, _ = procDeleteObject.Call(rgn)
-		}
+		_, _, _ = procCombineRgn.Call(finalRgn, finalRgn, rgn, uintptr(rgnOr))
+		_, _, _ = procDeleteObject.Call(rgn)
 	}
 	return finalRgn
 }

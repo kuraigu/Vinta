@@ -200,6 +200,7 @@
   let islandAnim = $state('0.32s cubic-bezier(0.2, 0.8, 0.2, 1)')
 
   let islandContainerNode = $state<HTMLDivElement | null>(null)
+  let islandWrapperNode = $state<HTMLDivElement | null>(null)
   let islandNode = $state<HTMLDivElement | null>(null)
 
   let isControlsDrawerOpen = $state(false)
@@ -639,7 +640,13 @@
   setContext('hidePill', hideWidget)
 
   function syncOSBounds() {
-    if (gestures.isDragging || gestures.isTrackRegionActive) return
+    if (
+      gestures.isDragging ||
+      gestures.isTrackRegionActive ||
+      gestures.isSettling
+    ) {
+      return
+    }
     const target = getBoundsForState()
     bounds.syncBounds(
       target,
@@ -654,6 +661,8 @@
 
   // Drag Gesture Helpers
   function finishDragGesture() {
+    const wasInRunway =
+      gestures.isTrackRegionActive || gestures.isDragging || gestures.isSettling
     gestures.finishDrag(undefined, () => {
       const resting = Math.max(
         allowedOffsets.min,
@@ -662,7 +671,22 @@
       currentLiveOffsetX = resting
       $hiddenPillOffsetXStore = resting
       const target = getBoundsForState()
-      bounds.syncBounds(target, resting, islandNode, false, isHidden)
+
+      if (wasInRunway) {
+        gestures.isSettling = true
+        gestures.isTrackRegionActive = true
+        bounds.settleRunwayBounds(
+          target,
+          resting,
+          islandWrapperNode,
+          islandNode,
+          () => {
+            gestures.finishSettling()
+          }
+        )
+      } else {
+        bounds.syncBounds(target, resting, islandNode, false, isHidden)
+      }
     })
   }
 
@@ -686,6 +710,18 @@
     isHovering = true
     isSatelliteHovering = false
     clearTimeout(hideTimeout)
+    if (
+      !gestures.isDragging &&
+      !gestures.isTrackRegionActive &&
+      !gestures.isSettling
+    ) {
+      bounds.recoverBounds(
+        getBoundsForState(),
+        clampedOffsetX,
+        islandNode,
+        true
+      )
+    }
     if (isHidden && $wakeMethodStore === 'hover') {
       hoverShowTimeout = window.setTimeout(showWidget, 150)
     } else if (!isHidden) {
@@ -795,10 +831,36 @@
       }
     }
 
+    const handleWindowFocus = () => {
+      if (
+        !gestures.isDragging &&
+        !gestures.isTrackRegionActive &&
+        !gestures.isSettling
+      ) {
+        bounds.recoverBounds(
+          getBoundsForState(),
+          clampedOffsetX,
+          islandNode,
+          true
+        )
+      }
+    }
+
+    const handleRecoverBoundsEvent = () => {
+      bounds.recoverBounds(
+        getBoundsForState(),
+        clampedOffsetX,
+        islandNode,
+        true
+      )
+    }
+
     window.addEventListener('resize', handleResize)
     window.addEventListener('blur', handleGlobalDragFailsafe)
     window.addEventListener('pointercancel', handleGlobalDragFailsafe)
     window.addEventListener('keydown', handleWindowKeydownFailsafe)
+    window.addEventListener('focus', handleWindowFocus)
+    window.addEventListener('vinta-recover-bounds', handleRecoverBoundsEvent)
 
     const cleanupEvents = initIslandEvents({
       showWidget,
@@ -968,6 +1030,11 @@
       window.removeEventListener('blur', handleGlobalDragFailsafe)
       window.removeEventListener('pointercancel', handleGlobalDragFailsafe)
       window.removeEventListener('keydown', handleWindowKeydownFailsafe)
+      window.removeEventListener('focus', handleWindowFocus)
+      window.removeEventListener(
+        'vinta-recover-bounds',
+        handleRecoverBoundsEvent
+      )
     }
   })
 </script>
@@ -994,6 +1061,7 @@
   )}px; transform: translateX(-50%);"
 >
   <div
+    bind:this={islandWrapperNode}
     class="island-wrapper"
     style="
       pointer-events: {isQuitting ? 'none' : 'auto'};
@@ -1042,6 +1110,14 @@
       onHideWidget={hideWidget}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      onRecoverBounds={() => {
+        bounds.recoverBounds(
+          getBoundsForState(),
+          clampedOffsetX,
+          islandNode,
+          true
+        )
+      }}
     />
 
     {#if !isQuitting && !isHidden}
