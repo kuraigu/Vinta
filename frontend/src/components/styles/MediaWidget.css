@@ -348,8 +348,9 @@
       to bottom,
       rgba(10, 11, 16, 0.18) 0%,
       transparent 22%,
-      transparent 72%,
-      rgba(10, 11, 16, 0.28) 100%
+      transparent 64%,
+      rgba(10, 11, 16, 0.25) 82%,
+      rgba(10, 11, 16, 0.52) 100%
     );
   pointer-events: none;
   transition: background 0.4s ease;

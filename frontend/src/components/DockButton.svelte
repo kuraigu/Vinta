@@ -47,7 +47,7 @@
   .dock-btn {
     background: transparent;
     border: 1px solid transparent;
-    color: var(--c-text-secondary);
+    color: rgba(255, 255, 255, 0.85);
     width: 32px;
     height: 32px;
     border-radius: 12px;
@@ -57,6 +57,7 @@
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
     position: relative;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7));
   }
 
   .dock-btn.shape-circle {
@@ -129,27 +130,29 @@
   }
 
   .dock-btn:hover {
-    color: var(--c-text-primary);
-    background: var(--c-hover, rgba(255, 255, 255, 0.06));
-    border-color: rgba(255, 255, 255, 0.06);
-    transform: scale(1.06);
+    color: #ffffff;
+    background: var(--c-hover, rgba(255, 255, 255, 0.12));
+    border-color: rgba(255, 255, 255, 0.12);
+    transform: scale(1.08);
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
   }
 
   .dock-btn.active {
-    color: var(--c-text-primary, #ffffff);
-    background: rgba(255, 255, 255, 0.13);
-    border-color: var(--c-border, rgba(255, 255, 255, 0.16));
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.18);
+    border-color: rgba(255, 255, 255, 0.22);
     box-shadow:
-      0 2px 6px rgba(0, 0, 0, 0.25),
-      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      0 2px 8px rgba(0, 0, 0, 0.35),
+      inset 0 1px 0 rgba(255, 255, 255, 0.18);
+    filter: drop-shadow(0 1px 2.5px rgba(0, 0, 0, 0.75));
   }
 
   .dock-btn.active:hover {
-    background: rgba(255, 255, 255, 0.17);
-    border-color: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.24);
+    border-color: rgba(255, 255, 255, 0.28);
     box-shadow:
-      0 3px 8px rgba(0, 0, 0, 0.28),
-      inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      0 3px 10px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
   }
 
   /* Action button hover colors */
