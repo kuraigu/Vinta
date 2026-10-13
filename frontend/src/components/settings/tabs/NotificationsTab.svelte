@@ -32,6 +32,7 @@
 
   <SettingItem
     label={`Notification Sound Volume (${Math.round($notifVolumeStore * 100)}%)`}
+    description="Audio feedback level for incoming notifications (Default: 50%)"
     icon={Volume2}
     flexCol={true}
   >

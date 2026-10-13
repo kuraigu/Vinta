@@ -23,6 +23,7 @@
     Download,
     Calculator,
     Timer,
+    Calendar as CalendarIcon,
     X
   } from 'lucide-svelte'
   import HomePage, { config as homeConfig } from './HomePage.svelte'
@@ -36,6 +37,7 @@
     config as calculatorConfig
   } from './CalculatorPage.svelte'
   import TimerPage, { config as timerConfig } from './TimerPage.svelte'
+  import CalendarPage, { config as calendarConfig } from './CalendarPage.svelte'
   import ActionCenterPage, {
     config as actionCenterConfig
   } from './ActionCenterPage.svelte'
@@ -103,6 +105,14 @@
       icon: Calculator,
       visibilityKey: 'calculator',
       action: () => openApp(CalculatorPage, calculatorConfig)
+    },
+    {
+      id: 'calendar',
+      name: 'Calendar',
+      desc: 'Schedule & events',
+      icon: CalendarIcon,
+      visibilityKey: 'calendar',
+      action: () => openApp(CalendarPage, calendarConfig)
     },
     {
       id: 'home',

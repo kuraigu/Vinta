@@ -660,41 +660,43 @@
 
   let miniTitleNode = $state<HTMLElement | null>(null)
   let expandedTitleNode = $state<HTMLElement | null>(null)
+  let expandedArtistNode = $state<HTMLElement | null>(null)
 
   let isMiniTitleOverflowing = $state(false)
-  let miniTitleDist = $state(0)
   let miniTitleDuration = $state(8)
 
   let isExpandedTitleOverflowing = $state(false)
-  let expandedTitleDist = $state(0)
   let expandedTitleDuration = $state(8)
+
+  let isExpandedArtistOverflowing = $state(false)
+  let expandedArtistDuration = $state(8)
 
   /**
    * Calculates text overflow metrics and configures the marquee animation speed.
    *
    * @param node Target element to evaluate
-   * @returns Object containing overflow status, slide distance, and duration
+   * @returns Object containing overflow status and duration
    */
   function measureMarquee(node: HTMLElement | null): {
     overflowing: boolean
-    dist: number
     duration: number
   } {
     if (!node || !node.parentElement) {
-      return { overflowing: false, dist: 0, duration: 8 }
+      return { overflowing: false, duration: 8 }
     }
     const containerWidth = node.parentElement.clientWidth
-    const contentWidth = node.scrollWidth
+    const textNode =
+      (node.querySelector('.marquee-text') as HTMLElement) || node
+    const contentWidth = textNode.scrollWidth || node.scrollWidth
     const diff = contentWidth - containerWidth
 
-    if (diff > 14 && containerWidth > 0) {
-      const dist = Math.ceil(diff + 8)
-      // Calm reading cadence (~20px/sec) with 3.5s initial pause and 2.5s terminal pause
-      const scrollTime = dist / 20
-      const duration = Math.max(12, Math.min(45, Math.round(scrollTime + 6)))
-      return { overflowing: true, dist, duration }
+    if (diff > 8 && containerWidth > 0) {
+      const dist = Math.ceil(contentWidth + 40)
+      const scrollTime = dist / 28
+      const duration = Math.max(8, Math.min(30, Math.round(scrollTime + 4)))
+      return { overflowing: true, duration }
     }
-    return { overflowing: false, dist: 0, duration: 8 }
+    return { overflowing: false, duration: 8 }
   }
 
   /**
@@ -702,9 +704,11 @@
    */
   function handleTitleMarqueeEffect() {
     const _title = media.title
+    const _artist = media.artist
     const _expanded = expanded
     const _mini = miniTitleNode
     const _exp = expandedTitleNode
+    const _expArtist = expandedArtistNode
 
     let rafId: number | null = null
 
@@ -712,13 +716,18 @@
       if (!_expanded && _mini) {
         const res = measureMarquee(_mini)
         isMiniTitleOverflowing = res.overflowing
-        miniTitleDist = res.dist
         miniTitleDuration = res.duration
-      } else if (_expanded && _exp) {
-        const res = measureMarquee(_exp)
-        isExpandedTitleOverflowing = res.overflowing
-        expandedTitleDist = res.dist
-        expandedTitleDuration = res.duration
+      } else if (_expanded) {
+        if (_exp) {
+          const res = measureMarquee(_exp)
+          isExpandedTitleOverflowing = res.overflowing
+          expandedTitleDuration = res.duration
+        }
+        if (_expArtist) {
+          const res = measureMarquee(_expArtist)
+          isExpandedArtistOverflowing = res.overflowing
+          expandedArtistDuration = res.duration
+        }
       }
     }
 
@@ -733,6 +742,9 @@
     }
     if (_exp?.parentElement) {
       ro.observe(_exp.parentElement)
+    }
+    if (_expArtist?.parentElement) {
+      ro.observe(_expArtist.parentElement)
     }
 
     return () => {
@@ -788,15 +800,22 @@
           class="track-title-mini-wrapper"
           class:is-overflowing={isMiniTitleOverflowing}
           style={isMiniTitleOverflowing
-            ? `--marquee-dist: ${miniTitleDist}px; --marquee-duration: ${miniTitleDuration}s;`
+            ? `--marquee-duration: ${miniTitleDuration}s;`
             : undefined}
         >
           <span
             bind:this={miniTitleNode}
             class="track-title-mini"
             class:is-marquee={isMiniTitleOverflowing}
-            >{media.title || 'No Media Playing'}</span
           >
+            <span class="marquee-text">{media.title || 'No Media Playing'}</span
+            >
+            {#if isMiniTitleOverflowing}
+              <span class="marquee-spacer" aria-hidden="true"
+                >{media.title || 'No Media Playing'}</span
+              >
+            {/if}
+          </span>
         </div>
         {#if media.artist}
           <span class="artist-name-mini">{media.artist}</span>
@@ -980,10 +999,31 @@
         <div class="middle-section">
           <div class="track-details">
             <!-- Line 1: Artist / Album Name (Subtle Subtitle Style) -->
-            <div class="artist-name">
-              {media.artist ||
-                media.album ||
-                (media.title ? 'Unknown Artist' : 'Media Player')}
+            <div
+              class="artist-name-wrapper"
+              class:is-overflowing={isExpandedArtistOverflowing}
+              style={isExpandedArtistOverflowing
+                ? `--marquee-duration: ${expandedArtistDuration}s;`
+                : undefined}
+            >
+              <div
+                bind:this={expandedArtistNode}
+                class="artist-name"
+                class:is-marquee={isExpandedArtistOverflowing}
+              >
+                <span class="marquee-text">
+                  {media.artist ||
+                    media.album ||
+                    (media.title ? 'Unknown Artist' : 'Media Player')}
+                </span>
+                {#if isExpandedArtistOverflowing}
+                  <span class="marquee-spacer" aria-hidden="true">
+                    {media.artist ||
+                      media.album ||
+                      (media.title ? 'Unknown Artist' : 'Media Player')}
+                  </span>
+                {/if}
+              </div>
             </div>
 
             <!-- Line 2: Track Title (Prominent Headline Style with marquee support) -->
@@ -991,7 +1031,7 @@
               class="track-title-wrapper"
               class:is-overflowing={isExpandedTitleOverflowing}
               style={isExpandedTitleOverflowing
-                ? `--marquee-dist: ${expandedTitleDist}px; --marquee-duration: ${expandedTitleDuration}s;`
+                ? `--marquee-duration: ${expandedTitleDuration}s;`
                 : undefined}
             >
               <div
@@ -999,7 +1039,14 @@
                 class="track-title"
                 class:is-marquee={isExpandedTitleOverflowing}
               >
-                {media.title || 'Connect Media Player'}
+                <span class="marquee-text"
+                  >{media.title || 'Connect Media Player'}</span
+                >
+                {#if isExpandedTitleOverflowing}
+                  <span class="marquee-spacer" aria-hidden="true"
+                    >{media.title || 'Connect Media Player'}</span
+                  >
+                {/if}
               </div>
             </div>
           </div>

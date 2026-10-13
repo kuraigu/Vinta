@@ -184,6 +184,7 @@
             : 'Check for new versions'}
       icon={RefreshCw}
       flexCol={true}
+      disabled={!isOfficialBuild}
     >
       <SettingActionButton
         variant="default"
@@ -372,6 +373,7 @@
         ? 'Disabled for non-official releases'
         : 'Periodically query GitHub releases in the background'}
       icon={Download}
+      disabled={!isOfficialBuild}
     >
       <label class="toggle-switch">
         <input

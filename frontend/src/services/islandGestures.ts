@@ -59,6 +59,7 @@ export function computeMonitorSnapOffsets(
  */
 export class IslandGestureController {
   public isDragging = false
+  public isSettling = false
   public isTrackRegionActive = false
   public dragMovedDistance = 0
 
@@ -110,6 +111,7 @@ export class IslandGestureController {
     onWatchdogFailsafe: () => void
   ): void {
     this.isDragging = true
+    this.isSettling = false
     this.hasPointerCaptured = false
     this.dragMovedDistance = 0
     this.hasExpandedRunway = false
@@ -147,7 +149,7 @@ export class IslandGestureController {
     const dx = e.screenX - this.dragStartX
     this.dragMovedDistance = Math.abs(dx)
 
-    if (this.dragMovedDistance > 6) {
+    if (this.dragMovedDistance > 2) {
       if (!this.hasExpandedRunway) {
         this.hasExpandedRunway = true
         this.isTrackRegionActive = true
@@ -177,13 +179,12 @@ export class IslandGestureController {
   }
 
   /**
-   * Concludes the dragging gesture and restores resting boundaries.
+   * Concludes the dragging gesture and triggers resting completion.
    */
   public finishDrag(e?: PointerEvent, onComplete?: () => void): void {
     clearTimeout(this.dragWatchdogTimeout)
     this.dragWatchdogTimeout = undefined
     this.isDragging = false
-    this.isTrackRegionActive = false
     this.hasExpandedRunway = false
     this.onExpandRunwayCallback = undefined
 
@@ -203,12 +204,20 @@ export class IslandGestureController {
   }
 
   /**
+   * Concludes the settling phase after drag release and restores normal state tracking.
+   */
+  public finishSettling(): void {
+    this.isSettling = false
+    this.isTrackRegionActive = false
+  }
+
+  /**
    * Resets the drag inactivity watchdog timer.
    */
   public resetWatchdog(onFailsafe: () => void): void {
     clearTimeout(this.dragWatchdogTimeout)
     this.dragWatchdogTimeout = window.setTimeout(() => {
-      if (this.isDragging) {
+      if (this.isDragging || this.isSettling) {
         onFailsafe()
       }
     }, 6000)
@@ -221,6 +230,7 @@ export class IslandGestureController {
     clearTimeout(this.dragResetTimeout)
     clearTimeout(this.dragWatchdogTimeout)
     this.isDragging = false
+    this.isSettling = false
     this.isTrackRegionActive = false
     this.hasExpandedRunway = false
     this.onExpandRunwayCallback = undefined

@@ -95,7 +95,26 @@
   }
 
   .setting-item.item-disabled {
-    opacity: 0.55;
+    opacity: 0.42;
+    cursor: not-allowed;
+  }
+
+  .setting-item.item-disabled:hover {
+    border-color: rgba(255, 255, 255, 0.08);
+    background:
+      linear-gradient(
+        145deg,
+        rgba(255, 255, 255, 0.055) 0%,
+        rgba(255, 255, 255, 0.018) 100%
+      ),
+      #15161c;
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
+      0 3px 12px rgba(0, 0, 0, 0.12);
+  }
+
+  .setting-item.item-disabled .setting-icon-col {
+    opacity: 0.6;
   }
 
   .setting-item.flex-col {

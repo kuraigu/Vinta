@@ -5,6 +5,7 @@ import {
 } from '../../bindings/Vinta/backend/app.js'
 import { get } from 'svelte/store'
 import { debugLogs } from '../devtest/debugConfig'
+import { resyncAllSatellites } from '../stores/satellites'
 
 /**
  * Window region boundary dimensions and corner radius.
@@ -41,6 +42,8 @@ export class WindowBoundsManager {
     null
   private activeIslandNode: HTMLElement | null = null
   private resizeObserver: ResizeObserver | null = null
+  private recoveryDebounceTimer?: number
+  private transitionEndDebounceTimer?: number
 
   public currentOSBounds: WindowBounds = { w: 0, h: 0, r: 0 }
   public targetPendingBounds: WindowBounds = { w: 0, h: 0, r: 0 }
@@ -118,9 +121,17 @@ export class WindowBoundsManager {
 
     this.isBoundsIpcPending = true
 
-    return Promise.resolve(
+    const ipcCall = Promise.resolve(
       SetWidgetBounds(computedW, computedH, computedR, scale, offset)
     )
+    const timeoutCall = new Promise<void>((_, reject) => {
+      window.setTimeout(
+        () => reject(new Error('SetWidgetBounds timeout')),
+        1800
+      )
+    })
+
+    return Promise.race([ipcCall, timeoutCall])
       .then(() => {
         this.lastDispatchedBounds = {
           w: computedW,
@@ -190,30 +201,17 @@ export class WindowBoundsManager {
       return
     }
 
-    // Safety guard against clipping under heavy load:
-    // If islandNode has not reached target dimensions yet, retain a safe envelope
-    // so Windows DWM does not clip the visible animated element.
-    if (islandNode) {
-      const liveW = islandNode.offsetWidth
-      const liveH = islandNode.offsetHeight
-      if (liveW > toApply.w + 6 || liveH > toApply.h + 6) {
-        this.applyBounds(
-          Math.max(toApply.w, liveW),
-          Math.max(toApply.h, liveH),
-          toApply.r,
-          offset
-        )
-        return
-      }
-    }
-
-    this.applyBounds(toApply.w, toApply.h, toApply.r, offset)
+    this.recoverRestingBounds(toApply, offset, islandNode)
   }
 
   /**
    * Resets active shrinking timeout, disconnects observers, and removes lingering transition listeners.
    */
   public cancelPendingTransition(): void {
+    clearTimeout(this.recoveryDebounceTimer)
+    this.recoveryDebounceTimer = undefined
+    clearTimeout(this.transitionEndDebounceTimer)
+    this.transitionEndDebounceTimer = undefined
     clearTimeout(this.boundsTransitionTimeout)
     this.boundsTransitionTimeout = undefined
     this.targetPendingBounds = { w: 0, h: 0, r: 0 }
@@ -242,7 +240,8 @@ export class WindowBoundsManager {
    */
   public async prepareExpansion(
     target: WindowBounds,
-    explicitOffset?: number
+    explicitOffset?: number,
+    islandNode?: HTMLElement | null
   ): Promise<void> {
     const currW = this.currentOSBounds.w
     const currH = this.currentOSBounds.h
@@ -266,6 +265,167 @@ export class WindowBoundsManager {
         new Promise<void>((resolve) => window.setTimeout(resolve, 60))
       ])
     } catch {}
+
+    this.scheduleAnimationRecovery(
+      target,
+      offset,
+      islandNode || null,
+      false,
+      380
+    )
+  }
+
+  /**
+   * Smoothly settles bounds when leaving horizontal dragging runway mode.
+   * Keeps the wide corridor clipping envelope active while the island finishes translating
+   * to its resting offset, preventing Win32 clipping during slower or frame-dropped animations.
+   */
+  public settleRunwayBounds(
+    target: WindowBounds,
+    offset: number,
+    wrapperNode?: HTMLElement | null,
+    islandNode?: HTMLElement | null,
+    onSettled?: () => void
+  ): void {
+    this.cancelPendingTransition()
+
+    let hasSettled = false
+    const commitSettled = () => {
+      if (hasSettled) return
+      hasSettled = true
+      this.cancelPendingTransition()
+      this.recoverRestingBounds(target, offset, islandNode)
+      onSettled?.()
+    }
+
+    if (!wrapperNode) {
+      commitSettled()
+      return
+    }
+
+    const onTransitionEnd = (e: TransitionEvent) => {
+      if (e.target === wrapperNode) {
+        commitSettled()
+      }
+    }
+
+    this.activeIslandNode = wrapperNode
+    this.activeTransitionEndHandler = onTransitionEnd
+    wrapperNode.addEventListener('transitionend', onTransitionEnd)
+    wrapperNode.addEventListener('transitioncancel', onTransitionEnd)
+
+    // Fallback timer matching islandAnim duration plus safety buffer
+    this.boundsTransitionTimeout = window.setTimeout(commitSettled, 400)
+  }
+
+  /**
+   * Forcibly recovers the exact resting window clipping region to the target bounds.
+   * Cancels lingering transitions, updates OS window bounds, re-syncs all satellites,
+   * and runs a follow-up cache-bust check to guarantee the window region strictly matches
+   * the visible island without blocking external mouse clicks.
+   */
+  public async recoverRestingBounds(
+    target: WindowBounds,
+    offset: number,
+    _islandNode?: HTMLElement | null,
+    _isHidden: boolean = false
+  ): Promise<void> {
+    if (this.getIsDragging()) return
+    this.cancelPendingTransition()
+
+    clearTimeout(this.recoveryDebounceTimer)
+    this.recoveryDebounceTimer = window.setTimeout(async () => {
+      if (this.getIsDragging()) return
+      this.isBoundsIpcPending = false
+      this.pendingBoundsArgs = null
+      this.lastDispatchedBounds = null
+
+      const finalW = Math.round(target.w)
+      const finalH = Math.round(target.h)
+      const finalR = Math.round(target.r)
+
+      this.currentOSBounds = { w: finalW, h: finalH, r: finalR }
+      await this.updateBounds(finalW, finalH, finalR, offset)
+      resyncAllSatellites()
+
+      // Post-animation secondary verification to bust Windows DWM cache under lag
+      window.setTimeout(() => {
+        if (this.getIsDragging()) return
+        resyncAllSatellites()
+        // Pass -finalR to bust native cache in Go and guarantee SetWindowRgn
+        this.updateBounds(finalW, finalH, -finalR, offset)
+      }, 80)
+    }, 25)
+  }
+
+  /**
+   * Coordinates animation transitions and guarantees that once the CSS transition completes,
+   * the exact resting bounds are recovered.
+   */
+  public scheduleAnimationRecovery(
+    target: WindowBounds,
+    offset: number,
+    islandNode: HTMLElement | null,
+    isHidden: boolean = false,
+    durationMs: number = 380
+  ): void {
+    this.cancelPendingTransition()
+    this.targetPendingBounds = { ...target }
+
+    let hasRecovered = false
+    const commitRecovery = () => {
+      if (hasRecovered) return
+      hasRecovered = true
+      clearTimeout(this.transitionEndDebounceTimer)
+      this.transitionEndDebounceTimer = undefined
+      this.cancelPendingTransition()
+      this.recoverRestingBounds(target, offset, islandNode, isHidden)
+    }
+
+    const triggerDebouncedCommit = () => {
+      clearTimeout(this.transitionEndDebounceTimer)
+      this.transitionEndDebounceTimer = window.setTimeout(() => {
+        commitRecovery()
+      }, 40)
+    }
+
+    if (islandNode) {
+      const onTransitionEnd = (e: TransitionEvent) => {
+        if (e.target !== islandNode) return
+        if (
+          e.propertyName === 'width' ||
+          e.propertyName === 'height' ||
+          e.propertyName === 'border-radius' ||
+          e.propertyName === 'border-bottom-left-radius' ||
+          e.propertyName === 'border-bottom-right-radius' ||
+          e.propertyName === 'transform'
+        ) {
+          triggerDebouncedCommit()
+        }
+      }
+
+      this.activeIslandNode = islandNode
+      this.activeTransitionEndHandler = onTransitionEnd
+      islandNode.addEventListener('transitionend', onTransitionEnd)
+      islandNode.addEventListener('transitioncancel', onTransitionEnd)
+    }
+
+    // Safety fallback timer to guarantee recovery under frame drops or lag
+    this.boundsTransitionTimeout = window.setTimeout(commitRecovery, durationMs)
+  }
+
+  /**
+   * Recovers and re-synchronizes the OS window clipping region.
+   * Clears stuck IPC queues, cancels any stale transitions, and forcibly commits
+   * the true resting bounds, live offset, and all active satellites to the Win32 window manager.
+   */
+  public async recoverBounds(
+    target: WindowBounds,
+    offset: number,
+    islandNode?: HTMLElement | null,
+    _force: boolean = true
+  ): Promise<void> {
+    return this.recoverRestingBounds(target, offset, islandNode, false)
   }
 
   /**
@@ -283,8 +443,13 @@ export class WindowBoundsManager {
   ): void {
     if (isDragging || this.getIsDragging()) return
 
-    // Restore tight hit-testing bounds immediately when leaving dragging runway
+    // Settle bounds safely when leaving dragging runway
     if (this.lastDispatchedBounds?.w === -1) {
+      const parentWrapper = islandNode?.parentElement
+      if (parentWrapper) {
+        this.settleRunwayBounds(target, offset, parentWrapper, islandNode)
+        return
+      }
       this.cancelPendingTransition()
       this.applyBounds(target.w, target.h, target.r, offset)
       return
@@ -318,66 +483,32 @@ export class WindowBoundsManager {
       return
     }
 
-    // Growing: expand Win32 window clipping envelope upfront to avoid edge clipping
+    // Growing: expand Win32 window clipping envelope upfront to avoid edge clipping,
+    // and schedule post-animation recovery so bounds snap back to the exact target when done.
     if (isGrowing) {
       this.cancelPendingTransition()
       const immediateW = Math.max(currW, target.w)
       const immediateH = Math.max(currH, target.h)
 
       this.applyBounds(immediateW, immediateH, target.r, offset)
+      this.scheduleAnimationRecovery(target, offset, islandNode, isHidden, 380)
       return
     }
 
     // Shrinking: defer clipping region commit until CSS transition completes
+    // so animated elements are not clipped mid-flight, then recover exact resting bounds.
     if (isShrinking) {
       const isNodeAtTarget =
         islandNode &&
-        Math.abs(islandNode.offsetWidth - target.w) <= 3 &&
-        Math.abs(islandNode.offsetHeight - target.h) <= 3
+        Math.abs(islandNode.offsetWidth - target.w) <= 2 &&
+        Math.abs(islandNode.offsetHeight - target.h) <= 2
 
       if (isNodeAtTarget || !islandNode) {
-        this.cancelPendingTransition()
-        this.applyBounds(target.w, target.h, target.r, offset)
+        this.recoverRestingBounds(target, offset, islandNode, isHidden)
         return
       }
 
-      this.cancelPendingTransition()
-      this.targetPendingBounds = { ...target }
-
-      let hasCommitted = false
-      const commitOnce = () => {
-        if (hasCommitted) return
-        hasCommitted = true
-        this.tryCommitShrinkingBounds(islandNode, offset, false)
-      }
-
-      const checkDimensions = () => {
-        if (!islandNode) return
-        const wDiff = Math.abs(islandNode.offsetWidth - target.w)
-        const hDiff = Math.abs(islandNode.offsetHeight - target.h)
-        if (wDiff <= 3 && hDiff <= 3) {
-          commitOnce()
-        }
-      }
-
-      const onTransitionEnd = (e: TransitionEvent) => {
-        if (e.target !== islandNode) return
-        checkDimensions()
-      }
-
-      this.activeIslandNode = islandNode
-      this.activeTransitionEndHandler = onTransitionEnd
-      islandNode.addEventListener('transitionend', onTransitionEnd)
-      islandNode.addEventListener('transitioncancel', onTransitionEnd)
-
-      if (typeof ResizeObserver !== 'undefined') {
-        this.resizeObserver = new ResizeObserver(() => {
-          checkDimensions()
-        })
-        this.resizeObserver.observe(islandNode)
-      }
-
-      this.boundsTransitionTimeout = window.setTimeout(commitOnce, 850)
+      this.scheduleAnimationRecovery(target, offset, islandNode, isHidden, 380)
       return
     }
 

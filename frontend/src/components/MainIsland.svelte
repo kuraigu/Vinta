@@ -53,6 +53,8 @@
     onHideWidget?: () => void
     onMouseEnter?: () => void
     onMouseLeave?: () => void
+    onRecoverBounds?: () => void
+    onAnimationDone?: () => void
   }
 
   let {
@@ -90,8 +92,25 @@
     onShowWidget,
     onHideWidget,
     onMouseEnter,
-    onMouseLeave
+    onMouseLeave,
+    onRecoverBounds,
+    onAnimationDone
   }: Props = $props()
+
+  function handleTransitionEnd(e: TransitionEvent): void {
+    if (e.target !== islandNode) return
+    if (
+      e.propertyName === 'width' ||
+      e.propertyName === 'height' ||
+      e.propertyName === 'border-radius' ||
+      e.propertyName === 'border-bottom-left-radius' ||
+      e.propertyName === 'border-bottom-right-radius' ||
+      e.propertyName === 'transform'
+    ) {
+      onAnimationDone?.()
+      onRecoverBounds?.()
+    }
+  }
 
   function handlePointerDown(e: PointerEvent) {
     if (!gestures.canInitiateDrag(e, $allowDragPositionStore, expanded)) return
@@ -160,6 +179,11 @@
     }
   }
 
+  function handleDragHandleDblClick(e: MouseEvent) {
+    e.stopPropagation()
+    onRecoverBounds?.()
+  }
+
   onMount(() => {
     const handleDocumentPointerLeave = (e: PointerEvent) => {
       if (!e.relatedTarget && onMouseLeave) {
@@ -204,6 +228,8 @@
   onpointercancel={handlePointerUp}
   oncontextmenu={handleContextMenu}
   onclick={handleIslandClick}
+  ontransitionend={handleTransitionEnd}
+  ontransitioncancel={handleTransitionEnd}
   style="
     opacity: {isQuitting ? 0 : activeOpacity};
     filter: {isQuitting ? 'blur(12px)' : 'none'};
@@ -263,6 +289,7 @@
     <div
       class="island-drag-handle"
       aria-label="Drag to reposition (or Alt + Drag)"
+      ondblclick={handleDragHandleDblClick}
     >
       <div class="drag-pill-bar"></div>
     </div>

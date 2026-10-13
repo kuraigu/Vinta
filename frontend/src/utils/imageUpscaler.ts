@@ -120,9 +120,9 @@ export async function enhanceArtwork(
       if (blobUrl) URL.revokeObjectURL(blobUrl)
 
       // Images already adequate for the display card are passed through untouched.
-      // For a 400px card, anything ≥ 560px (1.4×) is more than sufficient for
-      // CSS bilinear downscaling to look sharp — no canvas work needed.
-      const adequateWidth = Math.round(minDisplayWidth * 1.4)
+      // For a 400px card, anything >= 200px is more than sufficient for
+      // GPU-accelerated CSS rendering to look sharp without canvas resampling.
+      const adequateWidth = 200
       if (srcW >= adequateWidth) {
         resolve({ url: src, isUpscaled: false, width: srcW, height: srcH })
         return

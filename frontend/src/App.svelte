@@ -21,6 +21,9 @@
     config as calcConfig
   } from './pages/CalculatorPage.svelte'
   import TimerPage, { config as timerConfig } from './pages/TimerPage.svelte'
+  import CalendarPage, {
+    config as calendarConfig
+  } from './pages/CalendarPage.svelte'
 
   import MainIsland from './components/MainIsland.svelte'
   import ControlsSatellite from './components/ControlsSatellite.svelte'
@@ -99,7 +102,6 @@
   let islandConfig = $state<IslandConfig>(homeConfig)
 
   let expanded = $state(false)
-  let isIslandTransitioning = $state(false)
   let isDockVisible = $state(false)
   let islandTransitionTimeout: number | undefined
 
@@ -117,15 +119,19 @@
     previousExpanded = isExp
 
     clearTimeout(islandTransitionTimeout)
-    isIslandTransitioning = true
     isDockVisible = false
     const transitionDuration = isExp ? 340 : 280
 
     islandTransitionTimeout = window.setTimeout(() => {
-      isIslandTransitioning = false
       if (isExp) {
         isDockVisible = true
       }
+      bounds.recoverRestingBounds(
+        getBoundsForState(),
+        clampedOffsetX,
+        islandNode,
+        isHidden
+      )
     }, transitionDuration)
   }
   $effect(handleExpandedTransitionEffect)
@@ -197,6 +203,7 @@
   let islandAnim = $state('0.32s cubic-bezier(0.2, 0.8, 0.2, 1)')
 
   let islandContainerNode = $state<HTMLDivElement | null>(null)
+  let islandWrapperNode = $state<HTMLDivElement | null>(null)
   let islandNode = $state<HTMLDivElement | null>(null)
 
   let isControlsDrawerOpen = $state(false)
@@ -210,6 +217,12 @@
     } else {
       hideTrigger++
     }
+    bounds.recoverRestingBounds(
+      getBoundsForState(),
+      clampedOffsetX,
+      islandNode,
+      isHidden
+    )
   }
 
   let isTimeoutActive = $state(false)
@@ -529,6 +542,7 @@
     else if (page === SettingsPage) pageId = 'settings'
     else if (page === CalculatorPage) pageId = 'calculator'
     else if (page === TimerPage) pageId = 'timer'
+    else if (page === CalendarPage) pageId = 'calendar'
 
     $activePageIdStore = pageId
     try {
@@ -622,6 +636,12 @@
           $activePageIdStore = fallback.page === HomePage ? 'home' : 'media'
         }
         bounds.notifyHidden(true)
+        bounds.recoverRestingBounds(
+          getBoundsForState(islandConfig, false, true),
+          clampedOffsetX,
+          islandNode,
+          true
+        )
       }
     }, duration + 50)
 
@@ -635,7 +655,13 @@
   setContext('hidePill', hideWidget)
 
   function syncOSBounds() {
-    if (gestures.isDragging || gestures.isTrackRegionActive) return
+    if (
+      gestures.isDragging ||
+      gestures.isTrackRegionActive ||
+      gestures.isSettling
+    ) {
+      return
+    }
     const target = getBoundsForState()
     bounds.syncBounds(
       target,
@@ -650,6 +676,8 @@
 
   // Drag Gesture Helpers
   function finishDragGesture() {
+    const wasInRunway =
+      gestures.isTrackRegionActive || gestures.isDragging || gestures.isSettling
     gestures.finishDrag(undefined, () => {
       const resting = Math.max(
         allowedOffsets.min,
@@ -658,7 +686,22 @@
       currentLiveOffsetX = resting
       $hiddenPillOffsetXStore = resting
       const target = getBoundsForState()
-      bounds.syncBounds(target, resting, islandNode, false, isHidden)
+
+      if (wasInRunway) {
+        gestures.isSettling = true
+        gestures.isTrackRegionActive = true
+        bounds.settleRunwayBounds(
+          target,
+          resting,
+          islandWrapperNode,
+          islandNode,
+          () => {
+            gestures.finishSettling()
+          }
+        )
+      } else {
+        bounds.syncBounds(target, resting, islandNode, false, isHidden)
+      }
     })
   }
 
@@ -670,11 +713,10 @@
       bounds.notifyHidden(false)
     }
     const nextBounds = getBoundsForState(islandConfig, true, false)
-    await bounds.prepareExpansion(nextBounds, clampedOffsetX)
+    await bounds.prepareExpansion(nextBounds, clampedOffsetX, islandNode)
     islandAnim = '0.32s cubic-bezier(0.2, 0.8, 0.2, 1)'
     expanded = true
     isControlsDrawerOpen = false
-    bounds.syncBounds(nextBounds, clampedOffsetX, islandNode, false, false)
   }
 
   function handleMouseEnter() {
@@ -682,6 +724,18 @@
     isHovering = true
     isSatelliteHovering = false
     clearTimeout(hideTimeout)
+    if (
+      !gestures.isDragging &&
+      !gestures.isTrackRegionActive &&
+      !gestures.isSettling
+    ) {
+      bounds.recoverRestingBounds(
+        getBoundsForState(),
+        clampedOffsetX,
+        islandNode,
+        isHidden
+      )
+    }
     if (isHidden && $wakeMethodStore === 'hover') {
       hoverShowTimeout = window.setTimeout(showWidget, 150)
     } else if (!isHidden) {
@@ -791,10 +845,36 @@
       }
     }
 
+    const handleWindowFocus = () => {
+      if (
+        !gestures.isDragging &&
+        !gestures.isTrackRegionActive &&
+        !gestures.isSettling
+      ) {
+        bounds.recoverRestingBounds(
+          getBoundsForState(),
+          clampedOffsetX,
+          islandNode,
+          isHidden
+        )
+      }
+    }
+
+    const handleRecoverBoundsEvent = () => {
+      bounds.recoverRestingBounds(
+        getBoundsForState(),
+        clampedOffsetX,
+        islandNode,
+        isHidden
+      )
+    }
+
     window.addEventListener('resize', handleResize)
     window.addEventListener('blur', handleGlobalDragFailsafe)
     window.addEventListener('pointercancel', handleGlobalDragFailsafe)
     window.addEventListener('keydown', handleWindowKeydownFailsafe)
+    window.addEventListener('focus', handleWindowFocus)
+    window.addEventListener('vinta-recover-bounds', handleRecoverBoundsEvent)
 
     const cleanupEvents = initIslandEvents({
       showWidget,
@@ -837,7 +917,8 @@
           apps: { page: AppsPage, config: appsConfig },
           settings: { page: SettingsPage, config: settingsConfig },
           calculator: { page: CalculatorPage, config: calcConfig },
-          timer: { page: TimerPage, config: timerConfig }
+          timer: { page: TimerPage, config: timerConfig },
+          calendar: { page: CalendarPage, config: calendarConfig }
         }
 
         const match = pageMappings[data.mode]
@@ -963,6 +1044,11 @@
       window.removeEventListener('blur', handleGlobalDragFailsafe)
       window.removeEventListener('pointercancel', handleGlobalDragFailsafe)
       window.removeEventListener('keydown', handleWindowKeydownFailsafe)
+      window.removeEventListener('focus', handleWindowFocus)
+      window.removeEventListener(
+        'vinta-recover-bounds',
+        handleRecoverBoundsEvent
+      )
     }
   })
 </script>
@@ -989,7 +1075,40 @@
   )}px; transform: translateX(-50%);"
 >
   <div
+    bind:this={islandWrapperNode}
     class="island-wrapper"
+    ontransitionend={(e) => {
+      if (e.target === islandWrapperNode) {
+        if (
+          !gestures.isDragging &&
+          !gestures.isTrackRegionActive &&
+          !gestures.isSettling
+        ) {
+          bounds.recoverRestingBounds(
+            getBoundsForState(),
+            clampedOffsetX,
+            islandNode,
+            isHidden
+          )
+        }
+      }
+    }}
+    ontransitioncancel={(e) => {
+      if (e.target === islandWrapperNode) {
+        if (
+          !gestures.isDragging &&
+          !gestures.isTrackRegionActive &&
+          !gestures.isSettling
+        ) {
+          bounds.recoverRestingBounds(
+            getBoundsForState(),
+            clampedOffsetX,
+            islandNode,
+            isHidden
+          )
+        }
+      }
+    }}
     style="
       pointer-events: {isQuitting ? 'none' : 'auto'};
       transform: translateX({clampedOffsetX}px);
@@ -1037,6 +1156,34 @@
       onHideWidget={hideWidget}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      onRecoverBounds={() => {
+        if (
+          !gestures.isDragging &&
+          !gestures.isTrackRegionActive &&
+          !gestures.isSettling
+        ) {
+          bounds.recoverRestingBounds(
+            getBoundsForState(),
+            clampedOffsetX,
+            islandNode,
+            isHidden
+          )
+        }
+      }}
+      onAnimationDone={() => {
+        if (
+          !gestures.isDragging &&
+          !gestures.isTrackRegionActive &&
+          !gestures.isSettling
+        ) {
+          bounds.recoverRestingBounds(
+            getBoundsForState(),
+            clampedOffsetX,
+            islandNode,
+            isHidden
+          )
+        }
+      }}
     />
 
     {#if !isQuitting && !isHidden}
@@ -1049,7 +1196,7 @@
         monitorLeft={activeMonitor.left}
         primaryCenter={displayLayout.primaryCenter}
         {clampedOffsetX}
-        active={!isIslandTransitioning}
+        active={!isQuitting && !isHidden}
         onmouseenter={handleSatelliteMouseEnter}
         onmouseleave={handleSatelliteMouseLeave}
         onDrawerChange={handleControlsDrawerChange}
