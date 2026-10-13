@@ -205,7 +205,7 @@
     text-align: center;
     pointer-events: none;
     box-sizing: border-box;
-    border: 1.5px solid var(--c-dock-popover-bg);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    border: 1.5px solid rgba(255, 255, 255, 0.25);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
   }
 </style>

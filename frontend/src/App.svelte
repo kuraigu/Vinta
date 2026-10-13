@@ -715,11 +715,11 @@
       !gestures.isTrackRegionActive &&
       !gestures.isSettling
     ) {
-      bounds.recoverBounds(
+      bounds.recoverRestingBounds(
         getBoundsForState(),
         clampedOffsetX,
         islandNode,
-        true
+        isHidden
       )
     }
     if (isHidden && $wakeMethodStore === 'hover') {
@@ -837,21 +837,21 @@
         !gestures.isTrackRegionActive &&
         !gestures.isSettling
       ) {
-        bounds.recoverBounds(
+        bounds.recoverRestingBounds(
           getBoundsForState(),
           clampedOffsetX,
           islandNode,
-          true
+          isHidden
         )
       }
     }
 
     const handleRecoverBoundsEvent = () => {
-      bounds.recoverBounds(
+      bounds.recoverRestingBounds(
         getBoundsForState(),
         clampedOffsetX,
         islandNode,
-        true
+        isHidden
       )
     }
 
@@ -1063,6 +1063,38 @@
   <div
     bind:this={islandWrapperNode}
     class="island-wrapper"
+    ontransitionend={(e) => {
+      if (e.target === islandWrapperNode) {
+        if (
+          !gestures.isDragging &&
+          !gestures.isTrackRegionActive &&
+          !gestures.isSettling
+        ) {
+          bounds.recoverRestingBounds(
+            getBoundsForState(),
+            clampedOffsetX,
+            islandNode,
+            isHidden
+          )
+        }
+      }
+    }}
+    ontransitioncancel={(e) => {
+      if (e.target === islandWrapperNode) {
+        if (
+          !gestures.isDragging &&
+          !gestures.isTrackRegionActive &&
+          !gestures.isSettling
+        ) {
+          bounds.recoverRestingBounds(
+            getBoundsForState(),
+            clampedOffsetX,
+            islandNode,
+            isHidden
+          )
+        }
+      }
+    }}
     style="
       pointer-events: {isQuitting ? 'none' : 'auto'};
       transform: translateX({clampedOffsetX}px);
@@ -1111,12 +1143,32 @@
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onRecoverBounds={() => {
-        bounds.recoverBounds(
-          getBoundsForState(),
-          clampedOffsetX,
-          islandNode,
-          true
-        )
+        if (
+          !gestures.isDragging &&
+          !gestures.isTrackRegionActive &&
+          !gestures.isSettling
+        ) {
+          bounds.recoverRestingBounds(
+            getBoundsForState(),
+            clampedOffsetX,
+            islandNode,
+            isHidden
+          )
+        }
+      }}
+      onAnimationDone={() => {
+        if (
+          !gestures.isDragging &&
+          !gestures.isTrackRegionActive &&
+          !gestures.isSettling
+        ) {
+          bounds.recoverRestingBounds(
+            getBoundsForState(),
+            clampedOffsetX,
+            islandNode,
+            isHidden
+          )
+        }
       }}
     />
 

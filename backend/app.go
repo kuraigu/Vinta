@@ -1118,7 +1118,9 @@ func (a *App) SetWidgetBounds(width int, height int, radius int, scale float64, 
 		regionMu.Lock()
 		lastRegion = regionCache{}
 		regionMu.Unlock()
-		if height > 52 {
+		if a.isHidden || height <= 24 {
+			radius = 6
+		} else if height > 52 {
 			radius = 30
 		} else if a.restingR > 0 {
 			radius = a.restingR

@@ -54,6 +54,7 @@
     onMouseEnter?: () => void
     onMouseLeave?: () => void
     onRecoverBounds?: () => void
+    onAnimationDone?: () => void
   }
 
   let {
@@ -92,8 +93,21 @@
     onHideWidget,
     onMouseEnter,
     onMouseLeave,
-    onRecoverBounds
+    onRecoverBounds,
+    onAnimationDone
   }: Props = $props()
+
+  function handleTransitionEnd(e: TransitionEvent): void {
+    if (e.target !== islandNode) return
+    if (
+      e.propertyName === 'width' ||
+      e.propertyName === 'height' ||
+      e.propertyName === 'border-radius'
+    ) {
+      onAnimationDone?.()
+      onRecoverBounds?.()
+    }
+  }
 
   function handlePointerDown(e: PointerEvent) {
     if (!gestures.canInitiateDrag(e, $allowDragPositionStore, expanded)) return
@@ -211,6 +225,8 @@
   onpointercancel={handlePointerUp}
   oncontextmenu={handleContextMenu}
   onclick={handleIslandClick}
+  ontransitionend={handleTransitionEnd}
+  ontransitioncancel={handleTransitionEnd}
   style="
     opacity: {isQuitting ? 0 : activeOpacity};
     filter: {isQuitting ? 'blur(12px)' : 'none'};
