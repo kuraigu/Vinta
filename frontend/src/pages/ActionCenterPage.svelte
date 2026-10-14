@@ -316,7 +316,10 @@
         </div>
       </div>
       {#if battery.hasBattery}
-        <label class="toggle-switch" use:islandTooltip={'Toggle Battery Saver Mode'}>
+        <label
+          class="toggle-switch"
+          use:islandTooltip={'Toggle Battery Saver Mode'}
+        >
           <input
             type="checkbox"
             checked={battery.batterySaver}

@@ -659,7 +659,10 @@
                       >{formatTimeAgo(n.modTime || n.createdAt)}</span
                     >
                     {#if hasImage(n.content)}
-                      <span class="note-card-has-img" use:islandTooltip={'Contains image'}>
+                      <span
+                        class="note-card-has-img"
+                        use:islandTooltip={'Contains image'}
+                      >
                         <ImageIcon size={11} />
                       </span>
                     {/if}
@@ -686,7 +689,11 @@
           <List size={15} />
         </button>
 
-        <button class="banner-btn" use:islandTooltip={'New note'} onclick={createNewNote}>
+        <button
+          class="banner-btn"
+          use:islandTooltip={'New note'}
+          onclick={createNewNote}
+        >
           <Plus size={16} />
         </button>
       </div>

@@ -577,7 +577,9 @@
             class="dnd-btn"
             class:dnd-active={$dndStore}
             onclick={() => dndStore.update((v) => !v)}
-            use:islandTooltip={$dndStore ? 'Do Not Disturb: ON' : 'Do Not Disturb: OFF'}
+            use:islandTooltip={$dndStore
+              ? 'Do Not Disturb: ON'
+              : 'Do Not Disturb: OFF'}
             aria-label="Toggle Do Not Disturb"
           >
             {#if $dndStore}

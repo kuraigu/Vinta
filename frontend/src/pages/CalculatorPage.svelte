@@ -334,7 +334,11 @@
   <!-- Keypad: 6 rows x 4 columns -->
   <div class="calc-keypad">
     <!-- Row 1: Clear, Grouping, Backspace -->
-    <button class="calc-btn action-btn" onclick={handleClear} use:islandTooltip={'All Clear'}>
+    <button
+      class="calc-btn action-btn"
+      onclick={handleClear}
+      use:islandTooltip={'All Clear'}
+    >
       C
     </button>
     <button
@@ -374,7 +378,11 @@
     >
       ⁿ√
     </button>
-    <button class="calc-btn func-btn" onclick={handlePower} use:islandTooltip={'Power (xʸ)'}>
+    <button
+      class="calc-btn func-btn"
+      onclick={handlePower}
+      use:islandTooltip={'Power (xʸ)'}
+    >
       xʸ
     </button>
     <button
