@@ -683,22 +683,30 @@
         allowedOffsets.min,
         Math.min(allowedOffsets.max, currentLiveOffsetX)
       )
+      const delta = Math.abs(resting - currentLiveOffsetX)
+      const needsSettle = delta > 2
       currentLiveOffsetX = resting
       $hiddenPillOffsetXStore = resting
       const target = getBoundsForState()
 
       if (wasInRunway) {
-        gestures.isSettling = true
-        gestures.isTrackRegionActive = true
-        bounds.settleRunwayBounds(
-          target,
-          resting,
-          islandWrapperNode,
-          islandNode,
-          () => {
-            gestures.finishSettling()
-          }
-        )
+        if (!needsSettle) {
+          gestures.finishSettling()
+          bounds.cancelPendingTransition()
+          bounds.recoverRestingBounds(target, resting, islandNode)
+        } else {
+          gestures.isSettling = true
+          gestures.isTrackRegionActive = true
+          bounds.settleRunwayBounds(
+            target,
+            resting,
+            islandWrapperNode,
+            islandNode,
+            () => {
+              gestures.finishSettling()
+            }
+          )
+        }
       } else {
         bounds.syncBounds(target, resting, islandNode, false, isHidden)
       }
@@ -876,6 +884,11 @@
     window.addEventListener('focus', handleWindowFocus)
     window.addEventListener('vinta-recover-bounds', handleRecoverBoundsEvent)
 
+    const stopIdleReconciler = bounds.startIdleReconciler(
+      () => islandNode,
+      () => getBoundsForState()
+    )
+
     const cleanupEvents = initIslandEvents({
       showWidget,
       hideWidget,
@@ -1019,6 +1032,7 @@
     )
 
     return () => {
+      stopIdleReconciler()
       finishDragGesture()
       cleanupEvents()
       bounds.cleanup()

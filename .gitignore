@@ -77,3 +77,9 @@ wails.json.user
 *.lib
 backend/services/vintaservices.dll
 backend/services/native/*.obj
+build/.cmake/
+build/CMakeFiles/
+build/CMakeCache.txt
+build/cmake_install.cmake
+build/*.vcxproj*
+build/*.slnx

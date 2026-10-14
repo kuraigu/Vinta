@@ -44,6 +44,7 @@ var (
 	procIsWindowVisible          = user32.NewProc("IsWindowVisible")
 	procIsIconic                 = user32.NewProc("IsIconic")
 	procGetAncestor              = user32.NewProc("GetAncestor")
+	procRedrawWindow             = user32.NewProc("RedrawWindow")
 
 	shell32                          = syscall.NewLazyDLL("shell32.dll")
 	procSHQueryUserNotificationState = shell32.NewProc("SHQueryUserNotificationState")
@@ -1049,6 +1050,7 @@ func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 		})
 		win.OnWindowEvent(events.Common.WindowClosing, func(_ *application.WindowEvent) {
 			services.SetFrontendReady(false)
+			services.StopServicesListener()
 		})
 	}
 
@@ -1761,6 +1763,7 @@ func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, effectiveMai
 
 	if w <= 0 && h <= 0 {
 		_, _, _ = procSetWindowRgn.Call(hwnd, 0, 1)
+		_, _, _ = procRedrawWindow.Call(hwnd, 0, 0, 0x0001|0x0400|0x0100)
 		return
 	}
 
@@ -1768,6 +1771,7 @@ func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, effectiveMai
 	if w == -1 {
 		if hrgnMain := createMainPillRegion(w, h, r, offsetX, sw, padding, totalVintaH, scale); hrgnMain != 0 {
 			_, _, _ = procSetWindowRgn.Call(hwnd, hrgnMain, 1)
+			_, _, _ = procRedrawWindow.Call(hwnd, 0, 0, 0x0001|0x0400|0x0100)
 		}
 		return
 	}
@@ -1789,6 +1793,7 @@ func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, effectiveMai
 	hrgnFinal := combineWindowRegions(regions...)
 	if hrgnFinal != 0 {
 		_, _, _ = procSetWindowRgn.Call(hwnd, hrgnFinal, 1)
+		_, _, _ = procRedrawWindow.Call(hwnd, 0, 0, 0x0001|0x0400|0x0100)
 	}
 }
 
