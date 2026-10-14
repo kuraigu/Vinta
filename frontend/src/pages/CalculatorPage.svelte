@@ -10,6 +10,7 @@
 <script lang="ts">
   import { Delete } from 'lucide-svelte'
   import BackButton from '../components/BackButton.svelte'
+  import { islandTooltip } from '../services/islandTooltip'
   import {
     evaluateExpression,
     isCalculationError
@@ -333,27 +334,31 @@
   <!-- Keypad: 6 rows x 4 columns -->
   <div class="calc-keypad">
     <!-- Row 1: Clear, Grouping, Backspace -->
-    <button class="calc-btn action-btn" onclick={handleClear} title="All Clear">
+    <button
+      class="calc-btn action-btn"
+      onclick={handleClear}
+      use:islandTooltip={'All Clear'}
+    >
       C
     </button>
     <button
       class="calc-btn action-btn"
       onclick={() => handleParenthesis('(')}
-      title="Open Parenthesis"
+      use:islandTooltip={'Open Parenthesis'}
     >
       (
     </button>
     <button
       class="calc-btn action-btn"
       onclick={() => handleParenthesis(')')}
-      title="Close Parenthesis"
+      use:islandTooltip={'Close Parenthesis'}
     >
       )
     </button>
     <button
       class="calc-btn func-btn backspace-btn"
       onclick={handleBackspace}
-      title="Backspace"
+      use:islandTooltip={'Backspace'}
     >
       <Delete size={17} />
     </button>
@@ -362,24 +367,28 @@
     <button
       class="calc-btn func-btn"
       onclick={handleSquareRoot}
-      title="Square root"
+      use:islandTooltip={'Square root'}
     >
       √
     </button>
     <button
       class="calc-btn func-btn"
       onclick={handleRoot}
-      title="Nth root (e.g. 3√27)"
+      use:islandTooltip={'Nth root (e.g. 3√27)'}
     >
       ⁿ√
     </button>
-    <button class="calc-btn func-btn" onclick={handlePower} title="Power (xʸ)">
+    <button
+      class="calc-btn func-btn"
+      onclick={handlePower}
+      use:islandTooltip={'Power (xʸ)'}
+    >
       xʸ
     </button>
     <button
       class="calc-btn op-btn"
       onclick={() => handleOperator('÷')}
-      title="Divide"
+      use:islandTooltip={'Divide'}
     >
       ÷
     </button>
@@ -391,7 +400,7 @@
     <button
       class="calc-btn op-btn"
       onclick={() => handleOperator('×')}
-      title="Multiply"
+      use:islandTooltip={'Multiply'}
     >
       ×
     </button>
@@ -403,7 +412,7 @@
     <button
       class="calc-btn op-btn"
       onclick={() => handleOperator('−')}
-      title="Subtract"
+      use:islandTooltip={'Subtract'}
     >
       −
     </button>
@@ -415,7 +424,7 @@
     <button
       class="calc-btn op-btn"
       onclick={() => handleOperator('+')}
-      title="Add"
+      use:islandTooltip={'Add'}
     >
       +
     </button>
@@ -424,7 +433,7 @@
     <button
       class="calc-btn num-btn"
       onclick={handleToggleSign}
-      title="Toggle sign"
+      use:islandTooltip={'Toggle sign'}
     >
       ±
     </button>
@@ -433,7 +442,7 @@
     <button
       class="calc-btn equals-btn"
       onclick={handleEvaluate}
-      title="Calculate"
+      use:islandTooltip={'Calculate'}
     >
       =
     </button>

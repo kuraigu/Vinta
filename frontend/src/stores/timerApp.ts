@@ -1,5 +1,9 @@
 import { writable, get } from 'svelte/store'
 import {
+  GetTimerData,
+  SaveTimerData
+} from '../../bindings/Vinta/backend/app.js'
+import {
   playFocusChime,
   playNotifChime,
   startAlarmRingingChime,
@@ -164,17 +168,54 @@ function loadAlarms(): AlarmItem[] {
   }
 }
 
+let isInitialTimerDiskLoadComplete = false
+let saveTimerTimeout: ReturnType<typeof setTimeout> | null = null
+
 /**
- * Persists updated alarms to local storage.
+ * Persists alarms, focus settings, and completed focus sessions count to disk.
  *
- * @param alarms List of alarm items.
+ * @param alarms - Active alarm items list.
+ * @param focusSettings - Active focus settings.
+ * @param focusStats - Total completed focus sessions count.
+ */
+function syncTimerToDisk(
+  alarms: AlarmItem[],
+  focusSettings: FocusTimerSettings,
+  focusStats: number
+) {
+  if (saveTimerTimeout) clearTimeout(saveTimerTimeout)
+  saveTimerTimeout = setTimeout(() => {
+    try {
+      if (typeof SaveTimerData === 'function') {
+        const payload = JSON.stringify({
+          alarms,
+          focusSettings,
+          focusStats
+        })
+        SaveTimerData(payload).catch(() => {})
+      }
+    } catch {
+      // Ignore disk write failure
+    }
+  }, 300)
+}
+
+/**
+ * Persists updated alarms to local storage and disk.
+ *
+ * @param alarms - List of alarm items.
  */
 function persistAlarms(alarms: AlarmItem[]): void {
-  if (typeof localStorage === 'undefined') return
-  try {
-    localStorage.setItem(ALARMS_STORAGE_KEY, JSON.stringify(alarms))
-  } catch {
-    // Ignore storage failure
+  if (typeof localStorage !== 'undefined') {
+    try {
+      localStorage.setItem(ALARMS_STORAGE_KEY, JSON.stringify(alarms))
+    } catch {
+      // Ignore storage failure
+    }
+  }
+  if (isInitialTimerDiskLoadComplete) {
+    const state = get(timerAppStore)
+    syncTimerToDisk(alarms, state.focus.settings, state.focus.completedSessions)
   }
 }
 
@@ -223,15 +264,72 @@ let focusTargetEnd: number | null = null
 /**
  * Persists updated focus settings.
  *
- * @param settings Target configuration to save.
+ * @param settings - Target configuration to save.
  */
 function persistFocusSettings(settings: FocusTimerSettings): void {
-  if (typeof localStorage === 'undefined') return
-  try {
-    localStorage.setItem(FOCUS_SETTINGS_KEY, JSON.stringify(settings))
-  } catch {
-    // Ignore storage failure
+  if (typeof localStorage !== 'undefined') {
+    try {
+      localStorage.setItem(FOCUS_SETTINGS_KEY, JSON.stringify(settings))
+    } catch {
+      // Ignore storage failure
+    }
   }
+  if (isInitialTimerDiskLoadComplete) {
+    const state = get(timerAppStore)
+    syncTimerToDisk(state.alarms, settings, state.focus.completedSessions)
+  }
+}
+
+if (typeof window !== 'undefined') {
+  setTimeout(async () => {
+    try {
+      if (typeof GetTimerData === 'function') {
+        const json = await GetTimerData()
+        if (json && json !== '{}') {
+          const parsed = JSON.parse(json)
+          const diskAlarms: AlarmItem[] = Array.isArray(parsed.alarms)
+            ? parsed.alarms.map((item: AlarmItem) => ({
+                ...item,
+                repeat: item.repeat || 'once',
+                days: Array.isArray(item.days) ? item.days : []
+              }))
+            : []
+          const diskSettings: FocusTimerSettings =
+            parsed.focusSettings && typeof parsed.focusSettings === 'object'
+              ? { ...DEFAULT_FOCUS_SETTINGS, ...parsed.focusSettings }
+              : { ...DEFAULT_FOCUS_SETTINGS }
+          const diskStats: number =
+            typeof parsed.focusStats === 'number' ? parsed.focusStats : 0
+
+          timerAppStore.update((s) => ({
+            ...s,
+            alarms: diskAlarms,
+            focus: {
+              ...s.focus,
+              settings: diskSettings,
+              completedSessions: diskStats
+            }
+          }))
+        } else {
+          const current = get(timerAppStore)
+          if (
+            current.alarms.length > 0 ||
+            current.focus.completedSessions > 0
+          ) {
+            syncTimerToDisk(
+              current.alarms,
+              current.focus.settings,
+              current.focus.completedSessions
+            )
+          }
+        }
+      }
+    } catch {
+      // Fallback to local storage state on disk read error
+    } finally {
+      isInitialTimerDiskLoadComplete = true
+    }
+  }, 0)
 }
 
 /**
@@ -534,6 +632,10 @@ function handleFocusCompletion(): void {
       try {
         localStorage.setItem(FOCUS_STATS_KEY, updatedCompleted.toString())
       } catch {}
+    }
+
+    if (isInitialTimerDiskLoadComplete) {
+      syncTimerToDisk(state.alarms, settings, updatedCompleted)
     }
 
     if (settings.soundEnabled) {

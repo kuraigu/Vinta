@@ -165,6 +165,13 @@ export function GetCacheSize(): $CancellablePromise<number> {
 }
 
 /**
+ * GetCalendarData reads calendar.json from %APPDATA%/FreeMatrix Studios/Vinta.
+ */
+export function GetCalendarData(): $CancellablePromise<string> {
+  return $Call.ByID(3290502299)
+}
+
+/**
  * GetContributors dynamically parses the baked-in CONTRIBUTORS.md to render the contributor list.
  */
 export function GetContributors(): $CancellablePromise<$models.Contributor[]> {
@@ -203,6 +210,13 @@ export function GetHardwareAcceleration(): $CancellablePromise<boolean> {
  */
 export function GetSettings(): $CancellablePromise<string> {
   return $Call.ByID(1011862228)
+}
+
+/**
+ * GetTimerData reads timer.json from %APPDATA%/FreeMatrix Studios/Vinta.
+ */
+export function GetTimerData(): $CancellablePromise<string> {
+  return $Call.ByID(120312406)
 }
 
 /**
@@ -328,6 +342,13 @@ export function RequestMediaUpdate(): $CancellablePromise<void> {
 }
 
 /**
+ * ResetSettings deletes settings.json to restore factory configuration defaults.
+ */
+export function ResetSettings(): $CancellablePromise<void> {
+  return $Call.ByID(672571499)
+}
+
+/**
  * ResolveNativeAppIcon resolves the icon for sourceApp or aumid, caching in memory and persistent disk.
  */
 export function ResolveNativeAppIcon(
@@ -345,6 +366,15 @@ export function ResumeUpdateDownload(): $CancellablePromise<void> {
 }
 
 /**
+ * SaveCalendarData writes calendar.json to %APPDATA%/FreeMatrix Studios/Vinta.
+ */
+export function SaveCalendarData(
+  calendarJSON: string
+): $CancellablePromise<void> {
+  return $Call.ByID(978427236, calendarJSON)
+}
+
+/**
  * SaveNote writes or updates a .vnote file.
  */
 export function SaveNote(
@@ -359,6 +389,13 @@ export function SaveNote(
  */
 export function SaveSettings(settingsJSON: string): $CancellablePromise<void> {
   return $Call.ByID(1213784607, settingsJSON)
+}
+
+/**
+ * SaveTimerData writes timer.json to %APPDATA%/FreeMatrix Studios/Vinta.
+ */
+export function SaveTimerData(timerJSON: string): $CancellablePromise<void> {
+  return $Call.ByID(829444531, timerJSON)
 }
 
 /**

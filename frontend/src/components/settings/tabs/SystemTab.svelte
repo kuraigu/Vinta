@@ -7,7 +7,8 @@
     SetAutostart,
     SetHardwareAcceleration,
     GetCacheSize,
-    ClearCache
+    ClearCache,
+    ResetSettings
   } from '../../../../bindings/Vinta/backend/app.js'
 
   function handleAutostartEffect() {
@@ -26,6 +27,7 @@
 
   const SETTINGS_KEYS = new Set([
     'vinta_theme',
+    'vinta_user_name',
     'vinta_glow_intensity',
     'vinta_opacity_minimal',
     'vinta_opacity_expanded',
@@ -51,10 +53,25 @@
     'vinta_weather_unit',
     'vinta_home_widgets_visibility',
     'vinta_page_visibility',
+    'vinta_dock_pinned_apps',
     'vinta_autostart',
     'vinta_hardware_accel',
-    'autoCheckUpdates'
+    'autoCheckUpdates',
+    'vinta_update_channel',
+    'vinta_custom_update_repo'
   ])
+
+  /**
+   * Determines if a localStorage key belongs to transient application cache.
+   *
+   * @param key - Storage key name.
+   * @returns True if the key represents a purgeable cache.
+   */
+  function isCacheKey(key: string): boolean {
+    return (
+      key.startsWith('vinta_weather_cache_') || key === 'vinta_sender_avatars'
+    )
+  }
 
   function formatBytes(bytes: number): string {
     if (bytes <= 0) return '0 B'
@@ -73,7 +90,7 @@
 
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i)
-        if (key && !SETTINGS_KEYS.has(key)) {
+        if (key && isCacheKey(key)) {
           const val = localStorage.getItem(key) || ''
           totalBytes += (key.length + val.length) * 2
         }
@@ -106,7 +123,7 @@
 
       for (let i = localStorage.length - 1; i >= 0; i--) {
         const key = localStorage.key(i)
-        if (key && !SETTINGS_KEYS.has(key)) {
+        if (key && isCacheKey(key)) {
           localStorage.removeItem(key)
         }
       }
@@ -121,9 +138,14 @@
     }
   }
 
-  function handleResetSettings() {
+  async function handleResetSettings() {
     try {
-      localStorage.clear()
+      if (typeof ResetSettings === 'function') {
+        await ResetSettings().catch(() => {})
+      }
+      for (const key of SETTINGS_KEYS) {
+        localStorage.removeItem(key)
+      }
       window.location.reload()
     } catch {
       // Ignore

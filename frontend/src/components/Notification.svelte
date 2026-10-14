@@ -27,6 +27,7 @@
     parseAumid
   } from '../services/iconService'
   import ScrollView from '../components/ScrollView.svelte'
+  import { islandTooltip } from '../services/islandTooltip'
   import appIcon from '@appicon'
   import {
     FocusNotificationApp,
@@ -576,7 +577,9 @@
             class="dnd-btn"
             class:dnd-active={$dndStore}
             onclick={() => dndStore.update((v) => !v)}
-            title={$dndStore ? 'Do Not Disturb: ON' : 'Do Not Disturb: OFF'}
+            use:islandTooltip={$dndStore
+              ? 'Do Not Disturb: ON'
+              : 'Do Not Disturb: OFF'}
             aria-label="Toggle Do Not Disturb"
           >
             {#if $dndStore}
@@ -674,7 +677,7 @@
                     e.stopPropagation()
                     toggleExpand(notif.id)
                   }}
-                  title={isExpanded
+                  use:islandTooltip={isExpanded
                     ? 'Collapse notification'
                     : 'Expand notification'}
                   aria-label={isExpanded
@@ -841,7 +844,7 @@
                         )
                         FocusWindow()
                       }}
-                      title={notif.isUpdate
+                      use:islandTooltip={notif.isUpdate
                         ? 'View Update Details'
                         : `Open in ${notif.appName || brand.brandName}`}
                     >

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { islandTooltip } from '../services/islandTooltip'
   import { wirelessDataStore } from '../store'
 
   let wireless = $derived($wirelessDataStore)
@@ -35,7 +36,7 @@
 <div class="wireless-minimal-wrap">
   {#if wireless.airplaneMode}
     <!-- Solid Filled Airplane Glyph -->
-    <span class="wireless-icon-btn" title={wifiTitle}>
+    <span class="wireless-icon-btn" use:islandTooltip={wifiTitle}>
       <svg
         width="13"
         height="13"
@@ -51,7 +52,7 @@
   {:else}
     <!-- Bluetooth on the Left -->
     {#if wireless.hasBluetooth}
-      <span class="wireless-icon-btn" title={bluetoothTitle}>
+      <span class="wireless-icon-btn" use:islandTooltip={bluetoothTitle}>
         <svg
           width="13"
           height="13"
@@ -71,7 +72,7 @@
 
     <!-- Wi-Fi on the Right of Bluetooth -->
     {#if wireless.hasWifi}
-      <span class="wireless-icon-btn" title={wifiTitle}>
+      <span class="wireless-icon-btn" use:islandTooltip={wifiTitle}>
         <svg
           width="14.5"
           height="11"

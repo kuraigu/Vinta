@@ -1,4 +1,8 @@
 import { writable, get } from 'svelte/store'
+import {
+  GetCalendarData,
+  SaveCalendarData
+} from '../../bindings/Vinta/backend/app.js'
 import { sendVintaNotification } from '../services/vintaNotification'
 
 export interface CalendarEvent {
@@ -35,6 +39,31 @@ export interface CalendarAppState {
 
 const STORAGE_KEY_EVENTS = 'vinta_calendar_events'
 const STORAGE_KEY_FEEDS = 'vinta_calendar_feeds'
+
+let isInitialCalendarDiskLoadComplete = false
+let saveCalendarTimeout: ReturnType<typeof setTimeout> | null = null
+
+/**
+ * Persists the current calendar events and feeds to disk.
+ *
+ * @param state - Active calendar state.
+ */
+function syncCalendarToDisk(state: CalendarAppState) {
+  if (saveCalendarTimeout) clearTimeout(saveCalendarTimeout)
+  saveCalendarTimeout = setTimeout(() => {
+    try {
+      if (typeof SaveCalendarData === 'function') {
+        const payload = JSON.stringify({
+          events: state.events,
+          feeds: state.feeds
+        })
+        SaveCalendarData(payload).catch(() => {})
+      }
+    } catch {
+      // Ignore disk write failure
+    }
+  }, 300)
+}
 
 /**
  * Formats a Date object to YYYY-MM-DD local format.
@@ -95,7 +124,45 @@ calendarStore.subscribe((state) => {
   } catch {
     // Ignore storage failure
   }
+
+  if (isInitialCalendarDiskLoadComplete) {
+    syncCalendarToDisk(state)
+  }
 })
+
+if (typeof window !== 'undefined') {
+  setTimeout(async () => {
+    try {
+      if (typeof GetCalendarData === 'function') {
+        const json = await GetCalendarData()
+        if (json && json !== '{}') {
+          const parsed = JSON.parse(json)
+          const diskEvents: CalendarEvent[] = Array.isArray(parsed.events)
+            ? parsed.events
+            : []
+          const diskFeeds: CalendarFeed[] = Array.isArray(parsed.feeds)
+            ? parsed.feeds
+            : []
+
+          calendarStore.update((state) => ({
+            ...state,
+            events: diskEvents,
+            feeds: diskFeeds
+          }))
+        } else {
+          const currentState = get(calendarStore)
+          if (currentState.events.length > 0 || currentState.feeds.length > 0) {
+            syncCalendarToDisk(currentState)
+          }
+        }
+      }
+    } catch {
+      // Fallback to local storage state on disk read error
+    } finally {
+      isInitialCalendarDiskLoadComplete = true
+    }
+  }, 0)
+}
 
 /**
  * Updates the currently active selected date on the calendar.

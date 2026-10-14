@@ -2539,6 +2539,53 @@ func (a *App) SaveSettings(settingsJSON string) error {
 	return os.WriteFile(filePath, []byte(settingsJSON), 0644)
 }
 
+// ResetSettings deletes settings.json to restore factory configuration defaults.
+func (a *App) ResetSettings() error {
+	filePath := filepath.Join(GetAppDataDir(), "settings.json")
+	_ = os.Remove(filePath)
+	return nil
+}
+
+// GetCalendarData reads calendar.json from %APPDATA%/FreeMatrix Studios/Vinta.
+func (a *App) GetCalendarData() (string, error) {
+	filePath := filepath.Join(GetAppDataDir(), "calendar.json")
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return "{}", nil
+	}
+	return string(data), nil
+}
+
+// SaveCalendarData writes calendar.json to %APPDATA%/FreeMatrix Studios/Vinta.
+func (a *App) SaveCalendarData(calendarJSON string) error {
+	dir := GetAppDataDir()
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+	filePath := filepath.Join(dir, "calendar.json")
+	return os.WriteFile(filePath, []byte(calendarJSON), 0644)
+}
+
+// GetTimerData reads timer.json from %APPDATA%/FreeMatrix Studios/Vinta.
+func (a *App) GetTimerData() (string, error) {
+	filePath := filepath.Join(GetAppDataDir(), "timer.json")
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return "{}", nil
+	}
+	return string(data), nil
+}
+
+// SaveTimerData writes timer.json to %APPDATA%/FreeMatrix Studios/Vinta.
+func (a *App) SaveTimerData(timerJSON string) error {
+	dir := GetAppDataDir()
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+	filePath := filepath.Join(dir, "timer.json")
+	return os.WriteFile(filePath, []byte(timerJSON), 0644)
+}
+
 // GetCacheSize computes the total byte size of disk caches and temporary sync databases.
 func (a *App) GetCacheSize() (int64, error) {
 	var totalSize int64

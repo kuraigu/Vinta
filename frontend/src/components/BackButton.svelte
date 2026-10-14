@@ -2,6 +2,7 @@
   import { getContext } from 'svelte'
   import { ArrowLeft } from 'lucide-svelte'
   import AppsPage, { config as appsConfig } from '../pages/AppsPage.svelte'
+  import { islandTooltip } from '../services/islandTooltip'
   import type { IslandConfig } from '../store'
 
   interface Props {
@@ -25,7 +26,7 @@
   }
 </script>
 
-<button class="back-btn" onclick={handleClick} {title}>
+<button class="back-btn" onclick={handleClick} use:islandTooltip={title}>
   <ArrowLeft size={14} />
 </button>
 

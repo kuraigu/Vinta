@@ -23,6 +23,7 @@
     ExternalLink
   } from 'lucide-svelte'
   import BackButton from '../components/BackButton.svelte'
+  import { islandTooltip } from '../services/islandTooltip'
   import {
     wirelessDataStore,
     batteryDataStore,
@@ -183,7 +184,7 @@
             <span class="card-primary-text">Wi-Fi</span>
             <button
               class="quick-open-btn"
-              title="Open Windows Network Flyout"
+              use:islandTooltip={'Open Windows Network Flyout'}
               onclick={(e) => openSystemDialog('network', e)}
             >
               <ExternalLink size={11} />
@@ -236,7 +237,7 @@
             <span class="card-primary-text">Bluetooth</span>
             <button
               class="quick-open-btn"
-              title="Open Windows Bluetooth Settings"
+              use:islandTooltip={'Open Windows Bluetooth Settings'}
               onclick={(e) => openSystemDialog('bluetooth', e)}
             >
               <ExternalLink size={11} />
@@ -303,7 +304,7 @@
             <span class="card-primary-text">Battery & Power</span>
             <button
               class="quick-open-btn"
-              title="Open Windows Power Settings"
+              use:islandTooltip={'Open Windows Power Settings'}
               onclick={(e) => openSystemDialog('battery', e)}
             >
               <ExternalLink size={11} />
@@ -315,7 +316,10 @@
         </div>
       </div>
       {#if battery.hasBattery}
-        <label class="toggle-switch" title="Toggle Battery Saver Mode">
+        <label
+          class="toggle-switch"
+          use:islandTooltip={'Toggle Battery Saver Mode'}
+        >
           <input
             type="checkbox"
             checked={battery.batterySaver}
@@ -340,7 +344,7 @@
             <span class="card-primary-text">Airplane Mode</span>
             <button
               class="quick-open-btn"
-              title="Open Windows Airplane Mode Settings"
+              use:islandTooltip={'Open Windows Airplane Mode Settings'}
               onclick={(e) => openSystemDialog('airplane', e)}
             >
               <ExternalLink size={11} />
