@@ -987,7 +987,7 @@
                   {#if isSelected}
                     <Check size={13} class="selected-check" />
                   {:else if s.isPlaying}
-                    <div class="live-playing-dot" title="Playing"></div>
+                    <div class="live-playing-dot" use:islandTooltip={'Playing'}></div>
                   {/if}
                 </div>
               </button>

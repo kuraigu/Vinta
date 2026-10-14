@@ -679,7 +679,7 @@
                             class="tray-card-action-btn edit"
                             onclick={() => handleOpenEditModal(event)}
                             aria-label="Edit event"
-                            title="Edit event"
+                            use:islandTooltip={'Edit event'}
                           >
                             <Pencil size={11} />
                           </button>
@@ -688,7 +688,7 @@
                             class="tray-card-action-btn danger"
                             onclick={() => deleteCalendarEvent(event.id)}
                             aria-label="Delete event"
-                            title="Delete event"
+                            use:islandTooltip={'Delete event'}
                           >
                             <Trash2 size={11} />
                           </button>
@@ -883,7 +883,7 @@
                     handleJumpToAgenda(formDate)
                     isModalOpen = false
                   }}
-                  title="View this event in Agenda"
+                  use:islandTooltip={'View this event in Agenda'}
                 >
                   <ExternalLink size={12} />
                   <span>View in Agenda</span>

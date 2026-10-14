@@ -11,6 +11,7 @@
   import CalendarPage, {
     config as calendarConfig
   } from '../pages/CalendarPage.svelte'
+  import { islandTooltip } from '../services/islandTooltip'
   import type { IslandConfig } from '../store'
 
   let {
@@ -291,7 +292,7 @@
               <button
                 class="icon-nav-btn"
                 onclick={prevPeriod}
-                title="Previous"
+                use:islandTooltip={'Previous'}
                 aria-label="Previous"
               >
                 <ChevronLeft size={13} />
@@ -300,7 +301,7 @@
               <button
                 class="header-title-btn"
                 onclick={handleHeaderClick}
-                title="Click to switch view mode"
+                use:islandTooltip={'Click to switch view mode'}
               >
                 {headerTitle}
               </button>
@@ -308,7 +309,7 @@
               <button
                 class="icon-nav-btn"
                 onclick={nextPeriod}
-                title="Next"
+                use:islandTooltip={'Next'}
                 aria-label="Next"
               >
                 <ChevronRight size={13} />
@@ -321,14 +322,14 @@
               <button
                 class="today-btn"
                 onclick={resetToToday}
-                title="Jump to Today">Today</button
+                use:islandTooltip={'Jump to Today'}>Today</button
               >
             {/if}
 
             <button
               class="go-to-calendar-btn"
               onclick={handleGoToCalendar}
-              title="Open Calendar Page"
+              use:islandTooltip={'Open Calendar Page'}
             >
               <CalendarDays size={12} />
               <span>Go to Calendar</span>

@@ -40,6 +40,7 @@
   } from 'lucide-svelte'
   import BackButton from '../components/BackButton.svelte'
   import ScrollView from '../components/ScrollView.svelte'
+  import { islandTooltip } from '../services/islandTooltip'
   import {
     ListNotes,
     ReadNote,
@@ -592,14 +593,14 @@
         <div class="board-header-right">
           <button
             class="board-action-btn"
-            title="Open Notes Folder in Explorer"
+            use:islandTooltip={'Open Notes Folder in Explorer'}
             onclick={handleOpenFolder}
           >
             <FolderOpen size={14} />
           </button>
           <button
             class="board-action-btn new-note-action"
-            title="Create Note"
+            use:islandTooltip={'Create Note'}
             onclick={createNewNote}
           >
             <Plus size={16} />
@@ -640,7 +641,7 @@
                   <div class="note-card-band">
                     <button
                       class="note-card-delete-btn"
-                      title="Delete note"
+                      use:islandTooltip={'Delete note'}
                       onclick={(e) =>
                         deleteNoteByIndex(e, realIndex >= 0 ? realIndex : idx)}
                     >
@@ -658,7 +659,7 @@
                       >{formatTimeAgo(n.modTime || n.createdAt)}</span
                     >
                     {#if hasImage(n.content)}
-                      <span class="note-card-has-img" title="Contains image">
+                      <span class="note-card-has-img" use:islandTooltip={'Contains image'}>
                         <ImageIcon size={11} />
                       </span>
                     {/if}
@@ -679,13 +680,13 @@
 
         <button
           class="banner-btn"
-          title="All notes"
+          use:islandTooltip={'All notes'}
           onclick={handleBackToBoard}
         >
           <List size={15} />
         </button>
 
-        <button class="banner-btn" title="New note" onclick={createNewNote}>
+        <button class="banner-btn" use:islandTooltip={'New note'} onclick={createNewNote}>
           <Plus size={16} />
         </button>
       </div>
@@ -711,7 +712,8 @@
               class="swatch-dot-btn dot-{c} {activeNote?.color === c
                 ? 'selected'
                 : ''}"
-              title="{c} color"
+              use:islandTooltip={`${c} color`}
+              aria-label={`${c} color`}
               onclick={() => handleSelectColor(c)}
             ></button>
           {/each}
@@ -719,7 +721,7 @@
 
         <button
           class="banner-btn"
-          title="Open Notes Folder in Explorer"
+          use:islandTooltip={'Open Notes Folder in Explorer'}
           onclick={handleOpenFolder}
         >
           <FolderOpen size={14} />
@@ -727,7 +729,7 @@
 
         <button
           class="banner-btn"
-          title="Delete note"
+          use:islandTooltip={'Delete note'}
           onclick={handleDeleteActiveNote}
         >
           <Trash2 size={14} />
@@ -740,7 +742,7 @@
       <div class="toolbar-actions-group">
         <button
           class="tool-action-btn"
-          title="Bold (Ctrl+B)"
+          use:islandTooltip={'Bold (Ctrl+B)'}
           onclick={() => applyFormat('bold')}
         >
           <Bold size={13} />
@@ -748,7 +750,7 @@
 
         <button
           class="tool-action-btn"
-          title="Italic (Ctrl+I)"
+          use:islandTooltip={'Italic (Ctrl+I)'}
           onclick={() => applyFormat('italic')}
         >
           <Italic size={13} />
@@ -756,7 +758,7 @@
 
         <button
           class="tool-action-btn"
-          title="Underline (Ctrl+U)"
+          use:islandTooltip={'Underline (Ctrl+U)'}
           onclick={() => applyFormat('underline')}
         >
           <Underline size={13} />
@@ -764,7 +766,7 @@
 
         <button
           class="tool-action-btn"
-          title="Strikethrough"
+          use:islandTooltip={'Strikethrough'}
           onclick={() => applyFormat('strikeThrough')}
         >
           <Strikethrough size={13} />
@@ -772,7 +774,7 @@
 
         <button
           class="tool-action-btn"
-          title="Bullet List"
+          use:islandTooltip={'Bullet List'}
           onclick={() => applyFormat('insertUnorderedList')}
         >
           <ListOrdered size={13} />
@@ -780,7 +782,7 @@
 
         <button
           class="tool-action-btn"
-          title="Attach image"
+          use:islandTooltip={'Attach image'}
           onclick={() => fileInputRef?.click()}
         >
           <ImageIcon size={13} />
