@@ -2,7 +2,10 @@ import { writable, get } from 'svelte/store'
 import {
   GetSettings,
   SaveSettings,
-  SetAutoHideBorderless
+  SetAutoHideBorderless,
+  ExportSettingsFileDialog,
+  ImportSettingsFileDialog,
+  ApplyImportedSettings
 } from '../../bindings/Vinta/backend/app.js'
 import { devTestingStore } from './appState'
 
@@ -396,6 +399,10 @@ export const weatherUnitStore = persistentWritable<TemperatureUnit>('vinta_weath
 export const homeWidgetsVisibilityStore = persistentWritable<HomeWidgetsVisibility>('vinta_home_widgets_visibility', defaultHomeWidgetsVisibility)
 export const pageVisibilityStore = persistentWritable<PageVisibility>('vinta_page_visibility', defaultPageVisibility)
 export const dockPinnedAppsStore = persistentWritable<DockPinnedApps>('vinta_dock_pinned_apps', defaultDockPinnedApps)
+export const pinnedMediaSourceStore = persistentWritable<string | null>('vinta_pinned_media_source', null)
+export const globalHotkeyStore = persistentWritable<string>('vinta_global_hotkey', 'Alt+Shift+V')
+export const quickNotesHotkeyStore = persistentWritable<string>('vinta_hotkey_quick_notes', 'Alt+Shift+N')
+export const modeSwitchHotkeyStore = persistentWritable<string>('vinta_hotkey_mode_switch', 'Alt+Shift+D')
 
 // ============================================================================
 // 7. System Integration & Updates
@@ -452,3 +459,209 @@ export function calculateHomeMinimalWidth(
   const gapsW = Math.max(0, activeSlots.length - 1) * GAP
   return Math.max(130, PADDING + contentW + gapsW)
 }
+
+// ============================================================================
+// 8. Configuration Export, Import & Schema Sanitization
+// ============================================================================
+
+export interface SettingsExportResult {
+  success: boolean
+  path?: string
+  error?: string
+}
+
+export interface SettingsImportResult {
+  success: boolean
+  count?: number
+  error?: string
+}
+
+/**
+ * Validates and sanitizes an imported configuration object.
+ * Clamps numeric boundaries, enforces strict enum literals, and strips unrecognized fields.
+ *
+ * @param raw - Raw unverified settings payload.
+ * @returns Cleaned and sanitized settings object.
+ */
+function sanitizeSettingsPayload(raw: Record<string, unknown>): Record<string, unknown> {
+  const sanitized: Record<string, unknown> = {}
+
+  for (const reg of registeredStores) {
+    const key = reg.key
+    if (key in raw) {
+      const val = raw[key]
+      const defaultVal = reg.initialValue
+
+      if (key === 'vinta_pinned_media_source') {
+        sanitized[key] = typeof val === 'string' && val.trim() ? val.trim() : null
+        continue
+      }
+
+      if (key === 'vinta_global_hotkey') {
+        sanitized[key] = typeof val === 'string' && val.trim() ? val.trim() : 'Alt+Shift+V'
+        continue
+      }
+
+      if (key === 'vinta_hotkey_quick_notes') {
+        sanitized[key] = typeof val === 'string' && val.trim() ? val.trim() : 'Alt+Shift+N'
+        continue
+      }
+
+      if (key === 'vinta_hotkey_mode_switch') {
+        sanitized[key] = typeof val === 'string' && val.trim() ? val.trim() : 'Alt+Shift+D'
+        continue
+      }
+
+      if (typeof val === typeof defaultVal && val !== null) {
+        if (typeof defaultVal === 'number') {
+          if (key === 'vinta_autohide_delay') {
+            sanitized[key] = Math.max(3, Math.min(60, Number(val)))
+          } else if (key.startsWith('vinta_opacity_')) {
+            sanitized[key] = Math.max(0.1, Math.min(1.0, Number(val)))
+          } else {
+            sanitized[key] = Number(val)
+          }
+        } else if (typeof defaultVal === 'string') {
+          if (key === 'vinta_theme' && (val === 'dark' || val === 'light')) {
+            sanitized[key] = val
+          } else if (
+            key === 'vinta_glow_intensity' &&
+            (val === 'disabled' || val === 'subtle' || val === 'vibrant')
+          ) {
+            sanitized[key] = val
+          } else if (key === 'vinta_autohide_display' && (val === 'dash' || val === 'clock')) {
+            sanitized[key] = val
+          } else if (
+            key === 'vinta_hidden_pill_position' &&
+            (val === 'center' || val === 'top-left' || val === 'top-right')
+          ) {
+            sanitized[key] = val
+          } else if (key === 'vinta_wakemethod' && (val === 'hover' || val === 'click')) {
+            sanitized[key] = val
+          } else if (key === 'vinta_time_format' && (val === '12h' || val === '24h')) {
+            sanitized[key] = val
+          } else if (
+            key === 'vinta_date_format' &&
+            (val === 'default' || val === 'iso' || val === 'us' || val === 'eu')
+          ) {
+            sanitized[key] = val
+          } else if (
+            key === 'vinta_weather_unit' &&
+            (val === 'celsius' || val === 'fahrenheit' || val === 'kelvin')
+          ) {
+            sanitized[key] = val
+          } else if (
+            key === 'vinta_update_channel' &&
+            (val === 'stable' || val === 'prerelease' || val === 'testing')
+          ) {
+            sanitized[key] = val
+          } else {
+            sanitized[key] = String(val)
+          }
+        } else if (typeof defaultVal === 'boolean') {
+          sanitized[key] = Boolean(val)
+        } else if (
+          typeof defaultVal === 'object' &&
+          !Array.isArray(defaultVal) &&
+          typeof val === 'object' &&
+          !Array.isArray(val)
+        ) {
+          const mergedObj: Record<string, unknown> = { ...(defaultVal as Record<string, unknown>) }
+          const valObj = val as Record<string, unknown>
+          for (const subKey of Object.keys(mergedObj)) {
+            if (subKey in valObj && typeof valObj[subKey] === typeof mergedObj[subKey]) {
+              mergedObj[subKey] = valObj[subKey]
+            }
+          }
+          sanitized[key] = mergedObj
+        }
+      }
+    }
+  }
+
+  sanitized['_sparse_migrated'] = true
+  return sanitized
+}
+
+/**
+ * Prompts the user with a native file dialog to export their current settings to a JSON file.
+ *
+ * @returns Result object with status and chosen destination path.
+ */
+export async function exportSettingsToFile(): Promise<SettingsExportResult> {
+  try {
+    if (typeof ExportSettingsFileDialog !== 'function') {
+      return { success: false, error: 'Export function not available' }
+    }
+    const targetPath = await ExportSettingsFileDialog('vinta-settings.json')
+    if (!targetPath) {
+      return { success: false }
+    }
+    return { success: true, path: targetPath }
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return { success: false, error: msg }
+  }
+}
+
+/**
+ * Prompts the user to pick a JSON configuration file, parses and deep-sanitizes its structure,
+ * commits it atomically to disk, and updates reactive state in-place.
+ *
+ * @returns Result object with status and imported settings count.
+ */
+export async function importSettingsFromFile(): Promise<SettingsImportResult> {
+  try {
+    if (
+      typeof ImportSettingsFileDialog !== 'function' ||
+      typeof ApplyImportedSettings !== 'function'
+    ) {
+      return { success: false, error: 'Import function not available' }
+    }
+
+    const rawJSON = await ImportSettingsFileDialog()
+    if (!rawJSON) {
+      return { success: false }
+    }
+
+    let parsed: Record<string, unknown>
+    try {
+      parsed = JSON.parse(rawJSON)
+    } catch {
+      return { success: false, error: 'Selected file is not valid JSON' }
+    }
+
+    const settingsPayload =
+      parsed.settings && typeof parsed.settings === 'object' && !Array.isArray(parsed.settings)
+        ? (parsed.settings as Record<string, unknown>)
+        : parsed
+
+    const sanitized = sanitizeSettingsPayload(settingsPayload)
+    const sanitizedKeys = Object.keys(sanitized).filter((k) => k !== '_sparse_migrated')
+
+    if (sanitizedKeys.length === 0) {
+      return { success: false, error: 'No recognizable settings found in file' }
+    }
+
+    await ApplyImportedSettings(JSON.stringify(sanitized))
+
+    for (const key of Object.keys(userOverridesCache)) {
+      delete userOverridesCache[key]
+    }
+    Object.assign(userOverridesCache, sanitized)
+
+    for (const reg of registeredStores) {
+      if (reg.key in sanitized) {
+        reg.store.set(sanitized[reg.key])
+      } else {
+        reg.store.set(reg.initialValue)
+      }
+    }
+
+    return { success: true, count: sanitizedKeys.length }
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return { success: false, error: msg }
+  }
+}
+

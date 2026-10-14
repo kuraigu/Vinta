@@ -40,30 +40,49 @@
   let isDrawerOpen = $state(false)
   const getInitialExpanded = () => expanded
   let layoutExpanded = $state(getInitialExpanded())
-  let exitSyncTimeout: number | undefined
+  let isTransitioning = $state(false)
+  let transitionTimer: number | undefined
+  let settleTimer: number | undefined
 
   /**
-   * Synchronizes layout expansion across transition cycles.
-   * When active, layout is synced immediately. When inactive during island
-   * transitions, layout update is deferred until the exit animation finishes (180ms),
-   * ensuring that the target layout is fully ready before the satellite re-enters.
+   * Synchronizes satellite layout across island expansion and collapse cycles.
+   * Smoothly fades out during the island size transition (110ms) to prevent
+   * visual collisions and mismatched Win32 clipping regions between minimized
+   * and expanded states, then re-enters at the resting position once the island
+   * finishes animating.
    */
   function syncLayoutExpanded() {
-    clearTimeout(exitSyncTimeout)
-    if (active) {
-      layoutExpanded = expanded
+    if (layoutExpanded === expanded) {
       return
     }
 
-    exitSyncTimeout = window.setTimeout(() => {
+    clearTimeout(transitionTimer)
+    clearTimeout(settleTimer)
+
+    // Fade out immediately to avoid mid-flight clipping or collision artifacts
+    isTransitioning = true
+
+    const islandDuration = expanded ? 290 : 210
+
+    transitionTimer = window.setTimeout(() => {
       layoutExpanded = expanded
-    }, 180)
+      if (expanded) {
+        isDrawerOpen = false
+        onDrawerChange?.(false)
+      }
+
+      // Settle and fade in cleanly at the exact resting position
+      settleTimer = window.setTimeout(() => {
+        isTransitioning = false
+      }, 30)
+    }, islandDuration)
   }
 
   $effect(syncLayoutExpanded)
 
   onDestroy(() => {
-    clearTimeout(exitSyncTimeout)
+    clearTimeout(transitionTimer)
+    clearTimeout(settleTimer)
   })
 
   /**
@@ -175,10 +194,22 @@
   {onmouseenter}
   {onmouseleave}
 >
-  <FloatingControls
-    {activePage}
-    expanded={layoutExpanded}
-    {expandedTooltipSide}
-    onDrawerChange={handleDrawerChange}
-  />
+  <div
+    class="controls-transition-wrapper"
+    style="
+      width: 100%;
+      height: 100%;
+      pointer-events: {isTransitioning ? 'none' : 'auto'};
+      opacity: {isTransitioning ? 0 : 1};
+      transform: scale({isTransitioning ? 0.88 : 1});
+      transition: opacity 0.1s ease, transform 0.1s ease;
+    "
+  >
+    <FloatingControls
+      {activePage}
+      expanded={layoutExpanded}
+      {expandedTooltipSide}
+      onDrawerChange={handleDrawerChange}
+    />
+  </div>
 </SatelliteHost>

@@ -395,14 +395,45 @@
 
   let currentLiveOffsetX = $state(0)
 
+  /**
+   * Pre-calculates the target clamped horizontal offset for a specific island width,
+   * taking monitor bounds and active satellite footprints into account.
+   */
+  function calculateTargetOffsetForWidth(
+    width: number,
+    offset: number = currentLiveOffsetX
+  ): number {
+    const range = computeAllowedOffsets(
+      width,
+      activeMonitor,
+      displayLayout.virtualLeft + displayLayout.primaryCenter,
+      activeLeftSatelliteFootprint,
+      activeRightSatelliteFootprint
+    )
+    if (Math.abs(offset) < 3) return 0
+    return Math.max(range.min, Math.min(range.max, offset))
+  }
+
   function handleSmartEdgeOffsetAdjustment() {
     if (!gestures.isDragging && !isControlsDrawerOpen) {
+      let adjusted = false
       if (currentLiveOffsetX > allowedOffsets.max) {
         currentLiveOffsetX = allowedOffsets.max
         $hiddenPillOffsetXStore = currentLiveOffsetX
+        adjusted = true
       } else if (currentLiveOffsetX < allowedOffsets.min) {
         currentLiveOffsetX = allowedOffsets.min
         $hiddenPillOffsetXStore = currentLiveOffsetX
+        adjusted = true
+      }
+      if (adjusted && !gestures.isTrackRegionActive && !gestures.isSettling) {
+        bounds.syncBounds(
+          getBoundsForState(),
+          currentLiveOffsetX,
+          islandNode,
+          false,
+          isHidden
+        )
       }
     }
   }
@@ -550,7 +581,15 @@
     } catch {}
 
     const nextBounds = getBoundsForState(pageConfig, expand, false)
-    bounds.syncBounds(nextBounds, clampedOffsetX, islandNode, false, false)
+    const targetOffset = calculateTargetOffsetForWidth(
+      nextBounds.w,
+      currentLiveOffsetX
+    )
+    if (targetOffset !== currentLiveOffsetX) {
+      currentLiveOffsetX = targetOffset
+      $hiddenPillOffsetXStore = targetOffset
+    }
+    bounds.syncBounds(nextBounds, targetOffset, islandNode, false, false)
 
     triggerGlow()
   }
@@ -585,7 +624,15 @@
     isHidden = false
     bounds.notifyHidden(false)
     const nextBounds = getBoundsForState(islandConfig, false, false)
-    bounds.syncBounds(nextBounds, clampedOffsetX, islandNode, false, false)
+    const targetOffset = calculateTargetOffsetForWidth(
+      nextBounds.w,
+      currentLiveOffsetX
+    )
+    if (targetOffset !== currentLiveOffsetX) {
+      currentLiveOffsetX = targetOffset
+      $hiddenPillOffsetXStore = targetOffset
+    }
+    bounds.syncBounds(nextBounds, targetOffset, islandNode, false, false)
     resetHideTimer()
   }
 
@@ -683,22 +730,30 @@
         allowedOffsets.min,
         Math.min(allowedOffsets.max, currentLiveOffsetX)
       )
+      const delta = Math.abs(resting - currentLiveOffsetX)
+      const needsSettle = delta > 2
       currentLiveOffsetX = resting
       $hiddenPillOffsetXStore = resting
       const target = getBoundsForState()
 
       if (wasInRunway) {
-        gestures.isSettling = true
-        gestures.isTrackRegionActive = true
-        bounds.settleRunwayBounds(
-          target,
-          resting,
-          islandWrapperNode,
-          islandNode,
-          () => {
-            gestures.finishSettling()
-          }
-        )
+        if (!needsSettle) {
+          gestures.finishSettling()
+          bounds.cancelPendingTransition()
+          bounds.recoverRestingBounds(target, resting, islandNode)
+        } else {
+          gestures.isSettling = true
+          gestures.isTrackRegionActive = true
+          bounds.settleRunwayBounds(
+            target,
+            resting,
+            islandWrapperNode,
+            islandNode,
+            () => {
+              gestures.finishSettling()
+            }
+          )
+        }
       } else {
         bounds.syncBounds(target, resting, islandNode, false, isHidden)
       }
@@ -713,7 +768,15 @@
       bounds.notifyHidden(false)
     }
     const nextBounds = getBoundsForState(islandConfig, true, false)
-    await bounds.prepareExpansion(nextBounds, clampedOffsetX, islandNode)
+    const targetOffset = calculateTargetOffsetForWidth(
+      nextBounds.w,
+      currentLiveOffsetX
+    )
+    if (targetOffset !== currentLiveOffsetX) {
+      currentLiveOffsetX = targetOffset
+      $hiddenPillOffsetXStore = targetOffset
+    }
+    await bounds.prepareExpansion(nextBounds, targetOffset, islandNode)
     islandAnim = '0.32s cubic-bezier(0.2, 0.8, 0.2, 1)'
     expanded = true
     isControlsDrawerOpen = false
@@ -840,8 +903,37 @@
     }
 
     const handleWindowKeydownFailsafe = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && gestures.isDragging) {
-        finishDragGesture()
+      if (e.defaultPrevented) return
+      if (e.key === 'Escape') {
+        if (gestures.isDragging) {
+          finishDragGesture()
+          return
+        }
+        if (expanded && !isHidden) {
+          const fallback = getFallbackPage()
+          if (activePage !== fallback.page) {
+            navigateTo(fallback.page as Component, fallback.config, true)
+          } else {
+            expanded = false
+            const nextBounds = getBoundsForState(islandConfig, false, false)
+            const targetOffset = calculateTargetOffsetForWidth(
+              nextBounds.w,
+              currentLiveOffsetX
+            )
+            if (targetOffset !== currentLiveOffsetX) {
+              currentLiveOffsetX = targetOffset
+              $hiddenPillOffsetXStore = targetOffset
+            }
+            bounds.syncBounds(
+              nextBounds,
+              targetOffset,
+              islandNode,
+              false,
+              false
+            )
+            resetHideTimer()
+          }
+        }
       }
     }
 
@@ -869,12 +961,71 @@
       )
     }
 
+    const handleHotkeyToggle = () => {
+      if (expanded && !isHidden) {
+        const fallback = getFallbackPage()
+        if (activePage !== fallback.page) {
+          activePage = fallback.page as Component
+          islandConfig = fallback.config
+          $activePageIdStore = fallback.page === HomePage ? 'home' : 'media'
+        }
+        hideWidget()
+      } else {
+        const fallback = getFallbackPage()
+        navigateTo(fallback.page as Component, fallback.config, true)
+      }
+    }
+
+    const handleQuickNotesHotkey = () => {
+      if (activePage === NotesPage && expanded && !isHidden) {
+        const fallback = getFallbackPage()
+        navigateTo(fallback.page as Component, fallback.config, false)
+      } else {
+        navigateTo(NotesPage, notesConfig, true)
+      }
+    }
+
+    const handleModeSwitchHotkey = () => {
+      if (isHidden) {
+        showWidget()
+        return
+      }
+      if (expanded) {
+        expanded = false
+        const fallback = getFallbackPage()
+        if (activePage !== fallback.page) {
+          activePage = fallback.page as Component
+          islandConfig = fallback.config
+          $activePageIdStore = fallback.page === HomePage ? 'home' : 'media'
+        }
+        const nextBounds = getBoundsForState(islandConfig, false, false)
+        const targetOffset = calculateTargetOffsetForWidth(
+          nextBounds.w,
+          currentLiveOffsetX
+        )
+        if (targetOffset !== currentLiveOffsetX) {
+          currentLiveOffsetX = targetOffset
+          $hiddenPillOffsetXStore = targetOffset
+        }
+        bounds.syncBounds(nextBounds, targetOffset, islandNode, false, false)
+        resetHideTimer()
+      } else {
+        const fallback = getFallbackPage()
+        navigateTo(fallback.page as Component, fallback.config, true)
+      }
+    }
+
     window.addEventListener('resize', handleResize)
     window.addEventListener('blur', handleGlobalDragFailsafe)
     window.addEventListener('pointercancel', handleGlobalDragFailsafe)
     window.addEventListener('keydown', handleWindowKeydownFailsafe)
     window.addEventListener('focus', handleWindowFocus)
     window.addEventListener('vinta-recover-bounds', handleRecoverBoundsEvent)
+
+    const stopIdleReconciler = bounds.startIdleReconciler(
+      () => islandNode,
+      () => getBoundsForState()
+    )
 
     const cleanupEvents = initIslandEvents({
       showWidget,
@@ -897,7 +1048,10 @@
       onRefreshDisplay: refreshDisplay,
       onNotificationWake: () => {
         wasHiddenBeforeNotif = isHidden
-      }
+      },
+      onHotkeyToggle: handleHotkeyToggle,
+      onQuickNotesHotkey: handleQuickNotesHotkey,
+      onModeSwitchHotkey: handleModeSwitchHotkey
     })
 
     const unsubDevTestNavigate = Events.On(
@@ -1019,6 +1173,7 @@
     )
 
     return () => {
+      stopIdleReconciler()
       finishDragGesture()
       cleanupEvents()
       bounds.cleanup()

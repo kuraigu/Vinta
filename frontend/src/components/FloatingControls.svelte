@@ -34,15 +34,16 @@
   }: Props = $props()
 
   let isDrawerOpen = $state(false)
+  let controlsEl = $state<HTMLDivElement | null>(null)
 
-  function handleOpenDrawer(e: MouseEvent) {
-    e.stopPropagation()
+  function handleOpenDrawer(e?: MouseEvent) {
+    if (e) e.stopPropagation()
     isDrawerOpen = true
     onDrawerChange?.(true)
   }
 
-  function handleCloseDrawer(e: MouseEvent) {
-    e.stopPropagation()
+  function handleCloseDrawer(e?: MouseEvent) {
+    if (e) e.stopPropagation()
     isDrawerOpen = false
     onDrawerChange?.(false)
   }
@@ -58,10 +59,31 @@
   }
 
   $effect(handleExpandedDrawerClose)
+
+  /**
+   * Closes the drawer when clicking outside the controls container.
+   */
+  function setupOutsideClickListener() {
+    if (expanded || !isDrawerOpen) return
+
+    function onPointerDown(e: PointerEvent) {
+      if (controlsEl && !controlsEl.contains(e.target as Node)) {
+        handleCloseDrawer()
+      }
+    }
+
+    window.addEventListener('pointerdown', onPointerDown)
+    return () => {
+      window.removeEventListener('pointerdown', onPointerDown)
+    }
+  }
+
+  $effect(setupOutsideClickListener)
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <div
+  bind:this={controlsEl}
   class="floating-controls"
   class:minimized={!expanded}
   class:folded={!expanded && !isDrawerOpen}
@@ -111,7 +133,7 @@
     <div class="button-wrapper">
       <DockButton
         shape="rounded"
-        tooltip=""
+        tooltip="Window Controls"
         tooltipPosition="bottom"
         onclick={handleOpenDrawer}
       >

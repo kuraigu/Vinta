@@ -16,6 +16,7 @@
   import AppearanceTab from '../components/settings/tabs/AppearanceTab.svelte'
   import AppsModulesTab from '../components/settings/tabs/AppsModulesTab.svelte'
   import BehaviorTab from '../components/settings/tabs/BehaviorTab.svelte'
+  import ShortcutsTab from '../components/settings/tabs/ShortcutsTab.svelte'
   import NotificationsTab from '../components/settings/tabs/NotificationsTab.svelte'
   import ClockTab from '../components/settings/tabs/ClockTab.svelte'
   import WeatherTab from '../components/settings/tabs/WeatherTab.svelte'
@@ -41,6 +42,8 @@
           <AppsModulesTab />
         {:else if activeTab === 'behavior'}
           <BehaviorTab />
+        {:else if activeTab === 'shortcuts'}
+          <ShortcutsTab />
         {:else if activeTab === 'notifications'}
           <NotificationsTab />
         {:else if activeTab === 'clock'}

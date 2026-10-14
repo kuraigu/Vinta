@@ -60,6 +60,9 @@ export interface IslandEventCallbacks {
   onMonitorChanged: (mon: MonitorInfo) => void
   onRefreshDisplay: () => void
   onNotificationWake?: () => void
+  onHotkeyToggle?: () => void
+  onQuickNotesHotkey?: () => void
+  onModeSwitchHotkey?: () => void
 }
 
 /**
@@ -89,6 +92,24 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
 
   onEvent('show-pill', () => {
     callbacks.showWidget()
+  })
+
+  onEvent('hotkey-toggle-island', () => {
+    if (callbacks.onHotkeyToggle) {
+      callbacks.onHotkeyToggle()
+    } else if (callbacks.getIsHidden()) {
+      callbacks.showWidget()
+    } else {
+      callbacks.hideWidget()
+    }
+  })
+
+  onEvent('hotkey-quick-notes', () => {
+    callbacks.onQuickNotesHotkey?.()
+  })
+
+  onEvent('hotkey-mode-switch', () => {
+    callbacks.onModeSwitchHotkey?.()
   })
 
   // Fullscreen / Game Mode Handling

@@ -26,6 +26,15 @@ import * as application$0 from '../../github.com/wailsapp/wails/v3/pkg/applicati
 import * as $models from './models.js'
 
 /**
+ * ApplyImportedSettings validates and saves sanitized settings JSON to %APPDATA%/FreeMatrix Studios/Vinta/settings.json.
+ */
+export function ApplyImportedSettings(
+  sanitizedJSON: string
+): $CancellablePromise<void> {
+  return $Call.ByID(1795097572, sanitizedJSON)
+}
+
+/**
  * ApplyUpdate launches the downloaded installer and gracefully exits Vinta.
  */
 export function ApplyUpdate(): $CancellablePromise<void> {
@@ -95,6 +104,15 @@ export function DownloadUpdate(
   checksumsURL: string
 ): $CancellablePromise<void> {
   return $Call.ByID(521641498, downloadURL, checksumsURL)
+}
+
+/**
+ * ExportSettingsFileDialog opens a native save dialog and exports the current settings JSON with envelope metadata.
+ */
+export function ExportSettingsFileDialog(
+  defaultName: string
+): $CancellablePromise<string> {
+  return $Call.ByID(969537782, defaultName)
 }
 
 /**
@@ -199,10 +217,26 @@ export function GetDisplayLayout(): $CancellablePromise<$models.DisplayLayout> {
 }
 
 /**
+ * GetGlobalShortcut returns the main toggle shortcut (retained for backward compatibility).
+ */
+export function GetGlobalShortcut(): $CancellablePromise<string> {
+  return $Call.ByID(500280652)
+}
+
+/**
  * GetHardwareAcceleration returns whether GPU acceleration is enabled.
  */
 export function GetHardwareAcceleration(): $CancellablePromise<boolean> {
   return $Call.ByID(3725975885)
+}
+
+/**
+ * GetNamedGlobalShortcut returns the currently registered accelerator string for a specific action.
+ */
+export function GetNamedGlobalShortcut(
+  name: string
+): $CancellablePromise<string> {
+  return $Call.ByID(2456397115, name)
 }
 
 /**
@@ -240,6 +274,13 @@ export function GetWirelessStatus(): $CancellablePromise<services$0.WirelessStat
  */
 export function Greet(name: string): $CancellablePromise<string> {
   return $Call.ByID(2029986440, name)
+}
+
+/**
+ * ImportSettingsFileDialog opens a native open dialog and returns the JSON content of the selected file.
+ */
+export function ImportSettingsFileDialog(): $CancellablePromise<string> {
+  return $Call.ByID(3465797657)
 }
 
 /**
@@ -305,6 +346,25 @@ export function Quit(): $CancellablePromise<void> {
  */
 export function ReadNote(fileName: string): $CancellablePromise<string> {
   return $Call.ByID(3035600691, fileName)
+}
+
+/**
+ * RegisterGlobalShortcut registers the main toggle shortcut (retained for backward compatibility).
+ */
+export function RegisterGlobalShortcut(
+  accelerator: string
+): $CancellablePromise<boolean> {
+  return $Call.ByID(3643707275, accelerator)
+}
+
+/**
+ * RegisterNamedGlobalShortcut registers an application-wide hotkey accelerator for a specific action.
+ */
+export function RegisterNamedGlobalShortcut(
+  name: string,
+  accelerator: string
+): $CancellablePromise<boolean> {
+  return $Call.ByID(365477966, name, accelerator)
 }
 
 /**
@@ -655,6 +715,22 @@ export function StopInertiaGlide(): $CancellablePromise<number> {
  */
 export function TrimMemory(): $CancellablePromise<void> {
   return $Call.ByID(1258805264)
+}
+
+/**
+ * UnregisterGlobalShortcut removes the main toggle shortcut (retained for backward compatibility).
+ */
+export function UnregisterGlobalShortcut(): $CancellablePromise<void> {
+  return $Call.ByID(1718010348)
+}
+
+/**
+ * UnregisterNamedGlobalShortcut removes a registered global shortcut by action name.
+ */
+export function UnregisterNamedGlobalShortcut(
+  name: string
+): $CancellablePromise<void> {
+  return $Call.ByID(656225691, name)
 }
 
 // Private type creation functions

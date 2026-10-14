@@ -251,8 +251,13 @@ export class WindowBoundsManager {
       return
     }
 
-    const envelopeW = Math.max(currW, target.w)
-    const envelopeH = Math.max(currH, target.h)
+    let envelopeW = Math.max(currW, target.w)
+    let envelopeH = Math.max(currH, target.h)
+    if (islandNode) {
+      const rect = islandNode.getBoundingClientRect()
+      if (rect.width > envelopeW) envelopeW = Math.round(rect.width)
+      if (rect.height > envelopeH) envelopeH = Math.round(rect.height)
+    }
     const offset =
       explicitOffset !== undefined ? explicitOffset : this.getLiveOffset()
 
@@ -293,8 +298,14 @@ export class WindowBoundsManager {
     const commitSettled = () => {
       if (hasSettled) return
       hasSettled = true
+      if (wrapperNode) {
+        wrapperNode.removeEventListener('transitionend', onTransitionEnd)
+        wrapperNode.removeEventListener('transitioncancel', onTransitionEnd)
+      }
       this.cancelPendingTransition()
-      this.recoverRestingBounds(target, offset, islandNode)
+      const liveOffset = this.getLiveOffset()
+      const finalOffset = Number.isFinite(liveOffset) ? liveOffset : offset
+      this.recoverRestingBounds(target, finalOffset, islandNode)
       onSettled?.()
     }
 
@@ -304,7 +315,10 @@ export class WindowBoundsManager {
     }
 
     const onTransitionEnd = (e: TransitionEvent) => {
-      if (e.target === wrapperNode) {
+      if (
+        e.target === wrapperNode &&
+        (e.propertyName === 'transform' || e.propertyName === 'left')
+      ) {
         commitSettled()
       }
     }
@@ -314,8 +328,8 @@ export class WindowBoundsManager {
     wrapperNode.addEventListener('transitionend', onTransitionEnd)
     wrapperNode.addEventListener('transitioncancel', onTransitionEnd)
 
-    // Fallback timer matching islandAnim duration plus safety buffer
-    this.boundsTransitionTimeout = window.setTimeout(commitSettled, 400)
+    // Fast-settle fallback timer (160ms for smooth snap transition completion)
+    this.boundsTransitionTimeout = window.setTimeout(commitSettled, 160)
   }
 
   /**
@@ -327,35 +341,66 @@ export class WindowBoundsManager {
   public async recoverRestingBounds(
     target: WindowBounds,
     offset: number,
-    _islandNode?: HTMLElement | null,
+    islandNode?: HTMLElement | null,
     _isHidden: boolean = false
   ): Promise<void> {
     if (this.getIsDragging()) return
     this.cancelPendingTransition()
 
     clearTimeout(this.recoveryDebounceTimer)
+    const delay = this.lastDispatchedBounds?.w === -1 ? 0 : 25
     this.recoveryDebounceTimer = window.setTimeout(async () => {
       if (this.getIsDragging()) return
       this.isBoundsIpcPending = false
       this.pendingBoundsArgs = null
       this.lastDispatchedBounds = null
 
-      const finalW = Math.round(target.w)
-      const finalH = Math.round(target.h)
+      let finalW = Math.round(target.w)
+      let finalH = Math.round(target.h)
       const finalR = Math.round(target.r)
+      let needsFollowUp = false
+
+      if (islandNode) {
+        const rect = islandNode.getBoundingClientRect()
+        if (rect.width > 0 && rect.height > 0) {
+          const domW = Math.round(rect.width)
+          const domH = Math.round(rect.height)
+          if (domW > finalW) {
+            finalW = domW
+            needsFollowUp = true
+          }
+          if (domH > finalH) {
+            finalH = domH
+            needsFollowUp = true
+          }
+        }
+      }
 
       this.currentOSBounds = { w: finalW, h: finalH, r: finalR }
-      await this.updateBounds(finalW, finalH, finalR, offset)
+      const liveOffset = this.getLiveOffset()
+      const effectiveOffset = Number.isFinite(liveOffset) ? liveOffset : offset
+      await this.updateBounds(finalW, finalH, finalR, effectiveOffset)
       resyncAllSatellites()
 
       // Post-animation secondary verification to bust Windows DWM cache under lag
       window.setTimeout(() => {
         if (this.getIsDragging()) return
         resyncAllSatellites()
+        const currentLive = this.getLiveOffset()
+        const followUpOffset = Number.isFinite(currentLive)
+          ? currentLive
+          : effectiveOffset
         // Pass -finalR to bust native cache in Go and guarantee SetWindowRgn
-        this.updateBounds(finalW, finalH, -finalR, offset)
+        this.updateBounds(finalW, finalH, -finalR, followUpOffset)
       }, 80)
-    }, 25)
+
+      if (needsFollowUp) {
+        window.setTimeout(() => {
+          if (this.getIsDragging()) return
+          this.recoverRestingBounds(target, offset, islandNode, _isHidden)
+        }, 120)
+      }
+    }, delay)
   }
 
   /**
@@ -373,13 +418,29 @@ export class WindowBoundsManager {
     this.targetPendingBounds = { ...target }
 
     let hasRecovered = false
+    let safetyAttempts = 0
     const commitRecovery = () => {
       if (hasRecovered) return
-      hasRecovered = true
       clearTimeout(this.transitionEndDebounceTimer)
       this.transitionEndDebounceTimer = undefined
+
+      if (islandNode && safetyAttempts < 8) {
+        const rect = islandNode.getBoundingClientRect()
+        const isStillOversized =
+          rect.width - target.w > 4 || rect.height - target.h > 4
+        // Prevent premature clipping during frame drops if element is still actively shrinking
+        if (isStillOversized) {
+          safetyAttempts++
+          this.boundsTransitionTimeout = window.setTimeout(commitRecovery, 80)
+          return
+        }
+      }
+
+      hasRecovered = true
       this.cancelPendingTransition()
-      this.recoverRestingBounds(target, offset, islandNode, isHidden)
+      const liveOffset = this.getLiveOffset()
+      const finalOffset = Number.isFinite(liveOffset) ? liveOffset : offset
+      this.recoverRestingBounds(target, finalOffset, islandNode, isHidden)
     }
 
     const triggerDebouncedCommit = () => {
@@ -408,6 +469,21 @@ export class WindowBoundsManager {
       this.activeTransitionEndHandler = onTransitionEnd
       islandNode.addEventListener('transitionend', onTransitionEnd)
       islandNode.addEventListener('transitioncancel', onTransitionEnd)
+
+      if (typeof ResizeObserver !== 'undefined') {
+        this.resizeObserver = new ResizeObserver((entries) => {
+          for (const entry of entries) {
+            const { width, height } = entry.contentRect
+            if (
+              Math.abs(width - target.w) <= 2 &&
+              Math.abs(height - target.h) <= 2
+            ) {
+              triggerDebouncedCommit()
+            }
+          }
+        })
+        this.resizeObserver.observe(islandNode)
+      }
     }
 
     // Safety fallback timer to guarantee recovery under frame drops or lag
@@ -487,8 +563,13 @@ export class WindowBoundsManager {
     // and schedule post-animation recovery so bounds snap back to the exact target when done.
     if (isGrowing) {
       this.cancelPendingTransition()
-      const immediateW = Math.max(currW, target.w)
-      const immediateH = Math.max(currH, target.h)
+      let immediateW = Math.max(currW, target.w)
+      let immediateH = Math.max(currH, target.h)
+      if (islandNode) {
+        const rect = islandNode.getBoundingClientRect()
+        if (rect.width > immediateW) immediateW = Math.round(rect.width)
+        if (rect.height > immediateH) immediateH = Math.round(rect.height)
+      }
 
       this.applyBounds(immediateW, immediateH, target.r, offset)
       this.scheduleAnimationRecovery(target, offset, islandNode, isHidden, 380)
@@ -551,11 +632,59 @@ export class WindowBoundsManager {
     }
   }
 
+  private idleWatchdogTimer?: number
+
+  /**
+   * Initializes a background idle watchdog that periodically reconciles true DOM geometry
+   * against active OS bounds when the interface is stationary.
+   */
+  public startIdleReconciler(
+    getIslandNode: () => HTMLElement | null,
+    getTargetBounds: () => WindowBounds
+  ): () => void {
+    if (typeof window === 'undefined') return () => {}
+
+    const runIdleCheck = () => {
+      if (
+        !this.getIsDragging() &&
+        this.boundsTransitionTimeout === undefined &&
+        !this.isBoundsIpcPending
+      ) {
+        const node = getIslandNode()
+        if (node) {
+          const rect = node.getBoundingClientRect()
+          if (rect.width > 0 && rect.height > 0) {
+            const domW = Math.round(rect.width)
+            const domH = Math.round(rect.height)
+            const diffW = Math.abs(domW - this.currentOSBounds.w)
+            const diffH = Math.abs(domH - this.currentOSBounds.h)
+            const currentLiveOffset = this.getLiveOffset()
+            const diffOffset = this.lastDispatchedBounds
+              ? Math.abs(currentLiveOffset - this.lastDispatchedBounds.offset)
+              : 0
+            if (diffW > 4 || diffH > 4 || diffOffset > 2) {
+              const target = getTargetBounds()
+              this.recoverRestingBounds(target, currentLiveOffset, node)
+            }
+          }
+        }
+      }
+      this.idleWatchdogTimer = window.setTimeout(runIdleCheck, 400)
+    }
+
+    this.idleWatchdogTimer = window.setTimeout(runIdleCheck, 500)
+
+    return () => {
+      clearTimeout(this.idleWatchdogTimer)
+    }
+  }
+
   /**
    * Cleans up all pending timers and callbacks.
    */
   public cleanup(): void {
     this.cancelPendingTransition()
+    clearTimeout(this.idleWatchdogTimer)
     this.pendingBoundsResolver = null
     this.pendingBoundsArgs = null
   }

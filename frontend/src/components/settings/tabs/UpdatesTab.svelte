@@ -16,6 +16,7 @@
     Cpu
   } from 'lucide-svelte'
   import SettingItem from '../SettingItem.svelte'
+  import SettingBanner from '../SettingBanner.svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
   import CustomSelect from '../../CustomSelect.svelte'
   import {
@@ -160,15 +161,12 @@
 <div class="updates-container">
   <!-- Non-Official Release Information Banner: placed at the very top of the Updates page -->
   {#if !isOfficialBuild}
-    <div class="dev-banner">
-      <div class="dev-banner-icon-box">
-        <AlertCircle size={16} />
-      </div>
-      <span class="dev-banner-text">
-        <strong>Non-Official Release:</strong> Automatic update checking is disabled
-        on non-official and development builds.
-      </span>
-    </div>
+    <SettingBanner
+      variant="amber"
+      icon={AlertCircle}
+      title="Non-Official Release"
+      description="Automatic update checking is disabled on non-official and development builds."
+    />
   {/if}
 
   <!-- Settings Group -->

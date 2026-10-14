@@ -44,6 +44,7 @@ var (
 	procIsWindowVisible          = user32.NewProc("IsWindowVisible")
 	procIsIconic                 = user32.NewProc("IsIconic")
 	procGetAncestor              = user32.NewProc("GetAncestor")
+	procRedrawWindow             = user32.NewProc("RedrawWindow")
 
 	shell32                          = syscall.NewLazyDLL("shell32.dll")
 	procSHQueryUserNotificationState = shell32.NewProc("SHQueryUserNotificationState")
@@ -1049,6 +1050,7 @@ func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 		})
 		win.OnWindowEvent(events.Common.WindowClosing, func(_ *application.WindowEvent) {
 			services.SetFrontendReady(false)
+			services.StopServicesListener()
 		})
 	}
 
@@ -1069,6 +1071,32 @@ func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 	}()
 
 	a.StartBackgroundUpdateChecker()
+
+	// Initialize global shortcut manager
+	go func() {
+		time.Sleep(600 * time.Millisecond)
+		toggleHk := "Alt+Shift+V"
+		quickNotesHk := "Alt+Shift+N"
+		modeSwitchHk := "Alt+Shift+D"
+
+		if settingsJSON, err := a.GetSettings(); err == nil && settingsJSON != "" && settingsJSON != "{}" {
+			var m map[string]any
+			if json.Unmarshal([]byte(settingsJSON), &m) == nil {
+				if hk, ok := m["vinta_global_hotkey"].(string); ok && strings.TrimSpace(hk) != "" {
+					toggleHk = strings.TrimSpace(hk)
+				}
+				if hk, ok := m["vinta_hotkey_quick_notes"].(string); ok && strings.TrimSpace(hk) != "" {
+					quickNotesHk = strings.TrimSpace(hk)
+				}
+				if hk, ok := m["vinta_hotkey_mode_switch"].(string); ok && strings.TrimSpace(hk) != "" {
+					modeSwitchHk = strings.TrimSpace(hk)
+				}
+			}
+		}
+		_, _ = a.RegisterNamedGlobalShortcut("toggle", toggleHk)
+		_, _ = a.RegisterNamedGlobalShortcut("quick_notes", quickNotesHk)
+		_, _ = a.RegisterNamedGlobalShortcut("mode_switch", modeSwitchHk)
+	}()
 
 	if wailsApp != nil {
 		systray := wailsApp.SystemTray.New()
@@ -1761,6 +1789,7 @@ func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, effectiveMai
 
 	if w <= 0 && h <= 0 {
 		_, _, _ = procSetWindowRgn.Call(hwnd, 0, 1)
+		_, _, _ = procRedrawWindow.Call(hwnd, 0, 0, 0x0001|0x0400|0x0100)
 		return
 	}
 
@@ -1768,6 +1797,7 @@ func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, effectiveMai
 	if w == -1 {
 		if hrgnMain := createMainPillRegion(w, h, r, offsetX, sw, padding, totalVintaH, scale); hrgnMain != 0 {
 			_, _, _ = procSetWindowRgn.Call(hwnd, hrgnMain, 1)
+			_, _, _ = procRedrawWindow.Call(hwnd, 0, 0, 0x0001|0x0400|0x0100)
 		}
 		return
 	}
@@ -1789,6 +1819,7 @@ func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, effectiveMai
 	hrgnFinal := combineWindowRegions(regions...)
 	if hrgnFinal != 0 {
 		_, _, _ = procSetWindowRgn.Call(hwnd, hrgnFinal, 1)
+		_, _, _ = procRedrawWindow.Call(hwnd, 0, 0, 0x0001|0x0400|0x0100)
 	}
 }
 
@@ -2544,6 +2575,216 @@ func (a *App) ResetSettings() error {
 	filePath := filepath.Join(GetAppDataDir(), "settings.json")
 	_ = os.Remove(filePath)
 	return nil
+}
+
+// ExportSettingsFileDialog opens a native save dialog and exports the current settings JSON with envelope metadata.
+func (a *App) ExportSettingsFileDialog(defaultName string) (string, error) {
+	wailsApp := application.Get()
+	if wailsApp == nil {
+		return "", fmt.Errorf("application instance not available")
+	}
+
+	if defaultName == "" {
+		defaultName = "vinta-settings.json"
+	}
+
+	dialog := wailsApp.Dialog.SaveFile()
+	dialog.SetMessage("Export Vinta Settings")
+	dialog.SetFilename(defaultName)
+	dialog.AddFilter("JSON Files (*.json)", "*.json")
+
+	targetPath, err := dialog.PromptForSingleSelection()
+	if err != nil {
+		return "", err
+	}
+	if targetPath == "" {
+		return "", nil
+	}
+
+	currentJSON, _ := a.GetSettings()
+	var rawSettings any
+	if err := json.Unmarshal([]byte(currentJSON), &rawSettings); err != nil {
+		rawSettings = map[string]any{}
+	}
+
+	exportPayload := map[string]any{
+		"$schemaVersion": 1,
+		"exportedAt":     time.Now().UTC().Format(time.RFC3339),
+		"settings":       rawSettings,
+	}
+
+	data, err := json.MarshalIndent(exportPayload, "", "  ")
+	if err != nil {
+		return "", err
+	}
+
+	if err := os.WriteFile(targetPath, data, 0644); err != nil {
+		return "", err
+	}
+
+	return targetPath, nil
+}
+
+// ImportSettingsFileDialog opens a native open dialog and returns the JSON content of the selected file.
+func (a *App) ImportSettingsFileDialog() (string, error) {
+	wailsApp := application.Get()
+	if wailsApp == nil {
+		return "", fmt.Errorf("application instance not available")
+	}
+
+	dialog := wailsApp.Dialog.OpenFile()
+	dialog.SetTitle("Import Vinta Settings")
+	dialog.AddFilter("JSON Files (*.json)", "*.json")
+
+	selectedPath, err := dialog.PromptForSingleSelection()
+	if err != nil {
+		return "", err
+	}
+	if selectedPath == "" {
+		return "", nil
+	}
+
+	info, err := os.Stat(selectedPath)
+	if err != nil {
+		return "", err
+	}
+
+	const maxSettingsPayload = 256 * 1024
+	if info.Size() > maxSettingsPayload {
+		return "", fmt.Errorf("file size exceeds allowable limit (256 KB)")
+	}
+
+	data, err := os.ReadFile(selectedPath)
+	if err != nil {
+		return "", err
+	}
+
+	if !json.Valid(data) {
+		return "", fmt.Errorf("selected file does not contain valid JSON")
+	}
+
+	return string(data), nil
+}
+
+// ApplyImportedSettings validates and saves sanitized settings JSON to %APPDATA%/FreeMatrix Studios/Vinta/settings.json.
+func (a *App) ApplyImportedSettings(sanitizedJSON string) error {
+	if strings.TrimSpace(sanitizedJSON) == "" {
+		return fmt.Errorf("settings payload cannot be empty")
+	}
+
+	if !json.Valid([]byte(sanitizedJSON)) {
+		return fmt.Errorf("invalid JSON payload")
+	}
+
+	dir := GetAppDataDir()
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+
+	filePath := filepath.Join(dir, "settings.json")
+	tmpPath := filepath.Join(dir, "settings.json.tmp")
+
+	if err := os.WriteFile(tmpPath, []byte(sanitizedJSON), 0644); err != nil {
+		return err
+	}
+
+	_ = os.Remove(filePath)
+	if err := os.Rename(tmpPath, filePath); err != nil {
+		return os.WriteFile(filePath, []byte(sanitizedJSON), 0644)
+	}
+
+	return nil
+}
+
+var (
+	globalHotkeyMutex sync.Mutex
+	registeredHotkeys = make(map[string]string)
+)
+
+// RegisterNamedGlobalShortcut registers an application-wide hotkey accelerator for a specific action.
+func (a *App) RegisterNamedGlobalShortcut(name string, accelerator string) (bool, error) {
+	wailsApp := application.Get()
+	if wailsApp == nil {
+		return false, fmt.Errorf("application instance not available")
+	}
+
+	globalHotkeyMutex.Lock()
+	defer globalHotkeyMutex.Unlock()
+
+	trimmed := strings.TrimSpace(accelerator)
+	oldAccel := registeredHotkeys[name]
+
+	if trimmed == "" {
+		if oldAccel != "" {
+			_ = wailsApp.GlobalShortcut.Unregister(oldAccel)
+			delete(registeredHotkeys, name)
+		}
+		return true, nil
+	}
+
+	if oldAccel != "" {
+		_ = wailsApp.GlobalShortcut.Unregister(oldAccel)
+		delete(registeredHotkeys, name)
+	}
+
+	eventName := "hotkey-toggle-island"
+	switch name {
+	case "quick_notes":
+		eventName = "hotkey-quick-notes"
+	case "mode_switch":
+		eventName = "hotkey-mode-switch"
+	default:
+		eventName = "hotkey-toggle-island"
+	}
+
+	err := wailsApp.GlobalShortcut.Register(trimmed, func() {
+		wailsApp.Event.Emit(eventName)
+	})
+	if err != nil {
+		return false, err
+	}
+
+	registeredHotkeys[name] = trimmed
+	return true, nil
+}
+
+// UnregisterNamedGlobalShortcut removes a registered global shortcut by action name.
+func (a *App) UnregisterNamedGlobalShortcut(name string) error {
+	wailsApp := application.Get()
+	if wailsApp == nil {
+		return fmt.Errorf("application instance not available")
+	}
+
+	globalHotkeyMutex.Lock()
+	defer globalHotkeyMutex.Unlock()
+
+	if oldAccel := registeredHotkeys[name]; oldAccel != "" {
+		_ = wailsApp.GlobalShortcut.Unregister(oldAccel)
+		delete(registeredHotkeys, name)
+	}
+	return nil
+}
+
+// GetNamedGlobalShortcut returns the currently registered accelerator string for a specific action.
+func (a *App) GetNamedGlobalShortcut(name string) string {
+	globalHotkeyMutex.Lock()
+	defer globalHotkeyMutex.Unlock()
+	return registeredHotkeys[name]
+}
+
+// RegisterGlobalShortcut registers the main toggle shortcut (retained for backward compatibility).
+func (a *App) RegisterGlobalShortcut(accelerator string) (bool, error) {
+	return a.RegisterNamedGlobalShortcut("toggle", accelerator)
+}
+
+// UnregisterGlobalShortcut removes the main toggle shortcut (retained for backward compatibility).
+func (a *App) UnregisterGlobalShortcut() error {
+	return a.UnregisterNamedGlobalShortcut("toggle")
+}
+
+// GetGlobalShortcut returns the main toggle shortcut (retained for backward compatibility).
+func (a *App) GetGlobalShortcut() string {
+	return a.GetNamedGlobalShortcut("toggle")
 }
 
 // GetCalendarData reads calendar.json from %APPDATA%/FreeMatrix Studios/Vinta.

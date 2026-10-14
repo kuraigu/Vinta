@@ -21,6 +21,10 @@
   ]
 
   let isResettingOffset = $state(false)
+
+  /**
+   * Resets the persistent horizontal position offset of the island back to monitor center.
+   */
   function handleResetOffset() {
     $hiddenPillOffsetXStore = 0
     isResettingOffset = true
