@@ -3,514 +3,525 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Create as $Create } from "@wailsio/runtime";
+import { Create as $Create } from '@wailsio/runtime'
 
 /**
  * AppInfo represents structured application build, authenticity, and runtime metadata.
  */
 export class AppInfo {
-    "name": string;
-    "version": string;
-    "gitCommit": string;
-    "buildType": string;
-    "buildTime": string;
-    "isOfficialBuild": boolean;
-    "goVersion": string;
-    "arch": string;
-    "os": string;
-    "wailsVersion": string;
-    "repoUrl": string;
+  'name': string
+  'version': string
+  'gitCommit': string
+  'buildType': string
+  'buildTime': string
+  'isOfficialBuild': boolean
+  'goVersion': string
+  'arch': string
+  'os': string
+  'wailsVersion': string
+  'repoUrl': string
 
-    /** Creates a new AppInfo instance. */
-    constructor($$source: Partial<AppInfo> = {}) {
-        if (!("name" in $$source)) {
-            this["name"] = "";
-        }
-        if (!("version" in $$source)) {
-            this["version"] = "";
-        }
-        if (!("gitCommit" in $$source)) {
-            this["gitCommit"] = "";
-        }
-        if (!("buildType" in $$source)) {
-            this["buildType"] = "";
-        }
-        if (!("buildTime" in $$source)) {
-            this["buildTime"] = "";
-        }
-        if (!("isOfficialBuild" in $$source)) {
-            this["isOfficialBuild"] = false;
-        }
-        if (!("goVersion" in $$source)) {
-            this["goVersion"] = "";
-        }
-        if (!("arch" in $$source)) {
-            this["arch"] = "";
-        }
-        if (!("os" in $$source)) {
-            this["os"] = "";
-        }
-        if (!("wailsVersion" in $$source)) {
-            this["wailsVersion"] = "";
-        }
-        if (!("repoUrl" in $$source)) {
-            this["repoUrl"] = "";
-        }
-
-        Object.assign(this, $$source);
+  /** Creates a new AppInfo instance. */
+  constructor($$source: Partial<AppInfo> = {}) {
+    if (!('name' in $$source)) {
+      this['name'] = ''
+    }
+    if (!('version' in $$source)) {
+      this['version'] = ''
+    }
+    if (!('gitCommit' in $$source)) {
+      this['gitCommit'] = ''
+    }
+    if (!('buildType' in $$source)) {
+      this['buildType'] = ''
+    }
+    if (!('buildTime' in $$source)) {
+      this['buildTime'] = ''
+    }
+    if (!('isOfficialBuild' in $$source)) {
+      this['isOfficialBuild'] = false
+    }
+    if (!('goVersion' in $$source)) {
+      this['goVersion'] = ''
+    }
+    if (!('arch' in $$source)) {
+      this['arch'] = ''
+    }
+    if (!('os' in $$source)) {
+      this['os'] = ''
+    }
+    if (!('wailsVersion' in $$source)) {
+      this['wailsVersion'] = ''
+    }
+    if (!('repoUrl' in $$source)) {
+      this['repoUrl'] = ''
     }
 
-    /**
-     * Creates a new AppInfo instance from a string or object.
-     */
-    static createFrom($$source: any = {}): AppInfo {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new AppInfo($$parsedSource as Partial<AppInfo>);
-    }
+    Object.assign(this, $$source)
+  }
+
+  /**
+   * Creates a new AppInfo instance from a string or object.
+   */
+  static createFrom($$source: any = {}): AppInfo {
+    let $$parsedSource =
+      typeof $$source === 'string' ? JSON.parse($$source) : $$source
+    return new AppInfo($$parsedSource as Partial<AppInfo>)
+  }
 }
 
 /**
  * Contributor represents a project contributor parsed dynamically from docs/CONTRIBUTORS.md.
  */
 export class Contributor {
-    "name": string;
-    "handle": string;
-    "role": string;
-    "avatar": string;
-    "url": string;
+  'name': string
+  'handle': string
+  'role': string
+  'avatar': string
+  'url': string
 
-    /** Creates a new Contributor instance. */
-    constructor($$source: Partial<Contributor> = {}) {
-        if (!("name" in $$source)) {
-            this["name"] = "";
-        }
-        if (!("handle" in $$source)) {
-            this["handle"] = "";
-        }
-        if (!("role" in $$source)) {
-            this["role"] = "";
-        }
-        if (!("avatar" in $$source)) {
-            this["avatar"] = "";
-        }
-        if (!("url" in $$source)) {
-            this["url"] = "";
-        }
-
-        Object.assign(this, $$source);
+  /** Creates a new Contributor instance. */
+  constructor($$source: Partial<Contributor> = {}) {
+    if (!('name' in $$source)) {
+      this['name'] = ''
+    }
+    if (!('handle' in $$source)) {
+      this['handle'] = ''
+    }
+    if (!('role' in $$source)) {
+      this['role'] = ''
+    }
+    if (!('avatar' in $$source)) {
+      this['avatar'] = ''
+    }
+    if (!('url' in $$source)) {
+      this['url'] = ''
     }
 
-    /**
-     * Creates a new Contributor instance from a string or object.
-     */
-    static createFrom($$source: any = {}): Contributor {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new Contributor($$parsedSource as Partial<Contributor>);
-    }
+    Object.assign(this, $$source)
+  }
+
+  /**
+   * Creates a new Contributor instance from a string or object.
+   */
+  static createFrom($$source: any = {}): Contributor {
+    let $$parsedSource =
+      typeof $$source === 'string' ? JSON.parse($$source) : $$source
+    return new Contributor($$parsedSource as Partial<Contributor>)
+  }
 }
 
 /**
  * DisplayLayout captures multi-monitor geometry and the composite virtual desktop space.
  */
 export class DisplayLayout {
-    "virtualLeft": number;
-    "virtualTop": number;
-    "virtualWidth": number;
-    "virtualHeight": number;
-    "primaryCenter": number;
-    "currentMonitor": MonitorInfo;
-    "monitors": MonitorInfo[];
+  'virtualLeft': number
+  'virtualTop': number
+  'virtualWidth': number
+  'virtualHeight': number
+  'primaryCenter': number
+  'currentMonitor': MonitorInfo
+  'monitors': MonitorInfo[]
 
-    /** Creates a new DisplayLayout instance. */
-    constructor($$source: Partial<DisplayLayout> = {}) {
-        if (!("virtualLeft" in $$source)) {
-            this["virtualLeft"] = 0;
-        }
-        if (!("virtualTop" in $$source)) {
-            this["virtualTop"] = 0;
-        }
-        if (!("virtualWidth" in $$source)) {
-            this["virtualWidth"] = 0;
-        }
-        if (!("virtualHeight" in $$source)) {
-            this["virtualHeight"] = 0;
-        }
-        if (!("primaryCenter" in $$source)) {
-            this["primaryCenter"] = 0;
-        }
-        if (!("currentMonitor" in $$source)) {
-            this["currentMonitor"] = (new MonitorInfo());
-        }
-        if (!("monitors" in $$source)) {
-            this["monitors"] = [];
-        }
-
-        Object.assign(this, $$source);
+  /** Creates a new DisplayLayout instance. */
+  constructor($$source: Partial<DisplayLayout> = {}) {
+    if (!('virtualLeft' in $$source)) {
+      this['virtualLeft'] = 0
+    }
+    if (!('virtualTop' in $$source)) {
+      this['virtualTop'] = 0
+    }
+    if (!('virtualWidth' in $$source)) {
+      this['virtualWidth'] = 0
+    }
+    if (!('virtualHeight' in $$source)) {
+      this['virtualHeight'] = 0
+    }
+    if (!('primaryCenter' in $$source)) {
+      this['primaryCenter'] = 0
+    }
+    if (!('currentMonitor' in $$source)) {
+      this['currentMonitor'] = new MonitorInfo()
+    }
+    if (!('monitors' in $$source)) {
+      this['monitors'] = []
     }
 
-    /**
-     * Creates a new DisplayLayout instance from a string or object.
-     */
-    static createFrom($$source: any = {}): DisplayLayout {
-        const $$createField5_0 = $$createType0;
-        const $$createField6_0 = $$createType1;
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        if ("currentMonitor" in $$parsedSource) {
-            $$parsedSource["currentMonitor"] = $$createField5_0($$parsedSource["currentMonitor"]);
-        }
-        if ("monitors" in $$parsedSource) {
-            $$parsedSource["monitors"] = $$createField6_0($$parsedSource["monitors"]);
-        }
-        return new DisplayLayout($$parsedSource as Partial<DisplayLayout>);
+    Object.assign(this, $$source)
+  }
+
+  /**
+   * Creates a new DisplayLayout instance from a string or object.
+   */
+  static createFrom($$source: any = {}): DisplayLayout {
+    const $$createField5_0 = $$createType0
+    const $$createField6_0 = $$createType1
+    let $$parsedSource =
+      typeof $$source === 'string' ? JSON.parse($$source) : $$source
+    if ('currentMonitor' in $$parsedSource) {
+      $$parsedSource['currentMonitor'] = $$createField5_0(
+        $$parsedSource['currentMonitor']
+      )
     }
+    if ('monitors' in $$parsedSource) {
+      $$parsedSource['monitors'] = $$createField6_0($$parsedSource['monitors'])
+    }
+    return new DisplayLayout($$parsedSource as Partial<DisplayLayout>)
+  }
 }
 
 /**
  * MonitorInfo describes a connected physical display's boundaries and properties.
  */
 export class MonitorInfo {
-    "id": number;
-    "name": string;
-    "left": number;
-    "top": number;
-    "width": number;
-    "height": number;
-    "isPrimary": boolean;
-    "isPortrait": boolean;
+  'id': number
+  'name': string
+  'left': number
+  'top': number
+  'width': number
+  'height': number
+  'isPrimary': boolean
+  'isPortrait': boolean
 
-    /** Creates a new MonitorInfo instance. */
-    constructor($$source: Partial<MonitorInfo> = {}) {
-        if (!("id" in $$source)) {
-            this["id"] = 0;
-        }
-        if (!("name" in $$source)) {
-            this["name"] = "";
-        }
-        if (!("left" in $$source)) {
-            this["left"] = 0;
-        }
-        if (!("top" in $$source)) {
-            this["top"] = 0;
-        }
-        if (!("width" in $$source)) {
-            this["width"] = 0;
-        }
-        if (!("height" in $$source)) {
-            this["height"] = 0;
-        }
-        if (!("isPrimary" in $$source)) {
-            this["isPrimary"] = false;
-        }
-        if (!("isPortrait" in $$source)) {
-            this["isPortrait"] = false;
-        }
-
-        Object.assign(this, $$source);
+  /** Creates a new MonitorInfo instance. */
+  constructor($$source: Partial<MonitorInfo> = {}) {
+    if (!('id' in $$source)) {
+      this['id'] = 0
+    }
+    if (!('name' in $$source)) {
+      this['name'] = ''
+    }
+    if (!('left' in $$source)) {
+      this['left'] = 0
+    }
+    if (!('top' in $$source)) {
+      this['top'] = 0
+    }
+    if (!('width' in $$source)) {
+      this['width'] = 0
+    }
+    if (!('height' in $$source)) {
+      this['height'] = 0
+    }
+    if (!('isPrimary' in $$source)) {
+      this['isPrimary'] = false
+    }
+    if (!('isPortrait' in $$source)) {
+      this['isPortrait'] = false
     }
 
-    /**
-     * Creates a new MonitorInfo instance from a string or object.
-     */
-    static createFrom($$source: any = {}): MonitorInfo {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new MonitorInfo($$parsedSource as Partial<MonitorInfo>);
-    }
+    Object.assign(this, $$source)
+  }
+
+  /**
+   * Creates a new MonitorInfo instance from a string or object.
+   */
+  static createFrom($$source: any = {}): MonitorInfo {
+    let $$parsedSource =
+      typeof $$source === 'string' ? JSON.parse($$source) : $$source
+    return new MonitorInfo($$parsedSource as Partial<MonitorInfo>)
+  }
 }
 
 /**
  * NoteFileInfo describes a saved sticky note file.
  */
 export class NoteFileInfo {
-    "id": string;
-    "title": string;
-    "fileName": string;
-    "modTime": number;
-    "size": number;
+  'id': string
+  'title': string
+  'fileName': string
+  'modTime': number
+  'size': number
 
-    /** Creates a new NoteFileInfo instance. */
-    constructor($$source: Partial<NoteFileInfo> = {}) {
-        if (!("id" in $$source)) {
-            this["id"] = "";
-        }
-        if (!("title" in $$source)) {
-            this["title"] = "";
-        }
-        if (!("fileName" in $$source)) {
-            this["fileName"] = "";
-        }
-        if (!("modTime" in $$source)) {
-            this["modTime"] = 0;
-        }
-        if (!("size" in $$source)) {
-            this["size"] = 0;
-        }
-
-        Object.assign(this, $$source);
+  /** Creates a new NoteFileInfo instance. */
+  constructor($$source: Partial<NoteFileInfo> = {}) {
+    if (!('id' in $$source)) {
+      this['id'] = ''
+    }
+    if (!('title' in $$source)) {
+      this['title'] = ''
+    }
+    if (!('fileName' in $$source)) {
+      this['fileName'] = ''
+    }
+    if (!('modTime' in $$source)) {
+      this['modTime'] = 0
+    }
+    if (!('size' in $$source)) {
+      this['size'] = 0
     }
 
-    /**
-     * Creates a new NoteFileInfo instance from a string or object.
-     */
-    static createFrom($$source: any = {}): NoteFileInfo {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new NoteFileInfo($$parsedSource as Partial<NoteFileInfo>);
-    }
+    Object.assign(this, $$source)
+  }
+
+  /**
+   * Creates a new NoteFileInfo instance from a string or object.
+   */
+  static createFrom($$source: any = {}): NoteFileInfo {
+    let $$parsedSource =
+      typeof $$source === 'string' ? JSON.parse($$source) : $$source
+    return new NoteFileInfo($$parsedSource as Partial<NoteFileInfo>)
+  }
 }
 
 /**
  * ReleaseInfo represents structured release details from GitHub Releases.
  */
 export class ReleaseInfo {
-    "version": string;
-    "tagName": string;
-    "name": string;
-    "body": string;
-    "publishedAt": string;
-    "htmlUrl": string;
-    "installerUrl": string;
-    "portableUrl": string;
-    "checksumsUrl": string;
-    "isPrerelease": boolean;
-    "isPortable": boolean;
+  'version': string
+  'tagName': string
+  'name': string
+  'body': string
+  'publishedAt': string
+  'htmlUrl': string
+  'installerUrl': string
+  'portableUrl': string
+  'checksumsUrl': string
+  'isPrerelease': boolean
+  'isPortable': boolean
 
-    /** Creates a new ReleaseInfo instance. */
-    constructor($$source: Partial<ReleaseInfo> = {}) {
-        if (!("version" in $$source)) {
-            this["version"] = "";
-        }
-        if (!("tagName" in $$source)) {
-            this["tagName"] = "";
-        }
-        if (!("name" in $$source)) {
-            this["name"] = "";
-        }
-        if (!("body" in $$source)) {
-            this["body"] = "";
-        }
-        if (!("publishedAt" in $$source)) {
-            this["publishedAt"] = "";
-        }
-        if (!("htmlUrl" in $$source)) {
-            this["htmlUrl"] = "";
-        }
-        if (!("installerUrl" in $$source)) {
-            this["installerUrl"] = "";
-        }
-        if (!("portableUrl" in $$source)) {
-            this["portableUrl"] = "";
-        }
-        if (!("checksumsUrl" in $$source)) {
-            this["checksumsUrl"] = "";
-        }
-        if (!("isPrerelease" in $$source)) {
-            this["isPrerelease"] = false;
-        }
-        if (!("isPortable" in $$source)) {
-            this["isPortable"] = false;
-        }
-
-        Object.assign(this, $$source);
+  /** Creates a new ReleaseInfo instance. */
+  constructor($$source: Partial<ReleaseInfo> = {}) {
+    if (!('version' in $$source)) {
+      this['version'] = ''
+    }
+    if (!('tagName' in $$source)) {
+      this['tagName'] = ''
+    }
+    if (!('name' in $$source)) {
+      this['name'] = ''
+    }
+    if (!('body' in $$source)) {
+      this['body'] = ''
+    }
+    if (!('publishedAt' in $$source)) {
+      this['publishedAt'] = ''
+    }
+    if (!('htmlUrl' in $$source)) {
+      this['htmlUrl'] = ''
+    }
+    if (!('installerUrl' in $$source)) {
+      this['installerUrl'] = ''
+    }
+    if (!('portableUrl' in $$source)) {
+      this['portableUrl'] = ''
+    }
+    if (!('checksumsUrl' in $$source)) {
+      this['checksumsUrl'] = ''
+    }
+    if (!('isPrerelease' in $$source)) {
+      this['isPrerelease'] = false
+    }
+    if (!('isPortable' in $$source)) {
+      this['isPortable'] = false
     }
 
-    /**
-     * Creates a new ReleaseInfo instance from a string or object.
-     */
-    static createFrom($$source: any = {}): ReleaseInfo {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new ReleaseInfo($$parsedSource as Partial<ReleaseInfo>);
-    }
+    Object.assign(this, $$source)
+  }
+
+  /**
+   * Creates a new ReleaseInfo instance from a string or object.
+   */
+  static createFrom($$source: any = {}): ReleaseInfo {
+    let $$parsedSource =
+      typeof $$source === 'string' ? JSON.parse($$source) : $$source
+    return new ReleaseInfo($$parsedSource as Partial<ReleaseInfo>)
+  }
 }
 
 /**
  * SatelliteBounds represents the position, dimensions, radius, and anchor configuration for a floating satellite dock.
  */
 export class SatelliteBounds {
-    "id": string;
-    "anchor": string;
-    "x": number;
-    "y": number;
-    "width": number;
-    "height": number;
-    "radius": number;
-    "radii"?: number[];
-    "gap": number;
-    "gaps"?: number[];
-    "offsetX": number;
-    "offsetY": number;
-    "tooltipPad": number;
-    "tooltipSide": string;
-    "active": boolean;
+  'id': string
+  'anchor': string
+  'x': number
+  'y': number
+  'width': number
+  'height': number
+  'radius': number
+  'radii'?: number[]
+  'gap': number
+  'gaps'?: number[]
+  'offsetX': number
+  'offsetY': number
+  'tooltipPad': number
+  'tooltipSide': string
+  'active': boolean
 
-    /** Creates a new SatelliteBounds instance. */
-    constructor($$source: Partial<SatelliteBounds> = {}) {
-        if (!("id" in $$source)) {
-            this["id"] = "";
-        }
-        if (!("anchor" in $$source)) {
-            this["anchor"] = "";
-        }
-        if (!("x" in $$source)) {
-            this["x"] = 0;
-        }
-        if (!("y" in $$source)) {
-            this["y"] = 0;
-        }
-        if (!("width" in $$source)) {
-            this["width"] = 0;
-        }
-        if (!("height" in $$source)) {
-            this["height"] = 0;
-        }
-        if (!("radius" in $$source)) {
-            this["radius"] = 0;
-        }
-        if (!("gap" in $$source)) {
-            this["gap"] = 0;
-        }
-        if (!("offsetX" in $$source)) {
-            this["offsetX"] = 0;
-        }
-        if (!("offsetY" in $$source)) {
-            this["offsetY"] = 0;
-        }
-        if (!("tooltipPad" in $$source)) {
-            this["tooltipPad"] = 0;
-        }
-        if (!("tooltipSide" in $$source)) {
-            this["tooltipSide"] = "";
-        }
-        if (!("active" in $$source)) {
-            this["active"] = false;
-        }
-
-        Object.assign(this, $$source);
+  /** Creates a new SatelliteBounds instance. */
+  constructor($$source: Partial<SatelliteBounds> = {}) {
+    if (!('id' in $$source)) {
+      this['id'] = ''
+    }
+    if (!('anchor' in $$source)) {
+      this['anchor'] = ''
+    }
+    if (!('x' in $$source)) {
+      this['x'] = 0
+    }
+    if (!('y' in $$source)) {
+      this['y'] = 0
+    }
+    if (!('width' in $$source)) {
+      this['width'] = 0
+    }
+    if (!('height' in $$source)) {
+      this['height'] = 0
+    }
+    if (!('radius' in $$source)) {
+      this['radius'] = 0
+    }
+    if (!('gap' in $$source)) {
+      this['gap'] = 0
+    }
+    if (!('offsetX' in $$source)) {
+      this['offsetX'] = 0
+    }
+    if (!('offsetY' in $$source)) {
+      this['offsetY'] = 0
+    }
+    if (!('tooltipPad' in $$source)) {
+      this['tooltipPad'] = 0
+    }
+    if (!('tooltipSide' in $$source)) {
+      this['tooltipSide'] = ''
+    }
+    if (!('active' in $$source)) {
+      this['active'] = false
     }
 
-    /**
-     * Creates a new SatelliteBounds instance from a string or object.
-     */
-    static createFrom($$source: any = {}): SatelliteBounds {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new SatelliteBounds($$parsedSource as Partial<SatelliteBounds>);
-    }
+    Object.assign(this, $$source)
+  }
+
+  /**
+   * Creates a new SatelliteBounds instance from a string or object.
+   */
+  static createFrom($$source: any = {}): SatelliteBounds {
+    let $$parsedSource =
+      typeof $$source === 'string' ? JSON.parse($$source) : $$source
+    return new SatelliteBounds($$parsedSource as Partial<SatelliteBounds>)
+  }
 }
 
 /**
  * TooltipBounds holds the screen-relative bounding box and corner radius for an active tooltip.
  */
 export class TooltipBounds {
-    "id": string;
-    "x": number;
-    "y": number;
-    "width": number;
-    "height": number;
-    "radius": number;
-    "scale": number;
-    "active": boolean;
+  'id': string
+  'x': number
+  'y': number
+  'width': number
+  'height': number
+  'radius': number
+  'scale': number
+  'active': boolean
 
-    /** Creates a new TooltipBounds instance. */
-    constructor($$source: Partial<TooltipBounds> = {}) {
-        if (!("id" in $$source)) {
-            this["id"] = "";
-        }
-        if (!("x" in $$source)) {
-            this["x"] = 0;
-        }
-        if (!("y" in $$source)) {
-            this["y"] = 0;
-        }
-        if (!("width" in $$source)) {
-            this["width"] = 0;
-        }
-        if (!("height" in $$source)) {
-            this["height"] = 0;
-        }
-        if (!("radius" in $$source)) {
-            this["radius"] = 0;
-        }
-        if (!("scale" in $$source)) {
-            this["scale"] = 0;
-        }
-        if (!("active" in $$source)) {
-            this["active"] = false;
-        }
-
-        Object.assign(this, $$source);
+  /** Creates a new TooltipBounds instance. */
+  constructor($$source: Partial<TooltipBounds> = {}) {
+    if (!('id' in $$source)) {
+      this['id'] = ''
+    }
+    if (!('x' in $$source)) {
+      this['x'] = 0
+    }
+    if (!('y' in $$source)) {
+      this['y'] = 0
+    }
+    if (!('width' in $$source)) {
+      this['width'] = 0
+    }
+    if (!('height' in $$source)) {
+      this['height'] = 0
+    }
+    if (!('radius' in $$source)) {
+      this['radius'] = 0
+    }
+    if (!('scale' in $$source)) {
+      this['scale'] = 0
+    }
+    if (!('active' in $$source)) {
+      this['active'] = false
     }
 
-    /**
-     * Creates a new TooltipBounds instance from a string or object.
-     */
-    static createFrom($$source: any = {}): TooltipBounds {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new TooltipBounds($$parsedSource as Partial<TooltipBounds>);
-    }
+    Object.assign(this, $$source)
+  }
+
+  /**
+   * Creates a new TooltipBounds instance from a string or object.
+   */
+  static createFrom($$source: any = {}): TooltipBounds {
+    let $$parsedSource =
+      typeof $$source === 'string' ? JSON.parse($$source) : $$source
+    return new TooltipBounds($$parsedSource as Partial<TooltipBounds>)
+  }
 }
 
 /**
  * UpdateCheckResult represents the outcome of an update verification query.
  */
 export class UpdateCheckResult {
-    /**
-     * "up-to-date", "update-available", "dev-mode", "error"
-     */
-    "status": string;
-    "updateAvailable": boolean;
-    "currentVersion": string;
-    "latestVersion": string;
-    "release": ReleaseInfo;
-    "checkedAt": string;
-    "message": string;
-    "isPortable": boolean;
-    "isCustomRepo": boolean;
+  /**
+   * "up-to-date", "update-available", "dev-mode", "error"
+   */
+  'status': string
+  'updateAvailable': boolean
+  'currentVersion': string
+  'latestVersion': string
+  'release': ReleaseInfo
+  'checkedAt': string
+  'message': string
+  'isPortable': boolean
+  'isCustomRepo': boolean
 
-    /** Creates a new UpdateCheckResult instance. */
-    constructor($$source: Partial<UpdateCheckResult> = {}) {
-        if (!("status" in $$source)) {
-            this["status"] = "";
-        }
-        if (!("updateAvailable" in $$source)) {
-            this["updateAvailable"] = false;
-        }
-        if (!("currentVersion" in $$source)) {
-            this["currentVersion"] = "";
-        }
-        if (!("latestVersion" in $$source)) {
-            this["latestVersion"] = "";
-        }
-        if (!("release" in $$source)) {
-            this["release"] = (new ReleaseInfo());
-        }
-        if (!("checkedAt" in $$source)) {
-            this["checkedAt"] = "";
-        }
-        if (!("message" in $$source)) {
-            this["message"] = "";
-        }
-        if (!("isPortable" in $$source)) {
-            this["isPortable"] = false;
-        }
-        if (!("isCustomRepo" in $$source)) {
-            this["isCustomRepo"] = false;
-        }
-
-        Object.assign(this, $$source);
+  /** Creates a new UpdateCheckResult instance. */
+  constructor($$source: Partial<UpdateCheckResult> = {}) {
+    if (!('status' in $$source)) {
+      this['status'] = ''
+    }
+    if (!('updateAvailable' in $$source)) {
+      this['updateAvailable'] = false
+    }
+    if (!('currentVersion' in $$source)) {
+      this['currentVersion'] = ''
+    }
+    if (!('latestVersion' in $$source)) {
+      this['latestVersion'] = ''
+    }
+    if (!('release' in $$source)) {
+      this['release'] = new ReleaseInfo()
+    }
+    if (!('checkedAt' in $$source)) {
+      this['checkedAt'] = ''
+    }
+    if (!('message' in $$source)) {
+      this['message'] = ''
+    }
+    if (!('isPortable' in $$source)) {
+      this['isPortable'] = false
+    }
+    if (!('isCustomRepo' in $$source)) {
+      this['isCustomRepo'] = false
     }
 
-    /**
-     * Creates a new UpdateCheckResult instance from a string or object.
-     */
-    static createFrom($$source: any = {}): UpdateCheckResult {
-        const $$createField4_0 = $$createType2;
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        if ("release" in $$parsedSource) {
-            $$parsedSource["release"] = $$createField4_0($$parsedSource["release"]);
-        }
-        return new UpdateCheckResult($$parsedSource as Partial<UpdateCheckResult>);
+    Object.assign(this, $$source)
+  }
+
+  /**
+   * Creates a new UpdateCheckResult instance from a string or object.
+   */
+  static createFrom($$source: any = {}): UpdateCheckResult {
+    const $$createField4_0 = $$createType2
+    let $$parsedSource =
+      typeof $$source === 'string' ? JSON.parse($$source) : $$source
+    if ('release' in $$parsedSource) {
+      $$parsedSource['release'] = $$createField4_0($$parsedSource['release'])
     }
+    return new UpdateCheckResult($$parsedSource as Partial<UpdateCheckResult>)
+  }
 }
 
 // Private type creation functions
-const $$createType0 = MonitorInfo.createFrom;
-const $$createType1 = $Create.Array($$createType0);
-const $$createType2 = ReleaseInfo.createFrom;
+const $$createType0 = MonitorInfo.createFrom
+const $$createType1 = $Create.Array($$createType0)
+const $$createType2 = ReleaseInfo.createFrom

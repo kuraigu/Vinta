@@ -395,14 +395,45 @@
 
   let currentLiveOffsetX = $state(0)
 
+  /**
+   * Pre-calculates the target clamped horizontal offset for a specific island width,
+   * taking monitor bounds and active satellite footprints into account.
+   */
+  function calculateTargetOffsetForWidth(
+    width: number,
+    offset: number = currentLiveOffsetX
+  ): number {
+    const range = computeAllowedOffsets(
+      width,
+      activeMonitor,
+      displayLayout.virtualLeft + displayLayout.primaryCenter,
+      activeLeftSatelliteFootprint,
+      activeRightSatelliteFootprint
+    )
+    if (Math.abs(offset) < 3) return 0
+    return Math.max(range.min, Math.min(range.max, offset))
+  }
+
   function handleSmartEdgeOffsetAdjustment() {
     if (!gestures.isDragging && !isControlsDrawerOpen) {
+      let adjusted = false
       if (currentLiveOffsetX > allowedOffsets.max) {
         currentLiveOffsetX = allowedOffsets.max
         $hiddenPillOffsetXStore = currentLiveOffsetX
+        adjusted = true
       } else if (currentLiveOffsetX < allowedOffsets.min) {
         currentLiveOffsetX = allowedOffsets.min
         $hiddenPillOffsetXStore = currentLiveOffsetX
+        adjusted = true
+      }
+      if (adjusted && !gestures.isTrackRegionActive && !gestures.isSettling) {
+        bounds.syncBounds(
+          getBoundsForState(),
+          currentLiveOffsetX,
+          islandNode,
+          false,
+          isHidden
+        )
       }
     }
   }
@@ -550,7 +581,15 @@
     } catch {}
 
     const nextBounds = getBoundsForState(pageConfig, expand, false)
-    bounds.syncBounds(nextBounds, clampedOffsetX, islandNode, false, false)
+    const targetOffset = calculateTargetOffsetForWidth(
+      nextBounds.w,
+      currentLiveOffsetX
+    )
+    if (targetOffset !== currentLiveOffsetX) {
+      currentLiveOffsetX = targetOffset
+      $hiddenPillOffsetXStore = targetOffset
+    }
+    bounds.syncBounds(nextBounds, targetOffset, islandNode, false, false)
 
     triggerGlow()
   }
@@ -585,7 +624,15 @@
     isHidden = false
     bounds.notifyHidden(false)
     const nextBounds = getBoundsForState(islandConfig, false, false)
-    bounds.syncBounds(nextBounds, clampedOffsetX, islandNode, false, false)
+    const targetOffset = calculateTargetOffsetForWidth(
+      nextBounds.w,
+      currentLiveOffsetX
+    )
+    if (targetOffset !== currentLiveOffsetX) {
+      currentLiveOffsetX = targetOffset
+      $hiddenPillOffsetXStore = targetOffset
+    }
+    bounds.syncBounds(nextBounds, targetOffset, islandNode, false, false)
     resetHideTimer()
   }
 
@@ -721,7 +768,15 @@
       bounds.notifyHidden(false)
     }
     const nextBounds = getBoundsForState(islandConfig, true, false)
-    await bounds.prepareExpansion(nextBounds, clampedOffsetX, islandNode)
+    const targetOffset = calculateTargetOffsetForWidth(
+      nextBounds.w,
+      currentLiveOffsetX
+    )
+    if (targetOffset !== currentLiveOffsetX) {
+      currentLiveOffsetX = targetOffset
+      $hiddenPillOffsetXStore = targetOffset
+    }
+    await bounds.prepareExpansion(nextBounds, targetOffset, islandNode)
     islandAnim = '0.32s cubic-bezier(0.2, 0.8, 0.2, 1)'
     expanded = true
     isControlsDrawerOpen = false
@@ -861,7 +916,21 @@
           } else {
             expanded = false
             const nextBounds = getBoundsForState(islandConfig, false, false)
-            bounds.syncBounds(nextBounds, clampedOffsetX, islandNode, false, false)
+            const targetOffset = calculateTargetOffsetForWidth(
+              nextBounds.w,
+              currentLiveOffsetX
+            )
+            if (targetOffset !== currentLiveOffsetX) {
+              currentLiveOffsetX = targetOffset
+              $hiddenPillOffsetXStore = targetOffset
+            }
+            bounds.syncBounds(
+              nextBounds,
+              targetOffset,
+              islandNode,
+              false,
+              false
+            )
             resetHideTimer()
           }
         }
@@ -930,7 +999,15 @@
           $activePageIdStore = fallback.page === HomePage ? 'home' : 'media'
         }
         const nextBounds = getBoundsForState(islandConfig, false, false)
-        bounds.syncBounds(nextBounds, clampedOffsetX, islandNode, false, false)
+        const targetOffset = calculateTargetOffsetForWidth(
+          nextBounds.w,
+          currentLiveOffsetX
+        )
+        if (targetOffset !== currentLiveOffsetX) {
+          currentLiveOffsetX = targetOffset
+          $hiddenPillOffsetXStore = targetOffset
+        }
+        bounds.syncBounds(nextBounds, targetOffset, islandNode, false, false)
         resetHideTimer()
       } else {
         const fallback = getFallbackPage()

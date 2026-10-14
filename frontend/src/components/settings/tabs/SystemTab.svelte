@@ -1,5 +1,13 @@
 <script lang="ts">
-  import { Power, Cpu, Database, RotateCcw, Check, Download, Upload } from 'lucide-svelte'
+  import {
+    Power,
+    Cpu,
+    Database,
+    RotateCcw,
+    Check,
+    Download,
+    Upload
+  } from 'lucide-svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
   import {
@@ -268,7 +276,8 @@
 
   <SettingItem
     label="Import Settings"
-    description={importStatusMsg || "Restore previously exported settings with schema validation"}
+    description={importStatusMsg ||
+      'Restore previously exported settings with schema validation'}
     icon={Upload}
     flexCol={true}
   >
@@ -300,7 +309,6 @@
       Reset All Settings
     </SettingActionButton>
   </SettingItem>
-
 </div>
 
 <style>

@@ -1060,7 +1060,6 @@
                   <Pin size={11} />
                 </button>
               </div>
-
             {/each}
           </div>
         </div>

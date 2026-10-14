@@ -59,6 +59,26 @@
   }
 
   $effect(handleExpandedDrawerClose)
+
+  /**
+   * Closes the drawer when clicking outside the controls container.
+   */
+  function setupOutsideClickListener() {
+    if (expanded || !isDrawerOpen) return
+
+    function onPointerDown(e: PointerEvent) {
+      if (controlsEl && !controlsEl.contains(e.target as Node)) {
+        handleCloseDrawer()
+      }
+    }
+
+    window.addEventListener('pointerdown', onPointerDown)
+    return () => {
+      window.removeEventListener('pointerdown', onPointerDown)
+    }
+  }
+
+  $effect(setupOutsideClickListener)
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -71,19 +91,6 @@
   aria-label="Window controls"
   tabindex="-1"
   onclick={!expanded && !isDrawerOpen ? handleOpenDrawer : undefined}
-  onfocusin={() => {
-    if (!expanded && !isDrawerOpen) {
-      handleOpenDrawer()
-    }
-  }}
-  onfocusout={(e) => {
-    if (!expanded && isDrawerOpen) {
-      const nextTarget = e.relatedTarget as Node | null
-      if (!controlsEl || !controlsEl.contains(nextTarget)) {
-        handleCloseDrawer()
-      }
-    }
-  }}
 >
   {#if expanded}
     <!-- Expanded Card State: Vertical Dock attached to parent window -->

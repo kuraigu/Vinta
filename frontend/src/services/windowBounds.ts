@@ -303,7 +303,9 @@ export class WindowBoundsManager {
         wrapperNode.removeEventListener('transitioncancel', onTransitionEnd)
       }
       this.cancelPendingTransition()
-      this.recoverRestingBounds(target, offset, islandNode)
+      const liveOffset = this.getLiveOffset()
+      const finalOffset = Number.isFinite(liveOffset) ? liveOffset : offset
+      this.recoverRestingBounds(target, finalOffset, islandNode)
       onSettled?.()
     }
 
@@ -313,7 +315,10 @@ export class WindowBoundsManager {
     }
 
     const onTransitionEnd = (e: TransitionEvent) => {
-      if (e.target === wrapperNode && (e.propertyName === 'transform' || e.propertyName === 'left')) {
+      if (
+        e.target === wrapperNode &&
+        (e.propertyName === 'transform' || e.propertyName === 'left')
+      ) {
         commitSettled()
       }
     }
@@ -372,15 +377,21 @@ export class WindowBoundsManager {
       }
 
       this.currentOSBounds = { w: finalW, h: finalH, r: finalR }
-      await this.updateBounds(finalW, finalH, finalR, offset)
+      const liveOffset = this.getLiveOffset()
+      const effectiveOffset = Number.isFinite(liveOffset) ? liveOffset : offset
+      await this.updateBounds(finalW, finalH, finalR, effectiveOffset)
       resyncAllSatellites()
 
       // Post-animation secondary verification to bust Windows DWM cache under lag
       window.setTimeout(() => {
         if (this.getIsDragging()) return
         resyncAllSatellites()
+        const currentLive = this.getLiveOffset()
+        const followUpOffset = Number.isFinite(currentLive)
+          ? currentLive
+          : effectiveOffset
         // Pass -finalR to bust native cache in Go and guarantee SetWindowRgn
-        this.updateBounds(finalW, finalH, -finalR, offset)
+        this.updateBounds(finalW, finalH, -finalR, followUpOffset)
       }, 80)
 
       if (needsFollowUp) {
@@ -427,7 +438,9 @@ export class WindowBoundsManager {
 
       hasRecovered = true
       this.cancelPendingTransition()
-      this.recoverRestingBounds(target, offset, islandNode, isHidden)
+      const liveOffset = this.getLiveOffset()
+      const finalOffset = Number.isFinite(liveOffset) ? liveOffset : offset
+      this.recoverRestingBounds(target, finalOffset, islandNode, isHidden)
     }
 
     const triggerDebouncedCommit = () => {
@@ -645,9 +658,13 @@ export class WindowBoundsManager {
             const domH = Math.round(rect.height)
             const diffW = Math.abs(domW - this.currentOSBounds.w)
             const diffH = Math.abs(domH - this.currentOSBounds.h)
-            if (diffW > 4 || diffH > 4) {
+            const currentLiveOffset = this.getLiveOffset()
+            const diffOffset = this.lastDispatchedBounds
+              ? Math.abs(currentLiveOffset - this.lastDispatchedBounds.offset)
+              : 0
+            if (diffW > 4 || diffH > 4 || diffOffset > 2) {
               const target = getTargetBounds()
-              this.recoverRestingBounds(target, this.getLiveOffset(), node)
+              this.recoverRestingBounds(target, currentLiveOffset, node)
             }
           }
         }

@@ -38,21 +38,24 @@
     {
       id: 'toggle',
       label: 'Toggle Dynamic Island',
-      description: 'Summons or dismisses the home dashboard from any window or game',
+      description:
+        'Summons or dismisses the home dashboard from any window or game',
       defaultKey: 'Alt+Shift+V',
       icon: Keyboard
     },
     {
       id: 'quick_notes',
       label: 'Quick Note Summon',
-      description: 'Instantly opens and focuses Quick Notes over your active workspace',
+      description:
+        'Instantly opens and focuses Quick Notes over your active workspace',
       defaultKey: 'Alt+Shift+N',
       icon: FileText
     },
     {
       id: 'mode_switch',
       label: 'Island Mode Switch',
-      description: 'Switches between compact pill and expanded dashboard without hiding',
+      description:
+        'Switches between compact pill and expanded dashboard without hiding',
       defaultKey: 'Alt+Shift+D',
       icon: Sliders
     }
@@ -89,7 +92,9 @@
   let listeningId = $state<string | null>(null)
   let activeModifiers = $state<string[]>([])
   let statusMessages = $state<Record<string, string>>({})
-  let statusTypes = $state<Record<string, 'error' | 'warning' | 'success' | 'info'>>({})
+  let statusTypes = $state<
+    Record<string, 'error' | 'warning' | 'success' | 'info'>
+  >({})
   let savedFlashes = $state<Record<string, boolean>>({})
 
   /**
@@ -136,13 +141,25 @@
       return `Warning: Conflicts with ${COMMON_APP_COLLISIONS[normalized]}`
     }
 
-    if (currentId !== 'toggle' && $globalHotkeyStore && $globalHotkeyStore.toUpperCase() === normalized) {
+    if (
+      currentId !== 'toggle' &&
+      $globalHotkeyStore &&
+      $globalHotkeyStore.toUpperCase() === normalized
+    ) {
       return 'Warning: Already assigned to Toggle Dynamic Island'
     }
-    if (currentId !== 'quick_notes' && $quickNotesHotkeyStore && $quickNotesHotkeyStore.toUpperCase() === normalized) {
+    if (
+      currentId !== 'quick_notes' &&
+      $quickNotesHotkeyStore &&
+      $quickNotesHotkeyStore.toUpperCase() === normalized
+    ) {
       return 'Warning: Already assigned to Quick Note Summon'
     }
-    if (currentId !== 'mode_switch' && $modeSwitchHotkeyStore && $modeSwitchHotkeyStore.toUpperCase() === normalized) {
+    if (
+      currentId !== 'mode_switch' &&
+      $modeSwitchHotkeyStore &&
+      $modeSwitchHotkeyStore.toUpperCase() === normalized
+    ) {
       return 'Warning: Already assigned to Island Mode Switch'
     }
 
@@ -182,14 +199,20 @@
           setShortcutValue(id, trimmed)
           savedFlashes = { ...savedFlashes, [id]: true }
           if (!collisionWarning) {
-            statusMessages = { ...statusMessages, [id]: 'Shortcut registered successfully' }
+            statusMessages = {
+              ...statusMessages,
+              [id]: 'Shortcut registered successfully'
+            }
             statusTypes = { ...statusTypes, [id]: 'success' }
           }
           setTimeout(() => {
             savedFlashes = { ...savedFlashes, [id]: false }
           }, 1200)
         } else {
-          statusMessages = { ...statusMessages, [id]: 'Combination reserved or rejected by system' }
+          statusMessages = {
+            ...statusMessages,
+            [id]: 'Combination reserved or rejected by system'
+          }
           statusTypes = { ...statusTypes, [id]: 'error' }
         }
       } else {
@@ -302,12 +325,16 @@
 
     window.addEventListener('keydown', onWindowKeyDown, { capture: true })
     window.addEventListener('keyup', onWindowKeyUp, { capture: true })
-    window.addEventListener('pointerdown', onWindowPointerDown, { capture: true })
+    window.addEventListener('pointerdown', onWindowPointerDown, {
+      capture: true
+    })
 
     return () => {
       window.removeEventListener('keydown', onWindowKeyDown, { capture: true })
       window.removeEventListener('keyup', onWindowKeyUp, { capture: true })
-      window.removeEventListener('pointerdown', onWindowPointerDown, { capture: true })
+      window.removeEventListener('pointerdown', onWindowPointerDown, {
+        capture: true
+      })
     }
   }
 
@@ -336,7 +363,8 @@
   <div class="setting-group">
     {#each SHORTCUT_DEFS as sc (sc.id)}
       {@const currentVal = getShortcutValue(sc.id)}
-      {@const keyCaps = currentVal && currentVal.trim() ? currentVal.split('+') : []}
+      {@const keyCaps =
+        currentVal && currentVal.trim() ? currentVal.split('+') : []}
       {@const isCurrentListening = listeningId === sc.id}
       {@const isFlash = savedFlashes[sc.id]}
       {@const statusMsg = statusMessages[sc.id]}
@@ -416,7 +444,10 @@
             <button
               type="button"
               class="keybind-action-btn"
-              use:islandTooltip={{ text: `Reset to ${sc.defaultKey}`, position: 'top' }}
+              use:islandTooltip={{
+                text: `Reset to ${sc.defaultKey}`,
+                position: 'top'
+              }}
               onclick={() => void applyShortcut(sc.id, sc.defaultKey)}
               aria-label={`Reset ${sc.label}`}
             >

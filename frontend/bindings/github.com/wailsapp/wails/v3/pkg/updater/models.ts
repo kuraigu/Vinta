@@ -3,25 +3,24 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Create as $Create } from "@wailsio/runtime";
+import { Create as $Create } from '@wailsio/runtime'
 
 /**
  * Updater is the singleton exposed as app.Updater. It is constructed during
  * application initialisation but does nothing useful until Init is called.
  */
 export class Updater {
+  /** Creates a new Updater instance. */
+  constructor($$source: Partial<Updater> = {}) {
+    Object.assign(this, $$source)
+  }
 
-    /** Creates a new Updater instance. */
-    constructor($$source: Partial<Updater> = {}) {
-
-        Object.assign(this, $$source);
-    }
-
-    /**
-     * Creates a new Updater instance from a string or object.
-     */
-    static createFrom($$source: any = {}): Updater {
-        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
-        return new Updater($$parsedSource as Partial<Updater>);
-    }
+  /**
+   * Creates a new Updater instance from a string or object.
+   */
+  static createFrom($$source: any = {}): Updater {
+    let $$parsedSource =
+      typeof $$source === 'string' ? JSON.parse($$source) : $$source
+    return new Updater($$parsedSource as Partial<Updater>)
+  }
 }

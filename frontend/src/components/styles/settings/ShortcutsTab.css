@@ -5,7 +5,6 @@
   text-align: left;
 }
 
-
 .section-header {
   display: flex;
   flex-direction: column;
@@ -88,7 +87,8 @@
 }
 
 @keyframes keybindPulse {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.35);
   }
   50% {

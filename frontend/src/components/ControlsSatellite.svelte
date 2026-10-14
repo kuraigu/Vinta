@@ -59,10 +59,11 @@
     clearTimeout(transitionTimer)
     clearTimeout(settleTimer)
 
-    // Begin fade-out to unregister and prevent mid-animation clipping collisions
+    // Fade out immediately to avoid mid-flight clipping or collision artifacts
     isTransitioning = true
 
-    // Switch layout state mid-transition once visually faded out
+    const islandDuration = expanded ? 290 : 210
+
     transitionTimer = window.setTimeout(() => {
       layoutExpanded = expanded
       if (expanded) {
@@ -70,11 +71,11 @@
         onDrawerChange?.(false)
       }
 
-      // Re-enter cleanly at resting position as island transition completes
+      // Settle and fade in cleanly at the exact resting position
       settleTimer = window.setTimeout(() => {
         isTransitioning = false
-      }, 120)
-    }, 110)
+      }, 30)
+    }, islandDuration)
   }
 
   $effect(syncLayoutExpanded)
@@ -188,7 +189,7 @@
   tooltipPad={satelliteBounds.tooltipPad}
   tooltipSide={satelliteBounds.tooltipSide}
   {clampedOffsetX}
-  active={active && !isTransitioning}
+  {active}
   animateIn={!layoutExpanded}
   {onmouseenter}
   {onmouseleave}
@@ -196,6 +197,9 @@
   <div
     class="controls-transition-wrapper"
     style="
+      width: 100%;
+      height: 100%;
+      pointer-events: {isTransitioning ? 'none' : 'auto'};
       opacity: {isTransitioning ? 0 : 1};
       transform: scale({isTransitioning ? 0.88 : 1});
       transition: opacity 0.1s ease, transform 0.1s ease;

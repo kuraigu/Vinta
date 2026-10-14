@@ -2787,7 +2787,6 @@ func (a *App) GetGlobalShortcut() string {
 	return a.GetNamedGlobalShortcut("toggle")
 }
 
-
 // GetCalendarData reads calendar.json from %APPDATA%/FreeMatrix Studios/Vinta.
 func (a *App) GetCalendarData() (string, error) {
 	filePath := filepath.Join(GetAppDataDir(), "calendar.json")
