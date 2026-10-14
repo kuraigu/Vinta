@@ -251,8 +251,13 @@ export class WindowBoundsManager {
       return
     }
 
-    const envelopeW = Math.max(currW, target.w)
-    const envelopeH = Math.max(currH, target.h)
+    let envelopeW = Math.max(currW, target.w)
+    let envelopeH = Math.max(currH, target.h)
+    if (islandNode) {
+      const rect = islandNode.getBoundingClientRect()
+      if (rect.width > envelopeW) envelopeW = Math.round(rect.width)
+      if (rect.height > envelopeH) envelopeH = Math.round(rect.height)
+    }
     const offset =
       explicitOffset !== undefined ? explicitOffset : this.getLiveOffset()
 
@@ -348,14 +353,21 @@ export class WindowBoundsManager {
       let finalW = Math.round(target.w)
       let finalH = Math.round(target.h)
       const finalR = Math.round(target.r)
+      let needsFollowUp = false
 
       if (islandNode) {
         const rect = islandNode.getBoundingClientRect()
         if (rect.width > 0 && rect.height > 0) {
           const domW = Math.round(rect.width)
           const domH = Math.round(rect.height)
-          if (domW > finalW) finalW = domW
-          if (domH > finalH) finalH = domH
+          if (domW > finalW) {
+            finalW = domW
+            needsFollowUp = true
+          }
+          if (domH > finalH) {
+            finalH = domH
+            needsFollowUp = true
+          }
         }
       }
 
@@ -370,6 +382,13 @@ export class WindowBoundsManager {
         // Pass -finalR to bust native cache in Go and guarantee SetWindowRgn
         this.updateBounds(finalW, finalH, -finalR, offset)
       }, 80)
+
+      if (needsFollowUp) {
+        window.setTimeout(() => {
+          if (this.getIsDragging()) return
+          this.recoverRestingBounds(target, offset, islandNode, _isHidden)
+        }, 120)
+      }
     }, delay)
   }
 
@@ -394,10 +413,12 @@ export class WindowBoundsManager {
       clearTimeout(this.transitionEndDebounceTimer)
       this.transitionEndDebounceTimer = undefined
 
-      if (islandNode && safetyAttempts < 3) {
+      if (islandNode && safetyAttempts < 8) {
         const rect = islandNode.getBoundingClientRect()
+        const isStillOversized =
+          rect.width - target.w > 4 || rect.height - target.h > 4
         // Prevent premature clipping during frame drops if element is still actively shrinking
-        if (rect.width - target.w > 8) {
+        if (isStillOversized) {
           safetyAttempts++
           this.boundsTransitionTimeout = window.setTimeout(commitRecovery, 80)
           return
@@ -435,6 +456,21 @@ export class WindowBoundsManager {
       this.activeTransitionEndHandler = onTransitionEnd
       islandNode.addEventListener('transitionend', onTransitionEnd)
       islandNode.addEventListener('transitioncancel', onTransitionEnd)
+
+      if (typeof ResizeObserver !== 'undefined') {
+        this.resizeObserver = new ResizeObserver((entries) => {
+          for (const entry of entries) {
+            const { width, height } = entry.contentRect
+            if (
+              Math.abs(width - target.w) <= 2 &&
+              Math.abs(height - target.h) <= 2
+            ) {
+              triggerDebouncedCommit()
+            }
+          }
+        })
+        this.resizeObserver.observe(islandNode)
+      }
     }
 
     // Safety fallback timer to guarantee recovery under frame drops or lag
@@ -514,8 +550,13 @@ export class WindowBoundsManager {
     // and schedule post-animation recovery so bounds snap back to the exact target when done.
     if (isGrowing) {
       this.cancelPendingTransition()
-      const immediateW = Math.max(currW, target.w)
-      const immediateH = Math.max(currH, target.h)
+      let immediateW = Math.max(currW, target.w)
+      let immediateH = Math.max(currH, target.h)
+      if (islandNode) {
+        const rect = islandNode.getBoundingClientRect()
+        if (rect.width > immediateW) immediateW = Math.round(rect.width)
+        if (rect.height > immediateH) immediateH = Math.round(rect.height)
+      }
 
       this.applyBounds(immediateW, immediateH, target.r, offset)
       this.scheduleAnimationRecovery(target, offset, islandNode, isHidden, 380)
@@ -611,10 +652,10 @@ export class WindowBoundsManager {
           }
         }
       }
-      this.idleWatchdogTimer = window.setTimeout(runIdleCheck, 1500)
+      this.idleWatchdogTimer = window.setTimeout(runIdleCheck, 400)
     }
 
-    this.idleWatchdogTimer = window.setTimeout(runIdleCheck, 2000)
+    this.idleWatchdogTimer = window.setTimeout(runIdleCheck, 500)
 
     return () => {
       clearTimeout(this.idleWatchdogTimer)
