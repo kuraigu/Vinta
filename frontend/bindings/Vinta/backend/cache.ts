@@ -8,22 +8,16 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import {
-  Call as $Call,
-  CancellablePromise as $CancellablePromise,
-  Create as $Create
-} from '@wailsio/runtime'
+import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
 /**
  * CacheIcons takes a list of URLs, downloads missing ones, and returns a map of URL to a local custom URI.
  */
-export function CacheIcons(
-  urls: string[]
-): $CancellablePromise<{ [_ in string]?: string }> {
-  return $Call.ByID(1002689088, urls).then(($result: any) => {
-    return $$createType0($result)
-  })
+export function CacheIcons(urls: string[]): $CancellablePromise<{ [_ in string]?: string }> {
+    return $Call.ByID(1002689088, urls).then(($result: any) => {
+        return $$createType0($result);
+    });
 }
 
 // Private type creation functions
-const $$createType0 = $Create.Map($Create.Any, $Create.Any)
+const $$createType0 = $Create.Map($Create.Any, $Create.Any);

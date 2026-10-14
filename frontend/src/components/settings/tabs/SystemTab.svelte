@@ -1,8 +1,14 @@
 <script lang="ts">
-  import { Power, Cpu, Database, RotateCcw, Check } from 'lucide-svelte'
+  import { Power, Cpu, Database, RotateCcw, Check, Download, Upload } from 'lucide-svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
-  import { autostartStore, hardwareAccelStore, notifData } from '../../../store'
+  import {
+    autostartStore,
+    hardwareAccelStore,
+    notifData,
+    exportSettingsToFile,
+    importSettingsFromFile
+  } from '../../../store'
   import {
     SetAutostart,
     SetHardwareAcceleration,
@@ -41,6 +47,10 @@
     'vinta_wakemethod',
     'vinta_allow_drag_position',
     'vinta_autohide_borderless',
+    'vinta_global_hotkey',
+    'vinta_hotkey_quick_notes',
+    'vinta_hotkey_mode_switch',
+    'vinta_pinned_media_source',
     'vinta_dnd',
     'vinta_notif_autowake',
     'vinta_media_autowake',
@@ -138,6 +148,55 @@
     }
   }
 
+  let isExporting = $state(false)
+  let exportSuccess = $state(false)
+  let exportTimer: ReturnType<typeof setTimeout> | null = null
+
+  let isImporting = $state(false)
+  let importStatusMsg = $state('')
+  let importSuccess = $state(false)
+  let importTimer: ReturnType<typeof setTimeout> | null = null
+
+  async function handleExportSettings() {
+    isExporting = true
+    try {
+      const res = await exportSettingsToFile()
+      if (res.success && res.path) {
+        exportSuccess = true
+        if (exportTimer) clearTimeout(exportTimer)
+        exportTimer = setTimeout(() => {
+          exportSuccess = false
+        }, 2500)
+      }
+    } finally {
+      isExporting = false
+    }
+  }
+
+  async function handleImportSettings() {
+    isImporting = true
+    try {
+      const res = await importSettingsFromFile()
+      if (res.success) {
+        importSuccess = true
+        importStatusMsg = `Imported ${res.count ?? 0} settings successfully`
+        if (importTimer) clearTimeout(importTimer)
+        importTimer = setTimeout(() => {
+          importSuccess = false
+          importStatusMsg = ''
+        }, 3000)
+      } else if (res.error) {
+        importStatusMsg = `Import failed: ${res.error}`
+        if (importTimer) clearTimeout(importTimer)
+        importTimer = setTimeout(() => {
+          importStatusMsg = ''
+        }, 4000)
+      }
+    } finally {
+      isImporting = false
+    }
+  }
+
   async function handleResetSettings() {
     try {
       if (typeof ResetSettings === 'function') {
@@ -188,6 +247,46 @@
   </SettingItem>
 
   <SettingItem
+    label="Export Settings"
+    description="Backup current configuration and preferences to a JSON file"
+    icon={Download}
+    flexCol={true}
+  >
+    <SettingActionButton
+      variant={exportSuccess ? 'success' : 'default'}
+      fullWidth={true}
+      disabled={isExporting}
+      onclick={handleExportSettings}
+    >
+      {#if exportSuccess}
+        <Check size={13} /> Exported Successfully
+      {:else}
+        <Download size={13} /> Export to JSON
+      {/if}
+    </SettingActionButton>
+  </SettingItem>
+
+  <SettingItem
+    label="Import Settings"
+    description={importStatusMsg || "Restore previously exported settings with schema validation"}
+    icon={Upload}
+    flexCol={true}
+  >
+    <SettingActionButton
+      variant={importSuccess ? 'success' : 'default'}
+      fullWidth={true}
+      disabled={isImporting}
+      onclick={handleImportSettings}
+    >
+      {#if importSuccess}
+        <Check size={13} /> Settings Imported
+      {:else}
+        <Upload size={13} /> Import from JSON
+      {/if}
+    </SettingActionButton>
+  </SettingItem>
+
+  <SettingItem
     label="Reset All Settings to Default"
     description="Restores all settings and layout states"
     icon={RotateCcw}
@@ -201,6 +300,7 @@
       Reset All Settings
     </SettingActionButton>
   </SettingItem>
+
 </div>
 
 <style>

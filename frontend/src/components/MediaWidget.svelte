@@ -24,7 +24,8 @@
     audioPeakStore,
     notifData,
     batteryDataStore,
-    homeWidgetsVisibilityStore
+    homeWidgetsVisibilityStore,
+    pinnedMediaSourceStore
   } from '../store'
   import {
     Volume1,
@@ -37,7 +38,8 @@
     ListMusic,
     Music2,
     Check,
-    X
+    X,
+    Pin
   } from 'lucide-svelte'
   import { getContext, untrack } from 'svelte'
   import NotificationPage, {
@@ -135,6 +137,35 @@
     SelectMediaSession(sessionId)
     isSessionMenuOpen = false
   }
+
+  function handleTogglePinSource(sourceApp: string, e: MouseEvent) {
+    e.stopPropagation()
+    if ($pinnedMediaSourceStore === sourceApp) {
+      $pinnedMediaSourceStore = null
+    } else {
+      $pinnedMediaSourceStore = sourceApp
+      const match = media.sessions?.find((s) => s.sourceApp === sourceApp)
+      if (match) {
+        SelectMediaSession(match.id)
+      }
+    }
+  }
+
+  function handlePinnedSourcePrioritizationEffect() {
+    const pinned = $pinnedMediaSourceStore
+    const sessions = media.sessions
+    if (!pinned || !sessions || sessions.length <= 1) return
+
+    if (media.sourceApp !== pinned) {
+      const match = sessions.find(
+        (s) => s.sourceApp === pinned || s.id.startsWith(pinned)
+      )
+      if (match && match.id !== media.activeSessionId) {
+        SelectMediaSession(match.id)
+      }
+    }
+  }
+  $effect(handlePinnedSourcePrioritizationEffect)
 
   function handleSessionDismissEffect() {
     function onPointerDown(e: PointerEvent) {
@@ -898,6 +929,17 @@
       <div class="top-meta-bar">
         <div class="app-brand">
           <span class="app-name-text">Media Player</span>
+          {#if $pinnedMediaSourceStore && media.sourceApp === $pinnedMediaSourceStore}
+            <span
+              class="pinned-source-indicator"
+              use:islandTooltip={{
+                text: `Pinned Source: ${appBrand.name}`,
+                position: 'bottom'
+              }}
+            >
+              <Pin size={10} />
+            </span>
+          {/if}
         </div>
 
         <div class="top-clock-wrapper">
@@ -946,11 +988,17 @@
                 (media.sessions.length === 1 &&
                   s.sourceApp === media.sourceApp)}
               {@const sBrand = getSessionBrand(s.sourceApp, s.id)}
-              <button
+              <div
                 class="session-menu-item"
                 class:is-selected={isSelected}
                 onclick={(e) => handleSelectSession(s.id, e)}
+                onkeydown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    handleSelectSession(s.id, e as unknown as MouseEvent)
+                  }
+                }}
                 role="menuitem"
+                tabindex="0"
               >
                 <div class="session-item-icon">
                   {#if sBrand.icon}
@@ -993,7 +1041,26 @@
                     ></div>
                   {/if}
                 </div>
-              </button>
+                <button
+                  type="button"
+                  class="session-pin-btn"
+                  class:is-pinned={$pinnedMediaSourceStore === s.sourceApp}
+                  use:islandTooltip={{
+                    text:
+                      $pinnedMediaSourceStore === s.sourceApp
+                        ? 'Pinned Source (Click to unpin)'
+                        : 'Pin this source',
+                    position: 'top'
+                  }}
+                  onclick={(e) => handleTogglePinSource(s.sourceApp, e)}
+                  aria-label={$pinnedMediaSourceStore === s.sourceApp
+                    ? 'Unpin source'
+                    : 'Pin source'}
+                >
+                  <Pin size={11} />
+                </button>
+              </div>
+
             {/each}
           </div>
         </div>

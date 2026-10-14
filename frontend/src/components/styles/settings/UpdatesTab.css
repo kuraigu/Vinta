@@ -55,55 +55,6 @@
   transform: translateX(16px);
 }
 
-/* Non-Official Release Information Banner (Vibrant Sunset Amber Banner) */
-.dev-banner {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 13px 16px;
-  border-radius: 18px;
-  background: linear-gradient(135deg, #b45309 0%, #d97706 50%, #ea580c 100%);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  box-shadow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.22),
-    0 4px 18px rgba(0, 0, 0, 0.22);
-  color: #ffffff;
-  text-align: left;
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.dev-banner:hover {
-  transform: translateY(-1px);
-  box-shadow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.3),
-    0 6px 22px rgba(0, 0, 0, 0.28);
-}
-
-.dev-banner-icon-box {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-  background: rgba(0, 0, 0, 0.22);
-  color: #ffffff;
-  flex-shrink: 0;
-}
-
-.dev-banner-text {
-  font-size: 11.5px;
-  color: rgba(255, 255, 255, 0.95);
-  line-height: 1.45;
-  text-align: left;
-}
-
-.dev-banner-text strong {
-  color: #ffffff;
-  font-weight: 700;
-}
 
 /* Update Available Master Card (Vibrant Royal Sapphire Atmospheric Card) */
 .update-card {

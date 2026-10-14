@@ -1,0 +1,250 @@
+.shortcuts-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  text-align: left;
+}
+
+
+.section-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  text-align: left;
+  gap: 3px;
+  margin-bottom: 2px;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--c-text-primary);
+  text-align: left;
+  letter-spacing: -0.01em;
+}
+
+.section-title :global(svg) {
+  color: var(--c-primary);
+}
+
+.divider {
+  height: 1px;
+  background: var(--c-border);
+  margin: 6px 0;
+  opacity: 0.6;
+}
+
+.setting-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Gaming Keybind Control */
+.keybind-control-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.keybind-binder-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: 1;
+  min-height: 36px;
+  padding: 4px 12px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--c-border);
+  color: var(--c-text-primary);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  box-sizing: border-box;
+  user-select: none;
+}
+
+.keybind-binder-btn:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.keybind-binder-btn.is-listening {
+  border-color: var(--c-primary);
+  background: rgba(99, 102, 241, 0.12);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.35);
+  animation: keybindPulse 1.8s infinite ease-in-out;
+}
+
+.keybind-binder-btn.is-saved {
+  border-color: #22c55e;
+  background: rgba(34, 197, 94, 0.14);
+}
+
+@keyframes keybindPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+  }
+}
+
+.listening-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--c-primary);
+  letter-spacing: 0.02em;
+}
+
+.pulse-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: var(--c-primary);
+  box-shadow: 0 0 6px var(--c-primary);
+  animation: pulseDot 1s infinite alternate ease-in-out;
+}
+
+@keyframes pulseDot {
+  0% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+.unassigned-label {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--c-text-muted);
+  font-style: italic;
+}
+
+.keybind-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  border: 1px solid var(--c-border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--c-text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.keybind-action-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--c-text-primary);
+}
+
+.keybind-action-btn.danger:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #f87171;
+}
+
+/* Key Cap Badges */
+.key-caps-list {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.key-cap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 24px;
+  padding: 0 7px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid var(--c-border);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.22);
+  color: var(--c-text-primary);
+  font-size: 11px;
+  font-weight: 700;
+  font-family: inherit;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.key-cap.active {
+  background: var(--c-primary);
+  border-color: var(--c-primary);
+  border-bottom-color: rgba(0, 0, 0, 0.3);
+  color: #ffffff;
+}
+
+.key-plus {
+  font-size: 11px;
+  color: var(--c-text-muted);
+  font-weight: 600;
+}
+
+.status-message {
+  font-size: 11px;
+  color: var(--c-text-secondary);
+  text-align: left;
+  margin-top: 4px;
+  padding-left: 2px;
+}
+
+.status-message.is-error {
+  color: #f87171;
+}
+
+.status-message.is-warning {
+  color: #fbbf24;
+}
+
+.status-message.is-success {
+  color: #4ade80;
+}
+
+/* Navigation Cheatsheet Badges */
+.shortcut-keys {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.key-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--c-border);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+  color: var(--c-text-primary);
+  font-size: 11px;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+.key-separator {
+  font-size: 10px;
+  color: var(--c-text-muted);
+  font-weight: 500;
+  padding: 0 1px;
+}

@@ -34,15 +34,16 @@
   }: Props = $props()
 
   let isDrawerOpen = $state(false)
+  let controlsEl = $state<HTMLDivElement | null>(null)
 
-  function handleOpenDrawer(e: MouseEvent) {
-    e.stopPropagation()
+  function handleOpenDrawer(e?: MouseEvent) {
+    if (e) e.stopPropagation()
     isDrawerOpen = true
     onDrawerChange?.(true)
   }
 
-  function handleCloseDrawer(e: MouseEvent) {
-    e.stopPropagation()
+  function handleCloseDrawer(e?: MouseEvent) {
+    if (e) e.stopPropagation()
     isDrawerOpen = false
     onDrawerChange?.(false)
   }
@@ -62,6 +63,7 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <div
+  bind:this={controlsEl}
   class="floating-controls"
   class:minimized={!expanded}
   class:folded={!expanded && !isDrawerOpen}
@@ -69,6 +71,19 @@
   aria-label="Window controls"
   tabindex="-1"
   onclick={!expanded && !isDrawerOpen ? handleOpenDrawer : undefined}
+  onfocusin={() => {
+    if (!expanded && !isDrawerOpen) {
+      handleOpenDrawer()
+    }
+  }}
+  onfocusout={(e) => {
+    if (!expanded && isDrawerOpen) {
+      const nextTarget = e.relatedTarget as Node | null
+      if (!controlsEl || !controlsEl.contains(nextTarget)) {
+        handleCloseDrawer()
+      }
+    }
+  }}
 >
   {#if expanded}
     <!-- Expanded Card State: Vertical Dock attached to parent window -->
@@ -111,7 +126,7 @@
     <div class="button-wrapper">
       <DockButton
         shape="rounded"
-        tooltip=""
+        tooltip="Window Controls"
         tooltipPosition="bottom"
         onclick={handleOpenDrawer}
       >

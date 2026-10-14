@@ -60,6 +60,12 @@
     filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.7));
   }
 
+  .dock-btn:focus-visible {
+    outline: 2px solid var(--c-primary, #6366f1);
+    outline-offset: 1px;
+    background: rgba(255, 255, 255, 0.15);
+  }
+
   .dock-btn.shape-circle {
     border-radius: 50%;
   }

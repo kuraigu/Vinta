@@ -848,8 +848,23 @@
     }
 
     const handleWindowKeydownFailsafe = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && gestures.isDragging) {
-        finishDragGesture()
+      if (e.defaultPrevented) return
+      if (e.key === 'Escape') {
+        if (gestures.isDragging) {
+          finishDragGesture()
+          return
+        }
+        if (expanded && !isHidden) {
+          const fallback = getFallbackPage()
+          if (activePage !== fallback.page) {
+            navigateTo(fallback.page as Component, fallback.config, true)
+          } else {
+            expanded = false
+            const nextBounds = getBoundsForState(islandConfig, false, false)
+            bounds.syncBounds(nextBounds, clampedOffsetX, islandNode, false, false)
+            resetHideTimer()
+          }
+        }
       }
     }
 
@@ -875,6 +890,52 @@
         islandNode,
         isHidden
       )
+    }
+
+    const handleHotkeyToggle = () => {
+      if (expanded && !isHidden) {
+        const fallback = getFallbackPage()
+        if (activePage !== fallback.page) {
+          activePage = fallback.page as Component
+          islandConfig = fallback.config
+          $activePageIdStore = fallback.page === HomePage ? 'home' : 'media'
+        }
+        hideWidget()
+      } else {
+        const fallback = getFallbackPage()
+        navigateTo(fallback.page as Component, fallback.config, true)
+      }
+    }
+
+    const handleQuickNotesHotkey = () => {
+      if (activePage === NotesPage && expanded && !isHidden) {
+        const fallback = getFallbackPage()
+        navigateTo(fallback.page as Component, fallback.config, false)
+      } else {
+        navigateTo(NotesPage, notesConfig, true)
+      }
+    }
+
+    const handleModeSwitchHotkey = () => {
+      if (isHidden) {
+        showWidget()
+        return
+      }
+      if (expanded) {
+        expanded = false
+        const fallback = getFallbackPage()
+        if (activePage !== fallback.page) {
+          activePage = fallback.page as Component
+          islandConfig = fallback.config
+          $activePageIdStore = fallback.page === HomePage ? 'home' : 'media'
+        }
+        const nextBounds = getBoundsForState(islandConfig, false, false)
+        bounds.syncBounds(nextBounds, clampedOffsetX, islandNode, false, false)
+        resetHideTimer()
+      } else {
+        const fallback = getFallbackPage()
+        navigateTo(fallback.page as Component, fallback.config, true)
+      }
     }
 
     window.addEventListener('resize', handleResize)
@@ -910,7 +971,10 @@
       onRefreshDisplay: refreshDisplay,
       onNotificationWake: () => {
         wasHiddenBeforeNotif = isHidden
-      }
+      },
+      onHotkeyToggle: handleHotkeyToggle,
+      onQuickNotesHotkey: handleQuickNotesHotkey,
+      onModeSwitchHotkey: handleModeSwitchHotkey
     })
 
     const unsubDevTestNavigate = Events.On(
