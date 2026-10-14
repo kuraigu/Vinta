@@ -400,9 +400,9 @@ export const homeWidgetsVisibilityStore = persistentWritable<HomeWidgetsVisibili
 export const pageVisibilityStore = persistentWritable<PageVisibility>('vinta_page_visibility', defaultPageVisibility)
 export const dockPinnedAppsStore = persistentWritable<DockPinnedApps>('vinta_dock_pinned_apps', defaultDockPinnedApps)
 export const pinnedMediaSourceStore = persistentWritable<string | null>('vinta_pinned_media_source', null)
-export const globalHotkeyStore = persistentWritable<string>('vinta_global_hotkey', 'Ctrl+Shift+V')
-export const quickNotesHotkeyStore = persistentWritable<string>('vinta_hotkey_quick_notes', 'Ctrl+Shift+N')
-export const modeSwitchHotkeyStore = persistentWritable<string>('vinta_hotkey_mode_switch', 'Ctrl+Shift+D')
+export const globalHotkeyStore = persistentWritable<string>('vinta_global_hotkey', 'Alt+Shift+V')
+export const quickNotesHotkeyStore = persistentWritable<string>('vinta_hotkey_quick_notes', 'Alt+Shift+N')
+export const modeSwitchHotkeyStore = persistentWritable<string>('vinta_hotkey_mode_switch', 'Alt+Shift+D')
 
 // ============================================================================
 // 7. System Integration & Updates
@@ -498,17 +498,17 @@ function sanitizeSettingsPayload(raw: Record<string, unknown>): Record<string, u
       }
 
       if (key === 'vinta_global_hotkey') {
-        sanitized[key] = typeof val === 'string' && val.trim() ? val.trim() : 'Ctrl+Shift+V'
+        sanitized[key] = typeof val === 'string' && val.trim() ? val.trim() : 'Alt+Shift+V'
         continue
       }
 
       if (key === 'vinta_hotkey_quick_notes') {
-        sanitized[key] = typeof val === 'string' && val.trim() ? val.trim() : 'Ctrl+Shift+N'
+        sanitized[key] = typeof val === 'string' && val.trim() ? val.trim() : 'Alt+Shift+N'
         continue
       }
 
       if (key === 'vinta_hotkey_mode_switch') {
-        sanitized[key] = typeof val === 'string' && val.trim() ? val.trim() : 'Ctrl+Shift+D'
+        sanitized[key] = typeof val === 'string' && val.trim() ? val.trim() : 'Alt+Shift+D'
         continue
       }
 

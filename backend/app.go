@@ -1075,9 +1075,9 @@ func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 	// Initialize global shortcut manager
 	go func() {
 		time.Sleep(600 * time.Millisecond)
-		toggleHk := "Ctrl+Shift+V"
-		quickNotesHk := "Ctrl+Shift+N"
-		modeSwitchHk := "Ctrl+Shift+D"
+		toggleHk := "Alt+Shift+V"
+		quickNotesHk := "Alt+Shift+N"
+		modeSwitchHk := "Alt+Shift+D"
 
 		if settingsJSON, err := a.GetSettings(); err == nil && settingsJSON != "" && settingsJSON != "{}" {
 			var m map[string]any

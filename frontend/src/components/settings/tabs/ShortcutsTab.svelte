@@ -39,21 +39,21 @@
       id: 'toggle',
       label: 'Toggle Dynamic Island',
       description: 'Summons or dismisses the home dashboard from any window or game',
-      defaultKey: 'Ctrl+Shift+V',
+      defaultKey: 'Alt+Shift+V',
       icon: Keyboard
     },
     {
       id: 'quick_notes',
       label: 'Quick Note Summon',
       description: 'Instantly opens and focuses Quick Notes over your active workspace',
-      defaultKey: 'Ctrl+Shift+N',
+      defaultKey: 'Alt+Shift+N',
       icon: FileText
     },
     {
       id: 'mode_switch',
       label: 'Island Mode Switch',
       description: 'Switches between compact pill and expanded dashboard without hiding',
-      defaultKey: 'Ctrl+Shift+D',
+      defaultKey: 'Alt+Shift+D',
       icon: Sliders
     }
   ]
@@ -69,6 +69,21 @@
     'SUPER+X': 'Windows Power Menu',
     'SUPER+E': 'File Explorer',
     'SUPER+R': 'Run Dialog'
+  }
+
+  const COMMON_APP_COLLISIONS: Record<string, string> = {
+    'CTRL+SHIFT+N': 'Chrome/Edge Incognito & Explorer New Folder',
+    'CTRL+SHIFT+V': 'Paste Plain Text in browsers, Slack, & editors',
+    'CTRL+SHIFT+D': 'Bookmark All Tabs in Chrome & Edge',
+    'CTRL+SHIFT+T': 'Reopen Closed Tab in browsers',
+    'CTRL+SHIFT+W': 'Close Window in browsers',
+    'CTRL+SHIFT+I': 'Developer Tools in browsers',
+    'CTRL+SHIFT+J': 'Console / Downloads in Chrome',
+    'CTRL+SHIFT+P': 'Command Palette in VS Code & browsers',
+    'CTRL+SHIFT+F': 'Global Search in VS Code & editors',
+    'CTRL+SHIFT+B': 'Toggle Bookmarks Bar in Chrome',
+    'CTRL+SHIFT+O': 'Bookmark Manager in Chrome',
+    'CTRL+SHIFT+DELETE': 'Clear Browsing Data in browsers'
   }
 
   let listeningId = $state<string | null>(null)
@@ -115,6 +130,10 @@
 
     if (SYSTEM_RESERVED_SHORTCUTS[normalized]) {
       return `Warning: Conflicts with Windows shortcut (${SYSTEM_RESERVED_SHORTCUTS[normalized]})`
+    }
+
+    if (COMMON_APP_COLLISIONS[normalized]) {
+      return `Warning: Conflicts with ${COMMON_APP_COLLISIONS[normalized]}`
     }
 
     if (currentId !== 'toggle' && $globalHotkeyStore && $globalHotkeyStore.toUpperCase() === normalized) {
