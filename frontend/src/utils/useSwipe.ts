@@ -71,6 +71,7 @@ export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
 
     if ((e.target as HTMLElement).closest(fullIgnoreSelector)) return
     if (e.button !== 0 && e.pointerType === 'mouse') return
+    if (requestedAxis === 'y' && e.pointerType === 'mouse') return
 
     cancelAnimationFrame(inertiaFrame)
     if (clearClickTimeout) {

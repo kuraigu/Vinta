@@ -387,6 +387,14 @@ export const mediaAutoWakeStore = persistentWritable<boolean>('vinta_media_autow
 export const notifSoundStore = persistentWritable<boolean>('vinta_notif_sound', true)
 export const notifVolumeStore = persistentWritable<number>('vinta_notif_volume', 0.8)
 
+// Alarms & Reminders Audio Settings
+export type { AlarmSoundPreset } from '../services/audioService'
+import type { AlarmSoundPreset } from '../services/audioService'
+export const alarmSoundPresetStore = persistentWritable<AlarmSoundPreset>('vinta_alarm_sound_preset', 'chime')
+export const alarmVolumeStore = persistentWritable<number>('vinta_alarm_volume', 0.85)
+export const alarmSnoozeMinutesStore = persistentWritable<number>('vinta_alarm_snooze_minutes', 5)
+export const reminderSoundPresetStore = persistentWritable<AlarmSoundPreset>('vinta_reminder_sound_preset', 'chime')
+
 // ============================================================================
 // 4. Time, Date & Localization
 // ============================================================================

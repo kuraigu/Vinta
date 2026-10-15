@@ -4,7 +4,8 @@ import {
   notifData,
   dndStore,
   notifSoundStore,
-  notifVolumeStore
+  notifVolumeStore,
+  MAX_NOTIFICATIONS
 } from '../store'
 import { playNotifChime } from './audioService'
 
@@ -38,7 +39,7 @@ export function sendVintaNotification(options: VintaNotificationOptions): void {
       appLogo: icon,
       timestamp: Date.now()
     },
-    ...items.slice(0, 98)
+    ...items.slice(0, MAX_NOTIFICATIONS - 1)
   ])
 
   // 2. Desktop toast notification

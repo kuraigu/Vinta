@@ -1,17 +1,59 @@
 <script lang="ts">
-  import { Bell, Volume2, BellRing, Trash2 } from 'lucide-svelte'
+  import {
+    Bell,
+    Volume2,
+    BellRing,
+    Trash2,
+    AlarmClock,
+    Play,
+    TimerReset
+  } from 'lucide-svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
+  import CustomSelect from '../../CustomSelect.svelte'
   import {
     dndStore,
     notifSoundStore,
     notifVolumeStore,
     notifAutoWakeStore,
+    alarmSoundPresetStore,
+    alarmVolumeStore,
+    alarmSnoozeMinutesStore,
     notifData
   } from '../../../store'
+  import {
+    previewAlarmSound,
+    type AlarmSoundPreset
+  } from '../../../services/audioService'
+
+  const alarmSoundOptions: { value: AlarmSoundPreset; label: string }[] = [
+    { value: 'chime', label: 'Chime (Soft Bell)' },
+    { value: 'radar', label: 'Radar (Sonar Ping)' },
+    { value: 'digital', label: 'Digital (Synth Beep)' },
+    { value: 'marimba', label: 'Marimba (Warm Scale)' }
+  ]
+
+  const snoozeOptions = [
+    { value: '5', label: '5 minutes' },
+    { value: '10', label: '10 minutes' },
+    { value: '15', label: '15 minutes' }
+  ]
+
+  let snoozeString = $state(String($alarmSnoozeMinutesStore))
+
+  $effect(function syncSnoozeMinutes() {
+    const parsed = parseInt(snoozeString, 10)
+    if (!isNaN(parsed) && parsed !== $alarmSnoozeMinutesStore) {
+      $alarmSnoozeMinutesStore = parsed
+    }
+  })
 
   function clearAllNotifications() {
     notifData.set([])
+  }
+
+  function handleAuditionAlarmSound() {
+    previewAlarmSound($alarmSoundPresetStore, $alarmVolumeStore)
   }
 </script>
 
@@ -51,6 +93,71 @@
       <input type="checkbox" bind:checked={$notifAutoWakeStore} />
       <span class="slider"></span>
     </label>
+  </SettingItem>
+
+  <!-- ======================================================================
+       Alarms & Reminders Audio Settings
+       ====================================================================== -->
+  <div class="setting-section-header">
+    <AlarmClock size={13} />
+    <span>Alarms & Reminders</span>
+  </div>
+
+  <SettingItem
+    label="Alarm Ringing Sound"
+    description="Procedural synthesis chime played when scheduled alarms fire"
+    icon={AlarmClock}
+    flexCol={true}
+  >
+    <div class="sound-select-row">
+      <div class="sound-select-box">
+        <CustomSelect
+          options={alarmSoundOptions}
+          bind:value={$alarmSoundPresetStore}
+          placeholder="Select sound..."
+          fullWidth={true}
+        />
+      </div>
+      <button
+        type="button"
+        class="sound-preview-btn"
+        onclick={handleAuditionAlarmSound}
+        aria-label="Preview alarm sound"
+      >
+        <Play size={11} />
+        <span>Test</span>
+      </button>
+    </div>
+  </SettingItem>
+
+  <SettingItem
+    label={`Alarm Volume (${Math.round($alarmVolumeStore * 100)}%)`}
+    description="Ringing volume level for active alarms and timer completions"
+    icon={Volume2}
+    flexCol={true}
+  >
+    <input
+      type="range"
+      min="0.1"
+      max="1"
+      step="0.05"
+      bind:value={$alarmVolumeStore}
+      class="range-slider no-swipe"
+    />
+  </SettingItem>
+
+  <SettingItem
+    label="Default Snooze Duration"
+    description="Interval duration before a snoozed alarm rings again"
+    icon={TimerReset}
+  >
+    <div class="snooze-select-box">
+      <CustomSelect
+        options={snoozeOptions}
+        bind:value={snoozeString}
+        placeholder="Duration..."
+      />
+    </div>
   </SettingItem>
 
   <SettingItem
@@ -122,5 +229,58 @@
   .range-slider {
     width: 100%;
     accent-color: var(--c-primary, #6366f1);
+  }
+
+  .setting-section-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 4px 2px 4px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--c-text-muted, #94a3b8);
+  }
+
+  .sound-select-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .sound-select-box {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .sound-preview-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    height: 32px;
+    padding: 0 12px;
+    border-radius: 9px;
+    background: var(--c-item-bg, rgba(255, 255, 255, 0.08));
+    border: 1px solid var(--c-border, rgba(255, 255, 255, 0.14));
+    color: var(--c-text-primary, #ffffff);
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+  }
+
+  .sound-preview-btn:hover {
+    background: var(--c-hover, rgba(255, 255, 255, 0.16));
+    border-color: rgba(255, 255, 255, 0.25);
+    transform: translateY(-0.5px);
+  }
+
+  .snooze-select-box {
+    width: 130px;
+    flex-shrink: 0;
   }
 </style>

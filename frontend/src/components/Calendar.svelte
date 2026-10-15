@@ -426,62 +426,268 @@
       </div>
     {/if}
 
-    <ScrollView class="calendar-scroll-view">
-      <div class="calendar-card" class:variant-page={variant === 'page'}>
-        {#if variant === 'page' && activeTab === 'agenda'}
-          <!-- FULL AGENDA STREAM TAB -->
-          <div class="agenda-tab-view">
-            <div class="agenda-toolbar-row">
-              <HorizontalTabSelection
-                tabs={AGENDA_FILTER_TABS}
-                bind:value={agendaFilter}
-                ariaLabel="Filter agenda events"
-              />
+    {#if variant === 'page'}
+      <ScrollView class="calendar-scroll-view">
+        <div class="calendar-card variant-page">
+          {#if activeTab === 'agenda'}
+            <!-- FULL AGENDA STREAM TAB -->
+            <div class="agenda-tab-view">
+              <div class="agenda-toolbar-row">
+                <HorizontalTabSelection
+                  tabs={AGENDA_FILTER_TABS}
+                  bind:value={agendaFilter}
+                  colorVariant="primary"
+                  ariaLabel="Filter agenda events"
+                />
+
+                <button
+                  type="button"
+                  class="agenda-primary-add-btn"
+                  onclick={() => handleOpenAddModal()}
+                >
+                  <Plus size={13} />
+                  <span>Add Event</span>
+                </button>
+              </div>
+
+              {#if filteredAgendaEvents.length === 0}
+                <div class="agenda-empty-state">
+                  <CalendarDays size={26} />
+                  <span>No events match this filter</span>
+                </div>
+              {:else}
+                <div class="agenda-stream-list">
+                  {#each filteredAgendaEvents as event (event.id)}
+                    <div class="agenda-card card-color-{event.color}">
+                      <div class="agenda-card-left">
+                        <div class="agenda-card-title-row">
+                          <span class="agenda-card-title">{event.title}</span>
+                          <span class="agenda-card-date-badge"
+                            >{formatUserDate(
+                              event.date,
+                              $dateFormatStore
+                            )}</span
+                          >
+                        </div>
+                        <div class="agenda-card-meta-row">
+                          <span class="agenda-card-time">
+                            {#if event.isAllDay}
+                              All Day
+                            {:else if event.startTime}
+                              {formatEventTime(event.startTime)}{event.endTime
+                                ? ` - ${formatEventTime(event.endTime)}`
+                                : ''}
+                            {:else}
+                              Scheduled
+                            {/if}
+                          </span>
+                          {#if event.location}
+                            <span>• {event.location}</span>
+                          {/if}
+                        </div>
+                      </div>
+
+                      <div class="tray-card-actions">
+                        <button
+                          type="button"
+                          class="tray-card-action-btn"
+                          onclick={() => handleOpenEditModal(event)}
+                          aria-label="Edit event"
+                          use:islandTooltip={'Edit event'}
+                        >
+                          <Pencil size={12} />
+                        </button>
+                        <button
+                          type="button"
+                          class="tray-card-action-btn danger"
+                          onclick={() => deleteCalendarEvent(event.id)}
+                          aria-label="Delete event"
+                          use:islandTooltip={'Delete event'}
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  {/each}
+                </div>
+              {/if}
+            </div>
+          {:else}
+            {@render monthGridView()}
+          {/if}
+        </div>
+      </ScrollView>
+    {:else}
+      <div class="calendar-card widget-mode">
+        {@render monthGridView()}
+      </div>
+    {/if}
+
+    {#snippet monthGridView()}
+      <!-- MONTH GRID VIEW (Shared by Widget and Page Calendar Tab) -->
+      <div class="grid-section">
+        <!-- Navigation Header -->
+        <div class="month-nav">
+          <div class="month-nav-left">
+            <div class="stepper-title-group">
+              <button
+                type="button"
+                class="header-title-btn"
+                onclick={cycleViewMode}
+              >
+                <span>{headerTitle}</span>
+                <ChevronDown
+                  size={11}
+                  style="display:inline; margin-left:2px; vertical-align:middle;"
+                />
+              </button>
 
               <button
                 type="button"
-                class="agenda-primary-add-btn"
-                onclick={() => handleOpenAddModal()}
+                class="icon-nav-btn"
+                onclick={handlePrev}
+                aria-label="Previous interval"
+                use:islandTooltip={'Previous'}
               >
-                <Plus size={13} />
-                <span>Add Event</span>
+                <ChevronLeft size={13} />
+              </button>
+              <button
+                type="button"
+                class="icon-nav-btn"
+                onclick={handleNext}
+                aria-label="Next interval"
+                use:islandTooltip={'Next'}
+              >
+                <ChevronRight size={13} />
               </button>
             </div>
+          </div>
 
-            {#if filteredAgendaEvents.length === 0}
-              <div class="agenda-empty-state">
-                <CalendarDays size={26} />
-                <span>No events match this filter</span>
+          <div class="month-nav-right">
+            <button
+              type="button"
+              class="today-btn"
+              onclick={jumpToToday}
+              use:islandTooltip={'Jump to current day'}
+            >
+              Today
+            </button>
+
+            {#if showGoToCalendar}
+              <button
+                type="button"
+                class="go-to-calendar-btn"
+                onclick={handleOpenCalendarPage}
+                use:islandTooltip={'Open full Calendar page'}
+              >
+                <CalendarDays size={12} />
+                <span>Go to Calendar</span>
+                <ArrowRight size={11} />
+              </button>
+            {/if}
+          </div>
+        </div>
+
+        {#if viewMode === 'month'}
+          <!-- Weekdays Header -->
+          <div class="weekdays-row">
+            {#each weekDays as wd (wd)}
+              <div class="weekday-cell">{wd}</div>
+            {/each}
+          </div>
+
+          <!-- Days Grid -->
+          <div class="days-grid">
+            {#each blanks as blank, i (i)}
+              <div class="day-cell empty">{blank}</div>
+            {/each}
+            {#each daysArray as day (day)}
+              {@const isToday = isCurrentMonth && day === realToday.getDate()}
+              {@const dayKey = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`}
+              {@const isSelected = dayKey === $calendarStore.selectedDate}
+              {@const dayEvts = $calendarStore.events.filter(
+                (e) => e.date === dayKey
+              )}
+              <button
+                type="button"
+                class="day-cell"
+                class:today={isToday}
+                class:selected={isSelected}
+                onclick={() => selectDate(day)}
+              >
+                <span class="day-num">{day}</span>
+                {#if dayEvts.length > 0}
+                  <div class="day-dot-indicator-tray">
+                    {#each dayEvts.slice(0, 3) as evt (evt.id)}
+                      <span class="mini-day-dot {evt.color}"></span>
+                    {/each}
+                  </div>
+                {/if}
+              </button>
+            {/each}
+          </div>
+
+          <!-- Selected Day Agenda Tray -->
+          <div class="calendar-agenda-tray">
+            <div class="agenda-tray-header">
+              <div class="agenda-tray-title">
+                <Clock size={11} />
+                <span>{selectedDateLabel}</span>
+                <span class="agenda-tray-subtitle">
+                  • {selectedDateEvents.length}
+                  {selectedDateEvents.length === 1 ? 'event' : 'events'}
+                </span>
+              </div>
+              <div class="agenda-tray-actions">
+                {#if variant === 'page'}
+                  <button
+                    type="button"
+                    class="tray-agenda-jump-btn"
+                    onclick={() => (activeTab = 'agenda')}
+                  >
+                    <span>View in Agenda</span>
+                  </button>
+                {/if}
+                <button
+                  type="button"
+                  class="tray-add-btn"
+                  onclick={() =>
+                    handleOpenAddModal($calendarStore.selectedDate)}
+                >
+                  <Plus size={12} />
+                  <span>Add Event</span>
+                </button>
+              </div>
+            </div>
+
+            {#if selectedDateEvents.length === 0}
+              <div class="agenda-tray-empty">
+                <span>No events scheduled for this date</span>
               </div>
             {:else}
-              <div class="agenda-stream-list">
-                {#each filteredAgendaEvents as event (event.id)}
-                  <div class="agenda-card card-color-{event.color}">
-                    <div class="agenda-card-left">
-                      <div class="agenda-card-title-row">
-                        <span class="agenda-card-title">{event.title}</span>
-                        <span class="agenda-card-date-badge"
-                          >{formatUserDate(event.date, $dateFormatStore)}</span
-                        >
-                      </div>
-                      <div class="agenda-card-meta-row">
-                        <span class="agenda-card-time">
-                          {#if event.isAllDay}
-                            All Day
-                          {:else if event.startTime}
-                            {formatEventTime(event.startTime)}{event.endTime
-                              ? ` - ${formatEventTime(event.endTime)}`
-                              : ''}
-                          {:else}
-                            Scheduled
-                          {/if}
-                        </span>
-                        {#if event.location}
-                          <span>• {event.location}</span>
+              <div class="agenda-tray-list">
+                {#each selectedDateEvents as event (event.id)}
+                  <div class="tray-event-card card-color-{event.color}">
+                    <div class="tray-card-main">
+                      <span class="tray-time-chip">
+                        {#if event.isAllDay}
+                          All Day
+                        {:else if event.startTime}
+                          {formatEventTime(event.startTime)}{event.endTime
+                            ? ` - ${formatEventTime(event.endTime)}`
+                            : ''}
+                        {:else}
+                          Event
                         {/if}
-                      </div>
+                      </span>
+                      <span class="tray-card-title">{event.title}</span>
+                      {#if event.location}
+                        <span class="tray-card-loc">
+                          <MapPin size={9} />
+                          {event.location}
+                        </span>
+                      {/if}
                     </div>
-
                     <div class="tray-card-actions">
                       <button
                         type="button"
@@ -490,7 +696,7 @@
                         aria-label="Edit event"
                         use:islandTooltip={'Edit event'}
                       >
-                        <Pencil size={12} />
+                        <Pencil size={11} />
                       </button>
                       <button
                         type="button"
@@ -499,7 +705,7 @@
                         aria-label="Delete event"
                         use:islandTooltip={'Delete event'}
                       >
-                        <Trash2 size={12} />
+                        <Trash2 size={11} />
                       </button>
                     </div>
                   </div>
@@ -507,238 +713,45 @@
               </div>
             {/if}
           </div>
+        {:else if viewMode === 'year'}
+          <!-- 12 Months Grid -->
+          <div class="months-grid">
+            {#each monthNames as mName, idx (mName)}
+              {@const isCurrentM =
+                viewYear === realToday.getFullYear() &&
+                idx === realToday.getMonth()}
+              {@const isSelectedM = idx === viewMonth}
+              <button
+                type="button"
+                class="grid-picker-cell"
+                class:today={isCurrentM}
+                class:selected={isSelectedM}
+                onclick={() => selectMonth(idx)}
+              >
+                {mName}
+              </button>
+            {/each}
+          </div>
         {:else}
-          <!-- MONTH GRID VIEW (Shared by Widget and Page Calendar Tab) -->
-          <div class="grid-section">
-            <!-- Navigation Header -->
-            <div class="month-nav">
-              <div class="month-nav-left">
-                <div class="stepper-title-group">
-                  <button
-                    type="button"
-                    class="header-title-btn"
-                    onclick={cycleViewMode}
-                  >
-                    <span>{headerTitle}</span>
-                    <ChevronDown
-                      size={11}
-                      style="display:inline; margin-left:2px; vertical-align:middle;"
-                    />
-                  </button>
-
-                  <button
-                    type="button"
-                    class="icon-nav-btn"
-                    onclick={handlePrev}
-                    aria-label="Previous interval"
-                    use:islandTooltip={'Previous'}
-                  >
-                    <ChevronLeft size={13} />
-                  </button>
-                  <button
-                    type="button"
-                    class="icon-nav-btn"
-                    onclick={handleNext}
-                    aria-label="Next interval"
-                    use:islandTooltip={'Next'}
-                  >
-                    <ChevronRight size={13} />
-                  </button>
-                </div>
-              </div>
-
-              <div class="month-nav-right">
-                <button
-                  type="button"
-                  class="today-btn"
-                  onclick={jumpToToday}
-                  use:islandTooltip={'Jump to current day'}
-                >
-                  Today
-                </button>
-
-                {#if showGoToCalendar}
-                  <button
-                    type="button"
-                    class="go-to-calendar-btn"
-                    onclick={handleOpenCalendarPage}
-                    use:islandTooltip={'Open full Calendar page'}
-                  >
-                    <CalendarDays size={12} />
-                    <span>Go to Calendar</span>
-                    <ArrowRight size={11} />
-                  </button>
-                {/if}
-              </div>
-            </div>
-
-            {#if viewMode === 'month'}
-              <!-- Weekdays Header -->
-              <div class="weekdays-row">
-                {#each weekDays as wd (wd)}
-                  <div class="weekday-cell">{wd}</div>
-                {/each}
-              </div>
-
-              <!-- Days Grid -->
-              <div class="days-grid">
-                {#each blanks as blank, i (i)}
-                  <div class="day-cell empty">{blank}</div>
-                {/each}
-                {#each daysArray as day (day)}
-                  {@const isToday =
-                    isCurrentMonth && day === realToday.getDate()}
-                  {@const dayKey = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`}
-                  {@const isSelected = dayKey === $calendarStore.selectedDate}
-                  {@const dayEvts = $calendarStore.events.filter(
-                    (e) => e.date === dayKey
-                  )}
-                  <button
-                    type="button"
-                    class="day-cell"
-                    class:today={isToday}
-                    class:selected={isSelected}
-                    onclick={() => selectDate(day)}
-                  >
-                    <span class="day-num">{day}</span>
-                    {#if dayEvts.length > 0}
-                      <div class="day-dot-indicator-tray">
-                        {#each dayEvts.slice(0, 3) as evt (evt.id)}
-                          <span class="mini-day-dot {evt.color}"></span>
-                        {/each}
-                      </div>
-                    {/if}
-                  </button>
-                {/each}
-              </div>
-
-              <!-- Selected Day Agenda Tray -->
-              <div class="calendar-agenda-tray">
-                <div class="agenda-tray-header">
-                  <div class="agenda-tray-title">
-                    <Clock size={11} />
-                    <span>{selectedDateLabel}</span>
-                    <span class="agenda-tray-subtitle">
-                      • {selectedDateEvents.length}
-                      {selectedDateEvents.length === 1 ? 'event' : 'events'}
-                    </span>
-                  </div>
-                  <div class="agenda-tray-actions">
-                    {#if variant === 'page'}
-                      <button
-                        type="button"
-                        class="tray-agenda-jump-btn"
-                        onclick={() => (activeTab = 'agenda')}
-                      >
-                        <span>View in Agenda</span>
-                      </button>
-                    {/if}
-                    <button
-                      type="button"
-                      class="tray-add-btn"
-                      onclick={() =>
-                        handleOpenAddModal($calendarStore.selectedDate)}
-                    >
-                      <Plus size={12} />
-                      <span>Add Event</span>
-                    </button>
-                  </div>
-                </div>
-
-                {#if selectedDateEvents.length === 0}
-                  <div class="agenda-tray-empty">
-                    <span>No events scheduled for this date</span>
-                  </div>
-                {:else}
-                  <div class="agenda-tray-list">
-                    {#each selectedDateEvents as event (event.id)}
-                      <div class="tray-event-card card-color-{event.color}">
-                        <div class="tray-card-main">
-                          <span class="tray-time-chip">
-                            {#if event.isAllDay}
-                              All Day
-                            {:else if event.startTime}
-                              {formatEventTime(event.startTime)}{event.endTime
-                                ? ` - ${formatEventTime(event.endTime)}`
-                                : ''}
-                            {:else}
-                              Event
-                            {/if}
-                          </span>
-                          <span class="tray-card-title">{event.title}</span>
-                          {#if event.location}
-                            <span class="tray-card-loc">
-                              <MapPin size={9} />
-                              {event.location}
-                            </span>
-                          {/if}
-                        </div>
-                        <div class="tray-card-actions">
-                          <button
-                            type="button"
-                            class="tray-card-action-btn"
-                            onclick={() => handleOpenEditModal(event)}
-                            aria-label="Edit event"
-                            use:islandTooltip={'Edit event'}
-                          >
-                            <Pencil size={11} />
-                          </button>
-                          <button
-                            type="button"
-                            class="tray-card-action-btn danger"
-                            onclick={() => deleteCalendarEvent(event.id)}
-                            aria-label="Delete event"
-                            use:islandTooltip={'Delete event'}
-                          >
-                            <Trash2 size={11} />
-                          </button>
-                        </div>
-                      </div>
-                    {/each}
-                  </div>
-                {/if}
-              </div>
-            {:else if viewMode === 'year'}
-              <!-- 12 Months Grid -->
-              <div class="months-grid">
-                {#each monthNames as mName, idx (mName)}
-                  {@const isCurrentM =
-                    viewYear === realToday.getFullYear() &&
-                    idx === realToday.getMonth()}
-                  {@const isSelectedM = idx === viewMonth}
-                  <button
-                    type="button"
-                    class="grid-picker-cell"
-                    class:today={isCurrentM}
-                    class:selected={isSelectedM}
-                    onclick={() => selectMonth(idx)}
-                  >
-                    {mName}
-                  </button>
-                {/each}
-              </div>
-            {:else}
-              <!-- 12 Years Decade Grid -->
-              <div class="years-grid">
-                {#each decadeYears as yr (yr)}
-                  {@const isCurrentY = yr === realToday.getFullYear()}
-                  {@const isSelectedY = yr === viewYear}
-                  <button
-                    type="button"
-                    class="grid-picker-cell"
-                    class:today={isCurrentY}
-                    class:selected={isSelectedY}
-                    onclick={() => selectYear(yr)}
-                  >
-                    {yr}
-                  </button>
-                {/each}
-              </div>
-            {/if}
+          <!-- 12 Years Decade Grid -->
+          <div class="years-grid">
+            {#each decadeYears as yr (yr)}
+              {@const isCurrentY = yr === realToday.getFullYear()}
+              {@const isSelectedY = yr === viewYear}
+              <button
+                type="button"
+                class="grid-picker-cell"
+                class:today={isCurrentY}
+                class:selected={isSelectedY}
+                onclick={() => selectYear(yr)}
+              >
+                {yr}
+              </button>
+            {/each}
           </div>
         {/if}
       </div>
-    </ScrollView>
+    {/snippet}
 
     <!-- EVENT CREATION / EDITING MODAL (Self-contained in Calendar component) -->
     {#if isModalOpen}

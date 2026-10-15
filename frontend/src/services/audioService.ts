@@ -110,19 +110,129 @@ export function playFocusChime(
   }
 }
 
+export type AlarmSoundPreset = 'chime' | 'radar' | 'digital' | 'marimba'
+
+/**
+ * Plays a single iteration of a procedural alarm sound preset.
+ *
+ * @param preset The chosen sound preset identifier.
+ * @param volume Master volume gain multiplier between 0 and 1.
+ */
+export function playAlarmPreset(
+  preset: AlarmSoundPreset = 'chime',
+  volume = 0.85
+): void {
+  try {
+    const ctx = getAudioContext()
+    const now = ctx.currentTime
+
+    const masterGain = ctx.createGain()
+    masterGain.gain.setValueAtTime(Math.max(0, Math.min(1, volume)), now)
+    masterGain.connect(ctx.destination)
+
+    if (preset === 'radar') {
+      // High-frequency sonar ping with subtle frequency drop
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(1320, now)
+      osc.frequency.exponentialRampToValueAtTime(880, now + 0.35)
+
+      gain.gain.setValueAtTime(0.001, now)
+      gain.gain.exponentialRampToValueAtTime(0.35, now + 0.02)
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.5)
+
+      osc.connect(gain)
+      gain.connect(masterGain)
+      osc.start(now)
+      osc.stop(now + 0.5)
+    } else if (preset === 'digital') {
+      // Classic digital alarm double-beep burst
+      const beeps = [
+        { start: 0, duration: 0.12 },
+        { start: 0.16, duration: 0.12 }
+      ]
+      for (const b of beeps) {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+
+        osc.type = 'square'
+        osc.frequency.setValueAtTime(1046.5, now + b.start)
+
+        const st = now + b.start
+        gain.gain.setValueAtTime(0.001, st)
+        gain.gain.linearRampToValueAtTime(0.18, st + 0.01)
+        gain.gain.linearRampToValueAtTime(0.001, st + b.duration)
+
+        osc.connect(gain)
+        gain.connect(masterGain)
+        osc.start(st)
+        osc.stop(st + b.duration)
+      }
+    } else if (preset === 'marimba') {
+      // Woody acoustic triad chords with short percussive decay
+      const notes = [
+        { freq: 523.25, start: 0, duration: 0.3 }, // C5
+        { freq: 659.25, start: 0.08, duration: 0.3 }, // E5
+        { freq: 783.99, start: 0.16, duration: 0.45 } // G5
+      ]
+      for (const n of notes) {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+
+        osc.type = 'triangle'
+        osc.frequency.setValueAtTime(n.freq, now + n.start)
+
+        const st = now + n.start
+        gain.gain.setValueAtTime(0.001, st)
+        gain.gain.exponentialRampToValueAtTime(0.35, st + 0.01)
+        gain.gain.exponentialRampToValueAtTime(0.0001, st + n.duration)
+
+        osc.connect(gain)
+        gain.connect(masterGain)
+        osc.start(st)
+        osc.stop(st + n.duration)
+      }
+    } else {
+      // Default soft chime
+      playNotifChime(volume)
+    }
+  } catch {
+    // Ignore audio errors if audio context blocked by browser
+  }
+}
+
+/**
+ * Previews an alarm sound preset once.
+ *
+ * @param preset The sound preset to audition.
+ * @param volume Audition volume.
+ */
+export function previewAlarmSound(
+  preset: AlarmSoundPreset,
+  volume = 0.85
+): void {
+  playAlarmPreset(preset, volume)
+}
+
 let alarmChimeIntervalId: number | undefined
 
 /**
- * Initiates a repeating procedural dual-tone ringing chime for active alarms.
+ * Initiates a repeating procedural ringing chime for active alarms.
  *
  * @param volume Master volume gain multiplier between 0 and 1.
+ * @param preset The alarm sound preset to ring.
  */
-export function startAlarmRingingChime(volume = 0.85): void {
+export function startAlarmRingingChime(
+  volume = 0.85,
+  preset: AlarmSoundPreset = 'chime'
+): void {
   stopAlarmRingingChime()
-  playNotifChime(volume)
+  playAlarmPreset(preset, volume)
   alarmChimeIntervalId = window.setInterval(() => {
-    playNotifChime(volume)
-  }, 2500)
+    playAlarmPreset(preset, volume)
+  }, 2400)
 }
 
 /**

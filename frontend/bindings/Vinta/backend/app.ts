@@ -240,6 +240,13 @@ export function GetNamedGlobalShortcut(
 }
 
 /**
+ * GetNotifications reads notifications.json from %APPDATA%/FreeMatrix Studios/Vinta.
+ */
+export function GetNotifications(): $CancellablePromise<string> {
+  return $Call.ByID(1044629443)
+}
+
+/**
  * GetSettings reads settings.json from %APPDATA%/FreeMatrix Studios/Vinta.
  */
 export function GetSettings(): $CancellablePromise<string> {
@@ -442,6 +449,15 @@ export function SaveNote(
   content: string
 ): $CancellablePromise<void> {
   return $Call.ByID(1034640134, fileName, content)
+}
+
+/**
+ * SaveNotifications writes notifications.json to %APPDATA%/FreeMatrix Studios/Vinta.
+ */
+export function SaveNotifications(
+  notificationsJSON: string
+): $CancellablePromise<void> {
+  return $Call.ByID(3718355310, notificationsJSON)
 }
 
 /**
