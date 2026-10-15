@@ -8,6 +8,7 @@
     ChevronRight,
     ChevronDown
   } from 'lucide-svelte'
+  import { dateFormatStore, formatUserDate } from '../store'
 
   let {
     value = $bindable(''),
@@ -91,12 +92,7 @@
     }
     const [y, m, d] = value.split('-').map(Number)
     const target = new Date(y, m - 1, d)
-    return target.toLocaleDateString(undefined, {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    })
+    return formatUserDate(target, $dateFormatStore, { includeWeekday: true })
   }
   let displayLabel = $derived.by(computeDisplayLabel)
 

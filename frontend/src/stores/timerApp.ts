@@ -5,12 +5,17 @@ import {
 } from '../../bindings/Vinta/backend/app.js'
 import {
   playFocusChime,
-  playNotifChime,
+  playAlarmPreset,
   startAlarmRingingChime,
   stopAlarmRingingChime
 } from '../services/audioService'
 import { sendVintaNotification } from '../services/vintaNotification'
-import { timeFormatStore } from './settings'
+import {
+  timeFormatStore,
+  alarmSoundPresetStore,
+  alarmVolumeStore,
+  alarmSnoozeMinutesStore
+} from './settings'
 
 export type TimerAppTab = 'timer' | 'stopwatch' | 'focus' | 'alarms'
 
@@ -381,7 +386,7 @@ function handleCountdownTick(): void {
 
   if (remaining <= 0) {
     pauseCountdown()
-    playNotifChime(0.85)
+    playAlarmPreset(get(alarmSoundPresetStore), get(alarmVolumeStore))
     sendToastNotification('Timer Expired', 'Your countdown timer has completed.')
   }
 }
@@ -1000,7 +1005,10 @@ function checkAlarmsClock(): void {
       triggeredAt: nowTimestamp
     }
 
-    startAlarmRingingChime()
+    startAlarmRingingChime(
+      get(alarmVolumeStore),
+      get(alarmSoundPresetStore)
+    )
 
     const use24H = get(timeFormatStore) === '24h'
     const scheduledDisplay = formatTimeBySetting(target.time, use24H)
@@ -1070,7 +1078,10 @@ function checkAlarmsClock(): void {
 
   if (newlyRinging) {
     const ringingItem = newlyRinging as RingingAlarm
-    startAlarmRingingChime()
+    startAlarmRingingChime(
+      get(alarmVolumeStore),
+      get(alarmSoundPresetStore)
+    )
 
     const use24H = get(timeFormatStore) === '24h'
     const scheduledDisplay = formatTimeBySetting(ringingItem.time, use24H)
@@ -1114,9 +1125,10 @@ export function dismissRingingAlarm(): void {
 /**
  * Snoozes the actively ringing alarm for a designated duration.
  *
- * @param minutes Snooze duration in minutes (defaults to 5 minutes).
+ * @param minutes Snooze duration in minutes (defaults to user configured snooze setting).
  */
-export function snoozeRingingAlarm(minutes = 5): void {
+export function snoozeRingingAlarm(minutes?: number): void {
+  const snoozeMins = minutes ?? get(alarmSnoozeMinutesStore) ?? 5
   stopAlarmRingingChime()
   timerAppStore.update((s) => {
     const current = s.ringingAlarm
@@ -1129,12 +1141,12 @@ export function snoozeRingingAlarm(minutes = 5): void {
       label: current.label,
       repeat: current.repeat,
       days: current.days,
-      snoozeUntil: Date.now() + Math.max(1, minutes) * 60 * 1000
+      snoozeUntil: Date.now() + Math.max(1, snoozeMins) * 60 * 1000
     }
 
     sendToastNotification(
       'Alarm Snoozed',
-      `"${current.label}" will ring again in ${minutes} minutes.`
+      `"${current.label}" will ring again in ${snoozeMins} minutes.`
     )
 
     return {

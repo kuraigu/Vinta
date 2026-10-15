@@ -29,7 +29,13 @@
   let isOpen = $state(false)
   let searchTerm = $state('')
   let wrapperNode = $state<HTMLElement>()
-  let dropdownRect = $state({ top: 0, left: 0, width: 0, dropUp: false })
+  let dropdownRect = $state({
+    top: 0,
+    left: 0,
+    width: 0,
+    dropUp: false,
+    maxHeight: 220
+  })
   let searchInputNode = $state<HTMLInputElement>()
 
   let filteredOptions = $derived.by(() => {
@@ -47,16 +53,37 @@
   function updateRect() {
     if (!wrapperNode) return
     const rect = wrapperNode.getBoundingClientRect()
-    const spaceBelow = window.innerHeight - rect.bottom
+    const island =
+      wrapperNode.closest('.island') ||
+      wrapperNode.closest('.island-wrapper') ||
+      wrapperNode.closest('.island-container')
+    const containerRect = island
+      ? island.getBoundingClientRect()
+      : {
+          top: 0,
+          bottom: window.innerHeight,
+          left: 0,
+          right: window.innerWidth
+        }
+
+    const spaceBelow = containerRect.bottom - rect.bottom
+    const spaceAbove = rect.top - containerRect.top
     const isUp =
       direction === 'up' ||
-      (direction === 'auto' && spaceBelow < 220 && rect.top > 150)
+      (direction === 'auto' && spaceBelow < 220 && spaceAbove > spaceBelow)
+
+    const availableSpace = isUp ? spaceAbove : spaceBelow
+    const calculatedMaxHeight = Math.max(
+      120,
+      Math.min(220, availableSpace - 12)
+    )
 
     dropdownRect = {
       top: isUp ? rect.top - 4 : rect.bottom + 4,
       left: rect.left,
       width: rect.width,
-      dropUp: isUp
+      dropUp: isUp,
+      maxHeight: calculatedMaxHeight
     }
   }
 
@@ -201,6 +228,7 @@
         {dropdownRect.dropUp
         ? `bottom: ${window.innerHeight - dropdownRect.top}px;`
         : `top: ${dropdownRect.top}px;`}
+        max-height: {dropdownRect.maxHeight}px;
         z-index: 999999;
       "
       onwheel={stopPropagation}
@@ -350,7 +378,8 @@
     display: flex;
     flex-direction: column;
     gap: 2px;
-    max-height: 170px;
+    flex: 1;
+    min-height: 0;
   }
 
   :global(.options-scroll-container::-webkit-scrollbar) {

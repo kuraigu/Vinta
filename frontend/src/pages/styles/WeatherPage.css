@@ -1,0 +1,14 @@
+/* Standalone WeatherPage Layout Wrapper */
+.weather-page-layout {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.weather-page-layout.minimal {
+  align-items: center;
+  justify-content: center;
+}

@@ -2827,6 +2827,26 @@ func (a *App) SaveTimerData(timerJSON string) error {
 	return os.WriteFile(filePath, []byte(timerJSON), 0644)
 }
 
+// GetNotifications reads notifications.json from %APPDATA%/FreeMatrix Studios/Vinta.
+func (a *App) GetNotifications() (string, error) {
+	filePath := filepath.Join(GetAppDataDir(), "notifications.json")
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return "[]", nil
+	}
+	return string(data), nil
+}
+
+// SaveNotifications writes notifications.json to %APPDATA%/FreeMatrix Studios/Vinta.
+func (a *App) SaveNotifications(notificationsJSON string) error {
+	dir := GetAppDataDir()
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+	filePath := filepath.Join(dir, "notifications.json")
+	return os.WriteFile(filePath, []byte(notificationsJSON), 0644)
+}
+
 // GetCacheSize computes the total byte size of disk caches and temporary sync databases.
 func (a *App) GetCacheSize() (int64, error) {
 	var totalSize int64

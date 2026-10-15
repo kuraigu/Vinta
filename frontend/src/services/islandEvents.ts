@@ -22,6 +22,7 @@ import {
   globalMediaStore,
   audioPeakStore,
   notifData,
+  MAX_NOTIFICATIONS,
   notificationPermissionDenied,
   notifSoundStore,
   notifVolumeStore,
@@ -139,7 +140,9 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
       timestamp: Date.now()
     }
 
-    notifData.update((items) => [newNotif, ...items].slice(0, 99))
+    notifData.update((items) =>
+      [newNotif, ...items].slice(0, MAX_NOTIFICATIONS)
+    )
   })
 
   onEvent('game-mode-exit', () => {
@@ -281,7 +284,7 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
         timestamp: Date.now()
       }
 
-      notifData.update((n) => [newNotif, ...n].slice(0, 99))
+      notifData.update((n) => [newNotif, ...n].slice(0, MAX_NOTIFICATIONS))
 
       const isNotifEnabled = get(pageVisibilityStore).notifications
       const mediaIsActive =
