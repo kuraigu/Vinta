@@ -14,11 +14,27 @@
     { label: '24-Hour (13:30)', value: '24h' }
   ]
 
+  import { onMount } from 'svelte'
+
   const dateFormatOptions = [
-    { label: 'Short (Mon, Oct 24)', value: 'short' },
-    { label: 'Full (Monday, October 24)', value: 'full' },
-    { label: 'ISO (2026-10-24)', value: 'iso' }
+    { label: 'Thu, Oct 15 (Short)', value: 'short' },
+    { label: 'Thursday, October 15 (Full)', value: 'full' },
+    { label: '10/15/2026 (MM/DD/YYYY)', value: 'us_numeric' },
+    { label: '15/10/2026 (DD/MM/YYYY)', value: 'eu_numeric' },
+    { label: 'October 15, 2026 (Month D, YYYY)', value: 'us_long' },
+    { label: '15 October 2026 (D Month YYYY)', value: 'eu_long' },
+    { label: '2026-10-15 (ISO YYYY-MM-DD)', value: 'iso' }
   ]
+
+  onMount(() => {
+    if ($dateFormatStore === 'default') {
+      dateFormatStore.set('short')
+    } else if ($dateFormatStore === 'us') {
+      dateFormatStore.set('us_numeric')
+    } else if ($dateFormatStore === 'eu') {
+      dateFormatStore.set('eu_numeric')
+    }
+  })
 
   const rawTimezones =
     typeof Intl !== 'undefined' && typeof Intl.supportedValuesOf === 'function'

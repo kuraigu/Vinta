@@ -13,6 +13,7 @@
   import Calendar from '../components/Calendar.svelte'
   import Weather from '../components/Weather.svelte'
   import DeviceStatusWidget from '../components/DeviceStatusWidget.svelte'
+  import ActionCenterGlance from '../components/ActionCenterGlance.svelte'
   import ScrollView from '../components/ScrollView.svelte'
   import CalendarPage, { config as calendarConfig } from './CalendarPage.svelte'
   import { islandTooltip } from '../services/islandTooltip'
@@ -22,6 +23,7 @@
     timeFormatStore,
     timezoneStore,
     dateFormatStore,
+    formatUserDate,
     type IslandConfig
   } from '../store'
 
@@ -84,24 +86,11 @@
       const h24 = parseInt(getVal('hour'), 10)
       const m = getVal('minute').padStart(2, '0')
       const s = parseInt(getVal('second'), 10).toString().padStart(2, '0')
-      const weekday = getVal('weekday')
-      const monthLong = getVal('month')
-      const monthNum = (time.getMonth() + 1).toString().padStart(2, '0')
-      const day = getVal('day')
-      const year = getVal('year')
 
-      let dateBadgeText = `${weekday}, ${monthLong} ${day}, ${year}`
-      let friendlyDateText = `${weekday}, ${monthLong.slice(0, 3)} ${day}`
-      if ($dateFormatStore === 'iso') {
-        dateBadgeText = `${year}-${monthNum}-${day.padStart(2, '0')}`
-        friendlyDateText = dateBadgeText
-      } else if ($dateFormatStore === 'us') {
-        dateBadgeText = `${monthNum}/${day.padStart(2, '0')}/${year}`
-        friendlyDateText = `${monthNum}/${day.padStart(2, '0')}`
-      } else if ($dateFormatStore === 'eu') {
-        dateBadgeText = `${day.padStart(2, '0')}/${monthNum}/${year}`
-        friendlyDateText = `${day.padStart(2, '0')}/${monthNum}`
-      }
+      const dateBadgeText = formatUserDate(time, $dateFormatStore)
+      const friendlyDateText = formatUserDate(time, $dateFormatStore, {
+        includeWeekday: true
+      })
 
       return {
         h24,
@@ -111,24 +100,10 @@
         fullDateStr: dateBadgeText
       }
     } catch {
-      const year = time.getFullYear()
-      const monthNum = (time.getMonth() + 1).toString().padStart(2, '0')
-      const day = time.getDate().toString()
-      const weekday = time.toLocaleDateString('en-US', { weekday: 'long' })
-      const monthLong = time.toLocaleDateString('en-US', { month: 'long' })
-
-      let dateBadgeText = `${weekday}, ${monthLong} ${day}, ${year}`
-      let friendlyDateText = `${weekday}, ${monthLong.slice(0, 3)} ${day}`
-      if ($dateFormatStore === 'iso') {
-        dateBadgeText = `${year}-${monthNum}-${day.padStart(2, '0')}`
-        friendlyDateText = dateBadgeText
-      } else if ($dateFormatStore === 'us') {
-        dateBadgeText = `${monthNum}/${day.padStart(2, '0')}/${year}`
-        friendlyDateText = `${monthNum}/${day.padStart(2, '0')}`
-      } else if ($dateFormatStore === 'eu') {
-        dateBadgeText = `${day.padStart(2, '0')}/${monthNum}/${year}`
-        friendlyDateText = `${day.padStart(2, '0')}/${monthNum}`
-      }
+      const dateBadgeText = formatUserDate(time, $dateFormatStore)
+      const friendlyDateText = formatUserDate(time, $dateFormatStore, {
+        includeWeekday: true
+      })
 
       return {
         h24: time.getHours(),
@@ -289,10 +264,21 @@
             </section>
           {/if}
 
-          <!-- Calendar Overview Card with interactive day selection and Go to Calendar button -->
+          <!-- Quick Details from Action Center (Modular Bento Card) -->
+          {#if $homeWidgetsVisibilityStore.actionCenter}
+            <section class="glance-card-feed">
+              <ActionCenterGlance />
+            </section>
+          {/if}
+
+          <!-- Calendar Overview Card (Shared component with Go to Calendar button) -->
           {#if $homeWidgetsVisibilityStore.calendar}
             <section class="calendar-card-feed">
-              <Calendar expanded={true} onOpenCalendar={openCalendar} />
+              <Calendar
+                expanded={true}
+                showGoToCalendar={true}
+                onOpenCalendar={openCalendar}
+              />
             </section>
           {/if}
         </div>

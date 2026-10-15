@@ -10,7 +10,8 @@
     Timer,
     LayoutGrid,
     Calendar,
-    Pin
+    Pin,
+    CloudSun
   } from 'lucide-svelte'
   import SettingItem from '../SettingItem.svelte'
   import {
@@ -128,6 +129,17 @@
           type="checkbox"
           checked={$pageVisibilityStore.calculator}
           onchange={() => togglePage('calculator')}
+        />
+        <span class="slider"></span>
+      </label>
+    </SettingItem>
+
+    <SettingItem label="Weather" icon={CloudSun}>
+      <label class="toggle-switch">
+        <input
+          type="checkbox"
+          checked={$pageVisibilityStore.weather !== false}
+          onchange={() => togglePage('weather')}
         />
         <span class="slider"></span>
       </label>
@@ -374,6 +386,17 @@
           >
         </div>
       {/if}
+
+      <SettingItem label="Action Center Glance" icon={SlidersHorizontal}>
+        <label class="toggle-switch">
+          <input
+            type="checkbox"
+            checked={$homeWidgetsVisibilityStore.actionCenter}
+            onchange={() => toggleHomeWidget('actionCenter')}
+          />
+          <span class="slider"></span>
+        </label>
+      </SettingItem>
     </div>
   </div>
 
@@ -427,6 +450,17 @@
           type="checkbox"
           checked={$dockPinnedAppsStore.timer}
           onchange={() => toggleDockPinned('timer')}
+        />
+        <span class="slider"></span>
+      </label>
+    </SettingItem>
+
+    <SettingItem label="Pin Weather" icon={CloudSun}>
+      <label class="toggle-switch">
+        <input
+          type="checkbox"
+          checked={$dockPinnedAppsStore.weather}
+          onchange={() => toggleDockPinned('weather')}
         />
         <span class="slider"></span>
       </label>

@@ -17,7 +17,8 @@ export type GlowIntensity = 'disabled' | 'subtle' | 'vibrant'
 export type AutoHideDisplayWidget = 'dash' | 'clock'
 export type HiddenPillPosition = 'center' | 'top-left' | 'top-right'
 export type TimeFormatOption = '12h' | '24h'
-export type DateFormatOption = 'default' | 'iso' | 'us' | 'eu'
+export type { DateFormatOption } from '../utils/dateFormatter'
+import type { DateFormatOption } from '../utils/dateFormatter'
 
 export type IslandConfig = {
   minimal: { w: number; h: number; r: number }
@@ -40,6 +41,7 @@ export interface HomeWidgetsVisibility {
   weather: boolean
   battery: boolean
   wireless: boolean
+  actionCenter: boolean
 }
 
 export const defaultHomeWidgetsVisibility: HomeWidgetsVisibility = {
@@ -47,7 +49,8 @@ export const defaultHomeWidgetsVisibility: HomeWidgetsVisibility = {
   calendar: true,
   weather: true,
   battery: true,
-  wireless: true
+  wireless: true,
+  actionCenter: true
 }
 
 export interface PageVisibility {
@@ -59,6 +62,7 @@ export interface PageVisibility {
   focus?: boolean
   timer: boolean
   calendar: boolean
+  weather: boolean
 }
 
 export const defaultPageVisibility: PageVisibility = {
@@ -69,7 +73,8 @@ export const defaultPageVisibility: PageVisibility = {
   calculator: true,
   focus: true,
   timer: true,
-  calendar: true
+  calendar: true,
+  weather: true
 }
 
 export interface DockPinnedApps {
@@ -77,13 +82,15 @@ export interface DockPinnedApps {
   notes: boolean
   calculator: boolean
   timer: boolean
+  weather: boolean
 }
 
 export const defaultDockPinnedApps: DockPinnedApps = {
   calendar: true,
   notes: true,
   calculator: true,
-  timer: false
+  timer: false,
+  weather: false
 }
 
 // ============================================================================
@@ -385,7 +392,7 @@ export const notifVolumeStore = persistentWritable<number>('vinta_notif_volume',
 // ============================================================================
 export const timeFormatStore = persistentWritable<TimeFormatOption>('vinta_time_format', '12h')
 export const timezoneStore = persistentWritable<string>('vinta_timezone', getInitialTimezone())
-export const dateFormatStore = persistentWritable<DateFormatOption>('vinta_date_format', 'default')
+export const dateFormatStore = persistentWritable<DateFormatOption>('vinta_date_format', 'short')
 
 // ============================================================================
 // 5. Weather

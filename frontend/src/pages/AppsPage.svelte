@@ -24,6 +24,7 @@
     Calculator,
     Timer,
     Calendar as CalendarIcon,
+    CloudSun,
     X
   } from 'lucide-svelte'
   import HomePage, { config as homeConfig } from './HomePage.svelte'
@@ -38,6 +39,7 @@
   } from './CalculatorPage.svelte'
   import TimerPage, { config as timerConfig } from './TimerPage.svelte'
   import CalendarPage, { config as calendarConfig } from './CalendarPage.svelte'
+  import WeatherPage, { config as weatherConfig } from './WeatherPage.svelte'
   import ActionCenterPage, {
     config as actionCenterConfig
   } from './ActionCenterPage.svelte'
@@ -165,6 +167,14 @@
       action: () => openApp(TimerPage, timerConfig)
     },
     {
+      id: 'weather',
+      name: 'Weather',
+      desc: 'Forecast & metrics',
+      icon: CloudSun,
+      visibilityKey: 'weather',
+      action: () => openApp(WeatherPage, weatherConfig)
+    },
+    {
       id: 'updates',
       name: 'Updates',
       desc: 'Check for updates',
@@ -255,7 +265,7 @@
             }}
           >
             <div class="tile-icon-box">
-              <app.icon size={22} strokeWidth={2} class="tile-icon" />
+              <app.icon size={24} strokeWidth={2} class="tile-icon" />
               {#if isEnabled && app.badge && $notifData.length > 0}
                 <span class="tile-badge">
                   {$notifData.length > 9 ? '9+' : $notifData.length}

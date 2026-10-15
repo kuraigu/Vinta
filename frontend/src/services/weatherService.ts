@@ -19,14 +19,21 @@ export type ForecastDay = {
 export type WeatherData = {
   location: string
   temp: number
+  feelsLike: number
   condition: string
   high: number
   low: number
   humidity: number
   windSpeed: number
+  windDirection: number
+  windDirectionLabel: string
+  pressure: number
+  precipitationProbability: number
   uvIndex: string
   weatherCode: number
   forecast: ForecastDay[]
+  sunrise?: string
+  sunset?: string
   isCached?: boolean
   isOffline?: boolean
   lastUpdated: number
@@ -171,7 +178,7 @@ export async function fetchWeatherData(
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 6000)
 
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,uv_index_max&timezone=auto`
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,surface_pressure,wind_speed_10m,wind_direction_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,uv_index_max,precipitation_probability_max,sunrise,sunset&timezone=auto`
 
     const response = await fetch(url, { signal: controller.signal })
     clearTimeout(timeoutId)
@@ -190,7 +197,7 @@ export async function fetchWeatherData(
     const forecastList: ForecastDay[] = []
 
     if (daily && daily.time) {
-      for (let i = 0; i < Math.min(daily.time.length, 4); i++) {
+      for (let i = 0; i < Math.min(daily.time.length, 7); i++) {
         const dateObj = new Date(daily.time[i])
         const dayLabel = i === 0 ? 'Today' : dayNames[dateObj.getDay()] || 'Day'
         const wCode = daily.weather_code[i]
@@ -208,16 +215,32 @@ export async function fetchWeatherData(
 
     const uvMax =
       daily && daily.uv_index_max ? Math.round(daily.uv_index_max[0]) : 3
-    const uvLabel =
-      uvMax <= 2
-        ? `${uvMax} (Low)`
-        : uvMax <= 5
-          ? `${uvMax} (Mod)`
-          : `${uvMax} (High)`
+    const uvLabel = String(uvMax)
+
+    const windDirections = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
+    const windDeg = current.wind_direction_10m ?? 0
+    const windIdx = Math.round((((windDeg % 360) + 360) % 360) / 45) % 8
+    const windDirLabel = windDirections[windIdx] || 'N'
+
+    const feelsLikeTemp =
+      typeof current.apparent_temperature === 'number'
+        ? Math.round(current.apparent_temperature)
+        : Math.round(current.temperature_2m)
+
+    const precipProb =
+      daily && daily.precipitation_probability_max
+        ? Math.round(daily.precipitation_probability_max[0])
+        : 0
+
+    const pressureVal =
+      typeof current.surface_pressure === 'number'
+        ? Math.round(current.surface_pressure)
+        : 1013
 
     const freshData: WeatherData = {
       location: locationName,
       temp: Math.round(current.temperature_2m),
+      feelsLike: feelsLikeTemp,
       condition: parsedCondition.condition,
       high:
         daily && daily.temperature_2m_max
@@ -229,9 +252,15 @@ export async function fetchWeatherData(
           : Math.round(current.temperature_2m),
       humidity: Math.round(current.relative_humidity_2m),
       windSpeed: Math.round(current.wind_speed_10m),
+      windDirection: windDeg,
+      windDirectionLabel: windDirLabel,
+      pressure: pressureVal,
+      precipitationProbability: precipProb,
       uvIndex: uvLabel,
       weatherCode: current.weather_code,
       forecast: forecastList,
+      sunrise: daily?.sunrise?.[0],
+      sunset: daily?.sunset?.[0],
       isCached: false,
       isOffline: false,
       lastUpdated: Date.now()

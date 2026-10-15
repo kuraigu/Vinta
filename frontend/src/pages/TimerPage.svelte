@@ -899,20 +899,33 @@
       <!-- Tab 3: Focus & Break Sessions (Unboxed Clean Dial) -->
       {#if $timerAppStore.activeTab === 'focus'}
         <div class="tab-panel">
-          <!-- Cycle Progress Bar above Dial -->
+          <!-- Cycle Progress Bar above Dial with Settings Trigger -->
           <div class="focus-cycle-bar">
-            <span class="cycle-text">
-              Cycle {$timerAppStore.focus.currentCycle} / {$timerAppStore.focus
-                .settings.longBreakInterval}
-            </span>
-            <div class="cycle-dots-row">
-              {#each Array($timerAppStore.focus.settings.longBreakInterval) as _, idx (idx)}
-                <span
-                  class="cycle-dot"
-                  class:active={idx < $timerAppStore.focus.currentCycle}
-                ></span>
-              {/each}
+            <div class="cycle-left-group">
+              <span class="cycle-text">
+                Cycle {$timerAppStore.focus.currentCycle} / {$timerAppStore
+                  .focus.settings.longBreakInterval}
+              </span>
+              <div class="cycle-dots-row">
+                {#each Array($timerAppStore.focus.settings.longBreakInterval) as _, idx (idx)}
+                  <span
+                    class="cycle-dot"
+                    class:active={idx < $timerAppStore.focus.currentCycle}
+                  ></span>
+                {/each}
+              </div>
             </div>
+
+            <button
+              class="focus-settings-trigger-btn"
+              onclick={() => {
+                isSettingsOpen = true
+              }}
+              use:islandTooltip={'Focus settings'}
+              aria-label="Focus settings"
+            >
+              <SlidersHorizontal size={13} />
+            </button>
           </div>
 
           <!-- Unboxed Radial Dial directly on canvas -->
@@ -1315,6 +1328,49 @@
           </div>
 
           <div class="drawer-content">
+            <!-- Pomodoro Interval Presets -->
+            <div class="focus-presets-row">
+              <button
+                class="focus-preset-chip"
+                class:active={$timerAppStore.focus.settings.focusDuration ===
+                  25 && $timerAppStore.focus.settings.shortBreakDuration === 5}
+                onclick={() =>
+                  updateFocusSettings({
+                    focusDuration: 25,
+                    shortBreakDuration: 5
+                  })}
+                use:islandTooltip={'Standard Pomodoro (25m focus / 5m break)'}
+              >
+                25 / 5m
+              </button>
+              <button
+                class="focus-preset-chip"
+                class:active={$timerAppStore.focus.settings.focusDuration ===
+                  45 && $timerAppStore.focus.settings.shortBreakDuration === 15}
+                onclick={() =>
+                  updateFocusSettings({
+                    focusDuration: 45,
+                    shortBreakDuration: 15
+                  })}
+                use:islandTooltip={'Deep Work (45m focus / 15m break)'}
+              >
+                45 / 15m
+              </button>
+              <button
+                class="focus-preset-chip"
+                class:active={$timerAppStore.focus.settings.focusDuration ===
+                  50 && $timerAppStore.focus.settings.shortBreakDuration === 10}
+                onclick={() =>
+                  updateFocusSettings({
+                    focusDuration: 50,
+                    shortBreakDuration: 10
+                  })}
+                use:islandTooltip={'Extended Focus (50m focus / 10m break)'}
+              >
+                50 / 10m
+              </button>
+            </div>
+
             <div class="drawer-row">
               <span class="drawer-row-label">Focus Length</span>
               <div class="drawer-stepper">

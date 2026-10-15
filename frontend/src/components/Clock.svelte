@@ -1,6 +1,11 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
-  import { timeFormatStore, timezoneStore, dateFormatStore } from '../store'
+  import {
+    timeFormatStore,
+    timezoneStore,
+    dateFormatStore,
+    formatUserDate
+  } from '../store'
 
   let { expanded = false } = $props<{ expanded?: boolean }>()
 
@@ -47,14 +52,9 @@
       const day = getVal('day').padStart(2, '0')
       const year = getVal('year')
 
-      let dateBadgeText = `${weekday}, ${month} ${parseInt(day, 10)}, ${year}`
-      if ($dateFormatStore === 'iso') {
-        dateBadgeText = `${year}-${monthNum}-${day}`
-      } else if ($dateFormatStore === 'us') {
-        dateBadgeText = `${monthNum}/${day}/${year}`
-      } else if ($dateFormatStore === 'eu') {
-        dateBadgeText = `${day}/${monthNum}/${year}`
-      }
+      const dateBadgeText = formatUserDate(time, $dateFormatStore, {
+        includeWeekday: true
+      })
 
       return {
         h24,
@@ -63,23 +63,9 @@
         fullDateStr: dateBadgeText
       }
     } catch {
-      const year = time.getFullYear()
-      const monthNum = (time.getMonth() + 1).toString().padStart(2, '0')
-      const day = time.getDate().toString().padStart(2, '0')
-
-      let dateBadgeText = time.toLocaleDateString('en-US', {
-        weekday: 'long',
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric'
+      const dateBadgeText = formatUserDate(time, $dateFormatStore, {
+        includeWeekday: true
       })
-      if ($dateFormatStore === 'iso') {
-        dateBadgeText = `${year}-${monthNum}-${day}`
-      } else if ($dateFormatStore === 'us') {
-        dateBadgeText = `${monthNum}/${day}/${year}`
-      } else if ($dateFormatStore === 'eu') {
-        dateBadgeText = `${day}/${monthNum}/${year}`
-      }
 
       return {
         h24: time.getHours(),

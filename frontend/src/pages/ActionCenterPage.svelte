@@ -169,9 +169,7 @@
       <div class="card-left">
         <div
           class="card-icon-circle"
-          class:wifi-active={wireless.wifiEnabled &&
-            wireless.wifiConnected &&
-            !wireless.airplaneMode}
+          class:is-off={!wireless.wifiEnabled || wireless.airplaneMode}
         >
           {#if wireless.wifiEnabled && !wireless.airplaneMode}
             <Wifi size={18} />
@@ -180,16 +178,7 @@
           {/if}
         </div>
         <div class="card-info">
-          <div class="card-title-row">
-            <span class="card-primary-text">Wi-Fi</span>
-            <button
-              class="quick-open-btn"
-              use:islandTooltip={'Open Windows Network Flyout'}
-              onclick={(e) => openSystemDialog('network', e)}
-            >
-              <ExternalLink size={11} />
-            </button>
-          </div>
+          <span class="card-primary-text">Wi-Fi</span>
           <span class="card-secondary-text">
             {#if wireless.airplaneMode}
               Turned off by Airplane mode
@@ -203,18 +192,29 @@
           </span>
         </div>
       </div>
-      <label
-        class="toggle-switch"
-        class:disabled-switch={wireless.airplaneMode}
-      >
-        <input
-          type="checkbox"
-          checked={wireless.wifiEnabled && !wireless.airplaneMode}
-          disabled={wireless.airplaneMode}
-          onchange={toggleWifi}
-        />
-        <span class="slider"></span>
-      </label>
+      <div class="card-controls-right">
+        <button
+          type="button"
+          class="quick-open-btn"
+          use:islandTooltip={'Open Windows Network Flyout'}
+          onclick={(e) => openSystemDialog('network', e)}
+          aria-label="Open Windows Network Flyout"
+        >
+          <ExternalLink size={12} />
+        </button>
+        <label
+          class="toggle-switch"
+          class:disabled-switch={wireless.airplaneMode}
+        >
+          <input
+            type="checkbox"
+            checked={wireless.wifiEnabled && !wireless.airplaneMode}
+            disabled={wireless.airplaneMode}
+            onchange={toggleWifi}
+          />
+          <span class="slider"></span>
+        </label>
+      </div>
     </div>
 
     <!-- Bluetooth Card -->
@@ -222,9 +222,7 @@
       <div class="card-left">
         <div
           class="card-icon-circle"
-          class:bt-active={wireless.bluetoothEnabled &&
-            wireless.bluetoothConnected &&
-            !wireless.airplaneMode}
+          class:is-off={!wireless.bluetoothEnabled || wireless.airplaneMode}
         >
           {#if wireless.bluetoothEnabled && !wireless.airplaneMode}
             <Bluetooth size={18} />
@@ -233,16 +231,7 @@
           {/if}
         </div>
         <div class="card-info">
-          <div class="card-title-row">
-            <span class="card-primary-text">Bluetooth</span>
-            <button
-              class="quick-open-btn"
-              use:islandTooltip={'Open Windows Bluetooth Settings'}
-              onclick={(e) => openSystemDialog('bluetooth', e)}
-            >
-              <ExternalLink size={11} />
-            </button>
-          </div>
+          <span class="card-primary-text">Bluetooth</span>
           <span class="card-secondary-text">
             {#if !wireless.hasBluetooth}
               No Bluetooth adapter installed
@@ -265,30 +254,38 @@
           </span>
         </div>
       </div>
-      <label
-        class="toggle-switch"
-        class:disabled-switch={!wireless.hasBluetooth || wireless.airplaneMode}
-      >
-        <input
-          type="checkbox"
-          checked={wireless.hasBluetooth &&
-            wireless.bluetoothEnabled &&
-            !wireless.airplaneMode}
-          disabled={!wireless.hasBluetooth || wireless.airplaneMode}
-          onchange={toggleBluetooth}
-        />
-        <span class="slider"></span>
-      </label>
+      <div class="card-controls-right">
+        <button
+          type="button"
+          class="quick-open-btn"
+          use:islandTooltip={'Open Windows Bluetooth Settings'}
+          onclick={(e) => openSystemDialog('bluetooth', e)}
+          aria-label="Open Windows Bluetooth Settings"
+        >
+          <ExternalLink size={12} />
+        </button>
+        <label
+          class="toggle-switch"
+          class:disabled-switch={!wireless.hasBluetooth ||
+            wireless.airplaneMode}
+        >
+          <input
+            type="checkbox"
+            checked={wireless.hasBluetooth &&
+              wireless.bluetoothEnabled &&
+              !wireless.airplaneMode}
+            disabled={!wireless.hasBluetooth || wireless.airplaneMode}
+            onchange={toggleBluetooth}
+          />
+          <span class="slider"></span>
+        </label>
+      </div>
     </div>
 
     <!-- Battery & Power Card -->
     <div class="bento-action-card">
       <div class="card-left">
-        <div
-          class="card-icon-circle"
-          class:battery-charging={battery.isCharging}
-          class:battery-low={!battery.isCharging && battery.percentage <= 15}
-        >
+        <div class="card-icon-circle">
           {#if !battery.hasBattery}
             <Plug size={18} />
           {:else if battery.isCharging}
@@ -300,56 +297,46 @@
           {/if}
         </div>
         <div class="card-info">
-          <div class="card-title-row">
-            <span class="card-primary-text">Battery & Power</span>
-            <button
-              class="quick-open-btn"
-              use:islandTooltip={'Open Windows Power Settings'}
-              onclick={(e) => openSystemDialog('battery', e)}
-            >
-              <ExternalLink size={11} />
-            </button>
-          </div>
+          <span class="card-primary-text">Battery & Power</span>
           <span class="card-secondary-text">
             {batteryStateLabel}{remainingStr ? ` • ${remainingStr}` : ''}
           </span>
         </div>
       </div>
-      {#if battery.hasBattery}
-        <label
-          class="toggle-switch"
-          use:islandTooltip={'Toggle Battery Saver Mode'}
+      <div class="card-controls-right">
+        <button
+          type="button"
+          class="quick-open-btn"
+          use:islandTooltip={'Open Windows Power Settings'}
+          onclick={(e) => openSystemDialog('battery', e)}
+          aria-label="Open Windows Power Settings"
         >
-          <input
-            type="checkbox"
-            checked={battery.batterySaver}
-            onchange={toggleBatterySaver}
-          />
-          <span class="slider"></span>
-        </label>
-      {/if}
+          <ExternalLink size={12} />
+        </button>
+        {#if battery.hasBattery}
+          <label
+            class="toggle-switch"
+            use:islandTooltip={'Toggle Battery Saver Mode'}
+          >
+            <input
+              type="checkbox"
+              checked={battery.batterySaver}
+              onchange={toggleBatterySaver}
+            />
+            <span class="slider"></span>
+          </label>
+        {/if}
+      </div>
     </div>
 
     <!-- Airplane Mode Card -->
     <div class="bento-action-card">
       <div class="card-left">
-        <div
-          class="card-icon-circle"
-          class:airplane-active={wireless.airplaneMode}
-        >
+        <div class="card-icon-circle" class:is-off={!wireless.airplaneMode}>
           <Plane size={18} />
         </div>
         <div class="card-info">
-          <div class="card-title-row">
-            <span class="card-primary-text">Airplane Mode</span>
-            <button
-              class="quick-open-btn"
-              use:islandTooltip={'Open Windows Airplane Mode Settings'}
-              onclick={(e) => openSystemDialog('airplane', e)}
-            >
-              <ExternalLink size={11} />
-            </button>
-          </div>
+          <span class="card-primary-text">Airplane Mode</span>
           <span class="card-secondary-text">
             {wireless.airplaneMode
               ? 'All wireless radios disabled'
@@ -357,14 +344,25 @@
           </span>
         </div>
       </div>
-      <label class="toggle-switch">
-        <input
-          type="checkbox"
-          checked={wireless.airplaneMode}
-          onchange={toggleAirplaneMode}
-        />
-        <span class="slider"></span>
-      </label>
+      <div class="card-controls-right">
+        <button
+          type="button"
+          class="quick-open-btn"
+          use:islandTooltip={'Open Windows Airplane Mode Settings'}
+          onclick={(e) => openSystemDialog('airplane', e)}
+          aria-label="Open Windows Airplane Mode Settings"
+        >
+          <ExternalLink size={12} />
+        </button>
+        <label class="toggle-switch">
+          <input
+            type="checkbox"
+            checked={wireless.airplaneMode}
+            onchange={toggleAirplaneMode}
+          />
+          <span class="slider"></span>
+        </label>
+      </div>
     </div>
   </div>
 </div>
