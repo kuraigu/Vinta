@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { ExternalLink, ShieldCheck, GitBranch } from 'lucide-svelte'
+  import { ArrowUpRight, ShieldCheck, GitBranch } from 'lucide-svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
   import appIcon from '@appicon'
@@ -153,7 +153,7 @@
         rel="noreferrer"
         fullWidth={true}
       >
-        <ExternalLink size={12} strokeWidth={2} />
+        <ArrowUpRight size={13} strokeWidth={2} />
         <span>Repository</span>
       </SettingActionButton>
       <SettingActionButton
@@ -162,7 +162,7 @@
         rel="noreferrer"
         fullWidth={true}
       >
-        <ExternalLink size={12} strokeWidth={2} />
+        <ArrowUpRight size={13} strokeWidth={2} />
         <span>Release Notes</span>
       </SettingActionButton>
     </div>
@@ -200,7 +200,7 @@
         class="contributor-full-link"
       >
         <span>View Full Contributor Roster</span>
-        <ExternalLink size={11} />
+        <ArrowUpRight size={12} />
       </a>
     </div>
   {/if}

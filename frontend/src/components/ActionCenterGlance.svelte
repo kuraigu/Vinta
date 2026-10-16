@@ -7,7 +7,7 @@
     Battery,
     Zap,
     Leaf,
-    ExternalLink
+    ArrowUpRight
   } from 'lucide-svelte'
   import ActionCenterPage, {
     config as actionCenterConfig
@@ -123,7 +123,7 @@
           use:islandTooltip={'Open Action Center'}
           aria-label="Open Action Center"
         >
-          <ExternalLink size={12} />
+          <ArrowUpRight size={13} />
         </button>
 
         <label
@@ -171,7 +171,7 @@
             use:islandTooltip={'Open Action Center'}
             aria-label="Open Action Center"
           >
-            <ExternalLink size={12} />
+            <ArrowUpRight size={13} />
           </button>
 
           <label

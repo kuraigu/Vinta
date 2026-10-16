@@ -4,10 +4,14 @@ package main
 import (
 	"Vinta/backend"
 	"Vinta/backend/devtest"
+	"Vinta/backend/services"
 	"embed"
 	"net/http"
+	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -117,6 +121,18 @@ func main() {
 		app.SetDevWindow(devWin)
 		devWin.Show()
 	}
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sigChan
+		services.StopServicesListener()
+		if a := application.Get(); a != nil {
+			a.Quit()
+		}
+	}()
+
+	defer services.StopServicesListener()
 
 	err := wailsApp.Run()
 	if err != nil {

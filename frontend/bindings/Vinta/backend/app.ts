@@ -67,6 +67,13 @@ export function CheckPostUpdateInstalled(): $CancellablePromise<string> {
 }
 
 /**
+ * ClearAllTooltips removes all active floating tooltip regions from the Win32 window clipping mask.
+ */
+export function ClearAllTooltips(): $CancellablePromise<void> {
+  return $Call.ByID(244037923)
+}
+
+/**
  * ClearCache deletes persistent disk cache files, cleans temp sync files, and flushes in-memory caches.
  */
 export function ClearCache(): $CancellablePromise<void> {

@@ -12,7 +12,6 @@
 </script>
 
 <script lang="ts">
-  import { getContext } from 'svelte'
   import {
     Hourglass,
     Clock,
@@ -63,14 +62,8 @@
     type AlarmItem,
     type AlarmRepeat
   } from '../store'
-  import { AppControls } from '../utils/AppControls.svelte'
 
   let { expanded = false }: { expanded?: boolean } = $props()
-
-  const navigate =
-    getContext<
-      (page: unknown, pageConfig: IslandConfig, expand?: boolean) => void
-    >('navigate')
 
   let isSettingsOpen = $state(false)
   let isCustomDrawerOpen = $state(false)
@@ -96,8 +89,16 @@
   const RADIUS = 70
   const CIRCUMFERENCE = 2 * Math.PI * RADIUS
 
-  const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-  const DAY_LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+  const DAY_NAMES = [
+    'Sunday',
+    'Monday',
+    'Tuesday',
+    'Wednesday',
+    'Thursday',
+    'Friday',
+    'Saturday'
+  ]
+  const DAY_SHORT = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
 
   const TIMER_PRESETS = [
     { label: '1m', secs: 60 },
@@ -210,7 +211,7 @@
     if (alarm.repeat === 'weekdays') return 'Mon - Fri'
     if (!alarm.days || alarm.days.length === 0) return 'Custom'
     if (alarm.days.length === 7) return 'Every day'
-    return alarm.days.map((d) => DAY_NAMES[d]).join(', ')
+    return alarm.days.map((d) => DAY_SHORT[d]).join(', ')
   }
 
   // Active minimal mode derivation
@@ -281,15 +282,6 @@
   let timerCountdownDisplay = $derived.by(() =>
     formatDigitalTime($timerAppStore.timer.remainingSeconds)
   )
-
-  /**
-   * Expands the island to the full Timer application canvas.
-   */
-  function handleExpand(): void {
-    if (typeof navigate === 'function') {
-      AppControls.goTimer(navigate)
-    }
-  }
 
   /**
    * Toggles the active timer in minimal mode.
@@ -507,7 +499,7 @@
       <div class="timer-minimal ringing-capsule">
         <div class="minimal-ringing-pulse" aria-hidden="true"></div>
 
-        <button class="minimal-ringing-info" onclick={handleExpand}>
+        <div class="minimal-ringing-info">
           <div class="ringing-bell-badge">
             <Bell size={13} class="bell-shake" />
           </div>
@@ -519,14 +511,14 @@
               {formatAlarmDisplayTime($timerAppStore.ringingAlarm.time, is24H)}
             </span>
           </div>
-        </button>
+        </div>
 
         <div class="ringing-capsule-actions">
           <button
             class="ringing-action-pill snooze"
             onclick={(e: MouseEvent) => {
               e.stopPropagation()
-              snoozeRingingAlarm(5)
+              snoozeRingingAlarm()
             }}
           >
             <Clock size={11} />
@@ -559,7 +551,7 @@
           aria-hidden="true"
         ></div>
 
-        <button class="minimal-info-trigger" onclick={handleExpand}>
+        <div class="minimal-info-trigger">
           <span class="minimal-mode-label">{minimalModeLabel}</span>
 
           <div class="minimal-center-group">
@@ -576,7 +568,7 @@
               </div>
             {/if}
           </div>
-        </button>
+        </div>
 
         <!-- Minimal Mode Controls (Play/Pause and Reset without tooltips) -->
         <div class="minimal-actions">
@@ -705,8 +697,8 @@
           <div class="banner-actions">
             <button
               class="banner-action-btn snooze"
-              onclick={() => snoozeRingingAlarm(5)}
-              use:islandTooltip={'Snooze for 5 minutes'}
+              onclick={() => snoozeRingingAlarm()}
+              use:islandTooltip={'Snooze alarm'}
             >
               <Clock size={12} />
               <span>Snooze</span>
@@ -1088,14 +1080,14 @@
 
               {#if newAlarmRepeat === 'custom'}
                 <div class="custom-days-row">
-                  {#each DAY_LETTERS as letter, idx (idx)}
+                  {#each DAY_SHORT as dayLabel, idx (idx)}
                     <button
                       class="day-toggle-btn"
                       class:active={newAlarmDays.includes(idx)}
                       onclick={() => toggleDaySelection(idx)}
                       use:islandTooltip={DAY_NAMES[idx]}
                     >
-                      {letter}
+                      {dayLabel}
                     </button>
                   {/each}
                 </div>
@@ -1152,9 +1144,29 @@
                         <span class="alarm-item-time"
                           >{formatAlarmDisplayTime(alarm.time, is24H)}</span
                         >
-                        <span class="alarm-repeat-badge"
-                          >{formatAlarmRepeatBadge(alarm)}</span
-                        >
+                        {#if alarm.repeat === 'once'}
+                          <span class="alarm-repeat-badge">Once</span>
+                        {:else if alarm.repeat === 'daily'}
+                          <span class="alarm-repeat-badge">Every day</span>
+                        {:else if alarm.repeat === 'weekdays'}
+                          <div class="alarm-days-circles">
+                            {#each [1, 2, 3, 4, 5] as d}
+                              <span class="alarm-day-circle"
+                                >{DAY_SHORT[d]}</span
+                              >
+                            {/each}
+                          </div>
+                        {:else if alarm.repeat === 'custom' && alarm.days && alarm.days.length > 0}
+                          <div class="alarm-days-circles">
+                            {#each [...alarm.days].sort((a, b) => a - b) as d}
+                              <span class="alarm-day-circle"
+                                >{DAY_SHORT[d]}</span
+                              >
+                            {/each}
+                          </div>
+                        {:else}
+                          <span class="alarm-repeat-badge">Custom</span>
+                        {/if}
                       </div>
                       <span class="alarm-item-label"
                         >{alarm.label || 'Reminder'}</span

@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"Vinta/backend/services"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -65,6 +66,7 @@ func LogCrash(err interface{}, stackTrace string) {
 // SetupPanicRecovery registers a global defer handler to catch panics and write crash logs.
 func SetupPanicRecovery() {
 	if r := recover(); r != nil {
+		services.StopServicesListener()
 		stackTrace := string(debug.Stack())
 		LogCrash(r, stackTrace)
 	}

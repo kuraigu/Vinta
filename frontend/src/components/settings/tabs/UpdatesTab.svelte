@@ -3,7 +3,7 @@
   import {
     RefreshCw,
     Download,
-    ExternalLink,
+    ArrowUpRight,
     Pause,
     Play,
     X,
@@ -334,7 +334,7 @@
               variant="default"
               onclick={() => handleOpenURL($updateInfoStore.release.htmlUrl)}
             >
-              <ExternalLink size={12} strokeWidth={2} />
+              <ArrowUpRight size={13} strokeWidth={2} />
               <span>GitHub</span>
             </SettingActionButton>
           {/if}

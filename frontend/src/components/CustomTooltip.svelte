@@ -9,7 +9,8 @@
   } from '../stores/tooltip'
   import {
     dispatchTooltipBounds,
-    dismissTooltipBounds
+    dismissTooltipBounds,
+    dismissAllTooltips
   } from '../services/tooltipBounds'
 
   let {
@@ -89,14 +90,20 @@
     const id = $activeTooltipStore.id
 
     if (isVisible && tooltipNode && id) {
+      if (lastDispatchedId && lastDispatchedId !== id) {
+        dismissTooltipBounds(lastDispatchedId)
+      }
       const rect = tooltipNode.getBoundingClientRect()
       if (rect.width > 0 && rect.height > 0) {
         dispatchTooltipBounds(id, rect, 7)
         lastDispatchedId = id
       }
-    } else if (!isVisible && lastDispatchedId) {
-      dismissTooltipBounds(lastDispatchedId)
-      lastDispatchedId = ''
+    } else if (!isVisible) {
+      if (lastDispatchedId) {
+        dismissTooltipBounds(lastDispatchedId)
+        lastDispatchedId = ''
+      }
+      dismissAllTooltips()
     }
   }
 
@@ -107,6 +114,7 @@
       dismissTooltipBounds(lastDispatchedId)
       lastDispatchedId = ''
     }
+    dismissAllTooltips()
   })
 </script>
 

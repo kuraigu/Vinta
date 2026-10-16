@@ -20,7 +20,7 @@
     Leaf,
     Plug,
     Plane,
-    ExternalLink
+    ArrowUpRight
   } from 'lucide-svelte'
   import BackButton from '../components/BackButton.svelte'
   import { islandTooltip } from '../services/islandTooltip'
@@ -200,7 +200,7 @@
           onclick={(e) => openSystemDialog('network', e)}
           aria-label="Open Windows Network Flyout"
         >
-          <ExternalLink size={12} />
+          <ArrowUpRight size={13} />
         </button>
         <label
           class="toggle-switch"
@@ -262,7 +262,7 @@
           onclick={(e) => openSystemDialog('bluetooth', e)}
           aria-label="Open Windows Bluetooth Settings"
         >
-          <ExternalLink size={12} />
+          <ArrowUpRight size={13} />
         </button>
         <label
           class="toggle-switch"
@@ -311,7 +311,7 @@
           onclick={(e) => openSystemDialog('battery', e)}
           aria-label="Open Windows Power Settings"
         >
-          <ExternalLink size={12} />
+          <ArrowUpRight size={13} />
         </button>
         {#if battery.hasBattery}
           <label
@@ -352,7 +352,7 @@
           onclick={(e) => openSystemDialog('airplane', e)}
           aria-label="Open Windows Airplane Mode Settings"
         >
-          <ExternalLink size={12} />
+          <ArrowUpRight size={13} />
         </button>
         <label class="toggle-switch">
           <input

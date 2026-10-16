@@ -1320,7 +1320,7 @@ func (a *App) Quit() {
 			a.window.Close()
 		}
 
-		time.Sleep(150 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		os.Exit(0)
 	}()
 }
@@ -1499,8 +1499,20 @@ func (a *App) SetTooltipBounds(bounds TooltipBounds) {
 func (a *App) ClearTooltipBounds(id string) {
 	a.tooltipsMu.Lock()
 	if a.tooltips != nil {
-		delete(a.tooltips, id)
+		if id == "*" || id == "all" || id == "" {
+			a.tooltips = make(map[string]TooltipBounds)
+		} else {
+			delete(a.tooltips, id)
+		}
 	}
+	a.tooltipsMu.Unlock()
+	a.updateWindowRegion()
+}
+
+// ClearAllTooltips removes all active floating tooltip regions from the Win32 window clipping mask.
+func (a *App) ClearAllTooltips() {
+	a.tooltipsMu.Lock()
+	a.tooltips = make(map[string]TooltipBounds)
 	a.tooltipsMu.Unlock()
 	a.updateWindowRegion()
 }

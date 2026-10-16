@@ -114,8 +114,8 @@ export class IslandGestureController {
     this.isSettling = false
     this.hasPointerCaptured = false
     this.dragMovedDistance = 0
-    this.hasExpandedRunway = false
-    this.isTrackRegionActive = false
+    this.hasExpandedRunway = true
+    this.isTrackRegionActive = true
     this.onExpandRunwayCallback = onExpandRunway
     clearTimeout(this.dragResetTimeout)
     this.resetWatchdog(onWatchdogFailsafe)
@@ -123,10 +123,8 @@ export class IslandGestureController {
     this.dragStartX = e.screenX
     this.dragStartOffset = currentOffset
 
-    try {
-      ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
-      this.hasPointerCaptured = true
-    } catch {}
+    // Immediately apply the 100% full-width runway corridor before pointer motion begins
+    onExpandRunway()
   }
 
   /**
@@ -156,13 +154,6 @@ export class IslandGestureController {
         this.onExpandRunwayCallback?.()
       }
 
-      if (!this.hasPointerCaptured) {
-        this.hasPointerCaptured = true
-        try {
-          ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
-        } catch {}
-      }
-
       const rawOffset = this.dragStartOffset + dx
       let targetOffset = rawOffset
 
@@ -187,13 +178,6 @@ export class IslandGestureController {
     this.isDragging = false
     this.hasExpandedRunway = false
     this.onExpandRunwayCallback = undefined
-
-    if (e && this.hasPointerCaptured) {
-      this.hasPointerCaptured = false
-      try {
-        ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
-      } catch {}
-    }
 
     onComplete?.()
 

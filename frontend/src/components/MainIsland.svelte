@@ -121,6 +121,22 @@
       () => onStartDragRunway?.(),
       () => onFinishDrag?.()
     )
+
+    const handleGlobalPointerMove = (ev: PointerEvent) => {
+      handlePointerMove(ev)
+    }
+
+    const handleGlobalPointerUp = (ev: PointerEvent) => {
+      if (ev.type === 'pointercancel' && ev.buttons === 1) return
+      window.removeEventListener('pointermove', handleGlobalPointerMove)
+      window.removeEventListener('pointerup', handleGlobalPointerUp)
+      window.removeEventListener('pointercancel', handleGlobalPointerUp)
+      handlePointerUp(ev)
+    }
+
+    window.addEventListener('pointermove', handleGlobalPointerMove)
+    window.addEventListener('pointerup', handleGlobalPointerUp)
+    window.addEventListener('pointercancel', handleGlobalPointerUp)
   }
 
   function handlePointerMove(e: PointerEvent) {
@@ -135,7 +151,8 @@
   }
 
   function handlePointerUp(e: PointerEvent) {
-    if (!gestures.isDragging) return
+    if (!gestures.isDragging && !gestures.isTrackRegionActive) return
+    if (e.type === 'pointercancel' && e.buttons === 1) return
     onFinishDrag?.()
   }
 
@@ -225,7 +242,6 @@
   onpointerdown={handlePointerDown}
   onpointermove={handlePointerMove}
   onpointerup={handlePointerUp}
-  onpointercancel={handlePointerUp}
   oncontextmenu={handleContextMenu}
   onclick={handleIslandClick}
   ontransitionend={handleTransitionEnd}
@@ -285,7 +301,7 @@
     {/if}
   {/if}
 
-  {#if expanded && $allowDragPositionStore}
+  {#if !isHidden && expanded && $allowDragPositionStore}
     <div
       class="island-drag-handle"
       aria-label="Drag to reposition (or Alt + Drag)"

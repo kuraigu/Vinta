@@ -19,7 +19,8 @@
     WifiOff,
     Thermometer,
     Globe,
-    Trash2
+    Trash2,
+    CloudSun
   } from 'lucide-svelte'
 
   function broadcastWeatherEffect() {
@@ -50,6 +51,82 @@
   let searchResults = $state<GeocodingResult[]>([])
 
   type PresetCity = WeatherLocation & { timezone: string }
+
+  type ConditionPreset = {
+    label: string
+    code: number
+    isNight?: boolean
+    temp: number
+    feelsLike: number
+    condition: string
+  }
+
+  const CONDITION_PRESETS: ConditionPreset[] = [
+    {
+      label: 'Sunny',
+      code: 0,
+      isNight: false,
+      temp: 32,
+      feelsLike: 35,
+      condition: 'Sunny'
+    },
+    {
+      label: 'Night',
+      code: 0,
+      isNight: true,
+      temp: 24,
+      feelsLike: 25,
+      condition: 'Clear Night'
+    },
+    {
+      label: 'Cloudy',
+      code: 2,
+      isNight: false,
+      temp: 28,
+      feelsLike: 30,
+      condition: 'Partly Cloudy'
+    },
+    {
+      label: 'Cloudy Night',
+      code: 2,
+      isNight: true,
+      temp: 25,
+      feelsLike: 26,
+      condition: 'Cloudy Night'
+    },
+    {
+      label: 'Rain',
+      code: 61,
+      isNight: false,
+      temp: 23,
+      feelsLike: 24,
+      condition: 'Rainy'
+    },
+    {
+      label: 'Thunder',
+      code: 95,
+      isNight: false,
+      temp: 21,
+      feelsLike: 22,
+      condition: 'Thunderstorm'
+    },
+    {
+      label: 'Snow',
+      code: 71,
+      isNight: false,
+      temp: -2,
+      feelsLike: -5,
+      condition: 'Snowy'
+    },
+    {
+      label: 'Fog',
+      code: 45,
+      isNight: false,
+      temp: 15,
+      feelsLike: 15,
+      condition: 'Foggy'
+    }
+  ]
 
   const PRESET_CITIES: PresetCity[] = [
     { name: 'Manila', lat: 14.5995, lon: 120.9842, timezone: 'Asia/Manila' },
@@ -114,6 +191,71 @@
     weatherLocationStore.set({ ...currentLocation })
   }
 
+  function applyConditionMock(c: ConditionPreset) {
+    const key = `vinta_weather_cache_${currentLocation.lat.toFixed(4)}_${currentLocation.lon.toFixed(4)}`
+    const now = Date.now()
+    const mock = {
+      location: currentLocation.name,
+      temp: c.temp,
+      feelsLike: c.feelsLike,
+      condition: c.condition,
+      high: c.temp + 3,
+      low: c.temp - 4,
+      humidity: c.code >= 51 ? 85 : 50,
+      windSpeed: 12,
+      windDirection: 180,
+      windDirectionLabel: 'S',
+      pressure: 1013,
+      precipitationProbability: c.code >= 51 ? 85 : 5,
+      uvIndex: '5',
+      weatherCode: c.code,
+      isNight: c.isNight,
+      forecast: [
+        {
+          day: 'Today',
+          tempMax: c.temp + 2,
+          tempMin: c.temp - 3,
+          weatherCode: c.code,
+          icon: null
+        },
+        {
+          day: 'Tue',
+          tempMax: c.temp + 1,
+          tempMin: c.temp - 2,
+          weatherCode: 2,
+          icon: null
+        },
+        {
+          day: 'Wed',
+          tempMax: c.temp + 3,
+          tempMin: c.temp - 1,
+          weatherCode: 0,
+          icon: null
+        },
+        {
+          day: 'Thu',
+          tempMax: c.temp,
+          tempMin: c.temp - 4,
+          weatherCode: 61,
+          icon: null
+        }
+      ],
+      lastUpdated: now
+    }
+    localStorage.setItem(key, JSON.stringify(mock))
+    try {
+      Events.Emit('devtest-weather-mock', { mock })
+    } catch {}
+    weatherLocationStore.set({ ...currentLocation })
+  }
+
+  function resetToLiveWeather() {
+    clearWeatherCache()
+    try {
+      Events.Emit('devtest-weather-mock', { mock: null })
+    } catch {}
+  }
+
   async function handleSearch() {
     if (!searchQuery || searchQuery.trim().length < 2) {
       searchResults = []
@@ -145,6 +287,28 @@
           {city.name}
         </button>
       {/each}
+    </div>
+  </div>
+
+  <!-- Condition Testing Presets -->
+  <div class="preset-row">
+    <div class="section-title">
+      <CloudSun size={12} />
+      <span class="label">Simulate Condition:</span>
+    </div>
+    <div class="preset-pills">
+      {#each CONDITION_PRESETS as c (c.label)}
+        <button class="city-pill" onclick={() => applyConditionMock(c)}>
+          {c.label}
+        </button>
+      {/each}
+      <button
+        class="city-pill reset-pill"
+        onclick={resetToLiveWeather}
+        title="Clear simulation and fetch live weather"
+      >
+        Reset Live
+      </button>
     </div>
   </div>
 
@@ -303,6 +467,17 @@
     background: var(--c-primary);
     color: #ffffff;
     border-color: var(--c-primary);
+  }
+
+  .city-pill.reset-pill {
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.35);
+    color: #f87171;
+  }
+
+  .city-pill.reset-pill:hover {
+    background: rgba(239, 68, 68, 0.22);
+    border-color: rgba(239, 68, 68, 0.55);
   }
 
   .search-row {

@@ -6,6 +6,7 @@ import {
 import { get } from 'svelte/store'
 import { debugLogs } from '../devtest/debugConfig'
 import { resyncAllSatellites } from '../stores/satellites'
+import { dismissAllTooltips } from './tooltipBounds'
 
 /**
  * Window region boundary dimensions and corner radius.
@@ -44,6 +45,7 @@ export class WindowBoundsManager {
   private resizeObserver: ResizeObserver | null = null
   private recoveryDebounceTimer?: number
   private transitionEndDebounceTimer?: number
+  private followUpCacheBustTimeout?: number
 
   public currentOSBounds: WindowBounds = { w: 0, h: 0, r: 0 }
   public targetPendingBounds: WindowBounds = { w: 0, h: 0, r: 0 }
@@ -75,12 +77,6 @@ export class WindowBoundsManager {
       explicitOffset !== undefined ? explicitOffset : this.getLiveOffset()
     )
 
-    const isCorridorUnchanged =
-      computedW === -1 &&
-      this.lastDispatchedBounds?.w === -1 &&
-      this.lastDispatchedBounds.h === computedH &&
-      this.lastDispatchedBounds.scale === scale
-
     const isTightUnchanged =
       this.lastDispatchedBounds !== null &&
       this.lastDispatchedBounds.w === computedW &&
@@ -89,16 +85,24 @@ export class WindowBoundsManager {
       this.lastDispatchedBounds.offset === offset &&
       this.lastDispatchedBounds.scale === scale
 
-    if (isCorridorUnchanged || isTightUnchanged) {
+    if (computedW !== -1 && isTightUnchanged) {
+      return Promise.resolve()
+    }
+
+    if (computedW === -1) {
+      this.cancelPendingTransition()
+    } else if (this.getIsDragging()) {
       return Promise.resolve()
     }
 
     if (this.isBoundsIpcPending) {
-      this.pendingBoundsArgs = {
-        w: computedW,
-        h: computedH,
-        r: computedR,
-        offset
+      if (!this.getIsDragging() || computedW === -1) {
+        this.pendingBoundsArgs = {
+          w: computedW,
+          h: computedH,
+          r: computedR,
+          offset
+        }
       }
       return new Promise<void>((resolve) => {
         const prevResolver = this.pendingBoundsResolver
@@ -208,6 +212,8 @@ export class WindowBoundsManager {
    * Resets active shrinking timeout, disconnects observers, and removes lingering transition listeners.
    */
   public cancelPendingTransition(): void {
+    clearTimeout(this.followUpCacheBustTimeout)
+    this.followUpCacheBustTimeout = undefined
     clearTimeout(this.recoveryDebounceTimer)
     this.recoveryDebounceTimer = undefined
     clearTimeout(this.transitionEndDebounceTimer)
@@ -355,37 +361,23 @@ export class WindowBoundsManager {
       this.pendingBoundsArgs = null
       this.lastDispatchedBounds = null
 
-      let finalW = Math.round(target.w)
-      let finalH = Math.round(target.h)
+      const finalW = Math.round(target.w)
+      const finalH = Math.round(target.h)
       const finalR = Math.round(target.r)
-      let needsFollowUp = false
-
-      if (islandNode) {
-        const rect = islandNode.getBoundingClientRect()
-        if (rect.width > 0 && rect.height > 0) {
-          const domW = Math.round(rect.width)
-          const domH = Math.round(rect.height)
-          if (domW > finalW) {
-            finalW = domW
-            needsFollowUp = true
-          }
-          if (domH > finalH) {
-            finalH = domH
-            needsFollowUp = true
-          }
-        }
-      }
 
       this.currentOSBounds = { w: finalW, h: finalH, r: finalR }
       const liveOffset = this.getLiveOffset()
       const effectiveOffset = Number.isFinite(liveOffset) ? liveOffset : offset
       await this.updateBounds(finalW, finalH, finalR, effectiveOffset)
       resyncAllSatellites()
+      dismissAllTooltips()
 
       // Post-animation secondary verification to bust Windows DWM cache under lag
-      window.setTimeout(() => {
+      clearTimeout(this.followUpCacheBustTimeout)
+      this.followUpCacheBustTimeout = window.setTimeout(() => {
         if (this.getIsDragging()) return
         resyncAllSatellites()
+        dismissAllTooltips()
         const currentLive = this.getLiveOffset()
         const followUpOffset = Number.isFinite(currentLive)
           ? currentLive
@@ -393,13 +385,6 @@ export class WindowBoundsManager {
         // Pass -finalR to bust native cache in Go and guarantee SetWindowRgn
         this.updateBounds(finalW, finalH, -finalR, followUpOffset)
       }, 80)
-
-      if (needsFollowUp) {
-        window.setTimeout(() => {
-          if (this.getIsDragging()) return
-          this.recoverRestingBounds(target, offset, islandNode, _isHidden)
-        }, 120)
-      }
     }, delay)
   }
 

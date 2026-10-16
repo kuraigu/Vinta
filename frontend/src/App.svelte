@@ -24,6 +24,9 @@
   import CalendarPage, {
     config as calendarConfig
   } from './pages/CalendarPage.svelte'
+  import WeatherPage, {
+    config as weatherConfig
+  } from './pages/WeatherPage.svelte'
 
   import MainIsland from './components/MainIsland.svelte'
   import ControlsSatellite from './components/ControlsSatellite.svelte'
@@ -66,6 +69,7 @@
     weatherUnitStore,
     timezoneStore,
     simulateOfflineStore,
+    simulateWeatherStore,
     isSimulatingBatteryStore,
     isSimulatingWirelessStore,
     devPinnedStore,
@@ -77,6 +81,7 @@
     type WeatherLocation,
     type TemperatureUnit
   } from './store'
+  import { hideTooltip } from './stores/tooltip'
   import { debugBoundsOverlay, debugLogs } from './devtest/debugConfig'
 
   function syncDebugBoundsOverlay(enabled: boolean) {
@@ -118,6 +123,7 @@
     }
     previousExpanded = isExp
 
+    hideTooltip()
     clearTimeout(islandTransitionTimeout)
     isDockVisible = false
     const transitionDuration = isExp ? 340 : 280
@@ -126,12 +132,18 @@
       if (isExp) {
         isDockVisible = true
       }
-      bounds.recoverRestingBounds(
-        getBoundsForState(),
-        clampedOffsetX,
-        islandNode,
-        isHidden
-      )
+      if (
+        !gestures.isDragging &&
+        !gestures.isTrackRegionActive &&
+        !gestures.isSettling
+      ) {
+        bounds.recoverRestingBounds(
+          getBoundsForState(),
+          clampedOffsetX,
+          islandNode,
+          isHidden
+        )
+      }
     }, transitionDuration)
   }
   $effect(handleExpandedTransitionEffect)
@@ -461,7 +473,8 @@
   })
 
   bounds.getLiveOffset = () => clampedOffsetX
-  bounds.getIsDragging = () => gestures.isDragging
+  bounds.getIsDragging = () =>
+    gestures.isDragging || gestures.isTrackRegionActive || gestures.isSettling
 
   let glowOpacity = $derived(
     $glowIntensityStore === 'disabled'
@@ -659,6 +672,7 @@
     clearTimeout(hideTimeout)
     isTimeoutActive = false
     isControlsDrawerOpen = false
+    isHovering = false
     finishDragGesture()
 
     wasExpandedBeforeHide = expanded
@@ -673,7 +687,7 @@
     bounds.syncBounds(nextBounds, clampedOffsetX, islandNode, false, true)
 
     dormantUnmountTimeout = window.setTimeout(() => {
-      if (isHidden && !isHovering) {
+      if (isHidden) {
         isPageDormant = true
         expanded = false
         const fallback = getFallbackPage()
@@ -867,7 +881,7 @@
       }
       window.setTimeout(() => {
         Quit().catch(() => {})
-      }, 360)
+      }, 120)
     }
 
     window.addEventListener('vinta-overlay', handleOverlayChange)
@@ -894,6 +908,11 @@
           !document.hidden &&
           document.hasFocus()
         ) {
+          return
+        }
+      }
+      if (e?.type === 'pointercancel') {
+        if (e instanceof PointerEvent && e.buttons === 1) {
           return
         }
       }
@@ -1072,7 +1091,8 @@
           settings: { page: SettingsPage, config: settingsConfig },
           calculator: { page: CalculatorPage, config: calcConfig },
           timer: { page: TimerPage, config: timerConfig },
-          calendar: { page: CalendarPage, config: calendarConfig }
+          calendar: { page: CalendarPage, config: calendarConfig },
+          weather: { page: WeatherPage, config: weatherConfig }
         }
 
         const match = pageMappings[data.mode]
@@ -1172,6 +1192,14 @@
       }
     )
 
+    const unsubDevTestWeatherMock = Events.On(
+      'devtest-weather-mock',
+      (ev: { data: unknown }) => {
+        const data = ev?.data as { mock?: any }
+        simulateWeatherStore.set(data?.mock ?? null)
+      }
+    )
+
     return () => {
       stopIdleReconciler()
       finishDragGesture()
@@ -1186,6 +1214,7 @@
       unsubDevTestBattery()
       unsubDevTestWireless()
       unsubDevTestWeather()
+      unsubDevTestWeatherMock()
       clearHoverGrace()
       clearTimeout(dormantUnmountTimeout)
       clearTimeout(memoryTrimTimeout)

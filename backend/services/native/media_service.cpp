@@ -12,6 +12,7 @@
 #include <unordered_set>
 
 #include <atomic>
+#include <condition_variable>
 #include <mutex>
 #include <thread>
 
@@ -20,6 +21,8 @@ namespace winrt_media = winrt::Windows::Media::Control;
 static NativeMediaCallback g_mediaCb = nullptr;
 static std::atomic<bool> g_mediaRunning{false};
 static std::thread g_mediaSessionPollThread;
+static std::condition_variable g_mediaStopCv;
+static std::mutex g_mediaStopMutex;
 
 static winrt_media::GlobalSystemMediaTransportControlsSessionManager g_sessionManager{nullptr};
 static winrt_media::GlobalSystemMediaTransportControlsSession g_currentSession{nullptr};
@@ -1559,8 +1562,12 @@ void StartMediaService(NativeMediaCallback cb) {
         UpdateCurrentSession();
 
         while (g_mediaRunning) {
-            // Heartbeat fallback: real-time updates are handled asynchronously by WinRT push callbacks
-            std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+            {
+                std::unique_lock<std::mutex> lock(g_mediaStopMutex);
+                if (g_mediaStopCv.wait_for(lock, std::chrono::milliseconds(3000), [] { return !g_mediaRunning.load(); })) {
+                    break;
+                }
+            }
             if (g_mediaRunning) {
                 UpdateCurrentSession();
             }
@@ -1571,6 +1578,7 @@ void StartMediaService(NativeMediaCallback cb) {
 void StopMediaService() {
     if (!g_mediaRunning) return;
     g_mediaRunning = false;
+    g_mediaStopCv.notify_all();
 
     if (g_mediaSessionPollThread.joinable()) g_mediaSessionPollThread.join();
 
