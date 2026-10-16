@@ -71,11 +71,17 @@
 
       adjustedX = finalX
       adjustedY = finalY
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))
+      }
     })
 
     return {
       destroy() {
         if (node.parentElement) node.parentElement.removeChild(node)
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))
+        }
       }
     }
   }

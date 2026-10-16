@@ -12,6 +12,7 @@ export {
     AppInfo,
     Contributor,
     DisplayLayout,
+    HitRect,
     MonitorInfo,
     NoteFileInfo,
     ReleaseInfo,

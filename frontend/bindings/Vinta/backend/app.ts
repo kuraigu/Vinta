@@ -541,10 +541,24 @@ export function SetFloatingControlsBounds(width: number, height: number, radius:
 }
 
 /**
+ * SetForceInteractive forces the window to be interactive during dragging or modal flows.
+ */
+export function SetForceInteractive(active: boolean): $CancellablePromise<void> {
+    return $Call.ByID(3268980504, active);
+}
+
+/**
  * SetHardwareAcceleration persists the GPU acceleration setting.
  */
 export function SetHardwareAcceleration(enabled: boolean): $CancellablePromise<void> {
     return $Call.ByID(3309982961, enabled);
+}
+
+/**
+ * SetHitRects updates the list of physical pixel rectangles that receive mouse input.
+ */
+export function SetHitRects(rects: $models.HitRect[]): $CancellablePromise<void> {
+    return $Call.ByID(275492897, rects);
 }
 
 /**
@@ -560,6 +574,13 @@ export function SetIgnoreMouseEvents(ignore: boolean): $CancellablePromise<void>
  */
 export function SetIsHidden(hidden: boolean): $CancellablePromise<void> {
     return $Call.ByID(3839965369, hidden);
+}
+
+/**
+ * SetPillBounds updates the physical pixel bounding box of the active island for hit testing.
+ */
+export function SetPillBounds(left: number, top: number, width: number, height: number): $CancellablePromise<void> {
+    return $Call.ByID(2473066851, left, top, width, height);
 }
 
 /**

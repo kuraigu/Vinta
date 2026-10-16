@@ -562,6 +562,11 @@
     pageConfig: IslandConfig,
     expand: boolean = false
   ) {
+    gestures.finishSettling()
+    if (!expand && gestures.isDragging) {
+      finishDragGesture()
+    }
+
     if (page !== NotificationPage) {
       wasHiddenBeforeNotif = false
     }
@@ -614,6 +619,10 @@
       $hiddenPillOffsetXStore = targetOffset
     }
     bounds.syncBounds(nextBounds, targetOffset, islandNode, false, false)
+
+    window.setTimeout(() => {
+      bounds.syncPillBounds(islandNode, isHidden)
+    }, expand ? 330 : 230)
 
     triggerGlow()
   }
@@ -917,8 +926,13 @@
       }, 120)
     }
 
+    const handleResyncBounds = () => {
+      bounds.syncPillBounds(islandNode, isHidden)
+    }
+
     window.addEventListener('vinta-overlay', handleOverlayChange)
     window.addEventListener('vinta-quit', handleQuit)
+    window.addEventListener('vinta-resync-bounds', handleResyncBounds)
 
     const refreshDisplay = async () => {
       try {
@@ -1281,10 +1295,7 @@
       window.removeEventListener('pointercancel', handleGlobalDragFailsafe)
       window.removeEventListener('keydown', handleWindowKeydownFailsafe)
       window.removeEventListener('focus', handleWindowFocus)
-      window.removeEventListener(
-        'vinta-recover-bounds',
-        handleRecoverBoundsEvent
-      )
+      window.removeEventListener('vinta-resync-bounds', handleResyncBounds)
     }
   })
 </script>

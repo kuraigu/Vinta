@@ -77,8 +77,8 @@ func main() {
 		}
 	}
 	overlayHeight := maxTopOffset + 680
-	if vHeight > 0 && overlayHeight > vHeight {
-		overlayHeight = vHeight
+	if vHeight > 0 && overlayHeight >= vHeight {
+		overlayHeight = vHeight - 1
 	}
 	if vWidth <= 0 {
 		vWidth = 1920

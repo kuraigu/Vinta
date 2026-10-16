@@ -46,6 +46,8 @@ var (
 	procIsIconic                 = user32.NewProc("IsIconic")
 	procGetAncestor              = user32.NewProc("GetAncestor")
 	procRedrawWindow             = user32.NewProc("RedrawWindow")
+	procGetCursorPos             = user32.NewProc("GetCursorPos")
+	procScreenToClient           = user32.NewProc("ScreenToClient")
 
 	shell32                          = syscall.NewLazyDLL("shell32.dll")
 	procSHQueryUserNotificationState = shell32.NewProc("SHQueryUserNotificationState")
@@ -200,6 +202,22 @@ type processPowerThrottlingState struct {
 
 type rect32 struct {
 	Left, Top, Right, Bottom int32
+}
+
+type point32 struct {
+	X, Y int32
+}
+
+// HitRect defines a physical client rectangle for hit testing.
+type HitRect struct {
+	Left   int `json:"left"`
+	Top    int `json:"top"`
+	Width  int `json:"width"`
+	Height int `json:"height"`
+}
+
+type pillHitBounds struct {
+	left, top, right, bottom int32
 }
 
 type monitorInfoW struct {
@@ -1162,6 +1180,10 @@ type App struct {
 	isFullscreenRelocated    bool
 	originalFullscreenOffset int
 	originalFullscreenMonID  int
+	pillHitMu                sync.RWMutex
+	pillHitRects             []pillHitBounds
+	isForceInteractive       bool
+	isCurrentlyInteractive   bool
 }
 
 // NewApp creates a new App application struct
@@ -1243,8 +1265,11 @@ func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 
 			gwl := int32(GWL_EXSTYLE)
 			style, _, _ := procGetWindowLong.Call(hwnd, uintptr(gwl))
-			style = (style | WS_EX_TOOLWINDOW | WS_EX_TOPMOST) &^ WS_EX_NOACTIVATE &^ WS_EX_APPWINDOW
+			style = (style | WS_EX_TOOLWINDOW | WS_EX_TOPMOST | WS_EX_NOACTIVATE | WS_EX_LAYERED | WS_EX_TRANSPARENT) &^ WS_EX_APPWINDOW
 			_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwl), style)
+
+			// Remove any clipping region so the canvas is fully transparent and unclipped
+			_, _, _ = procSetWindowRgn.Call(hwnd, 0, 1)
 
 			a.setupForegroundEventHook(hwnd)
 
@@ -1257,8 +1282,8 @@ func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 				}
 			}
 			overlayHeight := maxTopOffset + 680
-			if vHeight > 0 && overlayHeight > vHeight {
-				overlayHeight = vHeight
+			if vHeight > 0 && overlayHeight >= vHeight {
+				overlayHeight = vHeight - 1
 			}
 			if vWidth > 0 {
 				_, _, _ = procSetWindowPos.Call(
@@ -1272,7 +1297,7 @@ func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 
 			go services.StartServicesListener()
 
-			a.updateWindowRegion()
+			a.startHitTestingLoop(hwnd)
 		})
 	}
 
@@ -1383,9 +1408,6 @@ func (a *App) Shutdown(_ context.Context) {
 // It updates the native Win32 click-through region so only the visible widget is clickable.
 func (a *App) SetWidgetBounds(width int, height int, radius int, scale float64, offsetX int) {
 	if radius < 0 {
-		regionMu.Lock()
-		lastRegion = regionCache{}
-		regionMu.Unlock()
 		if radius == -999 {
 			if a.isHidden || height <= 24 {
 				radius = 6
@@ -1417,6 +1439,111 @@ func (a *App) SetWidgetBounds(width int, height int, radius int, scale float64, 
 		a.scale = scale
 	}
 	a.updateWindowRegion()
+}
+
+// SetHitRects updates the list of physical pixel rectangles that receive mouse input.
+func (a *App) SetHitRects(rects []HitRect) {
+	a.pillHitMu.Lock()
+	a.pillHitRects = make([]pillHitBounds, 0, len(rects))
+	for _, r := range rects {
+		if r.Width > 0 && r.Height > 0 {
+			a.pillHitRects = append(a.pillHitRects, pillHitBounds{
+				left:   int32(r.Left),
+				top:    int32(r.Top),
+				right:  int32(r.Left + r.Width),
+				bottom: int32(r.Top + r.Height),
+			})
+		}
+	}
+	a.pillHitMu.Unlock()
+}
+
+// SetPillBounds updates the physical pixel bounding box of the active island for hit testing.
+func (a *App) SetPillBounds(left, top, width, height int) {
+	if width <= 0 || height <= 0 {
+		a.SetHitRects(nil)
+	} else {
+		a.SetHitRects([]HitRect{{Left: left, Top: top, Width: width, Height: height}})
+	}
+}
+
+// SetForceInteractive forces the window to be interactive during dragging or modal flows.
+func (a *App) SetForceInteractive(active bool) {
+	a.pillHitMu.Lock()
+	a.isForceInteractive = active
+	a.pillHitMu.Unlock()
+
+	hwnd := a.getHwnd()
+	if hwnd == 0 {
+		return
+	}
+	gwl := int32(GWL_EXSTYLE)
+	style, _, _ := procGetWindowLong.Call(hwnd, uintptr(gwl))
+	if active {
+		a.isCurrentlyInteractive = true
+		style &^= WS_EX_TRANSPARENT
+		_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwl), style)
+	}
+}
+
+// startHitTestingLoop runs a 60Hz background loop to dynamically toggle WS_EX_TRANSPARENT
+// based on cursor proximity to the active pill bounding box, active satellites, or force-interactive mode.
+func (a *App) startHitTestingLoop(hwnd uintptr) {
+	go func() {
+		defer SetupPanicRecovery()
+		ticker := time.NewTicker(16 * time.Millisecond)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			if hwnd == 0 {
+				continue
+			}
+			isWin, _, _ := procIsWindow.Call(hwnd)
+			if isWin == 0 {
+				return
+			}
+
+			a.pillHitMu.RLock()
+			force := a.isForceInteractive
+			rects := make([]pillHitBounds, len(a.pillHitRects))
+			copy(rects, a.pillHitRects)
+			a.pillHitMu.RUnlock()
+
+			isHit := false
+			if force {
+				isHit = true
+			} else if len(rects) > 0 {
+				var pt point32
+				ret, _, _ := procGetCursorPos.Call(uintptr(unsafe.Pointer(&pt)))
+				if ret != 0 {
+					retScreen, _, _ := procScreenToClient.Call(hwnd, uintptr(unsafe.Pointer(&pt)))
+					if retScreen != 0 {
+						// 6-pixel buffer around the hit bounding boxes for smooth hover transitions across satellite gaps
+						const buf int32 = 6
+						for _, rect := range rects {
+							if pt.X >= rect.left-buf && pt.X <= rect.right+buf &&
+								pt.Y >= rect.top-buf && pt.Y <= rect.bottom+buf {
+								isHit = true
+								break
+							}
+						}
+					}
+				}
+			}
+
+			if isHit != a.isCurrentlyInteractive {
+				a.isCurrentlyInteractive = isHit
+				gwl := int32(GWL_EXSTYLE)
+				style, _, _ := procGetWindowLong.Call(hwnd, uintptr(gwl))
+				if isHit {
+					style &^= WS_EX_TRANSPARENT
+				} else {
+					style |= WS_EX_TRANSPARENT
+				}
+				_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwl), style)
+			}
+		}
+	}()
 }
 
 // SetClipboardMonitoring satisfies existing frontend bindings as clipboard monitoring is retired.
@@ -1646,16 +1773,14 @@ func (a *App) SetIgnoreMouseEvents(ignore bool) {
 		return
 	}
 
+	gwl := int32(GWL_EXSTYLE)
+	style, _, _ := procGetWindowLong.Call(hwnd, uintptr(gwl))
 	if ignore {
-		// Lift clipping region completely so island renders seamlessly without edge clipping during flight
-		_, _, _ = procSetWindowRgn.Call(hwnd, 0, 0)
+		style |= WS_EX_TRANSPARENT
 	} else {
-		// Invalidate region cache and restore tight hit-testing region around the pill
-		regionMu.Lock()
-		lastRegion = regionCache{}
-		regionMu.Unlock()
-		a.updateWindowRegion()
+		style &^= WS_EX_TRANSPARENT
 	}
+	_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwl), style)
 }
 
 // TrimMemory requests Windows to reclaim unused physical RAM pages from the Vinta process working set.
@@ -1849,662 +1974,14 @@ func (a *App) getActiveSatellites() []SatelliteBounds {
 	return result
 }
 
-func satellitesSignature(satellites []SatelliteBounds) string {
-	if len(satellites) == 0 {
-		return ""
-	}
-	var sb strings.Builder
-	for _, s := range satellites {
-		fmt.Fprintf(&sb, "%s:%s:%t:%d:%d:%d:%d:%d:%v:%d:%v:%d:%d:%d:%s;", s.ID, s.Anchor, s.Active, s.X, s.Y, s.Width, s.Height, s.Radius, s.Radii, s.Gap, s.Gaps, s.OffsetX, s.OffsetY, s.TooltipPad, s.TooltipSide)
-	}
-	return sb.String()
-}
-
-func tooltipsSignature(tooltips []TooltipBounds) string {
-	if len(tooltips) == 0 {
-		return ""
-	}
-	var sb strings.Builder
-	for _, t := range tooltips {
-		fmt.Fprintf(&sb, "%s:%d:%d:%d:%d:%d;", t.ID, t.X, t.Y, t.Width, t.Height, t.Radius)
-	}
-	return sb.String()
-}
-
-type regionCache struct {
-	w, h, r, offsetX int
-	effectiveMainW   int
-	effectiveMainH   int
-	totalVintaH      int
-	satellitesHash   string
-	tooltipsHash     string
-	padding          int
-	scale            float64
-	sw               int
-}
-
-var (
-	regionMu       sync.Mutex
-	lastRegion     regionCache
-	cachedClientSw int
-)
-
-// computeTotalVintaHeight calculates the total vertical span in physical pixels
-// required to cover all currently visible Vinta elements (island, satellites).
-func (a *App) computeTotalVintaHeight(effectiveMainH int, scale float64) int {
-	scaleInt := func(v int) int {
-		return int(float64(v) * scale)
-	}
-
-	totalH := scaleInt(effectiveMainH)
-	if totalH <= 0 {
-		totalH = scaleInt(36)
-	}
-
-	// Floating satellites anchored around the main island
-	a.satellitesMu.RLock()
-	for _, sat := range a.satellites {
-		if !sat.Active || sat.Width <= 0 || sat.Height <= 0 {
-			continue
-		}
-		var satBottom int
-		switch sat.Anchor {
-		case "bottom":
-			gapScaled := scaleInt(sat.Gap)
-			if sat.Gaps[0] > 0 {
-				gapScaled = scaleInt(sat.Gaps[0])
-			}
-			hScaled := scaleInt(sat.Height)
-			satOffsetScaledY := scaleInt(sat.OffsetY)
-			satBottom = totalH + gapScaled + satOffsetScaledY + hScaled
-		default:
-			satOffsetScaledY := scaleInt(sat.OffsetY)
-			hScaled := scaleInt(sat.Height)
-			tPad := scaleInt(sat.TooltipPad)
-			satBottom = satOffsetScaledY + hScaled + tPad
-		}
-		if satBottom > totalH {
-			totalH = satBottom
-		}
-	}
-	a.satellitesMu.RUnlock()
-
-	// Add outside margin padding so shadows and hovering margins are never clipped
-	pad := scaleInt(OutsidePadding + 4)
-	return totalH + pad
-}
-
-// updateWindowRegion updates the Win32 window clipping region for click-through.
+// updateWindowRegion is a no-op under the unclipped transparent canvas hit-testing architecture.
 func (a *App) updateWindowRegion() {
-	hwnd := a.getHwnd()
-	if hwnd == 0 {
-		return
-	}
-
-	padding := OutsidePadding
-	// Use minimal padding when in hidden state so click-through around the small pill is precise
-	if a.isHidden || (a.pillW > 0 && a.pillW <= 130 && a.pillH <= 36) {
-		padding = HiddenOutsidePadding
-	}
-
-	mainW := a.pillW
-	mainH := a.pillH
-	mainR := a.pillR
-	effectiveMainW := a.pillW
-	effectiveMainH := a.pillH
-
-	if a.isHidden {
-		if mainW <= 0 {
-			mainW = 72
-		}
-		if mainH <= 0 {
-			mainH = 12
-		}
-		if mainR <= 0 {
-			mainR = 6
-		}
-		effectiveMainW = mainW
-		effectiveMainH = mainH
-	} else {
-		if effectiveMainW <= 0 && a.restingW > 0 {
-			effectiveMainW = a.restingW
-		}
-		if effectiveMainH <= 0 && a.restingH > 0 {
-			effectiveMainH = a.restingH
-		}
-	}
-
-	totalVintaH := a.computeTotalVintaHeight(effectiveMainH, a.scale)
-	var sats []SatelliteBounds
-	if !a.isHidden {
-		sats = a.getActiveSatellites()
-	}
-	var tooltips []TooltipBounds
-	if !a.isHidden {
-		tooltips = a.getActiveTooltips()
-	}
-	setClickRegion(hwnd, mainW, mainH, mainR, a.offsetX, effectiveMainW, effectiveMainH, totalVintaH, sats, tooltips, padding, a.scale)
 }
 
-// setClickRegion updates the Win32 window region to combine the main pill, satellites, and active tooltips.
-func setClickRegion(hwnd uintptr, w int, h int, r int, offsetX int, effectiveMainW int, effectiveMainH int, totalVintaH int, satellites []SatelliteBounds, tooltips []TooltipBounds, padding int, scale float64) {
-	if hwnd == 0 {
-		return
-	}
-	regionMu.Lock()
-	defer regionMu.Unlock()
-
-	if scale <= 0 {
-		scale = 1.0
-	}
-
-	sw := cachedClientSw
-	if sw <= 0 {
-		type winRect struct {
-			Left, Top, Right, Bottom int32
-		}
-		var cr winRect
-		_, _, _ = procGetClientRect.Call(hwnd, uintptr(unsafe.Pointer(&cr)))
-		sw = int(cr.Right - cr.Left)
-		if sw > 0 {
-			cachedClientSw = sw
-		}
-	}
-	if sw <= 0 {
-		sw = screenWidth
-		if sw <= 0 {
-			sw = 1920
-		}
-	}
-	if _, _, vWidth, _, _, _ := GetDisplayMetrics(); vWidth > sw {
-		sw = vWidth
-		cachedClientSw = sw
-	}
-
-	satSig := satellitesSignature(satellites)
-	ttSig := tooltipsSignature(tooltips)
-
-	// Early exit if identical region is already applied to HWND
-	if lastRegion.w == w && lastRegion.h == h && lastRegion.r == r &&
-		lastRegion.effectiveMainW == effectiveMainW &&
-		lastRegion.effectiveMainH == effectiveMainH &&
-		lastRegion.offsetX == offsetX && lastRegion.totalVintaH == totalVintaH &&
-		lastRegion.satellitesHash == satSig &&
-		lastRegion.tooltipsHash == ttSig &&
-		lastRegion.padding == padding && lastRegion.scale == scale && lastRegion.sw == sw {
-		return
-	}
-
-	lastRegion = regionCache{
-		w: w, h: h, r: r,
-		effectiveMainW: effectiveMainW,
-		effectiveMainH: effectiveMainH,
-		offsetX:        offsetX,
-		totalVintaH:    totalVintaH,
-		satellitesHash: satSig,
-		tooltipsHash:   ttSig,
-		padding:        padding, scale: scale, sw: sw,
-	}
-
-	if w <= 0 && h <= 0 {
-		_, _, _ = procSetWindowRgn.Call(hwnd, 0, 1)
-		_, _, _ = procRedrawWindow.Call(hwnd, 0, 0, 0x0001|0x0400|0x0100)
-		return
-	}
-
-	var regions []uintptr
-	if w == -1 {
-		if hrgnMain := createMainPillRegion(w, h, r, offsetX, sw, padding, totalVintaH, scale); hrgnMain != 0 {
-			_, _, _ = procSetWindowRgn.Call(hwnd, hrgnMain, 1)
-			_, _, _ = procRedrawWindow.Call(hwnd, 0, 0, 0x0001|0x0400|0x0100)
-		}
-		return
-	}
-
-	if hrgnMain := createMainPillRegion(w, h, r, offsetX, sw, padding, totalVintaH, scale); hrgnMain != 0 {
-		regions = append(regions, hrgnMain)
-	}
-	for _, sat := range satellites {
-		if hrgnSat := createSatelliteRegion(sat, effectiveMainW, effectiveMainH, offsetX, sw, scale); hrgnSat != 0 {
-			regions = append(regions, hrgnSat)
-		}
-	}
-	for _, tt := range tooltips {
-		if hrgnTt := createTooltipRegion(tt, scale); hrgnTt != 0 {
-			regions = append(regions, hrgnTt)
-		}
-	}
-
-	hrgnFinal := combineWindowRegions(regions...)
-	if hrgnFinal != 0 {
-		_, _, _ = procSetWindowRgn.Call(hwnd, hrgnFinal, 1)
-		_, _, _ = procRedrawWindow.Call(hwnd, 0, 0, 0x0001|0x0400|0x0100)
-	}
+// setClickRegion is a no-op under the unclipped transparent canvas hit-testing architecture.
+func setClickRegion(_ uintptr, _ ...any) {
 }
 
-// createTooltipRegion creates a Win32 HRGN for an active floating tooltip overlay.
-func createTooltipRegion(tt TooltipBounds, scale float64) uintptr {
-	scaleInt := func(v int) int {
-		return int(float64(v) * scale)
-	}
-
-	pad := scaleInt(OutsidePadding)
-	left := scaleInt(tt.X) - pad
-	if left < 0 {
-		left = 0
-	}
-	top := scaleInt(tt.Y) - pad
-	if top < 0 {
-		top = 0
-	}
-	right := scaleInt(tt.X) + scaleInt(tt.Width) + pad
-	bottom := scaleInt(tt.Y) + scaleInt(tt.Height) + pad
-	r := scaleInt(tt.Radius)
-	if r <= 0 {
-		r = scaleInt(7)
-	}
-
-	hrgn, _, _ := procCreateRoundRectRgn.Call(
-		uintptr(left), uintptr(top),
-		uintptr(right), uintptr(bottom),
-		uintptr(r*2), uintptr(r*2),
-	)
-	return hrgn
-}
-
-// createMainPillRegion generates the Win32 HRGN for the primary dynamic island.
-func createMainPillRegion(w, h, r, offsetX, sw, padding, totalVintaH int, scale float64) uintptr {
-	scaleInt := func(v int) int {
-		return int(float64(v) * scale)
-	}
-
-	vLeft, vTop, _, _, pCenter, monitors := GetDisplayMetrics()
-	scaledOffset := scaleInt(offsetX)
-	screenCenterX := vLeft + pCenter + scaledOffset
-	currentMon := resolveCurrentMonitor(screenCenterX, monitors)
-	monitorTopOffset := currentMon.Top - vTop
-	if monitorTopOffset < 0 {
-		monitorTopOffset = 0
-	}
-	visualTop := monitorTopOffset + scaleInt(0)
-
-	if w == -1 {
-		maxTopOffset := 0
-		for _, mon := range monitors {
-			if offset := mon.Top - vTop; offset > maxTopOffset {
-				maxTopOffset = offset
-			}
-		}
-
-		targetHeight := totalVintaH
-		if targetHeight <= 0 {
-			if h > 0 {
-				targetHeight = scaleInt(h)
-			} else {
-				targetHeight = scaleInt(680)
-			}
-		}
-
-		overlayHeight := maxTopOffset + targetHeight
-		_, _, _, vHeight, _, _ := GetDisplayMetrics()
-		if vHeight > 0 && overlayHeight > vHeight {
-			overlayHeight = vHeight
-		}
-
-		hrgn, _, _ := procCreateRectRgn.Call(
-			0, 0,
-			uintptr(sw), uintptr(overlayHeight),
-		)
-		return hrgn
-	} else if w > 0 && h > 0 {
-		physicalCenterX := pCenter + scaledOffset
-		pw := scaleInt(w)
-		ph := scaleInt(h)
-		pad := scaleInt(padding)
-
-		left := physicalCenterX - (pw / 2) - pad
-		if left < 0 {
-			left = 0
-		}
-		right := physicalCenterX + (pw / 2) + pad
-		top := visualTop - pad
-		if top < 0 {
-			top = 0
-		}
-		bottom := visualTop + ph + pad
-
-		rScaled := scaleInt(r)
-		// Primary island attaches to top edge: flat top corners (0, 0) and rounded bottom corners (r, r)
-		return createComplexRoundRectRgn(left, top, right, bottom, 0, 0, rScaled, rScaled)
-	}
-	return 0
-}
-
-// createComplexRoundRectRgn constructs a Win32 HRGN with independent corner radii [tl, tr, br, bl].
-func createComplexRoundRectRgn(left, top, right, bottom int, tl, tr, br, bl int) uintptr {
-	if left >= right || top >= bottom {
-		return 0
-	}
-	w := right - left
-	h := bottom - top
-	if tl < 0 {
-		tl = 0
-	}
-	if tr < 0 {
-		tr = 0
-	}
-	if br < 0 {
-		br = 0
-	}
-	if bl < 0 {
-		bl = 0
-	}
-
-	// Clamp radii to dimensions
-	if maxR := h / 2; tl > maxR {
-		tl = maxR
-	}
-	if maxR := h / 2; tr > maxR {
-		tr = maxR
-	}
-	if maxR := h / 2; br > maxR {
-		br = maxR
-	}
-	if maxR := h / 2; bl > maxR {
-		bl = maxR
-	}
-	if maxR := w / 2; tl > maxR {
-		tl = maxR
-	}
-	if maxR := w / 2; tr > maxR {
-		tr = maxR
-	}
-	if maxR := w / 2; br > maxR {
-		br = maxR
-	}
-	if maxR := w / 2; bl > maxR {
-		bl = maxR
-	}
-
-	// Uniform zero
-	if tl == 0 && tr == 0 && br == 0 && bl == 0 {
-		hrgn, _, _ := procCreateRectRgn.Call(uintptr(left), uintptr(top), uintptr(right), uintptr(bottom))
-		return hrgn
-	}
-
-	// Uniform rounded
-	if tl == tr && tr == br && br == bl {
-		ellipse := tl * 2
-		hrgn, _, _ := procCreateRoundRectRgn.Call(uintptr(left), uintptr(top), uintptr(right), uintptr(bottom), uintptr(ellipse), uintptr(ellipse))
-		return hrgn
-	}
-
-	// Flat top, rounded bottom
-	if tl == 0 && tr == 0 && br > 0 && bl > 0 && br == bl {
-		ellipse := br * 2
-		hrgn, _, _ := procCreateRoundRectRgn.Call(uintptr(left), uintptr(top), uintptr(right), uintptr(bottom), uintptr(ellipse), uintptr(ellipse))
-		if halfH := h / 2; halfH > 0 {
-			hrgnTop, _, _ := procCreateRectRgn.Call(uintptr(left), uintptr(top), uintptr(right), uintptr(top+halfH))
-			if hrgnTop != 0 {
-				_, _, _ = procCombineRgn.Call(hrgn, hrgn, hrgnTop, uintptr(rgnOr))
-				_, _, _ = procDeleteObject.Call(hrgnTop)
-			}
-		}
-		return hrgn
-	}
-
-	// Flat bottom, rounded top
-	if bl == 0 && br == 0 && tl > 0 && tr > 0 && tl == tr {
-		ellipse := tl * 2
-		hrgn, _, _ := procCreateRoundRectRgn.Call(uintptr(left), uintptr(top), uintptr(right), uintptr(bottom), uintptr(ellipse), uintptr(ellipse))
-		if halfH := h / 2; halfH > 0 {
-			hrgnBottom, _, _ := procCreateRectRgn.Call(uintptr(left), uintptr(bottom-halfH), uintptr(right), uintptr(bottom))
-			if hrgnBottom != 0 {
-				_, _, _ = procCombineRgn.Call(hrgn, hrgn, hrgnBottom, uintptr(rgnOr))
-				_, _, _ = procDeleteObject.Call(hrgnBottom)
-			}
-		}
-		return hrgn
-	}
-
-	// General quadrant-based composite region
-	midX := left + (w / 2)
-	midY := top + (h / 2)
-
-	createQuadrant := func(qLeft, qTop, qRight, qBottom, r int, corner string) uintptr {
-		if r <= 0 {
-			hrgn, _, _ := procCreateRectRgn.Call(uintptr(qLeft), uintptr(qTop), uintptr(qRight), uintptr(qBottom))
-			return hrgn
-		}
-		var elLeft, elTop, elRight, elBottom int
-		var strip1, strip2 uintptr
-		switch corner {
-		case "tl":
-			elLeft, elTop, elRight, elBottom = qLeft, qTop, qLeft+r*2, qTop+r*2
-			strip1, _, _ = procCreateRectRgn.Call(uintptr(qLeft+r), uintptr(qTop), uintptr(qRight), uintptr(qBottom))
-			strip2, _, _ = procCreateRectRgn.Call(uintptr(qLeft), uintptr(qTop+r), uintptr(qRight), uintptr(qBottom))
-		case "tr":
-			elLeft, elTop, elRight, elBottom = qRight-r*2, qTop, qRight, qTop+r*2
-			strip1, _, _ = procCreateRectRgn.Call(uintptr(qLeft), uintptr(qTop), uintptr(qRight-r), uintptr(qBottom))
-			strip2, _, _ = procCreateRectRgn.Call(uintptr(qLeft), uintptr(qTop+r), uintptr(qRight), uintptr(qBottom))
-		case "br":
-			elLeft, elTop, elRight, elBottom = qRight-r*2, qBottom-r*2, qRight, qBottom
-			strip1, _, _ = procCreateRectRgn.Call(uintptr(qLeft), uintptr(qTop), uintptr(qRight-r), uintptr(qBottom))
-			strip2, _, _ = procCreateRectRgn.Call(uintptr(qLeft), uintptr(qTop), uintptr(qRight), uintptr(qBottom-r))
-		case "bl":
-			elLeft, elTop, elRight, elBottom = qLeft, qBottom-r*2, qLeft+r*2, qBottom
-			strip1, _, _ = procCreateRectRgn.Call(uintptr(qLeft+r), uintptr(qTop), uintptr(qRight), uintptr(qBottom))
-			strip2, _, _ = procCreateRectRgn.Call(uintptr(qLeft), uintptr(qTop), uintptr(qRight), uintptr(qBottom-r))
-		}
-		elRgn, _, _ := procCreateEllipticRgn.Call(uintptr(elLeft), uintptr(elTop), uintptr(elRight), uintptr(elBottom))
-		if strip1 != 0 {
-			_, _, _ = procCombineRgn.Call(elRgn, elRgn, strip1, uintptr(rgnOr))
-			_, _, _ = procDeleteObject.Call(strip1)
-		}
-		if strip2 != 0 {
-			_, _, _ = procCombineRgn.Call(elRgn, elRgn, strip2, uintptr(rgnOr))
-			_, _, _ = procDeleteObject.Call(strip2)
-		}
-		return elRgn
-	}
-
-	qTL := createQuadrant(left, top, midX, midY, tl, "tl")
-	qTR := createQuadrant(midX, top, right, midY, tr, "tr")
-	qBR := createQuadrant(midX, midY, right, bottom, br, "br")
-	qBL := createQuadrant(left, midY, midX, bottom, bl, "bl")
-
-	return combineWindowRegions(qTL, qTR, qBR, qBL)
-}
-
-// createSatelliteRegion generates the Win32 HRGN for an anchored floating satellite dock.
-func createSatelliteRegion(sat SatelliteBounds, mainW, mainH, offsetX, sw int, scale float64) uintptr {
-	if !sat.Active || sat.Width <= 0 || sat.Height <= 0 || mainW <= 0 || mainH <= 0 {
-		return 0
-	}
-	scaleInt := func(v int) int {
-		return int(float64(v) * scale)
-	}
-
-	tl := scaleInt(sat.Radii[0])
-	tr := scaleInt(sat.Radii[1])
-	br := scaleInt(sat.Radii[2])
-	bl := scaleInt(sat.Radii[3])
-	if tl == 0 && tr == 0 && br == 0 && bl == 0 && sat.Radius > 0 {
-		rScaled := scaleInt(sat.Radius)
-		tl, tr, br, bl = rScaled, rScaled, rScaled, rScaled
-	}
-
-	// If direct viewport coordinates were provided by an unanchored satellite,
-	// follow the satellite element pixel-perfectly with standard outside padding.
-	if sat.Anchor == "" && sat.X > 0 {
-		pad := scaleInt(OutsidePadding)
-		left := scaleInt(sat.X) - pad
-		if left < 0 {
-			left = 0
-		}
-		top := scaleInt(sat.Y) - pad
-		if top < 0 {
-			top = 0
-		}
-		right := scaleInt(sat.X) + scaleInt(sat.Width) + pad
-		bottom := scaleInt(sat.Y) + scaleInt(sat.Height) + pad
-		return createComplexRoundRectRgn(left, top, right, bottom, tl, tr, br, bl)
-	}
-
-	vLeft, vTop, _, _, pCenter, monitors := GetDisplayMetrics()
-	scaledOffset := scaleInt(offsetX)
-	screenCenterX := vLeft + pCenter + scaledOffset
-	currentMon := resolveCurrentMonitor(screenCenterX, monitors)
-	monitorTopOffset := currentMon.Top - vTop
-	if monitorTopOffset < 0 {
-		monitorTopOffset = 0
-	}
-	visualTop := monitorTopOffset + scaleInt(0)
-
-	physicalCenterX := pCenter + scaledOffset
-	pw := scaleInt(mainW)
-	ph := scaleInt(mainH)
-	satOutsidePad := OutsidePadding
-	pad := scaleInt(satOutsidePad)
-
-	// Directional gaps: [top, right, bottom, left]
-	gapTop := sat.Gaps[0]
-	gapRight := sat.Gaps[1]
-	gapBottom := sat.Gaps[2]
-	gapLeft := sat.Gaps[3]
-	if gapTop == 0 && gapRight == 0 && gapBottom == 0 && gapLeft == 0 && sat.Gap > 0 {
-		gapTop = sat.Gap
-		gapRight = sat.Gap
-		gapBottom = sat.Gap
-		gapLeft = sat.Gap
-	}
-
-	wScaled := scaleInt(sat.Width)
-	hScaled := scaleInt(sat.Height)
-	satOffsetScaledX := scaleInt(sat.OffsetX)
-	satOffsetScaledY := scaleInt(sat.OffsetY)
-	gapTopScaled := scaleInt(gapTop)
-
-	var left, right, top, bottom int
-
-	switch sat.Anchor {
-	case "left":
-		gapScaled := scaleInt(gapRight)
-		if gapScaled == 0 {
-			gapScaled = scaleInt(sat.Gap)
-		}
-		right = physicalCenterX - (pw / 2) - satOffsetScaledX + pad
-		left = physicalCenterX - (pw / 2) - gapScaled - satOffsetScaledX - wScaled - pad
-		top = visualTop + gapTopScaled + satOffsetScaledY - pad
-		bottom = top + hScaled + (pad * 2)
-	case "bottom":
-		gapScaled := scaleInt(gapTop)
-		if gapScaled == 0 {
-			gapScaled = scaleInt(sat.Gap)
-		}
-		top = visualTop + ph + gapScaled + satOffsetScaledY - pad
-		bottom = top + hScaled + (pad * 2)
-		left = physicalCenterX - (wScaled / 2) + satOffsetScaledX - pad
-		right = left + wScaled + (pad * 2)
-	case "top":
-		gapScaled := scaleInt(gapBottom)
-		if gapScaled == 0 {
-			gapScaled = scaleInt(sat.Gap)
-		}
-		bottom = visualTop - gapScaled - satOffsetScaledY + pad
-		top = bottom - hScaled - (pad * 2)
-		left = physicalCenterX - (wScaled / 2) + satOffsetScaledX - pad
-		right = left + wScaled + (pad * 2)
-	case "right":
-		fallthrough
-	default:
-		gapScaled := scaleInt(gapLeft)
-		if gapScaled == 0 {
-			gapScaled = scaleInt(sat.Gap)
-		}
-		left = physicalCenterX + (pw / 2) + satOffsetScaledX - pad
-		right = physicalCenterX + (pw / 2) + gapScaled + satOffsetScaledX + wScaled + pad
-		top = visualTop + gapTopScaled + satOffsetScaledY - pad
-		bottom = top + hScaled + (pad * 2)
-	}
-
-	// For flank satellites situated near the monitor top edge, extend top up to monitorTopOffset
-	// to eliminate any narrow sliver gap where background browser tabs might receive hover.
-	isTopFlush := false
-	if sat.Anchor != "bottom" && visualTop+satOffsetScaledY <= monitorTopOffset+scaleInt(15) {
-		top = monitorTopOffset
-		isTopFlush = true
-	}
-
-	// Directional tooltip padding: expand the hit-test region strictly outward
-	// (away from the island) so DWM's window shadow never bleeds onto adjacent elements.
-	if sat.TooltipPad > 0 {
-		tPad := scaleInt(sat.TooltipPad)
-		switch sat.TooltipSide {
-		case "bottom":
-			bottom += tPad
-		case "top":
-			top -= tPad
-		case "right":
-			right += tPad
-		case "left":
-			left -= tPad
-		default:
-			switch sat.Anchor {
-			case "right":
-				right += tPad
-			case "left":
-				left -= tPad
-			case "bottom":
-				bottom += tPad
-			case "top":
-				top -= tPad
-			}
-		}
-	}
-
-	if left < 0 {
-		left = 0
-	}
-	if right > sw {
-		right = sw
-	}
-	if top < 0 {
-		top = 0
-	}
-
-	tl = scaleInt(sat.Radii[0])
-	tr = scaleInt(sat.Radii[1])
-	br = scaleInt(sat.Radii[2])
-	bl = scaleInt(sat.Radii[3])
-	if tl == 0 && tr == 0 && br == 0 && bl == 0 && sat.Radius > 0 {
-		rScaled := scaleInt(sat.Radius)
-		tl, tr, br, bl = rScaled, rScaled, rScaled, rScaled
-	}
-	if sat.TooltipPad > 0 {
-		tl, tr, br, bl = scaleInt(10), scaleInt(10), scaleInt(10), scaleInt(10)
-	}
-	// When flush against monitor top, top corners stay flat
-	if isTopFlush && sat.Anchor != "bottom" {
-		tl = 0
-		tr = 0
-	}
-
-	return createComplexRoundRectRgn(left, top, right, bottom, tl, tr, br, bl)
-}
-
-// combineWindowRegions merges a slice of Win32 HRGNs into a single composite region.
-func combineWindowRegions(regions ...uintptr) uintptr {
-	finalRgn, _, _ := procCreateRectRgn.Call(0, 0, 0, 0)
-	for _, rgn := range regions {
-		if rgn == 0 {
-			continue
-		}
-		_, _, _ = procCombineRgn.Call(finalRgn, finalRgn, rgn, uintptr(rgnOr))
-		_, _, _ = procDeleteObject.Call(rgn)
-	}
-	return finalRgn
-}
 
 // Greet returns a greeting for the given name
 func (a *App) Greet(name string) string {

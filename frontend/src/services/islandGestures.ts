@@ -1,4 +1,5 @@
 import type { MonitorInfo } from '../../bindings/Vinta/backend/models.js'
+import { SetForceInteractive } from '../../bindings/Vinta/backend/app.js'
 
 /**
  * Bounds constraints for island placement.
@@ -159,6 +160,8 @@ export class IslandGestureController {
     this.dragStartX = e.screenX
     this.dragStartOffset = currentOffset
 
+    SetForceInteractive(true).catch(() => {})
+
     // Immediately apply the 100% full-width runway corridor before pointer motion begins
     onExpandRunway()
   }
@@ -212,8 +215,12 @@ export class IslandGestureController {
     clearTimeout(this.dragWatchdogTimeout)
     this.dragWatchdogTimeout = undefined
     this.isDragging = false
+    this.isSettling = false
+    this.isTrackRegionActive = false
     this.hasExpandedRunway = false
     this.onExpandRunwayCallback = undefined
+
+    SetForceInteractive(false).catch(() => {})
 
     onComplete?.()
 
@@ -238,6 +245,7 @@ export class IslandGestureController {
     clearTimeout(this.dragWatchdogTimeout)
     this.dragWatchdogTimeout = window.setTimeout(() => {
       if (this.isDragging || this.isSettling) {
+        SetForceInteractive(false).catch(() => {})
         onFailsafe()
       }
     }, 6000)
@@ -254,5 +262,6 @@ export class IslandGestureController {
     this.isTrackRegionActive = false
     this.hasExpandedRunway = false
     this.onExpandRunwayCallback = undefined
+    SetForceInteractive(false).catch(() => {})
   }
 }
