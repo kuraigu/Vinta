@@ -37,7 +37,8 @@
   import {
     IslandGestureController,
     computeAllowedOffsets,
-    computeMonitorSnapOffsets
+    computeMonitorSnapOffsets,
+    getMonitorForOffset
   } from './services/islandGestures'
   import { playNotifChime } from './services/audioService'
   import {
@@ -79,7 +80,8 @@
     type BatteryData,
     type WirelessData,
     type WeatherLocation,
-    type TemperatureUnit
+    type TemperatureUnit,
+    displayLayoutStore
   } from './store'
   import { hideTooltip } from './stores/tooltip'
   import { debugBoundsOverlay, debugLogs } from './devtest/debugConfig'
@@ -197,18 +199,27 @@
     monitors: []
   })
 
-  let activeMonitor = $derived(
-    displayLayout.currentMonitor || {
-      id: 1,
-      name: 'Primary Display',
-      left: 0,
-      top: 0,
-      width: 1920,
-      height: 1080,
-      isPrimary: true,
-      isPortrait: false
-    }
-  )
+  let activeMonitor = $derived.by(() => {
+    const baseCenter = displayLayout.virtualLeft + displayLayout.primaryCenter
+    const resolved = getMonitorForOffset(
+      currentLiveOffsetX,
+      displayLayout.monitors,
+      baseCenter
+    )
+    return (
+      resolved ||
+      displayLayout.currentMonitor || {
+        id: 1,
+        name: 'Primary Display',
+        left: 0,
+        top: 0,
+        width: 1920,
+        height: 1080,
+        isPrimary: true,
+        isPortrait: false
+      }
+    )
+  })
 
   let extraDropdownW = $state(0)
   let extraDropdownH = $state(0)
@@ -740,14 +751,36 @@
     const wasInRunway =
       gestures.isTrackRegionActive || gestures.isDragging || gestures.isSettling
     gestures.finishDrag(undefined, () => {
+      const baseCenter = displayLayout.virtualLeft + displayLayout.primaryCenter
+      const targetMon =
+        getMonitorForOffset(
+          currentLiveOffsetX,
+          displayLayout.monitors,
+          baseCenter
+        ) || activeMonitor
+      const monAllowed = computeAllowedOffsets(
+        currentIslandW,
+        targetMon,
+        baseCenter,
+        activeLeftSatelliteFootprint,
+        activeRightSatelliteFootprint
+      )
       const resting = Math.max(
-        allowedOffsets.min,
-        Math.min(allowedOffsets.max, currentLiveOffsetX)
+        monAllowed.min,
+        Math.min(monAllowed.max, currentLiveOffsetX)
       )
       const delta = Math.abs(resting - currentLiveOffsetX)
       const needsSettle = delta > 2
       currentLiveOffsetX = resting
       $hiddenPillOffsetXStore = resting
+      if (displayLayout.currentMonitor?.id !== targetMon.id) {
+        displayLayout = {
+          ...displayLayout,
+          currentMonitor: targetMon
+        }
+        $displayLayoutStore = displayLayout
+      }
+      Events.Emit('cancel-fullscreen-relocate')
       const target = getBoundsForState()
 
       if (wasInRunway) {
@@ -892,6 +925,7 @@
         const layout = await GetDisplayLayout()
         if (layout && layout.virtualWidth > 0) {
           displayLayout = layout
+          $displayLayoutStore = layout
         }
       } catch {}
     }
@@ -1065,6 +1099,24 @@
         }
       },
       onRefreshDisplay: refreshDisplay,
+      onRelocateOffset: (offset) => {
+        currentLiveOffsetX = offset
+        $hiddenPillOffsetXStore = offset
+        const baseCenter =
+          displayLayout.virtualLeft + displayLayout.primaryCenter
+        const targetMon = getMonitorForOffset(
+          offset,
+          displayLayout.monitors,
+          baseCenter
+        )
+        if (targetMon && displayLayout.currentMonitor?.id !== targetMon.id) {
+          displayLayout = {
+            ...displayLayout,
+            currentMonitor: targetMon
+          }
+          $displayLayoutStore = displayLayout
+        }
+      },
       onNotificationWake: () => {
         wasHiddenBeforeNotif = isHidden
       },

@@ -54,6 +54,42 @@ export function computeMonitorSnapOffsets(
 }
 
 /**
+ * Resolves the physical display monitor corresponding to a horizontal offset.
+ *
+ * @param offset - Current horizontal live offset from primary display center.
+ * @param monitors - List of connected physical monitors.
+ * @param baseCenter - Virtual center coordinate (virtualLeft + primaryCenter).
+ * @returns The monitor enclosing the coordinate, or the nearest monitor.
+ */
+export function getMonitorForOffset(
+  offset: number,
+  monitors: MonitorInfo[] | undefined,
+  baseCenter: number
+): MonitorInfo | undefined {
+  if (!monitors || monitors.length === 0) {
+    return undefined
+  }
+  const currentVirtualX = baseCenter + offset
+  for (const mon of monitors) {
+    if (currentVirtualX >= mon.left && currentVirtualX < mon.left + mon.width) {
+      return mon
+    }
+  }
+
+  let closestMon = monitors[0]
+  let minDistance = Infinity
+  for (const mon of monitors) {
+    const monCenter = mon.left + mon.width / 2
+    const dist = Math.abs(currentVirtualX - monCenter)
+    if (dist < minDistance) {
+      minDistance = dist
+      closestMon = mon
+    }
+  }
+  return closestMon
+}
+
+/**
  * Coordinates pointer dragging gestures, runway track region expansion,
  * and magnetic snapping across displays.
  */

@@ -8,395 +8,371 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import {
-  Call as $Call,
-  CancellablePromise as $CancellablePromise,
-  Create as $Create
-} from '@wailsio/runtime'
+import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as services$0 from './services/models.js'
+import * as services$0 from "./services/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as application$0 from '../../github.com/wailsapp/wails/v3/pkg/application/models.js'
+import * as application$0 from "../../github.com/wailsapp/wails/v3/pkg/application/models.js";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as $models from './models.js'
+import * as $models from "./models.js";
 
 /**
  * ApplyImportedSettings validates and saves sanitized settings JSON to %APPDATA%/FreeMatrix Studios/Vinta/settings.json.
  */
-export function ApplyImportedSettings(
-  sanitizedJSON: string
-): $CancellablePromise<void> {
-  return $Call.ByID(1795097572, sanitizedJSON)
+export function ApplyImportedSettings(sanitizedJSON: string): $CancellablePromise<void> {
+    return $Call.ByID(1795097572, sanitizedJSON);
 }
 
 /**
  * ApplyUpdate launches the downloaded installer and gracefully exits Vinta.
  */
 export function ApplyUpdate(): $CancellablePromise<void> {
-  return $Call.ByID(3376089888)
+    return $Call.ByID(3376089888);
+}
+
+/**
+ * CancelFullscreenRelocate clears any temporary relocation state when the user explicitly moves Vinta.
+ */
+export function CancelFullscreenRelocate(): $CancellablePromise<void> {
+    return $Call.ByID(3945761807);
 }
 
 /**
  * CancelUpdateDownload cancels an update download and removes partial files.
  */
 export function CancelUpdateDownload(): $CancellablePromise<void> {
-  return $Call.ByID(4095139864)
+    return $Call.ByID(4095139864);
 }
 
 /**
  * CheckForUpdates queries GitHub Releases API to check for newer versions.
  */
-export function CheckForUpdates(
-  force: boolean
-): $CancellablePromise<$models.UpdateCheckResult | null> {
-  return $Call.ByID(1638718882, force).then(($result: any) => {
-    return $$createType1($result)
-  })
+export function CheckForUpdates(force: boolean): $CancellablePromise<$models.UpdateCheckResult | null> {
+    return $Call.ByID(1638718882, force).then(($result: any) => {
+        return $$createType1($result);
+    });
 }
 
 /**
  * CheckPostUpdateInstalled checks if the app was recently upgraded to a new version and updates state.
  */
 export function CheckPostUpdateInstalled(): $CancellablePromise<string> {
-  return $Call.ByID(2191110808)
+    return $Call.ByID(2191110808);
 }
 
 /**
  * ClearAllTooltips removes all active floating tooltip regions from the Win32 window clipping mask.
  */
 export function ClearAllTooltips(): $CancellablePromise<void> {
-  return $Call.ByID(244037923)
+    return $Call.ByID(244037923);
 }
 
 /**
  * ClearCache deletes persistent disk cache files, cleans temp sync files, and flushes in-memory caches.
  */
 export function ClearCache(): $CancellablePromise<void> {
-  return $Call.ByID(2687930266)
+    return $Call.ByID(2687930266);
 }
 
 /**
  * ClearTooltipBounds removes an active floating tooltip region from the Win32 window clipping mask.
  */
 export function ClearTooltipBounds(id: string): $CancellablePromise<void> {
-  return $Call.ByID(561175078, id)
+    return $Call.ByID(561175078, id);
 }
 
 /**
  * DeleteNote deletes a .vnote file from disk.
  */
 export function DeleteNote(fileName: string): $CancellablePromise<void> {
-  return $Call.ByID(1941640120, fileName)
+    return $Call.ByID(1941640120, fileName);
 }
 
 /**
  * DownloadAndInstallUpdate downloads the installer executable for the update and executes it.
  */
-export function DownloadAndInstallUpdate(
-  downloadURL: string
-): $CancellablePromise<void> {
-  return $Call.ByID(1511147558, downloadURL)
+export function DownloadAndInstallUpdate(downloadURL: string): $CancellablePromise<void> {
+    return $Call.ByID(1511147558, downloadURL);
 }
 
 /**
  * DownloadUpdate initiates or resumes a chunked download with real-time progress and checksum verification.
  */
-export function DownloadUpdate(
-  downloadURL: string,
-  checksumsURL: string
-): $CancellablePromise<void> {
-  return $Call.ByID(521641498, downloadURL, checksumsURL)
+export function DownloadUpdate(downloadURL: string, checksumsURL: string): $CancellablePromise<void> {
+    return $Call.ByID(521641498, downloadURL, checksumsURL);
 }
 
 /**
  * ExportSettingsFileDialog opens a native save dialog and exports the current settings JSON with envelope metadata.
  */
-export function ExportSettingsFileDialog(
-  defaultName: string
-): $CancellablePromise<string> {
-  return $Call.ByID(969537782, defaultName)
+export function ExportSettingsFileDialog(defaultName: string): $CancellablePromise<string> {
+    return $Call.ByID(969537782, defaultName);
 }
 
 /**
  * FocusMediaApp brings the top-level window of the specified media application to the foreground.
  */
 export function FocusMediaApp(sourceApp: string): $CancellablePromise<boolean> {
-  return $Call.ByID(4072877866, sourceApp)
+    return $Call.ByID(4072877866, sourceApp);
 }
 
 /**
  * FocusNotificationApp brings the source window of a notification to the foreground,
  * matching by process name or App User Model ID (for UWP/Store apps).
  */
-export function FocusNotificationApp(
-  sourceApp: string,
-  aumid: string
-): $CancellablePromise<boolean> {
-  return $Call.ByID(2253461641, sourceApp, aumid)
+export function FocusNotificationApp(sourceApp: string, aumid: string): $CancellablePromise<boolean> {
+    return $Call.ByID(2253461641, sourceApp, aumid);
 }
 
 /**
  * FocusWindow requests OS input focus so typing and keyboard events work immediately on click/focus
  */
 export function FocusWindow(): $CancellablePromise<void> {
-  return $Call.ByID(1046471345)
+    return $Call.ByID(1046471345);
 }
 
 /**
  * GetAppIcon is the Wails frontend binding to fetch the native application icon as a data URI.
  */
-export function GetAppIcon(
-  sourceApp: string,
-  aumid: string
-): $CancellablePromise<string> {
-  return $Call.ByID(2119748329, sourceApp, aumid)
+export function GetAppIcon(sourceApp: string, aumid: string): $CancellablePromise<string> {
+    return $Call.ByID(2119748329, sourceApp, aumid);
 }
 
 /**
  * GetAppInfo returns application versioning, build verification, and system details.
  */
 export function GetAppInfo(): $CancellablePromise<$models.AppInfo> {
-  return $Call.ByID(3850092932).then(($result: any) => {
-    return $$createType2($result)
-  })
+    return $Call.ByID(3850092932).then(($result: any) => {
+        return $$createType2($result);
+    });
 }
 
 /**
  * GetAutostart checks whether autostart is currently enabled in Windows Registry
  */
 export function GetAutostart(): $CancellablePromise<boolean> {
-  return $Call.ByID(982008890)
+    return $Call.ByID(982008890);
 }
 
 /**
  * GetBatteryStatus returns current system power status from the services layer.
  */
 export function GetBatteryStatus(): $CancellablePromise<services$0.BatteryStatus> {
-  return $Call.ByID(1722351164).then(($result: any) => {
-    return $$createType3($result)
-  })
+    return $Call.ByID(1722351164).then(($result: any) => {
+        return $$createType3($result);
+    });
 }
 
 /**
  * GetCacheSize computes the total byte size of disk caches and temporary sync databases.
  */
 export function GetCacheSize(): $CancellablePromise<number> {
-  return $Call.ByID(792261736)
+    return $Call.ByID(792261736);
 }
 
 /**
  * GetCalendarData reads calendar.json from %APPDATA%/FreeMatrix Studios/Vinta.
  */
 export function GetCalendarData(): $CancellablePromise<string> {
-  return $Call.ByID(3290502299)
+    return $Call.ByID(3290502299);
 }
 
 /**
  * GetContributors dynamically parses the baked-in CONTRIBUTORS.md to render the contributor list.
  */
 export function GetContributors(): $CancellablePromise<$models.Contributor[]> {
-  return $Call.ByID(3055720143).then(($result: any) => {
-    return $$createType5($result)
-  })
+    return $Call.ByID(3055720143).then(($result: any) => {
+        return $$createType5($result);
+    });
 }
 
 /**
  * GetCurrentMonitor returns the active monitor where Vinta is currently located.
  */
 export function GetCurrentMonitor(): $CancellablePromise<$models.MonitorInfo> {
-  return $Call.ByID(3990780328).then(($result: any) => {
-    return $$createType6($result)
-  })
+    return $Call.ByID(3990780328).then(($result: any) => {
+        return $$createType6($result);
+    });
 }
 
 /**
  * GetDisplayLayout returns the multi-monitor geometry and composite virtual desktop layout.
  */
 export function GetDisplayLayout(): $CancellablePromise<$models.DisplayLayout> {
-  return $Call.ByID(2439750779).then(($result: any) => {
-    return $$createType7($result)
-  })
+    return $Call.ByID(2439750779).then(($result: any) => {
+        return $$createType7($result);
+    });
 }
 
 /**
  * GetGlobalShortcut returns the main toggle shortcut (retained for backward compatibility).
  */
 export function GetGlobalShortcut(): $CancellablePromise<string> {
-  return $Call.ByID(500280652)
+    return $Call.ByID(500280652);
 }
 
 /**
  * GetHardwareAcceleration returns whether GPU acceleration is enabled.
  */
 export function GetHardwareAcceleration(): $CancellablePromise<boolean> {
-  return $Call.ByID(3725975885)
+    return $Call.ByID(3725975885);
 }
 
 /**
  * GetNamedGlobalShortcut returns the currently registered accelerator string for a specific action.
  */
-export function GetNamedGlobalShortcut(
-  name: string
-): $CancellablePromise<string> {
-  return $Call.ByID(2456397115, name)
+export function GetNamedGlobalShortcut(name: string): $CancellablePromise<string> {
+    return $Call.ByID(2456397115, name);
 }
 
 /**
  * GetNotifications reads notifications.json from %APPDATA%/FreeMatrix Studios/Vinta.
  */
 export function GetNotifications(): $CancellablePromise<string> {
-  return $Call.ByID(1044629443)
+    return $Call.ByID(1044629443);
 }
 
 /**
  * GetSettings reads settings.json from %APPDATA%/FreeMatrix Studios/Vinta.
  */
 export function GetSettings(): $CancellablePromise<string> {
-  return $Call.ByID(1011862228)
+    return $Call.ByID(1011862228);
 }
 
 /**
  * GetTimerData reads timer.json from %APPDATA%/FreeMatrix Studios/Vinta.
  */
 export function GetTimerData(): $CancellablePromise<string> {
-  return $Call.ByID(120312406)
+    return $Call.ByID(120312406);
 }
 
 /**
  * GetUpdateRepo returns the repository owner/name used for update queries.
  */
 export function GetUpdateRepo(): $CancellablePromise<string> {
-  return $Call.ByID(2036517204)
+    return $Call.ByID(2036517204);
 }
 
 /**
  * GetWirelessStatus returns current wireless connectivity and Wi-Fi signal status from the services layer.
  */
 export function GetWirelessStatus(): $CancellablePromise<services$0.WirelessStatus> {
-  return $Call.ByID(794979391).then(($result: any) => {
-    return $$createType8($result)
-  })
+    return $Call.ByID(794979391).then(($result: any) => {
+        return $$createType8($result);
+    });
 }
 
 /**
  * Greet returns a greeting for the given name
  */
 export function Greet(name: string): $CancellablePromise<string> {
-  return $Call.ByID(2029986440, name)
+    return $Call.ByID(2029986440, name);
 }
 
 /**
  * ImportSettingsFileDialog opens a native open dialog and returns the JSON content of the selected file.
  */
 export function ImportSettingsFileDialog(): $CancellablePromise<string> {
-  return $Call.ByID(3465797657)
+    return $Call.ByID(3465797657);
 }
 
 /**
  * IsPortableMode returns false as standalone portable packaging has been deprecated in favor of the NSIS installer.
  */
 export function IsPortableMode(): $CancellablePromise<boolean> {
-  return $Call.ByID(2364170391)
+    return $Call.ByID(2364170391);
 }
 
 /**
  * IsTestMode returns true if the application was compiled with the devtest tag.
  */
 export function IsTestMode(): $CancellablePromise<boolean> {
-  return $Call.ByID(1613227200)
+    return $Call.ByID(1613227200);
 }
 
 /**
  * ListNotes scans the notes directory, migrates legacy notes, and returns all .vnote metadata.
  */
 export function ListNotes(): $CancellablePromise<$models.NoteFileInfo[]> {
-  return $Call.ByID(2184398716).then(($result: any) => {
-    return $$createType10($result)
-  })
+    return $Call.ByID(2184398716).then(($result: any) => {
+        return $$createType10($result);
+    });
 }
 
 /**
  * OpenNotesFolder opens the Vinta notes directory in Windows File Explorer.
  */
 export function OpenNotesFolder(): $CancellablePromise<void> {
-  return $Call.ByID(1933981124)
+    return $Call.ByID(1933981124);
 }
 
 /**
  * OpenURL opens the specified URL in the user's default web browser.
  */
 export function OpenURL(targetURL: string): $CancellablePromise<void> {
-  return $Call.ByID(3792089764, targetURL)
+    return $Call.ByID(3792089764, targetURL);
 }
 
 /**
  * OpenWindowsSettings opens Windows system settings pages or flyouts.
  */
 export function OpenWindowsSettings(target: string): $CancellablePromise<void> {
-  return $Call.ByID(1761424149, target)
+    return $Call.ByID(1761424149, target);
 }
 
 /**
  * PauseUpdateDownload pauses the active download stream while preserving written bytes.
  */
 export function PauseUpdateDownload(): $CancellablePromise<void> {
-  return $Call.ByID(2705463110)
+    return $Call.ByID(2705463110);
 }
 
 /**
  * Quit terminates the application and all child windows.
  */
 export function Quit(): $CancellablePromise<void> {
-  return $Call.ByID(1291806680)
+    return $Call.ByID(1291806680);
 }
 
 /**
  * ReadNote reads and returns the JSON content of a .vnote file.
  */
 export function ReadNote(fileName: string): $CancellablePromise<string> {
-  return $Call.ByID(3035600691, fileName)
+    return $Call.ByID(3035600691, fileName);
 }
 
 /**
  * RegisterGlobalShortcut registers the main toggle shortcut (retained for backward compatibility).
  */
-export function RegisterGlobalShortcut(
-  accelerator: string
-): $CancellablePromise<boolean> {
-  return $Call.ByID(3643707275, accelerator)
+export function RegisterGlobalShortcut(accelerator: string): $CancellablePromise<boolean> {
+    return $Call.ByID(3643707275, accelerator);
 }
 
 /**
  * RegisterNamedGlobalShortcut registers an application-wide hotkey accelerator for a specific action.
  */
-export function RegisterNamedGlobalShortcut(
-  name: string,
-  accelerator: string
-): $CancellablePromise<boolean> {
-  return $Call.ByID(365477966, name, accelerator)
+export function RegisterNamedGlobalShortcut(name: string, accelerator: string): $CancellablePromise<boolean> {
+    return $Call.ByID(365477966, name, accelerator);
 }
 
 /**
  * RemoveSatellite removes a floating satellite dock by identifier.
  */
 export function RemoveSatellite(id: string): $CancellablePromise<void> {
-  return $Call.ByID(157317808, id)
+    return $Call.ByID(157317808, id);
 }
 
 /**
  * RenameNote renames an existing .vnote file using the new title as the filename.
  * Returns the new filename on success.
  */
-export function RenameNote(
-  oldFileName: string,
-  newTitle: string
-): $CancellablePromise<string> {
-  return $Call.ByID(1924963709, oldFileName, newTitle)
+export function RenameNote(oldFileName: string, newTitle: string): $CancellablePromise<string> {
+    return $Call.ByID(1924963709, oldFileName, newTitle);
 }
 
 /**
@@ -404,7 +380,7 @@ export function RenameNote(
  * stream for the current track and immediately push it to the frontend.
  */
 export function RequeryMediaArt(): $CancellablePromise<void> {
-  return $Call.ByID(3422584007)
+    return $Call.ByID(3422584007);
 }
 
 /**
@@ -412,170 +388,140 @@ export function RequeryMediaArt(): $CancellablePromise<void> {
  * a fresh media state snapshot to the frontend without suppressing the album art.
  */
 export function RequestMediaUpdate(): $CancellablePromise<void> {
-  return $Call.ByID(2406952373)
+    return $Call.ByID(2406952373);
 }
 
 /**
  * ResetSettings deletes settings.json to restore factory configuration defaults.
  */
 export function ResetSettings(): $CancellablePromise<void> {
-  return $Call.ByID(672571499)
+    return $Call.ByID(672571499);
 }
 
 /**
  * ResolveNativeAppIcon resolves the icon for sourceApp or aumid, caching in memory and persistent disk.
  */
-export function ResolveNativeAppIcon(
-  sourceApp: string,
-  aumid: string
-): $CancellablePromise<string> {
-  return $Call.ByID(181960208, sourceApp, aumid)
+export function ResolveNativeAppIcon(sourceApp: string, aumid: string): $CancellablePromise<string> {
+    return $Call.ByID(181960208, sourceApp, aumid);
 }
 
 /**
  * ResumeUpdateDownload resumes a paused download.
  */
 export function ResumeUpdateDownload(): $CancellablePromise<void> {
-  return $Call.ByID(3804646409)
+    return $Call.ByID(3804646409);
 }
 
 /**
  * SaveCalendarData writes calendar.json to %APPDATA%/FreeMatrix Studios/Vinta.
  */
-export function SaveCalendarData(
-  calendarJSON: string
-): $CancellablePromise<void> {
-  return $Call.ByID(978427236, calendarJSON)
+export function SaveCalendarData(calendarJSON: string): $CancellablePromise<void> {
+    return $Call.ByID(978427236, calendarJSON);
 }
 
 /**
  * SaveNote writes or updates a .vnote file.
  */
-export function SaveNote(
-  fileName: string,
-  content: string
-): $CancellablePromise<void> {
-  return $Call.ByID(1034640134, fileName, content)
+export function SaveNote(fileName: string, content: string): $CancellablePromise<void> {
+    return $Call.ByID(1034640134, fileName, content);
 }
 
 /**
  * SaveNotifications writes notifications.json to %APPDATA%/FreeMatrix Studios/Vinta.
  */
-export function SaveNotifications(
-  notificationsJSON: string
-): $CancellablePromise<void> {
-  return $Call.ByID(3718355310, notificationsJSON)
+export function SaveNotifications(notificationsJSON: string): $CancellablePromise<void> {
+    return $Call.ByID(3718355310, notificationsJSON);
 }
 
 /**
  * SaveSettings writes settings.json to %APPDATA%/FreeMatrix Studios/Vinta.
  */
 export function SaveSettings(settingsJSON: string): $CancellablePromise<void> {
-  return $Call.ByID(1213784607, settingsJSON)
+    return $Call.ByID(1213784607, settingsJSON);
 }
 
 /**
  * SaveTimerData writes timer.json to %APPDATA%/FreeMatrix Studios/Vinta.
  */
 export function SaveTimerData(timerJSON: string): $CancellablePromise<void> {
-  return $Call.ByID(829444531, timerJSON)
+    return $Call.ByID(829444531, timerJSON);
 }
 
 /**
  * SelectMediaSession asks the native media service to switch active playback to sessionID.
  */
-export function SelectMediaSession(
-  sessionID: string
-): $CancellablePromise<boolean> {
-  return $Call.ByID(2671531203, sessionID)
+export function SelectMediaSession(sessionID: string): $CancellablePromise<boolean> {
+    return $Call.ByID(2671531203, sessionID);
 }
 
 /**
  * SendMediaControl forwards playback commands to VintaServices.exe
  */
 export function SendMediaControl(action: string): $CancellablePromise<void> {
-  return $Call.ByID(792497512, action)
+    return $Call.ByID(792497512, action);
 }
 
 /**
  * SetAirplaneMode toggles the system Airplane mode.
  */
-export function SetAirplaneMode(
-  enabled: boolean
-): $CancellablePromise<boolean> {
-  return $Call.ByID(172178136, enabled)
+export function SetAirplaneMode(enabled: boolean): $CancellablePromise<boolean> {
+    return $Call.ByID(172178136, enabled);
 }
 
 /**
  * SetAutoHideBorderless toggles automatic hiding when a borderless fullscreen window is detected on Vinta's monitor.
  */
-export function SetAutoHideBorderless(
-  enabled: boolean
-): $CancellablePromise<void> {
-  return $Call.ByID(2287815453, enabled)
+export function SetAutoHideBorderless(enabled: boolean): $CancellablePromise<void> {
+    return $Call.ByID(2287815453, enabled);
 }
 
 /**
  * SetAutostart registers or unregisters the app in Windows Startup Registry
  */
 export function SetAutostart(enable: boolean): $CancellablePromise<void> {
-  return $Call.ByID(3989055622, enable)
+    return $Call.ByID(3989055622, enable);
 }
 
 /**
  * SetBatterySaver updates the system battery saver mode threshold.
  */
-export function SetBatterySaver(
-  enabled: boolean
-): $CancellablePromise<boolean> {
-  return $Call.ByID(2397953675, enabled)
+export function SetBatterySaver(enabled: boolean): $CancellablePromise<boolean> {
+    return $Call.ByID(2397953675, enabled);
 }
 
 /**
  * SetBluetoothEnabled toggles the system Bluetooth radio.
  */
-export function SetBluetoothEnabled(
-  enabled: boolean
-): $CancellablePromise<boolean> {
-  return $Call.ByID(1043097206, enabled)
+export function SetBluetoothEnabled(enabled: boolean): $CancellablePromise<boolean> {
+    return $Call.ByID(1043097206, enabled);
 }
 
 /**
  * SetClipboardMonitoring satisfies existing frontend bindings as clipboard monitoring is retired.
  */
-export function SetClipboardMonitoring(
-  copyEnabled: boolean,
-  pasteEnabled: boolean
-): $CancellablePromise<void> {
-  return $Call.ByID(2757267531, copyEnabled, pasteEnabled)
+export function SetClipboardMonitoring(copyEnabled: boolean, pasteEnabled: boolean): $CancellablePromise<void> {
+    return $Call.ByID(2757267531, copyEnabled, pasteEnabled);
 }
 
 /**
  * SetCustomUpdateRepo overrides the repository used for update queries.
  */
 export function SetCustomUpdateRepo(repo: string): $CancellablePromise<void> {
-  return $Call.ByID(576870143, repo)
+    return $Call.ByID(576870143, repo);
 }
 
 /**
  * SetDevPillBounds is called by the frontend to update the size of the developer menu.
  */
-export function SetDevPillBounds(
-  width: number,
-  height: number,
-  extraH: number,
-  scale: number
-): $CancellablePromise<void> {
-  return $Call.ByID(2026897698, width, height, extraH, scale)
+export function SetDevPillBounds(width: number, height: number, extraH: number, scale: number): $CancellablePromise<void> {
+    return $Call.ByID(2026897698, width, height, extraH, scale);
 }
 
 /**
  * SetDevWindow registers the developer tools window for lifecycle management.
  */
-export function SetDevWindow(
-  win: application$0.WebviewWindow | null
-): $CancellablePromise<void> {
-  return $Call.ByID(256862160, win)
+export function SetDevWindow(win: application$0.WebviewWindow | null): $CancellablePromise<void> {
+    return $Call.ByID(256862160, win);
 }
 
 /**
@@ -584,187 +530,153 @@ export function SetDevWindow(
  * Calling Win32 SetCapture on the parent HWND starves WebView2 of WM_MOUSEMOVE and WM_LBUTTONUP.
  */
 export function SetDragCapture(enable: boolean): $CancellablePromise<void> {
-  return $Call.ByID(1965237067, enable)
+    return $Call.ByID(1965237067, enable);
 }
 
 /**
  * SetFloatingControlsBounds adapts legacy calls to the generalized satellite dock registry.
  */
-export function SetFloatingControlsBounds(
-  width: number,
-  height: number,
-  radius: number,
-  gap: number
-): $CancellablePromise<void> {
-  return $Call.ByID(2706679968, width, height, radius, gap)
+export function SetFloatingControlsBounds(width: number, height: number, radius: number, gap: number): $CancellablePromise<void> {
+    return $Call.ByID(2706679968, width, height, radius, gap);
 }
 
 /**
  * SetHardwareAcceleration persists the GPU acceleration setting.
  */
-export function SetHardwareAcceleration(
-  enabled: boolean
-): $CancellablePromise<void> {
-  return $Call.ByID(3309982961, enabled)
+export function SetHardwareAcceleration(enabled: boolean): $CancellablePromise<void> {
+    return $Call.ByID(3309982961, enabled);
 }
 
 /**
  * SetIgnoreMouseEvents toggles click-through for the entire window and its children using Win32 WS_EX_TRANSPARENT.
  * When enabled, all mouse clicks pass straight through to underlying applications and the clipping region is lifted.
  */
-export function SetIgnoreMouseEvents(
-  ignore: boolean
-): $CancellablePromise<void> {
-  return $Call.ByID(1718867283, ignore)
+export function SetIgnoreMouseEvents(ignore: boolean): $CancellablePromise<void> {
+    return $Call.ByID(1718867283, ignore);
 }
 
 /**
  * SetIsHidden informs native background services whether Vinta is currently hidden to throttle high-frequency IPC.
  */
 export function SetIsHidden(hidden: boolean): $CancellablePromise<void> {
-  return $Call.ByID(3839965369, hidden)
+    return $Call.ByID(3839965369, hidden);
 }
 
 /**
  * SetSatelliteBounds registers or updates a floating satellite dock in the window region manager.
  */
-export function SetSatelliteBounds(
-  bounds: $models.SatelliteBounds
-): $CancellablePromise<void> {
-  return $Call.ByID(479812843, bounds)
+export function SetSatelliteBounds(bounds: $models.SatelliteBounds): $CancellablePromise<void> {
+    return $Call.ByID(479812843, bounds);
 }
 
 /**
  * SetTooltipBounds registers an active floating tooltip region to permit Win32 painting beyond the main pill.
  */
-export function SetTooltipBounds(
-  bounds: $models.TooltipBounds
-): $CancellablePromise<void> {
-  return $Call.ByID(4008192705, bounds)
+export function SetTooltipBounds(bounds: $models.TooltipBounds): $CancellablePromise<void> {
+    return $Call.ByID(4008192705, bounds);
 }
 
 /**
  * SetWidgetBounds is called by the frontend whenever the widget dimensions change.
  * It updates the native Win32 click-through region so only the visible widget is clickable.
  */
-export function SetWidgetBounds(
-  width: number,
-  height: number,
-  radius: number,
-  scale: number,
-  offsetX: number
-): $CancellablePromise<void> {
-  return $Call.ByID(4226352792, width, height, radius, scale, offsetX)
+export function SetWidgetBounds(width: number, height: number, radius: number, scale: number, offsetX: number): $CancellablePromise<void> {
+    return $Call.ByID(4226352792, width, height, radius, scale, offsetX);
 }
 
 /**
  * SetWifiEnabled toggles the system Wi-Fi radio.
  */
 export function SetWifiEnabled(enabled: boolean): $CancellablePromise<boolean> {
-  return $Call.ByID(2023985577, enabled)
+    return $Call.ByID(2023985577, enabled);
 }
 
 /**
  * Setup initializes the Wails v3 application instance, window hooks, and native system tray.
  */
-export function Setup(
-  wailsApp: application$0.App | null,
-  win: application$0.WebviewWindow | null
-): $CancellablePromise<void> {
-  return $Call.ByID(3523640688, wailsApp, win)
+export function Setup(wailsApp: application$0.App | null, win: application$0.WebviewWindow | null): $CancellablePromise<void> {
+    return $Call.ByID(3523640688, wailsApp, win);
 }
 
 /**
  * Shutdown stops native background listeners.
  */
 export function Shutdown(): $CancellablePromise<void> {
-  return $Call.ByID(2578565653)
+    return $Call.ByID(2578565653);
 }
 
 /**
  * SimulateDownloadCycle runs a simulated download progress ticker for offline test validation.
  */
-export function SimulateDownloadCycle(
-  failChecksum: boolean
-): $CancellablePromise<void> {
-  return $Call.ByID(2914287533, failChecksum)
+export function SimulateDownloadCycle(failChecksum: boolean): $CancellablePromise<void> {
+    return $Call.ByID(2914287533, failChecksum);
 }
 
 /**
  * SimulateUpdateAvailable emits a simulated update payload for UI and lifecycle testing.
  */
-export function SimulateUpdateAvailable(
-  version: string,
-  notes: string
-): $CancellablePromise<void> {
-  return $Call.ByID(2832446087, version, notes)
+export function SimulateUpdateAvailable(version: string, notes: string): $CancellablePromise<void> {
+    return $Call.ByID(2832446087, version, notes);
 }
 
 /**
  * StartBackgroundUpdateChecker launches a background ticker that checks for updates periodically.
  */
 export function StartBackgroundUpdateChecker(): $CancellablePromise<void> {
-  return $Call.ByID(480456083)
+    return $Call.ByID(480456083);
 }
 
 /**
  * StartInertiaGlide resets active glide generation tokens.
  */
-export function StartInertiaGlide(
-  startOffset: number,
-  velocity: number,
-  minOffset: number,
-  maxOffset: number
-): $CancellablePromise<void> {
-  return $Call.ByID(537051494, startOffset, velocity, minOffset, maxOffset)
+export function StartInertiaGlide(startOffset: number, velocity: number, minOffset: number, maxOffset: number): $CancellablePromise<void> {
+    return $Call.ByID(537051494, startOffset, velocity, minOffset, maxOffset);
 }
 
 /**
  * Startup satisfies legacy startup calls if invoked.
  */
 export function Startup(): $CancellablePromise<void> {
-  return $Call.ByID(3868125120)
+    return $Call.ByID(3868125120);
 }
 
 /**
  * StopInertiaGlide immediately halts any in-progress inertia glide and returns current offset.
  */
 export function StopInertiaGlide(): $CancellablePromise<number> {
-  return $Call.ByID(446266388)
+    return $Call.ByID(446266388);
 }
 
 /**
  * TrimMemory requests Windows to reclaim unused physical RAM pages from the Vinta process working set.
  */
 export function TrimMemory(): $CancellablePromise<void> {
-  return $Call.ByID(1258805264)
+    return $Call.ByID(1258805264);
 }
 
 /**
  * UnregisterGlobalShortcut removes the main toggle shortcut (retained for backward compatibility).
  */
 export function UnregisterGlobalShortcut(): $CancellablePromise<void> {
-  return $Call.ByID(1718010348)
+    return $Call.ByID(1718010348);
 }
 
 /**
  * UnregisterNamedGlobalShortcut removes a registered global shortcut by action name.
  */
-export function UnregisterNamedGlobalShortcut(
-  name: string
-): $CancellablePromise<void> {
-  return $Call.ByID(656225691, name)
+export function UnregisterNamedGlobalShortcut(name: string): $CancellablePromise<void> {
+    return $Call.ByID(656225691, name);
 }
 
 // Private type creation functions
-const $$createType0 = $models.UpdateCheckResult.createFrom
-const $$createType1 = $Create.Nullable($$createType0)
-const $$createType2 = $models.AppInfo.createFrom
-const $$createType3 = services$0.BatteryStatus.createFrom
-const $$createType4 = $models.Contributor.createFrom
-const $$createType5 = $Create.Array($$createType4)
-const $$createType6 = $models.MonitorInfo.createFrom
-const $$createType7 = $models.DisplayLayout.createFrom
-const $$createType8 = services$0.WirelessStatus.createFrom
-const $$createType9 = $models.NoteFileInfo.createFrom
-const $$createType10 = $Create.Array($$createType9)
+const $$createType0 = $models.UpdateCheckResult.createFrom;
+const $$createType1 = $Create.Nullable($$createType0);
+const $$createType2 = $models.AppInfo.createFrom;
+const $$createType3 = services$0.BatteryStatus.createFrom;
+const $$createType4 = $models.Contributor.createFrom;
+const $$createType5 = $Create.Array($$createType4);
+const $$createType6 = $models.MonitorInfo.createFrom;
+const $$createType7 = $models.DisplayLayout.createFrom;
+const $$createType8 = services$0.WirelessStatus.createFrom;
+const $$createType9 = $models.NoteFileInfo.createFrom;
+const $$createType10 = $Create.Array($$createType9);

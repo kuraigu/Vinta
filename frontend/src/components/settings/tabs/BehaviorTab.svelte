@@ -1,9 +1,10 @@
 <script lang="ts">
-  import { Layout, EyeOff, Timer, MousePointer, RotateCcw } from 'lucide-svelte'
+  import { Layout, EyeOff, Timer, MousePointer, RotateCcw, Monitor } from 'lucide-svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingSlider from '../SettingSlider.svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
   import CustomSelect from '../../CustomSelect.svelte'
+  import type { MonitorInfo } from '../../../../bindings/Vinta/backend/models.js'
   import {
     homeAutoHideStore,
     mediaAutoHideStore,
@@ -12,7 +13,7 @@
     wakeMethodStore,
     hiddenPillOffsetXStore,
     allowDragPositionStore,
-    autoHideBorderlessStore
+    displayLayoutStore
   } from '../../../store'
 
   const widgetContentOptions = [
@@ -21,6 +22,21 @@
   ]
 
   let isResettingOffset = $state(false)
+
+  /**
+   * Switches the active display and centers the island on the selected monitor.
+   */
+  function handleSwitchMonitor(mon: MonitorInfo) {
+    const baseCenter =
+      $displayLayoutStore.virtualLeft + $displayLayoutStore.primaryCenter
+    const monCenter = mon.left + mon.width / 2
+    const targetOffset = Math.round(monCenter - baseCenter)
+    $hiddenPillOffsetXStore = targetOffset
+    $displayLayoutStore = {
+      ...$displayLayoutStore,
+      currentMonitor: mon
+    }
+  }
 
   /**
    * Resets the persistent horizontal position offset of the island back to monitor center.
@@ -45,13 +61,6 @@
   <SettingItem label="Auto-Hide Media Widget" icon={EyeOff}>
     <label class="toggle-switch">
       <input type="checkbox" bind:checked={$mediaAutoHideStore} />
-      <span class="slider"></span>
-    </label>
-  </SettingItem>
-
-  <SettingItem label="Auto-Hide in Borderless Fullscreen" icon={EyeOff}>
-    <label class="toggle-switch">
-      <input type="checkbox" bind:checked={$autoHideBorderlessStore} />
       <span class="slider"></span>
     </label>
   </SettingItem>
@@ -109,6 +118,26 @@
       <span class="slider"></span>
     </label>
   </SettingItem>
+
+  {#if $displayLayoutStore.monitors && $displayLayoutStore.monitors.length > 1}
+    <SettingItem
+      label="Active Display"
+      description="Select which connected monitor Vinta is positioned on"
+      icon={Monitor}
+      flexCol={true}
+    >
+      <div class="segment-control full-width">
+        {#each $displayLayoutStore.monitors as mon}
+          <button
+            class:active={$displayLayoutStore.currentMonitor?.id === mon.id}
+            onclick={() => handleSwitchMonitor(mon)}
+          >
+            {mon.name || `Display ${mon.id}`}
+          </button>
+        {/each}
+      </div>
+    </SettingItem>
+  {/if}
 
   <SettingItem
     label="Center Island Position"

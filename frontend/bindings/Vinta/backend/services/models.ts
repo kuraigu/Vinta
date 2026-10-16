@@ -3,114 +3,112 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Create as $Create } from '@wailsio/runtime'
+import { Create as $Create } from "@wailsio/runtime";
 
 /**
  * BatteryStatus represents the structured battery and power status for the frontend.
  */
 export class BatteryStatus {
-  'hasBattery': boolean
-  'isCharging': boolean
-  'percentage': number
-  'batterySaver': boolean
-  'lifeTimeSeconds': number
+    "hasBattery": boolean;
+    "isCharging": boolean;
+    "percentage": number;
+    "batterySaver": boolean;
+    "lifeTimeSeconds": number;
 
-  /**
-   * "charging", "discharging", "full", "desktop", "unknown"
-   */
-  'state': string
+    /**
+     * "charging", "discharging", "full", "desktop", "unknown"
+     */
+    "state": string;
 
-  /** Creates a new BatteryStatus instance. */
-  constructor($$source: Partial<BatteryStatus> = {}) {
-    if (!('hasBattery' in $$source)) {
-      this['hasBattery'] = false
-    }
-    if (!('isCharging' in $$source)) {
-      this['isCharging'] = false
-    }
-    if (!('percentage' in $$source)) {
-      this['percentage'] = 0
-    }
-    if (!('batterySaver' in $$source)) {
-      this['batterySaver'] = false
-    }
-    if (!('lifeTimeSeconds' in $$source)) {
-      this['lifeTimeSeconds'] = 0
-    }
-    if (!('state' in $$source)) {
-      this['state'] = ''
+    /** Creates a new BatteryStatus instance. */
+    constructor($$source: Partial<BatteryStatus> = {}) {
+        if (!("hasBattery" in $$source)) {
+            this["hasBattery"] = false;
+        }
+        if (!("isCharging" in $$source)) {
+            this["isCharging"] = false;
+        }
+        if (!("percentage" in $$source)) {
+            this["percentage"] = 0;
+        }
+        if (!("batterySaver" in $$source)) {
+            this["batterySaver"] = false;
+        }
+        if (!("lifeTimeSeconds" in $$source)) {
+            this["lifeTimeSeconds"] = 0;
+        }
+        if (!("state" in $$source)) {
+            this["state"] = "";
+        }
+
+        Object.assign(this, $$source);
     }
 
-    Object.assign(this, $$source)
-  }
-
-  /**
-   * Creates a new BatteryStatus instance from a string or object.
-   */
-  static createFrom($$source: any = {}): BatteryStatus {
-    let $$parsedSource =
-      typeof $$source === 'string' ? JSON.parse($$source) : $$source
-    return new BatteryStatus($$parsedSource as Partial<BatteryStatus>)
-  }
+    /**
+     * Creates a new BatteryStatus instance from a string or object.
+     */
+    static createFrom($$source: any = {}): BatteryStatus {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new BatteryStatus($$parsedSource as Partial<BatteryStatus>);
+    }
 }
 
 /**
  * WirelessStatus represents the structured wireless and connectivity status.
  */
 export class WirelessStatus {
-  'hasWifi': boolean
-  'wifiEnabled': boolean
-  'wifiConnected': boolean
-  'wifiSsid': string
-  'wifiSignal': number
-  'hasBluetooth': boolean
-  'bluetoothEnabled': boolean
-  'bluetoothConnected': boolean
-  'bluetoothDeviceName': string
-  'airplaneMode': boolean
+    "hasWifi": boolean;
+    "wifiEnabled": boolean;
+    "wifiConnected": boolean;
+    "wifiSsid": string;
+    "wifiSignal": number;
+    "hasBluetooth": boolean;
+    "bluetoothEnabled": boolean;
+    "bluetoothConnected": boolean;
+    "bluetoothDeviceName": string;
+    "airplaneMode": boolean;
 
-  /** Creates a new WirelessStatus instance. */
-  constructor($$source: Partial<WirelessStatus> = {}) {
-    if (!('hasWifi' in $$source)) {
-      this['hasWifi'] = false
-    }
-    if (!('wifiEnabled' in $$source)) {
-      this['wifiEnabled'] = false
-    }
-    if (!('wifiConnected' in $$source)) {
-      this['wifiConnected'] = false
-    }
-    if (!('wifiSsid' in $$source)) {
-      this['wifiSsid'] = ''
-    }
-    if (!('wifiSignal' in $$source)) {
-      this['wifiSignal'] = 0
-    }
-    if (!('hasBluetooth' in $$source)) {
-      this['hasBluetooth'] = false
-    }
-    if (!('bluetoothEnabled' in $$source)) {
-      this['bluetoothEnabled'] = false
-    }
-    if (!('bluetoothConnected' in $$source)) {
-      this['bluetoothConnected'] = false
-    }
-    if (!('bluetoothDeviceName' in $$source)) {
-      this['bluetoothDeviceName'] = ''
-    }
-    if (!('airplaneMode' in $$source)) {
-      this['airplaneMode'] = false
+    /** Creates a new WirelessStatus instance. */
+    constructor($$source: Partial<WirelessStatus> = {}) {
+        if (!("hasWifi" in $$source)) {
+            this["hasWifi"] = false;
+        }
+        if (!("wifiEnabled" in $$source)) {
+            this["wifiEnabled"] = false;
+        }
+        if (!("wifiConnected" in $$source)) {
+            this["wifiConnected"] = false;
+        }
+        if (!("wifiSsid" in $$source)) {
+            this["wifiSsid"] = "";
+        }
+        if (!("wifiSignal" in $$source)) {
+            this["wifiSignal"] = 0;
+        }
+        if (!("hasBluetooth" in $$source)) {
+            this["hasBluetooth"] = false;
+        }
+        if (!("bluetoothEnabled" in $$source)) {
+            this["bluetoothEnabled"] = false;
+        }
+        if (!("bluetoothConnected" in $$source)) {
+            this["bluetoothConnected"] = false;
+        }
+        if (!("bluetoothDeviceName" in $$source)) {
+            this["bluetoothDeviceName"] = "";
+        }
+        if (!("airplaneMode" in $$source)) {
+            this["airplaneMode"] = false;
+        }
+
+        Object.assign(this, $$source);
     }
 
-    Object.assign(this, $$source)
-  }
-
-  /**
-   * Creates a new WirelessStatus instance from a string or object.
-   */
-  static createFrom($$source: any = {}): WirelessStatus {
-    let $$parsedSource =
-      typeof $$source === 'string' ? JSON.parse($$source) : $$source
-    return new WirelessStatus($$parsedSource as Partial<WirelessStatus>)
-  }
+    /**
+     * Creates a new WirelessStatus instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WirelessStatus {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new WirelessStatus($$parsedSource as Partial<WirelessStatus>);
+    }
 }

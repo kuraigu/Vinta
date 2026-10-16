@@ -1,4 +1,5 @@
 import { writable } from 'svelte/store'
+import type { DisplayLayout } from '../../bindings/Vinta/backend/models.js'
 import {
   GetNotifications,
   SaveNotifications
@@ -210,3 +211,27 @@ export const defaultWirelessData: WirelessData = {
 }
 
 export const wirelessDataStore = writable<WirelessData>(defaultWirelessData)
+
+// ============================================================================
+// Multi-Monitor Display Layout
+// ============================================================================
+export const defaultDisplayLayout: DisplayLayout = {
+  virtualLeft: 0,
+  virtualTop: 0,
+  virtualWidth: 1920,
+  virtualHeight: 1080,
+  primaryCenter: 960,
+  currentMonitor: {
+    id: 1,
+    name: 'Primary Display',
+    left: 0,
+    top: 0,
+    width: 1920,
+    height: 1080,
+    isPrimary: true,
+    isPortrait: false
+  },
+  monitors: []
+}
+
+export const displayLayoutStore = writable<DisplayLayout>(defaultDisplayLayout)
