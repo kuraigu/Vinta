@@ -242,6 +242,7 @@ export class IslandGestureController {
     }
 
     this.isDragging = false
+    SetForceInteractive(false).catch(() => {})
 
     const now = performance.now()
     this.dragHistory.push({ x: e.screenX, time: now })

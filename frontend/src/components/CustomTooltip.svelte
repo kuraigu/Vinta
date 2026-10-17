@@ -13,17 +13,19 @@
     dismissAllTooltips
   } from '../services/tooltipBounds'
 
-  let {
-    text,
-    position = 'bottom',
-    align = 'center',
-    children
-  } = $props<{
+  interface Props {
     text?: string
     position?: 'top' | 'bottom'
     align?: 'left' | 'center' | 'right'
     children?: Snippet
-  }>()
+  }
+
+  let {
+    text = undefined,
+    position = 'bottom',
+    align = 'center',
+    children = undefined
+  }: Props = $props()
 
   let triggerNode = $state<HTMLElement>()
   let tooltipNode = $state<HTMLDivElement>()

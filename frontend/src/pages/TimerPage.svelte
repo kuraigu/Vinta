@@ -1150,7 +1150,7 @@
                           <span class="alarm-repeat-badge">Every day</span>
                         {:else if alarm.repeat === 'weekdays'}
                           <div class="alarm-days-circles">
-                            {#each [1, 2, 3, 4, 5] as d}
+                            {#each [1, 2, 3, 4, 5] as d (d)}
                               <span class="alarm-day-circle"
                                 >{DAY_SHORT[d]}</span
                               >
@@ -1158,7 +1158,7 @@
                           </div>
                         {:else if alarm.repeat === 'custom' && alarm.days && alarm.days.length > 0}
                           <div class="alarm-days-circles">
-                            {#each [...alarm.days].sort((a, b) => a - b) as d}
+                            {#each [...alarm.days].sort((a, b) => a - b) as d (d)}
                               <span class="alarm-day-circle"
                                 >{DAY_SHORT[d]}</span
                               >

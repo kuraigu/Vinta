@@ -1,6 +1,5 @@
 import {
   SetHitRects,
-  SetPillBounds,
   TrimMemory,
   SetIsHidden
 } from '../../bindings/Vinta/backend/app.js'
@@ -45,11 +44,15 @@ export class WindowBoundsManager {
     islandNode?: HTMLElement | null,
     isHidden: boolean = false
   ): void {
+    if (islandNode) {
+      this.activeIslandNode = islandNode
+    }
     const dpr = window.devicePixelRatio || 1
 
     if (isHidden) {
-      if (islandNode) {
-        const rect = islandNode.getBoundingClientRect()
+      const targetNode = islandNode || this.activeIslandNode
+      if (targetNode) {
+        const rect = targetNode.getBoundingClientRect()
         if (rect.width > 0 && rect.height > 0) {
           SetHitRects([
             new HitRect({
@@ -68,10 +71,10 @@ export class WindowBoundsManager {
 
     const hitRects: HitRect[] = []
 
-    const node =
-      islandNode?.parentElement?.classList.contains('island-wrapper')
-        ? islandNode.parentElement
-        : islandNode
+    const targetNode = islandNode || this.activeIslandNode
+    const node = targetNode?.parentElement?.classList.contains('island-wrapper')
+      ? targetNode.parentElement
+      : targetNode
 
     if (node) {
       const rect = node.getBoundingClientRect()
@@ -89,7 +92,8 @@ export class WindowBoundsManager {
 
     // Include all active satellite hosts (ControlsSatellite, MediaSatellite, etc.)
     if (typeof document !== 'undefined') {
-      const satellites = document.querySelectorAll<HTMLElement>('.satellite-host')
+      const satellites =
+        document.querySelectorAll<HTMLElement>('.satellite-host')
       for (const sat of satellites) {
         const rect = sat.getBoundingClientRect()
         if (rect.width > 0 && rect.height > 0) {
@@ -183,14 +187,28 @@ export class WindowBoundsManager {
    * Settles bounds when leaving horizontal dragging mode.
    */
   public settleRunwayBounds(
-    _target: WindowBounds,
+    target: WindowBounds,
     _offset: number,
     _wrapperNode?: HTMLElement | null,
     islandNode?: HTMLElement | null,
     onSettled?: () => void
   ): void {
-    onSettled?.()
-    this.syncPillBounds(islandNode)
+    if (islandNode) this.activeIslandNode = islandNode
+    this.currentOSBounds = { ...target }
+    this.syncPillBounds(islandNode || this.activeIslandNode)
+    if (typeof requestAnimationFrame !== 'undefined') {
+      requestAnimationFrame(() => {
+        this.syncPillBounds(islandNode || this.activeIslandNode)
+      })
+    }
+    setTimeout(() => {
+      onSettled?.()
+      this.syncPillBounds(islandNode || this.activeIslandNode)
+    }, 150)
+    setTimeout(() => {
+      onSettled?.()
+      this.syncPillBounds(islandNode || this.activeIslandNode)
+    }, 360)
   }
 
   /**
@@ -205,6 +223,17 @@ export class WindowBoundsManager {
     if (islandNode) this.activeIslandNode = islandNode
     this.currentOSBounds = { ...target }
     this.syncPillBounds(islandNode || this.activeIslandNode, isHidden)
+    if (typeof requestAnimationFrame !== 'undefined') {
+      requestAnimationFrame(() => {
+        this.syncPillBounds(islandNode || this.activeIslandNode, isHidden)
+      })
+    }
+    setTimeout(() => {
+      this.syncPillBounds(islandNode || this.activeIslandNode, isHidden)
+    }, 150)
+    setTimeout(() => {
+      this.syncPillBounds(islandNode || this.activeIslandNode, isHidden)
+    }, 360)
     resyncAllSatellites()
     dismissAllTooltips()
   }

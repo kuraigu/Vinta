@@ -624,9 +624,12 @@
     }
     bounds.syncBounds(nextBounds, targetOffset, islandNode, false, false)
 
-    window.setTimeout(() => {
-      bounds.syncPillBounds(islandNode, isHidden)
-    }, expand ? 330 : 230)
+    window.setTimeout(
+      () => {
+        bounds.syncPillBounds(islandNode, isHidden)
+      },
+      expand ? 330 : 230
+    )
 
     triggerGlow()
   }
@@ -973,13 +976,21 @@
         ) {
           return
         }
+        if (gestures.isDragging) {
+          finishDragGesture()
+        }
+        return
       }
       if (e?.type === 'pointercancel') {
         if (e instanceof PointerEvent && e.buttons === 1) {
           return
         }
+        if (gestures.isDragging) {
+          finishDragGesture()
+        }
+        return
       }
-      if (gestures.isDragging || gestures.isInertia) {
+      if (gestures.isDragging) {
         finishDragGesture()
       }
     }
@@ -1377,7 +1388,9 @@
     style="
       pointer-events: {isQuitting ? 'none' : 'auto'};
       transform: translateX({clampedOffsetX}px);
-      transition: {gestures.isDragging || gestures.isInertia ? 'none' : islandAnim};
+      transition: {gestures.isDragging || gestures.isInertia
+      ? 'none'
+      : islandAnim};
     "
   >
     <MainIsland
@@ -1414,6 +1427,13 @@
       }}
       onUpdateOffset={(next) => {
         currentLiveOffsetX = next
+        if (gestures.isInertia) {
+          requestAnimationFrame(() => {
+            if (gestures.isInertia) {
+              bounds.syncPillBounds(islandNode)
+            }
+          })
+        }
       }}
       onFinishDrag={finishDragGesture}
       onExpand={handleExpand}

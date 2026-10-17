@@ -9,7 +9,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	goruntime "runtime"
-	"sort"
 	"strings"
 	"sync"
 	"syscall"
@@ -38,14 +37,12 @@ var (
 	procEnumDisplayMonitors      = user32.NewProc("EnumDisplayMonitors")
 	procGetMonitorInfoW          = user32.NewProc("GetMonitorInfoW")
 	procGetWindowRect            = user32.NewProc("GetWindowRect")
-	procGetClientRect            = user32.NewProc("GetClientRect")
 	procMonitorFromWindow        = user32.NewProc("MonitorFromWindow")
 	procEnumWindows              = user32.NewProc("EnumWindows")
 	procSetWindowPos             = user32.NewProc("SetWindowPos")
 	procIsWindowVisible          = user32.NewProc("IsWindowVisible")
 	procIsIconic                 = user32.NewProc("IsIconic")
 	procGetAncestor              = user32.NewProc("GetAncestor")
-	procRedrawWindow             = user32.NewProc("RedrawWindow")
 	procGetCursorPos             = user32.NewProc("GetCursorPos")
 	procScreenToClient           = user32.NewProc("ScreenToClient")
 
@@ -57,12 +54,7 @@ var (
 	procCoUninitialize = ole32.NewProc("CoUninitialize")
 
 	gdi32                             = syscall.NewLazyDLL("gdi32.dll")
-	procCreateRectRgn                 = gdi32.NewProc("CreateRectRgn")
-	procCreateRoundRectRgn            = gdi32.NewProc("CreateRoundRectRgn")
-	procCreateEllipticRgn             = gdi32.NewProc("CreateEllipticRgn")
-	procCombineRgn                    = gdi32.NewProc("CombineRgn")
 	procSetWindowRgn                  = user32.NewProc("SetWindowRgn")
-	procDeleteObject                  = gdi32.NewProc("DeleteObject")
 	procD3DKMTCheckExclusiveOwnership = gdi32.NewProc("D3DKMTCheckExclusiveOwnership")
 
 	psapi                         = syscall.NewLazyDLL("psapi.dll")
@@ -492,7 +484,9 @@ func logFullscreenDebug(format string, args ...interface{}) {
 	if err != nil {
 		return
 	}
-	defer f.Close()
+	defer func() {
+		_ = f.Close()
+	}()
 	msg := fmt.Sprintf("[%s] ", time.Now().Format("15:04:05.000")) + fmt.Sprintf(format, args...) + "\n"
 	_, _ = f.WriteString(msg)
 }
@@ -917,7 +911,7 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 		if covers && isWhitelistedForDemotion(procName) {
 			if curFg != lastDemotedHwnd {
 				lastDemotedHwnd = curFg
-				gwlStyle := int32(-16)                                     // GWL_STYLE
+				gwlStyle := int32(-16)                                    // GWL_STYLE
 				newStyle := uintptr(0x80000000 | 0x10000000 | 0x04000000) // WS_POPUP | WS_VISIBLE | WS_CLIPSIBLINGS
 				setWindowLongPtr(curFg, gwlStyle, newStyle)
 
@@ -1043,7 +1037,7 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 
 			a.updateWindowRegion()
 
-			var origMonName string = "Original Display"
+			origMonName := "Original Display"
 			for _, m := range monitors {
 				if m.ID == origMonID {
 					origMonName = m.Name
@@ -1149,34 +1143,34 @@ var screenWidth, screenHeight int
 
 // App struct
 type App struct {
-	ctx                context.Context
-	wailsApp           *application.App
-	window             *application.WebviewWindow
-	devWindow          *application.WebviewWindow
-	icon               []byte
-	pillW              int
-	pillH              int
-	pillR              int
-	restingW           int
-	restingH           int
-	restingR           int
-	offsetX            int
-	devW               int
-	devH               int
-	devExtra           int
-	satellitesMu       sync.RWMutex
-	satellites         map[string]SatelliteBounds
-	tooltipsMu         sync.RWMutex
-	tooltips           map[string]TooltipBounds
-	scale              float64
-	isHidden           bool
-	autoHideBorderless bool
-	autoHideMu         sync.RWMutex
-	updaterMu          sync.Mutex
-	downloadCancel     context.CancelFunc
-	downloadPaused     bool
-	activeDownloadURL  string
-	activeChecksumURL  string
+	ctx                      context.Context
+	wailsApp                 *application.App
+	window                   *application.WebviewWindow
+	devWindow                *application.WebviewWindow
+	icon                     []byte
+	pillW                    int
+	pillH                    int
+	pillR                    int
+	restingW                 int
+	restingH                 int
+	restingR                 int
+	offsetX                  int
+	devW                     int
+	devH                     int
+	devExtra                 int
+	satellitesMu             sync.RWMutex
+	satellites               map[string]SatelliteBounds
+	tooltipsMu               sync.RWMutex
+	tooltips                 map[string]TooltipBounds
+	scale                    float64
+	isHidden                 bool
+	autoHideBorderless       bool
+	autoHideMu               sync.RWMutex
+	updaterMu                sync.Mutex
+	downloadCancel           context.CancelFunc
+	downloadPaused           bool
+	activeDownloadURL        string
+	activeChecksumURL        string
 	pendingInstallPath       string
 	customUpdateRepo         string
 	fullscreenRelocatedMu    sync.Mutex
@@ -1944,21 +1938,6 @@ func (a *App) ClearAllTooltips() {
 	a.updateWindowRegion()
 }
 
-func (a *App) getActiveTooltips() []TooltipBounds {
-	a.tooltipsMu.RLock()
-	defer a.tooltipsMu.RUnlock()
-	if len(a.tooltips) == 0 {
-		return nil
-	}
-	list := make([]TooltipBounds, 0, len(a.tooltips))
-	for _, tt := range a.tooltips {
-		if tt.Active && tt.Width > 0 && tt.Height > 0 {
-			list = append(list, tt)
-		}
-	}
-	return list
-}
-
 // SatelliteBounds represents the position, dimensions, radius, and anchor configuration for a floating satellite dock.
 type SatelliteBounds struct {
 	ID          string `json:"id"`
@@ -2012,31 +1991,9 @@ func (a *App) SetFloatingControlsBounds(width int, height int, radius int, gap i
 	})
 }
 
-// getActiveSatellites extracts all active satellites sorted deterministically by ID.
-func (a *App) getActiveSatellites() []SatelliteBounds {
-	a.satellitesMu.RLock()
-	defer a.satellitesMu.RUnlock()
-
-	var result []SatelliteBounds
-	for _, sat := range a.satellites {
-		if sat.Active && sat.Width > 0 && sat.Height > 0 {
-			result = append(result, sat)
-		}
-	}
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].ID < result[j].ID
-	})
-	return result
-}
-
 // updateWindowRegion is a no-op under the unclipped transparent canvas hit-testing architecture.
 func (a *App) updateWindowRegion() {
 }
-
-// setClickRegion is a no-op under the unclipped transparent canvas hit-testing architecture.
-func setClickRegion(_ uintptr, _ ...any) {
-}
-
 
 // Greet returns a greeting for the given name
 func (a *App) Greet(name string) string {

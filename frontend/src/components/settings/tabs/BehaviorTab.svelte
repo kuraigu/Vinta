@@ -1,5 +1,12 @@
 <script lang="ts">
-  import { Layout, EyeOff, Timer, MousePointer, RotateCcw, Monitor } from 'lucide-svelte'
+  import {
+    Layout,
+    EyeOff,
+    Timer,
+    MousePointer,
+    RotateCcw,
+    Monitor
+  } from 'lucide-svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingSlider from '../SettingSlider.svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
@@ -127,7 +134,7 @@
       flexCol={true}
     >
       <div class="segment-control full-width">
-        {#each $displayLayoutStore.monitors as mon}
+        {#each $displayLayoutStore.monitors as mon (mon.id)}
           <button
             class:active={$displayLayoutStore.currentMonitor?.id === mon.id}
             onclick={() => handleSwitchMonitor(mon)}

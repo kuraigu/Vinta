@@ -154,7 +154,12 @@
   }
 
   function handlePointerUp(e: PointerEvent) {
-    if (!gestures.isDragging && !gestures.isTrackRegionActive && !gestures.isInertia) return
+    if (
+      !gestures.isDragging &&
+      !gestures.isTrackRegionActive &&
+      !gestures.isInertia
+    )
+      return
     if (e.type === 'pointercancel' && e.buttons === 1) return
     gestures.handlePointerUp(
       e,
@@ -168,7 +173,11 @@
   }
 
   function handleContextMenu(e: MouseEvent) {
-    if (gestures.isDragging || gestures.isInertia || gestures.dragMovedDistance > 4) {
+    if (
+      gestures.isDragging ||
+      gestures.isInertia ||
+      gestures.dragMovedDistance > 4
+    ) {
       if (gestures.isInertia) {
         gestures.interruptInertia()
         onFinishDrag?.()

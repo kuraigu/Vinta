@@ -8,27 +8,31 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
+import {
+  Call as $Call,
+  CancellablePromise as $CancellablePromise,
+  Create as $Create
+} from '@wailsio/runtime'
 
 /**
  * SendTestBadge triggers a Windows Badge notification via PowerShell
  */
 export function SendTestBadge(value: string): $CancellablePromise<void> {
-    return $Call.ByID(4088341960, value);
+  return $Call.ByID(4088341960, value)
 }
 
 /**
  * SendTestLongMessageToast triggers a toast with a very long message
  */
 export function SendTestLongMessageToast(): $CancellablePromise<void> {
-    return $Call.ByID(1208493117);
+  return $Call.ByID(1208493117)
 }
 
 /**
  * SendTestNoTitleToast triggers a toast with only a message, mimicking NVIDIA
  */
 export function SendTestNoTitleToast(): $CancellablePromise<void> {
-    return $Call.ByID(3783370955);
+  return $Call.ByID(3783370955)
 }
 
 /**
@@ -37,5 +41,5 @@ export function SendTestNoTitleToast(): $CancellablePromise<void> {
  * and intercepted by the WinRT UserNotificationListener.
  */
 export function SendTestNotification(): $CancellablePromise<void> {
-    return $Call.ByID(743126710);
+  return $Call.ByID(743126710)
 }
