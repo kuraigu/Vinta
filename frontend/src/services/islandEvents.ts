@@ -497,7 +497,7 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
 
   // Periodic Hardware Status Polling
   const updateBattery = () => {
-    if (get(isSimulatingBatteryStore)) return
+    if (callbacks.getIsHidden() || get(isSimulatingBatteryStore)) return
     if (typeof GetBatteryStatus === 'function') {
       GetBatteryStatus()
         .then((status) => {
@@ -512,7 +512,7 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
   const batteryInterval = window.setInterval(updateBattery, 8000)
 
   const updateWireless = () => {
-    if (get(isSimulatingWirelessStore)) return
+    if (callbacks.getIsHidden() || get(isSimulatingWirelessStore)) return
     if (typeof GetWirelessStatus === 'function') {
       GetWirelessStatus()
         .then((status) => {

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
+  import { isIslandHiddenStore } from '../store'
 
   interface Props {
     isPlaying?: boolean
@@ -61,7 +62,7 @@
   }
 
   function handlePlayStateEffect() {
-    if (isPlaying) {
+    if (isPlaying && !$isIslandHiddenStore) {
       if (!animFrame) {
         animFrame = requestAnimationFrame(renderLoop)
       }
@@ -87,8 +88,15 @@
 
   function renderLoop(time: number) {
     if (!canvasRef) return
+    if ($isIslandHiddenStore) {
+      if (animFrame) {
+        cancelAnimationFrame(animFrame)
+        animFrame = 0
+      }
+      return
+    }
     drawFrame(time)
-    if (isPlaying) {
+    if (isPlaying && !$isIslandHiddenStore) {
       animFrame = requestAnimationFrame(renderLoop)
     }
   }
@@ -257,6 +265,7 @@
     width: 100%;
     height: 100%;
     pointer-events: none;
+    contain: strict;
   }
 
   canvas.dynamic-equalizer.minimal {

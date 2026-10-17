@@ -1833,10 +1833,78 @@ func (a *App) SetIgnoreMouseEvents(ignore bool) {
 	_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwl), style)
 }
 
-// TrimMemory requests Windows to reclaim unused physical RAM pages from the Vinta process working set.
+var (
+	lastTrimTime time.Time
+	trimMu       sync.Mutex
+)
+
+// TrimMemory requests Windows to reclaim unused physical RAM pages from Vinta and all child WebView2 processes.
 func (a *App) TrimMemory() {
+	trimMu.Lock()
+	if time.Since(lastTrimTime) < 500*time.Millisecond {
+		trimMu.Unlock()
+		return
+	}
+	lastTrimTime = time.Now()
+	trimMu.Unlock()
+
+	if procEmptyWorkingSet.Find() != nil {
+		return
+	}
+
+	currentPID := uint32(os.Getpid())
+	snapshot, err := windows.CreateToolhelp32Snapshot(windows.TH32CS_SNAPPROCESS, 0)
+	if err == nil {
+		defer func() {
+			_ = windows.CloseHandle(snapshot)
+		}()
+
+		var pe windows.ProcessEntry32
+		pe.Size = uint32(unsafe.Sizeof(pe))
+
+		type procItem struct {
+			pid       uint32
+			parentPID uint32
+			exe       string
+		}
+		var allProcs []procItem
+
+		if err = windows.Process32First(snapshot, &pe); err == nil {
+			for {
+				allProcs = append(allProcs, procItem{
+					pid:       pe.ProcessID,
+					parentPID: pe.ParentProcessID,
+					exe:       strings.ToLower(windows.UTF16ToString(pe.ExeFile[:])),
+				})
+				if err = windows.Process32Next(snapshot, &pe); err != nil {
+					break
+				}
+			}
+		}
+
+		childPIDs := make(map[uint32]bool)
+		for _, p := range allProcs {
+			if p.parentPID == currentPID && strings.Contains(p.exe, "msedgewebview2") {
+				childPIDs[p.pid] = true
+			}
+		}
+		for _, p := range allProcs {
+			if childPIDs[p.parentPID] && strings.Contains(p.exe, "msedgewebview2") {
+				childPIDs[p.pid] = true
+			}
+		}
+
+		for pid := range childPIDs {
+			hChild, err := windows.OpenProcess(windows.PROCESS_SET_QUOTA|windows.PROCESS_QUERY_LIMITED_INFORMATION, false, pid)
+			if err == nil {
+				_, _, _ = procEmptyWorkingSet.Call(uintptr(hChild))
+				_ = windows.CloseHandle(hChild)
+			}
+		}
+	}
+
 	hProcess, _, _ := procGetCurrentProcess.Call()
-	if hProcess != 0 && procEmptyWorkingSet.Find() == nil {
+	if hProcess != 0 {
 		_, _, _ = procEmptyWorkingSet.Call(hProcess)
 	}
 }

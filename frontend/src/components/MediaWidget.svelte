@@ -25,7 +25,8 @@
     notifData,
     batteryDataStore,
     homeWidgetsVisibilityStore,
-    pinnedMediaSourceStore
+    pinnedMediaSourceStore,
+    isIslandHiddenStore
   } from '../store'
   import {
     Volume1,
@@ -460,12 +461,18 @@
         seekVal = nextPos
       }
 
-      if (untrack(() => isPlayingState) && !isDraggingSeek) {
+      if (
+        untrack(() => isPlayingState) &&
+        !isDraggingSeek &&
+        !$isIslandHiddenStore
+      ) {
         rafId = requestAnimationFrame(tick)
       }
     }
 
-    rafId = requestAnimationFrame(tick)
+    if (!$isIslandHiddenStore && isPlayingState) {
+      rafId = requestAnimationFrame(tick)
+    }
     return () => {
       if (rafId) cancelAnimationFrame(rafId)
     }

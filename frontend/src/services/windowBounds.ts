@@ -23,6 +23,7 @@ export class WindowBoundsManager {
   private boundsTransitionTimeout: number | undefined
   private activeIslandNode: HTMLElement | null = null
   private idleWatchdogTimer: number | undefined
+  private lastHitRectsSignature: string = ''
 
   public currentOSBounds: WindowBounds = { w: 0, h: 0, r: 0 }
   public targetPendingBounds: WindowBounds = { w: 0, h: 0, r: 0 }
@@ -54,18 +55,29 @@ export class WindowBoundsManager {
       if (targetNode) {
         const rect = targetNode.getBoundingClientRect()
         if (rect.width > 0 && rect.height > 0) {
-          SetHitRects([
-            new HitRect({
-              left: Math.round(rect.left * dpr),
-              top: Math.round(rect.top * dpr),
-              width: Math.round(rect.width * dpr),
-              height: Math.round(rect.height * dpr)
-            })
-          ]).catch(() => {})
+          const l = Math.round(rect.left * dpr)
+          const t = Math.round(rect.top * dpr)
+          const w = Math.round(rect.width * dpr)
+          const h = Math.round(rect.height * dpr)
+          const sig = `hidden:${l},${t},${w},${h}`
+          if (sig !== this.lastHitRectsSignature) {
+            this.lastHitRectsSignature = sig
+            SetHitRects([
+              new HitRect({
+                left: l,
+                top: t,
+                width: w,
+                height: h
+              })
+            ]).catch(() => {})
+          }
           return
         }
       }
-      SetHitRects([]).catch(() => {})
+      if (this.lastHitRectsSignature !== 'hidden:empty') {
+        this.lastHitRectsSignature = 'hidden:empty'
+        SetHitRects([]).catch(() => {})
+      }
       return
     }
 
@@ -127,6 +139,13 @@ export class WindowBoundsManager {
       }
     }
 
+    const sig = hitRects
+      .map((r) => `${r.left},${r.top},${r.width},${r.height}`)
+      .join(';')
+    if (sig === this.lastHitRectsSignature) {
+      return
+    }
+    this.lastHitRectsSignature = sig
     SetHitRects(hitRects).catch(() => {})
   }
 
@@ -317,12 +336,13 @@ export class WindowBoundsManager {
    */
   public startIdleReconciler(
     getIslandNode: () => HTMLElement | null,
-    getTargetBounds: () => WindowBounds
+    getTargetBounds: () => WindowBounds,
+    getIsHidden: () => boolean = () => false
   ): () => void {
     if (typeof window === 'undefined') return () => {}
 
     const runIdleCheck = () => {
-      if (!this.getIsDragging()) {
+      if (!this.getIsDragging() && !getIsHidden()) {
         const node = getIslandNode()
         if (node) {
           this.activeIslandNode = node
@@ -331,10 +351,10 @@ export class WindowBoundsManager {
           this.syncPillBounds(node, false)
         }
       }
-      this.idleWatchdogTimer = window.setTimeout(runIdleCheck, 400)
+      this.idleWatchdogTimer = window.setTimeout(runIdleCheck, 500)
     }
 
-    this.idleWatchdogTimer = window.setTimeout(runIdleCheck, 400)
+    this.idleWatchdogTimer = window.setTimeout(runIdleCheck, 500)
 
     return () => {
       clearTimeout(this.idleWatchdogTimer)
