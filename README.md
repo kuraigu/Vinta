@@ -1,6 +1,6 @@
 # Vinta
 
-[![Go Version](https://img.shields.io/badge/Go-1.25%2B-00ADD8?style=flat&logo=go)](https://go.dev/)
+[![Go Version](https://img.shields.io/badge/Go-1.26%2B-00ADD8?style=flat&logo=go)](https://go.dev/)
 [![Svelte Version](https://img.shields.io/badge/Svelte-v5-FF3E00?style=flat&logo=svelte)](https://svelte.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-v5-3178C6?style=flat&logo=typescript)](https://www.typescriptlang.org/)
 [![Wails Framework](https://img.shields.io/badge/Wails-v3-E64A19?style=flat&logo=wails)](https://wails.io/)
@@ -33,6 +33,16 @@ Inspired by this heritage, Vinta brings that same fluid grace to your desktop in
 
 ---
 
+## Repository Structure
+
+- [backend/](backend/README.md): Go backend services, Wails v3 integration, Win32 window management, and native C++/WinRT bridge.
+- [frontend/](frontend/README.md): Svelte 5 application, runes state management, UI components, styling, and themes.
+- [build/](build/README.md): Windows packaging assets, icon templates, and application manifest resources.
+- [docs/](docs/README.md): Design system guidelines, contributor records, and project documentation.
+- [scripts/](scripts/README.md): Build automation scripts, environment setup, and development task helpers.
+
+---
+
 ## Documentation & Community
 
 - [Contributing Guide](CONTRIBUTING.md): Instructions for contributing code, testing features, or reporting issues.
@@ -46,7 +56,7 @@ Inspired by this heritage, Vinta brings that same fluid grace to your desktop in
 
 ## Development Setup
 
-Prerequisites: **Go 1.25+**, **Node.js 20+**, **Wails v3 CLI (wails3)**, **CMake**, and **MSVC C++ Build Tools**.
+Prerequisites: **Go 1.26+**, **Node.js 20+**, **Wails v3 CLI (wails3)**, **CMake**, and **MSVC C++ Build Tools**.
 
 ```powershell
 # 1. Clone repository
