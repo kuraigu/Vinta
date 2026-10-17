@@ -113,6 +113,9 @@
   }
 
   function handlePointerDown(e: PointerEvent) {
+    if (gestures.isInertia) {
+      gestures.interruptInertia()
+    }
     if (!gestures.canInitiateDrag(e, $allowDragPositionStore, expanded)) return
 
     gestures.startDrag(
@@ -146,19 +149,30 @@
       virtualMaxOffset,
       monitorSnapOffsets,
       (nextOffset) => onUpdateOffset?.(nextOffset),
-      () => onFinishDrag?.()
+      (upEv) => handlePointerUp(upEv)
     )
   }
 
   function handlePointerUp(e: PointerEvent) {
-    if (!gestures.isDragging && !gestures.isTrackRegionActive) return
+    if (!gestures.isDragging && !gestures.isTrackRegionActive && !gestures.isInertia) return
     if (e.type === 'pointercancel' && e.buttons === 1) return
-    onFinishDrag?.()
+    gestures.handlePointerUp(
+      e,
+      currentLiveOffsetX,
+      virtualMinOffset,
+      virtualMaxOffset,
+      monitorSnapOffsets,
+      (nextOffset) => onUpdateOffset?.(nextOffset),
+      () => onFinishDrag?.()
+    )
   }
 
   function handleContextMenu(e: MouseEvent) {
-    if (gestures.isDragging || gestures.dragMovedDistance > 6) {
-      onFinishDrag?.()
+    if (gestures.isDragging || gestures.isInertia || gestures.dragMovedDistance > 4) {
+      if (gestures.isInertia) {
+        gestures.interruptInertia()
+        onFinishDrag?.()
+      }
       e.preventDefault()
       e.stopPropagation()
       return
@@ -182,7 +196,7 @@
   }
 
   function handleIslandClick(e: MouseEvent) {
-    if (gestures.dragMovedDistance > 6) {
+    if (gestures.dragMovedDistance > 4) {
       e.preventDefault()
       e.stopPropagation()
       return
@@ -240,8 +254,6 @@
   onmouseenter={onMouseEnter}
   onmouseleave={onMouseLeave}
   onpointerdown={handlePointerDown}
-  onpointermove={handlePointerMove}
-  onpointerup={handlePointerUp}
   oncontextmenu={handleContextMenu}
   onclick={handleIslandClick}
   ontransitionend={handleTransitionEnd}

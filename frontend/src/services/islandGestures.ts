@@ -98,6 +98,7 @@ export class IslandGestureController {
   public isDragging = false
   public isSettling = false
   public isTrackRegionActive = false
+  public isInertia = false
   public dragMovedDistance = 0
 
   private dragStartX = 0
@@ -107,6 +108,9 @@ export class IslandGestureController {
   private dragWatchdogTimeout: number | undefined
   private onExpandRunwayCallback?: () => void
   private hasExpandedRunway = false
+  private dragHistory: Array<{ x: number; time: number }> = []
+  private inertiaAnimFrame: number | undefined
+  private inertiaSafetyTimeout: number | undefined
 
   /**
    * Evaluates whether an element or event can initiate dragging.
@@ -147,6 +151,7 @@ export class IslandGestureController {
     onExpandRunway: () => void,
     onWatchdogFailsafe: () => void
   ): void {
+    this.stopInertia()
     this.isDragging = true
     this.isSettling = false
     this.hasPointerCaptured = false
@@ -159,6 +164,7 @@ export class IslandGestureController {
 
     this.dragStartX = e.screenX
     this.dragStartOffset = currentOffset
+    this.dragHistory = [{ x: e.screenX, time: performance.now() }]
 
     SetForceInteractive(true).catch(() => {})
 
@@ -183,8 +189,14 @@ export class IslandGestureController {
       return
     }
 
+    const now = performance.now()
+    this.dragHistory.push({ x: e.screenX, time: now })
+    if (this.dragHistory.length > 35) {
+      this.dragHistory.shift()
+    }
+
     const dx = e.screenX - this.dragStartX
-    this.dragMovedDistance = Math.abs(dx)
+    this.dragMovedDistance = Math.max(this.dragMovedDistance, Math.abs(dx))
 
     if (this.dragMovedDistance > 2) {
       if (!this.hasExpandedRunway) {
@@ -209,9 +221,135 @@ export class IslandGestureController {
   }
 
   /**
+   * Handles pointer release, calculating release velocity and starting inertia glide if flicked.
+   */
+  public handlePointerUp(
+    e: PointerEvent,
+    currentOffset: number,
+    virtualMin: number,
+    virtualMax: number,
+    _snapOffsets: number[],
+    onUpdateOffset: (newOffset: number) => void,
+    onComplete: () => void
+  ): void {
+    if (this.isInertia) {
+      return
+    }
+
+    if (!this.isDragging && !this.isTrackRegionActive) {
+      onComplete()
+      return
+    }
+
+    this.isDragging = false
+
+    const now = performance.now()
+    this.dragHistory.push({ x: e.screenX, time: now })
+
+    // Sample points within the last 150ms of release
+    const recent = this.dragHistory.filter((p) => now - p.time <= 150)
+    let velocity = 0
+
+    if (recent.length >= 2) {
+      const oldest = recent[0]
+      const newest = recent[recent.length - 1]
+      const dt = newest.time - oldest.time
+      const dx = newest.x - oldest.x
+      if (dt > 10) {
+        velocity = dx / dt
+      }
+    }
+
+    const maxVelocity = 2.5
+    velocity = Math.max(-maxVelocity, Math.min(maxVelocity, velocity))
+
+    if (Math.abs(velocity) >= 0.04 && this.dragMovedDistance > 3) {
+      this.isInertia = true
+      this.isTrackRegionActive = true
+
+      const friction = 0.0028
+      let lastFrameTime = performance.now()
+      let liveOffset = currentOffset
+
+      clearTimeout(this.inertiaSafetyTimeout)
+      this.inertiaSafetyTimeout = window.setTimeout(() => {
+        this.stopInertia()
+        onComplete()
+      }, 1500)
+
+      const runInertiaStep = (currentTime: number) => {
+        if (!this.isInertia) return
+
+        const frameDt = Math.min(32, currentTime - lastFrameTime)
+        lastFrameTime = currentTime
+
+        if (frameDt > 0) {
+          const decay = Math.exp(-friction * frameDt)
+          velocity *= decay
+          liveOffset += velocity * frameDt
+
+          if (liveOffset <= virtualMin) {
+            this.stopInertia()
+            onUpdateOffset(virtualMin)
+            onComplete()
+            return
+          }
+          if (liveOffset >= virtualMax) {
+            this.stopInertia()
+            onUpdateOffset(virtualMax)
+            onComplete()
+            return
+          }
+
+          if (Math.abs(velocity) < 0.03) {
+            this.stopInertia()
+            onUpdateOffset(liveOffset)
+            onComplete()
+            return
+          }
+
+          onUpdateOffset(liveOffset)
+        }
+
+        this.inertiaAnimFrame = requestAnimationFrame(runInertiaStep)
+      }
+
+      this.inertiaAnimFrame = requestAnimationFrame(runInertiaStep)
+    } else {
+      this.stopInertia()
+      onComplete()
+    }
+  }
+
+  /**
+   * Cancels active inertia velocity loop and timers.
+   */
+  public stopInertia(): void {
+    if (this.inertiaAnimFrame !== undefined) {
+      cancelAnimationFrame(this.inertiaAnimFrame)
+      this.inertiaAnimFrame = undefined
+    }
+    clearTimeout(this.inertiaSafetyTimeout)
+    this.inertiaSafetyTimeout = undefined
+    this.isInertia = false
+  }
+
+  /**
+   * Interrupts an active inertia glide immediately, restoring gesture state.
+   */
+  public interruptInertia(): void {
+    this.stopInertia()
+    this.isTrackRegionActive = false
+    this.hasExpandedRunway = false
+    clearTimeout(this.dragWatchdogTimeout)
+    this.dragWatchdogTimeout = undefined
+  }
+
+  /**
    * Concludes the dragging gesture and triggers resting completion.
    */
   public finishDrag(e?: PointerEvent, onComplete?: () => void): void {
+    this.stopInertia()
     clearTimeout(this.dragWatchdogTimeout)
     this.dragWatchdogTimeout = undefined
     this.isDragging = false
@@ -244,7 +382,8 @@ export class IslandGestureController {
   public resetWatchdog(onFailsafe: () => void): void {
     clearTimeout(this.dragWatchdogTimeout)
     this.dragWatchdogTimeout = window.setTimeout(() => {
-      if (this.isDragging || this.isSettling) {
+      if (this.isDragging || this.isSettling || this.isInertia) {
+        this.stopInertia()
         SetForceInteractive(false).catch(() => {})
         onFailsafe()
       }
@@ -255,6 +394,7 @@ export class IslandGestureController {
    * Cleans up active gesture timers.
    */
   public cleanup(): void {
+    this.stopInertia()
     clearTimeout(this.dragResetTimeout)
     clearTimeout(this.dragWatchdogTimeout)
     this.isDragging = false

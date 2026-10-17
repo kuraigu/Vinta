@@ -137,7 +137,8 @@
       if (
         !gestures.isDragging &&
         !gestures.isTrackRegionActive &&
-        !gestures.isSettling
+        !gestures.isSettling &&
+        !gestures.isInertia
       ) {
         bounds.recoverRestingBounds(
           getBoundsForState(),
@@ -438,7 +439,7 @@
   }
 
   function handleSmartEdgeOffsetAdjustment() {
-    if (!gestures.isDragging && !isControlsDrawerOpen) {
+    if (!gestures.isDragging && !gestures.isInertia && !isControlsDrawerOpen) {
       let adjusted = false
       if (currentLiveOffsetX > allowedOffsets.max) {
         currentLiveOffsetX = allowedOffsets.max
@@ -463,7 +464,7 @@
   $effect(handleSmartEdgeOffsetAdjustment)
 
   function syncStoreOffsetToLive(val: number) {
-    if (!gestures.isDragging) {
+    if (!gestures.isDragging && !gestures.isInertia) {
       currentLiveOffsetX = val
     }
   }
@@ -474,7 +475,7 @@
 
   let clampedOffsetX = $derived.by(() => {
     if (Math.abs(currentLiveOffsetX) < 3) return 0
-    if (gestures.isDragging) {
+    if (gestures.isDragging || gestures.isInertia) {
       return currentLiveOffsetX
     }
     return Math.max(
@@ -485,7 +486,10 @@
 
   bounds.getLiveOffset = () => clampedOffsetX
   bounds.getIsDragging = () =>
-    gestures.isDragging || gestures.isTrackRegionActive || gestures.isSettling
+    gestures.isDragging ||
+    gestures.isTrackRegionActive ||
+    gestures.isSettling ||
+    gestures.isInertia
 
   let glowOpacity = $derived(
     $glowIntensityStore === 'disabled'
@@ -563,7 +567,7 @@
     expand: boolean = false
   ) {
     gestures.finishSettling()
-    if (!expand && gestures.isDragging) {
+    if (!expand && (gestures.isDragging || gestures.isInertia)) {
       finishDragGesture()
     }
 
@@ -739,7 +743,8 @@
     if (
       gestures.isDragging ||
       gestures.isTrackRegionActive ||
-      gestures.isSettling
+      gestures.isSettling ||
+      gestures.isInertia
     ) {
       return
     }
@@ -748,7 +753,7 @@
       target,
       clampedOffsetX,
       islandNode,
-      gestures.isDragging,
+      gestures.isDragging || gestures.isInertia,
       isHidden
     )
   }
@@ -758,7 +763,10 @@
   // Drag Gesture Helpers
   function finishDragGesture() {
     const wasInRunway =
-      gestures.isTrackRegionActive || gestures.isDragging || gestures.isSettling
+      gestures.isTrackRegionActive ||
+      gestures.isDragging ||
+      gestures.isSettling ||
+      gestures.isInertia
     gestures.finishDrag(undefined, () => {
       const baseCenter = displayLayout.virtualLeft + displayLayout.primaryCenter
       const targetMon =
@@ -818,7 +826,7 @@
 
   async function handleExpand() {
     if (expanded) return
-    if (gestures.isDragging) finishDragGesture()
+    if (gestures.isDragging || gestures.isInertia) finishDragGesture()
     if (isHidden) {
       isHidden = false
       bounds.notifyHidden(false)
@@ -846,7 +854,8 @@
     if (
       !gestures.isDragging &&
       !gestures.isTrackRegionActive &&
-      !gestures.isSettling
+      !gestures.isSettling &&
+      !gestures.isInertia
     ) {
       bounds.recoverRestingBounds(
         getBoundsForState(),
@@ -899,6 +908,12 @@
     currentLiveOffsetX = 0
     const b = getBoundsForState()
     bounds.syncBounds(b, 0, islandNode, false, isHidden)
+    requestAnimationFrame(() => {
+      bounds.syncPillBounds(islandNode, isHidden)
+      requestAnimationFrame(() => {
+        bounds.syncPillBounds(islandNode, isHidden)
+      })
+    })
 
     const handleOverlayChange = (e: Event) => {
       const detail = (e as CustomEvent).detail as
@@ -964,7 +979,7 @@
           return
         }
       }
-      if (gestures.isDragging) {
+      if (gestures.isDragging || gestures.isInertia) {
         finishDragGesture()
       }
     }
@@ -972,7 +987,7 @@
     const handleWindowKeydownFailsafe = (e: KeyboardEvent) => {
       if (e.defaultPrevented) return
       if (e.key === 'Escape') {
-        if (gestures.isDragging) {
+        if (gestures.isDragging || gestures.isInertia) {
           finishDragGesture()
           return
         }
@@ -1008,7 +1023,8 @@
       if (
         !gestures.isDragging &&
         !gestures.isTrackRegionActive &&
-        !gestures.isSettling
+        !gestures.isSettling &&
+        !gestures.isInertia
       ) {
         bounds.recoverRestingBounds(
           getBoundsForState(),
@@ -1329,7 +1345,8 @@
         if (
           !gestures.isDragging &&
           !gestures.isTrackRegionActive &&
-          !gestures.isSettling
+          !gestures.isSettling &&
+          !gestures.isInertia
         ) {
           bounds.recoverRestingBounds(
             getBoundsForState(),
@@ -1345,7 +1362,8 @@
         if (
           !gestures.isDragging &&
           !gestures.isTrackRegionActive &&
-          !gestures.isSettling
+          !gestures.isSettling &&
+          !gestures.isInertia
         ) {
           bounds.recoverRestingBounds(
             getBoundsForState(),
@@ -1359,7 +1377,7 @@
     style="
       pointer-events: {isQuitting ? 'none' : 'auto'};
       transform: translateX({clampedOffsetX}px);
-      transition: {gestures.isDragging ? 'none' : islandAnim};
+      transition: {gestures.isDragging || gestures.isInertia ? 'none' : islandAnim};
     "
   >
     <MainIsland
@@ -1407,7 +1425,8 @@
         if (
           !gestures.isDragging &&
           !gestures.isTrackRegionActive &&
-          !gestures.isSettling
+          !gestures.isSettling &&
+          !gestures.isInertia
         ) {
           bounds.recoverRestingBounds(
             getBoundsForState(),
@@ -1421,7 +1440,8 @@
         if (
           !gestures.isDragging &&
           !gestures.isTrackRegionActive &&
-          !gestures.isSettling
+          !gestures.isSettling &&
+          !gestures.isInertia
         ) {
           bounds.recoverRestingBounds(
             getBoundsForState(),

@@ -861,7 +861,7 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 			vintaHwnd,
 			uintptr(^uintptr(0)), // HWND_TOPMOST
 			0, 0, 0, 0,
-			0x0001|0x0002|0x0010|0x0040, // SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE | SWP_SHOWWINDOW
+			0x0001|0x0002|0x0010, // SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE
 		)
 	}
 
@@ -872,6 +872,9 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 	)
 
 	evaluateForegroundState := func() {
+		if !services.IsFrontendReady() {
+			return
+		}
 		curFg, _, _ := procGetForegroundWindow.Call()
 		if curFg == 0 || isVintaForeground(curFg) {
 			reassertTopmost(curFg)
@@ -1184,6 +1187,7 @@ type App struct {
 	pillHitRects             []pillHitBounds
 	isForceInteractive       bool
 	isCurrentlyInteractive   bool
+	initialShowOnce          sync.Once
 }
 
 // NewApp creates a new App application struct
@@ -1295,6 +1299,29 @@ func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 				)
 			}
 
+			// Seed initial resting pill hit rect so the island is immediately interactive on launch
+			primaryCenter := (vWidth / 2)
+			for _, mon := range monitors {
+				if mon.IsPrimary {
+					primaryCenter = (mon.Left - vLeft) + (mon.Width / 2)
+					break
+				}
+			}
+			initW := int32(360)
+			initH := int32(50)
+			initLeft := int32(primaryCenter) - (initW / 2)
+			initTop := int32(0)
+			a.pillHitMu.Lock()
+			if len(a.pillHitRects) == 0 {
+				a.pillHitRects = []pillHitBounds{{
+					left:   initLeft,
+					top:    initTop,
+					right:  initLeft + initW,
+					bottom: initTop + initH,
+				}}
+			}
+			a.pillHitMu.Unlock()
+
 			go services.StartServicesListener()
 
 			a.startHitTestingLoop(hwnd)
@@ -1303,6 +1330,11 @@ func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 
 	if win != nil {
 		win.OnWindowEvent(events.Common.WindowShow, func(_ *application.WindowEvent) {
+			if h := uintptr(win.NativeWindow()); h != 0 {
+				applyInit(h)
+			}
+		})
+		win.OnWindowEvent(events.Windows.WindowShow, func(_ *application.WindowEvent) {
 			if h := uintptr(win.NativeWindow()); h != 0 {
 				applyInit(h)
 			}
@@ -1317,6 +1349,15 @@ func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 			services.SetFrontendReady(false)
 			services.StopServicesListener()
 		})
+
+		go func() {
+			time.Sleep(3000 * time.Millisecond)
+			a.initialShowOnce.Do(func() {
+				if a.window != nil {
+					a.window.Show()
+				}
+			})
+		}()
 	}
 
 	go func() {
@@ -1456,6 +1497,14 @@ func (a *App) SetHitRects(rects []HitRect) {
 		}
 	}
 	a.pillHitMu.Unlock()
+
+	if len(rects) > 0 {
+		a.initialShowOnce.Do(func() {
+			if a.window != nil {
+				a.window.Show()
+			}
+		})
+	}
 }
 
 // SetPillBounds updates the physical pixel bounding box of the active island for hit testing.
@@ -1531,15 +1580,21 @@ func (a *App) startHitTestingLoop(hwnd uintptr) {
 				}
 			}
 
-			if isHit != a.isCurrentlyInteractive {
+			gwl := int32(GWL_EXSTYLE)
+			style, _, _ := procGetWindowLong.Call(hwnd, uintptr(gwl))
+			hasTransparent := (style & WS_EX_TRANSPARENT) != 0
+
+			needsUpdate := false
+			if isHit && hasTransparent {
+				style &^= WS_EX_TRANSPARENT
+				needsUpdate = true
+			} else if !isHit && !hasTransparent {
+				style |= WS_EX_TRANSPARENT
+				needsUpdate = true
+			}
+
+			if needsUpdate {
 				a.isCurrentlyInteractive = isHit
-				gwl := int32(GWL_EXSTYLE)
-				style, _, _ := procGetWindowLong.Call(hwnd, uintptr(gwl))
-				if isHit {
-					style &^= WS_EX_TRANSPARENT
-				} else {
-					style |= WS_EX_TRANSPARENT
-				}
 				_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwl), style)
 			}
 		}
