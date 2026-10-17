@@ -254,7 +254,7 @@ export function GetNamedGlobalShortcut(
 }
 
 /**
- * GetNotifications reads notifications.json from %APPDATA%/FreeMatrix Studios/Vinta.
+ * GetNotifications reads notifications.json from %APPDATA%/FreeMatrix Studios/Vinta, decrypting DPAPI ciphertext if encrypted.
  */
 export function GetNotifications(): $CancellablePromise<string> {
   return $Call.ByID(1044629443)
@@ -466,7 +466,7 @@ export function SaveNote(
 }
 
 /**
- * SaveNotifications writes notifications.json to %APPDATA%/FreeMatrix Studios/Vinta.
+ * SaveNotifications encrypts and writes notifications.json to %APPDATA%/FreeMatrix Studios/Vinta using Windows DPAPI.
  */
 export function SaveNotifications(
   notificationsJSON: string

@@ -25,20 +25,7 @@ export type AppNotification = {
 
 export const MAX_NOTIFICATIONS = 999
 
-function loadInitialNotifications(): AppNotification[] {
-  try {
-    const raw = localStorage.getItem('vinta_notifications')
-    if (raw) {
-      const parsed = JSON.parse(raw)
-      if (Array.isArray(parsed)) return parsed.slice(0, MAX_NOTIFICATIONS)
-    }
-  } catch {
-    // Ignore initial storage read error
-  }
-  return []
-}
-
-export const notifData = writable<AppNotification[]>(loadInitialNotifications())
+export const notifData = writable<AppNotification[]>([])
 export const notificationPermissionDenied = writable<boolean>(false)
 
 let saveNotificationsTimeout: ReturnType<typeof setTimeout> | null = null
@@ -54,23 +41,22 @@ function syncNotificationsToDisk(items: AppNotification[]) {
   }
 }
 
-// Hydrate persisted notifications from backend storage on application launch
+// Hydrate persisted notifications from DPAPI-encrypted backend storage on application launch
 if (typeof GetNotifications === 'function') {
   GetNotifications()
     .then((jsonStr) => {
+      // Purge legacy plaintext notifications from localStorage if present
+      try {
+        localStorage.removeItem('vinta_notifications')
+      } catch {
+        // Ignore storage removal errors
+      }
+
       if (jsonStr && jsonStr !== '[]') {
         try {
           const parsed = JSON.parse(jsonStr)
           if (Array.isArray(parsed) && parsed.length > 0) {
             notifData.set(parsed.slice(0, MAX_NOTIFICATIONS))
-            try {
-              localStorage.setItem(
-                'vinta_notifications',
-                JSON.stringify(parsed.slice(0, MAX_NOTIFICATIONS))
-              )
-            } catch {
-              // Ignore localStorage write error
-            }
           }
         } catch {
           // Ignore parse errors from corrupted storage
