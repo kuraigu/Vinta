@@ -57,6 +57,7 @@
     opacityExpandedStore,
     opacityHiddenStore,
     hiddenPillOffsetXStore,
+    isIslandHiddenStore,
     notifSoundStore,
     notifVolumeStore,
     glowIntensityStore,
@@ -146,6 +147,9 @@
           islandNode,
           isHidden
         )
+      }
+      if (!isExp) {
+        bounds.trimMemory()
       }
     }, transitionDuration)
   }
@@ -473,6 +477,11 @@
   }
   $effect(handleHiddenPillOffsetSync)
 
+  function handleIsHiddenSyncEffect() {
+    $isIslandHiddenStore = isHidden
+  }
+  $effect(handleIsHiddenSyncEffect)
+
   let clampedOffsetX = $derived.by(() => {
     if (Math.abs(currentLiveOffsetX) < 3) return 0
     if (gestures.isDragging || gestures.isInertia) {
@@ -737,7 +746,7 @@
       if (isHidden && isPageDormant) {
         bounds.trimMemory()
       }
-    }, 1500)
+    }, 500)
   }
 
   setContext('hidePill', hideWidget)
@@ -1118,8 +1127,15 @@
 
     const stopIdleReconciler = bounds.startIdleReconciler(
       () => islandNode,
-      () => getBoundsForState()
+      () => getBoundsForState(),
+      () => isHidden
     )
+
+    const idleMemoryWatchdog = window.setInterval(() => {
+      if (!expanded || isHidden) {
+        bounds.trimMemory()
+      }
+    }, 30000)
 
     const cleanupEvents = initIslandEvents({
       showWidget,
@@ -1294,6 +1310,7 @@
     )
 
     return () => {
+      window.clearInterval(idleMemoryWatchdog)
       stopIdleReconciler()
       finishDragGesture()
       cleanupEvents()

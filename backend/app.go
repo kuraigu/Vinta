@@ -17,6 +17,7 @@ import (
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
+	"golang.org/x/sys/windows"
 	"golang.org/x/sys/windows/registry"
 
 	"Vinta/backend/services"
@@ -1832,10 +1833,78 @@ func (a *App) SetIgnoreMouseEvents(ignore bool) {
 	_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwl), style)
 }
 
-// TrimMemory requests Windows to reclaim unused physical RAM pages from the Vinta process working set.
+var (
+	lastTrimTime time.Time
+	trimMu       sync.Mutex
+)
+
+// TrimMemory requests Windows to reclaim unused physical RAM pages from Vinta and all child WebView2 processes.
 func (a *App) TrimMemory() {
+	trimMu.Lock()
+	if time.Since(lastTrimTime) < 500*time.Millisecond {
+		trimMu.Unlock()
+		return
+	}
+	lastTrimTime = time.Now()
+	trimMu.Unlock()
+
+	if procEmptyWorkingSet.Find() != nil {
+		return
+	}
+
+	currentPID := uint32(os.Getpid())
+	snapshot, err := windows.CreateToolhelp32Snapshot(windows.TH32CS_SNAPPROCESS, 0)
+	if err == nil {
+		defer func() {
+			_ = windows.CloseHandle(snapshot)
+		}()
+
+		var pe windows.ProcessEntry32
+		pe.Size = uint32(unsafe.Sizeof(pe))
+
+		type procItem struct {
+			pid       uint32
+			parentPID uint32
+			exe       string
+		}
+		var allProcs []procItem
+
+		if err = windows.Process32First(snapshot, &pe); err == nil {
+			for {
+				allProcs = append(allProcs, procItem{
+					pid:       pe.ProcessID,
+					parentPID: pe.ParentProcessID,
+					exe:       strings.ToLower(windows.UTF16ToString(pe.ExeFile[:])),
+				})
+				if err = windows.Process32Next(snapshot, &pe); err != nil {
+					break
+				}
+			}
+		}
+
+		childPIDs := make(map[uint32]bool)
+		for _, p := range allProcs {
+			if p.parentPID == currentPID && strings.Contains(p.exe, "msedgewebview2") {
+				childPIDs[p.pid] = true
+			}
+		}
+		for _, p := range allProcs {
+			if childPIDs[p.parentPID] && strings.Contains(p.exe, "msedgewebview2") {
+				childPIDs[p.pid] = true
+			}
+		}
+
+		for pid := range childPIDs {
+			hChild, err := windows.OpenProcess(windows.PROCESS_SET_QUOTA|windows.PROCESS_QUERY_LIMITED_INFORMATION, false, pid)
+			if err == nil {
+				_, _, _ = procEmptyWorkingSet.Call(uintptr(hChild))
+				_ = windows.CloseHandle(hChild)
+			}
+		}
+	}
+
 	hProcess, _, _ := procGetCurrentProcess.Call()
-	if hProcess != 0 && procEmptyWorkingSet.Find() == nil {
+	if hProcess != 0 {
 		_, _, _ = procEmptyWorkingSet.Call(hProcess)
 	}
 }
@@ -2575,24 +2644,93 @@ func (a *App) SaveTimerData(timerJSON string) error {
 	return os.WriteFile(filePath, []byte(timerJSON), 0644)
 }
 
-// GetNotifications reads notifications.json from %APPDATA%/FreeMatrix Studios/Vinta.
+var dpapiNotificationHeader = []byte("VNDP")
+
+// encryptDPAPI encrypts plaintext bytes using the Windows Data Protection API.
+func encryptDPAPI(plaintext []byte) ([]byte, error) {
+	if len(plaintext) == 0 {
+		return nil, nil
+	}
+	var inBlob windows.DataBlob
+	inBlob.Size = uint32(len(plaintext))
+	inBlob.Data = &plaintext[0]
+
+	var outBlob windows.DataBlob
+	err := windows.CryptProtectData(&inBlob, nil, nil, 0, nil, 0, &outBlob)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		_, _ = windows.LocalFree(windows.Handle(unsafe.Pointer(outBlob.Data)))
+	}()
+
+	ciphertext := unsafe.Slice(outBlob.Data, outBlob.Size)
+	result := make([]byte, len(ciphertext))
+	copy(result, ciphertext)
+	return result, nil
+}
+
+// decryptDPAPI decrypts ciphertext bytes using the Windows Data Protection API.
+func decryptDPAPI(ciphertext []byte) ([]byte, error) {
+	if len(ciphertext) == 0 {
+		return nil, nil
+	}
+	var inBlob windows.DataBlob
+	inBlob.Size = uint32(len(ciphertext))
+	inBlob.Data = &ciphertext[0]
+
+	var outBlob windows.DataBlob
+	err := windows.CryptUnprotectData(&inBlob, nil, nil, 0, nil, 0, &outBlob)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		_, _ = windows.LocalFree(windows.Handle(unsafe.Pointer(outBlob.Data)))
+	}()
+
+	plaintext := unsafe.Slice(outBlob.Data, outBlob.Size)
+	result := make([]byte, len(plaintext))
+	copy(result, plaintext)
+	return result, nil
+}
+
+// GetNotifications reads notifications.json from %APPDATA%/FreeMatrix Studios/Vinta, decrypting DPAPI ciphertext if encrypted.
 func (a *App) GetNotifications() (string, error) {
 	filePath := filepath.Join(GetAppDataDir(), "notifications.json")
 	data, err := os.ReadFile(filePath)
-	if err != nil {
+	if err != nil || len(data) == 0 {
 		return "[]", nil
 	}
+
+	if len(data) >= len(dpapiNotificationHeader) && string(data[:len(dpapiNotificationHeader)]) == string(dpapiNotificationHeader) {
+		decrypted, err := decryptDPAPI(data[len(dpapiNotificationHeader):])
+		if err != nil {
+			return "[]", nil
+		}
+		return string(decrypted), nil
+	}
+
 	return string(data), nil
 }
 
-// SaveNotifications writes notifications.json to %APPDATA%/FreeMatrix Studios/Vinta.
+// SaveNotifications encrypts and writes notifications.json to %APPDATA%/FreeMatrix Studios/Vinta using Windows DPAPI.
 func (a *App) SaveNotifications(notificationsJSON string) error {
 	dir := GetAppDataDir()
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return err
 	}
+
+	encrypted, err := encryptDPAPI([]byte(notificationsJSON))
+	if err != nil {
+		return err
+	}
+
+	payload := make([]byte, 0, len(dpapiNotificationHeader)+len(encrypted))
+	payload = append(payload, dpapiNotificationHeader...)
+	payload = append(payload, encrypted...)
+
 	filePath := filepath.Join(dir, "notifications.json")
-	return os.WriteFile(filePath, []byte(notificationsJSON), 0644)
+	return os.WriteFile(filePath, payload, 0600)
 }
 
 // GetCacheSize computes the total byte size of disk caches and temporary sync databases.

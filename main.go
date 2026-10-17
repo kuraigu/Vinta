@@ -66,6 +66,7 @@ func main() {
 		Windows: application.WindowsOptions{
 			WebviewUserDataPath:           filepath.Join(backend.GetAppDataDir(), "webview2"),
 			DisableQuitOnLastWindowClosed: false,
+			DisabledFeatures:              []string{"CalculateNativeWinOcclusion"},
 		},
 	})
 
