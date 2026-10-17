@@ -16,7 +16,6 @@
   import ActionCenterGlance from '../components/ActionCenterGlance.svelte'
   import ScrollView from '../components/ScrollView.svelte'
   import CalendarPage, { config as calendarConfig } from './CalendarPage.svelte'
-  import { islandTooltip } from '../services/islandTooltip'
   import {
     homeWidgetsVisibilityStore,
     userNameStore,
@@ -208,7 +207,6 @@
             openCalendar()
           }}
           onkeydown={(e) => e.key === 'Enter' && openCalendar()}
-          use:islandTooltip={'Open Calendar'}
         >
           <Calendar expanded={false} />
         </div>

@@ -4,10 +4,14 @@ package main
 import (
 	"Vinta/backend"
 	"Vinta/backend/devtest"
+	"Vinta/backend/services"
 	"embed"
 	"net/http"
+	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
@@ -73,8 +77,8 @@ func main() {
 		}
 	}
 	overlayHeight := maxTopOffset + 680
-	if vHeight > 0 && overlayHeight > vHeight {
-		overlayHeight = vHeight
+	if vHeight > 0 && overlayHeight >= vHeight {
+		overlayHeight = vHeight - 1
 	}
 	if vWidth <= 0 {
 		vWidth = 1920
@@ -90,6 +94,7 @@ func main() {
 		Frameless:         true,
 		AlwaysOnTop:       true,
 		DisableResize:     true,
+		Hidden:            true,
 		BackgroundType:    application.BackgroundTypeTransparent,
 		BackgroundColour:  application.NewRGBA(0, 0, 0, 0),
 		IgnoreMouseEvents: false,
@@ -117,6 +122,18 @@ func main() {
 		app.SetDevWindow(devWin)
 		devWin.Show()
 	}
+
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sigChan
+		services.StopServicesListener()
+		if a := application.Get(); a != nil {
+			a.Quit()
+		}
+	}()
+
+	defer services.StopServicesListener()
 
 	err := wailsApp.Run()
 	if err != nil {

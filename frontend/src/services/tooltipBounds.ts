@@ -47,3 +47,12 @@ export function dismissTooltipBounds(id: string): void {
     ClearTooltipBounds(id).catch(() => {})
   }
 }
+
+/**
+ * Removes all active floating tooltip regions from the native window mask.
+ */
+export function dismissAllTooltips(): void {
+  if (typeof ClearTooltipBounds === 'function') {
+    ClearTooltipBounds('*').catch(() => {})
+  }
+}

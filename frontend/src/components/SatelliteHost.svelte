@@ -111,6 +111,13 @@
       tooltipSide,
       active
     })
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))
+      requestAnimationFrame(() => {
+        window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))
+      })
+    }
   }
 
   /**
@@ -145,6 +152,9 @@
 
   onDestroy(() => {
     unregisterSatellite(id)
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))
+    }
   })
 
   /**

@@ -128,7 +128,7 @@
    * Computes layout dimensions, 4-part gaps, and corner radii for the controls satellite.
    */
   function computeSatelliteBounds() {
-    if (layoutExpanded) {
+    if (expanded && layoutExpanded) {
       const centerOffsetY = Math.max(0, Math.round((expandedHeight - 88) / 2))
       const expandedRadii: FourPartRadii = [12, 12, 12, 12]
       const expandedGaps: FourPartGaps = [0, 6, 0, 6]
@@ -189,7 +189,7 @@
   tooltipPad={satelliteBounds.tooltipPad}
   tooltipSide={satelliteBounds.tooltipSide}
   {clampedOffsetX}
-  {active}
+  active={active && !isTransitioning}
   animateIn={!layoutExpanded}
   {onmouseenter}
   {onmouseleave}

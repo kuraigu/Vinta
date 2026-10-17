@@ -967,7 +967,7 @@ function formatAlarmRepeatDescription(
   if (repeat === 'weekdays') return 'Mon - Fri'
   if (!days || days.length === 0) return 'Custom days'
   if (days.length === 7) return 'Every day'
-  const names = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+  const names = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
   return days.map((d) => names[d]).join(', ')
 }
 

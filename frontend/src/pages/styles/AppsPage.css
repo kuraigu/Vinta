@@ -178,53 +178,63 @@
 
 /* Distinct Curated Brand Gradients for Each App */
 .app-tile.app-about .tile-icon-box {
-  background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
-  --glow-color: rgba(139, 92, 246, 0.4);
+  background: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%);
+  --glow-color: rgba(167, 139, 250, 0.45);
 }
 
 .app-tile.app-actioncenter .tile-icon-box {
-  background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
-  --glow-color: rgba(99, 102, 241, 0.4);
+  background: linear-gradient(135deg, #818cf8 0%, #4f46e5 100%);
+  --glow-color: rgba(129, 140, 248, 0.45);
 }
 
 .app-tile.app-calculator .tile-icon-box {
-  background: linear-gradient(135deg, #f97316 0%, #c2410c 100%);
-  --glow-color: rgba(249, 115, 22, 0.4);
+  background: linear-gradient(135deg, #fb923c 0%, #ea580c 100%);
+  --glow-color: rgba(251, 146, 60, 0.45);
+}
+
+.app-tile.app-calendar .tile-icon-box {
+  background: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%);
+  --glow-color: rgba(56, 189, 248, 0.45);
 }
 
 .app-tile.app-home .tile-icon-box {
-  background: linear-gradient(135deg, #10b981 0%, #047857 100%);
-  --glow-color: rgba(16, 185, 129, 0.4);
+  background: linear-gradient(135deg, #34d399 0%, #059669 100%);
+  --glow-color: rgba(52, 211, 153, 0.45);
 }
 
 .app-tile.app-media .tile-icon-box {
-  background: linear-gradient(135deg, #f43f5e 0%, #be123c 100%);
-  --glow-color: rgba(244, 63, 94, 0.4);
+  background: linear-gradient(135deg, #fb7185 0%, #e11d48 100%);
+  --glow-color: rgba(251, 113, 133, 0.45);
 }
 
 .app-tile.app-notifs .tile-icon-box {
-  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
-  --glow-color: rgba(14, 165, 233, 0.4);
+  background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
+  --glow-color: rgba(56, 189, 248, 0.45);
 }
 
 .app-tile.app-notes .tile-icon-box {
-  background: linear-gradient(135deg, #eab308 0%, #b45309 100%);
-  --glow-color: rgba(234, 179, 8, 0.4);
+  background: linear-gradient(135deg, #facc15 0%, #ca8a04 100%);
+  --glow-color: rgba(250, 204, 21, 0.45);
 }
 
 .app-tile.app-settings .tile-icon-box {
-  background: linear-gradient(135deg, #64748b 0%, #334155 100%);
-  --glow-color: rgba(100, 116, 139, 0.4);
+  background: linear-gradient(135deg, #94a3b8 0%, #475569 100%);
+  --glow-color: rgba(148, 163, 184, 0.45);
+}
+
+.app-tile.app-timer .tile-icon-box {
+  background: linear-gradient(135deg, #f472b6 0%, #db2777 100%);
+  --glow-color: rgba(244, 114, 182, 0.45);
 }
 
 .app-tile.app-updates .tile-icon-box {
-  background: linear-gradient(135deg, #06b6d4 0%, #0e7490 100%);
-  --glow-color: rgba(6, 182, 212, 0.4);
+  background: linear-gradient(135deg, #22d3ee 0%, #0891b2 100%);
+  --glow-color: rgba(34, 211, 238, 0.45);
 }
 
 .app-tile.app-weather .tile-icon-box {
-  background: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
-  --glow-color: rgba(56, 189, 248, 0.45);
+  background: linear-gradient(135deg, #60a5fa 0%, #2563eb 100%);
+  --glow-color: rgba(96, 165, 250, 0.45);
 }
 
 /* Badge on App Tile */

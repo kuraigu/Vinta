@@ -41,9 +41,11 @@ import {
   type MediaSessionItem,
   type UpdateCheckResult,
   type BatteryData,
-  type WirelessData
+  type WirelessData,
+  hiddenPillOffsetXStore
 } from '../store'
 import type { MonitorInfo } from '../../bindings/Vinta/backend/models.js'
+import { sendVintaNotification } from './vintaNotification.js'
 
 /**
  * Callbacks provided by the island orchestrator to handle system and runtime events.
@@ -60,6 +62,7 @@ export interface IslandEventCallbacks {
   onHideTrigger: () => void
   onMonitorChanged: (mon: MonitorInfo) => void
   onRefreshDisplay: () => void
+  onRelocateOffset?: (newOffset: number) => void
   onNotificationWake?: () => void
   onHotkeyToggle?: () => void
   onQuickNotesHotkey?: () => void
@@ -115,7 +118,7 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
 
   // Fullscreen / Game Mode Handling
   let wasHiddenBeforeGameMode = false
-  onEvent('game-mode-enter', (reason: unknown) => {
+  onEvent('game-mode-enter', (payload: unknown) => {
     if (callbacks.getIsHidden()) {
       wasHiddenBeforeGameMode = true
     } else {
@@ -123,20 +126,29 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
       callbacks.hideWidget()
     }
 
-    let reasonText = 'exclusive fullscreen application'
-    if (typeof reason === 'string') {
-      if (reason === 'presentation_mode') {
-        reasonText = 'presentation mode'
-      } else if (reason === 'borderless_fullscreen') {
-        reasonText = 'borderless fullscreen application'
-      }
+    let reason = ''
+    let appName = ''
+    if (typeof payload === 'string') {
+      reason = payload
+    } else if (payload && typeof payload === 'object') {
+      const p = payload as Record<string, unknown>
+      reason = String(p.reason || '')
+      appName = String(p.appName || '')
     }
 
+    let reasonText = 'exclusive fullscreen application'
+    if (reason === 'presentation_mode') {
+      reasonText = 'presentation mode'
+    } else if (reason === 'borderless_fullscreen') {
+      reasonText = 'borderless fullscreen application'
+    }
+
+    const appPrefix = appName ? `${appName}: ` : ''
     const newNotif = {
       id: Date.now(),
-      appName: 'Vinta',
+      appName: appName || 'Vinta',
       title: 'Auto-Hidden for Fullscreen',
-      message: `Vinta was automatically hidden to prevent overlay conflicts during ${reasonText}.`,
+      message: `${appPrefix}Vinta was automatically hidden to prevent overlay conflicts during ${reasonText}.`,
       timestamp: Date.now()
     }
 
@@ -149,6 +161,52 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
     if (!wasHiddenBeforeGameMode && callbacks.getIsHidden()) {
       callbacks.showWidget()
     }
+  })
+
+  onEvent('game-mode-relocate', (payload: unknown) => {
+    const p = payload as {
+      appName?: string
+      targetOffset?: number
+      targetMonitor?: MonitorInfo
+      originalMonitor?: MonitorInfo
+      reason?: string
+    }
+    const appName = p?.appName || 'Application'
+    const targetName = p?.targetMonitor?.name || 'Secondary Display'
+    const targetOffset = p?.targetOffset ?? 0
+
+    if (callbacks.onRelocateOffset) {
+      callbacks.onRelocateOffset(targetOffset)
+    } else {
+      hiddenPillOffsetXStore.set(targetOffset)
+    }
+
+    sendVintaNotification({
+      title: `Moved to ${targetName}`,
+      message: `${appName}: Vinta moved to ${targetName} to stay visible during exclusive fullscreen application.`,
+      subApp: 'Display Manager'
+    })
+  })
+
+  onEvent('game-mode-return', (payload: unknown) => {
+    const p = payload as {
+      restoreOffset?: number
+      originalMonitorName?: string
+    }
+    const restoreOffset = p?.restoreOffset ?? 0
+    const origName = p?.originalMonitorName || 'Original Display'
+
+    if (callbacks.onRelocateOffset) {
+      callbacks.onRelocateOffset(restoreOffset)
+    } else {
+      hiddenPillOffsetXStore.set(restoreOffset)
+    }
+
+    sendVintaNotification({
+      title: `Returned to ${origName}`,
+      message: `Vinta returned to ${origName}.`,
+      subApp: 'Display Manager'
+    })
   })
 
   // Media Playback Updates

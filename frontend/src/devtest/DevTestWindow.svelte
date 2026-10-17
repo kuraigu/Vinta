@@ -14,6 +14,7 @@
   import CustomSelect from '../components/CustomSelect.svelte'
   import NotificationDevControls from './NotificationDevControls.svelte'
   import HomeDevControls from './HomeDevControls.svelte'
+  import WeatherDevControls from './WeatherDevControls.svelte'
   import {
     themeStore,
     devPinnedStore,
@@ -27,6 +28,7 @@
 
   const pageOptions = [
     { value: 'home', label: 'Home Page' },
+    { value: 'weather', label: 'Weather' },
     { value: 'calendar', label: 'Calendar' },
     { value: 'media', label: 'Media Player' },
     { value: 'notifications', label: 'Notifications' },
@@ -192,6 +194,8 @@
           <NotificationDevControls />
         {:else if targetMode === 'home'}
           <HomeDevControls />
+        {:else if targetMode === 'weather'}
+          <WeatherDevControls />
         {:else if targetMode === 'calendar'}
           <div class="mock-card">
             <span class="mock-title">Calendar & Event Feeds</span>

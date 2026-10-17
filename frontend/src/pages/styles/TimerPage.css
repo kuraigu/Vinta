@@ -87,10 +87,11 @@
   padding: 0;
   margin: 0;
   color: inherit;
-  cursor: pointer;
+  cursor: grab;
   outline: none;
   flex: 1;
   min-width: 0;
+  user-select: none;
 }
 
 .minimal-info-trigger:focus-visible {
@@ -272,11 +273,12 @@
   padding: 0;
   margin: 0;
   color: inherit;
-  cursor: pointer;
+  cursor: grab;
   outline: none;
   flex: 1;
   min-width: 0;
   text-align: left;
+  user-select: none;
 }
 
 .ringing-bell-badge {
@@ -1269,14 +1271,18 @@
 }
 
 .day-toggle-btn {
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   border: 1px solid var(--c-border, rgba(255, 255, 255, 0.1));
   background: var(--c-item-bg, rgba(255, 255, 255, 0.04));
   color: var(--c-text-secondary, #b0b0b0);
   font-size: 10px;
   font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
   cursor: pointer;
   outline: none;
   transition: all 0.15s ease;
@@ -1438,6 +1444,35 @@
   padding: 1px 6px;
   border-radius: 6px;
   flex-shrink: 0;
+}
+
+.alarm-days-circles {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+
+.alarm-day-circle {
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  letter-spacing: -0.2px;
+}
+
+.alarm-item-card.disabled .alarm-day-circle {
+  color: var(--c-text-muted, #888888);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
 .alarm-item-label {

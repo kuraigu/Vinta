@@ -9,20 +9,23 @@
   } from '../stores/tooltip'
   import {
     dispatchTooltipBounds,
-    dismissTooltipBounds
+    dismissTooltipBounds,
+    dismissAllTooltips
   } from '../services/tooltipBounds'
 
-  let {
-    text,
-    position = 'bottom',
-    align = 'center',
-    children
-  } = $props<{
+  interface Props {
     text?: string
     position?: 'top' | 'bottom'
     align?: 'left' | 'center' | 'right'
     children?: Snippet
-  }>()
+  }
+
+  let {
+    text = undefined,
+    position = 'bottom',
+    align = 'center',
+    children = undefined
+  }: Props = $props()
 
   let triggerNode = $state<HTMLElement>()
   let tooltipNode = $state<HTMLDivElement>()
@@ -89,14 +92,20 @@
     const id = $activeTooltipStore.id
 
     if (isVisible && tooltipNode && id) {
+      if (lastDispatchedId && lastDispatchedId !== id) {
+        dismissTooltipBounds(lastDispatchedId)
+      }
       const rect = tooltipNode.getBoundingClientRect()
       if (rect.width > 0 && rect.height > 0) {
         dispatchTooltipBounds(id, rect, 7)
         lastDispatchedId = id
       }
-    } else if (!isVisible && lastDispatchedId) {
-      dismissTooltipBounds(lastDispatchedId)
-      lastDispatchedId = ''
+    } else if (!isVisible) {
+      if (lastDispatchedId) {
+        dismissTooltipBounds(lastDispatchedId)
+        lastDispatchedId = ''
+      }
+      dismissAllTooltips()
     }
   }
 
@@ -107,6 +116,7 @@
       dismissTooltipBounds(lastDispatchedId)
       lastDispatchedId = ''
     }
+    dismissAllTooltips()
   })
 </script>
 

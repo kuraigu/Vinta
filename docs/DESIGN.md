@@ -143,3 +143,15 @@ Satellites are secondary peripheral surfaces that orbit the perimeter of the Dyn
 - **Deep Luminance for Contrast:** Gradients must use deep, subdued color stops rather than neon or overly saturated hues. This preserves crisp text legibility in dark mode and eliminates glaring contrast fatigue.
 - **Frosted Glass Accents:** Internal chips, badges, and action buttons within gradient banners use translucent frosted glass styling (`background: rgba(255, 255, 255, 0.12); border: 1px solid rgba(255, 255, 255, 0.2)`) with white typography to maintain contrast and visual cohesion.
 - **Left-Aligned Content Flow:** Informational text, badges, and status descriptions inside atmospheric banners remain strictly left-aligned alongside their action buttons to sustain clean vertical reading lines.
+
+### 13. Illustrations Architecture and Standards
+
+#### 1. Directory Structure and Separation of Concerns
+- **Location:** All thematic, decorative, and state illustrations reside in `frontend/src/illustrations/<category>/` (e.g. `frontend/src/illustrations/weather/`).
+- **Distinction from Components:** Components in `frontend/src/components/` handle application logic, navigation, interactive controls, and user actions. Illustrations in `frontend/src/illustrations/` provide rich, non-interactive visual representations of data states (such as weather conditions, empty states, or achievement artwork).
+
+#### 2. Vector Graphics and Scalability Standards
+- **Vector Base:** Illustrations must be constructed using responsive SVG markup with clean `viewBox` coordinates to scale seamlessly across desktop window dimensions without raster artifacts.
+- **Layered Volumetric Depth:** Avoid flat 2D silhouettes. Use multi-stop radial and linear gradients, layered overlapping shapes, soft ambient drop shadows, and specular highlights to create tangible visual depth.
+- **Responsive Variants:** When an illustration is used in both hero cards and compact capsule views (such as the minimized Dynamic Island), provide a `variant` prop supporting `hero` (full volumetric artwork) and `compact` (clean, streamlined vector representation).
+- **Theme and Ambient Harmony:** Illustration color stops must complement surrounding surface gradients, avoiding harsh neon tones that cause visual fatigue.

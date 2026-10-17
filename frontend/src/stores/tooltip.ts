@@ -1,4 +1,5 @@
 import { writable } from 'svelte/store'
+import { dismissAllTooltips } from '../services/tooltipBounds'
 
 /**
  * Options for configuring a custom tooltip display.
@@ -64,4 +65,5 @@ export function hideTooltip(): void {
     if (!state.visible) return state
     return { ...state, visible: false }
   })
+  dismissAllTooltips()
 }

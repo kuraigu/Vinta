@@ -24,6 +24,9 @@
   import CalendarPage, {
     config as calendarConfig
   } from './pages/CalendarPage.svelte'
+  import WeatherPage, {
+    config as weatherConfig
+  } from './pages/WeatherPage.svelte'
 
   import MainIsland from './components/MainIsland.svelte'
   import ControlsSatellite from './components/ControlsSatellite.svelte'
@@ -34,7 +37,8 @@
   import {
     IslandGestureController,
     computeAllowedOffsets,
-    computeMonitorSnapOffsets
+    computeMonitorSnapOffsets,
+    getMonitorForOffset
   } from './services/islandGestures'
   import { playNotifChime } from './services/audioService'
   import {
@@ -66,6 +70,7 @@
     weatherUnitStore,
     timezoneStore,
     simulateOfflineStore,
+    simulateWeatherStore,
     isSimulatingBatteryStore,
     isSimulatingWirelessStore,
     devPinnedStore,
@@ -75,8 +80,10 @@
     type BatteryData,
     type WirelessData,
     type WeatherLocation,
-    type TemperatureUnit
+    type TemperatureUnit,
+    displayLayoutStore
   } from './store'
+  import { hideTooltip } from './stores/tooltip'
   import { debugBoundsOverlay, debugLogs } from './devtest/debugConfig'
 
   function syncDebugBoundsOverlay(enabled: boolean) {
@@ -118,6 +125,7 @@
     }
     previousExpanded = isExp
 
+    hideTooltip()
     clearTimeout(islandTransitionTimeout)
     isDockVisible = false
     const transitionDuration = isExp ? 340 : 280
@@ -126,12 +134,19 @@
       if (isExp) {
         isDockVisible = true
       }
-      bounds.recoverRestingBounds(
-        getBoundsForState(),
-        clampedOffsetX,
-        islandNode,
-        isHidden
-      )
+      if (
+        !gestures.isDragging &&
+        !gestures.isTrackRegionActive &&
+        !gestures.isSettling &&
+        !gestures.isInertia
+      ) {
+        bounds.recoverRestingBounds(
+          getBoundsForState(),
+          clampedOffsetX,
+          islandNode,
+          isHidden
+        )
+      }
     }, transitionDuration)
   }
   $effect(handleExpandedTransitionEffect)
@@ -185,18 +200,27 @@
     monitors: []
   })
 
-  let activeMonitor = $derived(
-    displayLayout.currentMonitor || {
-      id: 1,
-      name: 'Primary Display',
-      left: 0,
-      top: 0,
-      width: 1920,
-      height: 1080,
-      isPrimary: true,
-      isPortrait: false
-    }
-  )
+  let activeMonitor = $derived.by(() => {
+    const baseCenter = displayLayout.virtualLeft + displayLayout.primaryCenter
+    const resolved = getMonitorForOffset(
+      currentLiveOffsetX,
+      displayLayout.monitors,
+      baseCenter
+    )
+    return (
+      resolved ||
+      displayLayout.currentMonitor || {
+        id: 1,
+        name: 'Primary Display',
+        left: 0,
+        top: 0,
+        width: 1920,
+        height: 1080,
+        isPrimary: true,
+        isPortrait: false
+      }
+    )
+  })
 
   let extraDropdownW = $state(0)
   let extraDropdownH = $state(0)
@@ -415,7 +439,7 @@
   }
 
   function handleSmartEdgeOffsetAdjustment() {
-    if (!gestures.isDragging && !isControlsDrawerOpen) {
+    if (!gestures.isDragging && !gestures.isInertia && !isControlsDrawerOpen) {
       let adjusted = false
       if (currentLiveOffsetX > allowedOffsets.max) {
         currentLiveOffsetX = allowedOffsets.max
@@ -440,7 +464,7 @@
   $effect(handleSmartEdgeOffsetAdjustment)
 
   function syncStoreOffsetToLive(val: number) {
-    if (!gestures.isDragging) {
+    if (!gestures.isDragging && !gestures.isInertia) {
       currentLiveOffsetX = val
     }
   }
@@ -451,7 +475,7 @@
 
   let clampedOffsetX = $derived.by(() => {
     if (Math.abs(currentLiveOffsetX) < 3) return 0
-    if (gestures.isDragging) {
+    if (gestures.isDragging || gestures.isInertia) {
       return currentLiveOffsetX
     }
     return Math.max(
@@ -461,7 +485,11 @@
   })
 
   bounds.getLiveOffset = () => clampedOffsetX
-  bounds.getIsDragging = () => gestures.isDragging
+  bounds.getIsDragging = () =>
+    gestures.isDragging ||
+    gestures.isTrackRegionActive ||
+    gestures.isSettling ||
+    gestures.isInertia
 
   let glowOpacity = $derived(
     $glowIntensityStore === 'disabled'
@@ -538,6 +566,11 @@
     pageConfig: IslandConfig,
     expand: boolean = false
   ) {
+    gestures.finishSettling()
+    if (!expand && (gestures.isDragging || gestures.isInertia)) {
+      finishDragGesture()
+    }
+
     if (page !== NotificationPage) {
       wasHiddenBeforeNotif = false
     }
@@ -590,6 +623,13 @@
       $hiddenPillOffsetXStore = targetOffset
     }
     bounds.syncBounds(nextBounds, targetOffset, islandNode, false, false)
+
+    window.setTimeout(
+      () => {
+        bounds.syncPillBounds(islandNode, isHidden)
+      },
+      expand ? 330 : 230
+    )
 
     triggerGlow()
   }
@@ -659,6 +699,7 @@
     clearTimeout(hideTimeout)
     isTimeoutActive = false
     isControlsDrawerOpen = false
+    isHovering = false
     finishDragGesture()
 
     wasExpandedBeforeHide = expanded
@@ -673,7 +714,7 @@
     bounds.syncBounds(nextBounds, clampedOffsetX, islandNode, false, true)
 
     dormantUnmountTimeout = window.setTimeout(() => {
-      if (isHidden && !isHovering) {
+      if (isHidden) {
         isPageDormant = true
         expanded = false
         const fallback = getFallbackPage()
@@ -705,7 +746,8 @@
     if (
       gestures.isDragging ||
       gestures.isTrackRegionActive ||
-      gestures.isSettling
+      gestures.isSettling ||
+      gestures.isInertia
     ) {
       return
     }
@@ -714,7 +756,7 @@
       target,
       clampedOffsetX,
       islandNode,
-      gestures.isDragging,
+      gestures.isDragging || gestures.isInertia,
       isHidden
     )
   }
@@ -724,16 +766,41 @@
   // Drag Gesture Helpers
   function finishDragGesture() {
     const wasInRunway =
-      gestures.isTrackRegionActive || gestures.isDragging || gestures.isSettling
+      gestures.isTrackRegionActive ||
+      gestures.isDragging ||
+      gestures.isSettling ||
+      gestures.isInertia
     gestures.finishDrag(undefined, () => {
+      const baseCenter = displayLayout.virtualLeft + displayLayout.primaryCenter
+      const targetMon =
+        getMonitorForOffset(
+          currentLiveOffsetX,
+          displayLayout.monitors,
+          baseCenter
+        ) || activeMonitor
+      const monAllowed = computeAllowedOffsets(
+        currentIslandW,
+        targetMon,
+        baseCenter,
+        activeLeftSatelliteFootprint,
+        activeRightSatelliteFootprint
+      )
       const resting = Math.max(
-        allowedOffsets.min,
-        Math.min(allowedOffsets.max, currentLiveOffsetX)
+        monAllowed.min,
+        Math.min(monAllowed.max, currentLiveOffsetX)
       )
       const delta = Math.abs(resting - currentLiveOffsetX)
       const needsSettle = delta > 2
       currentLiveOffsetX = resting
       $hiddenPillOffsetXStore = resting
+      if (displayLayout.currentMonitor?.id !== targetMon.id) {
+        displayLayout = {
+          ...displayLayout,
+          currentMonitor: targetMon
+        }
+        $displayLayoutStore = displayLayout
+      }
+      Events.Emit('cancel-fullscreen-relocate')
       const target = getBoundsForState()
 
       if (wasInRunway) {
@@ -762,7 +829,7 @@
 
   async function handleExpand() {
     if (expanded) return
-    if (gestures.isDragging) finishDragGesture()
+    if (gestures.isDragging || gestures.isInertia) finishDragGesture()
     if (isHidden) {
       isHidden = false
       bounds.notifyHidden(false)
@@ -790,7 +857,8 @@
     if (
       !gestures.isDragging &&
       !gestures.isTrackRegionActive &&
-      !gestures.isSettling
+      !gestures.isSettling &&
+      !gestures.isInertia
     ) {
       bounds.recoverRestingBounds(
         getBoundsForState(),
@@ -843,6 +911,12 @@
     currentLiveOffsetX = 0
     const b = getBoundsForState()
     bounds.syncBounds(b, 0, islandNode, false, isHidden)
+    requestAnimationFrame(() => {
+      bounds.syncPillBounds(islandNode, isHidden)
+      requestAnimationFrame(() => {
+        bounds.syncPillBounds(islandNode, isHidden)
+      })
+    })
 
     const handleOverlayChange = (e: Event) => {
       const detail = (e as CustomEvent).detail as
@@ -867,17 +941,23 @@
       }
       window.setTimeout(() => {
         Quit().catch(() => {})
-      }, 360)
+      }, 120)
+    }
+
+    const handleResyncBounds = () => {
+      bounds.syncPillBounds(islandNode, isHidden)
     }
 
     window.addEventListener('vinta-overlay', handleOverlayChange)
     window.addEventListener('vinta-quit', handleQuit)
+    window.addEventListener('vinta-resync-bounds', handleResyncBounds)
 
     const refreshDisplay = async () => {
       try {
         const layout = await GetDisplayLayout()
         if (layout && layout.virtualWidth > 0) {
           displayLayout = layout
+          $displayLayoutStore = layout
         }
       } catch {}
     }
@@ -896,6 +976,19 @@
         ) {
           return
         }
+        if (gestures.isDragging) {
+          finishDragGesture()
+        }
+        return
+      }
+      if (e?.type === 'pointercancel') {
+        if (e instanceof PointerEvent && e.buttons === 1) {
+          return
+        }
+        if (gestures.isDragging) {
+          finishDragGesture()
+        }
+        return
       }
       if (gestures.isDragging) {
         finishDragGesture()
@@ -905,7 +998,7 @@
     const handleWindowKeydownFailsafe = (e: KeyboardEvent) => {
       if (e.defaultPrevented) return
       if (e.key === 'Escape') {
-        if (gestures.isDragging) {
+        if (gestures.isDragging || gestures.isInertia) {
           finishDragGesture()
           return
         }
@@ -941,7 +1034,8 @@
       if (
         !gestures.isDragging &&
         !gestures.isTrackRegionActive &&
-        !gestures.isSettling
+        !gestures.isSettling &&
+        !gestures.isInertia
       ) {
         bounds.recoverRestingBounds(
           getBoundsForState(),
@@ -1046,6 +1140,24 @@
         }
       },
       onRefreshDisplay: refreshDisplay,
+      onRelocateOffset: (offset) => {
+        currentLiveOffsetX = offset
+        $hiddenPillOffsetXStore = offset
+        const baseCenter =
+          displayLayout.virtualLeft + displayLayout.primaryCenter
+        const targetMon = getMonitorForOffset(
+          offset,
+          displayLayout.monitors,
+          baseCenter
+        )
+        if (targetMon && displayLayout.currentMonitor?.id !== targetMon.id) {
+          displayLayout = {
+            ...displayLayout,
+            currentMonitor: targetMon
+          }
+          $displayLayoutStore = displayLayout
+        }
+      },
       onNotificationWake: () => {
         wasHiddenBeforeNotif = isHidden
       },
@@ -1072,7 +1184,8 @@
           settings: { page: SettingsPage, config: settingsConfig },
           calculator: { page: CalculatorPage, config: calcConfig },
           timer: { page: TimerPage, config: timerConfig },
-          calendar: { page: CalendarPage, config: calendarConfig }
+          calendar: { page: CalendarPage, config: calendarConfig },
+          weather: { page: WeatherPage, config: weatherConfig }
         }
 
         const match = pageMappings[data.mode]
@@ -1172,6 +1285,14 @@
       }
     )
 
+    const unsubDevTestWeatherMock = Events.On(
+      'devtest-weather-mock',
+      (ev: { data: unknown }) => {
+        const data = ev?.data as { mock?: any }
+        simulateWeatherStore.set(data?.mock ?? null)
+      }
+    )
+
     return () => {
       stopIdleReconciler()
       finishDragGesture()
@@ -1186,6 +1307,7 @@
       unsubDevTestBattery()
       unsubDevTestWireless()
       unsubDevTestWeather()
+      unsubDevTestWeatherMock()
       clearHoverGrace()
       clearTimeout(dormantUnmountTimeout)
       clearTimeout(memoryTrimTimeout)
@@ -1200,10 +1322,7 @@
       window.removeEventListener('pointercancel', handleGlobalDragFailsafe)
       window.removeEventListener('keydown', handleWindowKeydownFailsafe)
       window.removeEventListener('focus', handleWindowFocus)
-      window.removeEventListener(
-        'vinta-recover-bounds',
-        handleRecoverBoundsEvent
-      )
+      window.removeEventListener('vinta-resync-bounds', handleResyncBounds)
     }
   })
 </script>
@@ -1237,7 +1356,8 @@
         if (
           !gestures.isDragging &&
           !gestures.isTrackRegionActive &&
-          !gestures.isSettling
+          !gestures.isSettling &&
+          !gestures.isInertia
         ) {
           bounds.recoverRestingBounds(
             getBoundsForState(),
@@ -1253,7 +1373,8 @@
         if (
           !gestures.isDragging &&
           !gestures.isTrackRegionActive &&
-          !gestures.isSettling
+          !gestures.isSettling &&
+          !gestures.isInertia
         ) {
           bounds.recoverRestingBounds(
             getBoundsForState(),
@@ -1267,7 +1388,9 @@
     style="
       pointer-events: {isQuitting ? 'none' : 'auto'};
       transform: translateX({clampedOffsetX}px);
-      transition: {gestures.isDragging ? 'none' : islandAnim};
+      transition: {gestures.isDragging || gestures.isInertia
+      ? 'none'
+      : islandAnim};
     "
   >
     <MainIsland
@@ -1304,6 +1427,13 @@
       }}
       onUpdateOffset={(next) => {
         currentLiveOffsetX = next
+        if (gestures.isInertia) {
+          requestAnimationFrame(() => {
+            if (gestures.isInertia) {
+              bounds.syncPillBounds(islandNode)
+            }
+          })
+        }
       }}
       onFinishDrag={finishDragGesture}
       onExpand={handleExpand}
@@ -1315,7 +1445,8 @@
         if (
           !gestures.isDragging &&
           !gestures.isTrackRegionActive &&
-          !gestures.isSettling
+          !gestures.isSettling &&
+          !gestures.isInertia
         ) {
           bounds.recoverRestingBounds(
             getBoundsForState(),
@@ -1329,7 +1460,8 @@
         if (
           !gestures.isDragging &&
           !gestures.isTrackRegionActive &&
-          !gestures.isSettling
+          !gestures.isSettling &&
+          !gestures.isInertia
         ) {
           bounds.recoverRestingBounds(
             getBoundsForState(),

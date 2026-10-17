@@ -123,6 +123,9 @@ export function unregisterSatellite(id: string) {
   if (typeof RemoveSatellite === 'function') {
     RemoveSatellite(id).catch(() => {})
   }
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))
+  }
 }
 
 /**

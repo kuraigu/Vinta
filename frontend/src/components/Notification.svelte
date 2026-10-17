@@ -8,7 +8,7 @@
     Trash2,
     X,
     ChevronDown,
-    ExternalLink,
+    ArrowUpRight,
     Calendar,
     MessageCircle,
     Gamepad2,
@@ -848,7 +848,7 @@
                         ? 'View Update Details'
                         : `Open in ${notif.appName || brand.brandName}`}
                     >
-                      <ExternalLink size={11} />
+                      <ArrowUpRight size={12} />
                       <span>{notif.isUpdate ? 'View Update' : 'Open'}</span>
                     </button>
                   </div>

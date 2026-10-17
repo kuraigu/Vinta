@@ -1,6 +1,8 @@
 import {
   Sun,
+  Moon,
   CloudSun,
+  CloudMoon,
   Cloud,
   CloudRain,
   CloudSnow,
@@ -34,6 +36,7 @@ export type WeatherData = {
   forecast: ForecastDay[]
   sunrise?: string
   sunset?: string
+  isNight?: boolean
   isCached?: boolean
   isOffline?: boolean
   lastUpdated: number
@@ -54,7 +57,10 @@ export type WeatherTheme = {
   badgeBg: string
 }
 
-export function parseWmoCode(code: number): {
+export function parseWmoCode(
+  code: number,
+  isNight: boolean = false
+): {
   condition: string
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   icon: any
@@ -62,25 +68,37 @@ export function parseWmoCode(code: number): {
 } {
   if (code === 0) {
     return {
-      condition: 'Clear Sky',
-      icon: Sun,
-      theme: {
-        color: '#f59e0b',
-        glow: 'rgba(245, 158, 11, 0.22)',
-        badgeBg: 'rgba(245, 158, 11, 0.15)'
-      }
+      condition: isNight ? 'Clear Night' : 'Clear Sky',
+      icon: isNight ? Moon : Sun,
+      theme: isNight
+        ? {
+            color: '#818cf8',
+            glow: 'rgba(129, 140, 248, 0.25)',
+            badgeBg: 'rgba(129, 140, 248, 0.15)'
+          }
+        : {
+            color: '#f59e0b',
+            glow: 'rgba(245, 158, 11, 0.22)',
+            badgeBg: 'rgba(245, 158, 11, 0.15)'
+          }
     }
   }
   if (code >= 1 && code <= 3) {
     return {
       condition:
         code === 1 ? 'Mainly Clear' : code === 2 ? 'Partly Cloudy' : 'Overcast',
-      icon: CloudSun,
-      theme: {
-        color: '#38bdf8',
-        glow: 'rgba(56, 189, 248, 0.2)',
-        badgeBg: 'rgba(56, 189, 248, 0.15)'
-      }
+      icon: isNight ? CloudMoon : CloudSun,
+      theme: isNight
+        ? {
+            color: '#818cf8',
+            glow: 'rgba(129, 140, 248, 0.25)',
+            badgeBg: 'rgba(129, 140, 248, 0.15)'
+          }
+        : {
+            color: '#38bdf8',
+            glow: 'rgba(56, 189, 248, 0.2)',
+            badgeBg: 'rgba(56, 189, 248, 0.15)'
+          }
     }
   }
   if (code === 45 || code === 48) {
@@ -178,7 +196,7 @@ export async function fetchWeatherData(
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 6000)
 
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,surface_pressure,wind_speed_10m,wind_direction_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,uv_index_max,precipitation_probability_max,sunrise,sunset&timezone=auto`
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,surface_pressure,wind_speed_10m,wind_direction_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,uv_index_max,precipitation_probability_max,sunrise,sunset&timezone=auto`
 
     const response = await fetch(url, { signal: controller.signal })
     clearTimeout(timeoutId)
@@ -191,7 +209,21 @@ export async function fetchWeatherData(
     const current = data.current
     const daily = data.daily
 
-    const parsedCondition = parseWmoCode(current.weather_code)
+    const isNightNow =
+      typeof current.is_day === 'number'
+        ? current.is_day === 0
+        : (() => {
+            const now = new Date()
+            if (daily?.sunrise?.[0] && daily?.sunset?.[0]) {
+              const sr = new Date(daily.sunrise[0])
+              const ss = new Date(daily.sunset[0])
+              return now < sr || now >= ss
+            }
+            const hr = now.getHours()
+            return hr < 6 || hr >= 18
+          })()
+
+    const parsedCondition = parseWmoCode(current.weather_code, isNightNow)
 
     const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
     const forecastList: ForecastDay[] = []
@@ -261,6 +293,7 @@ export async function fetchWeatherData(
       forecast: forecastList,
       sunrise: daily?.sunrise?.[0],
       sunset: daily?.sunset?.[0],
+      isNight: isNightNow,
       isCached: false,
       isOffline: false,
       lastUpdated: Date.now()

@@ -1,9 +1,15 @@
-/* Remove translateZ from root to prevent transparent viewport memory bloat */
 :global(html),
 :global(*),
 :global(*::before),
 :global(*::after) {
   box-sizing: border-box;
+}
+
+:global(html),
+:global(body),
+:global(#app) {
+  background: transparent !important;
+  background-color: transparent !important;
 }
 
 :global(body) {

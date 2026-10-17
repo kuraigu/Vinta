@@ -171,6 +171,43 @@ export class DisplayLayout {
 }
 
 /**
+ * HitRect defines a physical client rectangle for hit testing.
+ */
+export class HitRect {
+  'left': number
+  'top': number
+  'width': number
+  'height': number
+
+  /** Creates a new HitRect instance. */
+  constructor($$source: Partial<HitRect> = {}) {
+    if (!('left' in $$source)) {
+      this['left'] = 0
+    }
+    if (!('top' in $$source)) {
+      this['top'] = 0
+    }
+    if (!('width' in $$source)) {
+      this['width'] = 0
+    }
+    if (!('height' in $$source)) {
+      this['height'] = 0
+    }
+
+    Object.assign(this, $$source)
+  }
+
+  /**
+   * Creates a new HitRect instance from a string or object.
+   */
+  static createFrom($$source: any = {}): HitRect {
+    let $$parsedSource =
+      typeof $$source === 'string' ? JSON.parse($$source) : $$source
+    return new HitRect($$parsedSource as Partial<HitRect>)
+  }
+}
+
+/**
  * MonitorInfo describes a connected physical display's boundaries and properties.
  */
 export class MonitorInfo {
