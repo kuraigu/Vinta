@@ -49,10 +49,12 @@
     isUpdate?: boolean
   }
 
-  let { expanded = false, notifications = [] } = $props<{
+  interface Props {
     expanded?: boolean
     notifications?: NotificationItem[]
-  }>()
+  }
+
+  let { expanded = false, notifications = [] }: Props = $props()
 
   let nativeIcons = $derived($nativeIconsStore)
 
@@ -497,7 +499,7 @@
   {/if}
 {/snippet}
 
-<div class="notification-container">
+<div data-vinta="notification" class="notification-container">
   {#if !expanded}
     <div class="banner-view-container">
       {#key latest.id}

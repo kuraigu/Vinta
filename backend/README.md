@@ -18,6 +18,7 @@ backend/
 ├── cache.go           # File cache helpers
 ├── icon_manager.go    # Application icon extraction and cache indexing
 ├── logger.go          # Runtime diagnostic logger
+├── theme.go           # Theme engine service for user-installed .vintatheme packages
 ├── updater.go         # Background updater and release installer
 ├── version.go         # Version stamping and repository metadata
 └── services/          # In-process C++/WinRT native bridge and IPC channels
@@ -40,3 +41,4 @@ Configuration and runtime states are saved under `%APPDATA%/FreeMatrix Studios/V
 - `notifications.json`: Persisted notifications encrypted at rest via the Windows Data Protection API (DPAPI).
 - `notes/`: Sticky notes saved in `.vnote` JSON format.
 - `calendar.json` & `timer.json`: Events, alarms, and focus configuration.
+- `themes/`: Custom community themes and unpacked `.vintatheme` packages.

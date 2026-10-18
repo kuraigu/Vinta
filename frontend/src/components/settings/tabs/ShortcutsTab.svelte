@@ -9,8 +9,7 @@
     Sliders,
     ArrowLeftRight,
     CornerDownLeft,
-    Layers,
-    AlertTriangle
+    Layers
   } from 'lucide-svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingBanner from '../SettingBanner.svelte'

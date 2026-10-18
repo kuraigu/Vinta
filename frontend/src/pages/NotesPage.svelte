@@ -4,7 +4,7 @@
   export const config: IslandConfig = {
     minimal: { w: 10, h: 10, r: 5 },
     expanded: { w: 600, h: 480, r: 28 },
-    borderColor: 'var(--c-border)',
+    borderColor: 'var(--vinta-border)',
     glowColor: 'transparent'
   }
 
@@ -53,7 +53,6 @@
   let notes = $state<VNote[]>([])
   let activeIndex = $state<number>(0)
   let viewMode = $state<'board' | 'editor'>('board')
-  let isDrawerOpen = $state(false)
   let drawerSearchQuery = $state('')
   let isDraggingOver = $state(false)
   let saveStatus = $state<'saved' | 'saving' | ''>('')
@@ -196,7 +195,6 @@
 
     notes = [newNote, ...notes]
     activeIndex = 0
-    isDrawerOpen = false
     viewMode = 'editor'
     persistNote(newNote)
     syncEditorContent()
@@ -544,6 +542,7 @@
 </script>
 
 <div
+  data-vinta="notes-page"
   class="notes-page-container {viewMode === 'editor'
     ? `color-${activeNote?.color || 'yellow'}`
     : ''}"

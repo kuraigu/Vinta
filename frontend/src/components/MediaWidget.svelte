@@ -793,7 +793,10 @@
   $effect(handleTitleMarqueeEffect)
 </script>
 
-<div class="media-container {expanded ? 'expanded' : 'minimal'}">
+<div
+  data-vinta="media-widget"
+  class="media-container {expanded ? 'expanded' : 'minimal'}"
+>
   {#if !expanded}
     <!-- Compact Minimal View with Spinning Vinyl Disc, Track Info, Clock, and Audio Wave Bars -->
     <div class="minimal-layout">

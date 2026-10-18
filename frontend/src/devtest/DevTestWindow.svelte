@@ -21,6 +21,7 @@
     addCalendarEvent,
     syncAllCalendarFeeds
   } from '../store'
+  import { applyThemeToDOM } from '../themes/engine'
   import { debugBoundsOverlay, debugLogs } from './debugConfig'
 
   let isExpandedMode = $state(false)
@@ -83,16 +84,13 @@
   }
 
   function toggleTheme() {
-    $themeStore = $themeStore === 'dark' ? 'light' : 'dark'
-    document.documentElement.setAttribute('data-theme', $themeStore)
+    $themeStore = $themeStore === 'oled-dark' ? 'nord-frost' : 'oled-dark'
     try {
       Events.Emit('devtest-theme', { theme: $themeStore })
     } catch {}
   }
 
   onMount(() => {
-    document.documentElement.setAttribute('data-theme', 'dark')
-
     const unsubSync = Events.On(
       'devtest-sync-page',
       (ev: { data: unknown }) => {
@@ -106,6 +104,11 @@
     return () => {
       unsubSync()
     }
+  })
+
+  $effect(function handleDevTestThemeChange() {
+    const currentTheme = $themeStore || 'oled-dark'
+    applyThemeToDOM(currentTheme)
   })
 </script>
 
@@ -158,7 +161,7 @@
       </button>
 
       <button class="action-btn" onclick={toggleTheme} title="Toggle Theme">
-        {#if $themeStore === 'dark'}
+        {#if $themeStore === 'oled-dark'}
           <Sun size={14} strokeWidth={2.2} />
         {:else}
           <Moon size={14} strokeWidth={2.2} />

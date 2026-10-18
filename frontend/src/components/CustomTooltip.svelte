@@ -4,8 +4,7 @@
   import {
     activeTooltipStore,
     showTooltip,
-    hideTooltip,
-    type TooltipOptions
+    hideTooltip
   } from '../stores/tooltip'
   import {
     dispatchTooltipBounds,

@@ -4,7 +4,7 @@
   export const config: IslandConfig = {
     minimal: { w: 10, h: 10, r: 5 },
     expanded: { w: 580, h: 480, r: 32 },
-    borderColor: 'var(--c-border)',
+    borderColor: 'var(--vinta-border)',
     glowColor: 'transparent'
   }
 </script>
@@ -28,7 +28,7 @@
   let activeTab = $derived($activeSettingsTabStore)
 </script>
 
-<SidebarLayout title="Settings">
+<SidebarLayout title="Settings" dataVinta="settings-page">
   {#snippet sidebar()}
     <SettingsSidebar />
   {/snippet}

@@ -4,7 +4,7 @@
   export const config: IslandConfig = {
     minimal: { w: 320, h: 42, r: 16 },
     expanded: { w: 440, h: 390, r: 28 },
-    borderColor: 'var(--c-border)',
+    borderColor: 'var(--vinta-border)',
     glowColor: 'transparent'
   }
 </script>
@@ -15,7 +15,12 @@
   let { expanded = false }: { expanded?: boolean } = $props()
 </script>
 
-<div class="calendar-page-layout" class:expanded class:minimal={!expanded}>
+<div
+  data-vinta="calendar-page"
+  class="calendar-page-layout"
+  class:expanded
+  class:minimal={!expanded}
+>
   <Calendar {expanded} variant="page" />
 </div>
 

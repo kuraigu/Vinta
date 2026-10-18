@@ -278,6 +278,7 @@
 </script>
 
 <div
+  data-vinta="timer-page"
   class="timer-page"
   class:minimal-mode={!expanded}
   class:expanded-mode={expanded}

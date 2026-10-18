@@ -11,9 +11,7 @@
     ShieldCheck,
     AlertCircle,
     GitBranch,
-    SlidersHorizontal,
-    Info,
-    Cpu
+    SlidersHorizontal
   } from 'lucide-svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingBanner from '../SettingBanner.svelte'
@@ -41,7 +39,6 @@
   } from '../../../../bindings/Vinta/backend/app.js'
   import { Events } from '@wailsio/runtime'
 
-  let appInfo = $state<any>(null)
   let isDevBuild = $state(false)
   let isOfficialBuild = $state(true)
   let showDevSimulation = $state(false)
@@ -131,7 +128,6 @@
       try {
         const info = await GetAppInfo()
         if (info) {
-          appInfo = info
           isDevBuild = info.buildType === 'Development'
           isOfficialBuild = Boolean(info.isOfficialBuild)
         }

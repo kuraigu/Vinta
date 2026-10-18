@@ -2,6 +2,19 @@
   import { slide } from 'svelte/transition'
   import { ChevronDown, Search } from 'lucide-svelte'
 
+  interface Props {
+    options: { value: string; label: string; payload?: unknown }[]
+    value: string
+    placeholder?: string
+    fullWidth?: boolean
+    direction?: 'auto' | 'down' | 'up'
+    searchable?: boolean
+    searchPlaceholder?: string
+    onSearch?: (query: string) => Promise<void> | void
+    onSelectPayload?: (payload: unknown) => void
+    onChange?: (value: string) => void
+  }
+
   let {
     options,
     value = $bindable(),
@@ -13,18 +26,7 @@
     onSearch,
     onSelectPayload,
     onChange
-  } = $props<{
-    options: { value: string; label: string; payload?: unknown }[]
-    value: string
-    placeholder?: string
-    fullWidth?: boolean
-    direction?: 'auto' | 'down' | 'up'
-    searchable?: boolean
-    searchPlaceholder?: string
-    onSearch?: (query: string) => Promise<void> | void
-    onSelectPayload?: (payload: unknown) => void
-    onChange?: (value: string) => void
-  }>()
+  }: Props = $props()
 
   let isOpen = $state(false)
   let searchTerm = $state('')

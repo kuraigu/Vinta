@@ -196,6 +196,17 @@ Official releases are compiled on isolated GitHub Actions runners to ensure repr
      Get-AuthenticodeSignature .\Vinta-Setup-x64.exe
      ```
 
+3. **Fork Isolation and Anti-Spoofing Protections**:
+   - **Cryptographic Provenance (Sigstore Attestations):** Anyone can verify official provenance using GitHub CLI:
+     ```bash
+     gh attestation verify Vinta-Setup-x64.exe --owner kuraigu
+     ```
+     Forks inherit the GitHub Actions release workflow, but their Sigstore attestations are permanently signed with the fork owner's identity. If a fork builds an executable and attempts to distribute it, running the verification against `--owner kuraigu` fails immediately.
+   - **Secret Isolation:** Upstream GitHub repository secrets (code signing certificates, publisher keys, and release tokens) are never shared with forks. Fork workflows cannot produce binaries signed by the official certificate.
+   - **Hardcoded Updater Pinning:** The Vinta in-app updater and API client strictly query `kuraigu/Vinta`. Client installations never check or pull releases from fork repositories.
+   - **Distribution Authority:** Official binaries are only published to `https://github.com/kuraigu/Vinta/releases` and verified package manager registries (such as Windows Package Manager `winget-pkgs`).
+   - **Theme Isolation:** Custom themes do not require forking Vinta. Themes are distributed as isolated `.vintatheme` packages or separate repositories without distributing modified application binaries.
+
 ## Working on Issues & Claim Workflow
 
 To keep development organized, prevent duplicated effort, and ensure fair opportunities for contributors:
@@ -215,6 +226,88 @@ You do not need to write code to contribute! Testing is just as important:
 2. Test the UI, theme switching, swipe gestures, and widgets.
 3. If you find a bug, open a GitHub Issue with clear steps on how to reproduce it.
 4. Once verified, maintainers will tag your issue and add you to the **Testers & QA Hall of Fame**!
+
+## Creating a Custom Theme (.vintatheme)
+
+Vinta supports custom theme packages with CSS Cascade Layer overrides. A theme can be distributed as an unpacked directory or as a zipped `.vintatheme` file.
+
+### 1. Theme Package Structure
+
+A valid theme package contains a manifest and an entry stylesheet:
+
+```text
+my-custom-theme/
+├── manifest.json
+└── style.css
+```
+
+### 2. Manifest Specification (`manifest.json`)
+
+The manifest defines metadata and points to the entry stylesheet:
+
+```json
+{
+  "$schema": "./schemas/vintatheme.schema.json",
+  "schemaVersion": 1,
+  "id": "my-custom-theme",
+  "name": "My Custom Theme",
+  "author": "Your Name",
+  "version": "1.0.0",
+  "description": "A tailored dark aesthetic with vibrant amber accents.",
+  "entry": "style.css",
+  "accentColor": "#f59e0b",
+  "mode": "dark"
+}
+```
+
+### 3. Entry Stylesheet (`style.css`)
+
+Themes override CSS custom properties declared in the `--vinta-*` namespace. Any omitted variables automatically fall back to the built-in `oled-dark` baseline:
+
+```css
+:root {
+  --vinta-accent-primary: #f59e0b;
+  --vinta-accent-hover: #d97706;
+  --vinta-accent-active: #b45309;
+  --vinta-accent-muted: rgba(245, 158, 11, 0.15);
+
+  --vinta-bg: #18181b;
+  --vinta-bg-opaque: #18181b;
+  --vinta-surface-card: rgba(24, 24, 27, 0.85);
+  --vinta-surface-elevated: #27272a;
+  --vinta-dock-popover-bg: #18181b;
+
+  --vinta-border: rgba(255, 255, 255, 0.08);
+  --vinta-hover: rgba(255, 255, 255, 0.06);
+  --vinta-item-bg: rgba(255, 255, 255, 0.03);
+
+  --vinta-text-primary: #ffffff;
+  --vinta-text-secondary: rgba(255, 255, 255, 0.7);
+  --vinta-text-muted: rgba(255, 255, 255, 0.4);
+}
+```
+
+> [!IMPORTANT]
+> The `--vinta-dock-popover-bg` token must always be an opaque hex or rgb color. Semi-transparent colors cause unblurred desktop bleed-through across transparent desktop webviews.
+
+### 4. Development Workflow
+
+Themes can be authored and tested as plain directories:
+
+1. Create a theme folder directly under `%APPDATA%/FreeMatrix Studios/Vinta/themes/<theme-id>/`.
+2. Add `manifest.json` and `style.css`.
+3. Open **Settings > Appearance**, click **Refresh**, and select your theme to test live.
+
+### 5. Packaging and Distribution
+
+To bundle a theme into a standalone `.vintatheme` file for distribution:
+
+```powershell
+# Using Taskfile (validates manifest and creates <theme-id>.vintatheme)
+task theme:pack -- "path/to/my-theme"
+```
+
+The resulting `.vintatheme` archive can be shared and imported via **Settings > Appearance > Import Theme**.
 
 ## Submitting a Pull Request
 

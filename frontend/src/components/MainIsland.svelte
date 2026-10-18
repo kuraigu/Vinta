@@ -130,7 +130,6 @@
     }
 
     const handleGlobalPointerUp = (ev: PointerEvent) => {
-      if (ev.type === 'pointercancel' && ev.buttons === 1) return
       window.removeEventListener('pointermove', handleGlobalPointerMove)
       window.removeEventListener('pointerup', handleGlobalPointerUp)
       window.removeEventListener('pointercancel', handleGlobalPointerUp)
@@ -160,7 +159,6 @@
       !gestures.isInertia
     )
       return
-    if (e.type === 'pointercancel' && e.buttons === 1) return
     gestures.handlePointerUp(
       e,
       currentLiveOffsetX,
@@ -173,11 +171,7 @@
   }
 
   function handleContextMenu(e: MouseEvent) {
-    if (
-      gestures.isDragging ||
-      gestures.isInertia ||
-      gestures.dragMovedDistance > 4
-    ) {
+    if (gestures.isDragging || gestures.isInertia) {
       if (gestures.isInertia) {
         gestures.interruptInertia()
         onFinishDrag?.()
@@ -257,6 +251,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
   bind:this={islandNode}
+  data-vinta="main-island"
   class="island {expanded ? 'expanded' : ''} {isTransitionGlow
     ? 'is-transition-glow'
     : ''} {isHidden ? 'is-hidden' : ''} {isQuitting ? 'is-quitting' : ''}"

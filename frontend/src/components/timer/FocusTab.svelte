@@ -1,10 +1,5 @@
 <script lang="ts">
-  import {
-    Play,
-    Pause,
-    RotateCcw,
-    SkipForward
-  } from 'lucide-svelte'
+  import { Play, Pause, RotateCcw, SkipForward } from 'lucide-svelte'
   import { islandTooltip } from '../../services/islandTooltip'
   import {
     timerAppStore,

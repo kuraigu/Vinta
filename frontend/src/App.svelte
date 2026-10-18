@@ -45,6 +45,7 @@
     satellitesStore,
     getActiveSatelliteFootprint
   } from './stores/satellites'
+  import { applyThemeToDOM } from './themes/engine'
   import {
     themeStore,
     autoHideStore,
@@ -913,16 +914,12 @@
     const disableGlobalContextMenu = (e: MouseEvent) => e.preventDefault()
     window.addEventListener('contextmenu', disableGlobalContextMenu)
 
-    $themeStore = 'dark'
-    document.documentElement.setAttribute('data-theme', 'dark')
-
     $hiddenPillOffsetXStore = 0
     currentLiveOffsetX = 0
-    const b = getBoundsForState()
-    bounds.syncBounds(b, 0, islandNode, false, isHidden)
     requestAnimationFrame(() => {
-      bounds.syncPillBounds(islandNode, isHidden)
       requestAnimationFrame(() => {
+        const b = getBoundsForState()
+        bounds.syncBounds(b, 0, islandNode, false, isHidden)
         bounds.syncPillBounds(islandNode, isHidden)
       })
     })
@@ -1225,10 +1222,9 @@
     const unsubDevTestTheme = Events.On(
       'devtest-theme',
       (ev: { data: unknown }) => {
-        const data = ev?.data as { theme?: 'dark' | 'light' }
-        if (data?.theme === 'dark' || data?.theme === 'light') {
+        const data = ev?.data as { theme?: string }
+        if (data?.theme) {
           $themeStore = data.theme
-          document.documentElement.setAttribute('data-theme', data.theme)
         }
       }
     )
@@ -1342,6 +1338,11 @@
       window.removeEventListener('vinta-resync-bounds', handleResyncBounds)
     }
   })
+
+  $effect(function handleActiveThemeChange() {
+    const currentTheme = $themeStore || 'oled-dark'
+    applyThemeToDOM(currentTheme)
+  })
 </script>
 
 <div
@@ -1445,11 +1446,7 @@
       onUpdateOffset={(next) => {
         currentLiveOffsetX = next
         if (gestures.isInertia) {
-          requestAnimationFrame(() => {
-            if (gestures.isInertia) {
-              bounds.syncPillBounds(islandNode)
-            }
-          })
+          bounds.syncPillBounds(islandNode)
         }
       }}
       onFinishDrag={finishDragGesture}

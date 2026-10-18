@@ -2,8 +2,8 @@
   export const config = {
     minimal: { w: 360, h: 65, r: 18 },
     expanded: { w: 440, h: 380, r: 30 },
-    borderColor: 'var(--c-island-border-notification)',
-    glowColor: 'var(--c-island-glow-notification)'
+    borderColor: 'var(--vinta-island-border-notification)',
+    glowColor: 'var(--vinta-island-glow-notification)'
   }
 </script>
 
@@ -24,7 +24,11 @@
     >('navigate')
 </script>
 
-<div class="notification-layout" class:minimal={!expanded}>
+<div
+  data-vinta="notification-page"
+  class="notification-layout"
+  class:minimal={!expanded}
+>
   <div class="notif-content">
     <Notification {expanded} notifications={$notifData} />
   </div>

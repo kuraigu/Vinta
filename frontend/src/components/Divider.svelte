@@ -1,16 +1,18 @@
 <script lang="ts">
+  interface Props {
+    width?: string
+    height?: string
+    color?: string
+    radius?: string
+  }
+
   // Export properties so the bar is completely reusable!
   let {
     width = '2px',
     height = '60%',
     color = 'var(--c-item-bg)',
     radius = '999px'
-  } = $props<{
-    width?: string
-    height?: string
-    color?: string
-    radius?: string
-  }>()
+  }: Props = $props()
 </script>
 
 <div

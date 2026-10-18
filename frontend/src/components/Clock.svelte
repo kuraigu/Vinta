@@ -7,7 +7,11 @@
     formatUserDate
   } from '../store'
 
-  let { expanded = false } = $props<{ expanded?: boolean }>()
+  interface Props {
+    expanded?: boolean
+  }
+
+  let { expanded = false }: Props = $props()
 
   let time = $state(new Date())
   let timer: ReturnType<typeof setInterval>
@@ -46,11 +50,6 @@
       const h24 = parseInt(getVal('hour'), 10)
       const m = getVal('minute').padStart(2, '0')
       const s = parseInt(getVal('second'), 10)
-      const weekday = getVal('weekday')
-      const month = getVal('month')
-      const monthNum = (time.getMonth() + 1).toString().padStart(2, '0')
-      const day = getVal('day').padStart(2, '0')
-      const year = getVal('year')
 
       const dateBadgeText = formatUserDate(time, $dateFormatStore, {
         includeWeekday: true

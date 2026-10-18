@@ -2,17 +2,19 @@
   import { swipe } from '../utils/useSwipe'
   import type { Snippet } from 'svelte'
 
+  interface Props {
+    children?: Snippet
+    class?: string
+    enableSwipe?: boolean
+    ignoreSelector?: string
+  }
+
   let {
     children,
     class: className = '',
     enableSwipe = true,
     ignoreSelector = 'input, select, textarea, range, .custom-select, .no-swipe, .no-drag'
-  } = $props<{
-    children?: Snippet
-    class?: string
-    enableSwipe?: boolean
-    ignoreSelector?: string
-  }>()
+  }: Props = $props()
 
   let swipeOptions = $derived({
     axis: 'y' as const,

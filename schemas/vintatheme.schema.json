@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "VintaThemeManifest",
+  "description": "Manifest definition for Vinta desktop themes (.vintatheme packages or theme directories).",
+  "type": "object",
+  "required": ["schemaVersion", "id", "name", "author", "version", "entry"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Path or URI to the JSON Schema."
+    },
+    "schemaVersion": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Schema version. Default is 1. Bump only when breaking token removals or structural manifest shifts occur."
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9-_]+$",
+      "description": "Unique identifier for theme. Lowercase alphanumeric, hyphen, and underscore only."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Human readable name of the theme."
+    },
+    "author": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Author name or handle."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
+      "description": "Semantic versioning string for the theme."
+    },
+    "description": {
+      "type": "string",
+      "description": "Short description of the theme."
+    },
+    "entry": {
+      "type": "string",
+      "default": "style.css",
+      "description": "Path to entry stylesheet relative to theme root. Usually style.css."
+    },
+    "preview": {
+      "type": "string",
+      "description": "Optional relative path to a preview thumbnail image (PNG/WebP/SVG)."
+    },
+    "accentColor": {
+      "type": "string",
+      "description": "Hex or CSS color string used as accent preview pill in UI selectors."
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["dark", "light", "oled", "custom"],
+      "default": "dark",
+      "description": "Theme color classification."
+    },
+    "meta": {
+      "type": "object",
+      "description": "Optional metadata dictionary for theme creator notes or repository links."
+    }
+  }
+}

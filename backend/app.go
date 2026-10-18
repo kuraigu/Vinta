@@ -60,6 +60,7 @@ type App struct {
 	isForceInteractive       bool
 	isCurrentlyInteractive   bool
 	initialShowOnce          sync.Once
+	themeService             *ThemeService
 }
 
 // NewApp initializes and returns a new App instance.
@@ -85,6 +86,7 @@ func NewApp(icon []byte) *App {
 		scale:              1.0,
 		autoHideBorderless: false,
 		tooltips:           make(map[string]TooltipBounds),
+		themeService:       NewThemeService(),
 	}
 }
 
@@ -351,4 +353,36 @@ func (a *App) SetClipboardMonitoring(copyEnabled bool, pasteEnabled bool) {
 
 // updateWindowRegion is a no-op under the unclipped transparent canvas hit-testing architecture.
 func (a *App) updateWindowRegion() {
+}
+
+// ListThemes returns all available built-in and user-installed themes.
+func (a *App) ListThemes() ([]ThemeInfo, error) {
+	if a.themeService == nil {
+		a.themeService = NewThemeService()
+	}
+	return a.themeService.ListThemes()
+}
+
+// GetThemeCSS returns the CSS content for the specified theme ID.
+func (a *App) GetThemeCSS(id string) (string, error) {
+	if a.themeService == nil {
+		a.themeService = NewThemeService()
+	}
+	return a.themeService.GetThemeCSS(id)
+}
+
+// ImportThemeDialog opens a native file dialog to import a .vintatheme package.
+func (a *App) ImportThemeDialog() (*ThemeInfo, error) {
+	if a.themeService == nil {
+		a.themeService = NewThemeService()
+	}
+	return a.themeService.ImportThemeDialog()
+}
+
+// OpenThemesFolder launches Windows Explorer targeting %APPDATA%/FreeMatrix Studios/Vinta/themes.
+func (a *App) OpenThemesFolder() error {
+	if a.themeService == nil {
+		a.themeService = NewThemeService()
+	}
+	return a.themeService.OpenThemesFolder()
 }
