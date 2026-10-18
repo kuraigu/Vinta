@@ -8,7 +8,15 @@ All UI contributions must follow these guidelines to maintain a clean and respon
 
 ### 1. Theme CSS Variables
 
-Never use hardcoded hex or RGB colors like `#ffffff` or `rgb(30, 30, 30)` inside component styles. All visual elements must use theme CSS tokens so themes can switch cleanly.
+Prefer using standard `--vinta-*` theme CSS variables for core UI surfaces, typography, and interactive elements so themes adapt smoothly across presets. Component-specific accent colors or custom values are permitted when unique visual requirements call for them, but referencing standard tokens is strongly encouraged for visual cohesion across themes.
+
+Standard token groups:
+- **Accents:** `--vinta-accent-primary`, `--vinta-accent-hover`, `--vinta-accent-active`, `--vinta-accent-muted`, `--vinta-accent-purple`, `--vinta-accent-danger`, `--vinta-accent-warning`, `--vinta-accent-success`
+- **Surfaces:** `--vinta-bg`, `--vinta-bg-opaque`, `--vinta-surface-card`, `--vinta-surface-elevated`, `--vinta-dock-popover-bg` (must always remain an opaque hex/rgb color to prevent WebView2 transparent desktop bleed-through)
+- **Borders:** `--vinta-border`, `--vinta-border-light`, `--vinta-border-accent`
+- **Interactions:** `--vinta-hover`, `--vinta-item-bg`
+- **Typography:** `--vinta-text-primary`, `--vinta-text-secondary`, `--vinta-text-muted`
+- **Geometry:** `--vinta-radius-island`, `--vinta-radius-card`, `--vinta-radius-button`, `--vinta-radius-pill`, `--vinta-font-family`
 
 ### 2. Iconography Standardsp
 
@@ -81,15 +89,15 @@ Satellites are secondary peripheral surfaces that orbit the perimeter of the Dyn
 
 - **Capsule Curvature:** Satellites must share the island's rounded geometry. Use pill or capsule silhouettes with border radii between `16px` and `20px` (or full circular radius for small single-action toggles).
 - **Surface Tokens:** Satellite containers use a clean, borderless surface without elevations:
-  - Background: `var(--c-dock-popover-bg)`
+  - Background: `var(--vinta-dock-popover-bg)`
   - Border: `none` (satellites omit outer borders and highlights to maintain visual distinction from the primary island)
   - Elevation: `none` (shadows are omitted on secondary satellites)
   - Desktop Opacity: Satellites floating over the transparent desktop canvas must use solid opaque surfaces. CSS backdrop blur cannot sample or blur native OS windows beneath transparent webviews, so semi-transparency causes unblurred desktop bleed-through.
 
 #### 3. Idle vs. Active States
 
-- **Subtle Idle Presence:** When persistent or idle alongside the island, collapsed toggles and background tools maintain a quiet visual presence. Subtlety is achieved through subdued iconography (`var(--c-text-secondary)` or `var(--c-text-muted)`) rather than container transparency against the desktop.
-- **Hover Transitions:** On cursor proximity, hover, or focus-within, satellites transition smoothly (`0.2s` cubic-bezier) to full primary iconography (`var(--c-text-primary)`) and elevated button states without container highlights or drop shadows.
+- **Subtle Idle Presence:** When persistent or idle alongside the island, collapsed toggles and background tools maintain a quiet visual presence. Subtlety is achieved through subdued iconography (`var(--vinta-text-secondary)` or `var(--vinta-text-muted)`) rather than container transparency against the desktop.
+- **Hover Transitions:** On cursor proximity, hover, or focus-within, satellites transition smoothly (`0.2s` cubic-bezier) to full primary iconography (`var(--vinta-text-primary)`) and elevated button states without container highlights or drop shadows.
 
 #### 4. Spatial Anchoring and Alignment
 
@@ -155,3 +163,30 @@ Satellites are secondary peripheral surfaces that orbit the perimeter of the Dyn
 - **Layered Volumetric Depth:** Avoid flat 2D silhouettes. Use multi-stop radial and linear gradients, layered overlapping shapes, soft ambient drop shadows, and specular highlights to create tangible visual depth.
 - **Responsive Variants:** When an illustration is used in both hero cards and compact capsule views (such as the minimized Dynamic Island), provide a `variant` prop supporting `hero` (full volumetric artwork) and `compact` (clean, streamlined vector representation).
 - **Theme and Ambient Harmony:** Illustration color stops must complement surrounding surface gradients, avoiding harsh neon tones that cause visual fatigue.
+
+### 14. Theme Engine Architecture and Manifest Specification
+
+Vinta features a dynamic theme engine built on CSS Cascade Layers (`vinta.base`, `vinta.components`, `vinta.theme`) and `.vintatheme` packages.
+
+#### 1. Cascade Layer Hierarchy
+1. `@layer vinta.base`: Core foundational tokens defined in `frontend/src/themes/oled-dark.css`.
+2. `@layer vinta.components`: Hash-scoped component styles compiled via Svelte `<style src="...">`.
+3. `@layer vinta.theme`: Active theme overrides injected dynamically into `<style id="vinta-active-theme">`. Properties declared in this layer take precedence over default base and component fallbacks.
+
+#### 2. Manifest Schema (`manifest.json`)
+Every theme directory or `.vintatheme` zip package must include a root `manifest.json` adhering to `schemas/vintatheme.schema.json`:
+- `schemaVersion` (integer): Version of the manifest schema. Default is 1.
+- `id` (string): Unique identifier (lowercase alphanumeric, hyphens, underscores).
+- `name` (string): Human readable theme title.
+- `author` (string): Author name or handle.
+- `version` (string): Semantic version string (e.g. `1.0.0`).
+- `entry` (string): Relative path to entry stylesheet (default `style.css`).
+- `preview` (string, optional): Path to preview thumbnail.
+- `accentColor` (string, optional): Hex color for theme picker badges.
+- `mode` (string): Color scheme classification (`dark`, `light`, `oled`, `custom`).
+
+#### 3. Schema Versioning Policy
+The `schemaVersion` integer is incremented only when breaking token removals or structural manifest shifts occur. Additive changes (such as introducing new non-breaking optional CSS tokens) do not warrant a schema version bump because unspecified tokens cleanly fall back to `vinta.base` defaults. Outdated schema versions trigger fallback to `oled-dark` to prevent interface malfunction.
+
+#### 4. Opaque Surface Rule for Desktop Overlays
+The `--vinta-dock-popover-bg` token must always resolve to a solid, fully opaque color. Because Windows WebView2 cannot sample or blur native windows through transparent webview regions, translucent alpha channels on floating popovers cause unblurred desktop bleed-through.

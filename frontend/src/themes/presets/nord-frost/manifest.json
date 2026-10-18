@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../../../schemas/vintatheme.schema.json",
+  "schemaVersion": 1,
+  "id": "nord-frost",
+  "name": "Nord Frost",
+  "author": "Innoh Reloza",
+  "version": "1.0.0",
+  "description": "Arctic, north-bluish clean dark palette based on Nord.",
+  "entry": "style.css",
+  "accentColor": "#88c0d0",
+  "mode": "dark"
+}

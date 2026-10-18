@@ -251,6 +251,7 @@
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
   bind:this={islandNode}
+  data-vinta="main-island"
   class="island {expanded ? 'expanded' : ''} {isTransitionGlow
     ? 'is-transition-glow'
     : ''} {isHidden ? 'is-hidden' : ''} {isQuitting ? 'is-quitting' : ''}"

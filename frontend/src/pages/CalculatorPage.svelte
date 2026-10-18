@@ -298,7 +298,7 @@
   $effect(setupKeyboardListener)
 </script>
 
-<div class="calculator-page">
+<div data-vinta="calculator-page" class="calculator-page">
   <!-- Uniform Reusable Header -->
   <div class="calc-header">
     <BackButton />

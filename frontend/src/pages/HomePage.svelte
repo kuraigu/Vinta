@@ -2,8 +2,8 @@
   export const config = {
     minimal: { w: 330, h: 35, r: 16 },
     expanded: { w: 440, h: 380, r: 30 },
-    borderColor: 'var(--c-island-border-idle)',
-    glowColor: 'var(--c-island-glow-idle)'
+    borderColor: 'var(--vinta-island-border-idle)',
+    glowColor: 'var(--vinta-island-glow-idle)'
   }
 </script>
 
@@ -186,7 +186,7 @@
   let timezoneDetails = $derived.by(computeTimezoneDetails)
 </script>
 
-<div class="page-container">
+<div data-vinta="home-page" class="page-container">
   {#if !expanded}
     <div class="minimal-view">
       <div class="minimal-slot">

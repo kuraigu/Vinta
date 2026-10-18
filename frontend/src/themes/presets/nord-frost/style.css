@@ -1,0 +1,29 @@
+:root {
+  --vinta-accent-primary: #88c0d0;
+  --vinta-accent-hover: #81a1c1;
+  --vinta-accent-active: #5e81ac;
+  --vinta-accent-muted: rgba(136, 192, 208, 0.18);
+  --vinta-accent-purple: #b48ead;
+  --vinta-accent-danger: #bf616a;
+  --vinta-accent-warning: #ebcb8b;
+  --vinta-accent-success: #a3be8c;
+
+  --vinta-bg: #2e3440;
+  --vinta-bg-opaque: #2e3440;
+  --vinta-surface-card: rgba(46, 52, 64, 0.9);
+  --vinta-surface-elevated: #3b4252;
+  --vinta-dock-popover-bg: #2e3440;
+
+  --vinta-border: rgba(216, 222, 233, 0.12);
+  --vinta-border-light: rgba(216, 222, 233, 0.08);
+  --vinta-border-accent: rgba(136, 192, 208, 0.35);
+
+  --vinta-hover: rgba(236, 239, 244, 0.08);
+  --vinta-item-bg: rgba(59, 66, 82, 0.7);
+
+  --vinta-text-primary: #eceff4;
+  --vinta-text-secondary: #e5e9f0;
+  --vinta-text-muted: #d8dee9;
+
+  --vinta-island-bg: rgba(46, 52, 64, 0.94);
+}

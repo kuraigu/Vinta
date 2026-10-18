@@ -4,7 +4,7 @@
   export const config: IslandConfig = {
     minimal: { w: 10, h: 10, r: 5 },
     expanded: { w: 440, h: 380, r: 30 },
-    borderColor: 'var(--c-border)',
+    borderColor: 'var(--vinta-border)',
     glowColor: 'transparent'
   }
 </script>
@@ -154,7 +154,7 @@
   let remainingStr = $derived(formatLifeTime(battery.lifeTimeSeconds))
 </script>
 
-<div class="action-center-page">
+<div data-vinta="action-center-page" class="action-center-page">
   <!-- Header -->
   <div class="action-header">
     <BackButton />

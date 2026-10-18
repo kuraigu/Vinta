@@ -497,7 +497,7 @@
   {/if}
 {/snippet}
 
-<div class="notification-container">
+<div data-vinta="notification" class="notification-container">
   {#if !expanded}
     <div class="banner-view-container">
       {#key latest.id}

@@ -4,7 +4,7 @@
   export const config: IslandConfig = {
     minimal: { w: 10, h: 10, r: 5 },
     expanded: { w: 440, h: 380, r: 30 },
-    borderColor: 'var(--c-border)',
+    borderColor: 'var(--vinta-border)',
     glowColor: 'transparent'
   }
 </script>
@@ -205,7 +205,7 @@
   let filteredApps = $derived.by(getFilteredApps)
 </script>
 
-<div class="apps-page">
+<div data-vinta="apps-page" class="apps-page">
   <div class="header">
     <div class="header-left">
       <span class="title">Apps</span>

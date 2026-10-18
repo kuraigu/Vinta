@@ -25,7 +25,7 @@ Inspired by this heritage, Vinta brings that same fluid grace to your desktop in
 - **Interactive Component Gallery:** Swipe or drag through your favorite widgets including weather forecasts, live clocks, system meters, and calendar views.
 - **Live Weather & Forecasts:** Real-time local temperatures, atmospheric conditions, daily high and low ranges, and multi-day forecasts.
 - **Intelligent Notification Hub:** Captures incoming Windows notifications in a clean pop-up banner with customizable audio chimes and quiet hours.
-- **Customizable Appearance & Themes:** Personalize your island with dark and light modes, customizable opacity, ambient glow intensity, and compact width options.
+- **Customizable Appearance & Themes:** Personalize your island with built-in presets (OLED Dark, Nord Frost) or create and install custom `.vintatheme` packages with CSS cascade layer overrides.
 - **Flexible Screen Positioning:** Drag the island horizontally to align with your setup, or double-click anytime to return it to center.
 
 > [!NOTE]

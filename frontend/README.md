@@ -18,7 +18,7 @@ frontend/
 │   ├── stores/             # Svelte reactive state stores
 │   ├── services/           # Window bounds, gestures, tooltips, and weather services
 │   ├── illustrations/      # Volumetric vector artwork for weather and widgets
-│   ├── themes/             # Tokenized CSS theme files
+│   ├── themes/             # Theme engine, presets (oled-dark, nord-frost), and base stylesheets
 │   └── utils/              # Gesture math, date formatting, and application helpers
 ├── bindings/               # Generated Wails v3 Go to TypeScript bindings
 └── index.html              # HTML shell configured for transparent webviews
@@ -36,7 +36,8 @@ All components use Svelte 5 runes (`$state`, `$derived`, `$props`, `$effect`):
 ### 2. Design System & CSS Variables
 
 - Strict compliance with `docs/DESIGN.md` is mandatory.
-- Never hardcode color hex codes or static RGB strings. Always use semantic CSS tokens such as `var(--c-primary)` and `var(--c-item-bg)`.
+- Use standard `--vinta-*` semantic CSS variables (such as `var(--vinta-accent-primary)` and `var(--vinta-item-bg)`).
+- Layer hierarchy uses CSS Cascade Layers (`@layer vinta.base, vinta.components, vinta.theme;`).
 - Use `lucide-svelte` for standard iconography.
 
 ### 3. Stylesheet Organization

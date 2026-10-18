@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../../../schemas/vintatheme.schema.json",
+  "schemaVersion": 1,
+  "id": "oled-dark",
+  "name": "OLED Dark",
+  "author": "Innoh Reloza",
+  "version": "1.0.0",
+  "description": "Default deep obsidian dark theme with emerald mint accents.",
+  "entry": "style.css",
+  "accentColor": "#00ffaa",
+  "mode": "oled"
+}

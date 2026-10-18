@@ -4,7 +4,7 @@
   export const config: IslandConfig = {
     minimal: { w: 10, h: 10, r: 5 },
     expanded: { w: 600, h: 480, r: 28 },
-    borderColor: 'var(--c-border)',
+    borderColor: 'var(--vinta-border)',
     glowColor: 'transparent'
   }
 
@@ -544,6 +544,7 @@
 </script>
 
 <div
+  data-vinta="notes-page"
   class="notes-page-container {viewMode === 'editor'
     ? `color-${activeNote?.color || 'yellow'}`
     : ''}"

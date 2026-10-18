@@ -7,6 +7,7 @@
     showBackButton?: boolean
     onback?: () => void
     sidebarWidth?: string
+    dataVinta?: string
     sidebar?: Snippet
     content?: Snippet
     children?: Snippet
@@ -17,13 +18,14 @@
     showBackButton = false,
     onback,
     sidebarWidth = '160px',
+    dataVinta,
     sidebar,
     content,
     children
   }: Props = $props()
 </script>
 
-<div class="sidebar-page-layout">
+<div data-vinta={dataVinta} class="sidebar-page-layout">
   {#if title}
     <div class="page-header" class:has-back={showBackButton}>
       {#if showBackButton}

@@ -1,0 +1,140 @@
+:root {
+  /* ACCENT TOKENS */
+  --vinta-accent-primary: #38bdf8;
+  --vinta-accent-danger: #ff3b30;
+  --vinta-accent-danger-hover-bg: rgba(255, 59, 48, 0.15);
+  --vinta-accent-danger-hover-text: var(--vinta-accent-danger);
+  --vinta-accent-warning: #ffcc00;
+  --vinta-accent-warning-hover-bg: rgba(255, 204, 0, 0.15);
+  --vinta-accent-warning-hover-text: var(--vinta-accent-warning);
+  --vinta-accent-success: #34c759;
+  --vinta-accent-success-hover-bg: rgba(52, 199, 89, 0.15);
+  --vinta-accent-success-hover-text: var(--vinta-accent-success);
+  --vinta-accent-purple: #a78bfa;
+
+  /* BASE SURFACES */
+  --vinta-bg: rgba(20, 20, 20, 1);
+  --vinta-surface-card: #15161c;
+  --vinta-border: rgba(255, 255, 255, 0.1);
+  --vinta-hover: rgba(255, 255, 255, 0.08);
+  --vinta-item-bg: rgba(255, 255, 255, 0.05);
+
+  /* TYPOGRAPHY */
+  --vinta-text-primary: #ffffff;
+  --vinta-text-secondary: #b0b0b0;
+  --vinta-text-muted: #888888;
+
+  /* CONTRAST SURFACES */
+  --vinta-contrast-bg: rgba(255, 255, 255, 0.05);
+  --vinta-contrast-border: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  --vinta-contrast-hover: rgba(27, 11, 11, 0.15);
+
+  /* GEOMETRY & LAYOUT */
+  --vinta-radius-island: 20px;
+  --vinta-radius-card: 22px;
+  --vinta-font-family:
+    'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    Helvetica, Arial, sans-serif;
+
+  /* ISLAND STATES */
+  --vinta-island-border-idle: #34c759;
+  --vinta-island-border-notification: #007aff;
+  --vinta-island-glow-idle: #34c759;
+  --vinta-island-glow-notification: #007aff;
+  --vinta-island-shadow:
+    inset 1px 0 0 0 rgba(255, 255, 255, 0.08),
+    inset -1px 0 0 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 0 rgba(255, 255, 255, 0.08),
+    0 1.5px 3.5px rgba(0, 0, 0, 0.22);
+  --vinta-island-hover-shadow: 0 2px 4.5px rgba(0, 0, 0, 0.3);
+
+  /* SCROLLBARS */
+  --vinta-scrollbar-thumb: rgba(255, 255, 255, 0.2);
+
+  /* COMPONENT SEMANTIC TOKENS */
+  --vinta-clear-btn-hover-bg: rgba(255, 59, 48, 0.12);
+  --vinta-clear-btn-hover-text: #ff3b30;
+  --vinta-clear-btn-hover-border: inset 0 0 0 1px rgba(255, 59, 48, 0.3);
+
+  --vinta-dnd-active-bg: rgba(255, 149, 0, 0.12);
+  --vinta-dnd-active-text: #ff9500;
+  --vinta-dnd-active-border: inset 0 0 0 1px rgba(255, 149, 0, 0.3);
+
+  --vinta-dock-popover-bg: rgba(20, 20, 20, 1);
+  --vinta-dock-popover-border: rgba(255, 255, 255, 0.1);
+  --vinta-dock-popover-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+
+  --vinta-calendar-today-glow: 0 4px 10px rgba(52, 199, 89, 0.4);
+  --vinta-clock-shadow: rgba(255, 255, 255, 0.15);
+
+  --vinta-icon-badge-bg: rgba(255, 255, 255, 0.08);
+  --vinta-icon-badge-border: rgba(255, 255, 255, 0.12);
+
+  --vinta-scrim: rgba(0, 0, 0, 0.72);
+
+  --vinta-media-btn-active-bg: #ffffff;
+  --vinta-media-btn-active-text: #000000;
+  --vinta-media-btn-active-border: rgba(255, 255, 255, 0.6);
+  --vinta-media-btn-active-glow: 0 0 10px rgba(255, 255, 255, 0.6);
+
+  /* BACKWARD COMPATIBILITY ALIASES */
+  --c-primary: var(--vinta-accent-primary);
+  --c-danger: var(--vinta-accent-danger);
+  --c-danger-hover-bg: var(--vinta-accent-danger-hover-bg);
+  --c-danger-hover-text: var(--vinta-accent-danger-hover-text);
+  --c-warning: var(--vinta-accent-warning);
+  --c-warning-hover-bg: var(--vinta-accent-warning-hover-bg);
+  --c-warning-hover-text: var(--vinta-accent-warning-hover-text);
+  --c-success: var(--vinta-accent-success);
+  --c-success-hover-bg: var(--vinta-accent-success-hover-bg);
+  --c-success-hover-text: var(--vinta-accent-success-hover-text);
+  --c-purple: var(--vinta-accent-purple);
+
+  --c-bg: var(--vinta-bg);
+  --c-border: var(--vinta-border);
+  --c-hover: var(--vinta-hover);
+  --c-item-bg: var(--vinta-item-bg);
+
+  --c-text-primary: var(--vinta-text-primary);
+  --c-text-secondary: var(--vinta-text-secondary);
+  --c-text-muted: var(--vinta-text-muted);
+
+  --c-contrast-bg: var(--vinta-contrast-bg);
+  --c-contrast-bg-border: var(--vinta-contrast-border);
+  --c-contrast-bg-hover: var(--vinta-contrast-hover);
+
+  --c-island-border-idle: var(--vinta-island-border-idle);
+  --c-island-border-notification: var(--vinta-island-border-notification);
+  --c-island-glow-idle: var(--vinta-island-glow-idle);
+  --c-island-glow-notification: var(--vinta-island-glow-notification);
+
+  --island-box-shadow: var(--vinta-island-shadow);
+  --island-hover-drop-shadow: var(--vinta-island-hover-shadow);
+
+  --c-scrollbar-thumb: var(--vinta-scrollbar-thumb);
+
+  --c-clear-btn-hover-bg: var(--vinta-clear-btn-hover-bg);
+  --c-clear-btn-hover-text: var(--vinta-clear-btn-hover-text);
+  --c-clear-btn-hover-border: var(--vinta-clear-btn-hover-border);
+
+  --c-dnd-active-bg: var(--vinta-dnd-active-bg);
+  --c-dnd-active-text: var(--vinta-dnd-active-text);
+  --c-dnd-active-border: var(--vinta-dnd-active-border);
+
+  --c-dock-popover-bg: var(--vinta-dock-popover-bg);
+  --c-dock-popover-border: var(--vinta-dock-popover-border);
+  --c-dock-popover-shadow: var(--vinta-dock-popover-shadow);
+
+  --c-calendar-today-glow: var(--vinta-calendar-today-glow);
+  --c-clock-shadow: var(--vinta-clock-shadow);
+
+  --c-icon-badge-bg: var(--vinta-icon-badge-bg);
+  --c-icon-badge-border: var(--vinta-icon-badge-border);
+
+  --c-scrim: var(--vinta-scrim);
+
+  --c-media-btn-active-bg: var(--vinta-media-btn-active-bg);
+  --c-media-btn-active-text: var(--vinta-media-btn-active-text);
+  --c-media-btn-active-border: var(--vinta-media-btn-active-border);
+  --c-media-btn-active-glow: var(--vinta-media-btn-active-glow);
+}

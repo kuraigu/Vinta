@@ -91,7 +91,7 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
 
   // System Tray & Theme toggles
   onEvent('toggle-theme', () => {
-    themeStore.update((t) => (t === 'dark' ? 'light' : 'dark'))
+    themeStore.update((t) => (t === 'oled-dark' ? 'nord-frost' : 'oled-dark'))
   })
 
   onEvent('show-pill', () => {

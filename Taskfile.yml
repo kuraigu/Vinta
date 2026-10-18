@@ -129,6 +129,11 @@ tasks:
       - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/increment_build.ps1
       - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/package_installer.ps1
 
+  theme:pack:
+    desc: Validate and package a theme directory into a distributable .vintatheme bundle
+    cmds:
+      - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/pack-theme.ps1 {{.CLI_ARGS}}
+
   run:
     desc: Compile and run standalone binary
     deps: [build]

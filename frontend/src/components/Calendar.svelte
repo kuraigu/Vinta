@@ -376,6 +376,7 @@
 </script>
 
 <div
+  data-vinta="calendar"
   class="calendar-container"
   class:expanded
   class:minimal={!expanded}

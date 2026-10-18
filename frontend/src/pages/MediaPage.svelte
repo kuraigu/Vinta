@@ -13,7 +13,12 @@
   let { expanded = false }: { expanded?: boolean } = $props()
 </script>
 
-<div class="media-page-layout" class:expanded class:minimal={!expanded}>
+<div
+  data-vinta="media-page"
+  class="media-page-layout"
+  class:expanded
+  class:minimal={!expanded}
+>
   <MediaWidget {expanded} />
 </div>
 

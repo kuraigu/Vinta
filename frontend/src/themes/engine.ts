@@ -1,0 +1,118 @@
+import type { ThemeInfo } from './types.js'
+import oledDarkManifest from './presets/oled-dark/manifest.json'
+import nordFrostManifest from './presets/nord-frost/manifest.json'
+import nordFrostCss from './presets/nord-frost/style.css?raw'
+import {
+  ListThemes as listThemesFromBackend,
+  GetThemeCSS as getThemeCssFromBackend,
+  ImportThemeDialog,
+  OpenThemesFolder
+} from '../../bindings/Vinta/backend/themeservice.js'
+
+const STYLE_TAG_ID = 'vinta-active-theme'
+
+/**
+ * Built-in themes packaged directly with the frontend distribution.
+ */
+export const BUILTIN_THEMES: ThemeInfo[] = [
+  {
+    manifest: oledDarkManifest as ThemeInfo['manifest'],
+    isBuiltIn: true,
+    path: 'frontend/src/themes/presets/oled-dark'
+  },
+  {
+    manifest: nordFrostManifest as ThemeInfo['manifest'],
+    isBuiltIn: true,
+    path: 'frontend/src/themes/presets/nord-frost'
+  }
+]
+
+/**
+ * Retrieves built-in presets combined with custom themes installed on disk.
+ */
+export async function listThemes(): Promise<ThemeInfo[]> {
+  try {
+    const customThemes = await listThemesFromBackend()
+    if (Array.isArray(customThemes) && customThemes.length > 0) {
+      return [...BUILTIN_THEMES, ...(customThemes as unknown as ThemeInfo[])]
+    }
+  } catch (err) {
+    console.warn('Failed to load custom themes from backend:', err)
+  }
+
+  return BUILTIN_THEMES
+}
+
+/**
+ * Prompts the user with a native file dialog to import a .vintatheme package.
+ */
+export async function importTheme(): Promise<ThemeInfo | null> {
+  return (await ImportThemeDialog()) as unknown as ThemeInfo | null
+}
+
+/**
+ * Opens the local themes storage directory in Windows Explorer.
+ */
+export async function openThemesFolder(): Promise<void> {
+  await OpenThemesFolder()
+}
+
+/**
+ * Retrieves the entry CSS stylesheet content for a specific theme ID.
+ */
+export async function getThemeCss(id: string): Promise<string> {
+  if (id === 'oled-dark') {
+    return ''
+  }
+  if (id === 'nord-frost') {
+    return nordFrostCss
+  }
+  return await getThemeCssFromBackend(id)
+}
+
+/**
+ * Applies a theme to the current DOM document by injecting CSS into the vinta.theme cascade layer.
+ */
+export async function applyThemeToDOM(themeId: string): Promise<void> {
+  if (typeof document === 'undefined') {
+    return
+  }
+
+  let styleTag = document.getElementById(
+    STYLE_TAG_ID
+  ) as HTMLStyleElement | null
+  if (!styleTag) {
+    styleTag = document.createElement('style')
+    styleTag.id = STYLE_TAG_ID
+    document.head.appendChild(styleTag)
+  }
+
+  const normalizedId = themeId || 'oled-dark'
+  document.documentElement.dataset.theme = normalizedId
+
+  if (normalizedId === 'oled-dark') {
+    styleTag.textContent = ''
+    return
+  }
+
+  if (normalizedId === 'nord-frost') {
+    styleTag.textContent = `@layer vinta.theme {\n${nordFrostCss}\n}`
+    return
+  }
+
+  try {
+    const rawCss = await getThemeCss(normalizedId)
+    if (rawCss) {
+      styleTag.textContent = `@layer vinta.theme {\n${rawCss}\n}`
+    } else {
+      styleTag.textContent = ''
+    }
+  } catch (err) {
+    console.warn(
+      `Failed to load theme "${normalizedId}", falling back to oled-dark:`,
+      err
+    )
+    styleTag.textContent = ''
+    document.documentElement.dataset.theme = 'oled-dark'
+  }
+}

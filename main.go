@@ -33,6 +33,7 @@ func main() {
 	app := backend.NewApp(icon)
 	devTools := devtest.NewDevTest()
 	cache := backend.NewCache()
+	themeService := backend.NewThemeService()
 
 	wailsApp := application.New(application.Options{
 		Name:        "Vinta",
@@ -42,6 +43,7 @@ func main() {
 			application.NewService(app),
 			application.NewService(devTools),
 			application.NewService(cache),
+			application.NewService(themeService),
 		},
 		SingleInstance: &application.SingleInstanceOptions{
 			UniqueID: "vinta-dynamic-island",

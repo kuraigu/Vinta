@@ -13,6 +13,11 @@ if "%~1"=="setup" (
     exit /b %ERRORLEVEL%
 )
 
+if "%~1"=="pack-theme" (
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\pack-theme.ps1" %2 %3
+    exit /b %ERRORLEVEL%
+)
+
 if "%~1"=="dev" (
     set "DO_BUILD_NATIVE=1"
 
@@ -152,6 +157,7 @@ echo   run [no_build] [debug]   Runs binary (optionally skip build, optionally e
 echo   test                     Runs test suite with DevTest panel (-test)
 echo   bindings                 Generates TypeScript bindings for frontend from Go backend
 echo   installer                Builds standalone production binary and Windows NSIS installer
+echo   pack-theme ^<path^>        Packages a theme directory into a .vintatheme bundle
 echo   lint                     Runs Go and Frontend linters and formatters
 exit /b 1
 

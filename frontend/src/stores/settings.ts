@@ -12,7 +12,7 @@ import { devTestingStore } from './appState'
 // ============================================================================
 // Types
 // ============================================================================
-export type AppTheme = 'dark' | 'light'
+export type AppTheme = string
 export type GlowIntensity = 'disabled' | 'subtle' | 'vibrant'
 export type AutoHideDisplayWidget = 'dash' | 'clock'
 export type HiddenPillPosition = 'center' | 'top-left' | 'top-right'
@@ -183,9 +183,16 @@ function persistentWritable<T>(key: string, initialValue: T) {
       } else {
         initial = parsed
       }
+      if (key === 'vinta_theme' && initial === 'dark') {
+        initial = 'oled-dark' as unknown as T
+      }
     } catch {
       initial = initialValue
     }
+  }
+
+  if (key === 'vinta_theme' && initial === 'dark') {
+    initial = 'oled-dark' as unknown as T
   }
 
   const store = writable<T>(initial)
@@ -221,7 +228,7 @@ function persistentWritable<T>(key: string, initialValue: T) {
 // Known legacy defaults to prune during one-time sparse migration
 const legacyV1Defaults: Record<string, unknown> = {
   vinta_autohide_display: 'dash',
-  vinta_theme: 'dark',
+  vinta_theme: 'oled-dark',
   vinta_user_name: 'User',
   vinta_glow_intensity: 'subtle',
   vinta_opacity_minimal: 1.0,
@@ -295,6 +302,9 @@ if (typeof window !== 'undefined') {
                   ...diskVal
                 }
               }
+              if (item.key === 'vinta_theme' && diskVal === 'dark') {
+                diskVal = 'oled-dark'
+              }
               localStorage.setItem(item.key, JSON.stringify(diskVal))
               item.store.set(diskVal)
             } else {
@@ -323,7 +333,7 @@ export function getInitialTimezone(): string {
 // ============================================================================
 // 1. Appearance & Customization
 // ============================================================================
-export const themeStore = persistentWritable<AppTheme>('vinta_theme', 'dark')
+export const themeStore = persistentWritable<string>('vinta_theme', 'oled-dark')
 export const userNameStore = persistentWritable<string>(
   'vinta_user_name',
   'User'
