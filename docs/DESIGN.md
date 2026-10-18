@@ -44,7 +44,7 @@ Vinta supports custom community themes (including anime-styled or custom backgro
 
 - Use clean sans-serif system font stacks with explicit font weights (`500`, `600`, `700`, `800`).
 - Apply `text-overflow: ellipsis`, `overflow: hidden`, and `white-space: nowrap` with a `max-width` on dynamic text fields (such as city names and timezones) to prevent overflow.
-- **Custom Tooltip Mandate for Interactive Controls:** Always use Vinta's custom tooltip mechanism via the `use:islandTooltip` action (`frontend/src/services/islandTooltip.ts`) or the `<CustomTooltip>` component (`frontend/src/components/CustomTooltip.svelte`) on interactive buttons, icon triggers, and toggles. Never use native HTML `title` attributes on interactive elements, as native OS tooltips introduce delayed hover popups, clip outside transparent webview boundaries, and fail to dispatch window bounds.
+- **Custom Tooltip Mandate for Interactive Controls:** Always use Vinta's custom tooltip mechanism via the `use:islandTooltip` action (`frontend/src/services/islandTooltip.ts`) or the `<CustomTooltip>` component (`frontend/src/components/CustomTooltip.svelte`) on interactive buttons, icon triggers, and toggles. Never use native HTML `title` attributes on interactive elements, as native OS tooltips introduce delayed hover popups and fail to integrate with Vinta design tokens and hit testing.
 - **Truncation Fallback:** Retain native `title={text}` attributes strictly on truncated, non-interactive text spans to provide a simple accessible fallback without cluttering action tooltips.
 
 ### 8. Non-Distracting Indicator States
@@ -53,7 +53,7 @@ Vinta supports custom community themes (including anime-styled or custom backgro
 
 ### 9. Custom Form Control Standards (Select, DatePicker, TimePicker)
 
-- **Never use native HTML `<select>` elements:** Standard `<select>` elements create native OS popups that bleed through transparent Tauri/Wails webview boundaries, clip inside scrollable containers (`overflow: hidden` / `overflow-y: auto`), and break when hovering over background elements. Always import and use `CustomSelect` from `frontend/src/components/CustomSelect.svelte`.
+- **Never use native HTML `<select>` elements:** Standard `<select>` elements create unstyled operating system dialogs that lack theme styling and break within scrollable containers. Always import and use `CustomSelect` from `frontend/src/components/CustomSelect.svelte`.
 - **Swipe Protection in Select:** `<CustomSelect>` includes `.no-swipe` and pointer event suppression to ensure opening and scrolling options inside carousel viewports (`ComponentGallery`) does not trigger unwanted slide navigation.
 - **Never use native HTML `<input type="date">` elements:** Native date inputs spawn operating system dialogs that conflict with window transparency and lack theme variables. Always import and use `CustomDatePicker` from `frontend/src/components/CustomDatePicker.svelte`.
 - **Never use native HTML `<input type="time">` elements:** Native time inputs disrupt keyboard navigation and do not support dynamic theme accents. Always import and use `CustomTimePicker` from `frontend/src/components/CustomTimePicker.svelte`.
@@ -117,7 +117,7 @@ Satellites are secondary peripheral surfaces that orbit the perimeter of the Dyn
 #### 7. Tooltips and Popovers on Satellites
 
 - **Directional Awareness:** Tooltips originating from satellites must orient away from the main island or adapt dynamically (`top`, `bottom`, `left`, `right`) depending on proximity to monitor edges.
-- **Clipping Protection:** Satellite tooltips must float cleanly outside the container without being truncated by parent bounding boxes or window boundaries.
+- **Clear Placement:** Satellite tooltips float outside the satellite container while remaining fully visible within the active monitor workspace.
 
 #### 8. Accessibility and Hit Targets
 

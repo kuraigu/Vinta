@@ -12,7 +12,7 @@ All contributors, whether you write code, update documentation, report bugs, or 
 
 ### Main Application (`Vinta.exe`)
 
-Vinta is built using **Go + Wails v3 + Svelte 5**. The Go backend handles native Win32 window region clipping, click-through bounds, and configuration storage, while Svelte renders the Dynamic Island interface.
+Vinta is built using **Go + Wails v3 + Svelte 5**. The Go backend handles native Win32 window management, transparent multi-rect hit-testing, and configuration storage, while Svelte renders the Dynamic Island interface.
 
 ### Native WinRT Services Bridge (`vintaservices.dll`)
 
@@ -24,7 +24,7 @@ Vinta is built using **Go + Wails v3 + Svelte 5**. The Go backend handles native
 ### Satellite Dock System (Multi-Region Window Compositing)
 
 - **What it is:** An extensible satellite dock engine supporting floating utility panels, window action controls, and companion docks placed along the perimeter of the Dynamic Island.
-- **Why Single-Window Multi-Region:** Rather than spawning multiple WebView2 instances (which consume 40MB to 90MB of RAM per satellite and introduce mouse drag latency and DWM frame tearing), Vinta uses Win32 `CombineRgn(..., RGN_OR)` with `CreateRoundRectRgn`. All floating docks render inside the same high-performance webview while visual gaps remain completely transparent to background mouse clicks.
+- **Why Single-Window Multi-Region:** Rather than spawning multiple WebView2 instances (which consume 40MB to 90MB of RAM per satellite and introduce mouse drag latency and DWM frame tearing), Vinta uses a transparent canvas with dynamic multi-rect hit-testing (`SetHitRects`). All floating docks render inside the same high-performance webview while visual gaps remain completely transparent to background mouse clicks.
 - **Declarative Host Component:** Satellites are declared via `<SatelliteHost>` in Svelte, which automatically registers geometry (`anchor`, `width`, `height`, `radius`, `gap`, `offsetX`, `offsetY`, `active`) with the Go backend via IPC.
 - **Dynamic Edge Margin Clamping:** Horizontal screen bounds dynamically adapt to active satellite footprints (`getActiveSatelliteFootprint`) so floating docks never clip outside the physical monitor display.
 
