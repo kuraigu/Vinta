@@ -333,6 +333,10 @@ export class IslandGestureController {
     clearTimeout(this.inertiaSafetyTimeout)
     this.inertiaSafetyTimeout = undefined
     this.isInertia = false
+    clearTimeout(this.dragResetTimeout)
+    this.dragResetTimeout = window.setTimeout(() => {
+      this.dragMovedDistance = 0
+    }, 50)
   }
 
   /**
@@ -342,8 +346,10 @@ export class IslandGestureController {
     this.stopInertia()
     this.isTrackRegionActive = false
     this.hasExpandedRunway = false
+    this.dragMovedDistance = 0
     clearTimeout(this.dragWatchdogTimeout)
     this.dragWatchdogTimeout = undefined
+    clearTimeout(this.dragResetTimeout)
   }
 
   /**
@@ -366,7 +372,7 @@ export class IslandGestureController {
     clearTimeout(this.dragResetTimeout)
     this.dragResetTimeout = window.setTimeout(() => {
       this.dragMovedDistance = 0
-    }, 150)
+    }, 50)
   }
 
   /**
