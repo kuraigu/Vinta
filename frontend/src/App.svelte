@@ -1445,6 +1445,9 @@
       }}
       onUpdateOffset={(next) => {
         currentLiveOffsetX = next
+        if (gestures.isInertia) {
+          bounds.syncPillBounds(islandNode)
+        }
       }}
       onFinishDrag={finishDragGesture}
       onExpand={handleExpand}
