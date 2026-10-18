@@ -199,6 +199,12 @@
   }
 
   function handleIslandClick(e: MouseEvent) {
+    if (gestures.wasInertiaInterrupted) {
+      gestures.wasInertiaInterrupted = false
+      e.preventDefault()
+      e.stopPropagation()
+      return
+    }
     if (gestures.dragMovedDistance > 4) {
       e.preventDefault()
       e.stopPropagation()

@@ -916,11 +916,10 @@
 
     $hiddenPillOffsetXStore = 0
     currentLiveOffsetX = 0
-    const b = getBoundsForState()
-    bounds.syncBounds(b, 0, islandNode, false, isHidden)
     requestAnimationFrame(() => {
-      bounds.syncPillBounds(islandNode, isHidden)
       requestAnimationFrame(() => {
+        const b = getBoundsForState()
+        bounds.syncBounds(b, 0, islandNode, false, isHidden)
         bounds.syncPillBounds(islandNode, isHidden)
       })
     })
@@ -1446,13 +1445,6 @@
       }}
       onUpdateOffset={(next) => {
         currentLiveOffsetX = next
-        if (gestures.isInertia) {
-          requestAnimationFrame(() => {
-            if (gestures.isInertia) {
-              bounds.syncPillBounds(islandNode)
-            }
-          })
-        }
       }}
       onFinishDrag={finishDragGesture}
       onExpand={handleExpand}

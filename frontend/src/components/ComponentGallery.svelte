@@ -10,6 +10,18 @@
     props?: Record<string, unknown>
   }
 
+  interface Props {
+    slides: SlideItem[]
+    autoPlay?: boolean
+    autoPlayInterval?: number
+    loop?: boolean
+    showDots?: boolean
+    showControls?: boolean
+    initialIndex?: number
+    enableSwipe?: boolean
+    onSlideChange?: (index: number) => void
+  }
+
   let {
     slides = [],
     autoPlay = false,
@@ -20,17 +32,7 @@
     initialIndex = 0,
     enableSwipe = true,
     onSlideChange = () => {}
-  } = $props<{
-    slides: SlideItem[]
-    autoPlay?: boolean
-    autoPlayInterval?: number
-    loop?: boolean
-    showDots?: boolean
-    showControls?: boolean
-    initialIndex?: number
-    enableSwipe?: boolean
-    onSlideChange?: (index: number) => void
-  }>()
+  }: Props = $props()
 
   let isLoopingable = $derived(loop && slides.length > 1)
 
@@ -42,6 +44,7 @@
   })
 
   // Internal 1-based index when looping to account for left clone
+  // svelte-ignore state_referenced_locally
   let displayIndex = $state(initialIndex + (loop && slides.length > 1 ? 1 : 0))
   let isInstant = $state(false)
   let isDragging = $state(false)

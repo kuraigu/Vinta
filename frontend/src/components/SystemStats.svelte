@@ -4,7 +4,11 @@
 
   import { onMount } from 'svelte'
 
-  let { expanded = false } = $props<{ expanded?: boolean }>()
+  interface Props {
+    expanded?: boolean
+  }
+
+  let { expanded = false }: Props = $props()
 
   // Mock data for CPU and RAM
   let cpuUsage = $state(0)

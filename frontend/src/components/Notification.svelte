@@ -49,10 +49,12 @@
     isUpdate?: boolean
   }
 
-  let { expanded = false, notifications = [] } = $props<{
+  interface Props {
     expanded?: boolean
     notifications?: NotificationItem[]
-  }>()
+  }
+
+  let { expanded = false, notifications = [] }: Props = $props()
 
   let nativeIcons = $derived($nativeIconsStore)
 

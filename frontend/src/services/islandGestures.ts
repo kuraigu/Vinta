@@ -99,6 +99,7 @@ export class IslandGestureController {
   public isSettling = false
   public isTrackRegionActive = false
   public isInertia = false
+  public wasInertiaInterrupted = false
   public dragMovedDistance = 0
 
   private dragStartX = 0
@@ -242,7 +243,6 @@ export class IslandGestureController {
     }
 
     this.isDragging = false
-    SetForceInteractive(false).catch(() => {})
 
     const now = performance.now()
     this.dragHistory.push({ x: e.screenX, time: now })
@@ -267,6 +267,7 @@ export class IslandGestureController {
     if (Math.abs(velocity) >= 0.04 && this.dragMovedDistance > 3) {
       this.isInertia = true
       this.isTrackRegionActive = true
+      SetForceInteractive(true).catch(() => {})
 
       const friction = 0.0028
       let lastFrameTime = performance.now()
@@ -275,6 +276,7 @@ export class IslandGestureController {
       clearTimeout(this.inertiaSafetyTimeout)
       this.inertiaSafetyTimeout = window.setTimeout(() => {
         this.stopInertia()
+        SetForceInteractive(false).catch(() => {})
         onComplete()
       }, 1500)
 
@@ -291,12 +293,14 @@ export class IslandGestureController {
 
           if (liveOffset <= virtualMin) {
             this.stopInertia()
+            SetForceInteractive(false).catch(() => {})
             onUpdateOffset(virtualMin)
             onComplete()
             return
           }
           if (liveOffset >= virtualMax) {
             this.stopInertia()
+            SetForceInteractive(false).catch(() => {})
             onUpdateOffset(virtualMax)
             onComplete()
             return
@@ -304,6 +308,7 @@ export class IslandGestureController {
 
           if (Math.abs(velocity) < 0.03) {
             this.stopInertia()
+            SetForceInteractive(false).catch(() => {})
             onUpdateOffset(liveOffset)
             onComplete()
             return
@@ -318,6 +323,7 @@ export class IslandGestureController {
       this.inertiaAnimFrame = requestAnimationFrame(runInertiaStep)
     } else {
       this.stopInertia()
+      SetForceInteractive(false).catch(() => {})
       onComplete()
     }
   }
@@ -344,6 +350,7 @@ export class IslandGestureController {
    */
   public interruptInertia(): void {
     this.stopInertia()
+    this.wasInertiaInterrupted = true
     this.isTrackRegionActive = false
     this.hasExpandedRunway = false
     this.dragMovedDistance = 0

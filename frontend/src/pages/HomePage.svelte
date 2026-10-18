@@ -40,7 +40,11 @@
     }
   }
 
-  let { expanded = false } = $props<{ expanded?: boolean }>()
+  interface Props {
+    expanded?: boolean
+  }
+
+  let { expanded = false }: Props = $props()
 
   let time = $state(new Date())
   let timer: ReturnType<typeof setInterval>

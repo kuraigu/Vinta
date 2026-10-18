@@ -1,17 +1,19 @@
 <script lang="ts">
+  interface Props {
+    columns?: string
+    rows?: string
+    gap?: string
+    height?: string
+    children?: import('svelte').Snippet
+  }
+
   let {
     columns = '1fr',
     rows = 'auto',
     gap = '1rem',
     height = '100%',
     children
-  } = $props<{
-    columns?: string
-    rows?: string
-    gap?: string
-    height?: string
-    children?: import('svelte').Snippet
-  }>()
+  }: Props = $props()
 </script>
 
 <div

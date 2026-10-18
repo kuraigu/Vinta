@@ -1,5 +1,9 @@
 <script lang="ts">
-  let { children } = $props<{ children?: import('svelte').Snippet }>()
+  interface Props {
+    children?: import('svelte').Snippet
+  }
+
+  let { children }: Props = $props()
 </script>
 
 <div class="bento-item">

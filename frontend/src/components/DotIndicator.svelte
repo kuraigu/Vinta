@@ -1,8 +1,13 @@
 <script lang="ts">
+  interface Props {
+    color?: string
+    size?: string
+  }
+
   let {
     color = 'var(--c-success)', // default to a pleasant green
     size = '8px'
-  } = $props<{ color?: string; size?: string }>()
+  }: Props = $props()
 </script>
 
 <div class="dot-container" style="--dot-color: {color}; --dot-size: {size};">
