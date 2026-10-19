@@ -9,11 +9,12 @@
 
 <script lang="ts">
   import { onMount, onDestroy, getContext } from 'svelte'
-  import { MapPin, Sparkles, X, RefreshCw } from 'lucide-svelte'
+  import { MapPin, Sparkles, X, RefreshCw, ChevronDown } from 'lucide-svelte'
   import Calendar from '../components/Calendar.svelte'
   import Weather from '../components/Weather.svelte'
   import DeviceStatusWidget from '../components/DeviceStatusWidget.svelte'
   import ActionCenterGlance from '../components/ActionCenterGlance.svelte'
+  import NotificationGlance from '../components/NotificationGlance.svelte'
   import ScrollView from '../components/ScrollView.svelte'
   import CalendarPage, { config as calendarConfig } from './CalendarPage.svelte'
   import SettingsPage, { config as settingsConfig } from './SettingsPage.svelte'
@@ -82,6 +83,31 @@
   }
 
   let { expanded = false }: Props = $props()
+
+  let scrollContainer: HTMLElement | undefined = $state()
+  let isScrolledDown = $state(false)
+
+  /**
+   * Updates scroll indicator state based on current scroll position.
+   */
+  function handleFeedScroll(e: Event) {
+    const target = e.currentTarget as HTMLElement
+    if (target) {
+      isScrolledDown = target.scrollTop > 20
+    }
+  }
+
+  /**
+   * Smoothly scrolls the social feed downward when the scroll cue is clicked.
+   */
+  function scrollFeedDown() {
+    if (scrollContainer) {
+      scrollContainer.scrollBy({
+        top: 180,
+        behavior: 'smooth'
+      })
+    }
+  }
 
   let time = $state(new Date())
   let timer: ReturnType<typeof setInterval>
@@ -260,7 +286,11 @@
         <div class="page-title">Home</div>
       </div>
 
-      <ScrollView class="home-feed-scroll">
+      <ScrollView
+        class="home-feed-scroll"
+        bind:element={scrollContainer}
+        onscroll={handleFeedScroll}
+      >
         <div class="social-feed-container">
           <!-- Hero Greeting -->
           <header class="home-hero-greeting">
@@ -365,6 +395,11 @@
             </section>
           {/if}
 
+          <!-- Notification Glance Card -->
+          <section class="notification-card-feed">
+            <NotificationGlance />
+          </section>
+
           <!-- Quick Details from Action Center (Modular Bento Card) -->
           {#if $homeWidgetsVisibilityStore.actionCenter}
             <section class="glance-card-feed">
@@ -384,6 +419,18 @@
           {/if}
         </div>
       </ScrollView>
+
+      <!-- Scroll cue indicator: fades out when feed is scrolled down -->
+      <button
+        type="button"
+        class="home-scroll-cue-pill"
+        class:hidden={isScrolledDown}
+        onclick={scrollFeedDown}
+        aria-label="Scroll down for more content"
+      >
+        <span class="scroll-cue-text">More</span>
+        <ChevronDown size={13} class="scroll-cue-icon" />
+      </button>
     </div>
   {/if}
 </div>

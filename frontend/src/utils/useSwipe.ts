@@ -293,4 +293,3 @@ export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
     }
   }
 }
-

@@ -7,13 +7,17 @@
     class?: string
     enableSwipe?: boolean
     ignoreSelector?: string
+    onscroll?: (e: Event) => void
+    element?: HTMLElement
   }
 
   let {
     children,
     class: className = '',
     enableSwipe = true,
-    ignoreSelector = 'input, select, textarea, range, .custom-select, .no-swipe, .no-drag'
+    ignoreSelector = 'input, select, textarea, range, .custom-select, .no-swipe, .no-drag',
+    onscroll,
+    element = $bindable()
   }: Props = $props()
 
   let swipeOptions = $derived({
@@ -23,7 +27,12 @@
   })
 </script>
 
-<div class="scroll-view {className}" use:swipe={swipeOptions}>
+<div
+  bind:this={element}
+  class="scroll-view {className}"
+  use:swipe={swipeOptions}
+  {onscroll}
+>
   {#if children}
     {@render children()}
   {/if}
