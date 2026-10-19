@@ -914,9 +914,19 @@
       requestAnimationFrame(() => {
         const b = getBoundsForState()
         bounds.syncBounds(b, 0, islandNode, false, isHidden)
-        bounds.syncPillBounds(islandNode, isHidden)
+        bounds.syncPillBounds(islandNode, isHidden, true)
       })
     })
+
+    window.setTimeout(() => {
+      bounds.syncPillBounds(islandNode, isHidden, true)
+      resyncAllSatellites()
+    }, 120)
+
+    window.setTimeout(() => {
+      bounds.syncPillBounds(islandNode, isHidden, true)
+      resyncAllSatellites()
+    }, 320)
 
     const handleOverlayChange = (e: Event) => {
       const detail = (e as CustomEvent).detail as

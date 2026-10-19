@@ -12,10 +12,19 @@
     inset calc(-1.5 * var(--island-glow-width)) 0 0 0 var(--island-glow-color),
     inset 0 calc(-1.5 * var(--island-glow-width)) 0 0 var(--island-glow-color);
   --island-hover-border:
-    inset var(--island-border-width) 0 0 0 var(--island-border-color),
-    inset calc(-1 * var(--island-border-width)) 0 0 0 var(--island-border-color),
-    inset 0 calc(-1 * var(--island-border-width)) 0 0 var(--island-border-color);
-  --island-hover-glow: 0 2px 5px var(--island-border-color);
+    inset var(--island-border-width) 0 0 0
+      var(--island-glow-color, var(--vinta-island-glow-idle)),
+    inset calc(-1 * var(--island-border-width)) 0 0 0
+      var(--island-glow-color, var(--vinta-island-glow-idle)),
+    inset 0 calc(-1 * var(--island-border-width)) 0 0
+      var(--island-glow-color, var(--vinta-island-glow-idle));
+  --island-hover-glow:
+    0 0 10px var(--island-glow-color, var(--vinta-island-glow-idle)),
+    0 0 2px var(--island-glow-color, var(--vinta-island-glow-idle));
+  --island-hover-drop-shadow: var(
+    --vinta-island-hover-shadow,
+    0 2px 4.5px rgba(0, 0, 0, 0.3)
+  );
 
   margin-top: 0;
   position: relative;
@@ -28,7 +37,7 @@
   border-top: none;
   border-top-left-radius: 0 !important;
   border-top-right-radius: 0 !important;
-  box-shadow: var(--island-box-shadow);
+  box-shadow: var(--island-box-shadow, var(--vinta-island-shadow));
 
   transition:
     filter 0.4s ease,

@@ -296,12 +296,16 @@
     border-radius: 0 0 var(--island-r) var(--island-r);
     --island-border-color: {isHidden
     ? 'var(--vinta-border)'
-    : islandConfig.borderColor || 'transparent'};
+    : islandConfig.borderColor || 'var(--vinta-island-border-idle)'};
     --island-glow-color: {isHidden
     ? 'transparent'
-    : islandConfig.glowColor || 'transparent'};
-    --island-hidden-glow: {islandConfig.glowColor ||
-    'rgba(255, 255, 255, 0.6)'};
+    : islandConfig.glowColor && islandConfig.glowColor !== 'transparent'
+      ? islandConfig.glowColor
+      : 'var(--vinta-island-glow-idle)'};
+    --island-hidden-glow: {islandConfig.glowColor &&
+    islandConfig.glowColor !== 'transparent'
+    ? islandConfig.glowColor
+    : 'rgba(255, 255, 255, 0.6)'};
     --island-glow-opacity: {glowOpacity};
     --island-anim: {islandAnim};
   "

@@ -663,17 +663,16 @@
               </div>
             </div>
 
-            {#if selectedDateEvents.length === 0}
-              <!-- Consistent Day Empty State Card (styled identically to event cards) -->
-              <div class="tray-event-card tray-empty-card">
-                <div class="tray-card-main">
-                  <span class="tray-time-chip">All Day</span>
-                  <span class="tray-card-title">Free all day</span>
+            <div class="calendar-tray-scroll-container">
+              {#if selectedDateEvents.length === 0}
+                <!-- Consistent Day Empty State Card (styled identically to event cards) -->
+                <div class="tray-event-card tray-empty-card">
+                  <div class="tray-card-main">
+                    <span class="tray-time-chip">All Day</span>
+                    <span class="tray-card-title">Free all day</span>
+                  </div>
                 </div>
-              </div>
-            {:else}
-
-              <div class="calendar-tray-scroll-container">
+              {:else}
                 <ScrollView class="calendar-tray-scroll-view">
                   <div class="agenda-tray-list">
                     {#each selectedDateEvents as event (event.id)}
@@ -722,8 +721,8 @@
                     {/each}
                   </div>
                 </ScrollView>
-              </div>
-            {/if}
+              {/if}
+            </div>
           </div>
         {:else if viewMode === 'year'}
           <!-- 12 Months Grid -->

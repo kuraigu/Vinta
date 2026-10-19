@@ -154,22 +154,42 @@
 
   $effect(syncSatelliteBoundsEffect)
 
+  let resizeObserver: ResizeObserver | undefined
+
   /**
    * Immediately synchronizes bounds when the DOM element mounts into the document.
    */
   function handleHostMount() {
     if (hostEl && active) {
       syncSatelliteBounds()
+      requestAnimationFrame(() => {
+        syncSatelliteBounds()
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))
+        }
+      })
       clearSettleTimeouts()
       settleTimeout1 = window.setTimeout(syncSatelliteBounds, 80)
       settleTimeout2 = window.setTimeout(syncSatelliteBounds, 250)
       settleTimeout3 = window.setTimeout(syncSatelliteBounds, 350)
+
+      if (typeof ResizeObserver !== 'undefined') {
+        resizeObserver?.disconnect()
+        resizeObserver = new ResizeObserver(() => {
+          syncSatelliteBounds()
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))
+          }
+        })
+        resizeObserver.observe(hostEl)
+      }
     }
   }
 
   $effect(handleHostMount)
 
   onDestroy(() => {
+    resizeObserver?.disconnect()
     clearSettleTimeouts()
     unregisterSatellite(id)
     if (typeof window !== 'undefined') {
