@@ -136,7 +136,7 @@ func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 			style = (style | WS_EX_TOOLWINDOW | WS_EX_TOPMOST | WS_EX_NOACTIVATE | WS_EX_LAYERED | WS_EX_TRANSPARENT) &^ WS_EX_APPWINDOW
 			_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwl), style)
 
-			_, _, _ = procSetWindowRgn.Call(hwnd, 0, 1)
+			_, _, _ = procSetWindowRgn.Call(hwnd, 0, 0)
 
 			a.setupForegroundEventHook(hwnd)
 
@@ -157,7 +157,7 @@ func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 					uintptr(^uintptr(0)),
 					uintptr(int32(vLeft)), uintptr(int32(vTop)),
 					uintptr(vWidth), uintptr(overlayHeight),
-					0x0010|0x0020,
+					0x0010|0x0200,
 				)
 			}
 

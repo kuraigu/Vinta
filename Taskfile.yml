@@ -89,15 +89,6 @@ tasks:
   build:frontend:
     desc: Build frontend production bundle using Vite
     deps: [generate:bindings]
-    sources:
-      - 'frontend/src/**/*'
-      - 'frontend/package.json'
-      - 'frontend/vite.config.ts'
-      - 'frontend/index.html'
-      - 'frontend/tsconfig.json'
-      - 'frontend/bindings/**/*'
-    generates:
-      - 'frontend/dist/index.html'
     cmds:
       - cmd.exe /c "cd frontend && npm run build"
 

@@ -2,6 +2,8 @@ import type { ThemeInfo } from './types.js'
 import oledDarkManifest from './presets/oled-dark/manifest.json'
 import nordFrostManifest from './presets/nord-frost/manifest.json'
 import nordFrostCss from './presets/nord-frost/style.css?raw'
+import colorblindSafeManifest from './presets/colorblind-safe/manifest.json'
+import colorblindSafeCss from './presets/colorblind-safe/style.css?raw'
 import {
   ListThemes as listThemesFromBackend,
   GetThemeCSS as getThemeCssFromBackend,
@@ -24,6 +26,11 @@ export const BUILTIN_THEMES: ThemeInfo[] = [
     manifest: nordFrostManifest as ThemeInfo['manifest'],
     isBuiltIn: true,
     path: 'frontend/src/themes/presets/nord-frost'
+  },
+  {
+    manifest: colorblindSafeManifest as ThemeInfo['manifest'],
+    isBuiltIn: true,
+    path: 'frontend/src/themes/presets/colorblind-safe'
   }
 ]
 
@@ -66,6 +73,9 @@ export async function getThemeCss(id: string): Promise<string> {
   }
   if (id === 'nord-frost') {
     return nordFrostCss
+  }
+  if (id === 'colorblind-safe') {
+    return colorblindSafeCss
   }
   return await getThemeCssFromBackend(id)
 }

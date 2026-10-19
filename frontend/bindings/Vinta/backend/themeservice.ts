@@ -8,49 +8,45 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import {
-  Call as $Call,
-  CancellablePromise as $CancellablePromise,
-  Create as $Create
-} from '@wailsio/runtime'
+import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import * as $models from './models.js'
+import * as $models from "./models.js";
 
 /**
  * GetThemeCSS returns the CSS content for the specified custom theme ID from disk.
  */
 export function GetThemeCSS(id: string): $CancellablePromise<string> {
-  return $Call.ByID(1554768694, id)
+    return $Call.ByID(1554768694, id);
 }
 
 /**
  * ImportThemeDialog opens a native file dialog to import a .vintatheme or .zip package.
  */
 export function ImportThemeDialog(): $CancellablePromise<$models.ThemeInfo | null> {
-  return $Call.ByID(3297546876).then(($result: any) => {
-    return $$createType1($result)
-  })
+    return $Call.ByID(3297546876).then(($result: any) => {
+        return $$createType1($result);
+    });
 }
 
 /**
  * ListThemes scans the local user themes directory for installed custom themes.
  */
 export function ListThemes(): $CancellablePromise<$models.ThemeInfo[]> {
-  return $Call.ByID(50141624).then(($result: any) => {
-    return $$createType2($result)
-  })
+    return $Call.ByID(50141624).then(($result: any) => {
+        return $$createType2($result);
+    });
 }
 
 /**
  * OpenThemesFolder launches Windows Explorer targeting %APPDATA%/FreeMatrix Studios/Vinta/themes.
  */
 export function OpenThemesFolder(): $CancellablePromise<void> {
-  return $Call.ByID(2104643960)
+    return $Call.ByID(2104643960);
 }
 
 // Private type creation functions
-const $$createType0 = $models.ThemeInfo.createFrom
-const $$createType1 = $Create.Nullable($$createType0)
-const $$createType2 = $Create.Array($$createType0)
+const $$createType0 = $models.ThemeInfo.createFrom;
+const $$createType1 = $Create.Nullable($$createType0);
+const $$createType2 = $Create.Array($$createType0);

@@ -61,7 +61,7 @@
   }
 
   .dock-btn:focus-visible {
-    outline: 2px solid var(--c-primary, #6366f1);
+    outline: 2px solid var(--vinta-accent-primary, #38bdf8);
     outline-offset: 1px;
     background: rgba(255, 255, 255, 0.15);
   }
@@ -76,8 +76,8 @@
     bottom: calc(100% + 12px);
     left: 50%;
     transform: translateX(-50%) scale(0.9);
-    background: var(--c-dock-popover-bg);
-    color: var(--c-text-primary);
+    background: var(--vinta-dock-popover-bg, #0d0e12);
+    color: var(--vinta-text-primary, #ffffff);
     padding: 6px 10px;
     border-radius: 8px;
     font-size: 0.75rem;
@@ -86,8 +86,8 @@
     opacity: 0;
     pointer-events: none;
     transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: var(--c-dock-popover-shadow);
-    border: 1px solid var(--c-dock-popover-border);
+    box-shadow: var(--vinta-shadow-elevated, 0 4px 16px rgba(0, 0, 0, 0.4));
+    border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.08));
     z-index: 100;
   }
 
@@ -164,34 +164,50 @@
   /* Action button hover colors */
   .dock-btn.danger:hover {
     color: #ffffff;
-    background: color-mix(in srgb, var(--c-danger, #ff3b30) 35%, transparent);
-    border-color: color-mix(in srgb, var(--c-danger, #ff3b30) 60%, transparent);
+    background: color-mix(
+      in srgb,
+      var(--vinta-accent-danger, #ff3b30) 35%,
+      transparent
+    );
+    border-color: color-mix(
+      in srgb,
+      var(--vinta-accent-danger, #ff3b30) 60%,
+      transparent
+    );
     box-shadow: 0 2px 8px
-      color-mix(in srgb, var(--c-danger, #ff3b30) 30%, transparent);
+      color-mix(in srgb, var(--vinta-accent-danger, #ff3b30) 30%, transparent);
   }
 
   .dock-btn.warning:hover {
     color: #ffffff;
-    background: color-mix(in srgb, var(--c-warning, #ffcc00) 35%, transparent);
+    background: color-mix(
+      in srgb,
+      var(--vinta-accent-warning, #ffcc00) 35%,
+      transparent
+    );
     border-color: color-mix(
       in srgb,
-      var(--c-warning, #ffcc00) 60%,
+      var(--vinta-accent-warning, #ffcc00) 60%,
       transparent
     );
     box-shadow: 0 2px 8px
-      color-mix(in srgb, var(--c-warning, #ffcc00) 30%, transparent);
+      color-mix(in srgb, var(--vinta-accent-warning, #ffcc00) 30%, transparent);
   }
 
   .dock-btn.success:hover {
     color: #ffffff;
-    background: color-mix(in srgb, var(--c-success, #34c759) 35%, transparent);
+    background: color-mix(
+      in srgb,
+      var(--vinta-accent-success, #34c759) 35%,
+      transparent
+    );
     border-color: color-mix(
       in srgb,
-      var(--c-success, #34c759) 60%,
+      var(--vinta-accent-success, #34c759) 60%,
       transparent
     );
     box-shadow: 0 2px 8px
-      color-mix(in srgb, var(--c-success, #34c759) 30%, transparent);
+      color-mix(in srgb, var(--vinta-accent-success, #34c759) 30%, transparent);
   }
 
   /* Notification badge */
@@ -203,15 +219,15 @@
     height: 14px;
     padding: 0 3px;
     border-radius: 7px;
-    background: var(--c-primary, #38bdf8);
-    color: #ffffff;
+    background: var(--vinta-accent-primary, #38bdf8);
+    color: var(--vinta-text-on-accent, #000000);
     font-size: 9px;
     font-weight: 700;
     line-height: 12px;
     text-align: center;
     pointer-events: none;
     box-sizing: border-box;
-    border: 1.5px solid rgba(255, 255, 255, 0.25);
+    border: 1.5px solid var(--vinta-border, rgba(255, 255, 255, 0.25));
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
   }
 </style>

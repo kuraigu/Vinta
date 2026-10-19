@@ -1,0 +1,12 @@
+{
+  "$schema": "../../schemas/vintatheme.schema.json",
+  "schemaVersion": 1,
+  "id": "starter-theme",
+  "name": "Starter Theme",
+  "author": "Your Name",
+  "version": "1.0.0",
+  "description": "A clean starter theme template demonstrating design tokens and component overrides.",
+  "entry": "style.css",
+  "accentColor": "#38bdf8",
+  "mode": "dark"
+}

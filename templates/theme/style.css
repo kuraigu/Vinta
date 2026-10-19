@@ -1,0 +1,66 @@
+/* ==========================================================================
+   Vinta Starter Theme Template (style.css)
+   ========================================================================== */
+
+:root {
+  /* Brand and Accent Palette */
+  --vinta-accent-primary: #38bdf8;
+  --vinta-accent-hover: #0ea5e9;
+  --vinta-accent-active: #0284c7;
+  --vinta-accent-muted: rgba(56, 189, 248, 0.16);
+  --vinta-accent-purple: #c084fc;
+  --vinta-accent-danger: #f87171;
+  --vinta-accent-warning: #fbbf24;
+  --vinta-accent-success: #34d399;
+
+  /* Surfaces and Canvas */
+  --vinta-bg: #09090b;
+  --vinta-bg-opaque: #09090b;
+  --vinta-surface-card: rgba(18, 18, 22, 0.85);
+  --vinta-surface-elevated: #1e1e24;
+  --vinta-dock-popover-bg: #121216;
+
+  /* Borders and Dividers */
+  --vinta-border: rgba(255, 255, 255, 0.1);
+  --vinta-border-light: rgba(255, 255, 255, 0.06);
+  --vinta-border-accent: rgba(56, 189, 248, 0.35);
+
+  /* Hover and Interactive States */
+  --vinta-hover: rgba(255, 255, 255, 0.06);
+  --vinta-item-bg: rgba(255, 255, 255, 0.04);
+
+  /* Typography Colors */
+  --vinta-text-primary: #ffffff;
+  --vinta-text-secondary: rgba(255, 255, 255, 0.7);
+  --vinta-text-muted: rgba(255, 255, 255, 0.45);
+
+  /* Island Shell */
+  --vinta-island-bg: rgba(9, 9, 11, 0.94);
+}
+
+/* ==========================================================================
+   Component Customization via data-vinta Selectors
+   Themes can directly restyle individual components without token bloat.
+   ========================================================================== */
+
+/* Calendar Widget / Page */
+[data-vinta='calendar'] .calendar-agenda-tray {
+  background: var(--vinta-surface-elevated) !important;
+  border: 1px solid var(--vinta-border-accent) !important;
+}
+
+[data-vinta='calendar'] .tray-add-btn {
+  background: var(--vinta-accent-primary) !important;
+  color: #000000 !important;
+}
+
+/* Dock Button overrides */
+.dock-btn {
+  color: var(--vinta-text-primary) !important;
+}
+
+/* Action Center Glance cards */
+[data-vinta='action-center-page'] .action-center-glance-card {
+  background: var(--vinta-surface-card) !important;
+  border: 1px solid var(--vinta-border) !important;
+}

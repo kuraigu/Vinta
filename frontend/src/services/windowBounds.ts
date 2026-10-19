@@ -56,9 +56,9 @@ export class WindowBoundsManager {
         const rect = targetNode.getBoundingClientRect()
         if (rect.width > 0 && rect.height > 0) {
           const l = Math.round(rect.left * dpr)
-          const t = Math.round(rect.top * dpr)
+          const t = 0
           const w = Math.round(rect.width * dpr)
-          const h = Math.round(rect.height * dpr)
+          const h = Math.round((rect.bottom + 2) * dpr)
           const sig = `hidden:${l},${t},${w},${h}`
           if (sig !== this.lastHitRectsSignature) {
             this.lastHitRectsSignature = sig
@@ -84,19 +84,16 @@ export class WindowBoundsManager {
     const hitRects: HitRect[] = []
 
     const targetNode = islandNode || this.activeIslandNode
-    const node = targetNode?.parentElement?.classList.contains('island-wrapper')
-      ? targetNode.parentElement
-      : targetNode
 
-    if (node) {
-      const rect = node.getBoundingClientRect()
+    if (targetNode) {
+      const rect = targetNode.getBoundingClientRect()
       if (rect.width > 0 && rect.height > 0) {
         hitRects.push(
           new HitRect({
             left: Math.round(rect.left * dpr),
-            top: Math.round(rect.top * dpr),
+            top: 0,
             width: Math.round(rect.width * dpr),
-            height: Math.round(rect.height * dpr)
+            height: Math.round((rect.bottom + 4) * dpr)
           })
         )
       }
@@ -149,6 +146,91 @@ export class WindowBoundsManager {
     SetHitRects(hitRects).catch(() => {})
   }
 
+  private liveTrackingRaf: number | undefined
+  private transitionTimer: number | undefined
+
+  /**
+   * Starts a live requestAnimationFrame tracking loop that reports physical client coordinates
+   * of the island to Go during mounting, resizing, dragging, transitions, or gliding.
+   */
+  public startLiveTracking(
+    islandNode?: HTMLElement | null,
+    durationMs?: number,
+    onSettled?: () => void
+  ): void {
+    if (islandNode) this.activeIslandNode = islandNode
+    this.stopLiveTracking()
+
+    const startTime = performance.now()
+    const trackStep = (now: number) => {
+      this.syncPillBounds(this.activeIslandNode)
+      if (durationMs !== undefined && now - startTime >= durationMs) {
+        this.stopLiveTracking()
+        this.syncPillBounds(this.activeIslandNode)
+        onSettled?.()
+        return
+      }
+      this.liveTrackingRaf = requestAnimationFrame(trackStep)
+    }
+
+    this.syncPillBounds(this.activeIslandNode)
+    this.liveTrackingRaf = requestAnimationFrame(trackStep)
+  }
+
+  /**
+   * Stops active live requestAnimationFrame tracking loop.
+   */
+  public stopLiveTracking(): void {
+    if (this.liveTrackingRaf !== undefined) {
+      cancelAnimationFrame(this.liveTrackingRaf)
+      this.liveTrackingRaf = undefined
+    }
+  }
+
+  /**
+   * Tracks the island element's visual bounding box across a CSS transition or motion.
+   */
+  public startTrackingTransition(
+    islandNode?: HTMLElement | null,
+    durationMs: number = 360,
+    isHidden: boolean = false
+  ): void {
+    if (islandNode) this.activeIslandNode = islandNode
+    this.stopTrackingTransition()
+
+    this.startLiveTracking(this.activeIslandNode, durationMs, () => {
+      this.syncPillBounds(this.activeIslandNode, isHidden)
+      resyncAllSatellites()
+      dismissAllTooltips()
+    })
+  }
+
+  /**
+   * Stops any active transition timer or tracking frame.
+   */
+  public stopTrackingTransition(): void {
+    this.stopLiveTracking()
+    if (this.transitionTimer !== undefined) {
+      clearTimeout(this.transitionTimer)
+      this.transitionTimer = undefined
+    }
+  }
+
+  /**
+   * Synchronizes bounds during inertia gliding using live coordinate tracking.
+   * Tracks the live position of the gliding island frame-by-frame so the vacated path
+   * remains immediately click-through to background applications.
+   */
+  public syncGlideCorridor(
+    islandNode: HTMLElement | null,
+    _isHidden: boolean,
+    _startOffset: number,
+    _targetOffset: number
+  ): void {
+    if (islandNode) this.activeIslandNode = islandNode
+    this.startLiveTracking(islandNode)
+  }
+
   /**
    * Dispatches boundary updates with dynamic hit-testing bounds.
    */
@@ -189,17 +271,21 @@ export class WindowBoundsManager {
    */
   public cancelPendingTransition(): void {
     this.targetPendingBounds = { w: 0, h: 0, r: 0 }
+    this.stopTrackingTransition()
   }
 
   /**
-   * Pre-expansion hook to maintain compatibility with animation lifecycle.
+   * Pre-expansion hook to continuously track expanding bounds in real time.
    */
-  public async prepareExpansion(
-    _target: WindowBounds,
+  public prepareExpansion(
+    target: WindowBounds,
     _explicitOffset?: number,
     islandNode?: HTMLElement | null
   ): Promise<void> {
-    this.syncPillBounds(islandNode, false)
+    if (islandNode) this.activeIslandNode = islandNode
+    this.currentOSBounds = { ...target }
+    this.startTrackingTransition(islandNode, 360, false)
+    return Promise.resolve()
   }
 
   /**
@@ -214,26 +300,16 @@ export class WindowBoundsManager {
   ): void {
     if (islandNode) this.activeIslandNode = islandNode
     this.currentOSBounds = { ...target }
-    this.syncPillBounds(islandNode || this.activeIslandNode)
-    if (typeof requestAnimationFrame !== 'undefined') {
-      requestAnimationFrame(() => {
-        this.syncPillBounds(islandNode || this.activeIslandNode)
-      })
-    }
+    this.startTrackingTransition(islandNode, 360, false)
     setTimeout(() => {
       onSettled?.()
-      this.syncPillBounds(islandNode || this.activeIslandNode)
-    }, 150)
-    setTimeout(() => {
-      onSettled?.()
-      this.syncPillBounds(islandNode || this.activeIslandNode)
     }, 360)
   }
 
   /**
    * Recovers resting bounds and updates native hit testing.
    */
-  public async recoverRestingBounds(
+  public recoverRestingBounds(
     target: WindowBounds,
     _offset: number,
     islandNode?: HTMLElement | null,
@@ -241,20 +317,11 @@ export class WindowBoundsManager {
   ): Promise<void> {
     if (islandNode) this.activeIslandNode = islandNode
     this.currentOSBounds = { ...target }
+    this.stopTrackingTransition()
     this.syncPillBounds(islandNode || this.activeIslandNode, isHidden)
-    if (typeof requestAnimationFrame !== 'undefined') {
-      requestAnimationFrame(() => {
-        this.syncPillBounds(islandNode || this.activeIslandNode, isHidden)
-      })
-    }
-    setTimeout(() => {
-      this.syncPillBounds(islandNode || this.activeIslandNode, isHidden)
-    }, 150)
-    setTimeout(() => {
-      this.syncPillBounds(islandNode || this.activeIslandNode, isHidden)
-    }, 360)
     resyncAllSatellites()
     dismissAllTooltips()
+    return Promise.resolve()
   }
 
   /**
@@ -282,7 +349,7 @@ export class WindowBoundsManager {
   }
 
   /**
-   * Consolidated window bounds synchronizer.
+   * Consolidated window bounds synchronizer. Tracks the island across any state transition.
    */
   public syncBounds(
     target: WindowBounds,
@@ -291,7 +358,7 @@ export class WindowBoundsManager {
     _isDragging: boolean = false,
     isHidden: boolean = false
   ): void {
-    this.activeIslandNode = islandNode
+    if (islandNode) this.activeIslandNode = islandNode
     this.currentOSBounds = { ...target }
     this.syncPillBounds(islandNode, isHidden)
   }

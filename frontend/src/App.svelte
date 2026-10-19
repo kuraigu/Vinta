@@ -43,7 +43,8 @@
   import { playNotifChime } from './services/audioService'
   import {
     satellitesStore,
-    getActiveSatelliteFootprint
+    getActiveSatelliteFootprint,
+    resyncAllSatellites
   } from './stores/satellites'
   import { applyThemeToDOM } from './themes/engine'
   import {
@@ -364,8 +365,8 @@
   // Derived Dimensions & Geometric Bounds
   let hiddenBounds = $derived(
     $autoHideDisplayStore === 'clock'
-      ? { w: 116, h: 28, r: 14 }
-      : { w: 72, h: 12, r: 6 }
+      ? { w: 128, h: 28, r: 14 }
+      : { w: 112, h: 12, r: 6 }
   )
 
   let hasBattery = $derived($batteryDataStore.hasBattery)
@@ -632,14 +633,7 @@
       currentLiveOffsetX = targetOffset
       $hiddenPillOffsetXStore = targetOffset
     }
-    bounds.syncBounds(nextBounds, targetOffset, islandNode, false, false)
-
-    window.setTimeout(
-      () => {
-        bounds.syncPillBounds(islandNode, isHidden)
-      },
-      expand ? 330 : 230
-    )
+    bounds.startTrackingTransition(islandNode, expand ? 350 : 250, false)
 
     triggerGlow()
   }
@@ -682,7 +676,7 @@
       currentLiveOffsetX = targetOffset
       $hiddenPillOffsetXStore = targetOffset
     }
-    bounds.syncBounds(nextBounds, targetOffset, islandNode, false, false)
+    bounds.startTrackingTransition(islandNode, 350, false)
     resetHideTimer()
   }
 
@@ -720,8 +714,7 @@
       : '0.22s cubic-bezier(0.2, 0.8, 0.2, 1)'
 
     isHidden = true
-    const nextBounds = getBoundsForState(islandConfig, false, true)
-    bounds.syncBounds(nextBounds, clampedOffsetX, islandNode, false, true)
+    bounds.startTrackingTransition(islandNode, duration + 50, true)
 
     dormantUnmountTimeout = window.setTimeout(() => {
       if (isHidden) {
@@ -817,7 +810,7 @@
         if (!needsSettle) {
           gestures.finishSettling()
           bounds.cancelPendingTransition()
-          bounds.recoverRestingBounds(target, resting, islandNode)
+          bounds.recoverRestingBounds(target, resting, islandNode, isHidden)
         } else {
           gestures.isSettling = true
           gestures.isTrackRegionActive = true
@@ -828,6 +821,7 @@
             islandNode,
             () => {
               gestures.finishSettling()
+              bounds.recoverRestingBounds(target, resting, islandNode, isHidden)
             }
           )
         }
@@ -853,10 +847,10 @@
       currentLiveOffsetX = targetOffset
       $hiddenPillOffsetXStore = targetOffset
     }
-    await bounds.prepareExpansion(nextBounds, targetOffset, islandNode)
     islandAnim = '0.32s cubic-bezier(0.2, 0.8, 0.2, 1)'
     expanded = true
     isControlsDrawerOpen = false
+    bounds.startTrackingTransition(islandNode, 350, false)
   }
 
   function handleMouseEnter() {
@@ -952,6 +946,7 @@
 
     const handleResyncBounds = () => {
       bounds.syncPillBounds(islandNode, isHidden)
+      resyncAllSatellites()
     }
 
     window.addEventListener('vinta-overlay', handleOverlayChange)
@@ -971,6 +966,8 @@
 
     const handleResize = () => {
       refreshDisplay()
+      bounds.syncPillBounds(islandNode, isHidden)
+      resyncAllSatellites()
     }
 
     const handleGlobalDragFailsafe = (e?: Event) => {
@@ -1440,13 +1437,23 @@
       {currentLiveOffsetX}
       {wasExpandedBeforeHide}
       onStartDragRunway={() => {
+        bounds.startLiveTracking(islandNode)
         const { h, r } = getBoundsForState()
         bounds.updateBounds(-1, Math.max(h, 200), r, 0)
       }}
+      onStartInertia={(start, target) => {
+        bounds.syncGlideCorridor(islandNode, isHidden, start, target)
+      }}
+      onGlideStep={(live) => {
+        currentLiveOffsetX = live
+        if (islandWrapperNode) {
+          islandWrapperNode.style.transform = `translateX(${live}px)`
+        }
+      }}
       onUpdateOffset={(next) => {
         currentLiveOffsetX = next
-        if (gestures.isInertia) {
-          bounds.syncPillBounds(islandNode)
+        if (islandWrapperNode) {
+          islandWrapperNode.style.transform = `translateX(${next}px)`
         }
       }}
       onFinishDrag={finishDragGesture}

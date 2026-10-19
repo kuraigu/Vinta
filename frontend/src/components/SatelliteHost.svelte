@@ -31,8 +31,6 @@
     offsetX?: number
     /** Additional vertical coordinate offset for stacking. */
     offsetY?: number
-    /** Live clamped horizontal offset of the parent Dynamic Island. */
-    clampedOffsetX?: number
     /** Permanent tooltip region padding in pixels. */
     tooltipPad?: number
     /** Direction the tooltip extends from the satellite. */
@@ -58,7 +56,6 @@
     gap = 12,
     offsetX = 0,
     offsetY = 0,
-    clampedOffsetX = 0,
     tooltipPad = 0,
     tooltipSide,
     active,
@@ -117,6 +114,18 @@
     }
   }
 
+  let settleTimeout1: number | undefined
+  let settleTimeout2: number | undefined
+  let settleTimeout3: number | undefined
+
+  function clearSettleTimeouts() {
+    clearTimeout(settleTimeout1)
+    clearTimeout(settleTimeout2)
+    clearTimeout(settleTimeout3)
+  }
+
+  let lastActiveState: boolean | undefined
+
   /**
    * Synchronizes bounds whenever geometry properties or offset change.
    */
@@ -127,11 +136,20 @@
       gap,
       offsetX,
       offsetY,
-      clampedOffsetX,
       active,
       radius
     }
     syncSatelliteBounds()
+    if (active && lastActiveState !== active) {
+      lastActiveState = active
+      clearSettleTimeouts()
+      settleTimeout1 = window.setTimeout(syncSatelliteBounds, 80)
+      settleTimeout2 = window.setTimeout(syncSatelliteBounds, 250)
+      settleTimeout3 = window.setTimeout(syncSatelliteBounds, 350)
+    } else if (!active) {
+      lastActiveState = active
+      clearSettleTimeouts()
+    }
   }
 
   $effect(syncSatelliteBoundsEffect)
@@ -142,12 +160,17 @@
   function handleHostMount() {
     if (hostEl && active) {
       syncSatelliteBounds()
+      clearSettleTimeouts()
+      settleTimeout1 = window.setTimeout(syncSatelliteBounds, 80)
+      settleTimeout2 = window.setTimeout(syncSatelliteBounds, 250)
+      settleTimeout3 = window.setTimeout(syncSatelliteBounds, 350)
     }
   }
 
   $effect(handleHostMount)
 
   onDestroy(() => {
+    clearSettleTimeouts()
     unregisterSatellite(id)
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))

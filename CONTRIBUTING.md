@@ -57,68 +57,67 @@ To maintain a consistent, predictable user experience when closing, collapsing, 
 
 ## How to Create New Components, Pages, and Themes
 
-### Creating a New Component
+### 1. Creating a New Component
 
-1. Create a new `.svelte` file inside `frontend/src/components/` (such as `MyWidget.svelte`).
-2. Accept the `expanded` prop: `let { expanded = false } = $props<{ expanded?: boolean }>()`.
+1. Create a new `.svelte` file inside `frontend/src/components/` (such as `MyWidget.svelte`). A ready-to-copy template is provided in [templates/component/ExampleComponent.svelte](templates/component/ExampleComponent.svelte).
+2. Use Svelte 5 runes for state management:
+   - Declare props with `$props`: `let { expanded = false, title }: Props = $props()`.
+   - Declare local reactive state with `$state`: `let activeIndex = $state(0)`.
+   - Declare derived values with `$derived`: `let countLabel = $derived(...)`.
+   - When using `$effect`, always attach a dedicated named function for readability and stack tracing.
 3. Build both minimal view (`{#if !expanded}`) and expanded view (`{#else}`).
-4. Use design system CSS theme variables like `var(--c-primary)` and `var(--c-item-bg)` described in [docs/DESIGN.md](docs/DESIGN.md).
-5. Add your new component to `ComponentGallery.svelte` or `HomePage.svelte`.
+4. Consume semantic CSS custom properties defined in [docs/DESIGN.md](docs/DESIGN.md) (such as `var(--vinta-accent-primary)`, `var(--vinta-surface-card)`, and `var(--vinta-border)`).
+5. Attach a `data-vinta="<component-id>"` attribute to the root container to enable theme customization without schema token bloat.
+6. Register the component in `ComponentGallery.svelte` or add it to its host page.
 
-### Creating a New Page
+### 2. Creating a New Page
 
-1. Create a new `.svelte` file inside `frontend/src/pages/` (such as `MyPage.svelte`).
-2. Style the page container using design system CSS variables.
-3. Import and arrange your components.
-4. Register the new page route inside `frontend/src/store.ts` and `frontend/src/App.svelte`.
+1. Create a new `.svelte` file inside `frontend/src/pages/` (such as `MyPage.svelte`). A ready-to-copy template is provided in [templates/page/ExamplePage.svelte](templates/page/ExamplePage.svelte).
+2. Export the island geometry configuration via a `<script module>` block:
+   ```svelte
+   <script module lang="ts">
+     import type { IslandConfig } from '../store'
 
-### Component & Page CSS Splitting Guidelines
+     export const config: IslandConfig = {
+       minimal: { w: 320, h: 42, r: 21 },
+       expanded: { w: 440, h: 420, r: 28 },
+       borderColor: 'var(--vinta-border)',
+       glowColor: 'transparent'
+     }
+   </script>
+   ```
+3. Implement standardized page navigation and minimization using `AppControls.doMinimize(navigate, e)` from `src/utils/AppControls.svelte`.
+4. Leave at least 56px of bottom padding on the main scroll or page container (`padding-bottom: 56px;`) so contents do not clip beneath peripheral dock buttons.
+5. Register the new page route inside `frontend/src/store.ts` and `frontend/src/App.svelte`.
+
+### 3. Component & Page CSS Splitting Guidelines
 
 To keep code readable, modular, and easy to maintain as features grow:
 
 - **When to Split**: CSS and Svelte do not necessarily need to be separated for small, concise components (inline `<style>` is completely fine for simple widgets). However, as a page or component grows in length and styling complexity, its styles should be extracted into a companion `.css` file.
 - **File Naming & Organization**:
-  - The companion `.css` file name must match its `.svelte` counterpart exactly (e.g. `HomePage.svelte` ➔ `HomePage.css`).
+  - The companion `.css` file name must match its `.svelte` counterpart exactly (e.g. `HomePage.svelte` -> `HomePage.css`).
   - **Pages**: Place extracted stylesheets in `frontend/src/pages/styles/` and reference them via `<style src="./styles/PageName.css"></style>`.
-  - **Components & Sub-groups**: Place extracted stylesheets under `frontend/src/components/styles/` mirroring any folder hierarchy (e.g. `src/components/notes/NoteLive.svelte` ➔ `src/components/styles/notes/NoteLive.css` referenced via `<style src="../styles/notes/NoteLive.css"></style>`).
+  - **Components & Sub-groups**: Place extracted stylesheets under `frontend/src/components/styles/` mirroring any folder hierarchy (e.g. `src/components/notes/NoteLive.svelte` -> `src/components/styles/notes/NoteLive.css` referenced via `<style src="../styles/notes/NoteLive.css"></style>`).
 - **Preserve Scoping**: Always use `<style src="...">` rather than raw script imports to preserve Svelte's compile-time component scoping and prevent global CSS leakage.
 - **Theme Compliance**: All extracted styles must strictly consume CSS variables defined in [docs/DESIGN.md](docs/DESIGN.md).
 
-### Creating a Theme
+### 4. Creating a Theme
 
-Vinta uses a tokenized CSS variable system so that all UI components adapt cleanly between themes without hardcoding colors inside components.
+Vinta features a runtime theme engine supporting both built-in presets and packaged themes (`.vintatheme`). A ready-to-copy theme template is provided in [templates/theme/](templates/theme/).
 
-1. **Create Theme CSS File**: Add a new `.css` file inside `frontend/src/themes/` (e.g. `mytheme.css`).
-2. **Define Theme Tokens**: Target the root selector `:root[data-theme='mytheme']` and declare all semantic design tokens:
+For full specifications on token namespaces, `manifest.json`, `data-vinta` overrides, engine registration, and distribution, refer to [Authoring Themes & Presets](#authoring-themes--presets).
 
-   ```css
-   :root[data-theme="mytheme"] {
-   	/* ACCENT COLORS */
-   	--c-primary: #6366f1;
-   	--c-danger: #ff3b30;
-   	--c-warning: #ffcc00;
-   	--c-success: #34c759;
-   	--c-purple: #a78bfa;
+## Starter Templates for Contributors
 
-   	/* BACKGROUNDS & SURFACES */
-   	--c-bg: rgba(15, 15, 20, 1);
-   	--c-border: rgba(255, 255, 255, 0.1);
-   	--c-hover: rgba(255, 255, 255, 0.08);
-   	--c-item-bg: rgba(255, 255, 255, 0.05);
+Vinta provides starter boilerplate files under `templates/` to help contributors build new features quickly and follow project conventions:
 
-   	/* TYPOGRAPHY */
-   	--c-text-primary: #ffffff;
-   	--c-text-secondary: #b0b0b0;
-   	--c-text-muted: #888888;
+| Template | File / Directory | Highlights |
+| :--- | :--- | :--- |
+| **Component Template** | [templates/component/ExampleComponent.svelte](templates/component/ExampleComponent.svelte) | Svelte 5 runes (`$props`), minimal vs expanded views, standard `--vinta-*` tokens, and `data-vinta` attribute. |
+| **Page Template** | [templates/page/ExamplePage.svelte](templates/page/ExamplePage.svelte) | Module `IslandConfig` geometry, `AppControls.doMinimize` handler, back button header, and 56px bottom dock clearance. |
+| **Theme Template** | [templates/theme/](templates/theme/) | Complete `manifest.json` conforming to `schemas/vintatheme.schema.json` and `style.css` with token overrides and `data-vinta` component styling. |
 
-   	/* MEDIA & AMBIENT SCRIM */
-   	--c-scrim: rgba(0, 0, 0, 0.72);
-   }
-   ```
-
-3. **Import in `style.css`**: Add `@import './themes/mytheme.css';` at the top of `frontend/src/style.css`.
-4. **Register Theme Option**: Add your theme definition to `AppTheme` in `frontend/src/store.ts` and append `{ label: 'My Theme', value: 'mytheme' }` to `themeOptions` in `frontend/src/pages/SettingsPage.svelte`.
-5. **Verify Design Guidelines**: Ensure components consume `var(--c-token)` variables without hardcoded hex values (see [docs/DESIGN.md](docs/DESIGN.md)).
 
 ## Developer Setup & Commands
 
@@ -227,13 +226,22 @@ You do not need to write code to contribute! Testing is just as important:
 3. If you find a bug, open a GitHub Issue with clear steps on how to reproduce it.
 4. Once verified, maintainers will tag your issue and add you to the **Testers & QA Hall of Fame**!
 
-## Creating a Custom Theme (.vintatheme)
+## Authoring Themes & Presets
 
-Vinta supports custom theme packages with CSS Cascade Layer overrides. A theme can be distributed as an unpacked directory or as a zipped `.vintatheme` file.
+Vinta distinguishes between two types of themes:
+
+| Dimension | Built-in Presets (First-Party) | Packaged Themes (`.vintatheme`) |
+| :--- | :--- | :--- |
+| **Location** | `frontend/src/themes/presets/<theme-id>/` | `%APPDATA%/FreeMatrix Studios/Vinta/themes/<theme-id>/` |
+| **Delivery** | Bundled directly into the compiled application | Distributed as standalone `.vintatheme` zip archives |
+| **Registration** | Statically imported in `frontend/src/themes/engine.ts` | Loaded dynamically at runtime by the Go backend service |
+| **Recompilation** | Requires building the application | No recompilation required; hot-reloaded via Settings |
+| **Availability** | Permanent baseline; always available offline | Managed by the user; can be imported or deleted |
+| **Target Audience** | Core accessible and brand presets (`oled-dark`, `nord-frost`, `colorblind-safe`) | Community creations, user customizations, and third-party themes |
 
 ### 1. Theme Package Structure
 
-A valid theme package contains a manifest and an entry stylesheet:
+Both built-in presets and packaged themes share the exact same filesystem structure (see ready-to-copy template in [templates/theme/](templates/theme/)):
 
 ```text
 my-custom-theme/
@@ -262,7 +270,8 @@ The manifest defines metadata and points to the entry stylesheet:
 
 ### 3. Entry Stylesheet (`style.css`)
 
-Themes override CSS custom properties declared in the `--vinta-*` namespace. Any omitted variables automatically fall back to the built-in `oled-dark` baseline:
+#### Standard Token Overrides
+Themes customize CSS custom properties declared in the `--vinta-*` namespace. Any omitted variables automatically fall back to the built-in `oled-dark` baseline:
 
 ```css
 :root {
@@ -290,24 +299,88 @@ Themes override CSS custom properties declared in the `--vinta-*` namespace. Any
 > [!IMPORTANT]
 > The `--vinta-dock-popover-bg` token must always be an opaque hex or rgb color. Semi-transparent colors cause unblurred desktop bleed-through across transparent desktop webviews.
 
-### 4. Development Workflow
+#### Component Customization via `data-vinta` Selectors
+To avoid schema bloat, themes are not restricted to `:root` variables. Theme stylesheets can target specific component surfaces directly using their permanent `data-vinta` attributes:
 
-Themes can be authored and tested as plain directories:
+```css
+/* Example: Customizing Calendar cards and buttons in style.css */
+[data-vinta='calendar'] .calendar-agenda-tray {
+  background: #24252f !important;
+  border: 1px solid var(--vinta-border-accent) !important;
+}
 
-1. Create a theme folder directly under `%APPDATA%/FreeMatrix Studios/Vinta/themes/<theme-id>/`.
+[data-vinta='calendar'] .tray-add-btn {
+  background: var(--vinta-accent-primary) !important;
+  color: #000000 !important;
+}
+
+/* Example: Dock button styling */
+.dock-btn {
+  color: var(--vinta-text-primary) !important;
+}
+```
+
+Available `data-vinta` component selectors across the interface:
+- `[data-vinta="calendar"]` and `[data-vinta="calendar-page"]`: Calendar widget and expanded page.
+- `[data-vinta="weather-page"]`: Weather forecast card, metric bento tiles, and header.
+- `[data-vinta="action-center-page"]` and `.action-center-glance-card`: Action Center tiles and controls.
+- `[data-vinta="notification"]` and `[data-vinta="notification-page"]`: Notifications list and cards.
+- `[data-vinta="notes-page"]`: Quick Notes editor and drawer.
+- `[data-vinta="calculator-page"]`: Calculator display and keypad buttons.
+- `[data-vinta="media-widget"]` and `[data-vinta="media-page"]`: Media player controls and metadata.
+- `[data-vinta="main-island"]`: Core Dynamic Island container.
+- `[data-vinta="apps-page"]`: Application grid and search box.
+
+### 4. Contributing a Built-in Preset (First-Party)
+
+When submitting a new built-in preset to the core repository, complete the following integration steps:
+
+1. **Add Preset Files**: Place the theme folder under `frontend/src/themes/presets/<theme-id>/` containing `manifest.json` and `style.css`.
+2. **Register in Theme Engine (`frontend/src/themes/engine.ts`)**:
+   - Import the manifest and raw CSS:
+     ```ts
+     import myThemeManifest from './presets/<theme-id>/manifest.json'
+     import myThemeCss from './presets/<theme-id>/style.css?raw'
+     ```
+   - Add the preset object to `BUILTIN_THEMES`:
+     ```ts
+     {
+       manifest: myThemeManifest as ThemeInfo['manifest'],
+       isBuiltIn: true,
+       path: 'frontend/src/themes/presets/<theme-id>'
+     }
+     ```
+   - Add a branch in `getThemeCss`:
+     ```ts
+     if (id === '<theme-id>') {
+       return myThemeCss
+     }
+     ```
+3. **Register Fallback in Settings (`frontend/src/components/settings/tabs/AppearanceTab.svelte`)**:
+   - Add the preset to the fallback array in `themeOptions` to ensure the option appears immediately upon initial mount:
+     ```ts
+     { label: 'My Theme Name', value: '<theme-id>' }
+     ```
+4. **Update Documentation**:
+   - Document the preset and its design rationale in `docs/DESIGN.md` under Section 14.5.
+
+### 5. Local Development Workflow (Custom Themes)
+
+User-authored themes can be tested locally without modifying frontend code:
+
+1. Create a theme folder under `%APPDATA%/FreeMatrix Studios/Vinta/themes/<theme-id>/`.
 2. Add `manifest.json` and `style.css`.
-3. Open **Settings > Appearance**, click **Refresh**, and select your theme to test live.
+3. Open **Settings > Appearance**, click **Refresh**, and select the theme to test live.
 
-### 5. Packaging and Distribution
+### 6. Packaging and Distribution
 
-To bundle a theme into a standalone `.vintatheme` file for distribution:
+To bundle a custom theme into a standalone `.vintatheme` archive:
 
 ```powershell
-# Using Taskfile (validates manifest and creates <theme-id>.vintatheme)
 task theme:pack -- "path/to/my-theme"
 ```
 
-The resulting `.vintatheme` archive can be shared and imported via **Settings > Appearance > Import Theme**.
+The resulting `.vintatheme` file can be imported directly through **Settings > Appearance > Import Theme**.
 
 ## Submitting a Pull Request
 

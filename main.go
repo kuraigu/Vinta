@@ -104,6 +104,7 @@ func main() {
 		Windows: application.WindowsWindow{
 			DisableFramelessWindowDecorations: true,
 			HiddenOnTaskbar:                   true,
+			BackdropType:                      application.None,
 		},
 	})
 

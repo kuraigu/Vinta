@@ -1,5 +1,4 @@
 import type { MonitorInfo } from '../../bindings/Vinta/backend/models.js'
-import { SetForceInteractive } from '../../bindings/Vinta/backend/app.js'
 
 /**
  * Bounds constraints for island placement.
@@ -166,8 +165,6 @@ export class IslandGestureController {
     this.dragStartOffset = currentOffset
     this.dragHistory = [{ x: e.screenX, time: performance.now() }]
 
-    SetForceInteractive(true).catch(() => {})
-
     // Immediately apply the 100% full-width runway corridor before pointer motion begins
     onExpandRunway()
   }
@@ -230,7 +227,13 @@ export class IslandGestureController {
     virtualMax: number,
     _snapOffsets: number[],
     onUpdateOffset: (newOffset: number) => void,
-    onComplete: () => void
+    onComplete: () => void,
+    onStartInertia?: (
+      startOffset: number,
+      targetOffset: number,
+      velocity: number
+    ) => void,
+    onGlideStep?: (liveOffset: number) => void
   ): void {
     if (this.isInertia) {
       return
@@ -242,7 +245,6 @@ export class IslandGestureController {
     }
 
     this.isDragging = false
-    SetForceInteractive(false).catch(() => {})
 
     const now = performance.now()
     this.dragHistory.push({ x: e.screenX, time: now })
@@ -271,6 +273,13 @@ export class IslandGestureController {
       const friction = 0.0028
       let lastFrameTime = performance.now()
       let liveOffset = currentOffset
+
+      const stoppingDist = velocity / friction
+      const targetOffset = Math.max(
+        virtualMin,
+        Math.min(virtualMax, currentOffset + stoppingDist)
+      )
+      onStartInertia?.(currentOffset, targetOffset, velocity)
 
       clearTimeout(this.inertiaSafetyTimeout)
       this.inertiaSafetyTimeout = window.setTimeout(() => {
@@ -309,7 +318,11 @@ export class IslandGestureController {
             return
           }
 
-          onUpdateOffset(liveOffset)
+          if (onGlideStep) {
+            onGlideStep(liveOffset)
+          } else {
+            onUpdateOffset(liveOffset)
+          }
         }
 
         this.inertiaAnimFrame = requestAnimationFrame(runInertiaStep)
@@ -365,8 +378,6 @@ export class IslandGestureController {
     this.hasExpandedRunway = false
     this.onExpandRunwayCallback = undefined
 
-    SetForceInteractive(false).catch(() => {})
-
     onComplete?.()
 
     clearTimeout(this.dragResetTimeout)
@@ -391,7 +402,6 @@ export class IslandGestureController {
     this.dragWatchdogTimeout = window.setTimeout(() => {
       if (this.isDragging || this.isSettling || this.isInertia) {
         this.stopInertia()
-        SetForceInteractive(false).catch(() => {})
         onFailsafe()
       }
     }, 6000)
@@ -409,6 +419,5 @@ export class IslandGestureController {
     this.isTrackRegionActive = false
     this.hasExpandedRunway = false
     this.onExpandRunwayCallback = undefined
-    SetForceInteractive(false).catch(() => {})
   }
 }

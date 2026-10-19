@@ -47,6 +47,12 @@
     islandNode?: HTMLDivElement
     onStartDragRunway?: () => void
     onUpdateOffset?: (offset: number) => void
+    onGlideStep?: (liveOffset: number) => void
+    onStartInertia?: (
+      startOffset: number,
+      targetOffset: number,
+      velocity: number
+    ) => void
     onFinishDrag?: () => void
     onExpand?: () => void
     onShowWidget?: () => void
@@ -87,6 +93,8 @@
     islandNode = $bindable(),
     onStartDragRunway,
     onUpdateOffset,
+    onGlideStep,
+    onStartInertia,
     onFinishDrag,
     onExpand,
     onShowWidget,
@@ -115,7 +123,9 @@
   function handlePointerDown(e: PointerEvent) {
     if (gestures.isInertia) {
       gestures.interruptInertia()
+      onFinishDrag?.()
     }
+
     if (!gestures.canInitiateDrag(e, $allowDragPositionStore, expanded)) return
 
     gestures.startDrag(
@@ -166,7 +176,9 @@
       virtualMaxOffset,
       monitorSnapOffsets,
       (nextOffset) => onUpdateOffset?.(nextOffset),
-      () => onFinishDrag?.()
+      () => onFinishDrag?.(),
+      (start, target, vel) => onStartInertia?.(start, target, vel),
+      (live) => onGlideStep?.(live)
     )
   }
 

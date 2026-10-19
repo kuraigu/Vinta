@@ -1,5 +1,6 @@
 dist/
 node_modules/
 wailsjs/
+bindings/
 src/stores/**
 src/store.ts

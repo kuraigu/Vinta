@@ -74,6 +74,12 @@
       // Settle and fade in cleanly at the exact resting position
       settleTimer = window.setTimeout(() => {
         isTransitioning = false
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))
+          window.setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))
+          }, 250)
+        }
       }, 30)
     }, islandDuration)
   }
@@ -188,7 +194,6 @@
   offsetY={satelliteBounds.offsetY}
   tooltipPad={satelliteBounds.tooltipPad}
   tooltipSide={satelliteBounds.tooltipSide}
-  {clampedOffsetX}
   active={active && !isTransitioning}
   animateIn={!layoutExpanded}
   {onmouseenter}

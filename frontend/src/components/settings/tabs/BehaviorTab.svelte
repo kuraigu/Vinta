@@ -103,7 +103,7 @@
 
   <SettingItem
     label="Wake Trigger Method"
-    description="Interaction used to expand the island (Default: Hover)"
+    description="Interaction used to expand the island (Default: Click)"
     icon={MousePointer}
     flexCol={true}
   >

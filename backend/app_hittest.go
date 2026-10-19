@@ -83,6 +83,15 @@ func (a *App) SetPillBounds(left, top, width, height int) {
 	}
 }
 
+// UpdateIslandRect updates the physical pixel bounding box of the active island directly from live CSS client geometry.
+func (a *App) UpdateIslandRect(x, y, w, h float64) {
+	if w <= 0 || h <= 0 {
+		a.SetHitRects(nil)
+	} else {
+		a.SetHitRects([]HitRect{{Left: int(x), Top: int(y), Width: int(w), Height: int(h)}})
+	}
+}
+
 // SetForceInteractive forces the window to be interactive during dragging or modal flows.
 func (a *App) SetForceInteractive(active bool) {
 	a.pillHitMu.Lock()
@@ -134,11 +143,9 @@ func (a *App) startHitTestingLoop(hwnd uintptr) {
 				if ret != 0 {
 					retScreen, _, _ := procScreenToClient.Call(hwnd, uintptr(unsafe.Pointer(&pt)))
 					if retScreen != 0 {
-						// 6-pixel buffer around the hit bounding boxes for smooth hover transitions across satellite gaps
-						const buf int32 = 6
 						for _, rect := range rects {
-							if pt.X >= rect.left-buf && pt.X <= rect.right+buf &&
-								pt.Y >= rect.top-buf && pt.Y <= rect.bottom+buf {
+							if pt.X >= rect.left && pt.X <= rect.right &&
+								pt.Y >= rect.top && pt.Y <= rect.bottom {
 								isHit = true
 								break
 							}
