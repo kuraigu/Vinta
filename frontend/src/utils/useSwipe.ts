@@ -17,8 +17,25 @@ interface ExtendedPointerEvent extends PointerEvent {
   _swipeHandledAxis?: 'x' | 'y' | 'both'
 }
 
-function findScrollableParent(el: HTMLElement | null): HTMLElement | null {
-  let current = el
+/**
+ * Resolves the primary scrollable container.
+ * Prefers the node itself, or checks ancestors/target if needed.
+ */
+function findScrollableContainer(
+  node: HTMLElement,
+  target: HTMLElement | null
+): HTMLElement {
+  // If the node itself is configured for scrolling, always use it
+  const nodeStyle = window.getComputedStyle(node)
+  if (
+    nodeStyle.overflowY === 'auto' ||
+    nodeStyle.overflowY === 'scroll' ||
+    node.classList.contains('scroll-view')
+  ) {
+    return node
+  }
+
+  let current = target
   while (current && current !== document.body) {
     const style = window.getComputedStyle(current)
     const isScrollable =
@@ -33,9 +50,13 @@ function findScrollableParent(el: HTMLElement | null): HTMLElement | null {
     }
     current = current.parentElement
   }
-  return null
+  return node
 }
 
+/**
+ * Svelte action providing fluid touch and drag scrolling with momentum inertia
+ * while protecting nested clickable targets.
+ */
 export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
   let opts = options
   let isDragging = false
@@ -48,9 +69,8 @@ export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
   let startX = 0
   let startY = 0
   let lastY = 0
-
+  let lastMoveTime = 0
   let velocityY = 0
-  let lastTime = 0
   let inertiaFrame = 0
 
   function handlePointerDown(e: PointerEvent) {
@@ -60,14 +80,17 @@ export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
     if (
       extEvent._swipeHandledAxis === 'both' ||
       extEvent._swipeHandledAxis === requestedAxis
-    )
+    ) {
       return
+    }
     if (opts.enableSwipe === false) return
-    const defaultIgnore =
-      'select, option, input, textarea, range, .custom-select, .custom-select-trigger, .custom-select-options, .custom-select-option, .no-swipe'
+
+    // Do not initiate drag on interactive inputs or sliders
+    const formInputs =
+      'input, select, textarea, range, .custom-select-trigger, .custom-select-options, .custom-select-option, .no-swipe, .no-drag'
     const fullIgnoreSelector = opts.ignoreSelector
-      ? `${defaultIgnore}, ${opts.ignoreSelector}`
-      : defaultIgnore
+      ? `${formInputs}, ${opts.ignoreSelector}`
+      : formInputs
 
     if ((e.target as HTMLElement).closest(fullIgnoreSelector)) return
     if (e.button !== 0 && e.pointerType === 'mouse') return
@@ -83,34 +106,39 @@ export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
     preventNextClick = false
     isVerticalScroll = false
     isLockedToAxis = false
-    scrollTarget = null
+    scrollTarget = findScrollableContainer(node, e.target as HTMLElement)
     startX = e.clientX
     startY = e.clientY
     lastY = e.clientY
+    lastMoveTime = performance.now()
     velocityY = 0
-    lastTime = performance.now()
+
     opts.onDragStart?.()
   }
 
   function handlePointerMove(e: PointerEvent) {
     if (!isDragging) return
+    const now = performance.now()
+    const dt = Math.max(1, now - lastMoveTime)
+    lastMoveTime = now
+
     const dx = e.clientX - startX
     const dy = e.clientY - startY
+    const stepY = e.clientY - lastY
+    lastY = e.clientY
+
+    // Track running velocity with exponential moving average
+    const instantVelocity = stepY / dt
+    velocityY = 0.7 * instantVelocity + 0.3 * velocityY
+
     const dragThresh = opts.dragThreshold ?? 6
     const requestedAxis = opts.axis ?? 'both'
-    const now = performance.now()
-    const dt = Math.max(1, now - lastTime)
-
-    const stepY = e.clientY - lastY
-    velocityY = stepY / dt
-    lastY = e.clientY
-    lastTime = now
 
     if (
       !hasMovedFar &&
       (Math.abs(dx) > dragThresh || Math.abs(dy) > dragThresh)
     ) {
-      const isVertical = Math.abs(dy) > Math.abs(dx)
+      const isVertical = Math.abs(dy) >= Math.abs(dx)
 
       if (requestedAxis === 'x' && isVertical) {
         isDragging = false
@@ -135,24 +163,23 @@ export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
         // Ignore pointer capture errors
       }
 
-      if (isVertical) {
-        isVerticalScroll = true
-        scrollTarget = findScrollableParent(e.target as HTMLElement)
-      } else {
-        isVerticalScroll = false
+      isVerticalScroll = isVertical
+      if (isVertical && !scrollTarget) {
+        scrollTarget = findScrollableContainer(node, e.target as HTMLElement)
       }
-    }
-
-    if (!isLockedToAxis && hasMovedFar) {
       isLockedToAxis = true
     }
 
     if (!isLockedToAxis) return
 
-    if (isVerticalScroll) {
-      if (scrollTarget) {
-        scrollTarget.scrollTop -= stepY
-      }
+    if (isVerticalScroll && scrollTarget) {
+      const isAtTop = scrollTarget.scrollTop <= 0 && stepY > 0
+      const isAtBottom =
+        scrollTarget.scrollTop >=
+          scrollTarget.scrollHeight - scrollTarget.clientHeight && stepY < 0
+      const effectiveStep = isAtTop || isAtBottom ? stepY * 0.35 : stepY
+
+      scrollTarget.scrollTop -= effectiveStep
       opts.onDragMove?.({ x: 0, y: dy })
     } else {
       opts.onDragMove?.({ x: dx, y: dy })
@@ -202,25 +229,35 @@ export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
     if (preventNextClick) {
       clearClickTimeout = setTimeout(() => {
         preventNextClick = false
-      }, 300)
+      }, 120)
     }
 
-    if (isVerticalScroll && scrollTarget && Math.abs(velocityY) > 0.1) {
-      let v = velocityY
+    // Launch momentum inertia if user flicked with noticeable velocity
+    if (isVerticalScroll && scrollTarget && Math.abs(velocityY) > 0.12) {
       const target = scrollTarget
-      function loop() {
-        if (Math.abs(v) < 0.05 || isDragging) return
-        target.scrollTop -= v * 16
-        v *= 0.92 // friction multiplier
-        inertiaFrame = requestAnimationFrame(loop)
+      let currentVelocity = velocityY
+      let lastFrameTime = performance.now()
+
+      const inertiaLoop = (frameNow: number) => {
+        if (isDragging) return
+        const frameDt = Math.min(32, frameNow - lastFrameTime)
+        lastFrameTime = frameNow
+
+        target.scrollTop -= currentVelocity * frameDt
+        currentVelocity *= Math.pow(0.92, frameDt / 16.67)
+
+        if (Math.abs(currentVelocity) > 0.04) {
+          inertiaFrame = requestAnimationFrame(inertiaLoop)
+        }
       }
-      inertiaFrame = requestAnimationFrame(loop)
+      inertiaFrame = requestAnimationFrame(inertiaLoop)
     }
 
     hasMovedFar = false
     isVerticalScroll = false
     isLockedToAxis = false
     scrollTarget = null
+    velocityY = 0
   }
 
   function handleClickCapture(e: MouseEvent) {

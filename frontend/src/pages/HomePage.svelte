@@ -1,7 +1,7 @@
 <script module lang="ts">
   export const config = {
     minimal: { w: 330, h: 35, r: 16 },
-    expanded: { w: 440, h: 380, r: 30 },
+    expanded: { w: 430, h: 500, r: 32 },
     borderColor: 'var(--vinta-island-border-idle)',
     glowColor: 'var(--vinta-island-glow-idle)'
   }
@@ -9,13 +9,15 @@
 
 <script lang="ts">
   import { onMount, onDestroy, getContext } from 'svelte'
-  import { MapPin } from 'lucide-svelte'
+  import { MapPin, Sparkles, X, RefreshCw, ChevronDown } from 'lucide-svelte'
   import Calendar from '../components/Calendar.svelte'
   import Weather from '../components/Weather.svelte'
   import DeviceStatusWidget from '../components/DeviceStatusWidget.svelte'
   import ActionCenterGlance from '../components/ActionCenterGlance.svelte'
+  import NotificationGlance from '../components/NotificationGlance.svelte'
   import ScrollView from '../components/ScrollView.svelte'
   import CalendarPage, { config as calendarConfig } from './CalendarPage.svelte'
+  import SettingsPage, { config as settingsConfig } from './SettingsPage.svelte'
   import {
     homeWidgetsVisibilityStore,
     userNameStore,
@@ -23,6 +25,10 @@
     timezoneStore,
     dateFormatStore,
     formatUserDate,
+    updateInfoStore,
+    updateLifecycleStatusStore,
+    activeSettingsTabStore,
+    triggerApplyUpdate,
     type IslandConfig
   } from '../store'
 
@@ -30,6 +36,8 @@
     getContext<
       (page: unknown, pageConfig: IslandConfig, expand?: boolean) => void
     >('navigate')
+
+  let isUpdateSnoozed = $state(false)
 
   /**
    * Navigates directly to the dedicated Calendar application page.
@@ -40,11 +48,66 @@
     }
   }
 
+  /**
+   * Navigates directly to the Updates tab in Settings.
+   */
+  function openUpdatesTab() {
+    if (navigate) {
+      $activeSettingsTabStore = 'updates'
+      navigate(SettingsPage, settingsConfig, true)
+    }
+  }
+
+  /**
+   * Temporarily hides the update notification banner for the current session.
+   */
+  function snoozeUpdate(e: MouseEvent) {
+    e.stopPropagation()
+    isUpdateSnoozed = true
+  }
+
+  /**
+   * Triggers immediate application of a downloaded and verified update.
+   */
+  function handleApplyUpdate(e: MouseEvent) {
+    e.stopPropagation()
+    if (triggerApplyUpdate) {
+      triggerApplyUpdate()
+    } else {
+      openUpdatesTab()
+    }
+  }
+
   interface Props {
     expanded?: boolean
   }
 
   let { expanded = false }: Props = $props()
+
+  let scrollContainer: HTMLElement | undefined = $state()
+  let isScrolledDown = $state(false)
+
+  /**
+   * Updates scroll indicator state based on current scroll position.
+   */
+  function handleFeedScroll(e: Event) {
+    const target = e.currentTarget as HTMLElement
+    if (target) {
+      isScrolledDown = target.scrollTop > 20
+    }
+  }
+
+  /**
+   * Smoothly scrolls the social feed downward when the scroll cue is clicked.
+   */
+  function scrollFeedDown() {
+    if (scrollContainer) {
+      scrollContainer.scrollBy({
+        top: 180,
+        behavior: 'smooth'
+      })
+    }
+  }
 
   let time = $state(new Date())
   let timer: ReturnType<typeof setInterval>
@@ -223,7 +286,11 @@
         <div class="page-title">Home</div>
       </div>
 
-      <ScrollView class="home-feed-scroll">
+      <ScrollView
+        class="home-feed-scroll"
+        bind:element={scrollContainer}
+        onscroll={handleFeedScroll}
+      >
         <div class="social-feed-container">
           <!-- Hero Greeting -->
           <header class="home-hero-greeting">
@@ -259,12 +326,79 @@
             </section>
           {/if}
 
+          <!-- Update Glance Banner (Issue #161) -->
+          {#if $updateInfoStore?.updateAvailable && !isUpdateSnoozed}
+            {@const isReady = $updateLifecycleStatusStore === 'ready'}
+            <section
+              class="update-glance-card {isReady ? 'ready' : 'available'}"
+              role="button"
+              tabindex="0"
+              onclick={openUpdatesTab}
+              onkeydown={(e) => e.key === 'Enter' && openUpdatesTab()}
+            >
+              <div class="update-glance-icon">
+                {#if isReady}
+                  <RefreshCw size={14} class="update-spin-icon" />
+                {:else}
+                  <Sparkles size={14} />
+                {/if}
+              </div>
+              <div class="update-glance-text">
+                <span class="update-glance-title">
+                  {isReady
+                    ? 'Update Ready to Install'
+                    : `Vinta ${$updateInfoStore.latestVersion || 'Update'} Available`}
+                </span>
+                <span class="update-glance-sub">
+                  {isReady
+                    ? 'Click to restart and apply improvements'
+                    : 'Click to review what is new in this release'}
+                </span>
+              </div>
+              <div class="update-glance-actions">
+                {#if isReady}
+                  <button
+                    class="update-action-btn restart"
+                    onclick={handleApplyUpdate}
+                    title="Restart Vinta"
+                  >
+                    Restart
+                  </button>
+                {:else}
+                  <button
+                    class="update-action-btn view"
+                    onclick={(e) => {
+                      e.stopPropagation()
+                      openUpdatesTab()
+                    }}
+                    title="View update details"
+                  >
+                    View
+                  </button>
+                {/if}
+                <button
+                  class="update-dismiss-btn"
+                  onclick={snoozeUpdate}
+                  title="Dismiss for this session"
+                  aria-label="Dismiss banner"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            </section>
+          {/if}
+
           <!-- Illustrated Weather Banner -->
           {#if $homeWidgetsVisibilityStore.weather}
             <section class="weather-card-feed">
               <Weather expanded={true} />
             </section>
           {/if}
+
+          <!-- Notification Glance Card -->
+          <section class="notification-card-feed">
+            <NotificationGlance />
+          </section>
 
           <!-- Quick Details from Action Center (Modular Bento Card) -->
           {#if $homeWidgetsVisibilityStore.actionCenter}
@@ -285,6 +419,18 @@
           {/if}
         </div>
       </ScrollView>
+
+      <!-- Scroll cue indicator: fades out when feed is scrolled down -->
+      <button
+        type="button"
+        class="home-scroll-cue-pill"
+        class:hidden={isScrolledDown}
+        onclick={scrollFeedDown}
+        aria-label="Scroll down for more content"
+      >
+        <span class="scroll-cue-text">More</span>
+        <ChevronDown size={13} class="scroll-cue-icon" />
+      </button>
     </div>
   {/if}
 </div>
