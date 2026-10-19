@@ -168,7 +168,7 @@
     gap: 6px;
     font-size: 12.5px;
     font-weight: 600;
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
     text-align: left;
     line-height: 1.25;
   }
@@ -180,19 +180,19 @@
     letter-spacing: 0.04em;
     padding: 2px 7px;
     border-radius: 9999px;
-    background: rgba(56, 189, 248, 0.12);
-    color: var(--c-primary, #38bdf8);
-    border: 1px solid rgba(56, 189, 248, 0.25);
+    background: var(--vinta-accent-muted, rgba(56, 189, 248, 0.12));
+    color: var(--vinta-accent-primary, var(--vinta-primary, #38bdf8));
+    border: 1px solid var(--vinta-border-accent, rgba(56, 189, 248, 0.25));
   }
 
   .setting-icon-col :global(.item-icon) {
-    color: var(--c-text-secondary);
+    color: var(--vinta-text-secondary);
   }
 
   .setting-description {
     font-size: 10.5px;
     line-height: 1.4;
-    color: var(--c-text-muted);
+    color: var(--vinta-text-muted);
     text-align: left;
   }
 

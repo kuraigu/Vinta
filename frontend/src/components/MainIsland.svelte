@@ -295,7 +295,7 @@
       : islandConfig.minimal.r}px;
     border-radius: 0 0 var(--island-r) var(--island-r);
     --island-border-color: {isHidden
-    ? 'var(--c-border)'
+    ? 'var(--vinta-border)'
     : islandConfig.borderColor || 'transparent'};
     --island-glow-color: {isHidden
     ? 'transparent'

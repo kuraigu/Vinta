@@ -295,7 +295,7 @@
   pointer-events: none;
   overflow: hidden;
   border-radius: inherit;
-  background: var(--c-bg);
+  background: var(--vinta-bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -388,7 +388,7 @@
   font-size: 0.85rem;
   font-weight: 700;
   letter-spacing: -0.02em;
-  color: var(--c-text-primary, #ffffff);
+  color: var(--vinta-text-primary, #ffffff);
   opacity: 0.95;
   font-feature-settings: 'tnum';
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
@@ -800,7 +800,7 @@
   font-size: 0.62rem;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  color: var(--c-text-primary, #ffffff);
+  color: var(--vinta-text-primary, #ffffff);
   opacity: 0.95;
   min-width: 24px;
   text-align: right;
@@ -874,8 +874,8 @@
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: var(--c-primary, #818cf8);
-  box-shadow: 0 0 4px var(--c-primary, #818cf8);
+  background: var(--vinta-primary, #818cf8);
+  box-shadow: 0 0 4px var(--vinta-primary, #818cf8);
   pointer-events: none;
 }
 
@@ -889,10 +889,10 @@
   margin-bottom: 2px;
   gap: 4px;
   padding: 8px 10px 10px 10px;
-  background: var(--c-bg-card, rgba(14, 14, 20, 0.85));
+  background: var(--vinta-bg-card, rgba(14, 14, 20, 0.85));
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--c-border-subtle, rgba(255, 255, 255, 0.1));
+  border: 1px solid var(--vinta-border-subtle, rgba(255, 255, 255, 0.1));
   border-radius: 16px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
   box-sizing: border-box;
@@ -916,7 +916,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 2px 8px 2px;
-  border-bottom: 1px solid var(--c-border-subtle, rgba(255, 255, 255, 0.1));
+  border-bottom: 1px solid var(--vinta-border-subtle, rgba(255, 255, 255, 0.1));
 }
 
 .session-header-title-group {
@@ -930,7 +930,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--c-text-muted, rgba(255, 255, 255, 0.6));
+  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.6));
 }
 
 .session-count-tag {
@@ -938,8 +938,8 @@
   font-weight: 700;
   padding: 1px 6px;
   border-radius: 8px;
-  background: var(--c-surface-selected, rgba(99, 102, 241, 0.25));
-  color: var(--c-primary, #818cf8);
+  background: var(--vinta-surface-selected, rgba(99, 102, 241, 0.25));
+  color: var(--vinta-primary, #818cf8);
 }
 
 .session-close-btn {
@@ -952,7 +952,7 @@
   border-radius: 6px;
   border: none;
   background: rgba(255, 255, 255, 0.08);
-  color: var(--c-text-muted, rgba(255, 255, 255, 0.6));
+  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.6));
   cursor: pointer;
   transition: all 0.18s ease;
 }
@@ -1002,7 +1002,7 @@
   border-radius: 10px;
   border: 1px solid transparent;
   background: rgba(255, 255, 255, 0.06);
-  color: var(--c-text-primary, #ffffff);
+  color: var(--vinta-text-primary, #ffffff);
   cursor: pointer;
   transition: all 0.18s ease;
   text-align: left;
@@ -1023,7 +1023,7 @@
 }
 
 .session-menu-item.is-selected .session-item-title {
-  color: var(--c-primary, #818cf8);
+  color: var(--vinta-primary, #818cf8);
 }
 
 .session-item-icon {
@@ -1045,7 +1045,7 @@
 }
 
 .session-item-icon :global(svg) {
-  color: var(--c-text-muted, rgba(255, 255, 255, 0.6));
+  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.6));
 }
 
 .session-item-info {
@@ -1059,7 +1059,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: var(--c-text-primary, #ffffff);
+  color: var(--vinta-text-primary, #ffffff);
 }
 
 .session-item-subtitle {
@@ -1068,7 +1068,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: var(--c-text-muted, rgba(255, 255, 255, 0.6));
+  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.6));
   margin-top: 1px;
 }
 
@@ -1081,7 +1081,7 @@
 }
 
 .session-item-status :global(.selected-check) {
-  color: var(--c-primary, #818cf8);
+  color: var(--vinta-primary, #818cf8);
 }
 
 .live-playing-dot {
@@ -1114,7 +1114,7 @@
   border-radius: 6px;
   border: none;
   background: transparent;
-  color: var(--c-text-muted, rgba(255, 255, 255, 0.35));
+  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.35));
   cursor: pointer;
   transition: all 0.15s ease;
   flex-shrink: 0;
@@ -1127,7 +1127,7 @@
 }
 
 .session-pin-btn.is-pinned {
-  color: var(--c-primary, #818cf8);
+  color: var(--vinta-primary, #818cf8);
   background: rgba(99, 102, 241, 0.2);
 }
 
@@ -1135,7 +1135,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--c-primary, #818cf8);
+  color: var(--vinta-primary, #818cf8);
   margin-left: 5px;
   vertical-align: middle;
 }

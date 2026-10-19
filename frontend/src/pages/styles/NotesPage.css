@@ -7,7 +7,7 @@
   overflow: hidden;
   position: relative;
   text-align: left;
-  background: var(--c-bg, #18181b);
+  background: var(--vinta-bg, #18181b);
 }
 
 /* Subtle Banner Header */
@@ -45,19 +45,19 @@
   border-radius: 6px;
   background: transparent;
   border: none;
-  color: var(--c-text-secondary, rgba(255, 255, 255, 0.7));
+  color: var(--vinta-text-secondary, rgba(255, 255, 255, 0.7));
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .banner-btn:hover {
   background: rgba(255, 255, 255, 0.1);
-  color: var(--c-text-primary, #ffffff);
+  color: var(--vinta-text-primary, #ffffff);
 }
 
 .banner-btn.active {
   background: rgba(255, 255, 255, 0.15);
-  color: var(--c-text-primary, #ffffff);
+  color: var(--vinta-text-primary, #ffffff);
 }
 
 .banner-center-title {
@@ -73,7 +73,7 @@
   border: none;
   font-size: 0.95rem;
   font-weight: 700;
-  color: var(--c-text-primary, #ffffff);
+  color: var(--vinta-text-primary, #ffffff);
   outline: none;
   padding: 4px 8px;
   border-radius: 6px;
@@ -176,14 +176,14 @@
   border-radius: 4px;
   background: transparent;
   border: none;
-  color: var(--c-text-secondary, rgba(255, 255, 255, 0.65));
+  color: var(--vinta-text-secondary, rgba(255, 255, 255, 0.65));
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .tool-action-btn:hover {
   background: rgba(255, 255, 255, 0.1);
-  color: var(--c-text-primary, #ffffff);
+  color: var(--vinta-text-primary, #ffffff);
 }
 
 .tool-action-btn:active {
@@ -195,11 +195,11 @@
   align-items: center;
   font-size: 0.68rem;
   font-weight: 500;
-  color: var(--c-text-muted, rgba(255, 255, 255, 0.45));
+  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.45));
 }
 
 .state-saved-text {
-  color: var(--c-text-secondary, rgba(255, 255, 255, 0.65));
+  color: var(--vinta-text-secondary, rgba(255, 255, 255, 0.65));
 }
 
 /* Main Text Area with Dock clearance */
@@ -221,7 +221,7 @@
   padding: 16px 20px;
   font-size: 0.92rem;
   line-height: 1.6;
-  color: var(--c-text-primary, #ffffff);
+  color: var(--vinta-text-primary, #ffffff);
   outline: none;
   cursor: text;
   word-break: break-word;
@@ -232,7 +232,7 @@
 
 .editor-surface:empty::before {
   content: 'Take a note...';
-  color: var(--c-text-muted, rgba(255, 255, 255, 0.35));
+  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.35));
   pointer-events: none;
 }
 
@@ -322,7 +322,7 @@
 .drawer-title {
   font-size: 0.82rem;
   font-weight: 700;
-  color: var(--c-text-primary, #ffffff);
+  color: var(--vinta-text-primary, #ffffff);
 }
 
 .drawer-search-wrapper {
@@ -335,7 +335,7 @@
 :global(.drawer-search-icon) {
   position: absolute;
   left: 8px;
-  color: var(--c-text-muted, rgba(255, 255, 255, 0.4));
+  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.4));
   pointer-events: none;
 }
 
@@ -347,12 +347,12 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 0 8px 0 26px;
   font-size: 0.74rem;
-  color: var(--c-text-primary, #ffffff);
+  color: var(--vinta-text-primary, #ffffff);
   outline: none;
 }
 
 .drawer-search-input:focus {
-  border-color: var(--c-primary, #6366f1);
+  border-color: var(--vinta-primary, #6366f1);
 }
 
 .drawer-notes-list {
@@ -405,7 +405,7 @@
 .drawer-note-title {
   font-size: 0.76rem;
   font-weight: 600;
-  color: var(--c-text-primary, #ffffff);
+  color: var(--vinta-text-primary, #ffffff);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -413,7 +413,7 @@
 
 .drawer-note-date {
   font-size: 0.62rem;
-  color: var(--c-text-muted, rgba(255, 255, 255, 0.4));
+  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.4));
 }
 
 /* Banner color tokens */
@@ -475,7 +475,7 @@
   gap: 12px;
   flex-shrink: 0;
   background: rgba(255, 255, 255, 0.03);
-  border-bottom: 1px solid var(--c-border, rgba(255, 255, 255, 0.08));
+  border-bottom: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.08));
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   box-sizing: border-box;
@@ -491,14 +491,14 @@
 .board-title {
   font-size: 0.88rem;
   font-weight: 700;
-  color: var(--c-text-primary, #ffffff);
+  color: var(--vinta-text-primary, #ffffff);
   letter-spacing: -0.01em;
 }
 
 .board-count-pill {
   font-size: 0.65rem;
   font-weight: 600;
-  color: var(--c-text-muted, rgba(255, 255, 255, 0.5));
+  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.5));
   background: rgba(255, 255, 255, 0.08);
   padding: 1px 6px;
   border-radius: 999px;
@@ -526,7 +526,7 @@
 }
 
 .board-search-icon {
-  color: var(--c-text-muted, rgba(255, 255, 255, 0.4));
+  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.4));
   flex-shrink: 0;
 }
 
@@ -535,12 +535,12 @@
   background: transparent;
   border: none;
   font-size: 0.76rem;
-  color: var(--c-text-primary, #ffffff);
+  color: var(--vinta-text-primary, #ffffff);
   outline: none;
 }
 
 .board-search-input::placeholder {
-  color: var(--c-text-muted, rgba(255, 255, 255, 0.35));
+  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.35));
 }
 
 .board-header-right {
@@ -558,20 +558,20 @@
   height: 28px;
   border-radius: 7px;
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: var(--c-text-secondary, rgba(255, 255, 255, 0.7));
+  border: none;
+  color: var(--vinta-text-secondary, rgba(255, 255, 255, 0.7));
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .board-action-btn:hover {
   background: rgba(255, 255, 255, 0.12);
-  color: var(--c-text-primary, #ffffff);
+  color: var(--vinta-text-primary, #ffffff);
   transform: translateY(-1px);
 }
 
 .board-action-btn.new-note-action {
-  background: var(--c-primary, #38bdf8);
+  background: var(--vinta-primary, #38bdf8);
   color: #0f172a;
   border-color: transparent;
   font-weight: 700;
@@ -678,7 +678,7 @@
 .note-card-title {
   font-size: 0.82rem;
   font-weight: 700;
-  color: var(--c-text-primary, #ffffff);
+  color: var(--vinta-text-primary, #ffffff);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -687,7 +687,7 @@
 
 .note-card-snippet {
   font-size: 0.72rem;
-  color: var(--c-text-secondary, rgba(255, 255, 255, 0.65));
+  color: var(--vinta-text-secondary, rgba(255, 255, 255, 0.65));
   line-height: 1.35;
   margin: 0;
   display: -webkit-box;
@@ -704,14 +704,14 @@
   justify-content: space-between;
   padding: 4px 12px 8px 12px;
   font-size: 0.62rem;
-  color: var(--c-text-muted, rgba(255, 255, 255, 0.4));
+  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.4));
   flex-shrink: 0;
 }
 
 .note-card-has-img {
   display: flex;
   align-items: center;
-  color: var(--c-text-muted, rgba(255, 255, 255, 0.5));
+  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.5));
 }
 
 .empty-board-state {
@@ -720,7 +720,7 @@
   align-items: center;
   justify-content: center;
   padding: 48px 24px;
-  color: var(--c-text-muted, rgba(255, 255, 255, 0.4));
+  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.4));
   font-size: 0.85rem;
   gap: 12px;
 }
@@ -731,7 +731,7 @@
   gap: 6px;
   padding: 6px 14px;
   border-radius: 8px;
-  background: var(--c-primary, #38bdf8);
+  background: var(--vinta-primary, #38bdf8);
   color: #0f172a;
   border: none;
   font-size: 0.78rem;

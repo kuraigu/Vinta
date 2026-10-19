@@ -11,7 +11,8 @@
     ShieldCheck,
     AlertCircle,
     GitBranch,
-    SlidersHorizontal
+    SlidersHorizontal,
+    Info
   } from 'lucide-svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingBanner from '../SettingBanner.svelte'
@@ -209,7 +210,7 @@
             {:else if $updateLifecycleStatusStore === 'verifying'}
               <ShieldCheck size={16} class="spinning" />
             {:else}
-              <Download size={16} />
+              <Info size={16} />
             {/if}
           </div>
           <div class="update-header-info">

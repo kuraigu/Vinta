@@ -3,7 +3,7 @@
 
   export const config: IslandConfig = {
     minimal: { w: 320, h: 36, r: 18 },
-    expanded: { w: 440, h: 390, r: 28 },
+    expanded: { w: 452, h: 390, r: 28 },
     borderColor: 'var(--vinta-border)',
     glowColor: 'transparent'
   }

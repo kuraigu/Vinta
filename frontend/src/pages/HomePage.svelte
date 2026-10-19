@@ -9,12 +9,14 @@
 
 <script lang="ts">
   import { onMount, onDestroy, getContext } from 'svelte'
-  import { MapPin, Sparkles, X, RefreshCw, ChevronDown } from 'lucide-svelte'
+  import { MapPin, Info, X, RefreshCw, ChevronDown } from 'lucide-svelte'
+  import appIcon from '@appicon'
   import Calendar from '../components/Calendar.svelte'
   import Weather from '../components/Weather.svelte'
   import DeviceStatusWidget from '../components/DeviceStatusWidget.svelte'
   import ActionCenterGlance from '../components/ActionCenterGlance.svelte'
   import NotificationGlance from '../components/NotificationGlance.svelte'
+  import UpdateGlanceCard from '../components/UpdateGlanceCard.svelte'
   import ScrollView from '../components/ScrollView.svelte'
   import CalendarPage, { config as calendarConfig } from './CalendarPage.svelte'
   import SettingsPage, { config as settingsConfig } from './SettingsPage.svelte'
@@ -281,9 +283,12 @@
     </div>
   {:else}
     <div class="expanded-view">
-      <!-- Standard Page Header (In compliance with Settings / SidebarLayout) -->
+      <!-- Standard Page Header with Brand Identifier -->
       <div class="page-header">
-        <div class="page-title">Home</div>
+        <div class="brand-page-title-group">
+          <img src={appIcon} class="header-brand-glyph" alt="Vinta" />
+          <span class="header-brand-name">Vinta</span>
+        </div>
       </div>
 
       <ScrollView
@@ -328,82 +333,21 @@
 
           <!-- Update Glance Banner (Issue #161) -->
           {#if $updateInfoStore?.updateAvailable && !isUpdateSnoozed}
-            {@const isReady = $updateLifecycleStatusStore === 'ready'}
-            <section
-              class="update-glance-card {isReady ? 'ready' : 'available'}"
-              role="button"
-              tabindex="0"
-              onclick={openUpdatesTab}
-              onkeydown={(e) => e.key === 'Enter' && openUpdatesTab()}
-            >
-              <div class="update-glance-icon">
-                {#if isReady}
-                  <RefreshCw size={14} class="update-spin-icon" />
-                {:else}
-                  <Sparkles size={14} />
-                {/if}
-              </div>
-              <div class="update-glance-text">
-                <span class="update-glance-title">
-                  {isReady
-                    ? 'Update Ready to Install'
-                    : `Vinta ${$updateInfoStore.latestVersion || 'Update'} Available`}
-                </span>
-                <span class="update-glance-sub">
-                  {isReady
-                    ? 'Click to restart and apply improvements'
-                    : 'Click to review what is new in this release'}
-                </span>
-              </div>
-              <div class="update-glance-actions">
-                {#if isReady}
-                  <button
-                    class="update-action-btn restart"
-                    onclick={handleApplyUpdate}
-                    title="Restart Vinta"
-                  >
-                    Restart
-                  </button>
-                {:else}
-                  <button
-                    class="update-action-btn view"
-                    onclick={(e) => {
-                      e.stopPropagation()
-                      openUpdatesTab()
-                    }}
-                    title="View update details"
-                  >
-                    View
-                  </button>
-                {/if}
-                <button
-                  class="update-dismiss-btn"
-                  onclick={snoozeUpdate}
-                  title="Dismiss for this session"
-                  aria-label="Dismiss banner"
-                >
-                  <X size={12} />
-                </button>
-              </div>
-            </section>
+            <UpdateGlanceCard
+              onClick={openUpdatesTab}
+              onDismiss={snoozeUpdate}
+            />
           {/if}
+
+          <!-- Notification Glance Card (High priority alerts right after updates) -->
+          <section class="notification-card-feed">
+            <NotificationGlance />
+          </section>
 
           <!-- Illustrated Weather Banner -->
           {#if $homeWidgetsVisibilityStore.weather}
             <section class="weather-card-feed">
               <Weather expanded={true} />
-            </section>
-          {/if}
-
-          <!-- Notification Glance Card -->
-          <section class="notification-card-feed">
-            <NotificationGlance />
-          </section>
-
-          <!-- Quick Details from Action Center (Modular Bento Card) -->
-          {#if $homeWidgetsVisibilityStore.actionCenter}
-            <section class="glance-card-feed">
-              <ActionCenterGlance />
             </section>
           {/if}
 
@@ -415,6 +359,13 @@
                 showGoToCalendar={true}
                 onOpenCalendar={openCalendar}
               />
+            </section>
+          {/if}
+
+          <!-- Quick Controls from Action Center (Modular Bento Card) -->
+          {#if $homeWidgetsVisibilityStore.actionCenter}
+            <section class="glance-card-feed">
+              <ActionCenterGlance />
             </section>
           {/if}
         </div>

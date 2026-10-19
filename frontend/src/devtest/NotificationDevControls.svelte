@@ -85,9 +85,9 @@
 
   .action-input,
   .action-select {
-    background: var(--c-bg);
-    color: var(--c-text-primary);
-    border: 1px solid var(--c-border);
+    background: var(--vinta-bg);
+    color: var(--vinta-text-primary);
+    border: 1px solid var(--vinta-border);
     padding: 6px 8px;
     border-radius: 6px;
     font-size: 0.8rem;
@@ -100,13 +100,13 @@
 
   .action-input:focus,
   .action-select:focus {
-    border-color: var(--c-primary);
+    border-color: var(--vinta-primary);
   }
 
   .action-btn {
-    background: var(--c-item-bg);
-    border: 1px solid var(--c-border);
-    color: var(--c-text-primary);
+    background: var(--vinta-item-bg);
+    border: 1px solid var(--vinta-border);
+    color: var(--vinta-text-primary);
     padding: 6px 12px;
     border-radius: 6px;
     cursor: pointer;
@@ -117,6 +117,6 @@
   }
 
   .action-btn:hover {
-    background: var(--c-hover);
+    background: var(--vinta-hover);
   }
 </style>

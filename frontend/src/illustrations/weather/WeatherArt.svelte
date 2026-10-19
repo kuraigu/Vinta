@@ -18,10 +18,12 @@
   let {
     type = 'sunny',
     variant = 'hero',
+    monochrome = false,
     class: className = ''
   }: {
     type?: WeatherConditionType
-    variant?: 'hero' | 'compact'
+    variant?: 'hero' | 'compact' | 'mini'
+    monochrome?: boolean
     class?: string
   } = $props()
 </script>
@@ -77,28 +79,22 @@
         />
       </svg>
     {:else if type === 'night'}
-      <!-- Luminous Full Celestial Moon with Crater Maria & Sparkling Constellations -->
+      <!-- Luminous Golden Celestial Crescent Moon & Sparkling Starlight -->
       <svg class="hero-svg" viewBox="0 0 120 100" aria-label="Clear night sky">
         <defs>
-          <radialGradient id="moonAura" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="#ffffff" stop-opacity="0.38" />
-            <stop offset="45%" stop-color="#c7d2fe" stop-opacity="0.22" />
-            <stop offset="75%" stop-color="#818cf8" stop-opacity="0.08" />
-            <stop offset="100%" stop-color="#4f46e5" stop-opacity="0" />
+          <radialGradient id="moonGlowAura" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#fef08a" stop-opacity="0.32" />
+            <stop offset="50%" stop-color="#fde047" stop-opacity="0.12" />
+            <stop offset="100%" stop-color="#818cf8" stop-opacity="0" />
           </radialGradient>
-          <linearGradient id="moonBodyGrad" x1="0" y1="0" x2="1" y2="1">
+          <linearGradient id="crescentMoonGrad" x1="0" y1="0" x2="1" y2="1">
             <stop offset="0%" stop-color="#ffffff" />
-            <stop offset="35%" stop-color="#f8fafc" />
-            <stop offset="70%" stop-color="#e2e8f0" />
-            <stop offset="100%" stop-color="#cbd5e1" />
+            <stop offset="35%" stop-color="#fef9c3" />
+            <stop offset="70%" stop-color="#fde047" />
+            <stop offset="100%" stop-color="#facc15" />
           </linearGradient>
-          <radialGradient id="moonLimbShadow" cx="35%" cy="35%" r="65%">
-            <stop offset="60%" stop-color="#ffffff" stop-opacity="0" />
-            <stop offset="88%" stop-color="#818cf8" stop-opacity="0.2" />
-            <stop offset="100%" stop-color="#312e81" stop-opacity="0.45" />
-          </radialGradient>
           <filter
-            id="moonGlowFilter"
+            id="crescentGlowFilter"
             x="-30%"
             y="-30%"
             width="160%"
@@ -107,75 +103,38 @@
             <feDropShadow
               dx="0"
               dy="0"
-              stdDeviation="6"
-              flood-color="#c7d2fe"
-              flood-opacity="0.5"
+              stdDeviation="5"
+              flood-color="#fef08a"
+              flood-opacity="0.45"
             />
             <feDropShadow
               dx="0"
-              dy="4"
-              stdDeviation="12"
-              flood-color="#818cf8"
-              flood-opacity="0.35"
+              dy="3"
+              stdDeviation="10"
+              flood-color="#f59e0b"
+              flood-opacity="0.3"
             />
           </filter>
         </defs>
 
-        <!-- Ambient Celestial Lunar Halo -->
-        <circle cx="60" cy="50" r="44" fill="url(#moonAura)" />
+        <!-- Ambient Lunar Atmosphere Halo -->
+        <circle cx="64" cy="48" r="42" fill="url(#moonGlowAura)" />
 
-        <!-- Starfield & Constellation Sparkles -->
+        <!-- Starlight Sparkles -->
         <g fill="#ffffff">
-          <!-- 4-Point Primary Cross Sparkle -->
-          <path
-            d="M 28 22 L 29 25 L 32 26 L 29 27 L 28 30 L 27 27 L 24 26 L 27 25 Z"
-            opacity="0.95"
-            filter="drop-shadow(0 0 3px #ffffff)"
-          />
-          <path
-            d="M 94 24 L 95 26 L 97 27 L 95 28 L 94 30 L 93 28 L 91 27 L 93 26 Z"
-            opacity="0.9"
-            filter="drop-shadow(0 0 3px #ffffff)"
-          />
-          <!-- Star Dots -->
-          <circle
-            cx="20"
-            cy="52"
-            r="1.4"
-            opacity="0.8"
-            filter="drop-shadow(0 0 2px #ffffff)"
-          />
-          <circle cx="36" cy="74" r="1.6" opacity="0.85" />
-          <circle
-            cx="98"
-            cy="62"
-            r="1.8"
-            opacity="0.9"
-            filter="drop-shadow(0 0 2px #ffffff)"
-          />
-          <circle cx="84" cy="78" r="1.3" opacity="0.75" />
-          <circle cx="102" cy="42" r="1.2" opacity="0.7" />
+          <circle cx="24" cy="30" r="1.5" opacity="0.9" filter="drop-shadow(0 0 2px #ffffff)" />
+          <circle cx="32" cy="68" r="1.8" opacity="0.85" filter="drop-shadow(0 0 2px #ffffff)" />
+          <circle cx="98" cy="28" r="1.6" opacity="0.9" filter="drop-shadow(0 0 2px #ffffff)" />
+          <circle cx="104" cy="62" r="1.4" opacity="0.75" />
+          <circle cx="58" cy="84" r="1.2" opacity="0.8" />
         </g>
 
-        <!-- Luminous Celestial Moon Sphere -->
-        <g filter="url(#moonGlowFilter)">
-          <circle cx="60" cy="50" r="22" fill="url(#moonBodyGrad)" />
-          <!-- Limb Depth Overlay -->
-          <circle cx="60" cy="50" r="22" fill="url(#moonLimbShadow)" />
-
-          <!-- Soft Lunar Maria & Crater Formations -->
-          <!-- Mare Tranquillitatis -->
-          <circle cx="53" cy="43" r="4.8" fill="#94a3b8" opacity="0.28" />
-          <circle cx="51.5" cy="42" r="3.6" fill="#64748b" opacity="0.18" />
-          <!-- Mare Imbrium -->
-          <circle cx="68" cy="42" r="3.8" fill="#94a3b8" opacity="0.26" />
-          <!-- Tycho Crater -->
-          <circle cx="62" cy="60" r="3.2" fill="#94a3b8" opacity="0.32" />
-          <!-- Oceanus Procellarum / Minor Craters -->
-          <circle cx="72" cy="52" r="2.4" fill="#94a3b8" opacity="0.22" />
-          <circle cx="48" cy="56" r="2.0" fill="#94a3b8" opacity="0.2" />
-          <circle cx="61" cy="49" r="1.6" fill="#94a3b8" opacity="0.16" />
-        </g>
+        <!-- Luminous Golden Crescent Moon -->
+        <path
+          d="M 72 26 C 54 26 40 40 40 58 C 40 70 47 81 57 86 C 51 82 48 74 48 66 C 48 50 60 37 76 37 C 82 37 87 39 91 42 C 86 32 80 26 72 26 Z"
+          fill="url(#crescentMoonGrad)"
+          filter="url(#crescentGlowFilter)"
+        />
       </svg>
     {:else if type === 'rain'}
       <!-- Wide Volumetric Rain Cloud with Compact Fluid Raindrops -->
@@ -430,31 +389,38 @@
       <!-- Atmospheric Misty Cloud with Layered Drifting Fog Ribbons -->
       <svg class="hero-svg" viewBox="0 0 120 100" aria-label="Foggy weather">
         <defs>
+          <radialGradient id="fogAura" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#cbd5e1" stop-opacity="0.3" />
+            <stop offset="100%" stop-color="#64748b" stop-opacity="0" />
+          </radialGradient>
           <linearGradient id="fogCloudBody" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stop-color="#ffffff" />
-            <stop offset="55%" stop-color="#e2e8f0" />
-            <stop offset="100%" stop-color="#94a3b8" />
+            <stop offset="60%" stop-color="#e2e8f0" />
+            <stop offset="100%" stop-color="#cbd5e1" />
           </linearGradient>
           <linearGradient id="fogRibbonGrad1" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stop-color="#cbd5e1" stop-opacity="0.15" />
-            <stop offset="25%" stop-color="#ffffff" stop-opacity="0.9" />
-            <stop offset="75%" stop-color="#e2e8f0" stop-opacity="0.9" />
-            <stop offset="100%" stop-color="#cbd5e1" stop-opacity="0.15" />
+            <stop offset="0%" stop-color="#e2e8f0" stop-opacity="0.1" />
+            <stop offset="25%" stop-color="#ffffff" stop-opacity="0.85" />
+            <stop offset="75%" stop-color="#e2e8f0" stop-opacity="0.85" />
+            <stop offset="100%" stop-color="#cbd5e1" stop-opacity="0.1" />
           </linearGradient>
           <linearGradient id="fogRibbonGrad2" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stop-color="#94a3b8" stop-opacity="0.15" />
-            <stop offset="25%" stop-color="#cbd5e1" stop-opacity="0.8" />
-            <stop offset="75%" stop-color="#e2e8f0" stop-opacity="0.8" />
-            <stop offset="100%" stop-color="#94a3b8" stop-opacity="0.15" />
+            <stop offset="0%" stop-color="#cbd5e1" stop-opacity="0.1" />
+            <stop offset="25%" stop-color="#e2e8f0" stop-opacity="0.75" />
+            <stop offset="75%" stop-color="#cbd5e1" stop-opacity="0.75" />
+            <stop offset="100%" stop-color="#94a3b8" stop-opacity="0.1" />
           </linearGradient>
         </defs>
+
+        <!-- Ambient Fog Aura -->
+        <circle cx="58" cy="46" r="42" fill="url(#fogAura)" />
 
         <!-- Wide Misty Floating Cloud Base -->
         <path
           d="M 32 54 A 16 16 0 0 1 18 38 A 18 18 0 0 1 34 20 A 22 22 0 0 1 70 16 A 22 22 0 0 1 98 30 A 16 16 0 0 1 98 54 Z"
           fill="url(#fogCloudBody)"
-          filter="drop-shadow(0 4px 10px rgba(15, 23, 42, 0.28))"
-          opacity="0.92"
+          filter="drop-shadow(0 4px 12px rgba(15, 23, 42, 0.22))"
+          opacity="0.95"
         />
 
         <!-- Drifting Atmospheric Fog Ribbons Floating Across & Underneath Cloud -->
@@ -495,60 +461,72 @@
         </g>
       </svg>
     {:else if type === 'cloudy-night'}
-      <!-- Cloudy Night: Layered Volumetric Nocturnal Clouds with Ambient Starfield (No Moon) -->
+      <!-- Cloudy Night: Luminous Crescent Moon with Soft Nocturnal Clouds & Ambient Starfield -->
       <svg class="hero-svg" viewBox="0 0 120 100" aria-label="Cloudy night sky">
         <defs>
           <radialGradient id="nightSkyAura" cx="50%" cy="40%" r="55%">
-            <stop offset="0%" stop-color="#475569" stop-opacity="0.35" />
-            <stop offset="60%" stop-color="#312e81" stop-opacity="0.18" />
-            <stop offset="100%" stop-color="#1e1b4b" stop-opacity="0" />
+            <stop offset="0%" stop-color="#60a5fa" stop-opacity="0.28" />
+            <stop offset="60%" stop-color="#312e81" stop-opacity="0.16" />
+            <stop offset="100%" stop-color="#0f172a" stop-opacity="0" />
           </radialGradient>
+          <linearGradient id="cloudyNightMoon" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#ffffff" />
+            <stop offset="40%" stop-color="#fef9c3" />
+            <stop offset="100%" stop-color="#fde047" />
+          </linearGradient>
           <linearGradient id="nightCloudBack" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#475569" />
-            <stop offset="100%" stop-color="#1e293b" />
+            <stop offset="0%" stop-color="#6366f1" stop-opacity="0.7" />
+            <stop offset="100%" stop-color="#1e1b4b" />
           </linearGradient>
           <linearGradient id="nightCloudFront" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#cbd5e1" />
-            <stop offset="40%" stop-color="#94a3b8" />
+            <stop offset="0%" stop-color="#f8fafc" />
+            <stop offset="45%" stop-color="#cbd5e1" />
             <stop offset="100%" stop-color="#334155" />
           </linearGradient>
         </defs>
 
         <!-- Subtle Ambient Night Aura -->
-        <circle cx="60" cy="44" r="36" fill="url(#nightSkyAura)" />
+        <circle cx="56" cy="40" r="38" fill="url(#nightSkyAura)" />
 
         <!-- Starfield Glimpses in Upper Night Sky -->
         <g fill="#ffffff">
           <circle
-            cx="26"
-            cy="22"
+            cx="24"
+            cy="20"
             r="1.6"
             opacity="0.85"
-            filter="drop-shadow(0 0 3px #ffffff)"
+            filter="drop-shadow(0 0 2px #ffffff)"
           />
           <circle
-            cx="94"
-            cy="20"
+            cx="98"
+            cy="18"
             r="1.8"
             opacity="0.9"
-            filter="drop-shadow(0 0 3px #ffffff)"
+            filter="drop-shadow(0 0 2px #ffffff)"
           />
-          <circle cx="60" cy="14" r="1.3" opacity="0.75" />
-          <circle cx="84" cy="34" r="1.2" opacity="0.65" />
+          <circle cx="64" cy="12" r="1.3" opacity="0.75" />
+          <circle cx="86" cy="28" r="1.2" opacity="0.65" />
         </g>
+
+        <!-- Luminous Crescent Moon Behind Cloud -->
+        <path
+          d="M 68 14 C 54 14 43 25 43 39 C 43 47 48 55 55 59 C 51 56 49 50 49 44 C 49 32 58 22 71 22 C 75 22 79 23 82 25 C 78 18 73 14 68 14 Z"
+          fill="url(#cloudyNightMoon)"
+          filter="drop-shadow(0 0 8px rgba(254, 240, 138, 0.45))"
+        />
 
         <!-- Secondary Rear Ambient Night Cloud Depth -->
         <path
           d="M 44 56 A 14 14 0 0 1 32 42 A 16 16 0 0 1 50 26 A 18 18 0 0 1 82 24 A 18 18 0 0 1 100 40 A 14 14 0 0 1 100 56 Z"
           fill="url(#nightCloudBack)"
-          opacity="0.65"
+          opacity="0.6"
         />
 
         <!-- Wide Primary Foreground Nocturnal Fluffy Cloud -->
         <path
           d="M 32 64 A 16 16 0 0 1 18 48 A 18 18 0 0 1 34 30 A 22 22 0 0 1 70 26 A 22 22 0 0 1 98 40 A 16 16 0 0 1 98 64 Z"
           fill="url(#nightCloudFront)"
-          filter="drop-shadow(0 4px 12px rgba(15, 23, 42, 0.45))"
+          filter="drop-shadow(0 4px 14px rgba(15, 23, 42, 0.4))"
         />
       </svg>
     {:else}
@@ -626,7 +604,11 @@
   <!-- =========================================================================
        COMPACT GLYPH VARIANT (Minimized Dynamic Island Capsule Pill)
        ========================================================================= -->
-  <div class="weather-art-compact {className}">
+  <div
+    class="weather-art-compact {className}"
+    class:variant-mini={variant === 'mini'}
+    class:monochrome={monochrome}
+  >
     {#if type === 'sunny'}
       <svg
         class="compact-svg"
@@ -799,8 +781,23 @@
     user-select: none;
   }
 
+  .weather-art-compact.variant-mini {
+    width: 22px;
+    height: 22px;
+  }
+
   .compact-svg {
     width: 100%;
     height: 100%;
+  }
+
+  .weather-art-compact.monochrome :global(svg) {
+    stroke: #ffffff !important;
+  }
+
+  .weather-art-compact.monochrome :global(svg path),
+  .weather-art-compact.monochrome :global(svg line),
+  .weather-art-compact.monochrome :global(svg circle) {
+    stroke: #ffffff !important;
   }
 </style>

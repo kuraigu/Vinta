@@ -232,10 +232,10 @@
   .dock-divider {
     width: 1px;
     height: 18px;
-    background: rgba(255, 255, 255, 0.28);
+    background: rgba(255, 255, 255, 0.07);
     margin: 0 2px;
     flex-shrink: 0;
-    opacity: 0.85;
-    box-shadow: 0 0 2px rgba(0, 0, 0, 0.6);
+    opacity: 1;
+    box-shadow: none;
   }
 </style>

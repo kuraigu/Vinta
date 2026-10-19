@@ -9,6 +9,7 @@
     TimerReset
   } from 'lucide-svelte'
   import SettingItem from '../SettingItem.svelte'
+  import SettingSlider from '../SettingSlider.svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
   import CustomSelect from '../../CustomSelect.svelte'
   import {
@@ -73,18 +74,18 @@
   </SettingItem>
 
   <SettingItem
-    label={`Notification Sound Volume (${Math.round($notifVolumeStore * 100)}%)`}
+    label="Notification Sound Volume"
     description="Audio feedback level for incoming notifications (Default: 50%)"
     icon={Volume2}
     flexCol={true}
   >
-    <input
-      type="range"
-      min="0"
-      max="1"
-      step="0.05"
-      bind:value={$notifVolumeStore}
-      class="range-slider no-swipe"
+    <SettingSlider
+      min={0}
+      max={100}
+      step={5}
+      unit="%"
+      value={Math.round($notifVolumeStore * 100)}
+      onchange={(val) => ($notifVolumeStore = val / 100)}
     />
   </SettingItem>
 
@@ -131,18 +132,18 @@
   </SettingItem>
 
   <SettingItem
-    label={`Alarm Volume (${Math.round($alarmVolumeStore * 100)}%)`}
+    label="Alarm Volume"
     description="Ringing volume level for active alarms and timer completions"
     icon={Volume2}
     flexCol={true}
   >
-    <input
-      type="range"
-      min="0.1"
-      max="1"
-      step="0.05"
-      bind:value={$alarmVolumeStore}
-      class="range-slider no-swipe"
+    <SettingSlider
+      min={10}
+      max={100}
+      step={5}
+      unit="%"
+      value={Math.round($alarmVolumeStore * 100)}
+      onchange={(val) => ($alarmVolumeStore = val / 100)}
     />
   </SettingItem>
 
@@ -203,7 +204,7 @@
     background-color: rgba(255, 255, 255, 0.2);
     transition: 0.3s;
     border-radius: 20px;
-    border: 1px solid var(--c-border);
+    border: 1px solid var(--vinta-border);
   }
 
   .slider:before {
@@ -219,16 +220,11 @@
   }
 
   input:checked + .slider {
-    background-color: var(--c-primary, #6366f1);
+    background-color: var(--vinta-accent-primary, var(--vinta-primary, #38bdf8));
   }
 
   input:checked + .slider:before {
     transform: translateX(14px);
-  }
-
-  .range-slider {
-    width: 100%;
-    accent-color: var(--c-primary, #6366f1);
   }
 
   .setting-section-header {
@@ -240,7 +236,7 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: var(--c-text-muted, #94a3b8);
+    color: var(--vinta-text-muted, #94a3b8);
   }
 
   .sound-select-row {
@@ -263,9 +259,9 @@
     height: 32px;
     padding: 0 12px;
     border-radius: 9px;
-    background: var(--c-item-bg, rgba(255, 255, 255, 0.08));
-    border: 1px solid var(--c-border, rgba(255, 255, 255, 0.14));
-    color: var(--c-text-primary, #ffffff);
+    background: var(--vinta-item-bg, rgba(255, 255, 255, 0.08));
+    border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.14));
+    color: var(--vinta-text-primary, #ffffff);
     font-size: 11.5px;
     font-weight: 600;
     cursor: pointer;
@@ -274,7 +270,7 @@
   }
 
   .sound-preview-btn:hover {
-    background: var(--c-hover, rgba(255, 255, 255, 0.16));
+    background: var(--vinta-hover, rgba(255, 255, 255, 0.16));
     border-color: rgba(255, 255, 255, 0.25);
     transform: translateY(-0.5px);
   }

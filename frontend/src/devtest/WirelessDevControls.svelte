@@ -135,22 +135,22 @@
   <!-- Main Presets -->
   <div class="presets-row">
     <button class="preset-chip" onclick={() => setPreset('wifi_only')}>
-      <Wifi size={11} style="color: var(--c-success, #34c759)" />
+      <Wifi size={11} style="color: var(--vinta-success, #34c759)" />
       <span>Wi-Fi Only (No BT)</span>
     </button>
 
     <button class="preset-chip" onclick={() => setPreset('wifi_bt')}>
-      <Bluetooth size={11} style="color: var(--c-primary, #6366f1)" />
+      <Bluetooth size={11} style="color: var(--vinta-primary, #6366f1)" />
       <span>Wi-Fi + Bluetooth</span>
     </button>
 
     <button class="preset-chip" onclick={() => setPreset('airplane')}>
-      <Plane size={11} style="color: var(--c-warning, #ffcc00)" />
+      <Plane size={11} style="color: var(--vinta-warning, #ffcc00)" />
       <span>Airplane Mode</span>
     </button>
 
     <button class="preset-chip" onclick={() => setPreset('offline')}>
-      <WifiOff size={11} style="color: var(--c-danger, #ff3b30)" />
+      <WifiOff size={11} style="color: var(--vinta-danger, #ff3b30)" />
       <span>Disconnected</span>
     </button>
   </div>
@@ -296,7 +296,7 @@
     gap: 10px;
     padding: 12px 14px;
     background: rgba(255, 255, 255, 0.03);
-    border: 1px solid var(--c-border);
+    border: 1px solid var(--vinta-border);
     border-radius: 12px;
     margin-top: 6px;
     user-select: none;
@@ -312,7 +312,7 @@
   .dev-panel-title {
     font-size: 11px;
     font-weight: 700;
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
     text-transform: uppercase;
     letter-spacing: 0.04em;
   }
@@ -326,7 +326,7 @@
   .simulating-badge {
     font-size: 9px;
     font-weight: 700;
-    color: var(--c-warning, #ffcc00);
+    color: var(--vinta-warning, #ffcc00);
     background: rgba(255, 204, 0, 0.12);
     border: 1px solid rgba(255, 204, 0, 0.3);
     padding: 2px 6px;
@@ -341,9 +341,9 @@
     gap: 4px;
     font-size: 10px;
     font-weight: 600;
-    color: var(--c-text-secondary);
+    color: var(--vinta-text-secondary);
     background: rgba(255, 255, 255, 0.06);
-    border: 1px solid var(--c-border);
+    border: 1px solid var(--vinta-border);
     padding: 3px 8px;
     border-radius: 6px;
     cursor: pointer;
@@ -352,7 +352,7 @@
 
   .live-btn:hover,
   .reset-btn:hover {
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
     background: rgba(255, 255, 255, 0.12);
   }
 
@@ -368,9 +368,9 @@
     gap: 4px;
     font-size: 10px;
     font-weight: 600;
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
     background: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--c-border);
+    border: 1px solid var(--vinta-border);
     padding: 4px 8px;
     border-radius: 6px;
     cursor: pointer;
@@ -389,23 +389,23 @@
     gap: 4px;
     padding: 6px 8px;
     background: rgba(255, 255, 255, 0.02);
-    border: 1px solid var(--c-border);
+    border: 1px solid var(--vinta-border);
     border-radius: 8px;
   }
 
   .sub-label {
     font-size: 10px;
     font-weight: 600;
-    color: var(--c-text-secondary);
+    color: var(--vinta-text-secondary);
     margin-right: 2px;
   }
 
   .signal-chip {
     font-size: 9.5px;
     font-weight: 600;
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
     background: rgba(255, 255, 255, 0.06);
-    border: 1px solid var(--c-border);
+    border: 1px solid var(--vinta-border);
     padding: 2px 6px;
     border-radius: 4px;
     cursor: pointer;
@@ -414,7 +414,7 @@
 
   .signal-chip:hover {
     background: rgba(255, 255, 255, 0.14);
-    border-color: var(--c-primary, #6366f1);
+    border-color: var(--vinta-primary, #6366f1);
   }
 
   .controls-grid {
@@ -429,7 +429,7 @@
     gap: 4px;
     padding: 8px 10px;
     background: rgba(255, 255, 255, 0.03);
-    border: 1px solid var(--c-border);
+    border: 1px solid var(--vinta-border);
     border-radius: 8px;
     text-align: left;
   }
@@ -448,18 +448,18 @@
   .control-label {
     font-size: 10px;
     font-weight: 600;
-    color: var(--c-text-secondary);
+    color: var(--vinta-text-secondary);
   }
 
   .control-value {
     font-size: 10px;
     font-weight: 700;
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
   }
 
   .dev-slider {
     width: 100%;
-    accent-color: var(--c-primary, #6366f1);
+    accent-color: var(--vinta-primary, #6366f1);
     cursor: pointer;
   }
 
@@ -475,9 +475,9 @@
     gap: 4px;
     font-size: 10px;
     font-weight: 600;
-    color: var(--c-text-secondary);
+    color: var(--vinta-text-secondary);
     background: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--c-border);
+    border: 1px solid var(--vinta-border);
     padding: 3px 8px;
     border-radius: 6px;
     cursor: pointer;
@@ -486,7 +486,7 @@
 
   .dev-toggle-btn.active {
     color: #ffffff;
-    background: var(--c-primary, #6366f1);
-    border-color: var(--c-primary, #6366f1);
+    background: var(--vinta-primary, #6366f1);
+    border-color: var(--vinta-primary, #6366f1);
   }
 </style>

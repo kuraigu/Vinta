@@ -68,10 +68,10 @@
   .tabs-nav {
     display: flex;
     align-items: center;
-    background: var(--c-item-bg, rgba(255, 255, 255, 0.04));
-    border: 1px solid var(--c-border, rgba(255, 255, 255, 0.08));
+    background: rgba(255, 255, 255, 0.05);
+    border: none;
     padding: 3px;
-    border-radius: 12px;
+    border-radius: 99px;
     gap: 2px;
     flex-shrink: 0;
   }
@@ -80,11 +80,11 @@
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    padding: 4px 9px;
-    border-radius: 9px;
+    padding: 4px 11px;
+    border-radius: 99px;
     border: none;
     background: transparent;
-    color: var(--c-text-secondary, #b0b0b0);
+    color: var(--vinta-text-muted, #9ca3af);
     font-size: 11px;
     font-weight: 600;
     cursor: pointer;
@@ -95,18 +95,18 @@
   }
 
   .tab-btn:hover {
-    color: var(--c-text-primary, #ffffff);
+    color: var(--vinta-text-primary, #ffffff);
   }
 
   .tab-btn.active {
-    background: var(--c-hover, rgba(255, 255, 255, 0.12));
-    color: var(--c-text-primary, #ffffff);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+    background: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
   }
 
   .tabs-nav.variant-primary .tab-btn.active {
-    background: var(--c-primary, #38bdf8);
-    color: var(--c-primary-text, #ffffff);
+    background: var(--vinta-accent-primary, #38bdf8);
+    color: #ffffff;
     font-weight: 700;
     box-shadow: 0 2px 8px rgba(56, 189, 248, 0.35);
   }
@@ -126,8 +126,9 @@
   }
 
   .tabs-nav.variant-accent .tab-btn.active {
-    background: var(--c-accent, var(--c-primary, #38bdf8));
+    background: var(--vinta-accent-primary, #38bdf8);
     color: #ffffff;
     font-weight: 700;
+    box-shadow: 0 2px 8px rgba(56, 189, 248, 0.35);
   }
 </style>

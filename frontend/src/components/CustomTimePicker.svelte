@@ -358,9 +358,9 @@
     height: 32px;
     padding: 0 10px;
     background: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--c-border, rgba(255, 255, 255, 0.1));
+    border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.1));
     border-radius: 9px;
-    color: var(--c-text-primary, #ffffff);
+    color: var(--vinta-text-primary, #ffffff);
     font-size: 11.5px;
     font-weight: 500;
     cursor: pointer;
@@ -375,7 +375,7 @@
   }
 
   .time-trigger-btn.open {
-    border-color: var(--c-primary, #38bdf8);
+    border-color: var(--vinta-primary, #38bdf8);
     background: rgba(255, 255, 255, 0.09);
     box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
   }
@@ -388,7 +388,7 @@
   }
 
   :global(.trigger-icon) {
-    color: var(--c-primary, #38bdf8);
+    color: var(--vinta-primary, #38bdf8);
     flex-shrink: 0;
   }
 
@@ -399,7 +399,7 @@
   }
 
   :global(.chevron-icon) {
-    color: var(--c-text-secondary, #a1a1aa);
+    color: var(--vinta-text-secondary, #a1a1aa);
     transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
     flex-shrink: 0;
   }
@@ -452,7 +452,7 @@
     justify-content: space-between;
     gap: 6px;
     background: rgba(255, 255, 255, 0.04);
-    border: 1px solid var(--c-border, rgba(255, 255, 255, 0.08));
+    border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.08));
     border-radius: 8px;
     padding: 3px 6px;
   }
@@ -469,7 +469,7 @@
     background: transparent;
     border: none;
     outline: none;
-    color: var(--c-text-primary, #ffffff);
+    color: var(--vinta-text-primary, #ffffff);
     font-size: 12px;
     font-weight: 700;
     text-align: center;
@@ -489,7 +489,7 @@
   .digit-colon {
     font-size: 11px;
     font-weight: 800;
-    color: var(--c-text-muted, #71717a);
+    color: var(--vinta-text-muted, #71717a);
   }
 
   .ampm-header-toggle {
@@ -506,18 +506,18 @@
     border-radius: 5px;
     font-size: 9.5px;
     font-weight: 700;
-    color: var(--c-text-secondary, #a1a1aa);
+    color: var(--vinta-text-secondary, #a1a1aa);
     padding: 2px 5px;
     cursor: pointer;
     transition: all 0.15s ease;
   }
 
   .ampm-btn:hover {
-    color: var(--c-text-primary, #ffffff);
+    color: var(--vinta-text-primary, #ffffff);
   }
 
   .ampm-btn.active {
-    background: var(--c-primary, #38bdf8);
+    background: var(--vinta-primary, #38bdf8);
     color: #0b0f19;
   }
 
@@ -540,7 +540,7 @@
   .col-title {
     font-size: 9px;
     font-weight: 700;
-    color: var(--c-text-muted, #71717a);
+    color: var(--vinta-text-muted, #71717a);
     text-transform: uppercase;
     text-align: center;
   }
@@ -573,7 +573,7 @@
     text-align: center;
     font-size: 11px;
     font-weight: 500;
-    color: var(--c-text-primary, #e4e4e7);
+    color: var(--vinta-text-primary, #e4e4e7);
     cursor: pointer;
     transition: all 0.12s ease;
   }
@@ -585,7 +585,7 @@
 
   .col-item-btn.active {
     background: rgba(56, 189, 248, 0.2);
-    color: var(--c-primary, #38bdf8);
+    color: var(--vinta-primary, #38bdf8);
     font-weight: 700;
   }
 
@@ -613,15 +613,15 @@
 
   .popover-act-btn.now {
     background: transparent;
-    color: var(--c-text-secondary, #a1a1aa);
+    color: var(--vinta-text-secondary, #a1a1aa);
   }
 
   .popover-act-btn.now:hover {
-    color: var(--c-text-primary, #ffffff);
+    color: var(--vinta-text-primary, #ffffff);
   }
 
   .popover-act-btn.done {
-    background: var(--c-primary, #38bdf8);
+    background: var(--vinta-primary, #38bdf8);
     color: #0b0f19;
   }
 

@@ -929,7 +929,7 @@
         </div>
       {/if}
       <div class="card-bg-overlay"></div>
-      <!-- Bottom legibility scrim: fades from --c-scrim to transparent -->
+      <!-- Bottom legibility scrim: fades from --vinta-scrim to transparent -->
       <div class="card-bg-scrim"></div>
     </div>
 

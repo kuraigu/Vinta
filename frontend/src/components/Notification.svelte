@@ -481,21 +481,21 @@
 )}
   {@const cat = brand.category || brand.brandCategory}
   {#if cat === 'communication'}
-    <MessageCircle {size} color="var(--c-text-secondary)" />
+    <MessageCircle {size} color="var(--vinta-text-secondary)" />
   {:else if cat === 'productivity'}
-    <Calendar {size} color="var(--c-text-secondary)" />
+    <Calendar {size} color="var(--vinta-text-secondary)" />
   {:else if cat === 'gaming'}
-    <Gamepad2 {size} color="var(--c-text-secondary)" />
+    <Gamepad2 {size} color="var(--vinta-text-secondary)" />
   {:else if cat === 'media'}
-    <Play {size} color="var(--c-text-secondary)" />
+    <Play {size} color="var(--vinta-text-secondary)" />
   {:else if cat === 'browser'}
-    <Globe {size} color="var(--c-text-secondary)" />
+    <Globe {size} color="var(--vinta-text-secondary)" />
   {:else if cat === 'system'}
-    <Settings {size} color="var(--c-text-secondary)" />
+    <Settings {size} color="var(--vinta-text-secondary)" />
   {:else if cat === 'dev'}
-    <Terminal {size} color="var(--c-text-secondary)" />
+    <Terminal {size} color="var(--vinta-text-secondary)" />
   {:else}
-    <MessageSquareDot {size} color="var(--c-text-secondary)" />
+    <MessageSquareDot {size} color="var(--vinta-text-secondary)" />
   {/if}
 {/snippet}
 

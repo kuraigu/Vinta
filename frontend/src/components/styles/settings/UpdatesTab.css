@@ -29,10 +29,10 @@
   position: absolute;
   cursor: pointer;
   inset: 0;
-  background-color: var(--c-surface-2, rgba(255, 255, 255, 0.1));
+  background-color: var(--vinta-surface-2, rgba(255, 255, 255, 0.1));
   transition: 0.3s;
   border-radius: 20px;
-  border: 1px solid var(--c-border, rgba(255, 255, 255, 0.1));
+  border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.1));
 }
 
 .slider:before {
@@ -42,13 +42,13 @@
   width: 14px;
   left: 1px;
   bottom: 1px;
-  background-color: var(--c-text-primary, #ffffff);
+  background-color: var(--vinta-text-primary, #ffffff);
   transition: 0.3s;
   border-radius: 50%;
 }
 
 .toggle-switch input:checked + .slider {
-  background-color: var(--c-primary);
+  background-color: var(--vinta-primary);
 }
 
 .toggle-switch input:checked + .slider:before {
@@ -233,8 +233,8 @@
 /* DevTest Simulation Card */
 .devtest-sim-card {
   padding: 10px 12px;
-  background: var(--c-surface-1, rgba(255, 255, 255, 0.04));
-  border: 1px solid var(--c-border, rgba(255, 255, 255, 0.08));
+  background: var(--vinta-surface-1, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.08));
   border-radius: 10px;
 }
 

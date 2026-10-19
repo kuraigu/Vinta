@@ -82,7 +82,7 @@
           value: t.manifest.id
         }))
       : [
-          { label: 'OLED Dark', value: 'oled-dark' },
+          { label: 'Dark', value: 'oled-dark' },
           { label: 'Nord Frost', value: 'nord-frost' },
           { label: 'Colorblind Accessible', value: 'colorblind-safe' }
         ]

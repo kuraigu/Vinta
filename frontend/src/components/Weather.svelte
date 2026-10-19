@@ -32,6 +32,7 @@
     config as weatherPageConfig
   } from '../pages/WeatherPage.svelte'
   import BackButton from './BackButton.svelte'
+  import RefreshButton from './RefreshButton.svelte'
   import ScrollView from './ScrollView.svelte'
   import WeatherArt, {
     type WeatherConditionType
@@ -186,6 +187,16 @@
   }
   let illustrationType = $derived.by(computeIllustrationType)
 
+  function getForecastIllustrationType(code: number): WeatherConditionType {
+    if (code >= 95) return 'thunder'
+    if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return 'rain'
+    if (code >= 71 && code <= 77) return 'snow'
+    if (code === 0) return 'sunny'
+    if (code >= 1 && code <= 3) return 'cloudy'
+    if (code === 45 || code === 48) return 'fog'
+    return 'cloudy'
+  }
+
   function computeBannerConditionTitle() {
     if (!weather) return isNight ? 'Clear Night' : 'Sunny'
     if (weather.condition) return weather.condition
@@ -242,6 +253,75 @@
     class:variant-page={isPage}
     onclick={() => (!isPage ? (isForecastOpen = !isForecastOpen) : null)}
   >
+    <!-- GPU-Accelerated Dynamic Ambient Background Landscape Waves & Atmospheric FX -->
+    <div class="weather-card-aura-bg {illustrationType}" aria-hidden="true">
+      <!-- Layered Flowing Landscape Wave Contours -->
+      <svg class="weather-waves-canvas" viewBox="0 0 400 120" preserveAspectRatio="none">
+        <path class="wave-contour wave-contour-back" d="M -50 70 Q 70 35 190 65 T 450 50 L 450 130 L -50 130 Z" />
+        <path class="wave-contour wave-contour-mid" d="M -50 82 Q 90 55 220 80 T 450 68 L 450 130 L -50 130 Z" />
+        <path class="wave-contour wave-contour-front" d="M -50 94 Q 110 75 250 92 T 450 85 L 450 130 L -50 130 Z" />
+      </svg>
+
+      {#if illustrationType === 'sunny'}
+        <!-- Concentric Radial Sun Pulses from Top Right -->
+        <div class="weather-concentric-halos">
+          <span class="halo h1"></span>
+          <span class="halo h2"></span>
+          <span class="halo h3"></span>
+        </div>
+      {:else if illustrationType === 'night'}
+        <!-- Night Sky with Concentric Moon Ripples and Twinkling Star Motes -->
+        <div class="weather-concentric-halos night-halos">
+          <span class="halo h1"></span>
+          <span class="halo h2"></span>
+          <span class="halo h3"></span>
+        </div>
+        <div class="weather-starfield">
+          <span class="star st1"></span>
+          <span class="star st2"></span>
+          <span class="star st3"></span>
+          <span class="star st4"></span>
+          <span class="star st5"></span>
+          <span class="star st6"></span>
+        </div>
+      {:else if illustrationType === 'rain' || illustrationType === 'thunder'}
+        <!-- Smooth Angled Rain Streaks Passing Over Waves -->
+        <div class="weather-rain-curtain">
+          <span class="drop d1"></span>
+          <span class="drop d2"></span>
+          <span class="drop d3"></span>
+          <span class="drop d4"></span>
+          <span class="drop d5"></span>
+          <span class="drop d6"></span>
+          <span class="drop d7"></span>
+          <span class="drop d8"></span>
+          <span class="drop d9"></span>
+          <span class="drop d10"></span>
+          <span class="drop d11"></span>
+          <span class="drop d12"></span>
+        </div>
+      {:else if illustrationType === 'snow'}
+        <!-- Soft Drifting Geometric and Circular Snowflakes -->
+        <div class="weather-snowfall">
+          <span class="flake fl1 fl-hex"></span>
+          <span class="flake fl2"></span>
+          <span class="flake fl3 fl-hex"></span>
+          <span class="flake fl4"></span>
+          <span class="flake fl5 fl-hex"></span>
+          <span class="flake fl6"></span>
+          <span class="flake fl7"></span>
+        </div>
+      {:else if illustrationType === 'cloudy' || illustrationType === 'cloudy-night' || illustrationType === 'fog'}
+        <!-- Silky Rolling Cloud & Fog Mist Strata -->
+        <div class="weather-cloud-drifts">
+          <span class="drift dr1"></span>
+          <span class="drift dr2"></span>
+          <span class="drift dr3"></span>
+          <span class="drift dr4"></span>
+        </div>
+      {/if}
+    </div>
+
     {#if loading && !weather}
       <div class="banner-loading">
         <RefreshCw size={18} class="spin-icon" />
@@ -346,12 +426,18 @@
 
           <div class="forecast-strip-box">
             {#each weather.forecast.slice(0, 4) as f (f.day)}
-              {@const DayIcon = f.icon}
+              {@const forecastArtType = getForecastIllustrationType(f.weatherCode)}
               {@const maxConv = convertTemp(f.tempMax, $weatherUnitStore)}
               {@const minConv = convertTemp(f.tempMin, $weatherUnitStore)}
               <div class="f-day-col">
                 <span class="f-day-title">{f.day}</span>
-                <DayIcon size={16} class="f-day-icon" />
+                <div class="f-day-art-wrap">
+                  <WeatherArt
+                    type={forecastArtType}
+                    variant="mini"
+                    monochrome={true}
+                  />
+                </div>
                 <span class="f-day-temp">{maxConv.val}° / {minConv.val}°</span>
               </div>
             {/each}
@@ -390,16 +476,11 @@
         <BackButton />
         <span class="header-title-text">Weather</span>
       </div>
-      <button
-        type="button"
-        class="refresh-btn"
-        class:spinning={loading}
+      <RefreshButton
+        loading={loading}
         onclick={() => handleRetry()}
-        use:islandTooltip={'Refresh weather'}
-        aria-label="Refresh weather data"
-      >
-        <RefreshCw size={14} />
-      </button>
+        title="Refresh weather data"
+      />
     </div>
 
     {#if loading && !weather}
@@ -431,12 +512,18 @@
                 </div>
                 <div class="forecast-days-strip">
                   {#each weather.forecast as f, idx (f.day + idx)}
-                    {@const DayIcon = f.icon}
+                    {@const forecastArtType = getForecastIllustrationType(f.weatherCode)}
                     {@const maxConv = convertTemp(f.tempMax, $weatherUnitStore)}
                     {@const minConv = convertTemp(f.tempMin, $weatherUnitStore)}
                     <div class="forecast-col">
                       <span class="fc-day-title">{f.day}</span>
-                      <DayIcon size={18} class="f-day-icon" />
+                      <div class="fc-art-badge">
+                        <WeatherArt
+                          type={forecastArtType}
+                          variant="mini"
+                          monochrome={true}
+                        />
+                      </div>
                       <div class="fc-temp-split">
                         <span class="fc-max">{maxConv.val}°</span>
                         <span class="fc-min">{minConv.val}°</span>

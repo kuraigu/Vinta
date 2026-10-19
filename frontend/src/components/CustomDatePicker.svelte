@@ -457,9 +457,9 @@
     height: 32px;
     padding: 0 10px;
     background: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--c-border, rgba(255, 255, 255, 0.1));
+    border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.1));
     border-radius: 9px;
-    color: var(--c-text-primary, #ffffff);
+    color: var(--vinta-text-primary, #ffffff);
     font-size: 11.5px;
     font-weight: 500;
     cursor: pointer;
@@ -474,7 +474,7 @@
   }
 
   .date-trigger-btn.open {
-    border-color: var(--c-primary, #38bdf8);
+    border-color: var(--vinta-primary, #38bdf8);
     background: rgba(255, 255, 255, 0.09);
     box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
   }
@@ -487,7 +487,7 @@
   }
 
   :global(.trigger-icon) {
-    color: var(--c-primary, #38bdf8);
+    color: var(--vinta-primary, #38bdf8);
     flex-shrink: 0;
   }
 
@@ -498,7 +498,7 @@
   }
 
   :global(.chevron-icon) {
-    color: var(--c-text-secondary, #a1a1aa);
+    color: var(--vinta-text-secondary, #a1a1aa);
     transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
     flex-shrink: 0;
   }
@@ -565,8 +565,8 @@
     padding: 2.5px 7px;
     border-radius: 6px;
     background: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--c-border, rgba(255, 255, 255, 0.08));
-    color: var(--c-text-primary, #ffffff);
+    border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.08));
+    color: var(--vinta-text-primary, #ffffff);
     font-size: 11px;
     font-weight: 700;
     cursor: pointer;
@@ -580,18 +580,18 @@
   .header-toggle-btn.active {
     background: rgba(56, 189, 248, 0.18);
     border-color: rgba(56, 189, 248, 0.35);
-    color: var(--c-primary, #38bdf8);
+    color: var(--vinta-primary, #38bdf8);
   }
 
   .decade-header-label {
     font-size: 11.5px;
     font-weight: 700;
-    color: var(--c-text-primary, #ffffff);
+    color: var(--vinta-text-primary, #ffffff);
     letter-spacing: -0.01em;
   }
 
   :global(.small-chevron) {
-    color: var(--c-text-secondary, #a1a1aa);
+    color: var(--vinta-text-secondary, #a1a1aa);
   }
 
   .popover-nav-btn {
@@ -602,8 +602,8 @@
     height: 22px;
     border-radius: 6px;
     background: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--c-border, rgba(255, 255, 255, 0.08));
-    color: var(--c-text-secondary, #b0b0b0);
+    border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.08));
+    color: var(--vinta-text-secondary, #b0b0b0);
     cursor: pointer;
     transition: all 0.15s ease;
   }
@@ -624,7 +624,7 @@
   .popover-weekday {
     font-size: 9px;
     font-weight: 700;
-    color: var(--c-text-muted, #71717a);
+    color: var(--vinta-text-muted, #71717a);
     text-transform: uppercase;
   }
 
@@ -642,7 +642,7 @@
     border-radius: 6px;
     background: transparent;
     border: none;
-    color: var(--c-text-primary, #e4e4e7);
+    color: var(--vinta-text-primary, #e4e4e7);
     font-size: 11px;
     font-weight: 500;
     cursor: pointer;
@@ -656,12 +656,12 @@
   }
 
   .popover-day-cell.today {
-    color: var(--c-primary, #38bdf8);
+    color: var(--vinta-primary, #38bdf8);
     font-weight: 700;
   }
 
   .popover-day-cell.selected {
-    background: var(--c-primary, #38bdf8) !important;
+    background: var(--vinta-primary, #38bdf8) !important;
     color: #0b0f19 !important;
     font-weight: 700;
   }
@@ -683,8 +683,8 @@
     padding: 8px 0;
     border-radius: 7px;
     background: rgba(255, 255, 255, 0.04);
-    border: 1px solid var(--c-border, rgba(255, 255, 255, 0.06));
-    color: var(--c-text-primary, #e4e4e7);
+    border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.06));
+    color: var(--vinta-text-primary, #e4e4e7);
     font-size: 11px;
     font-weight: 600;
     cursor: pointer;
@@ -699,7 +699,7 @@
   .month-item-btn.active {
     background: rgba(56, 189, 248, 0.22);
     border-color: rgba(56, 189, 248, 0.4);
-    color: var(--c-primary, #38bdf8);
+    color: var(--vinta-primary, #38bdf8);
   }
 
   /* Fast Year Jump Form */
@@ -708,7 +708,7 @@
     align-items: center;
     gap: 5px;
     background: rgba(255, 255, 255, 0.04);
-    border: 1px solid var(--c-border, rgba(255, 255, 255, 0.08));
+    border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.08));
     border-radius: 7px;
     padding: 2px 6px;
   }
@@ -719,7 +719,7 @@
     background: transparent;
     border: none;
     outline: none;
-    color: var(--c-text-primary, #ffffff);
+    color: var(--vinta-text-primary, #ffffff);
     font-size: 11px;
     font-weight: 600;
     font-family: inherit;
@@ -727,7 +727,7 @@
   }
 
   .decade-jump-input::placeholder {
-    color: var(--c-text-muted, #71717a);
+    color: var(--vinta-text-muted, #71717a);
   }
 
   .decade-jump-btn {
@@ -735,7 +735,7 @@
     border-radius: 5px;
     background: rgba(56, 189, 248, 0.15);
     border: 1px solid rgba(56, 189, 248, 0.3);
-    color: var(--c-primary, #38bdf8);
+    color: var(--vinta-primary, #38bdf8);
     font-size: 10px;
     font-weight: 700;
     cursor: pointer;
@@ -758,8 +758,8 @@
     padding: 7px 0;
     border-radius: 6px;
     background: rgba(255, 255, 255, 0.04);
-    border: 1px solid var(--c-border, rgba(255, 255, 255, 0.06));
-    color: var(--c-text-primary, #e4e4e7);
+    border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.06));
+    color: var(--vinta-text-primary, #e4e4e7);
     font-size: 11px;
     font-weight: 600;
     cursor: pointer;
@@ -772,14 +772,14 @@
   }
 
   .decade-item-btn.outer {
-    color: var(--c-text-muted, #71717a);
+    color: var(--vinta-text-muted, #71717a);
     opacity: 0.6;
   }
 
   .decade-item-btn.active {
     background: rgba(56, 189, 248, 0.22);
     border-color: rgba(56, 189, 248, 0.4);
-    color: var(--c-primary, #38bdf8);
+    color: var(--vinta-primary, #38bdf8);
     font-weight: 700;
   }
 
@@ -799,7 +799,7 @@
     border-radius: 6px;
     background: rgba(56, 189, 248, 0.12);
     border: 1px solid rgba(56, 189, 248, 0.25);
-    color: var(--c-primary, #38bdf8);
+    color: var(--vinta-primary, #38bdf8);
     cursor: pointer;
     transition: all 0.15s ease;
   }
@@ -816,12 +816,12 @@
     border-radius: 6px;
     background: transparent;
     border: none;
-    color: var(--c-text-secondary, #a1a1aa);
+    color: var(--vinta-text-secondary, #a1a1aa);
     cursor: pointer;
     transition: all 0.15s ease;
   }
 
   .popover-back-btn:hover {
-    color: var(--c-text-primary, #ffffff);
+    color: var(--vinta-text-primary, #ffffff);
   }
 </style>

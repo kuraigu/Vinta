@@ -31,7 +31,9 @@
       {#if showBackButton}
         <BackButton {onback} />
       {/if}
-      <div class="page-title">{title}</div>
+      <div class="brand-page-title-group">
+        <span class="page-title">{title}</span>
+      </div>
       {#if showBackButton}
         <div class="header-spacer"></div>
       {/if}
@@ -56,7 +58,7 @@
     flex-direction: column;
     padding: 14px 16px 58px 16px;
     box-sizing: border-box;
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
   }
 
   .page-header {
@@ -79,11 +81,18 @@
     flex-shrink: 0;
   }
 
+  .brand-page-title-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    user-select: none;
+  }
+
   .page-title {
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 700;
-    letter-spacing: -0.01em;
-    color: var(--c-text-primary);
+    letter-spacing: -0.015em;
+    color: var(--vinta-text-primary);
     text-align: center;
   }
 
@@ -99,7 +108,7 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
-    border-right: 1px solid var(--c-border);
+    border-right: 1px solid var(--vinta-border);
     padding-right: 10px;
     flex-shrink: 0;
     box-sizing: border-box;

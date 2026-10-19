@@ -19,7 +19,7 @@
 
   margin-top: 0;
   position: relative;
-  background: var(--c-bg);
+  background: var(--vinta-bg);
 
   background-clip: padding-box;
   -webkit-background-clip: padding-box;
@@ -42,7 +42,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--c-text-primary);
+  color: var(--vinta-text-primary);
   pointer-events: auto;
 
   transform: translateZ(0);
@@ -105,8 +105,8 @@
 
 .island.is-hidden {
   box-shadow: 0 1.5px 4.5px rgba(0, 0, 0, 0.18);
-  border-color: var(--c-border);
-  background-color: var(--c-bg);
+  border-color: var(--vinta-border);
+  background-color: var(--vinta-bg);
 }
 
 .island-drag-handle {
@@ -131,7 +131,7 @@
   width: 48px;
   height: 3.5px;
   border-radius: 9999px;
-  background: var(--c-text-primary, #ffffff);
+  background: var(--vinta-text-primary, #ffffff);
   opacity: 0.35;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
   transition:
@@ -170,7 +170,7 @@
   padding: 0 4px;
   box-sizing: border-box;
   z-index: 10;
-  color: var(--c-text-primary);
+  color: var(--vinta-text-primary);
   overflow: hidden;
 }
 

@@ -33,8 +33,8 @@
 .setting-banner--primary {
   background: linear-gradient(
     135deg,
-    var(--c-primary) 0%,
-    rgba(var(--c-primary-rgb, 59, 130, 246), 0.85) 100%
+    var(--vinta-primary) 0%,
+    rgba(var(--vinta-primary-rgb, 59, 130, 246), 0.85) 100%
   );
 }
 

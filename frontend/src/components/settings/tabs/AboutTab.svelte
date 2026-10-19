@@ -235,14 +235,11 @@
   .about-logo-wrapper {
     width: 44px;
     height: 44px;
-    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
     flex-shrink: 0;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
-    border: 1px solid var(--c-border);
   }
 
   .about-logo-img {
@@ -265,7 +262,7 @@
     font-size: 16px;
     font-weight: 700;
     letter-spacing: -0.01em;
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
     line-height: 1.2;
   }
 
@@ -276,7 +273,7 @@
     padding: 3px 9px;
     border-radius: 8px;
     background: rgba(255, 255, 255, 0.04);
-    border: 1px solid var(--c-border);
+    border: 1px solid var(--vinta-border);
     font-size: 11px;
     line-height: 1.2;
     user-select: text;
@@ -289,7 +286,7 @@
     font-size: 10px;
     font-weight: 600;
     letter-spacing: 0.02em;
-    color: var(--c-text-secondary);
+    color: var(--vinta-text-secondary);
   }
 
   .capsule-channel.official {
@@ -308,13 +305,13 @@
 
   .capsule-version {
     font-weight: 600;
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
     font-variant-numeric: tabular-nums;
     font-size: 11px;
   }
 
   .capsule-build {
-    color: var(--c-text-muted);
+    color: var(--vinta-text-muted);
     font-variant-numeric: tabular-nums;
     font-size: 10.5px;
   }
@@ -351,7 +348,7 @@
   .specs-header {
     font-size: 11.5px;
     font-weight: 600;
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
     text-align: left;
     margin-bottom: 8px;
     letter-spacing: -0.01em;
@@ -371,9 +368,9 @@
     padding: 8px 10px;
     border-radius: 9px;
     background: rgba(255, 255, 255, 0.03);
-    border: 1px solid var(--c-border);
+    border: 1px solid var(--vinta-border);
     text-decoration: none;
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
     transition:
       background 0.15s ease,
       border-color 0.15s ease;
@@ -383,7 +380,7 @@
 
   .contributor-row:hover {
     background: rgba(255, 255, 255, 0.07);
-    border-color: var(--c-border-hover, rgba(255, 255, 255, 0.18));
+    border-color: var(--vinta-border-hover, rgba(255, 255, 255, 0.18));
   }
 
   .contributor-info {
@@ -398,7 +395,7 @@
   .contributor-name {
     font-size: 11.5px;
     font-weight: 600;
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -406,7 +403,7 @@
 
   .contributor-handle {
     font-size: 10px;
-    color: var(--c-text-muted);
+    color: var(--vinta-text-muted);
     font-weight: 500;
     white-space: nowrap;
   }
@@ -417,8 +414,8 @@
     padding: 2px 7px;
     border-radius: 6px;
     background: rgba(255, 255, 255, 0.08);
-    color: var(--c-text-secondary);
-    border: 1px solid var(--c-border);
+    color: var(--vinta-text-secondary);
+    border: 1px solid var(--vinta-border);
     flex-shrink: 0;
   }
 
@@ -434,7 +431,7 @@
     gap: 5px;
     font-size: 10.5px;
     font-weight: 600;
-    color: var(--c-primary, #6366f1);
+    color: var(--vinta-accent-primary, var(--vinta-primary, #38bdf8));
     text-decoration: none;
     margin-top: 8px;
     align-self: flex-start;

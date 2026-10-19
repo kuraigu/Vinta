@@ -5,7 +5,7 @@
   }
 
   let {
-    color = 'var(--c-success)', // default to a pleasant green
+    color = 'var(--vinta-success)', // default to a pleasant green
     size = '8px'
   }: Props = $props()
 </script>

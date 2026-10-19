@@ -5,15 +5,32 @@
   import NotificationPage, {
     config as notifConfig
   } from '../pages/NotificationPage.svelte'
-  import { nativeIconsStore } from '../services/iconService'
+  import {
+    nativeIconsStore,
+    parseAumid,
+    requestNativeAppIcon
+  } from '../services/iconService'
   import { islandTooltip } from '../services/islandTooltip'
+  import ActionCapsule from './ActionCapsule.svelte'
+  import appIcon from '@appicon'
 
   const navigate =
     getContext<
       (page: unknown, pageConfig: IslandConfig, expand?: boolean) => void
     >('navigate')
 
-  let notifications = $derived($notifData)
+  let notifications = $derived(
+    $notifData.filter(
+      (n) =>
+        !n.isUpdate &&
+        !n.title?.toLowerCase().includes('update available') &&
+        !(
+          (n.appName?.toLowerCase() === 'vinta' ||
+            n.aumid?.toLowerCase().includes('vinta')) &&
+          n.title?.toLowerCase().includes('update')
+        )
+    )
+  )
   let latestNotif = $derived(notifications.length > 0 ? notifications[0] : null)
   let unreadCount = $derived(notifications.length)
   let nativeIcons = $derived($nativeIconsStore)
@@ -34,17 +51,60 @@
 
   function resolveIconUrl(notif: typeof latestNotif): string | null {
     if (!notif) return null
-    if (notif.icon && notif.icon.length > 0) return notif.icon
-    if (notif.aumid && nativeIcons[notif.aumid]) return nativeIcons[notif.aumid]
-    if (notif.appName && nativeIcons[notif.appName])
+
+    const rawInput = notif.appName || notif.aumid || ''
+    const isVinta =
+      rawInput.toLowerCase().includes('vinta') ||
+      (notif.title || '').toLowerCase().includes('vinta')
+
+    if (isVinta) {
+      return notif.icon || notif.appLogo || appIcon
+    }
+
+    // 1. If explicit appLogo exists (e.g. native app emblem), prioritize it
+    if (notif.appLogo && notif.appLogo.length > 0) {
+      return notif.appLogo
+    }
+
+    // 2. Lookup native Windows extracted icon via iconService
+    const parsed = parseAumid(rawInput)
+    const searchApp = (parsed.processName || notif.appName || '').trim()
+    const searchAumid = (notif.aumid || '').trim()
+    const iconKey = `${searchApp.toLowerCase()}|${searchAumid.toLowerCase()}`
+
+    if (nativeIcons[iconKey]) {
+      return nativeIcons[iconKey]
+    }
+    if (notif.aumid && nativeIcons[notif.aumid]) {
+      return nativeIcons[notif.aumid]
+    }
+    if (notif.appName && nativeIcons[notif.appName]) {
       return nativeIcons[notif.appName]
-    if (notif.appLogo) return notif.appLogo
-    return null
+    }
+
+    // Trigger asynchronous extraction if not in cache yet
+    if (searchApp || searchAumid) {
+      const extracted = requestNativeAppIcon(searchApp, searchAumid)
+      if (extracted) return extracted
+    }
+
+    // 3. Fall back to notif.icon if it doesn't match a wide hero image
+    if (
+      notif.icon &&
+      notif.icon.length > 0 &&
+      notif.icon !== notif.heroImage
+    ) {
+      return notif.icon
+    }
+
+    // 4. Default to standard app icon if available
+    return notif.icon || null
   }
 
   let resolvedIcon = $derived(resolveIconUrl(latestNotif))
   let appDisplayName = $derived(
-    latestNotif?.appName || latestNotif?.aumid || 'Notification'
+    latestNotif?.appName ||
+      (latestNotif?.aumid ? parseAumid(latestNotif.aumid).displayName : 'Notification')
   )
 </script>
 
@@ -82,21 +142,16 @@
         </div>
         <span class="glance-app-name">{appDisplayName}</span>
         {#if unreadCount > 1}
-          <span class="glance-count-badge">+{unreadCount - 1}</span>
+          <span class="glance-count-badge">{unreadCount - 1}+</span>
         {/if}
       </div>
 
       <div class="glance-actions-group">
-        <button
-          type="button"
-          class="glance-action-btn view"
+        <ActionCapsule
+          label="View"
           onclick={openNotifications}
-          use:islandTooltip={'Open Notification Center'}
-          aria-label="View notifications"
-        >
-          <span>View</span>
-          <ChevronRight size={13} />
-        </button>
+          tooltip="Open Notification Center"
+        />
         <button
           type="button"
           class="glance-action-btn dismiss"
@@ -209,13 +264,14 @@
   .glance-count-badge {
     font-size: 0.68rem;
     font-weight: 700;
-    color: var(--vinta-accent-primary, #60a5fa);
-    background: var(--vinta-accent-muted, rgba(96, 165, 250, 0.16));
-    border: 1px solid var(--vinta-accent-muted, rgba(96, 165, 250, 0.25));
+    color: #ffffff;
+    background: var(--vinta-accent-primary, #38bdf8);
+    border: none;
     border-radius: 999px;
     padding: 1px 6px;
     line-height: 1.2;
     flex-shrink: 0;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
   }
 
   .glance-actions-group {
