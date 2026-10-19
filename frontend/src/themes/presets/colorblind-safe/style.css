@@ -1,0 +1,75 @@
+:root {
+  --vinta-accent-primary: #56b4e9;
+  --vinta-accent-hover: #7bc7f0;
+  --vinta-accent-active: #3ea2db;
+  --vinta-accent-muted: rgba(86, 180, 233, 0.2);
+  --vinta-accent-purple: #cc79a7;
+  --vinta-accent-danger: #d55e00;
+  --vinta-accent-warning: #e69f00;
+  --vinta-accent-success: #009e73;
+
+  --vinta-bg: #0d1117;
+  --vinta-bg-opaque: #0d1117;
+  --vinta-surface-card: #161b22;
+  --vinta-surface-elevated: #21262d;
+  --vinta-dock-popover-bg: #0d1117;
+  --vinta-island-bg: #0d1117;
+
+  --vinta-border: rgba(240, 246, 252, 0.25);
+  --vinta-border-light: rgba(240, 246, 252, 0.15);
+  --vinta-border-accent: rgba(86, 180, 233, 0.5);
+
+  --vinta-hover: rgba(240, 246, 252, 0.08);
+  --vinta-item-bg: #161b22;
+
+  --vinta-text-primary: #f0f6fc;
+  --vinta-text-secondary: #c9d1d9;
+  --vinta-text-muted: #8b949e;
+  --vinta-text-on-accent: #000000;
+
+  --vinta-contrast-bg: #161b22;
+  --vinta-contrast-border: inset 0 0 0 1px rgba(240, 246, 252, 0.2);
+  --vinta-contrast-hover: #21262d;
+
+  --c-text-on-accent: var(--vinta-text-on-accent);
+}
+
+/* Calendar component overrides */
+[data-vinta='calendar'] .day-cell.selected,
+[data-vinta='calendar-page'] .day-cell.selected {
+  background: #56b4e9 !important;
+  color: #000000 !important;
+}
+
+[data-vinta='calendar'] .tray-add-btn,
+[data-vinta='calendar-page'] .tray-add-btn {
+  background: #56b4e9 !important;
+  color: #000000 !important;
+}
+
+.badge {
+  background: #56b4e9 !important;
+  color: #000000 !important;
+  border: 1.5px solid rgba(240, 246, 252, 0.4) !important;
+}
+
+/* Calculator component overrides */
+[data-vinta='calculator-page'] .equals-btn {
+  background: #56b4e9 !important;
+  color: #000000 !important;
+}
+
+/* Media Player component overrides */
+[data-vinta='media-widget'] .hero-play-btn {
+  background: #56b4e9 !important;
+  color: #000000 !important;
+}
+
+/* Settings banner contrast overrides */
+.setting-banner--primary {
+  color: #000000 !important;
+}
+.setting-banner--primary .setting-banner-title,
+.setting-banner--primary .setting-banner-desc {
+  color: #000000 !important;
+}

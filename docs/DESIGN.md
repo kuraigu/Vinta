@@ -190,3 +190,10 @@ The `schemaVersion` integer is incremented only when breaking token removals or 
 
 #### 4. Opaque Surface Rule for Desktop Overlays
 The `--vinta-dock-popover-bg` token must always resolve to a solid, fully opaque color. Because Windows WebView2 cannot sample or blur native windows through transparent webview regions, translucent alpha channels on floating popovers cause unblurred desktop bleed-through.
+
+#### 5. Built-in Accessibility Presets
+Vinta includes three first-party built-in presets:
+- `oled-dark`: Default deep obsidian dark theme with sky blue accents.
+- `nord-frost`: Arctic Scandinavian cool slate and frost blue accents.
+- `colorblind-safe`: Deuteranopia, Protanopia, and Tritanopia accessible palette calibrated using Okabe-Ito color scales (Sky Blue `#56b4e9`, Orange/Amber `#e69f00`, Vermilion `#d55e00`, Bluish Green `#009e73`).
+

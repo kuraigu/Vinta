@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../../../schemas/vintatheme.schema.json",
+  "schemaVersion": 1,
+  "id": "colorblind-safe",
+  "name": "Colorblind Accessible",
+  "author": "Innoh Reloza",
+  "version": "1.0.0",
+  "description": "Deuteranopia, Protanopia, and Tritanopia accessible high-contrast palette using Okabe-Ito standards.",
+  "entry": "style.css",
+  "accentColor": "#56b4e9",
+  "mode": "dark"
+}

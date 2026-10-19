@@ -239,7 +239,7 @@ const legacyV1Defaults: Record<string, unknown> = {
   vinta_media_autohide: true,
   vinta_autohide_delay: 10,
   vinta_hidden_pill_position: 'center',
-  vinta_wakemethod: 'hover',
+  vinta_wakemethod: 'click',
   vinta_allow_drag_position: true,
   vinta_autohide_borderless: false,
   vinta_dnd: false,
@@ -377,7 +377,7 @@ export const autoHideDelayStore = persistentWritable<number>(
 export const autoHideDisplayStore =
   persistentWritable<AutoHideDisplayWidget>('vinta_autohide_display', 'dash')
 export const hiddenPillPositionStore = persistentWritable<HiddenPillPosition>('vinta_hidden_pill_position', 'center')
-export const wakeMethodStore = persistentWritable<'hover' | 'click'>('vinta_wakemethod', 'hover')
+export const wakeMethodStore = persistentWritable<'hover' | 'click'>('vinta_wakemethod', 'click')
 export const allowDragPositionStore = persistentWritable<boolean>('vinta_allow_drag_position', true)
 export const autoHideBorderlessStore = persistentWritable<boolean>('vinta_autohide_borderless', false)
 

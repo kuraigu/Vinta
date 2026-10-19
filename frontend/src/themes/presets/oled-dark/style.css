@@ -1,8 +1,8 @@
 :root {
-  --vinta-accent-primary: #00ffaa;
-  --vinta-accent-hover: #00e699;
-  --vinta-accent-active: #00cc88;
-  --vinta-accent-muted: rgba(0, 255, 170, 0.15);
+  --vinta-accent-primary: #38bdf8;
+  --vinta-accent-hover: #0ea5e9;
+  --vinta-accent-active: #0284c7;
+  --vinta-accent-muted: rgba(56, 189, 248, 0.16);
   --vinta-accent-purple: #a855f7;
   --vinta-accent-danger: #ef4444;
   --vinta-accent-warning: #f59e0b;
@@ -16,7 +16,7 @@
 
   --vinta-border: rgba(255, 255, 255, 0.08);
   --vinta-border-light: rgba(255, 255, 255, 0.05);
-  --vinta-border-accent: rgba(0, 255, 170, 0.25);
+  --vinta-border-accent: rgba(56, 189, 248, 0.25);
 
   --vinta-hover: rgba(255, 255, 255, 0.06);
   --vinta-item-bg: rgba(255, 255, 255, 0.03);

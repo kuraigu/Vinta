@@ -67,13 +67,16 @@ export default defineConfig({
     include: ['svelte', 'svelte/internal', 'svelte/transition', 'svelte/store'],
     exclude: ['lucide-svelte']
   },
+  build: {
+    emptyOutDir: true
+  },
   resolve: {
     alias: {
       'lucide-svelte/icons': path.resolve(
-        __dirname,
+        import.meta.dirname,
         'node_modules/lucide-svelte/dist/icons'
       ),
-      '@appicon': path.resolve(__dirname, '../build/appicon.png')
+      '@appicon': path.resolve(import.meta.dirname, '../build/appicon.png')
     }
   }
 })

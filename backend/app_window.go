@@ -98,10 +98,8 @@ const (
 	//nolint:revive // Windows API constants
 	WS_EX_NOACTIVATE = 0x08000000
 	//nolint:revive // Windows API constants
-	WS_EX_TRANSPARENT    = 0x00000020
-	OutsidePadding       = 8
-	HiddenOutsidePadding = 2
-	rgnOr                = 2
+	WS_EX_TRANSPARENT = 0x00000020
+	rgnOr             = 2
 
 	//nolint:revive // Windows API constants
 	GW_CHILD = 5

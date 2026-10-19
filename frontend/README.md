@@ -18,7 +18,7 @@ frontend/
 │   ├── stores/             # Svelte reactive state stores
 │   ├── services/           # Window bounds, gestures, tooltips, and weather services
 │   ├── illustrations/      # Volumetric vector artwork for weather and widgets
-│   ├── themes/             # Theme engine, presets (oled-dark, nord-frost), and base stylesheets
+│   ├── themes/             # Theme engine, presets (oled-dark, nord-frost, colorblind-safe), base styles
 │   └── utils/              # Gesture math, date formatting, and application helpers
 ├── bindings/               # Generated Wails v3 Go to TypeScript bindings
 └── index.html              # HTML shell configured for transparent webviews
