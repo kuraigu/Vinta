@@ -38,16 +38,21 @@
     overflow-x: hidden;
     position: relative;
     overscroll-behavior-y: contain;
+    touch-action: pan-y;
   }
 
   .scroll-view::-webkit-scrollbar {
-    width: 4px;
+    width: 3px;
   }
   .scroll-view::-webkit-scrollbar-track {
     background: transparent;
   }
   .scroll-view::-webkit-scrollbar-thumb {
-    background: var(--c-scrollbar-thumb, rgba(100, 100, 100, 0.4));
-    border-radius: 4px;
+    background: var(--c-scrollbar-thumb, rgba(255, 255, 255, 0.18));
+    border-radius: 3px;
+    transition: background 0.2s ease;
+  }
+  .scroll-view:hover::-webkit-scrollbar-thumb {
+    background: var(--c-scrollbar-thumb-hover, rgba(255, 255, 255, 0.35));
   }
 </style>
