@@ -61,12 +61,10 @@
       return notif.icon || notif.appLogo || appIcon
     }
 
-    // 1. If explicit appLogo exists (e.g. native app emblem), prioritize it
     if (notif.appLogo && notif.appLogo.length > 0) {
       return notif.appLogo
     }
 
-    // 2. Lookup native Windows extracted icon via iconService
     const parsed = parseAumid(rawInput)
     const searchApp = (parsed.processName || notif.appName || '').trim()
     const searchAumid = (notif.aumid || '').trim()
@@ -89,11 +87,7 @@
     }
 
     // 3. Fall back to notif.icon if it doesn't match a wide hero image
-    if (
-      notif.icon &&
-      notif.icon.length > 0 &&
-      notif.icon !== notif.heroImage
-    ) {
+    if (notif.icon && notif.icon.length > 0 && notif.icon !== notif.heroImage) {
       return notif.icon
     }
 
@@ -104,7 +98,9 @@
   let resolvedIcon = $derived(resolveIconUrl(latestNotif))
   let appDisplayName = $derived(
     latestNotif?.appName ||
-      (latestNotif?.aumid ? parseAumid(latestNotif.aumid).displayName : 'Notification')
+      (latestNotif?.aumid
+        ? parseAumid(latestNotif.aumid).displayName
+        : 'Notification')
   )
 </script>
 
@@ -199,8 +195,9 @@
   }
 
   .notification-glance-card:hover {
-    background: var(--vinta-hover, rgba(255, 255, 255, 0.07));
-    border-color: var(--vinta-border-light, rgba(255, 255, 255, 0.14));
+    background: var(--vinta-surface-elevated);
+    border-color: var(--vinta-contrast-hover);
+    box-shadow: var(--vinta-contrast-border), var(--vinta-dock-popover-shadow);
   }
 
   .notification-glance-card:active {
@@ -264,7 +261,7 @@
   .glance-count-badge {
     font-size: 0.68rem;
     font-weight: 700;
-    color: #ffffff;
+    color: var(--vinta-text-on-accent, #ffffff);
     background: var(--vinta-accent-primary, #38bdf8);
     border: none;
     border-radius: 999px;
@@ -297,17 +294,6 @@
     gap: 2px;
   }
 
-  .glance-action-btn.view {
-    background: rgba(255, 255, 255, 0.06);
-    color: var(--vinta-text-secondary, rgba(255, 255, 255, 0.8));
-    padding: 3px 8px;
-    border-radius: 12px;
-  }
-
-  .glance-action-btn.view:hover {
-    background: var(--vinta-accent-muted, rgba(96, 165, 250, 0.2));
-    color: var(--vinta-accent-primary, #60a5fa);
-  }
 
   .glance-action-btn.dismiss {
     width: 20px;

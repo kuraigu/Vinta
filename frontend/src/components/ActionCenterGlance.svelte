@@ -121,9 +121,7 @@
 
   let isWifiActive = $derived(wireless.wifiEnabled && !wireless.airplaneMode)
   let isBtActive = $derived(
-    wireless.hasBluetooth &&
-      wireless.bluetoothEnabled &&
-      !wireless.airplaneMode
+    wireless.hasBluetooth && wireless.bluetoothEnabled && !wireless.airplaneMode
   )
   let isAirplaneActive = $derived(wireless.airplaneMode)
   let isSaverActive = $derived(battery.hasBattery && battery.batterySaver)
@@ -173,7 +171,6 @@
     </div>
   </div>
 
-  <!-- Compact Icon Toggle Strip (Android / iOS Notification Bar Style) -->
   <div class="quick-toggle-row">
     <!-- Wi-Fi Toggle -->
     <button
@@ -187,9 +184,9 @@
     >
       <div class="toggle-icon-wrap">
         {#if isWifiActive}
-          <Wifi size={17} />
+          <Wifi size={18} />
         {:else}
-          <WifiOff size={17} />
+          <WifiOff size={18} />
         {/if}
       </div>
       <span class="toggle-label">Wi-Fi</span>
@@ -207,9 +204,9 @@
     >
       <div class="toggle-icon-wrap">
         {#if isBtActive}
-          <Bluetooth size={17} />
+          <Bluetooth size={18} />
         {:else}
-          <BluetoothOff size={17} />
+          <BluetoothOff size={18} />
         {/if}
       </div>
       <span class="toggle-label">Bluetooth</span>
@@ -225,7 +222,7 @@
       aria-label="Toggle Airplane Mode"
     >
       <div class="toggle-icon-wrap">
-        <Plane size={17} />
+        <Plane size={18} />
       </div>
       <span class="toggle-label">Airplane</span>
     </button>
@@ -242,9 +239,9 @@
     >
       <div class="toggle-icon-wrap">
         {#if isSaverActive}
-          <Leaf size={17} />
+          <Leaf size={18} />
         {:else}
-          <Battery size={17} />
+          <Battery size={18} />
         {/if}
       </div>
       <span class="toggle-label">Saver</span>

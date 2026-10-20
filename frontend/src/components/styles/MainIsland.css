@@ -353,6 +353,10 @@
     height var(--island-anim);
 }
 
+.view.has-dock {
+  padding-bottom: var(--vinta-dock-height, 42px);
+}
+
 .dock-overlay-wrapper {
   grid-area: 1 / 1;
   width: 100%;

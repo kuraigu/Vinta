@@ -40,7 +40,8 @@
   --vinta-text-primary: #ffffff;
   --vinta-text-secondary: rgba(255, 255, 255, 0.7);
   --vinta-text-muted: rgba(255, 255, 255, 0.4);
-  --vinta-text-on-accent: #000000;
+  /*--vinta-text-on-accent: #000000;*/
+  --vinta-text-on-accent: #ffffff;
   --vinta-font-family:
     'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
     Helvetica, Arial, sans-serif;
@@ -87,6 +88,9 @@
   --vinta-icon-badge-border: rgba(255, 255, 255, 0.12);
 
   --vinta-scrim: rgba(0, 0, 0, 0.72);
+
+  --vinta-collapse-btn-bg: rgba(255, 255, 255, 0.08);
+  --vinta-collapse-btn-hover-bg: rgba(255, 255, 255, 0.16);
 
   --vinta-media-btn-active-bg: #ffffff;
   --vinta-media-btn-active-text: #000000;

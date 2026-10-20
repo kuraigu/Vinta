@@ -536,15 +536,16 @@
               onclick={cycleViewMode}
             >
               {#if viewMode === 'month'}
-                <span class="header-month-name">{viewDate.toLocaleDateString(undefined, { month: 'long' })}</span>
+                <span class="header-month-name"
+                  >{viewDate.toLocaleDateString(undefined, {
+                    month: 'long'
+                  })}</span
+                >
                 <span class="header-year-num">{viewYear}</span>
               {:else}
                 <span class="header-month-name">{headerTitle}</span>
               {/if}
-              <ChevronDown
-                size={13}
-                class="header-chevron"
-              />
+              <ChevronDown size={13} class="header-chevron" />
             </button>
           </div>
 

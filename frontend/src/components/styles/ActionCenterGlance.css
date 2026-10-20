@@ -1,38 +1,29 @@
-/* ============================================================================
-   ActionCenterGlance Component Stylesheet
-   Complies with docs/DESIGN.md: theme tokens, glassmorphism, no hardcoded colors
-   Compact Icon Toggles (Android / iOS Notification Bar Style)
-   ============================================================================ */
-
 .action-center-glance-card {
   display: flex;
   flex-direction: column;
   gap: 10px;
   width: 100%;
-  padding: 11px 14px 13px 14px;
+  padding: 12px 14px 14px 14px;
   border-radius: 18px;
-  background:
-    linear-gradient(
-      145deg,
-      rgba(255, 255, 255, 0.05) 0%,
-      rgba(255, 255, 255, 0.015) 100%
-    ),
-    var(--vinta-surface-card, #15161c);
-  border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.1));
-  box-shadow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.08),
-    0 4px 18px rgba(0, 0, 0, 0.18);
+  background: var(--vinta-surface-card);
+  border: 1px solid var(--vinta-border);
+  box-shadow: var(--vinta-contrast-border), var(--vinta-dock-popover-shadow);
   box-sizing: border-box;
-  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
-  color: var(--vinta-text-primary, #ffffff);
+  transition:
+    background-color 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  color: var(--vinta-text-primary);
 }
 
+/* Commenting this out as I feel this is uneccessary, but I'll leave it here for now.
+  -Innoh Reloza (DippedInSoju)
 .action-center-glance-card:hover {
-  border-color: rgba(255, 255, 255, 0.16);
-  box-shadow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.12),
-    0 6px 20px rgba(0, 0, 0, 0.24);
+  background: var(--vinta-surface-elevated);
+  border-color: var(--vinta-contrast-hover);
+  box-shadow: var(--vinta-contrast-border), var(--vinta-dock-popover-shadow);
 }
+*/
 
 .glance-header {
   display: flex;
@@ -49,13 +40,12 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--vinta-text-secondary, rgba(255, 255, 255, 0.7));
+  color: var(--vinta-text-secondary);
 }
 
-/* Compact Icon Toggle Row */
 .quick-toggle-row {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
   width: 100%;
   box-sizing: border-box;
@@ -67,22 +57,36 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 8px 4px 7px 4px;
+  padding: 8px 4px;
   border-radius: 14px;
-  background: var(--vinta-item-bg, rgba(255, 255, 255, 0.04));
+  background: var(--vinta-surface-elevated);
   border: none;
-  color: var(--vinta-text-secondary, rgba(255, 255, 255, 0.65));
+  box-shadow: var(--vinta-contrast-border);
+  color: var(--vinta-text-secondary);
   cursor: pointer;
   user-select: none;
   -webkit-user-select: none;
-  transition: all 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition:
+    background-color 0.18s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.18s cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
   box-sizing: border-box;
   position: relative;
 }
 
-.quick-toggle-btn:hover:not(.disabled) {
-  background: var(--vinta-hover, rgba(255, 255, 255, 0.08));
-  transform: translateY(-1px);
+.quick-toggle-btn:hover:not(.disabled):not(.active) {
+  background: var(--vinta-contrast-hover);
+  box-shadow: inset 0 0 0 1px var(--vinta-dock-popover-border);
+}
+
+.quick-toggle-btn:hover:not(.disabled):not(.active) .toggle-icon-wrap {
+  background: var(--vinta-hover);
+  border-color: var(--vinta-dock-popover-border);
+  color: var(--vinta-accent-primary);
+}
+
+.quick-toggle-btn:hover:not(.disabled):not(.active) .toggle-label {
+  color: var(--vinta-text-primary);
 }
 
 .quick-toggle-btn:active:not(.disabled) {
@@ -96,47 +100,66 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.06);
-  border: none;
-  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.5));
-  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  background: var(--vinta-icon-badge-bg);
+  border: 1px solid var(--vinta-icon-badge-border);
+  box-sizing: border-box;
+  color: var(--vinta-text-secondary);
+  transition:
+    background-color 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+    color 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .toggle-icon-wrap :global(svg) {
-  shape-rendering: geometricPrecision;
+  display: block;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  stroke-width: 2px;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
+.quick-toggle-btn.active .toggle-icon-wrap :global(svg) {
+  stroke-width: 2.25px;
+}
+
 .toggle-label {
-  font-size: 0.68rem;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: -0.01em;
-  color: var(--vinta-text-secondary, rgba(255, 255, 255, 0.7));
-  line-height: 1.1;
+  color: var(--vinta-text-secondary);
+  line-height: 1.2;
   text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
   transition: color 0.18s ease;
 }
 
-/* Active State (Border removed, proper tokens, white icon like dock badge) */
 .quick-toggle-btn.active {
-  background: var(--vinta-accent-muted, rgba(56, 189, 248, 0.12));
+  background: var(--vinta-accent-muted);
   border: none;
-  box-shadow: 0 2px 10px var(--vinta-accent-muted, rgba(56, 189, 248, 0.18));
+  box-shadow:
+    var(--vinta-contrast-border),
+    0 2px 10px var(--vinta-accent-muted);
 }
 
 .quick-toggle-btn.active .toggle-icon-wrap {
-  background: var(--vinta-accent-primary, #38bdf8);
-  border: none;
-  color: #ffffff;
+  background: var(--vinta-accent-primary);
+  border-color: transparent;
+  color: var(--vinta-text-on-accent);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.16);
 }
 
 .quick-toggle-btn.active .toggle-label {
-  color: var(--vinta-text-primary, #ffffff);
+  color: var(--vinta-text-primary);
 }
 
-/* Disabled State */
 .quick-toggle-btn.disabled {
+  background: var(--vinta-item-bg);
   opacity: 0.35;
   cursor: not-allowed;
   pointer-events: none;

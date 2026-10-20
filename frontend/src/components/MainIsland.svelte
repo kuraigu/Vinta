@@ -303,7 +303,7 @@
       ? islandConfig.glowColor
       : 'var(--vinta-island-glow-idle)'};
     --island-hidden-glow: {islandConfig.glowColor &&
-    islandConfig.glowColor !== 'transparent'
+  islandConfig.glowColor !== 'transparent'
     ? islandConfig.glowColor
     : 'rgba(255, 255, 255, 0.6)'};
     --island-glow-opacity: {glowOpacity};

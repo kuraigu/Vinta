@@ -288,18 +288,18 @@ h3 {
 :global(.notif-list) {
   width: 100%;
   flex: 1;
-  min-height: 0; /* CRITICAL: prevents flex child from overflowing parent */
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding-right: 5px; /* for scrollbar */
+  padding-right: 5px;
   outline: none;
 }
 
 .notif-item {
   padding: 14px 12px;
   background: var(--vinta-item-bg);
-  border: 1px solid var(--vinta-border);
+  border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.08));
   position: relative;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
@@ -307,10 +307,10 @@ h3 {
 }
 
 .notif-item:hover {
-  background-color: var(--vinta-hover);
-  border-color: rgba(255, 255, 255, 0.16);
+  background: var(--vinta-surface-elevated);
+  border-color: var(--vinta-contrast-hover);
+  box-shadow: var(--vinta-contrast-border), var(--vinta-dock-popover-shadow);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .notif-item:active {
@@ -389,7 +389,7 @@ h3 {
   border: none;
   position: relative;
   width: 100%;
-  margin-bottom: 8px;
+  margin-bottom: 0;
   box-sizing: border-box;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -475,9 +475,9 @@ h3 {
 
 .expand-indicator:hover,
 .expand-indicator-btn:hover {
-  background: var(--vinta-hover);
+  background: rgba(255, 255, 255, 0.14);
   color: var(--vinta-text-primary);
-  border-color: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.22);
 }
 
 /* Keep visible when expanded so user can collapse */
@@ -684,8 +684,8 @@ h3 {
   gap: 4px;
   padding: 2px 8px;
   border-radius: 999px;
-  background: var(--vinta-hover);
-  border: 1px solid var(--vinta-border);
+  background: var(--vinta-contrast-bg);
+  border: 1px solid var(--vinta-contrast-bg);
   color: var(--vinta-text-secondary);
   font-size: 0.68rem;
   font-weight: 500;
@@ -728,7 +728,7 @@ h3 {
 .notif-group.unified-card {
   display: flex;
   flex-direction: column;
-  margin-bottom: 8px;
+  margin-bottom: 0;
   background: var(--vinta-item-bg);
   border: 1px solid var(--vinta-border);
   border-radius: 14px;
@@ -738,9 +738,9 @@ h3 {
 }
 
 .notif-group.unified-card:hover {
-  background: var(--vinta-hover);
-  border-color: rgba(255, 255, 255, 0.16);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  background: var(--vinta-surface-elevated);
+  border-color: var(--vinta-contrast-hover);
+  box-shadow: var(--vinta-contrast-border), var(--vinta-dock-popover-shadow);
 }
 
 .notif-group-header {
@@ -755,7 +755,7 @@ h3 {
 
 .notif-count-badge {
   background: var(--vinta-accent-primary);
-  color: #ffffff;
+  color: var(--vinta-text-on-accent, #ffffff);
   font-size: 0.68rem;
   font-weight: 700;
   padding: 2px 8px;
@@ -815,7 +815,8 @@ h3 {
 }
 
 .notif-item.nested:hover {
-  background-color: var(--vinta-hover);
+  background-color: var(--vinta-contrast-hover);
   transform: none;
   border-color: transparent;
+  box-shadow: none;
 }

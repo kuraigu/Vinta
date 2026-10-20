@@ -231,7 +231,7 @@
     padding: 0 3px;
     border-radius: 7px;
     background: var(--vinta-accent-primary, #38bdf8);
-    color: #ffffff;
+    color: var(--vinta-text-on-accent, #ffffff);
     font-size: 9px;
     font-weight: 700;
     line-height: 12px;

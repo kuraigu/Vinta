@@ -106,7 +106,7 @@
 
   .tabs-nav.variant-primary .tab-btn.active {
     background: var(--vinta-accent-primary, #38bdf8);
-    color: #ffffff;
+    color: var(--vinta-text-on-accent);
     font-weight: 700;
     box-shadow: 0 2px 8px rgba(56, 189, 248, 0.35);
   }
@@ -127,7 +127,7 @@
 
   .tabs-nav.variant-accent .tab-btn.active {
     background: var(--vinta-accent-primary, #38bdf8);
-    color: #ffffff;
+    color: var(--vinta-text-on-accent);
     font-weight: 700;
     box-shadow: 0 2px 8px rgba(56, 189, 248, 0.35);
   }

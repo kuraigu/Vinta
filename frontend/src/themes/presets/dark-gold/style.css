@@ -1,0 +1,99 @@
+:root {
+  /* ACCENT TOKENS */
+  --vinta-accent-primary: #ff8f40;
+  --vinta-primary: var(--vinta-accent-primary);
+  --vinta-accent-hover: #ffa05c;
+  --vinta-primary-hover: var(--vinta-accent-hover);
+  --vinta-accent-active: #e67626;
+  --vinta-accent-muted: rgba(255, 143, 64, 0.5);
+  --vinta-accent-purple: #c084fc;
+  --vinta-accent-bronze: #b3804d;
+  --vinta-accent-danger: #f87171;
+  --vinta-accent-danger-hover-bg: rgba(248, 113, 113, 0.14);
+  --vinta-accent-danger-hover-text: var(--vinta-accent-danger);
+  --vinta-accent-warning: #fbbf24;
+  --vinta-accent-warning-hover-bg: rgba(251, 191, 36, 0.14);
+  --vinta-accent-warning-hover-text: var(--vinta-accent-warning);
+  --vinta-accent-success: #34d399;
+  --vinta-accent-success-hover-bg: rgba(52, 211, 153, 0.14);
+  --vinta-accent-success-hover-text: var(--vinta-accent-success);
+
+  /* BASE SURFACES */
+  --vinta-bg: #111926;
+  --vinta-bg-opaque: #111926;
+  --vinta-island-bg: #162030;
+  --vinta-surface-card: #1c273a;
+  --vinta-surface-elevated: #24324a;
+  --vinta-dock-popover-bg: #141d2c;
+  --vinta-dock-popover-border: rgba(255, 143, 64, 0.25);
+  --vinta-dock-popover-shadow: 0 10px 30px rgba(0, 0, 0, 0.65);
+
+  /* BORDERS */
+  --vinta-border: rgba(255, 255, 255, 0.08);
+  --vinta-border-light: rgba(255, 255, 255, 0.04);
+  --vinta-border-accent: #ff8f40;
+
+  /* INTERACTIONS */
+  --vinta-hover: rgba(255, 143, 64, 0.08);
+  --vinta-item-bg: rgba(255, 255, 255, 0.03);
+
+  /* TYPOGRAPHY */
+  --vinta-text-primary: #ffffff;
+  --vinta-text-secondary: rgba(255, 255, 255, 0.7);
+  --vinta-text-muted: rgba(255, 255, 255, 0.4);
+  --vinta-text-on-accent: #111926;
+  --vinta-font-family:
+    'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    Helvetica, Arial, sans-serif;
+
+  /* CONTRAST SURFACES */
+  --vinta-contrast-bg: rgba(255, 255, 255, 0.04);
+  --vinta-contrast-border: inset 0 0 0 1px rgba(180, 205, 237, 0.12);
+  --vinta-contrast-hover: rgba(255, 255, 255, 0.07);
+
+  /* GEOMETRY & LAYOUT */
+  --vinta-radius-island: 18px;
+  --vinta-radius-card: 16px;
+  --vinta-radius-button: 10px;
+  --vinta-radius-pill: 9999px;
+
+  /* ISLAND STATES & SHADOWS */
+  --vinta-island-border-idle: #10b981;
+  --vinta-island-border-notification: #38bdf8;
+  --vinta-island-glow-idle: #10b981;
+  --vinta-island-glow-notification: #38bdf8;
+  --vinta-island-shadow:
+    inset 1px 0 0 0 rgba(255, 255, 255, 0.08),
+    inset -1px 0 0 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 0 rgba(255, 255, 255, 0.08),
+    0 1.5px 3.5px rgba(0, 0, 0, 0.22);
+  --vinta-island-hover-shadow: 0 2px 4.5px rgba(0, 0, 0, 0.3);
+
+  /* SCROLLBARS */
+  --vinta-scrollbar-thumb: rgba(255, 255, 255, 0.2);
+
+  /* COMPONENT SEMANTIC TOKENS */
+  --vinta-clear-btn-hover-bg: rgba(239, 68, 68, 0.12);
+  --vinta-clear-btn-hover-text: #ef4444;
+  --vinta-clear-btn-hover-border: inset 0 0 0 1px rgba(239, 68, 68, 0.3);
+
+  --vinta-dnd-active-bg: rgba(245, 158, 11, 0.12);
+  --vinta-dnd-active-text: #f59e0b;
+  --vinta-dnd-active-border: inset 0 0 0 1px rgba(245, 158, 11, 0.3);
+
+  --vinta-calendar-today-glow: 0 4px 10px rgba(56, 189, 248, 0.4);
+  --vinta-clock-shadow: rgba(255, 255, 255, 0.15);
+
+  --vinta-icon-badge-bg: rgba(255, 255, 255, 0.08);
+  --vinta-icon-badge-border: rgba(255, 255, 255, 0.12);
+
+  --vinta-scrim: rgba(0, 0, 0, 0.72);
+
+  --vinta-collapse-btn-bg: rgba(255, 255, 255, 0.08);
+  --vinta-collapse-btn-hover-bg: rgba(255, 143, 64, 0.16);
+
+  --vinta-media-btn-active-bg: #ffffff;
+  --vinta-media-btn-active-text: #000000;
+  --vinta-media-btn-active-border: rgba(255, 255, 255, 0.6);
+  --vinta-media-btn-active-glow: 0 0 10px rgba(255, 255, 255, 0.6);
+}

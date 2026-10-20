@@ -88,6 +88,9 @@
 
   --vinta-scrim: rgba(0, 0, 0, 0.72);
 
+  --vinta-collapse-btn-bg: rgba(216, 222, 233, 0.12);
+  --vinta-collapse-btn-hover-bg: rgba(216, 222, 233, 0.22);
+
   --vinta-media-btn-active-bg: #88c0d0;
   --vinta-media-btn-active-text: #2e3440;
   --vinta-media-btn-active-border: rgba(136, 192, 208, 0.6);

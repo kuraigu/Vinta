@@ -216,20 +216,22 @@
   .about-hero-card {
     display: flex;
     align-items: center;
-    gap: 14px;
-    padding: 15px 17px;
-    border-radius: 18px;
-    background:
-      linear-gradient(
-        145deg,
-        rgba(255, 255, 255, 0.07) 0%,
-        rgba(255, 255, 255, 0.02) 100%
-      ),
-      #15161c;
-    border: 1px solid rgba(255, 255, 255, 0.09);
-    box-shadow:
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.12),
-      0 4px 18px rgba(0, 0, 0, 0.15);
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: var(--vinta-radius-card, 16px);
+    background: var(--vinta-surface-card, rgba(255, 255, 255, 0.04));
+    border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.08));
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-sizing: border-box;
+    cursor: pointer;
+    text-align: left;
+    transition:
+      background 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+      border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.15s ease;
+    user-select: none;
+    -webkit-user-select: none;
   }
 
   .about-logo-wrapper {
@@ -319,19 +321,22 @@
   .about-card {
     display: flex;
     flex-direction: column;
-    padding: 13px 15px;
-    border-radius: 16px;
-    background:
-      linear-gradient(
-        145deg,
-        rgba(255, 255, 255, 0.055) 0%,
-        rgba(255, 255, 255, 0.018) 100%
-      ),
-      #15161c;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow:
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
-      0 3px 12px rgba(0, 0, 0, 0.12);
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: var(--vinta-radius-card, 16px);
+    background: var(--vinta-surface-card, rgba(255, 255, 255, 0.04));
+    border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.08));
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-sizing: border-box;
+    cursor: pointer;
+    text-align: left;
+    transition:
+      background 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+      border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+      transform 0.15s ease;
+    user-select: none;
+    -webkit-user-select: none;
   }
 
   .about-links-row {

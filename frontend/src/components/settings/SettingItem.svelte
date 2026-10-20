@@ -62,17 +62,9 @@
     gap: 12px;
     padding: 13px 15px;
     border-radius: 16px;
-    background:
-      linear-gradient(
-        145deg,
-        rgba(255, 255, 255, 0.055) 0%,
-        rgba(255, 255, 255, 0.018) 100%
-      ),
-      #15161c;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow:
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
-      0 3px 12px rgba(0, 0, 0, 0.12);
+    background: var(--vinta-surface-card);
+    border: 1px solid var(--vinta-border);
+    box-shadow: var(--vinta-contrast-border), var(--vinta-dock-popover-shadow);
     transition:
       opacity 0.2s ease,
       border-color 0.2s ease,
@@ -81,17 +73,9 @@
   }
 
   .setting-item:hover {
-    border-color: rgba(255, 255, 255, 0.15);
-    background:
-      linear-gradient(
-        145deg,
-        rgba(255, 255, 255, 0.075) 0%,
-        rgba(255, 255, 255, 0.028) 100%
-      ),
-      #15161c;
-    box-shadow:
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.14),
-      0 5px 16px rgba(0, 0, 0, 0.16);
+    border-color: var(--vinta-contrast-hover);
+    background: var(--vinta-surface-elevated);
+    box-shadow: var(--vinta-contrast-border), var(--vinta-dock-popover-shadow);
   }
 
   .setting-item.item-disabled {
@@ -100,17 +84,9 @@
   }
 
   .setting-item.item-disabled:hover {
-    border-color: rgba(255, 255, 255, 0.08);
-    background:
-      linear-gradient(
-        145deg,
-        rgba(255, 255, 255, 0.055) 0%,
-        rgba(255, 255, 255, 0.018) 100%
-      ),
-      #15161c;
-    box-shadow:
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
-      0 3px 12px rgba(0, 0, 0, 0.12);
+    border-color: var(--vinta-border);
+    background: var(--vinta-surface-card);
+    box-shadow: var(--vinta-contrast-border), var(--vinta-dock-popover-shadow);
   }
 
   .setting-item.item-disabled .setting-icon-col {
@@ -147,9 +123,8 @@
     width: 28px;
     height: 28px;
     border-radius: 9px;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.09);
-    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--vinta-border);
+    box-shadow: var(--vinta-contrast-border);
     flex-shrink: 0;
   }
 
@@ -180,9 +155,9 @@
     letter-spacing: 0.04em;
     padding: 2px 7px;
     border-radius: 9999px;
-    background: var(--vinta-accent-muted, rgba(56, 189, 248, 0.12));
-    color: var(--vinta-accent-primary, var(--vinta-primary, #38bdf8));
-    border: 1px solid var(--vinta-border-accent, rgba(56, 189, 248, 0.25));
+    background: var(--vinta-accent-muted);
+    color: var(--vinta-accent-primary);
+    border: 1px solid var(--vinta-border-accent);
   }
 
   .setting-icon-col :global(.item-icon) {

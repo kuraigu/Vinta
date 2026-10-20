@@ -286,7 +286,7 @@
 
 .today-btn:hover {
   background: var(--vinta-accent-primary, #38bdf8);
-  color: var(--vinta-text-on-accent, #000000);
+  color: var(--vinta-text-on-accent, #ffffff);
 }
 
 .month-stepper-pills {
@@ -409,12 +409,20 @@
 }
 
 .day-cell:hover:not(.empty):not(.selected) {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--vinta-accent-muted);
+  color: var(--vinta-accent-primary, #ffffff);
 }
 
 .day-cell.today:not(.selected) {
-  background: var(--vinta-accent-muted, rgba(56, 189, 248, 0.12));
-  color: var(--vinta-accent-primary, #38bdf8);
+  border: solid 1px var(--vinta-accent-primary);
+  /* I added opacity to minimize the jitters caused by Webview 2 in 1px borders 
+  - Innoh Reloza (DippedInSoju) */
+  border-color: color-mix(
+    in srgb,
+    var(--vinta-accent-primary) 50%,
+    transparent
+  );
+  color: var(--vinta-accent-primary, #ffffff);
   font-weight: 600;
 }
 
@@ -424,7 +432,7 @@
     var(--vinta-accent-primary, #38bdf8),
     var(--vinta-accent-hover, #0ea5e9)
   ) !important;
-  color: #ffffff !important;
+  color: var(--vinta-text-on-accent, #ffffff);
   font-weight: 700;
   box-shadow: 0 4px 14px var(--vinta-accent-muted, rgba(14, 165, 233, 0.4));
 }
@@ -837,7 +845,7 @@
   border-radius: 9px;
   background: var(--vinta-accent-primary, #38bdf8);
   border: none;
-  color: #ffffff;
+  color: var(--vinta-text-on-accent);
   font-size: 11.5px;
   font-weight: 700;
   cursor: pointer;

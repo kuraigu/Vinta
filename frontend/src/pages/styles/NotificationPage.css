@@ -41,7 +41,7 @@
 }
 
 .collapse-btn {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--vinta-collapse-btn-bg, rgba(255, 255, 255, 0.08));
   border: 1px solid var(--vinta-border);
   color: var(--vinta-text-secondary);
   width: 22px;
@@ -56,7 +56,7 @@
 }
 
 .collapse-btn:hover {
-  background: var(--vinta-hover);
+  background: var(--vinta-collapse-btn-hover-bg, var(--vinta-hover));
   color: var(--vinta-text-primary);
   transform: scale(1.1);
 }

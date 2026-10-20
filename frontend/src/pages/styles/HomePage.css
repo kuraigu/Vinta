@@ -34,7 +34,7 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding-bottom: 56px;
+  padding-bottom: 46px;
   box-sizing: border-box;
   overflow: hidden;
   position: relative;
@@ -55,46 +55,6 @@
   );
   pointer-events: none;
   z-index: 0;
-}
-
-.page-header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 8px;
-  padding-top: 14px;
-  flex-shrink: 0;
-  width: 100%;
-  min-height: 28px;
-  box-sizing: border-box;
-}
-
-.brand-page-title-group {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  user-select: none;
-}
-
-.header-brand-glyph {
-  width: 14px;
-  height: 14px;
-  object-fit: contain;
-  flex-shrink: 0;
-  opacity: 0.95;
-}
-
-.header-brand-name {
-  font-size: 14px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  color: var(--vinta-text-primary);
-}
-
-.header-brand-sep {
-  font-size: 10px;
-  color: var(--vinta-text-muted);
-  opacity: 0.5;
 }
 
 .page-title {
@@ -158,29 +118,32 @@
 
 .greeting-dots-pattern {
   position: absolute;
-  top: -2px;
+  top: 0;
   right: 0;
-  width: 120px;
+  width: 140px;
   height: 100%;
   pointer-events: none;
+  z-index: 1;
   background-image: radial-gradient(
-    circle,
-    var(--vinta-text-primary) 1.2px,
-    transparent 1.2px
+    circle at center,
+    var(--vinta-text-primary) 1px,
+    transparent 1.4px
   );
-  background-size: 8px 8px;
-  opacity: 0.12;
+  background-size: 10px 10px;
+  background-position: top 4px right 4px;
+  opacity: 0.14;
   mask-image: radial-gradient(
-    ellipse at top right,
-    rgba(0, 0, 0, 1) 20%,
-    transparent 75%
+    circle at 100% 0%,
+    #000 10%,
+    rgba(0, 0, 0, 0.5) 45%,
+    transparent 80%
   );
   -webkit-mask-image: radial-gradient(
-    ellipse at top right,
-    rgba(0, 0, 0, 1) 20%,
-    transparent 75%
+    circle at 100% 0%,
+    #000 10%,
+    rgba(0, 0, 0, 0.5) 45%,
+    transparent 80%
   );
-  z-index: 1;
 }
 
 .time-subtle-bar {
@@ -450,21 +413,26 @@
   gap: 4px;
   padding: 4px 10px;
   border-radius: 999px;
-  background: var(--vinta-surface-elevated, rgba(28, 28, 30, 0.72));
-  border: 1px solid var(--vinta-border-light, rgba(255, 255, 255, 0.12));
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  color: var(--vinta-text-secondary, rgba(255, 255, 255, 0.7));
+  /* I made it like this because I want the lighter color for the default pill
+  before hovering -Innoh Reloza (DippedInSoju) */
+  background: var(--vinta-surface-elevated, #1c273a);
+  border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.12));
+  color: var(--vinta-text-primary, #ffffff);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: -0.01em;
   cursor: pointer;
   z-index: 10;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.45),
+    var(--vinta-contrast-border);
   transition:
     opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1),
     transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
     background 0.2s ease,
+    border-color 0.2s ease,
     color 0.2s ease;
   user-select: none;
   -webkit-user-select: none;
@@ -472,8 +440,12 @@
 }
 
 .home-scroll-cue-pill:hover {
-  background: var(--vinta-hover, rgba(255, 255, 255, 0.1));
-  color: var(--vinta-text-primary, #ffffff);
+  background: var(--vinta-accent-primary, #38bdf8);
+  border-color: var(--vinta-accent-primary, #38bdf8);
+  color: var(--vinta-text-on-accent, #ffffff);
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.55),
+    0 0 12px var(--vinta-accent-muted, rgba(56, 189, 248, 0.4));
 }
 
 .home-scroll-cue-pill:active {

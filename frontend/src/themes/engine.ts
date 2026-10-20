@@ -4,6 +4,8 @@ import nordFrostManifest from './presets/nord-frost/manifest.json'
 import nordFrostCss from './presets/nord-frost/style.css?raw'
 import colorblindSafeManifest from './presets/colorblind-safe/manifest.json'
 import colorblindSafeCss from './presets/colorblind-safe/style.css?raw'
+import darkgoldSafeManifest from './presets/dark-gold/manifest.json'
+import darkgoldSafeCss from './presets/dark-gold/style.css?raw'
 import {
   ListThemes as listThemesFromBackend,
   GetThemeCSS as getThemeCssFromBackend,
@@ -31,6 +33,11 @@ export const BUILTIN_THEMES: ThemeInfo[] = [
     manifest: colorblindSafeManifest as ThemeInfo['manifest'],
     isBuiltIn: true,
     path: 'frontend/src/themes/presets/colorblind-safe'
+  },
+  {
+    manifest: darkgoldSafeManifest as ThemeInfo['manifest'],
+    isBuiltIn: true,
+    path: 'frontend/src/themes/presets/dark-gold'
   }
 ]
 
@@ -77,6 +84,9 @@ export async function getThemeCss(id: string): Promise<string> {
   if (id === 'colorblind-safe') {
     return colorblindSafeCss
   }
+  if (id === 'dark-gold') {
+    return darkgoldSafeCss
+  }
   return await getThemeCssFromBackend(id)
 }
 
@@ -107,6 +117,16 @@ export async function applyThemeToDOM(themeId: string): Promise<void> {
 
   if (normalizedId === 'nord-frost') {
     styleTag.textContent = `@layer vinta.theme {\n${nordFrostCss}\n}`
+    return
+  }
+
+  if (normalizedId === 'colorblind-safe') {
+    styleTag.textContent = `@layer vinta.theme {\n${colorblindSafeCss}\n}`
+    return
+  }
+
+  if (normalizedId === 'dark-gold') {
+    styleTag.textContent = `@layer vinta.theme {\n${darkgoldSafeCss}\n}`
     return
   }
 

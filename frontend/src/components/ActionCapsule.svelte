@@ -42,13 +42,13 @@
     padding: 3px 9px;
     border-radius: 999px;
     border: none;
-    background: var(--vinta-item-bg, rgba(255, 255, 255, 0.08));
-    color: var(--vinta-text-secondary, rgba(255, 255, 255, 0.8));
+    background: var(--vinta-collapse-btn-bg, rgba(255, 255, 255, 0.08));
+    color: var(--vinta-text-secondary);
     font-size: 0.72rem;
     font-weight: 600;
     letter-spacing: -0.01em;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all 0.2s ease;
     user-select: none;
     -webkit-user-select: none;
     line-height: 1.2;
@@ -56,8 +56,8 @@
   }
 
   .action-capsule-btn:hover {
-    background: var(--vinta-hover, rgba(255, 255, 255, 0.16));
-    color: var(--vinta-text-primary, #ffffff);
+    background: var(--vinta-collapse-btn-hover-bg, var(--vinta-hover));
+    color: var(--vinta-text-primary);
   }
 
   .action-capsule-btn:active {

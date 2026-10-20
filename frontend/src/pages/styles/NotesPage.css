@@ -210,7 +210,7 @@
   flex-direction: column;
   position: relative;
   /* Clears the bottom dock so content is never obscured */
-  padding-bottom: 58px;
+  padding-bottom: 46px;
   box-sizing: border-box;
   text-align: left;
 }
@@ -578,7 +578,7 @@
 }
 
 .board-action-btn.new-note-action:hover {
-  background: #7dd3fc;
+  background: var(--vinta-primary-hover, var(--vinta-accent-hover, #7dd3fc));
   color: #0f172a;
 }
 
@@ -744,7 +744,7 @@
 
 .board-create-btn:hover {
   transform: translateY(-1px);
-  background: #7dd3fc;
+  background: var(--vinta-primary-hover, var(--vinta-accent-hover, #7dd3fc));
 }
 
 /* Card color bands */

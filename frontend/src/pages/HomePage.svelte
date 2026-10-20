@@ -1,7 +1,7 @@
 <script module lang="ts">
   export const config = {
     minimal: { w: 330, h: 35, r: 16 },
-    expanded: { w: 430, h: 500, r: 32 },
+    expanded: { w: 430, h: 640, r: 28 },
     borderColor: 'var(--vinta-island-border-idle)',
     glowColor: 'var(--vinta-island-glow-idle)'
   }
@@ -10,7 +10,6 @@
 <script lang="ts">
   import { onMount, onDestroy, getContext } from 'svelte'
   import { MapPin, Info, X, RefreshCw, ChevronDown } from 'lucide-svelte'
-  import appIcon from '@appicon'
   import Calendar from '../components/Calendar.svelte'
   import Weather from '../components/Weather.svelte'
   import DeviceStatusWidget from '../components/DeviceStatusWidget.svelte'
@@ -283,14 +282,6 @@
     </div>
   {:else}
     <div class="expanded-view">
-      <!-- Standard Page Header with Brand Identifier -->
-      <div class="page-header">
-        <div class="brand-page-title-group">
-          <img src={appIcon} class="header-brand-glyph" alt="Vinta" />
-          <span class="header-brand-name">Vinta</span>
-        </div>
-      </div>
-
       <ScrollView
         class="home-feed-scroll"
         bind:element={scrollContainer}

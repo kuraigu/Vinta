@@ -1,0 +1,12 @@
+{
+  "$schema": "../../../../../schemas/vintatheme.schema.json",
+  "schemaVersion": 1,
+  "id": "dark-gold",
+  "name": "Dark Gold",
+  "author": "Innoh Reloza",
+  "version": "1.0.0",
+  "description": "Dark theme with gold accents.",
+  "entry": "style.css",
+  "accentColor": "#ffd95b",
+  "mode": "dark"
+}
