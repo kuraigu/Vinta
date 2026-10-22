@@ -6,12 +6,17 @@
     Maximize2,
     Minimize2,
     Crosshair,
+    Inspect,
     ScrollText,
     Sun,
     Moon,
-    RefreshCw
+    RefreshCw,
+    Copy,
+    Check
   } from 'lucide-svelte'
   import CustomSelect from '../components/CustomSelect.svelte'
+  import CustomTooltip from '../components/CustomTooltip.svelte'
+  import { islandTooltip } from '../services/islandTooltip'
   import NotificationDevControls from './NotificationDevControls.svelte'
   import HomeDevControls from './HomeDevControls.svelte'
   import WeatherDevControls from './WeatherDevControls.svelte'
@@ -22,10 +27,17 @@
     syncAllCalendarFeeds
   } from '../store'
   import { applyThemeToDOM } from '../themes/engine'
-  import { debugBoundsOverlay, debugLogs } from './debugConfig'
+  import {
+    debugBoundsOverlay,
+    debugLogs,
+    debugClassInspector
+  } from './debugConfig'
+  import type { InspectorHoverPayload } from './ClassInspectorOverlay.svelte'
 
   let isExpandedMode = $state(false)
   let targetMode = $state('home')
+  let inspectedElement = $state<InspectorHoverPayload | null>(null)
+  let copiedSelector = $state(false)
 
   const pageOptions = [
     { value: 'home', label: 'Home Page' },
@@ -83,6 +95,31 @@
     } catch {}
   }
 
+  function toggleClassInspector() {
+    $debugClassInspector = !$debugClassInspector
+    if (!$debugClassInspector) {
+      inspectedElement = null
+    }
+    try {
+      Events.Emit('devtest-class-inspector', {
+        enabled: $debugClassInspector
+      })
+    } catch {}
+  }
+
+  async function copySelector() {
+    if (!inspectedElement?.selector) return
+    try {
+      await navigator.clipboard.writeText(inspectedElement.selector)
+      copiedSelector = true
+      setTimeout(() => {
+        copiedSelector = false
+      }, 1500)
+    } catch {
+      // Ignore clipboard failure
+    }
+  }
+
   function toggleTheme() {
     $themeStore = $themeStore === 'dark-gold' ? 'nord-frost' : 'dark-gold'
     try {
@@ -101,8 +138,19 @@
       }
     )
 
+    const unsubInspectorHover = Events.On(
+      'devtest-inspector-hover',
+      (ev: { data: unknown }) => {
+        const data = ev?.data as InspectorHoverPayload | undefined
+        if (data && data.tag) {
+          inspectedElement = data
+        }
+      }
+    )
+
     return () => {
       unsubSync()
+      unsubInspectorHover()
     }
   })
 
@@ -123,7 +171,10 @@
       <button
         class="action-btn {$devPinnedStore ? 'active' : ''}"
         onclick={togglePin}
-        title={$devPinnedStore ? 'Unpin Page' : 'Pin Page'}
+        use:islandTooltip={{
+          text: $devPinnedStore ? 'Unpin Page' : 'Pin Page',
+          position: 'bottom'
+        }}
       >
         <Pin size={14} strokeWidth={2.2} />
       </button>
@@ -131,9 +182,12 @@
       <button
         class="action-btn {isExpandedMode ? 'active' : ''}"
         onclick={toggleExpandedMode}
-        title={isExpandedMode
-          ? 'Switch to Minimal Island'
-          : 'Switch to Expanded Card'}
+        use:islandTooltip={{
+          text: isExpandedMode
+            ? 'Switch to Minimal Island'
+            : 'Switch to Expanded Card',
+          position: 'bottom'
+        }}
       >
         {#if isExpandedMode}
           <Minimize2 size={14} strokeWidth={2.2} />
@@ -145,22 +199,49 @@
       <button
         class="action-btn {$debugBoundsOverlay ? 'active' : ''}"
         onclick={toggleBoundsOverlay}
-        title={$debugBoundsOverlay
-          ? 'Hide Bounds Overlay'
-          : 'Show Bounds Overlay'}
+        use:islandTooltip={{
+          text: $debugBoundsOverlay
+            ? 'Hide Bounds Overlay'
+            : 'Show Bounds Overlay',
+          position: 'bottom'
+        }}
       >
         <Crosshair size={14} strokeWidth={2.2} />
       </button>
 
       <button
+        class="action-btn {$debugClassInspector ? 'active' : ''}"
+        onclick={toggleClassInspector}
+        use:islandTooltip={{
+          text: $debugClassInspector
+            ? 'Disable Class Name Inspector (Ctrl+Shift+I)'
+            : 'Enable Class Name Inspector (Ctrl+Shift+I)',
+          position: 'bottom'
+        }}
+      >
+        <Inspect size={14} strokeWidth={2.2} />
+      </button>
+
+      <button
         class="action-btn {$debugLogs ? 'active' : ''}"
         onclick={toggleLogs}
-        title={$debugLogs ? 'Disable Verbose Logs' : 'Enable Verbose Logs'}
+        use:islandTooltip={{
+          text: $debugLogs ? 'Disable Verbose Logs' : 'Enable Verbose Logs',
+          position: 'bottom'
+        }}
       >
         <ScrollText size={14} strokeWidth={2.2} />
       </button>
 
-      <button class="action-btn" onclick={toggleTheme} title="Toggle Theme">
+      <button
+        class="action-btn"
+        onclick={toggleTheme}
+        use:islandTooltip={{
+          text: 'Toggle Theme',
+          position: 'bottom',
+          align: 'right'
+        }}
+      >
         {#if $themeStore === 'dark-gold'}
           <Sun size={14} strokeWidth={2.2} />
         {:else}
@@ -171,7 +252,11 @@
       <button
         class="action-btn"
         onclick={handleReload}
-        title="Reload Dev Tools"
+        use:islandTooltip={{
+          text: 'Reload Dev Tools',
+          position: 'bottom',
+          align: 'right'
+        }}
       >
         <RefreshCw size={14} strokeWidth={2.2} />
       </button>
@@ -189,6 +274,64 @@
         />
       </div>
     </section>
+
+    {#if $debugClassInspector}
+      <section class="control-section inspector-section">
+        <div class="inspector-header-row">
+          <span class="section-label inspector-label">
+            Class Name Inspector
+          </span>
+          {#if inspectedElement}
+            <button
+              class="copy-selector-btn"
+              onclick={copySelector}
+              use:islandTooltip={'Copy CSS selector'}
+            >
+              {#if copiedSelector}
+                <Check size={12} />
+                <span>Copied</span>
+              {:else}
+                <Copy size={12} />
+                <span>Copy Selector</span>
+              {/if}
+            </button>
+          {/if}
+        </div>
+
+        {#if inspectedElement}
+          <div class="inspector-readout-card">
+            <div class="inspector-meta-row">
+              <span class="meta-badge tag">&lt;{inspectedElement.tag}&gt;</span>
+              {#if inspectedElement.dataVinta}
+                <span class="meta-badge vinta"
+                  >data-vinta="{inspectedElement.dataVinta}"</span
+                >
+              {/if}
+              <span class="meta-dims"
+                >{inspectedElement.width} × {inspectedElement.height}px</span
+              >
+            </div>
+            <div class="inspector-classes-row">
+              {#if inspectedElement.classes.length > 0}
+                {#each inspectedElement.classes as cls (cls)}
+                  <span class="class-chip">.{cls}</span>
+                {/each}
+              {:else}
+                <span class="no-classes-text">No semantic classes</span>
+              {/if}
+            </div>
+            <code class="inspector-selector-code"
+              >{inspectedElement.selector}</code
+            >
+          </div>
+        {:else}
+          <div class="inspector-empty">
+            Hover over any element in the main Vinta island to inspect its
+            classes and theme selector.
+          </div>
+        {/if}
+      </section>
+    {/if}
 
     <section class="control-section simulation-section">
       <span class="section-label">Simulated Hardware & Feeds</span>
@@ -238,6 +381,8 @@
     </section>
   </div>
 </div>
+
+<CustomTooltip />
 
 <style>
   :global(body.devtest-window-body) {
@@ -433,5 +578,125 @@
 
   .mock-btn.primary:hover {
     background: #2563eb;
+  }
+
+  .inspector-section {
+    border-color: rgba(56, 189, 248, 0.25);
+  }
+
+  .inspector-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .inspector-label {
+    margin-bottom: 0;
+    color: #38bdf8;
+  }
+
+  .copy-selector-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 8px;
+    border-radius: 5px;
+    background: rgba(56, 189, 248, 0.14);
+    border: 1px solid rgba(56, 189, 248, 0.3);
+    color: #38bdf8;
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .copy-selector-btn:hover {
+    background: rgba(56, 189, 248, 0.25);
+    color: #ffffff;
+  }
+
+  .inspector-readout-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: rgba(0, 0, 0, 0.28);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    padding: 10px;
+    font-family: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+  }
+
+  .inspector-meta-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .meta-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  .meta-badge.tag {
+    background: rgba(56, 189, 248, 0.16);
+    color: #38bdf8;
+  }
+
+  .meta-badge.vinta {
+    background: rgba(192, 132, 252, 0.16);
+    color: #c084fc;
+  }
+
+  .meta-dims {
+    margin-left: auto;
+    font-size: 0.68rem;
+    color: #a1a1aa;
+  }
+
+  .inspector-classes-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .class-chip {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: #fbbf24;
+    background: rgba(251, 191, 36, 0.12);
+    border: 1px solid rgba(251, 191, 36, 0.25);
+    padding: 1.5px 6px;
+    border-radius: 4px;
+  }
+
+  .no-classes-text {
+    font-size: 0.7rem;
+    color: #71717a;
+    font-style: italic;
+  }
+
+  .inspector-selector-code {
+    display: block;
+    font-size: 0.68rem;
+    color: #e4e4e7;
+    background: rgba(255, 255, 255, 0.04);
+    padding: 5px 8px;
+    border-radius: 4px;
+    word-break: break-all;
+    user-select: text;
+    -webkit-user-select: text;
+  }
+
+  .inspector-empty {
+    font-size: 0.74rem;
+    color: #a1a1aa;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 6px;
+    text-align: center;
   }
 </style>

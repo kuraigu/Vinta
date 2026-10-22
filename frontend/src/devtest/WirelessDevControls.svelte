@@ -15,6 +15,7 @@
   } from '../store'
   import { Events } from '@wailsio/runtime'
   import { GetWirelessStatus } from '../../bindings/Vinta/backend/app.js'
+  import { islandTooltip } from '../services/islandTooltip'
 
   let wireless = $derived($wirelessDataStore)
   let isSimulating = $derived($isSimulatingWirelessStore)
@@ -116,7 +117,7 @@
       <button
         class="live-btn"
         onclick={resetToLive}
-        title="Switch to live hardware state"
+        use:islandTooltip={'Switch to live hardware state'}
       >
         <Radio size={11} />
         <span>Live Hardware</span>
@@ -124,7 +125,7 @@
       <button
         class="reset-btn"
         onclick={resetToDefaults}
-        title="Reset to default wireless status"
+        use:islandTooltip={'Reset to default wireless status'}
       >
         <RefreshCw size={11} />
         <span>Defaults</span>

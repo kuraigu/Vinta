@@ -14,6 +14,7 @@
     type BatteryData
   } from '../store'
   import { GetBatteryStatus } from '../../bindings/Vinta/backend/app.js'
+  import { islandTooltip } from '../services/islandTooltip'
 
   let simulatedPercentage = $state($batteryDataStore.percentage || 75)
   let simulatedCharging = $state(true)
@@ -91,7 +92,7 @@
     <button
       class="reset-btn"
       onclick={resetToHardware}
-      title="Reset to actual hardware power status"
+      use:islandTooltip={'Reset to actual hardware power status'}
     >
       <RefreshCw size={11} />
       <span>Live Hardware</span>

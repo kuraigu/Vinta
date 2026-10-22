@@ -87,7 +87,12 @@
     displayLayoutStore
   } from './store'
   import { hideTooltip } from './stores/tooltip'
-  import { debugBoundsOverlay, debugLogs } from './devtest/debugConfig'
+  import {
+    debugBoundsOverlay,
+    debugLogs,
+    debugClassInspector
+  } from './devtest/debugConfig'
+  import ClassInspectorOverlay from './devtest/ClassInspectorOverlay.svelte'
 
   function syncDebugBoundsOverlay(enabled: boolean) {
     if (typeof document !== 'undefined') {
@@ -1275,6 +1280,16 @@
       }
     )
 
+    const unsubDevTestInspector = Events.On(
+      'devtest-class-inspector',
+      (ev: { data: unknown }) => {
+        const data = ev?.data as { enabled?: boolean }
+        if (typeof data?.enabled === 'boolean') {
+          $debugClassInspector = data.enabled
+        }
+      }
+    )
+
     const unsubDevTestBattery = Events.On(
       'devtest-battery',
       (ev: { data: unknown }) => {
@@ -1338,6 +1353,7 @@
       unsubDevTestTheme()
       unsubDevTestBounds()
       unsubDevTestLogs()
+      unsubDevTestInspector()
       unsubDevTestBattery()
       unsubDevTestWireless()
       unsubDevTestWeather()
@@ -1538,5 +1554,6 @@
 </div>
 
 <CustomTooltip />
+<ClassInspectorOverlay />
 
 <style src="./App.css"></style>

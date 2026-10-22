@@ -71,6 +71,7 @@ We recommend using **[go-task / Taskfile](https://taskfile.dev)**, though `.\scr
 When running in `dev` mode or via `task run:debug`:
 
 - **`Ctrl + Shift + D`** (or **`Ctrl + Alt + B`**): Highlights the physical Win32 window clipping region (`SetWindowRgn`) in real time so you can see where clicks register.
+- **`Ctrl + Shift + I`** (or **`Ctrl + Alt + I`**): Toggles the real-time **Class Name Inspector** overlay. Hovering over any element in the main island highlights its bounding box, displays its tag, semantic class names, and `data-vinta` selector in an inline HUD pill, and streams the full CSS selector to the DevTest window where it can be copied with one click.
 - **`Ctrl + Shift + L`** (or **`Ctrl + Alt + L`**): Toggles verbose console logs for window bounds and IPC messages.
 
 ---

@@ -13,6 +13,7 @@
     searchCities,
     type GeocodingResult
   } from '../services/weatherService'
+  import { islandTooltip } from '../services/islandTooltip'
   import {
     Search,
     MapPin,
@@ -305,7 +306,7 @@
       <button
         class="city-pill reset-pill"
         onclick={resetToLiveWeather}
-        title="Clear simulation and fetch live weather"
+        use:islandTooltip={'Clear simulation and fetch live weather'}
       >
         Reset Live
       </button>
@@ -373,7 +374,7 @@
         class="unit-btn"
         class:active={currentUnit === 'kelvin'}
         onclick={() => toggleUnit('kelvin')}
-        title="Kelvin (Nerd Mode)"
+        use:islandTooltip={'Kelvin (Nerd Mode)'}
       >
         K
       </button>
@@ -384,7 +385,7 @@
         class="offline-toggle-btn"
         class:active={isOfflineSim}
         onclick={toggleOfflineMode}
-        title="Simulate Disconnected Network"
+        use:islandTooltip={'Simulate Disconnected Network'}
       >
         <WifiOff size={12} />
         <span>{isOfflineSim ? 'Offline Mode (On)' : 'Simulate Offline'}</span>
@@ -393,7 +394,7 @@
       <button
         class="clear-cache-btn"
         onclick={clearWeatherCache}
-        title="Clear Local Weather Cache to test Zero-Cache Error View"
+        use:islandTooltip={'Clear Local Weather Cache to test Zero-Cache Error View'}
       >
         <Trash2 size={12} />
         <span>Clear Cache</span>
