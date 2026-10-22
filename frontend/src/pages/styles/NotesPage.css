@@ -3,6 +3,7 @@
   flex-direction: column;
   width: 100%;
   height: 100%;
+  padding-top: 48px;
   box-sizing: border-box;
   overflow: hidden;
   position: relative;
@@ -18,7 +19,7 @@
   height: 44px;
   padding: 0 12px;
   background: var(--sticky-banner-bg, rgba(245, 158, 11, 0.16));
-  border-bottom: 1px solid var(--sticky-banner-border, rgba(245, 158, 11, 0.28));
+  border-top: 1px solid var(--sticky-banner-border, rgba(245, 158, 11, 0.28));
   gap: 10px;
   flex-shrink: 0;
   backdrop-filter: blur(12px);
@@ -156,7 +157,7 @@
   height: 32px;
   padding: 0 12px;
   background: rgba(0, 0, 0, 0.2);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
   flex-shrink: 0;
   box-sizing: border-box;
 }
@@ -202,15 +203,14 @@
   color: var(--vinta-text-secondary, rgba(255, 255, 255, 0.65));
 }
 
-/* Main Text Area with Dock clearance */
+/* Main Text Area */
 .notes-main-canvas {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
   position: relative;
-  /* Clears the bottom dock so content is never obscured */
-  padding-bottom: 46px;
+  padding-bottom: 4px;
   box-sizing: border-box;
   text-align: left;
 }
@@ -264,7 +264,7 @@
 .drag-drop-overlay {
   position: absolute;
   inset: 0;
-  bottom: 58px;
+  top: 48px;
   background: rgba(14, 165, 233, 0.2);
   backdrop-filter: blur(4px);
   border: 2px dashed #0ea5e9;
@@ -283,7 +283,7 @@
 .notes-drawer-backdrop {
   position: absolute;
   inset: 0;
-  bottom: 58px;
+  top: 48px;
   background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(4px);
   z-index: 50;
@@ -475,7 +475,7 @@
   gap: 12px;
   flex-shrink: 0;
   background: rgba(255, 255, 255, 0.03);
-  border-bottom: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.08));
+  border-top: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.08));
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   box-sizing: border-box;
@@ -593,7 +593,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  padding: 14px 16px 68px 16px;
+  padding: 8px 16px 12px 16px;
   box-sizing: border-box;
 }
 

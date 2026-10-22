@@ -34,7 +34,8 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding-bottom: 46px;
+  padding-top: 48px;
+  padding-bottom: 0;
   box-sizing: border-box;
   overflow: hidden;
   position: relative;
@@ -75,7 +76,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 12px 18px 24px 18px;
+  padding: 8px 18px 14px 18px;
   box-sizing: border-box;
   width: 100%;
 }
@@ -405,7 +406,7 @@
 /* Bottom Floating Scroll Cue Pill */
 .home-scroll-cue-pill {
   position: absolute;
-  bottom: 60px;
+  bottom: 12px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;

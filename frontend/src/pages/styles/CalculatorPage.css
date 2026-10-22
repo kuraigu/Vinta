@@ -4,7 +4,7 @@
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  padding: 12px 14px 58px 14px; /* Integrated space above Dock */
+  padding: 50px 14px 12px 14px;
   gap: 8px;
   user-select: none;
   overflow: hidden;

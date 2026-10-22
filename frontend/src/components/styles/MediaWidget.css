@@ -361,7 +361,7 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  padding: 10px 14px 52px 14px;
+  padding: 50px 14px 10px 14px;
   height: 100%;
   width: 100%;
   box-sizing: border-box;
@@ -373,8 +373,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 14px 12px 14px;
-  margin: -10px -14px 6px -14px;
+  padding: 6px 14px 2px 14px;
+  margin: 4px -14px 0 -14px;
   border-radius: inherit;
   background-color: transparent;
   border: none;
@@ -494,7 +494,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin: 16px 0 auto 0;
+  margin: 6px 0 auto 0;
   width: 100%;
 }
 
@@ -669,17 +669,17 @@
   position: absolute;
   bottom: calc(100% + 7px);
   transform: translateX(-50%);
-  padding: 3px 7px;
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: #ffffff;
-  background: rgba(14, 14, 20, 0.88);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  padding: 4px 8px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--vinta-text-primary, #ffffff);
+  background: var(--vinta-dock-popover-bg, rgba(20, 20, 24, 0.96));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--vinta-dock-popover-border, rgba(255, 255, 255, 0.12));
   border-radius: 6px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--vinta-dock-popover-shadow, 0 4px 14px rgba(0, 0, 0, 0.5));
   pointer-events: none;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -695,7 +695,8 @@
   transform: translateX(-50%);
   border-width: 4px 4px 0 4px;
   border-style: solid;
-  border-color: rgba(14, 14, 20, 0.88) transparent transparent transparent;
+  border-color: var(--vinta-dock-popover-border, rgba(255, 255, 255, 0.12))
+    transparent transparent transparent;
 }
 
 @keyframes scrubBubbleIn {

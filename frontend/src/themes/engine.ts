@@ -1,4 +1,5 @@
 import type { ThemeInfo } from './types.js'
+import tokensRawCss from './tokens.css?raw'
 import darkGoldManifest from './presets/dark-gold/manifest.json'
 import darkGoldCss from './presets/dark-gold/style.css?raw'
 import nordFrostManifest from './presets/nord-frost/manifest.json'
@@ -82,6 +83,38 @@ export async function getThemeCss(id: string): Promise<string> {
 }
 
 /**
+ * Extracts all declared `--vinta-*` token names from a raw CSS stylesheet.
+ *
+ * @param css - Raw CSS string to scan for custom property declarations.
+ * @returns Unique set of declared `--vinta-*` token names.
+ */
+function extractDeclaredTokens(css: string): Set<string> {
+  const matches = css.match(/--vinta-[a-z0-9-]+(?=\s*:)/g) ?? []
+  return new Set(matches)
+}
+
+/**
+ * Logs a development-only console warning if a theme stylesheet omits tokens declared in `tokens.css`.
+ *
+ * @param themeId - Active theme identifier.
+ * @param themeCss - Raw CSS content of the active theme.
+ */
+function auditThemeTokensInDev(themeId: string, themeCss: string): void {
+  if (!import.meta.env.DEV) {
+    return
+  }
+  const declared = extractDeclaredTokens(tokensRawCss)
+  const implemented = extractDeclaredTokens(themeCss)
+  const missing = [...declared].filter((token) => !implemented.has(token))
+  if (missing.length > 0) {
+    console.warn(
+      `[Vinta Theme Audit] Theme "${themeId}" is missing ${missing.length} token(s) declared in tokens.css (using dark-gold fallback):`,
+      missing
+    )
+  }
+}
+
+/**
  * Applies a theme to the current DOM document by injecting CSS into the vinta.theme cascade layer.
  */
 export async function applyThemeToDOM(themeId: string): Promise<void> {
@@ -102,16 +135,19 @@ export async function applyThemeToDOM(themeId: string): Promise<void> {
   document.documentElement.dataset.theme = normalizedId
 
   if (normalizedId === 'dark-gold') {
+    auditThemeTokensInDev(normalizedId, darkGoldCss)
     styleTag.textContent = `@layer vinta.theme {\n${darkGoldCss}\n}`
     return
   }
 
   if (normalizedId === 'nord-frost') {
+    auditThemeTokensInDev(normalizedId, nordFrostCss)
     styleTag.textContent = `@layer vinta.theme {\n${nordFrostCss}\n}`
     return
   }
 
   if (normalizedId === 'colorblind-safe') {
+    auditThemeTokensInDev(normalizedId, colorblindSafeCss)
     styleTag.textContent = `@layer vinta.theme {\n${colorblindSafeCss}\n}`
     return
   }
@@ -119,9 +155,11 @@ export async function applyThemeToDOM(themeId: string): Promise<void> {
   try {
     const rawCss = await getThemeCss(normalizedId)
     if (rawCss) {
+      auditThemeTokensInDev(normalizedId, rawCss)
       styleTag.textContent = `@layer vinta.theme {\n${rawCss}\n}`
     } else {
-      styleTag.textContent = ''
+      styleTag.textContent = `@layer vinta.theme {\n${darkGoldCss}\n}`
+      document.documentElement.dataset.theme = 'dark-gold'
     }
   } catch (err) {
     console.warn(

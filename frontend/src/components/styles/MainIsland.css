@@ -354,7 +354,7 @@
 }
 
 .view.has-dock {
-  padding-bottom: var(--vinta-dock-height, 42px);
+  padding-top: var(--vinta-dock-height, 48px);
 }
 
 .dock-overlay-wrapper {

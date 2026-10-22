@@ -56,7 +56,7 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    padding: 14px 16px 58px 16px;
+    padding: 50px 16px 14px 16px;
     box-sizing: border-box;
     color: var(--vinta-text-primary);
   }

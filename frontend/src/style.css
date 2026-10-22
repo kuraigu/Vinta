@@ -1,7 +1,8 @@
-@layer vinta.base, vinta.components, vinta.theme;
+@layer vinta.base, vinta.fallback, vinta.components, vinta.theme;
 
 @import './assets/fonts/fonts.css' layer(vinta.base);
 @import './themes/tokens.css' layer(vinta.base);
+@import './themes/presets/dark-gold/style.css' layer(vinta.fallback);
 
 html {
   background-color: transparent;

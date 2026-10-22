@@ -8,21 +8,22 @@ If you are contributing to Vinta's UI, please follow these rules so everything f
 
 ## 1. Theming & Tokens
 
-Vinta uses a dynamic theme engine built on CSS Cascade Layers (`vinta.base`, `vinta.components`, `vinta.theme`) and `.vintatheme` packages.
+Vinta uses a dynamic theme engine built on CSS Cascade Layers (`vinta.base`, `vinta.fallback`, `vinta.components`, `vinta.theme`) and `.vintatheme` packages.
 
 ### CSS Variables & Where to Edit
 
 Always prefer `--vinta-*` CSS variables for core UI surfaces, text, and interactive states so components adapt automatically across themes. You can use custom one-off colors if a specific component genuinely needs it, but standard tokens should be your default.
 
 - **Common examples:** `--vinta-accent-primary`, `--vinta-accent-hover`, `--vinta-accent-active`, `--vinta-accent-muted`, `--vinta-accent-purple`, `--vinta-accent-danger`, `--vinta-accent-warning`, `--vinta-accent-success`.
-- **`tokens.css` is for definitions only:** All base tokens live in `frontend/src/themes/tokens.css`. **Do not** edit `tokens.css` to tweak an existing theme's look. Only touch this file when introducing a brand-new token to the system.
-- **Editing Built-in & Accessibility Presets:** Vinta ships with built-in themes (including dedicated accessibility presets calibrated with Okabe-Ito color scales). To adjust the colors or styling of any built-in preset, edit that preset's individual `style.css` file inside its respective theme directory rather than `tokens.css`.
+- **`tokens.css` is for declarations only:** All base tokens live in `frontend/src/themes/tokens.css` and are assigned the `#ff00ff` sentinel value. **Do not** edit `tokens.css` to tweak an existing theme's look. Only touch this file when introducing a brand-new token to the system.
+- **Editing Built-in & Accessibility Presets:** Vinta ships with built-in themes (`dark-gold` as the default preset, `nord-frost`, and `colorblind-safe` calibrated with Okabe-Ito color scales). To adjust the colors or styling of any built-in preset, edit that preset's individual `style.css` file inside its respective theme directory rather than `tokens.css`.
 
 ### Cascade Layer Hierarchy
 
-1. `@layer vinta.base`: Core foundational token defaults (`frontend/src/themes/tokens.css`).
-2. `@layer vinta.components`: Scoped component styles compiled via Svelte `<style src="...">`.
-3. `@layer vinta.theme`: Active theme overrides injected at runtime into `<style id="vinta-active-theme">`. Anything declared here overrides base and component fallbacks.
+1. `@layer vinta.base`: Core foundational token declarations (`frontend/src/themes/tokens.css`, using `#ff00ff` missing-token sentinels).
+2. `@layer vinta.fallback`: Production fallback preset (`frontend/src/themes/presets/dark-gold/style.css`) ensuring omitted tokens in custom themes or async startup states resolve to `dark-gold` instead of `#ff00ff`.
+3. `@layer vinta.components`: Scoped component styles compiled via Svelte `<style src="...">`.
+4. `@layer vinta.theme`: Active theme overrides injected at runtime into `<style id="vinta-active-theme">`. Anything declared here overrides base, fallback, and component styles.
 
 ### Custom Themes & Copyright Rules
 

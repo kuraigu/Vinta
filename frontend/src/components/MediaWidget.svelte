@@ -935,40 +935,6 @@
 
     <!-- Expanded Player Content -->
     <div class="expanded-card">
-      <!-- Top Bar: Glass Header Backdrop with Media Player title, Center Clock, App Badge -->
-      <div class="top-meta-bar">
-        <div class="app-brand">
-          <span class="app-name-text">Media Player</span>
-          {#if $pinnedMediaSourceStore && media.sourceApp === $pinnedMediaSourceStore}
-            <span
-              class="pinned-source-indicator"
-              use:islandTooltip={{
-                text: `Pinned Source: ${appBrand.name}`,
-                position: 'bottom'
-              }}
-            >
-              <Pin size={10} />
-            </span>
-          {/if}
-        </div>
-
-        <div class="top-clock-wrapper">
-          <Clock expanded={false} />
-        </div>
-
-        <button
-          class="device-badge clickable"
-          use:islandTooltip={{
-            text: `Switch to ${appBrand.name}`,
-            position: 'bottom'
-          }}
-          aria-label="Switch to {appBrand.name}"
-          onclick={handleFocusApp}
-        >
-          <span>{appBrand.name}</span>
-        </button>
-      </div>
-
       {#if isSessionMenuOpen && media.sessions && media.sessions.length > 1}
         <!-- Dedicated Media Sources View Mode -->
         <div class="session-drawer-panel">
@@ -1345,6 +1311,40 @@
           <span class="time-label">{formatTime(media.durationMs)}</span>
         </div>
       {/if}
+
+      <!-- Bottom Bar (Swapped with Top Dock): Media Player title, Center Clock, App Badge -->
+      <div class="top-meta-bar">
+        <div class="app-brand">
+          <span class="app-name-text">Media Player</span>
+          {#if $pinnedMediaSourceStore && media.sourceApp === $pinnedMediaSourceStore}
+            <span
+              class="pinned-source-indicator"
+              use:islandTooltip={{
+                text: `Pinned Source: ${appBrand.name}`,
+                position: 'top'
+              }}
+            >
+              <Pin size={10} />
+            </span>
+          {/if}
+        </div>
+
+        <div class="top-clock-wrapper">
+          <Clock expanded={false} />
+        </div>
+
+        <button
+          class="device-badge clickable"
+          use:islandTooltip={{
+            text: `Switch to ${appBrand.name}`,
+            position: 'top'
+          }}
+          aria-label="Switch to {appBrand.name}"
+          onclick={handleFocusApp}
+        >
+          <span>{appBrand.name}</span>
+        </button>
+      </div>
     </div>
   {/if}
 </div>

@@ -91,6 +91,7 @@
     <div class="dock-group core-group">
       <DockButton
         tooltip="Apps"
+        tooltipPosition="bottom"
         active={activePage === AppsPage}
         onclick={(e: MouseEvent) => AppControls.goApps(navigate, e)}
       >
@@ -99,6 +100,7 @@
 
       <DockButton
         tooltip="Home"
+        tooltipPosition="bottom"
         active={activePage === HomePage}
         onclick={(e: MouseEvent) => AppControls.goHome(navigate, e)}
       >
@@ -111,6 +113,7 @@
       {#if $dockPinnedAppsStore.calendar && $pageVisibilityStore.calendar !== false}
         <DockButton
           tooltip="Calendar"
+          tooltipPosition="bottom"
           active={activePage === CalendarPage}
           onclick={(e: MouseEvent) => AppControls.goCalendar(navigate, e)}
         >
@@ -121,6 +124,7 @@
       {#if $dockPinnedAppsStore.notes && $pageVisibilityStore.notes !== false}
         <DockButton
           tooltip="Notes"
+          tooltipPosition="bottom"
           active={activePage === NotesPage}
           onclick={(e: MouseEvent) => AppControls.goNotes(navigate, e)}
         >
@@ -131,6 +135,7 @@
       {#if $dockPinnedAppsStore.calculator && $pageVisibilityStore.calculator !== false}
         <DockButton
           tooltip="Calculator"
+          tooltipPosition="bottom"
           active={activePage === CalculatorPage}
           onclick={(e: MouseEvent) => AppControls.goCalculator(navigate, e)}
         >
@@ -141,6 +146,7 @@
       {#if $dockPinnedAppsStore.timer && $pageVisibilityStore.timer !== false}
         <DockButton
           tooltip="Timer"
+          tooltipPosition="bottom"
           active={activePage === TimerPage}
           onclick={(e: MouseEvent) => AppControls.goTimer(navigate, e)}
         >
@@ -157,6 +163,7 @@
         {#if showTimerDynamic}
           <DockButton
             tooltip="Timer"
+            tooltipPosition="bottom"
             active={activePage === TimerPage}
             onclick={(e: MouseEvent) => AppControls.goTimer(navigate, e)}
           >
@@ -167,6 +174,7 @@
         {#if showMedia}
           <DockButton
             tooltip="Now Playing"
+            tooltipPosition="bottom"
             active={activePage === MediaPage}
             onclick={(e: MouseEvent) => AppControls.goMedia(navigate, e)}
           >
@@ -177,6 +185,7 @@
         {#if showNotifs}
           <DockButton
             tooltip="Notifications"
+            tooltipPosition="bottom"
             active={activePage === NotificationPage}
             badge={$notifData.length > 0 ? $notifData.length : undefined}
             onclick={(e: MouseEvent) => AppControls.goNotif(navigate, e)}
@@ -193,6 +202,7 @@
     <div class="dock-group settings-group">
       <DockButton
         tooltip="Settings"
+        tooltipPosition="bottom"
         active={activePage === SettingsPage}
         onclick={(e: MouseEvent) => AppControls.goSettings(navigate, e)}
       >
@@ -205,7 +215,7 @@
 <style>
   .dock-container {
     position: absolute;
-    bottom: 6px;
+    top: 12px;
     left: 0;
     right: 0;
     display: flex;
