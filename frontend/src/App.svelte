@@ -680,17 +680,31 @@
     resetHideTimer()
   }
 
+  let wasRingingAlarm = false
+
   /**
-   * Automatically reveals the island and displays the ringing alarm when triggered.
+   * Automatically reveals the island and displays the ringing alarm when triggered,
+   * and returns the minimized island to the fallback page when dismissed or snoozed.
    */
   function handleRingingAlarmNavigation(): void {
     const ringing = $timerAppStore.ringingAlarm
     if (ringing) {
+      wasRingingAlarm = true
       if (isHidden) {
         showWidget()
       }
       if (activePage !== TimerPage) {
         navigateTo(TimerPage, timerConfig, false)
+      }
+    } else if (wasRingingAlarm) {
+      wasRingingAlarm = false
+      if (
+        !expanded &&
+        activePage === TimerPage &&
+        !isAnyTimerRunning($timerAppStore)
+      ) {
+        const fallback = getFallbackPage()
+        navigateTo(fallback.page as Component, fallback.config, false)
       }
     }
   }
