@@ -84,7 +84,7 @@
   }
 
   function toggleTheme() {
-    $themeStore = $themeStore === 'oled-dark' ? 'nord-frost' : 'oled-dark'
+    $themeStore = $themeStore === 'dark-gold' ? 'nord-frost' : 'dark-gold'
     try {
       Events.Emit('devtest-theme', { theme: $themeStore })
     } catch {}
@@ -107,7 +107,7 @@
   })
 
   $effect(function handleDevTestThemeChange() {
-    const currentTheme = $themeStore || 'oled-dark'
+    const currentTheme = $themeStore || 'dark-gold'
     applyThemeToDOM(currentTheme)
   })
 </script>
@@ -161,7 +161,7 @@
       </button>
 
       <button class="action-btn" onclick={toggleTheme} title="Toggle Theme">
-        {#if $themeStore === 'oled-dark'}
+        {#if $themeStore === 'dark-gold'}
           <Sun size={14} strokeWidth={2.2} />
         {:else}
           <Moon size={14} strokeWidth={2.2} />

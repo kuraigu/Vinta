@@ -20,13 +20,7 @@
   }: Props = $props()
 </script>
 
-<button
-  type="button"
-  class="action-capsule-btn {className}"
-  {onclick}
-  use:islandTooltip={tooltip || label}
-  aria-label={label}
->
+<button type="button" class="action-capsule-btn {className}" {onclick}>
   {#if IconComponent}
     <IconComponent size={12} class="capsule-icon" />
   {/if}
@@ -56,8 +50,9 @@
   }
 
   .action-capsule-btn:hover {
-    background: var(--vinta-collapse-btn-hover-bg, var(--vinta-hover));
+    background: rgba(255, 255, 255, 0.14);
     color: var(--vinta-text-primary);
+    border-color: rgba(255, 255, 255, 0.22);
   }
 
   .action-capsule-btn:active {

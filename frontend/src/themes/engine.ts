@@ -1,11 +1,10 @@
 import type { ThemeInfo } from './types.js'
-import oledDarkManifest from './presets/oled-dark/manifest.json'
+import darkGoldManifest from './presets/dark-gold/manifest.json'
+import darkGoldCss from './presets/dark-gold/style.css?raw'
 import nordFrostManifest from './presets/nord-frost/manifest.json'
 import nordFrostCss from './presets/nord-frost/style.css?raw'
 import colorblindSafeManifest from './presets/colorblind-safe/manifest.json'
 import colorblindSafeCss from './presets/colorblind-safe/style.css?raw'
-import darkgoldSafeManifest from './presets/dark-gold/manifest.json'
-import darkgoldSafeCss from './presets/dark-gold/style.css?raw'
 import {
   ListThemes as listThemesFromBackend,
   GetThemeCSS as getThemeCssFromBackend,
@@ -20,9 +19,9 @@ const STYLE_TAG_ID = 'vinta-active-theme'
  */
 export const BUILTIN_THEMES: ThemeInfo[] = [
   {
-    manifest: oledDarkManifest as ThemeInfo['manifest'],
+    manifest: darkGoldManifest as ThemeInfo['manifest'],
     isBuiltIn: true,
-    path: 'frontend/src/themes/presets/oled-dark'
+    path: 'frontend/src/themes/presets/dark-gold'
   },
   {
     manifest: nordFrostManifest as ThemeInfo['manifest'],
@@ -33,11 +32,6 @@ export const BUILTIN_THEMES: ThemeInfo[] = [
     manifest: colorblindSafeManifest as ThemeInfo['manifest'],
     isBuiltIn: true,
     path: 'frontend/src/themes/presets/colorblind-safe'
-  },
-  {
-    manifest: darkgoldSafeManifest as ThemeInfo['manifest'],
-    isBuiltIn: true,
-    path: 'frontend/src/themes/presets/dark-gold'
   }
 ]
 
@@ -75,17 +69,14 @@ export async function openThemesFolder(): Promise<void> {
  * Retrieves the entry CSS stylesheet content for a specific theme ID.
  */
 export async function getThemeCss(id: string): Promise<string> {
-  if (id === 'oled-dark') {
-    return ''
+  if (id === 'dark-gold') {
+    return darkGoldCss
   }
   if (id === 'nord-frost') {
     return nordFrostCss
   }
   if (id === 'colorblind-safe') {
     return colorblindSafeCss
-  }
-  if (id === 'dark-gold') {
-    return darkgoldSafeCss
   }
   return await getThemeCssFromBackend(id)
 }
@@ -107,11 +98,11 @@ export async function applyThemeToDOM(themeId: string): Promise<void> {
     document.head.appendChild(styleTag)
   }
 
-  const normalizedId = themeId || 'oled-dark'
+  const normalizedId = themeId || 'dark-gold'
   document.documentElement.dataset.theme = normalizedId
 
-  if (normalizedId === 'oled-dark') {
-    styleTag.textContent = ''
+  if (normalizedId === 'dark-gold') {
+    styleTag.textContent = `@layer vinta.theme {\n${darkGoldCss}\n}`
     return
   }
 
@@ -125,11 +116,6 @@ export async function applyThemeToDOM(themeId: string): Promise<void> {
     return
   }
 
-  if (normalizedId === 'dark-gold') {
-    styleTag.textContent = `@layer vinta.theme {\n${darkgoldSafeCss}\n}`
-    return
-  }
-
   try {
     const rawCss = await getThemeCss(normalizedId)
     if (rawCss) {
@@ -139,10 +125,10 @@ export async function applyThemeToDOM(themeId: string): Promise<void> {
     }
   } catch (err) {
     console.warn(
-      `Failed to load theme "${normalizedId}", falling back to oled-dark:`,
+      `Failed to load theme "${normalizedId}", falling back to dark-gold:`,
       err
     )
-    styleTag.textContent = ''
-    document.documentElement.dataset.theme = 'oled-dark'
+    styleTag.textContent = `@layer vinta.theme {\n${darkGoldCss}\n}`
+    document.documentElement.dataset.theme = 'dark-gold'
   }
 }

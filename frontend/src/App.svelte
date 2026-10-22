@@ -1347,7 +1347,7 @@
   })
 
   $effect(function handleActiveThemeChange() {
-    const currentTheme = $themeStore || 'oled-dark'
+    const currentTheme = $themeStore || 'dark-gold'
     applyThemeToDOM(currentTheme)
   })
 </script>
