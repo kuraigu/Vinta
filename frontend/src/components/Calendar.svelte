@@ -247,6 +247,10 @@
     return `${h}:${m} ${ampm}`
   }
 
+  const AGENDA_DIAMONDS = Array.from({ length: 30 }, (_, i) => i)
+  const AGENDA_DIAMOND_ROWS = [0, 1, 2, 3, 4, 5]
+  const DIAMOND_OPACITY_VARIANTS = ['v1', 'v3', 'v2', 'v4', 'v1', 'v4', 'v3', 'v2']
+
   function handlePrev() {
     if (viewMode === 'month') {
       viewDate = new Date(viewYear, viewMonth - 1, 1)
@@ -488,6 +492,24 @@
                         </div>
                       </div>
 
+                      <div class="agenda-diamond-pattern" aria-hidden="true">
+                        {#each AGENDA_DIAMOND_ROWS as r (r)}
+                          <div class="diamond-row" class:offset={r % 2 !== 0}>
+                            {#each AGENDA_DIAMONDS as d (d)}
+                              {@const isLight = (r * 3 + d) % 2 === 0}
+                              {@const variant =
+                                DIAMOND_OPACITY_VARIANTS[
+                                  (r * 5 + d * 3) %
+                                    DIAMOND_OPACITY_VARIANTS.length
+                                ]}
+                              <span
+                                class="diamond-cell {isLight ? 'light' : 'dark'} {variant}"
+                              ></span>
+                            {/each}
+                          </div>
+                        {/each}
+                      </div>
+
                       <div class="tray-card-actions">
                         <button
                           type="button"
@@ -697,6 +719,23 @@
                               {event.location}
                             </span>
                           {/if}
+                        </div>
+                        <div class="agenda-diamond-pattern compact" aria-hidden="true">
+                          {#each AGENDA_DIAMOND_ROWS as r (r)}
+                            <div class="diamond-row" class:offset={r % 2 !== 0}>
+                              {#each AGENDA_DIAMONDS as d (d)}
+                                {@const isLight = (r * 3 + d) % 2 === 0}
+                                {@const variant =
+                                  DIAMOND_OPACITY_VARIANTS[
+                                    (r * 5 + d * 3) %
+                                      DIAMOND_OPACITY_VARIANTS.length
+                                  ]}
+                                <span
+                                  class="diamond-cell {isLight ? 'light' : 'dark'} {variant}"
+                                ></span>
+                              {/each}
+                            </div>
+                          {/each}
                         </div>
                         <div class="tray-card-actions">
                           <button

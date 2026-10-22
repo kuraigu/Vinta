@@ -609,69 +609,40 @@
   padding: 6px 10px;
   border-radius: 10px;
   transition: all 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
-  color: #ffffff;
+  color: var(--vinta-agenda-card-text, #ffffff);
   box-sizing: border-box;
+  overflow: hidden;
 }
 
 .tray-event-card.card-color-indigo {
-  background: linear-gradient(
-    135deg,
-    #4338ca 0%,
-    #4f46e5 50%,
-    #6366f1 100%
-  ) !important;
+  background: var(--vinta-agenda-indigo-bg) !important;
   border: none !important;
-  box-shadow: 0 3px 12px rgba(79, 70, 229, 0.28) !important;
+  box-shadow: var(--vinta-agenda-indigo-shadow) !important;
 }
 .tray-event-card.card-color-emerald {
-  background: linear-gradient(
-    135deg,
-    #059669 0%,
-    #10b981 50%,
-    #34d399 100%
-  ) !important;
+  background: var(--vinta-agenda-emerald-bg) !important;
   border: none !important;
-  box-shadow: 0 3px 12px rgba(5, 150, 105, 0.28) !important;
+  box-shadow: var(--vinta-agenda-emerald-shadow) !important;
 }
 .tray-event-card.card-color-amber {
-  background: linear-gradient(
-    135deg,
-    #d97706 0%,
-    #ea580c 50%,
-    #f97316 100%
-  ) !important;
+  background: var(--vinta-agenda-amber-bg) !important;
   border: none !important;
-  box-shadow: 0 3px 12px rgba(234, 88, 12, 0.28) !important;
+  box-shadow: var(--vinta-agenda-amber-shadow) !important;
 }
 .tray-event-card.card-color-purple {
-  background: linear-gradient(
-    135deg,
-    #7c3aed 0%,
-    #8b5cf6 50%,
-    #a855f7 100%
-  ) !important;
+  background: var(--vinta-agenda-purple-bg) !important;
   border: none !important;
-  box-shadow: 0 3px 12px rgba(124, 58, 237, 0.28) !important;
+  box-shadow: var(--vinta-agenda-purple-shadow) !important;
 }
 .tray-event-card.card-color-rose {
-  background: linear-gradient(
-    135deg,
-    #e11d48 0%,
-    #f43f5e 50%,
-    #fb7185 100%
-  ) !important;
+  background: var(--vinta-agenda-rose-bg) !important;
   border: none !important;
-  box-shadow: 0 3px 12px rgba(225, 29, 72, 0.28) !important;
+  box-shadow: var(--vinta-agenda-rose-shadow) !important;
 }
 .tray-event-card.card-color-sky {
-  background: linear-gradient(
-    135deg,
-    #0284c7 0%,
-    #0ea5e9 50%,
-    #38bdf8 100%
-  ) !important;
+  background: var(--vinta-agenda-sky-bg) !important;
   border: none !important;
-  box-shadow: 0 3px 12px rgba(14, 165, 233, 0.28) !important;
+  box-shadow: var(--vinta-agenda-sky-shadow) !important;
 }
 
 .tray-card-main {
@@ -718,6 +689,8 @@
 }
 
 .tray-card-actions {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -865,108 +838,163 @@
 }
 
 .agenda-card {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
   padding: 12px 16px;
   border-radius: 14px;
-  color: #ffffff;
+  color: var(--vinta-agenda-card-text, #ffffff);
   box-sizing: border-box;
+  overflow: hidden;
   transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .agenda-card:hover {
   transform: translateY(-1px);
+  filter: brightness(1.04);
 }
 
 .agenda-card.card-color-indigo {
-  background: linear-gradient(
-    135deg,
-    #4338ca 0%,
-    #4f46e5 50%,
-    #6366f1 100%
-  ) !important;
+  background: var(--vinta-agenda-indigo-bg) !important;
   border: none !important;
-  box-shadow: 0 4px 16px rgba(79, 70, 229, 0.28) !important;
-}
-.agenda-card.card-color-indigo:hover {
-  box-shadow: 0 6px 20px rgba(79, 70, 229, 0.38) !important;
+  box-shadow: var(--vinta-agenda-indigo-shadow) !important;
 }
 
 .agenda-card.card-color-sky {
-  background: linear-gradient(
-    135deg,
-    #0284c7 0%,
-    #0ea5e9 50%,
-    #38bdf8 100%
-  ) !important;
+  background: var(--vinta-agenda-sky-bg) !important;
   border: none !important;
-  box-shadow: 0 4px 16px rgba(14, 165, 233, 0.28) !important;
-}
-.agenda-card.card-color-sky:hover {
-  box-shadow: 0 6px 20px rgba(14, 165, 233, 0.38) !important;
+  box-shadow: var(--vinta-agenda-sky-shadow) !important;
 }
 
 .agenda-card.card-color-emerald {
-  background: linear-gradient(
-    135deg,
-    #059669 0%,
-    #10b981 50%,
-    #34d399 100%
-  ) !important;
+  background: var(--vinta-agenda-emerald-bg) !important;
   border: none !important;
-  box-shadow: 0 4px 16px rgba(5, 150, 105, 0.28) !important;
-}
-.agenda-card.card-color-emerald:hover {
-  box-shadow: 0 6px 20px rgba(5, 150, 105, 0.38) !important;
+  box-shadow: var(--vinta-agenda-emerald-shadow) !important;
 }
 
 .agenda-card.card-color-amber {
-  background: linear-gradient(
-    135deg,
-    #d97706 0%,
-    #ea580c 50%,
-    #f97316 100%
-  ) !important;
+  background: var(--vinta-agenda-amber-bg) !important;
   border: none !important;
-  box-shadow: 0 4px 16px rgba(234, 88, 12, 0.28) !important;
-}
-.agenda-card.card-color-amber:hover {
-  box-shadow: 0 6px 20px rgba(234, 88, 12, 0.38) !important;
+  box-shadow: var(--vinta-agenda-amber-shadow) !important;
 }
 
 .agenda-card.card-color-purple {
-  background: linear-gradient(
-    135deg,
-    #7c3aed 0%,
-    #8b5cf6 50%,
-    #a855f7 100%
-  ) !important;
+  background: var(--vinta-agenda-purple-bg) !important;
   border: none !important;
-  box-shadow: 0 4px 16px rgba(124, 58, 237, 0.28) !important;
-}
-.agenda-card.card-color-purple:hover {
-  box-shadow: 0 6px 20px rgba(124, 58, 237, 0.38) !important;
+  box-shadow: var(--vinta-agenda-purple-shadow) !important;
 }
 
 .agenda-card.card-color-rose {
-  background: linear-gradient(
-    135deg,
-    #e11d48 0%,
-    #f43f5e 50%,
-    #fb7185 100%
-  ) !important;
+  background: var(--vinta-agenda-rose-bg) !important;
   border: none !important;
-  box-shadow: 0 4px 16px rgba(225, 29, 72, 0.28) !important;
+  box-shadow: var(--vinta-agenda-rose-shadow) !important;
 }
-.agenda-card.card-color-rose:hover {
-  box-shadow: 0 6px 20px rgba(225, 29, 72, 0.38) !important;
+
+.agenda-diamond-pattern {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+  mask-image: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.08) 0%,
+    rgba(0, 0, 0, 0.55) 28%,
+    rgba(0, 0, 0, 0.95) 55%,
+    rgba(0, 0, 0, 0.35) 85%,
+    rgba(0, 0, 0, 0.1) 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.08) 0%,
+    rgba(0, 0, 0, 0.55) 28%,
+    rgba(0, 0, 0, 0.95) 55%,
+    rgba(0, 0, 0, 0.35) 85%,
+    rgba(0, 0, 0, 0.1) 100%
+  );
+}
+
+.diamond-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -1.5px 0;
+  flex-shrink: 0;
+}
+
+.diamond-row.offset {
+  transform: translateX(10px);
+}
+
+.diamond-cell {
+  width: 12px;
+  height: 12px;
+  border-radius: 1.5px;
+  transform: rotate(45deg);
+  flex-shrink: 0;
+}
+
+.agenda-diamond-pattern.compact .diamond-row {
+  gap: 6px;
+  margin: -1px 0;
+}
+
+.agenda-diamond-pattern.compact .diamond-row.offset {
+  transform: translateX(8px);
+}
+
+.agenda-diamond-pattern.compact .diamond-cell {
+  width: 9.5px;
+  height: 9.5px;
+  border-radius: 1.2px;
+}
+
+.diamond-cell.dark {
+  background: var(--vinta-agenda-diamond-dark, rgba(0, 0, 0, 0.24));
+}
+
+.diamond-cell.light {
+  background: var(--vinta-agenda-diamond-light, rgba(255, 255, 255, 0.24));
+}
+
+.diamond-cell.v1 {
+  opacity: 0.45;
+}
+
+.diamond-cell.v2 {
+  opacity: 0.7;
+}
+
+.diamond-cell.v3 {
+  opacity: 0.9;
+}
+
+.diamond-cell.v4 {
+  opacity: 1;
 }
 
 .agenda-card-left {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   gap: 3px;
+  min-width: 0;
+  flex: 1;
+}
+
+.tray-card-main {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
   flex: 1;
 }

@@ -96,6 +96,34 @@
   --vinta-media-btn-active-text: #000000;
   --vinta-media-btn-active-border: rgba(86, 180, 233, 0.7);
   --vinta-media-btn-active-glow: 0 0 10px rgba(86, 180, 233, 0.6);
+
+  /* NOTES CARD TOKENS */
+  --vinta-note-card-bg: #161b22;
+  --vinta-note-card-hover-bg: #21262d;
+  --vinta-note-card-border: rgba(240, 246, 252, 0.2);
+  --vinta-note-yellow: #f0e442;
+  --vinta-note-green: #009e73;
+  --vinta-note-pink: #cc79a7;
+  --vinta-note-purple: #cc79a7;
+  --vinta-note-blue: #56b4e9;
+  --vinta-note-charcoal: #8b949e;
+
+  /* CALENDAR AGENDA CARD TOKENS */
+  --vinta-agenda-card-text: #ffffff;
+  --vinta-agenda-diamond-dark: rgba(0, 0, 0, 0.28);
+  --vinta-agenda-diamond-light: rgba(255, 255, 255, 0.28);
+  --vinta-agenda-indigo-bg: linear-gradient(135deg, #005b96 0%, #0072b2 50%, #56b4e9 100%);
+  --vinta-agenda-indigo-shadow: 0 4px 16px rgba(0, 114, 178, 0.3);
+  --vinta-agenda-emerald-bg: linear-gradient(135deg, #006d4f 0%, #009e73 50%, #34d399 100%);
+  --vinta-agenda-emerald-shadow: 0 4px 16px rgba(0, 158, 115, 0.3);
+  --vinta-agenda-amber-bg: linear-gradient(135deg, #b87f00 0%, #e69f00 50%, #f0e442 100%);
+  --vinta-agenda-amber-shadow: 0 4px 16px rgba(230, 159, 0, 0.3);
+  --vinta-agenda-purple-bg: linear-gradient(135deg, #9a537b 0%, #cc79a7 50%, #e29ec4 100%);
+  --vinta-agenda-purple-shadow: 0 4px 16px rgba(204, 121, 167, 0.3);
+  --vinta-agenda-rose-bg: linear-gradient(135deg, #a34700 0%, #d55e00 50%, #e69f00 100%);
+  --vinta-agenda-rose-shadow: 0 4px 16px rgba(213, 94, 0, 0.3);
+  --vinta-agenda-sky-bg: linear-gradient(135deg, #0072b2 0%, #3ea2db 50%, #56b4e9 100%);
+  --vinta-agenda-sky-shadow: 0 4px 16px rgba(86, 180, 233, 0.3);
 }
 
 /* Calendar component overrides */
