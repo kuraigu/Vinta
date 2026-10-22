@@ -56,7 +56,7 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    padding: 50px 16px 14px 16px;
+    padding: var(--vinta-dock-clearance, 56px) 16px 0 16px;
     box-sizing: border-box;
     color: var(--vinta-text-primary);
   }
@@ -110,6 +110,7 @@
     gap: 6px;
     border-right: 1px solid var(--vinta-border);
     padding-right: 10px;
+    padding-bottom: 14px;
     flex-shrink: 0;
     box-sizing: border-box;
   }

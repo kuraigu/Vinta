@@ -24,9 +24,9 @@
     Calculator,
     Timer,
     Calendar as CalendarIcon,
-    CloudSun,
-    X
+    CloudSun
   } from 'lucide-svelte'
+  import SearchInput from '../components/SearchInput.svelte'
   import HomePage, { config as homeConfig } from './HomePage.svelte'
   import NotificationPage, {
     config as notifConfig
@@ -253,32 +253,11 @@
     <div class="header-left">
       <span class="title">Apps</span>
     </div>
-    <div class="search-box">
-      <Search size={13} class="search-icon" />
-      <input
-        type="text"
-        placeholder="Search apps..."
-        bind:value={searchQuery}
-        onclick={(e) => e.stopPropagation()}
-        onkeydown={(e) => {
-          if (e.key === 'Escape') {
-            searchQuery = ''
-          }
-        }}
-      />
-      {#if searchQuery.trim().length > 0}
-        <button
-          class="clear-search-btn"
-          aria-label="Clear search query"
-          onclick={(e) => {
-            e.stopPropagation()
-            searchQuery = ''
-          }}
-        >
-          <X size={11} />
-        </button>
-      {/if}
-    </div>
+    <SearchInput
+      bind:value={searchQuery}
+      placeholder="Search apps..."
+      maxWidth="175px"
+    />
   </div>
 </div>
 

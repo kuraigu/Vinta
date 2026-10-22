@@ -31,6 +31,7 @@
   import ActionCapsule from './ActionCapsule.svelte'
   import CustomDatePicker from './CustomDatePicker.svelte'
   import CustomTimePicker from './CustomTimePicker.svelte'
+  import DiamondPattern from './patterns/DiamondPattern.svelte'
   import HorizontalTabSelection, {
     type TabItem
   } from './HorizontalTabSelection.svelte'
@@ -83,13 +84,13 @@
       id: 'calendar',
       label: 'Calendar',
       icon: CalendarDays,
-      tooltip: 'Month overview'
+      tooltip: '' // Do not add tooltip, not necessary and ugly
     },
     {
       id: 'agenda',
       label: 'Agenda',
       icon: ListFilter,
-      tooltip: 'Scheduled events agenda'
+      tooltip: '' // Do not add tooltip, not necessary and ugly
     }
   ]
 
@@ -200,6 +201,19 @@
   }
   let selectedDateLabel = $derived.by(computeSelectedDateLabel)
 
+  function computeTodayEvents(): CalendarEvent[] {
+    const todayKey = formatDateKey(realToday)
+    return $calendarStore.events
+      .filter((e) => e.date === todayKey)
+      .sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''))
+  }
+  let todayEvents = $derived.by(computeTodayEvents)
+
+  function computeTodayDateLabel(): string {
+    return formatUserDate(realToday, $dateFormatStore)
+  }
+  let todayDateLabel = $derived.by(computeTodayDateLabel)
+
   function computeAllAgendaEvents(): CalendarEvent[] {
     return [...$calendarStore.events].sort((a, b) => {
       const cmpDate = a.date.localeCompare(b.date)
@@ -246,10 +260,6 @@
     if (h === 0) h = 12
     return `${h}:${m} ${ampm}`
   }
-
-  const AGENDA_DIAMONDS = Array.from({ length: 30 }, (_, i) => i)
-  const AGENDA_DIAMOND_ROWS = [0, 1, 2, 3, 4, 5]
-  const DIAMOND_OPACITY_VARIANTS = ['v1', 'v3', 'v2', 'v4', 'v1', 'v4', 'v3', 'v2']
 
   function handlePrev() {
     if (viewMode === 'month') {
@@ -492,23 +502,7 @@
                         </div>
                       </div>
 
-                      <div class="agenda-diamond-pattern" aria-hidden="true">
-                        {#each AGENDA_DIAMOND_ROWS as r (r)}
-                          <div class="diamond-row" class:offset={r % 2 !== 0}>
-                            {#each AGENDA_DIAMONDS as d (d)}
-                              {@const isLight = (r * 3 + d) % 2 === 0}
-                              {@const variant =
-                                DIAMOND_OPACITY_VARIANTS[
-                                  (r * 5 + d * 3) %
-                                    DIAMOND_OPACITY_VARIANTS.length
-                                ]}
-                              <span
-                                class="diamond-cell {isLight ? 'light' : 'dark'} {variant}"
-                              ></span>
-                            {/each}
-                          </div>
-                        {/each}
-                      </div>
+                      <DiamondPattern align="center" />
 
                       <div class="tray-card-actions">
                         <button
@@ -541,8 +535,98 @@
         {/if}
       </div>
     {:else}
-      <div class="calendar-card widget-mode">
-        {@render monthGridView()}
+      <div class="calendar-card widget-mode home-agenda-only">
+        <div class="agenda-tray-header home-agenda-header">
+          <div class="agenda-tray-title">
+            <CalendarDays size={13} />
+            <span>{todayDateLabel}</span>
+            {#if todayEvents.length > 0}
+              <span class="agenda-tray-subtitle">
+                • {todayEvents.length}
+                {todayEvents.length === 1 ? 'event' : 'events'}
+              </span>
+            {/if}
+          </div>
+          <div class="agenda-tray-actions">
+            <button
+              type="button"
+              class="tray-add-btn"
+              onclick={() => handleOpenAddModal(formatDateKey(realToday))}
+            >
+              <Plus size={12} />
+              <span>Add Event</span>
+            </button>
+            {#if showGoToCalendar}
+              <ActionCapsule
+                label="Calendar"
+                onclick={handleOpenCalendarPage}
+                tooltip="Open full Calendar page"
+              />
+            {/if}
+          </div>
+        </div>
+
+        <div class="calendar-tray-scroll-container home-agenda-list-wrap">
+          {#if todayEvents.length === 0}
+            <div class="tray-event-card tray-empty-card">
+              <div class="tray-card-main">
+                <span class="tray-time-chip">All Day</span>
+                <span class="tray-card-title">Free all day</span>
+              </div>
+              <DiamondPattern align="center" size="compact" />
+            </div>
+          {:else}
+            <ScrollView class="calendar-tray-scroll-view">
+              <div class="agenda-tray-list">
+                {#each todayEvents as event (event.id)}
+                  <div class="tray-event-card card-color-{event.color}">
+                    <div class="tray-card-main">
+                      <span class="tray-time-chip">
+                        {#if event.isAllDay}
+                          All Day
+                        {:else if event.startTime}
+                          {formatEventTime(event.startTime)}{event.endTime
+                            ? ` - ${formatEventTime(event.endTime)}`
+                            : ''}
+                        {:else}
+                          Event
+                        {/if}
+                      </span>
+                      <span class="tray-card-title">{event.title}</span>
+                      {#if event.location}
+                        <span class="tray-card-loc">
+                          <MapPin size={9} />
+                          {event.location}
+                        </span>
+                      {/if}
+                    </div>
+                    <DiamondPattern align="center" size="compact" />
+                    <div class="tray-card-actions">
+                      <button
+                        type="button"
+                        class="tray-card-action-btn"
+                        onclick={() => handleOpenEditModal(event)}
+                        aria-label="Edit event"
+                        use:islandTooltip={'Edit event'}
+                      >
+                        <Pencil size={11} />
+                      </button>
+                      <button
+                        type="button"
+                        class="tray-card-action-btn danger"
+                        onclick={() => deleteCalendarEvent(event.id)}
+                        aria-label="Delete event"
+                        use:islandTooltip={'Delete event'}
+                      >
+                        <Trash2 size={11} />
+                      </button>
+                    </div>
+                  </div>
+                {/each}
+              </div>
+            </ScrollView>
+          {/if}
+        </div>
       </div>
     {/if}
 
@@ -694,6 +778,7 @@
                     <span class="tray-time-chip">All Day</span>
                     <span class="tray-card-title">Free all day</span>
                   </div>
+                  <DiamondPattern align="center" size="compact" />
                 </div>
               {:else}
                 <ScrollView class="calendar-tray-scroll-view">
@@ -720,23 +805,7 @@
                             </span>
                           {/if}
                         </div>
-                        <div class="agenda-diamond-pattern compact" aria-hidden="true">
-                          {#each AGENDA_DIAMOND_ROWS as r (r)}
-                            <div class="diamond-row" class:offset={r % 2 !== 0}>
-                              {#each AGENDA_DIAMONDS as d (d)}
-                                {@const isLight = (r * 3 + d) % 2 === 0}
-                                {@const variant =
-                                  DIAMOND_OPACITY_VARIANTS[
-                                    (r * 5 + d * 3) %
-                                      DIAMOND_OPACITY_VARIANTS.length
-                                  ]}
-                                <span
-                                  class="diamond-cell {isLight ? 'light' : 'dark'} {variant}"
-                                ></span>
-                              {/each}
-                            </div>
-                          {/each}
-                        </div>
+                        <DiamondPattern align="center" size="compact" />
                         <div class="tray-card-actions">
                           <button
                             type="button"

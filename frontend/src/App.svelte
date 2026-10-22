@@ -46,7 +46,7 @@
     getActiveSatelliteFootprint,
     resyncAllSatellites
   } from './stores/satellites'
-  import { applyThemeToDOM } from './themes/engine'
+  import { applyThemeToDOM, refreshStylesheetsAndTheme } from './themes/engine'
   import {
     themeStore,
     autoHideStore,
@@ -1205,27 +1205,48 @@
       onModeSwitchHotkey: handleModeSwitchHotkey
     })
 
+    const pageMappings: Record<
+      string,
+      { page: Component; config: IslandConfig }
+    > = {
+      home: { page: HomePage, config: homeConfig },
+      media: { page: MediaPage, config: mediaConfig },
+      notifications: { page: NotificationPage, config: notifConfig },
+      notes: { page: NotesPage, config: notesConfig },
+      apps: { page: AppsPage, config: appsConfig },
+      settings: { page: SettingsPage, config: settingsConfig },
+      calculator: { page: CalculatorPage, config: calcConfig },
+      timer: { page: TimerPage, config: timerConfig },
+      calendar: { page: CalendarPage, config: calendarConfig },
+      weather: { page: WeatherPage, config: weatherConfig }
+    }
+
+    try {
+      const savedDevReload = sessionStorage.getItem('vinta_devtest_reload_state')
+      if (savedDevReload) {
+        sessionStorage.removeItem('vinta_devtest_reload_state')
+        const parsed = JSON.parse(savedDevReload) as {
+          mode?: string
+          expand?: boolean
+          pinned?: boolean
+        }
+        if (typeof parsed.pinned === 'boolean') {
+          $devPinnedStore = parsed.pinned
+        }
+        if (parsed.mode && pageMappings[parsed.mode]) {
+          const match = pageMappings[parsed.mode]
+          navigateTo(match.page, match.config, Boolean(parsed.expand))
+        }
+      }
+    } catch {
+      // Ignore storage errors
+    }
+
     const unsubDevTestNavigate = Events.On(
       'devtest-navigate',
       (ev: { data: unknown }) => {
         const data = ev?.data as { mode?: string; expand?: boolean }
         if (!data?.mode) return
-
-        const pageMappings: Record<
-          string,
-          { page: Component; config: IslandConfig }
-        > = {
-          home: { page: HomePage, config: homeConfig },
-          media: { page: MediaPage, config: mediaConfig },
-          notifications: { page: NotificationPage, config: notifConfig },
-          notes: { page: NotesPage, config: notesConfig },
-          apps: { page: AppsPage, config: appsConfig },
-          settings: { page: SettingsPage, config: settingsConfig },
-          calculator: { page: CalculatorPage, config: calcConfig },
-          timer: { page: TimerPage, config: timerConfig },
-          calendar: { page: CalendarPage, config: calendarConfig },
-          weather: { page: WeatherPage, config: weatherConfig }
-        }
 
         const match = pageMappings[data.mode]
         if (match) {
@@ -1252,6 +1273,37 @@
         if (data?.theme) {
           $themeStore = data.theme
         }
+      }
+    )
+
+    const unsubDevTestReloadCss = Events.On(
+      'devtest-reload-css',
+      async (ev: { data: unknown }) => {
+        const data = ev?.data as {
+          theme?: string
+          mode?: string
+          expand?: boolean
+          pinned?: boolean
+        }
+        const targetTheme = data?.theme || $themeStore || 'dark-gold'
+        await refreshStylesheetsAndTheme(targetTheme)
+        try {
+          sessionStorage.setItem(
+            'vinta_devtest_reload_state',
+            JSON.stringify({
+              mode: data?.mode || $activePageIdStore || 'home',
+              expand:
+                typeof data?.expand === 'boolean' ? data.expand : expanded,
+              pinned:
+                typeof data?.pinned === 'boolean'
+                  ? data.pinned
+                  : $devPinnedStore
+            })
+          )
+        } catch {
+          // Ignore storage errors
+        }
+        window.location.reload()
       }
     )
 
@@ -1351,6 +1403,7 @@
       unsubDevTestNavigate()
       unsubDevTestPin()
       unsubDevTestTheme()
+      unsubDevTestReloadCss()
       unsubDevTestBounds()
       unsubDevTestLogs()
       unsubDevTestInspector()

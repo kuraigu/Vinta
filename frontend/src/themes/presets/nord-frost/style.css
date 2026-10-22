@@ -52,6 +52,7 @@
   --vinta-contrast-hover: rgba(76, 86, 106, 0.8);
 
   /* GEOMETRY & LAYOUT */
+  --vinta-dock-clearance: 56px;
   --vinta-radius-island: 18px;
   --vinta-radius-card: 16px;
   --vinta-radius-button: 10px;
@@ -124,4 +125,6 @@
   --vinta-agenda-rose-shadow: 0 4px 16px rgba(191, 97, 106, 0.25);
   --vinta-agenda-sky-bg: linear-gradient(135deg, #5e81ac 0%, #81a1c1 50%, #88c0d0 100%);
   --vinta-agenda-sky-shadow: 0 4px 16px rgba(136, 192, 208, 0.28);
+  --vinta-agenda-free-bg: linear-gradient(135deg, #3b4252 0%, #434c5e 50%, #4c566a 100%);
+  --vinta-agenda-free-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
 }

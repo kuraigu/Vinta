@@ -2,7 +2,7 @@
   /**
    * WeatherArt
    *
-   * Reusable vector weather illustration supporting rich hero artwork
+   * Reusable vector weather illustration supporting animated mascot hero artwork
    * and compact glyph rendering across all weather conditions.
    */
   export type WeatherConditionType =
@@ -30,575 +30,903 @@
 
 {#if variant === 'hero'}
   <!-- =========================================================================
-       HERO VOLUMETRIC ARTWORK (Banner Cards and Full Weather Page)
+       HERO ANIMATED MASCOT ARTWORK (Banner Cards and Full Weather Page)
        ========================================================================= -->
   <div class="weather-art-hero {className}">
-    {#if type === 'sunny'}
-      <!-- Radiant Sun with Soft, Warm Golden Palette -->
-      <svg class="hero-svg" viewBox="0 0 120 100" aria-label="Sunny weather">
-        <defs>
-          <radialGradient id="sunAura" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="#ffffff" stop-opacity="0.3" />
-            <stop offset="50%" stop-color="#fef08a" stop-opacity="0.12" />
-            <stop offset="100%" stop-color="#fef08a" stop-opacity="0" />
-          </radialGradient>
-          <linearGradient id="sunBodyGrad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stop-color="#ffffff" />
-            <stop offset="40%" stop-color="#fef9c3" />
-            <stop offset="100%" stop-color="#fde047" />
-          </linearGradient>
-        </defs>
+    <svg class="hero-svg" viewBox="0 0 120 100" aria-label="{type} weather">
+      <defs>
+        <!-- Shared Mascot Gradients & Filters -->
+        <linearGradient id="botChassis" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#ffffff" />
+          <stop offset="65%" stop-color="#e2e8f0" />
+          <stop offset="100%" stop-color="#94a3b8" />
+        </linearGradient>
 
-        <!-- Ambient Soft Atmosphere Halo -->
-        <circle cx="60" cy="50" r="44" fill="url(#sunAura)" />
+        <linearGradient id="botChassisNight" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#e2e8f0" />
+          <stop offset="60%" stop-color="#94a3b8" />
+          <stop offset="100%" stop-color="#475569" />
+        </linearGradient>
 
-        <!-- Soft Corona Rays with Rounded Ends -->
-        <g
-          stroke="#fef08a"
-          stroke-width="2.2"
-          stroke-linecap="round"
-          opacity="0.75"
-        >
-          <line x1="60" y1="17" x2="60" y2="24" />
-          <line x1="60" y1="76" x2="60" y2="83" />
-          <line x1="27" y1="50" x2="34" y2="50" />
-          <line x1="86" y1="50" x2="93" y2="50" />
-          <line x1="37" y1="27" x2="42" y2="32" />
-          <line x1="78" y1="68" x2="83" y2="73" />
-          <line x1="37" y1="73" x2="42" y2="68" />
-          <line x1="78" y1="32" x2="83" y2="27" />
-        </g>
+        <linearGradient id="botVisor" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#1e293b" />
+          <stop offset="100%" stop-color="#090d16" />
+        </linearGradient>
 
-        <!-- Luminous Warm Sun Orb -->
+        <linearGradient id="sunCoreGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#fef08a" />
+          <stop offset="50%" stop-color="#facc15" />
+          <stop offset="100%" stop-color="#f97316" />
+        </linearGradient>
+
+        <radialGradient id="sunAuraGrad" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#fde047" stop-opacity="0.45" />
+          <stop offset="60%" stop-color="#f59e0b" stop-opacity="0.15" />
+          <stop offset="100%" stop-color="#f59e0b" stop-opacity="0" />
+        </radialGradient>
+
+        <linearGradient id="moonGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#ffffff" />
+          <stop offset="45%" stop-color="#fef9c3" />
+          <stop offset="100%" stop-color="#facc15" />
+        </linearGradient>
+
+        <linearGradient id="cloudLightGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#ffffff" />
+          <stop offset="60%" stop-color="#f1f5f9" />
+          <stop offset="100%" stop-color="#cbd5e1" />
+        </linearGradient>
+
+        <linearGradient id="cloudDarkGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#64748b" />
+          <stop offset="55%" stop-color="#334155" />
+          <stop offset="100%" stop-color="#1e293b" />
+        </linearGradient>
+
+        <linearGradient id="sweatGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#bae6fd" />
+          <stop offset="100%" stop-color="#0284c7" />
+        </linearGradient>
+
+        <linearGradient id="umbrellaGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#38bdf8" />
+          <stop offset="100%" stop-color="#0284c7" />
+        </linearGradient>
+
+        <linearGradient id="beanieGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#ef4444" />
+          <stop offset="50%" stop-color="#dc2626" />
+          <stop offset="100%" stop-color="#991b1b" />
+        </linearGradient>
+
+        <linearGradient id="fogBandGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#cbd5e1" stop-opacity="0" />
+          <stop offset="25%" stop-color="#f8fafc" stop-opacity="0.85" />
+          <stop offset="75%" stop-color="#e2e8f0" stop-opacity="0.85" />
+          <stop offset="100%" stop-color="#cbd5e1" stop-opacity="0" />
+        </linearGradient>
+
+        <filter id="cyanGlow" x="-30%" y="-30%" width="160%" height="160%">
+          <feDropShadow
+            dx="0"
+            dy="0"
+            stdDeviation="1.8"
+            flood-color="#38bdf8"
+            flood-opacity="0.85"
+          />
+        </filter>
+
+        <filter id="amberGlow" x="-30%" y="-30%" width="160%" height="160%">
+          <feDropShadow
+            dx="0"
+            dy="0"
+            stdDeviation="2"
+            flood-color="#facc15"
+            flood-opacity="0.9"
+          />
+        </filter>
+
+        <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow
+            dx="0"
+            dy="5"
+            stdDeviation="5"
+            flood-color="#0f172a"
+            flood-opacity="0.32"
+          />
+        </filter>
+      </defs>
+
+      {#if type === 'sunny'}
+        <!-- ===============================================================
+             SUNNY: Blazing Sun Behind + Sweating Overheated Bot
+             =============================================================== -->
+        <!-- Ambient Heat Aura -->
         <circle
+          class="anim-pulse-aura"
           cx="60"
-          cy="50"
-          r="20"
-          fill="url(#sunBodyGrad)"
-          filter="drop-shadow(0 4px 14px rgba(254, 240, 138, 0.35))"
+          cy="42"
+          r="46"
+          fill="url(#sunAuraGrad)"
         />
-      </svg>
-    {:else if type === 'night'}
-      <!-- Luminous Golden Celestial Crescent Moon & Sparkling Starlight -->
-      <svg class="hero-svg" viewBox="0 0 120 100" aria-label="Clear night sky">
-        <defs>
-          <radialGradient id="moonGlowAura" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="#fef08a" stop-opacity="0.32" />
-            <stop offset="50%" stop-color="#fde047" stop-opacity="0.12" />
-            <stop offset="100%" stop-color="#818cf8" stop-opacity="0" />
-          </radialGradient>
-          <linearGradient id="crescentMoonGrad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stop-color="#ffffff" />
-            <stop offset="35%" stop-color="#fef9c3" />
-            <stop offset="70%" stop-color="#fde047" />
-            <stop offset="100%" stop-color="#facc15" />
-          </linearGradient>
-          <filter
-            id="crescentGlowFilter"
-            x="-30%"
-            y="-30%"
-            width="160%"
-            height="160%"
+
+        <!-- Rotating Sun at the Back -->
+        <g class="anim-spin-sun" style="transform-origin: 60px 36px;">
+          <g
+            stroke="#fde047"
+            stroke-width="2.8"
+            stroke-linecap="round"
+            opacity="0.85"
           >
-            <feDropShadow
-              dx="0"
-              dy="0"
-              stdDeviation="5"
-              flood-color="#fef08a"
-              flood-opacity="0.45"
-            />
-            <feDropShadow
-              dx="0"
-              dy="3"
-              stdDeviation="10"
-              flood-color="#f59e0b"
-              flood-opacity="0.3"
-            />
-          </filter>
-        </defs>
-
-        <!-- Ambient Lunar Atmosphere Halo -->
-        <circle cx="64" cy="48" r="42" fill="url(#moonGlowAura)" />
-
-        <!-- Starlight Sparkles -->
-        <g fill="#ffffff">
-          <circle cx="24" cy="30" r="1.5" opacity="0.9" filter="drop-shadow(0 0 2px #ffffff)" />
-          <circle cx="32" cy="68" r="1.8" opacity="0.85" filter="drop-shadow(0 0 2px #ffffff)" />
-          <circle cx="98" cy="28" r="1.6" opacity="0.9" filter="drop-shadow(0 0 2px #ffffff)" />
-          <circle cx="104" cy="62" r="1.4" opacity="0.75" />
-          <circle cx="58" cy="84" r="1.2" opacity="0.8" />
+            <line x1="60" y1="4" x2="60" y2="10" />
+            <line x1="60" y1="62" x2="60" y2="68" />
+            <line x1="28" y1="36" x2="34" y2="36" />
+            <line x1="86" y1="36" x2="92" y2="36" />
+            <line x1="37" y1="13" x2="42" y2="18" />
+            <line x1="78" y1="54" x2="83" y2="59" />
+            <line x1="37" y1="59" x2="42" y2="54" />
+            <line x1="78" y1="18" x2="83" y2="13" />
+          </g>
+          <circle cx="60" cy="36" r="20" fill="url(#sunCoreGrad)" />
         </g>
 
-        <!-- Luminous Golden Crescent Moon -->
-        <path
-          d="M 72 26 C 54 26 40 40 40 58 C 40 70 47 81 57 86 C 51 82 48 74 48 66 C 48 50 60 37 76 37 C 82 37 87 39 91 42 C 86 32 80 26 72 26 Z"
-          fill="url(#crescentMoonGrad)"
-          filter="url(#crescentGlowFilter)"
-        />
-      </svg>
-    {:else if type === 'rain'}
-      <!-- Wide Volumetric Rain Cloud with Compact Fluid Raindrops -->
-      <svg class="hero-svg" viewBox="0 0 120 100" aria-label="Rainy weather">
-        <defs>
-          <linearGradient id="rainBackCloud" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#64748b" />
-            <stop offset="100%" stop-color="#334155" />
-          </linearGradient>
-          <linearGradient id="rainFrontCloud" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#ffffff" />
-            <stop offset="45%" stop-color="#e2e8f0" />
-            <stop offset="100%" stop-color="#94a3b8" />
-          </linearGradient>
-          <linearGradient id="rainDropGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#7dd3fc" />
-            <stop offset="100%" stop-color="#0284c7" />
-          </linearGradient>
-        </defs>
-
-        <!-- Secondary Background Storm Cloud -->
-        <path
-          d="M 42 50 A 14 14 0 0 1 30 36 A 16 16 0 0 1 48 20 A 18 18 0 0 1 80 18 A 18 18 0 0 1 98 34 A 14 14 0 0 1 98 50 Z"
-          fill="url(#rainBackCloud)"
-          opacity="0.6"
-        />
-
-        <!-- Wide Primary Foreground Cloud -->
-        <path
-          d="M 32 56 A 16 16 0 0 1 18 40 A 18 18 0 0 1 34 22 A 22 22 0 0 1 70 18 A 22 22 0 0 1 98 32 A 16 16 0 0 1 98 56 Z"
-          fill="url(#rainFrontCloud)"
-          filter="drop-shadow(0 4px 10px rgba(15, 23, 42, 0.32))"
-        />
-
-        <!-- Compact Angled Fluid Raindrops Spread Horizontally -->
-        <g
-          stroke="url(#rainDropGrad)"
-          stroke-width="2.6"
-          stroke-linecap="round"
-          opacity="0.95"
-        >
-          <line x1="28" y1="63" x2="24" y2="74" />
-          <line x1="43" y1="64" x2="39" y2="75" />
-          <line x1="58" y1="63" x2="54" y2="74" />
-          <line x1="73" y1="64" x2="69" y2="75" />
-          <line x1="88" y1="63" x2="84" y2="74" />
-        </g>
-      </svg>
-    {:else if type === 'thunder'}
-      <!-- Volumetric Cumulonimbus Thunderhead with Electric Discharge -->
-      <svg
-        class="hero-svg"
-        viewBox="0 0 120 100"
-        aria-label="Thunderstorm weather"
-      >
-        <defs>
-          <radialGradient id="thunderFlashGlow" cx="54%" cy="48%" r="48%">
-            <stop offset="0%" stop-color="#ffffff" stop-opacity="0.5" />
-            <stop offset="35%" stop-color="#c7d2fe" stop-opacity="0.25" />
-            <stop offset="70%" stop-color="#818cf8" stop-opacity="0.08" />
-            <stop offset="100%" stop-color="#4338ca" stop-opacity="0" />
-          </radialGradient>
-          <linearGradient id="thunderBackCloud" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#475569" />
-            <stop offset="50%" stop-color="#312e81" />
-            <stop offset="100%" stop-color="#0f172a" />
-          </linearGradient>
-          <linearGradient id="thunderFrontCloud" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#f8fafc" />
-            <stop offset="16%" stop-color="#cbd5e1" />
-            <stop offset="55%" stop-color="#475569" />
-            <stop offset="100%" stop-color="#1e1b4b" />
-          </linearGradient>
-          <linearGradient id="thunderBoltGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#ffffff" />
-            <stop offset="20%" stop-color="#e0f2fe" />
-            <stop offset="50%" stop-color="#fef08a" />
-            <stop offset="85%" stop-color="#facc15" />
-            <stop offset="100%" stop-color="#f59e0b" />
-          </linearGradient>
-          <filter
-            id="boltElectricGlow"
-            x="-40%"
-            y="-40%"
-            width="180%"
-            height="180%"
-          >
-            <feGaussianBlur
-              in="SourceGraphic"
-              stdDeviation="3.2"
-              result="blurWide"
-            />
-            <feGaussianBlur
-              in="SourceGraphic"
-              stdDeviation="1.2"
-              result="blurTight"
-            />
-            <feMerge>
-              <feMergeNode in="blurWide" />
-              <feMergeNode in="blurTight" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
-
-        <!-- Internal Lightning Discharge Glow -->
-        <ellipse
-          cx="60"
-          cy="46"
-          rx="48"
-          ry="28"
-          fill="url(#thunderFlashGlow)"
-        />
-
-        <!-- Rear Anvil Tempest Mass -->
-        <path
-          d="M 42 50 A 14 14 0 0 1 30 36 A 16 16 0 0 1 48 20 A 18 18 0 0 1 80 18 A 18 18 0 0 1 98 34 A 14 14 0 0 1 98 50 Z"
-          fill="url(#thunderBackCloud)"
-          opacity="0.6"
-        />
-
-        <!-- Realistic Branching Fractal Lightning Discharge (Positioned Behind Foreground Cloud) -->
-        <g filter="url(#boltElectricGlow)">
-          <!-- Outer Atmospheric Ionization Aura (Diffused Electric Violet-Cyan Halo) -->
-          <g
-            stroke="#818cf8"
-            stroke-linecap="round"
-            stroke-linejoin="miter"
-            opacity="0.45"
+        <!-- Mascot Character -->
+        <g class="anim-float-hot" filter="url(#softShadow)">
+          <!-- Antenna (Drooping slightly from heat) -->
+          <path
+            d="M 60 43 Q 63 36 67 37"
             fill="none"
-          >
-            <!-- Primary Downward Strike Trunk -->
-            <path
-              d="M 58 26 L 54 36 L 62 45 L 53 54 L 59 63 L 49 74 L 55 82 L 47 91 L 51 96"
-              stroke-width="3.8"
-            />
-            <!-- Major Right Lateral Fork -->
-            <path d="M 59 63 L 69 69 L 76 77 L 84 82" stroke-width="2.6" />
-            <path d="M 69 69 L 66 78 L 70 85" stroke-width="1.8" />
-            <!-- Major Left Stepped Fork -->
-            <path d="M 53 54 L 43 62 L 37 72 L 31 79" stroke-width="2.6" />
-            <path d="M 43 62 L 47 70 L 44 77" stroke-width="1.8" />
-            <!-- Lower Tertiary Step -->
-            <path d="M 55 82 L 62 87 L 65 93" stroke-width="1.8" />
-            <!-- Upper Intracloud Arc Behind Anvil -->
-            <path d="M 54 36 L 43 32 L 36 36 L 29 33" stroke-width="2.2" />
-          </g>
-
-          <!-- Mid High-Energy Ionization Plasma Sheath (Electric Cyan-Gold) -->
-          <g
-            stroke="url(#thunderBoltGrad)"
+            stroke="#cbd5e1"
+            stroke-width="2.5"
             stroke-linecap="round"
-            stroke-linejoin="miter"
-            opacity="0.92"
-            fill="none"
-          >
-            <!-- Primary Downward Strike Trunk -->
-            <path
-              d="M 58 26 L 54 36 L 62 45 L 53 54 L 59 63 L 49 74 L 55 82 L 47 91 L 51 96"
-              stroke-width="2.0"
-            />
-            <!-- Major Right Lateral Fork -->
-            <path d="M 59 63 L 69 69 L 76 77 L 84 82" stroke-width="1.3" />
-            <path d="M 69 69 L 66 78 L 70 85" stroke-width="0.9" />
-            <!-- Major Left Stepped Fork -->
-            <path d="M 53 54 L 43 62 L 37 72 L 31 79" stroke-width="1.3" />
-            <path d="M 43 62 L 47 70 L 44 77" stroke-width="0.9" />
-            <!-- Lower Tertiary Step -->
-            <path d="M 55 82 L 62 87 L 65 93" stroke-width="0.9" />
-            <!-- Upper Intracloud Arc Behind Anvil -->
-            <path d="M 54 36 L 43 32 L 36 36 L 29 33" stroke-width="1.1" />
-          </g>
+          />
+          <circle cx="68" cy="37" r="3" fill="#fb923c" />
 
-          <!-- Incandescent Superheated Plasma Core (Pure White Filament) -->
-          <g
+          <!-- Side Ear Pods -->
+          <rect x="29" y="57" width="6" height="14" rx="3" fill="#94a3b8" />
+          <rect x="85" y="57" width="6" height="14" rx="3" fill="#94a3b8" />
+
+          <!-- Main Head Chassis -->
+          <rect
+            x="33"
+            y="42"
+            width="54"
+            height="42"
+            rx="20"
+            fill="url(#botChassis)"
+          />
+
+          <!-- Glossy Visor Screen -->
+          <rect
+            x="38"
+            y="48"
+            width="44"
+            height="30"
+            rx="14"
+            fill="url(#botVisor)"
+          />
+          <!-- Visor Specular Highlight -->
+          <path
+            d="M 44 51 L 56 51"
             stroke="#ffffff"
+            stroke-width="1.5"
             stroke-linecap="round"
-            stroke-linejoin="miter"
-            opacity="1"
+            opacity="0.22"
+          />
+
+          <!-- Heat Flush Cheeks -->
+          <ellipse
+            cx="45"
+            cy="68"
+            rx="3.5"
+            ry="2"
+            fill="#fb7185"
+            opacity="0.55"
+          />
+          <ellipse
+            cx="75"
+            cy="68"
+            rx="3.5"
+            ry="2"
+            fill="#fb7185"
+            opacity="0.55"
+          />
+
+          <!-- Strained Squinting Eyes & Sweating Wavy Mouth -->
+          <g
+            filter="url(#cyanGlow)"
+            stroke="#38bdf8"
+            stroke-width="2.4"
+            stroke-linecap="round"
+            stroke-linejoin="round"
             fill="none"
           >
-            <!-- Primary Downward Strike Trunk -->
+            <!-- Left Squint Eye (> ) -->
+            <path d="M 46 57 L 52 60 L 46 63" />
+            <!-- Right Squint Eye ( <) -->
+            <path d="M 74 57 L 68 60 L 74 63" />
+            <!-- Overheated Wavy Mouth -->
             <path
-              d="M 58 26 L 54 36 L 62 45 L 53 54 L 59 63 L 49 74 L 55 82 L 47 91 L 51 96"
-              stroke-width="1.0"
+              d="M 51 70 Q 54 67 57 70 T 63 70 T 69 70"
+              stroke-width="2.1"
             />
-            <!-- Major Right Lateral Fork -->
-            <path d="M 59 63 L 69 69 L 76 77 L 84 82" stroke-width="0.65" />
-            <path d="M 69 69 L 66 78 L 70 85" stroke-width="0.45" />
-            <!-- Major Left Stepped Fork -->
-            <path d="M 53 54 L 43 62 L 37 72 L 31 79" stroke-width="0.65" />
-            <path d="M 43 62 L 47 70 L 44 77" stroke-width="0.45" />
-            <!-- Lower Tertiary Step -->
-            <path d="M 55 82 L 62 87 L 65 93" stroke-width="0.45" />
-            <!-- Upper Intracloud Arc Behind Anvil -->
-            <path d="M 54 36 L 43 32 L 36 36 L 29 33" stroke-width="0.55" />
+          </g>
+
+          <!-- Animated Sweat Drops -->
+          <g class="anim-sweat-1">
+            <path
+              d="M 82 47 C 82 47 86 52 86 54.5 A 2.5 2.5 0 1 1 81 54.5 C 81 52 82 47 82 47 Z"
+              fill="url(#sweatGrad)"
+            />
+          </g>
+          <g class="anim-sweat-2">
+            <path
+              d="M 37 51 C 37 51 40 55 40 57 A 2 2 0 1 1 36 57 C 36 55 37 51 37 51 Z"
+              fill="url(#sweatGrad)"
+            />
+          </g>
+        </g>
+      {:else if type === 'night'}
+        <!-- ===============================================================
+             NIGHT: Crescent Moon, Twinkling Stars + Sleeping Bot with Zzz
+             =============================================================== -->
+        <!-- Twinkling Starfield -->
+        <g fill="#ffffff">
+          <circle class="anim-twinkle-1" cx="22" cy="24" r="1.5" />
+          <circle class="anim-twinkle-2" cx="46" cy="14" r="1.2" />
+          <circle class="anim-twinkle-1" cx="100" cy="48" r="1.6" />
+          <circle class="anim-twinkle-2" cx="18" cy="54" r="1.2" />
+        </g>
+
+        <!-- Glowing Crescent Moon in Background -->
+        <path
+          class="anim-moon-rock"
+          style="transform-origin: 84px 26px;"
+          d="M 86 10 C 75 10 66 19 66 30 C 66 37 70 44 76 47 C 72 44 70 39 70 34 C 70 24 78 16 88 16 C 91 16 94 17 97 19 C 94 13 90 10 86 10 Z"
+          fill="url(#moonGrad)"
+          filter="url(#amberGlow)"
+        />
+
+        <!-- Sleeping Mascot -->
+        <g class="anim-float-sleep" filter="url(#softShadow)">
+          <!-- Antenna with Dimmed Night Bulb -->
+          <line
+            x1="60"
+            y1="36"
+            x2="60"
+            y2="43"
+            stroke="#64748b"
+            stroke-width="2.5"
+            stroke-linecap="round"
+          />
+          <circle cx="60" cy="35" r="3" fill="#818cf8" opacity="0.8" />
+
+          <!-- Side Ear Pods -->
+          <rect x="29" y="57" width="6" height="14" rx="3" fill="#475569" />
+          <rect x="85" y="57" width="6" height="14" rx="3" fill="#475569" />
+
+          <!-- Main Head Chassis -->
+          <rect
+            x="33"
+            y="42"
+            width="54"
+            height="42"
+            rx="20"
+            fill="url(#botChassisNight)"
+          />
+
+          <!-- Glossy Visor Screen -->
+          <rect
+            x="38"
+            y="48"
+            width="44"
+            height="30"
+            rx="14"
+            fill="url(#botVisor)"
+          />
+          <path
+            d="M 44 51 L 56 51"
+            stroke="#ffffff"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            opacity="0.15"
+          />
+
+          <!-- Peaceful Sleeping Eyes & Breathing Mouth -->
+          <g
+            filter="url(#cyanGlow)"
+            stroke="#818cf8"
+            stroke-width="2.3"
+            stroke-linecap="round"
+            fill="none"
+          >
+            <path d="M 45 59 Q 49 64 53 59" />
+            <path d="M 67 59 Q 71 64 75 59" />
+            <circle
+              class="anim-sleep-mouth"
+              style="transform-origin: 60px 69px;"
+              cx="60"
+              cy="69"
+              r="2.2"
+              fill="#818cf8"
+              stroke="none"
+            />
           </g>
         </g>
 
-        <!-- Primary Billowing Storm Cloud with Silver Rim Highlight (In Front of Lightning) -->
-        <path
-          d="M 32 56 A 16 16 0 0 1 18 40 A 18 18 0 0 1 34 22 A 22 22 0 0 1 70 18 A 22 22 0 0 1 98 32 A 16 16 0 0 1 98 56 Z"
-          fill="url(#thunderFrontCloud)"
-          filter="drop-shadow(0 4px 14px rgba(15, 23, 42, 0.45))"
-        />
-
-        <!-- Ambient Ionized Precipitation Streaks -->
+        <!-- Floating Zzz Particles -->
         <g
-          stroke="#93c5fd"
-          stroke-width="1.8"
-          stroke-linecap="round"
-          opacity="0.45"
+          fill="#c7d2fe"
+          font-family="system-ui, sans-serif"
+          font-weight="800"
+          text-anchor="middle"
         >
-          <line x1="28" y1="62" x2="25" y2="72" />
-          <line x1="38" y1="65" x2="35" y2="76" />
-          <line x1="82" y1="64" x2="79" y2="75" />
-          <line x1="92" y1="62" x2="89" y2="72" />
+          <text class="anim-zzz-1" x="34" y="40" font-size="9">Z</text>
+          <text class="anim-zzz-2" x="26" y="30" font-size="7">z</text>
+          <text class="anim-zzz-3" x="20" y="22" font-size="5.5">z</text>
         </g>
-      </svg>
-    {:else if type === 'snow'}
-      <!-- Wide Winter Cloud with Floating Snow Crystals -->
-      <svg class="hero-svg" viewBox="0 0 120 100" aria-label="Snowy weather">
-        <defs>
-          <linearGradient id="snowCloud" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#ffffff" />
-            <stop offset="60%" stop-color="#e2e8f0" />
-            <stop offset="100%" stop-color="#94a3b8" />
-          </linearGradient>
-        </defs>
-
-        <!-- Wide Frosty Cloud Body -->
-        <path
-          d="M 32 56 A 16 16 0 0 1 18 40 A 18 18 0 0 1 34 22 A 22 22 0 0 1 70 18 A 22 22 0 0 1 98 32 A 16 16 0 0 1 98 56 Z"
-          fill="url(#snowCloud)"
-          filter="drop-shadow(0 4px 10px rgba(15, 23, 42, 0.28))"
+      {:else if type === 'cloudy'}
+        <!-- ===============================================================
+             CLOUDY: Peeking Sun + Drifting Fluffy Clouds + Curious Bot
+             =============================================================== -->
+        <!-- Peeking Warm Sun at Upper Left -->
+        <circle
+          cx="34"
+          cy="26"
+          r="14"
+          fill="url(#sunCoreGrad)"
+          filter="url(#amberGlow)"
         />
 
-        <!-- Falling Snow Crystals Spread Horizontally -->
-        <g
-          fill="#ffffff"
-          opacity="0.95"
-          filter="drop-shadow(0 0 3px rgba(255, 255, 255, 0.8))"
-        >
-          <circle cx="28" cy="67" r="2.2" />
-          <circle cx="43" cy="73" r="1.8" />
-          <circle cx="58" cy="66" r="2.4" />
-          <circle cx="73" cy="73" r="1.8" />
-          <circle cx="88" cy="67" r="2.2" />
-        </g>
-      </svg>
-    {:else if type === 'fog'}
-      <!-- Atmospheric Misty Cloud with Layered Drifting Fog Ribbons -->
-      <svg class="hero-svg" viewBox="0 0 120 100" aria-label="Foggy weather">
-        <defs>
-          <radialGradient id="fogAura" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="#cbd5e1" stop-opacity="0.3" />
-            <stop offset="100%" stop-color="#64748b" stop-opacity="0" />
-          </radialGradient>
-          <linearGradient id="fogCloudBody" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#ffffff" />
-            <stop offset="60%" stop-color="#e2e8f0" />
-            <stop offset="100%" stop-color="#cbd5e1" />
-          </linearGradient>
-          <linearGradient id="fogRibbonGrad1" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stop-color="#e2e8f0" stop-opacity="0.1" />
-            <stop offset="25%" stop-color="#ffffff" stop-opacity="0.85" />
-            <stop offset="75%" stop-color="#e2e8f0" stop-opacity="0.85" />
-            <stop offset="100%" stop-color="#cbd5e1" stop-opacity="0.1" />
-          </linearGradient>
-          <linearGradient id="fogRibbonGrad2" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stop-color="#cbd5e1" stop-opacity="0.1" />
-            <stop offset="25%" stop-color="#e2e8f0" stop-opacity="0.75" />
-            <stop offset="75%" stop-color="#cbd5e1" stop-opacity="0.75" />
-            <stop offset="100%" stop-color="#94a3b8" stop-opacity="0.1" />
-          </linearGradient>
-        </defs>
-
-        <!-- Ambient Fog Aura -->
-        <circle cx="58" cy="46" r="42" fill="url(#fogAura)" />
-
-        <!-- Wide Misty Floating Cloud Base -->
+        <!-- Background Cloud Puff -->
         <path
-          d="M 32 54 A 16 16 0 0 1 18 38 A 18 18 0 0 1 34 20 A 22 22 0 0 1 70 16 A 22 22 0 0 1 98 30 A 16 16 0 0 1 98 54 Z"
-          fill="url(#fogCloudBody)"
-          filter="drop-shadow(0 4px 12px rgba(15, 23, 42, 0.22))"
-          opacity="0.95"
+          class="anim-cloud-drift-slow"
+          d="M 22 44 A 9 9 0 0 1 15 35 A 10 10 0 0 1 26 25 A 12 12 0 0 1 46 23 A 11 11 0 0 1 56 34 A 9 9 0 0 1 56 44 Z"
+          fill="url(#cloudLightGrad)"
+          opacity="0.88"
         />
 
-        <!-- Drifting Atmospheric Fog Ribbons Floating Across & Underneath Cloud -->
-        <g>
-          <rect
-            x="20"
-            y="53"
-            width="80"
-            height="5.5"
-            rx="2.75"
-            fill="url(#fogRibbonGrad1)"
+        <!-- Mascot Looking Up at the Clouds -->
+        <g class="anim-float-calm" filter="url(#softShadow)">
+          <line
+            x1="60"
+            y1="36"
+            x2="60"
+            y2="43"
+            stroke="#cbd5e1"
+            stroke-width="2.5"
+            stroke-linecap="round"
           />
+          <circle cx="60" cy="35" r="3" fill="#38bdf8" />
+
+          <rect x="29" y="57" width="6" height="14" rx="3" fill="#94a3b8" />
+          <rect x="85" y="57" width="6" height="14" rx="3" fill="#94a3b8" />
+
           <rect
-            x="14"
-            y="63"
-            width="92"
-            height="6"
-            rx="3"
-            fill="url(#fogRibbonGrad1)"
-          />
-          <rect
-            x="26"
-            y="73"
-            width="68"
-            height="5"
-            rx="2.5"
-            fill="url(#fogRibbonGrad2)"
+            x="33"
+            y="42"
+            width="54"
+            height="42"
+            rx="20"
+            fill="url(#botChassis)"
           />
           <rect
             x="38"
-            y="82"
+            y="48"
             width="44"
-            height="4"
-            rx="2"
-            fill="url(#fogRibbonGrad2)"
+            height="30"
+            rx="14"
+            fill="url(#botVisor)"
+          />
+          <path
+            d="M 44 51 L 56 51"
+            stroke="#ffffff"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            opacity="0.22"
+          />
+
+          <!-- Happy Eyes Glancing Upward + Gentle Smile -->
+          <g class="anim-look-around" filter="url(#cyanGlow)">
+            <ellipse cx="49" cy="58" rx="3.2" ry="4" fill="#38bdf8" />
+            <ellipse cx="71" cy="58" rx="3.2" ry="4" fill="#38bdf8" />
+            <circle cx="50" cy="56.5" r="1" fill="#ffffff" />
+            <circle cx="72" cy="56.5" r="1" fill="#ffffff" />
+            <path
+              d="M 54 68 Q 60 73 66 68"
+              fill="none"
+              stroke="#38bdf8"
+              stroke-width="2.3"
+              stroke-linecap="round"
+            />
+          </g>
+        </g>
+
+        <!-- Foreground Fluffy Cloud Overlapping Top-Right of Bot -->
+        <path
+          class="anim-cloud-drift"
+          d="M 62 49 A 8 8 0 0 1 55 41 A 9 9 0 0 1 65 32 A 11 11 0 0 1 84 30 A 10 10 0 0 1 95 40 A 8 8 0 0 1 95 49 Z"
+          fill="url(#cloudLightGrad)"
+          filter="url(#softShadow)"
+        />
+      {:else if type === 'cloudy-night'}
+        <!-- ===============================================================
+             CLOUDY NIGHT: Moon + Nocturnal Clouds + Cozy Night Bot
+             =============================================================== -->
+        <g fill="#ffffff">
+          <circle class="anim-twinkle-1" cx="22" cy="20" r="1.4" />
+          <circle class="anim-twinkle-2" cx="98" cy="18" r="1.5" />
+        </g>
+
+        <!-- Crescent Moon Behind Cloud -->
+        <path
+          d="M 42 12 C 33 12 26 19 26 28 C 26 34 29 39 34 42 C 31 39 29 35 29 31 C 29 23 35 17 43 17 C 46 17 48 18 50 19 C 48 14 45 12 42 12 Z"
+          fill="url(#moonGrad)"
+          filter="url(#amberGlow)"
+        />
+
+        <!-- Mascot in Night Palette -->
+        <g class="anim-float-calm" filter="url(#softShadow)">
+          <line
+            x1="60"
+            y1="36"
+            x2="60"
+            y2="43"
+            stroke="#64748b"
+            stroke-width="2.5"
+            stroke-linecap="round"
+          />
+          <circle cx="60" cy="35" r="3" fill="#818cf8" />
+
+          <rect x="29" y="57" width="6" height="14" rx="3" fill="#475569" />
+          <rect x="85" y="57" width="6" height="14" rx="3" fill="#475569" />
+
+          <rect
+            x="33"
+            y="42"
+            width="54"
+            height="42"
+            rx="20"
+            fill="url(#botChassisNight)"
+          />
+          <rect
+            x="38"
+            y="48"
+            width="44"
+            height="30"
+            rx="14"
+            fill="url(#botVisor)"
+          />
+          <path
+            d="M 44 51 L 56 51"
+            stroke="#ffffff"
+            stroke-width="1.5"
+            stroke-linecap="round"
+            opacity="0.15"
+          />
+
+          <!-- Calm Nocturnal Eyes & Cozy Smile -->
+          <g
+            filter="url(#cyanGlow)"
+            stroke="#a5b4fc"
+            stroke-width="2.3"
+            stroke-linecap="round"
+            fill="none"
+          >
+            <path d="M 45 60 Q 49 55 53 60" />
+            <path d="M 67 60 Q 71 55 75 60" />
+            <path d="M 55 69 Q 60 72 65 69" />
+          </g>
+        </g>
+
+        <!-- Foreground Nocturnal Cloud -->
+        <path
+          class="anim-cloud-drift"
+          d="M 58 48 A 8 8 0 0 1 51 40 A 9 9 0 0 1 61 31 A 11 11 0 0 1 80 29 A 10 10 0 0 1 91 39 A 8 8 0 0 1 91 48 Z"
+          fill="url(#cloudDarkGrad)"
+          filter="url(#softShadow)"
+        />
+      {:else if type === 'rain'}
+        <!-- ===============================================================
+             RAIN: Storm Cloud + Falling Raindrops + Bot Under Umbrella
+             =============================================================== -->
+        <!-- Upper Rain Cloud -->
+        <path
+          class="anim-cloud-drift-slow"
+          d="M 32 32 A 10 10 0 0 1 23 22 A 12 12 0 0 1 36 10 A 15 15 0 0 1 62 8 A 14 14 0 0 1 80 20 A 10 10 0 0 1 80 32 Z"
+          fill="url(#cloudDarkGrad)"
+          opacity="0.9"
+        />
+
+        <!-- Animated Falling Rain Streaks -->
+        <g
+          stroke="#38bdf8"
+          stroke-width="2"
+          stroke-linecap="round"
+          opacity="0.85"
+        >
+          <line class="anim-rain-1" x1="26" y1="36" x2="23" y2="45" />
+          <line class="anim-rain-2" x1="42" y1="34" x2="39" y2="43" />
+          <line class="anim-rain-3" x1="60" y1="36" x2="57" y2="45" />
+          <line class="anim-rain-1" x1="78" y1="35" x2="75" y2="44" />
+          <line class="anim-rain-2" x1="92" y1="42" x2="89" y2="51" />
+        </g>
+
+        <!-- Mascot Sheltering Under Umbrella -->
+        <g class="anim-float-calm" filter="url(#softShadow)">
+          <rect x="29" y="61" width="6" height="13" rx="3" fill="#64748b" />
+          <rect x="85" y="61" width="6" height="13" rx="3" fill="#64748b" />
+
+          <rect
+            x="33"
+            y="47"
+            width="54"
+            height="40"
+            rx="19"
+            fill="url(#botChassis)"
+          />
+          <rect
+            x="38"
+            y="53"
+            width="44"
+            height="28"
+            rx="13"
+            fill="url(#botVisor)"
+          />
+
+          <!-- Pensive / Gloomy Rainy Expression -->
+          <g
+            filter="url(#cyanGlow)"
+            stroke="#38bdf8"
+            stroke-width="2.2"
+            stroke-linecap="round"
+            fill="none"
+          >
+            <!-- Slightly Droopy Eyes -->
+            <line x1="45" y1="63" x2="53" y2="61" />
+            <line x1="75" y1="63" x2="67" y2="61" />
+            <circle cx="49" cy="65" r="2" fill="#38bdf8" stroke="none" />
+            <circle cx="71" cy="65" r="2" fill="#38bdf8" stroke="none" />
+            <!-- Small Pout Mouth -->
+            <path d="M 55 74 Q 60 70 65 74" />
+          </g>
+
+          <!-- Sleek Cyber Umbrella Canopy Over Bot -->
+          <g class="anim-umbrella-tilt" style="transform-origin: 60px 44px;">
+            <!-- Umbrella Handle Shaft -->
+            <path
+              d="M 60 32 L 60 48"
+              stroke="#94a3b8"
+              stroke-width="2.5"
+              stroke-linecap="round"
+            />
+            <!-- Glowing Umbrella Canopy -->
+            <path
+              d="M 24 44 C 24 24 96 24 96 44 Q 84 40 72 44 Q 60 40 48 44 Q 36 40 24 44 Z"
+              fill="url(#umbrellaGrad)"
+            />
+            <circle cx="60" cy="28" r="2.5" fill="#38bdf8" />
+          </g>
+        </g>
+      {:else if type === 'thunder'}
+        <!-- ===============================================================
+             THUNDER: Flashing Lightning + Startled Shivering Bot
+             =============================================================== -->
+        <!-- Dark Thunderhead at Top -->
+        <path
+          d="M 26 34 A 11 11 0 0 1 16 23 A 13 13 0 0 1 30 10 A 16 16 0 0 1 62 7 A 15 15 0 0 1 88 20 A 11 11 0 0 1 88 34 Z"
+          fill="url(#cloudDarkGrad)"
+          filter="url(#softShadow)"
+        />
+
+        <!-- Flashing Lightning Bolts Left & Right -->
+        <polygon
+          class="anim-lightning-1"
+          points="28,30 18,48 27,48 21,66 37,44 27,44"
+          fill="#facc15"
+          filter="url(#amberGlow)"
+        />
+        <polygon
+          class="anim-lightning-2"
+          points="88,28 79,45 87,45 82,61 96,41 87,41"
+          fill="#fef08a"
+          filter="url(#amberGlow)"
+        />
+
+        <!-- Startled Jittering Mascot -->
+        <g class="anim-shock-shake" filter="url(#softShadow)">
+          <!-- Electrified Antenna -->
+          <line
+            x1="60"
+            y1="36"
+            x2="60"
+            y2="45"
+            stroke="#fde047"
+            stroke-width="2.5"
+            stroke-linecap="round"
+          />
+          <circle
+            cx="60"
+            cy="35"
+            r="3.8"
+            fill="#facc15"
+            filter="url(#amberGlow)"
+          />
+
+          <rect x="29" y="59" width="6" height="14" rx="3" fill="#64748b" />
+          <rect x="85" y="59" width="6" height="14" rx="3" fill="#64748b" />
+
+          <rect
+            x="33"
+            y="44"
+            width="54"
+            height="42"
+            rx="20"
+            fill="url(#botChassis)"
+          />
+          <rect
+            x="38"
+            y="50"
+            width="44"
+            height="30"
+            rx="14"
+            fill="url(#botVisor)"
+          />
+
+          <!-- Shocked Ring Eyes & Zigzag / 'O' Mouth -->
+          <g filter="url(#amberGlow)">
+            <circle
+              cx="49"
+              cy="61"
+              r="4.5"
+              fill="none"
+              stroke="#facc15"
+              stroke-width="2.2"
+            />
+            <circle cx="49" cy="61" r="1.5" fill="#ffffff" />
+            <circle
+              cx="71"
+              cy="61"
+              r="4.5"
+              fill="none"
+              stroke="#facc15"
+              stroke-width="2.2"
+            />
+            <circle cx="71" cy="61" r="1.5" fill="#ffffff" />
+            <!-- Surprised 'O' Mouth -->
+            <ellipse
+              cx="60"
+              cy="72"
+              rx="4"
+              ry="3.2"
+              fill="none"
+              stroke="#facc15"
+              stroke-width="2.2"
+            />
+          </g>
+        </g>
+      {:else if type === 'snow'}
+        <!-- ===============================================================
+             SNOW: Falling Snowflakes + Chilly Bot in Cozy Winter Beanie
+             =============================================================== -->
+        <!-- Falling Snowflakes -->
+        <g fill="#ffffff" opacity="0.9">
+          <circle class="anim-snow-1" cx="22" cy="24" r="2.2" />
+          <circle class="anim-snow-2" cx="40" cy="16" r="1.8" />
+          <circle class="anim-snow-3" cx="82" cy="18" r="2.4" />
+          <circle class="anim-snow-1" cx="98" cy="28" r="1.7" />
+          <circle class="anim-snow-2" cx="16" cy="55" r="1.9" />
+          <circle class="anim-snow-3" cx="102" cy="60" r="2.1" />
+        </g>
+
+        <!-- Chilly Shivering Mascot with Knit Beanie -->
+        <g class="anim-shiver-cold" filter="url(#softShadow)">
+          <rect x="29" y="59" width="6" height="14" rx="3" fill="#94a3b8" />
+          <rect x="85" y="59" width="6" height="14" rx="3" fill="#94a3b8" />
+
+          <!-- Main Head Chassis -->
+          <rect
+            x="33"
+            y="44"
+            width="54"
+            height="42"
+            rx="20"
+            fill="url(#botChassis)"
+          />
+          <rect
+            x="38"
+            y="50"
+            width="44"
+            height="30"
+            rx="14"
+            fill="url(#botVisor)"
+          />
+
+          <!-- Rosy Cold Cheeks -->
+          <ellipse
+            cx="44"
+            cy="69"
+            rx="3.5"
+            ry="2.2"
+            fill="#f43f5e"
             opacity="0.6"
           />
+          <ellipse
+            cx="76"
+            cy="69"
+            rx="3.5"
+            ry="2.2"
+            fill="#f43f5e"
+            opacity="0.6"
+          />
+
+          <!-- Chilly Wide Eyes & Shivering Wavy Mouth -->
+          <g filter="url(#cyanGlow)">
+            <circle cx="49" cy="61" r="3.4" fill="#7dd3fc" />
+            <circle cx="71" cy="61" r="3.4" fill="#7dd3fc" />
+            <circle cx="50" cy="59.8" r="1.1" fill="#ffffff" />
+            <circle cx="72" cy="59.8" r="1.1" fill="#ffffff" />
+            <path
+              d="M 51 72 Q 53.2 69.5 55.5 72 T 60 72 T 64.5 72 T 69 72"
+              fill="none"
+              stroke="#7dd3fc"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
+          </g>
+
+          <!-- Cozy Winter Beanie Hat Sitting on Top of Head -->
+          <g>
+            <!-- Fluffy Pom-Pom -->
+            <circle cx="60" cy="25" r="6" fill="#ffffff" />
+            <!-- Beanie Dome -->
+            <path d="M 35 46 C 35 27 85 27 85 46 Z" fill="url(#beanieGrad)" />
+            <!-- Ribbed Beanie Cuff -->
+            <rect x="32" y="42" width="56" height="9" rx="4.5" fill="#f8fafc" />
+            <line
+              x1="44"
+              y1="43"
+              x2="44"
+              y2="50"
+              stroke="#cbd5e1"
+              stroke-width="1.5"
+              stroke-linecap="round"
+            />
+            <line
+              x1="54"
+              y1="43"
+              x2="54"
+              y2="50"
+              stroke="#cbd5e1"
+              stroke-width="1.5"
+              stroke-linecap="round"
+            />
+            <line
+              x1="66"
+              y1="43"
+              x2="66"
+              y2="50"
+              stroke="#cbd5e1"
+              stroke-width="1.5"
+              stroke-linecap="round"
+            />
+            <line
+              x1="76"
+              y1="43"
+              x2="76"
+              y2="50"
+              stroke="#cbd5e1"
+              stroke-width="1.5"
+              stroke-linecap="round"
+            />
+          </g>
         </g>
-      </svg>
-    {:else if type === 'cloudy-night'}
-      <!-- Cloudy Night: Luminous Crescent Moon with Soft Nocturnal Clouds & Ambient Starfield -->
-      <svg class="hero-svg" viewBox="0 0 120 100" aria-label="Cloudy night sky">
-        <defs>
-          <radialGradient id="nightSkyAura" cx="50%" cy="40%" r="55%">
-            <stop offset="0%" stop-color="#60a5fa" stop-opacity="0.28" />
-            <stop offset="60%" stop-color="#312e81" stop-opacity="0.16" />
-            <stop offset="100%" stop-color="#0f172a" stop-opacity="0" />
-          </radialGradient>
-          <linearGradient id="cloudyNightMoon" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stop-color="#ffffff" />
-            <stop offset="40%" stop-color="#fef9c3" />
-            <stop offset="100%" stop-color="#fde047" />
-          </linearGradient>
-          <linearGradient id="nightCloudBack" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#6366f1" stop-opacity="0.7" />
-            <stop offset="100%" stop-color="#1e1b4b" />
-          </linearGradient>
-          <linearGradient id="nightCloudFront" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#f8fafc" />
-            <stop offset="45%" stop-color="#cbd5e1" />
-            <stop offset="100%" stop-color="#334155" />
-          </linearGradient>
-        </defs>
+      {:else if type === 'fog'}
+        <!-- ===============================================================
+             FOG: Drifting Mist Layers + Bot Peering Side-to-Side
+             =============================================================== -->
+        <!-- Back Fog Ribbon -->
+        <rect
+          class="anim-fog-back"
+          x="10"
+          y="34"
+          width="90"
+          height="7"
+          rx="3.5"
+          fill="url(#fogBandGrad)"
+          opacity="0.65"
+        />
 
-        <!-- Subtle Ambient Night Aura -->
-        <circle cx="56" cy="40" r="38" fill="url(#nightSkyAura)" />
-
-        <!-- Starfield Glimpses in Upper Night Sky -->
-        <g fill="#ffffff">
-          <circle
-            cx="24"
-            cy="20"
-            r="1.6"
-            opacity="0.85"
-            filter="drop-shadow(0 0 2px #ffffff)"
+        <!-- Mascot Peering Through the Mist -->
+        <g class="anim-float-calm" filter="url(#softShadow)">
+          <line
+            x1="60"
+            y1="34"
+            x2="60"
+            y2="42"
+            stroke="#cbd5e1"
+            stroke-width="2.5"
+            stroke-linecap="round"
           />
           <circle
-            cx="98"
-            cy="18"
-            r="1.8"
-            opacity="0.9"
-            filter="drop-shadow(0 0 2px #ffffff)"
+            cx="60"
+            cy="33"
+            r="3.2"
+            fill="#fde047"
+            filter="url(#amberGlow)"
           />
-          <circle cx="64" cy="12" r="1.3" opacity="0.75" />
-          <circle cx="86" cy="28" r="1.2" opacity="0.65" />
+
+          <rect x="29" y="56" width="6" height="14" rx="3" fill="#94a3b8" />
+          <rect x="85" y="56" width="6" height="14" rx="3" fill="#94a3b8" />
+
+          <rect
+            x="33"
+            y="41"
+            width="54"
+            height="42"
+            rx="20"
+            fill="url(#botChassis)"
+          />
+          <rect
+            x="38"
+            y="47"
+            width="44"
+            height="30"
+            rx="14"
+            fill="url(#botVisor)"
+          />
+
+          <!-- Searching / Squinting Eyes Scanning Left and Right -->
+          <g class="anim-scan-eyes" filter="url(#cyanGlow)">
+            <!-- Narrowed Scanning Eyes -->
+            <rect
+              x="44"
+              y="56"
+              width="9"
+              height="4.5"
+              rx="2.2"
+              fill="#38bdf8"
+            />
+            <rect
+              x="65"
+              y="56"
+              width="9"
+              height="4.5"
+              rx="2.2"
+              fill="#38bdf8"
+            />
+            <!-- Uncertain Crooked Mouth -->
+            <path
+              d="M 54 69 L 64 67"
+              stroke="#38bdf8"
+              stroke-width="2.2"
+              stroke-linecap="round"
+            />
+          </g>
         </g>
 
-        <!-- Luminous Crescent Moon Behind Cloud -->
-        <path
-          d="M 68 14 C 54 14 43 25 43 39 C 43 47 48 55 55 59 C 51 56 49 50 49 44 C 49 32 58 22 71 22 C 75 22 79 23 82 25 C 78 18 73 14 68 14 Z"
-          fill="url(#cloudyNightMoon)"
-          filter="drop-shadow(0 0 8px rgba(254, 240, 138, 0.45))"
+        <!-- Foreground Drifting Fog Layers Partially Obscuring Bot -->
+        <rect
+          class="anim-fog-front-1"
+          x="14"
+          y="64"
+          width="92"
+          height="6.5"
+          rx="3.25"
+          fill="url(#fogBandGrad)"
         />
-
-        <!-- Secondary Rear Ambient Night Cloud Depth -->
-        <path
-          d="M 44 56 A 14 14 0 0 1 32 42 A 16 16 0 0 1 50 26 A 18 18 0 0 1 82 24 A 18 18 0 0 1 100 40 A 14 14 0 0 1 100 56 Z"
-          fill="url(#nightCloudBack)"
-          opacity="0.6"
+        <rect
+          class="anim-fog-front-2"
+          x="22"
+          y="76"
+          width="76"
+          height="6"
+          rx="3"
+          fill="url(#fogBandGrad)"
+          opacity="0.9"
         />
-
-        <!-- Wide Primary Foreground Nocturnal Fluffy Cloud -->
-        <path
-          d="M 32 64 A 16 16 0 0 1 18 48 A 18 18 0 0 1 34 30 A 22 22 0 0 1 70 26 A 22 22 0 0 1 98 40 A 16 16 0 0 1 98 64 Z"
-          fill="url(#nightCloudFront)"
-          filter="drop-shadow(0 4px 14px rgba(15, 23, 42, 0.4))"
-        />
-      </svg>
-    {:else}
-      <!-- Cloudy (Partly Cloudy): Sun Directly at the Back of Wide Fluffy Cloud -->
-      <svg
-        class="hero-svg"
-        viewBox="0 0 120 100"
-        aria-label="Partly cloudy weather"
-      >
-        <defs>
-          <radialGradient id="sunBackAura" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="#ffffff" stop-opacity="0.45" />
-            <stop offset="50%" stop-color="#fef08a" stop-opacity="0.2" />
-            <stop offset="100%" stop-color="#fef08a" stop-opacity="0" />
-          </radialGradient>
-          <linearGradient id="sunBackBody" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stop-color="#ffffff" />
-            <stop offset="35%" stop-color="#fef9c3" />
-            <stop offset="100%" stop-color="#fde047" />
-          </linearGradient>
-          <linearGradient id="cloudyBackCloud" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#cbd5e1" />
-            <stop offset="100%" stop-color="#94a3b8" />
-          </linearGradient>
-          <linearGradient id="cloudyFrontCloud" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#ffffff" />
-            <stop offset="50%" stop-color="#f1f5f9" />
-            <stop offset="100%" stop-color="#cbd5e1" />
-          </linearGradient>
-        </defs>
-
-        <!-- Ambient Sun Glow at Back -->
-        <circle cx="50" cy="34" r="28" fill="url(#sunBackAura)" />
-
-        <!-- Corona Rays Radiating from the Sun Behind Cloud -->
-        <g
-          stroke="#fef08a"
-          stroke-width="2.2"
-          stroke-linecap="round"
-          opacity="0.8"
-        >
-          <line x1="50" y1="8" x2="50" y2="14" />
-          <line x1="30" y1="16" x2="35" y2="21" />
-          <line x1="70" y1="16" x2="65" y2="21" />
-          <line x1="22" y1="34" x2="28" y2="34" />
-          <line x1="78" y1="34" x2="72" y2="34" />
-        </g>
-
-        <!-- Radiant Golden Sun Positioned Directly at the Back of Cloud -->
-        <circle
-          cx="50"
-          cy="34"
-          r="19"
-          fill="url(#sunBackBody)"
-          filter="drop-shadow(0 0 10px rgba(254, 240, 138, 0.45))"
-        />
-
-        <!-- Secondary Rear Ambient Cloud Depth -->
-        <path
-          d="M 44 56 A 14 14 0 0 1 32 42 A 16 16 0 0 1 50 26 A 18 18 0 0 1 82 24 A 18 18 0 0 1 100 40 A 14 14 0 0 1 100 56 Z"
-          fill="url(#cloudyBackCloud)"
-          opacity="0.55"
-        />
-
-        <!-- Wide Primary Foreground Fluffy Cloud in Front of Sun -->
-        <path
-          d="M 32 64 A 16 16 0 0 1 18 48 A 18 18 0 0 1 34 30 A 22 22 0 0 1 70 26 A 22 22 0 0 1 98 40 A 16 16 0 0 1 98 64 Z"
-          fill="url(#cloudyFrontCloud)"
-          filter="drop-shadow(0 4px 12px rgba(15, 23, 42, 0.28))"
-        />
-      </svg>
-    {/if}
+      {/if}
+    </svg>
   </div>
 {:else}
   <!-- =========================================================================
@@ -607,7 +935,7 @@
   <div
     class="weather-art-compact {className}"
     class:variant-mini={variant === 'mini'}
-    class:monochrome={monochrome}
+    class:monochrome
   >
     {#if type === 'sunny'}
       <svg
@@ -697,7 +1025,6 @@
         <path d="M16 19h.01" />
       </svg>
     {:else if type === 'fog'}
-      <!-- Standard well-proportioned CloudFog outline -->
       <svg
         class="compact-svg"
         viewBox="0 0 24 24"
@@ -715,7 +1042,6 @@
         <line x1="9" y1="21" x2="17" y2="21" />
       </svg>
     {:else if type === 'cloudy-night'}
-      <!-- Cloudy Night: Wide Fluffy Nocturnal Cloud (No Moon) -->
       <svg
         class="compact-svg"
         viewBox="0 0 24 24"
@@ -730,7 +1056,6 @@
         />
       </svg>
     {:else}
-      <!-- Cloudy (Partly Cloudy) with Wide Aspect Ratio and Sun at the Back -->
       <svg
         class="compact-svg"
         viewBox="0 0 24 24"
@@ -771,6 +1096,359 @@
     object-fit: contain;
   }
 
+  /* =========================================================================
+     HERO MASCOT & WEATHER ANIMATIONS
+     ========================================================================= */
+
+  /* Gentle Floating Motions */
+  .anim-float-calm {
+    animation: floatCalm 4s ease-in-out infinite;
+  }
+  .anim-float-hot {
+    animation: floatHot 2.6s ease-in-out infinite;
+  }
+  .anim-float-sleep {
+    animation: floatSleep 5s ease-in-out infinite;
+  }
+
+  @keyframes floatCalm {
+    0%,
+    100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-3.5px);
+    }
+  }
+  @keyframes floatHot {
+    0%,
+    100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(2.5px);
+    }
+  }
+  @keyframes floatSleep {
+    0%,
+    100% {
+      transform: translateY(0px) rotate(-1deg);
+    }
+    50% {
+      transform: translateY(-3px) rotate(1deg);
+    }
+  }
+
+  /* Sun & Heat Animations */
+  .anim-spin-sun {
+    animation: spinSun 24s linear infinite;
+  }
+  .anim-pulse-aura {
+    animation: pulseAura 3s ease-in-out infinite;
+    transform-origin: 60px 42px;
+  }
+  .anim-sweat-1 {
+    animation: sweatDrop 2.2s ease-in infinite;
+  }
+  .anim-sweat-2 {
+    animation: sweatDrop 2.2s ease-in 1.1s infinite;
+  }
+
+  @keyframes spinSun {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @keyframes pulseAura {
+    0%,
+    100% {
+      transform: scale(0.95);
+      opacity: 0.8;
+    }
+    50% {
+      transform: scale(1.08);
+      opacity: 1;
+    }
+  }
+  @keyframes sweatDrop {
+    0% {
+      transform: translateY(0px);
+      opacity: 0;
+    }
+    20% {
+      opacity: 1;
+    }
+    80% {
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(11px);
+      opacity: 0;
+    }
+  }
+
+  /* Night & Sleep Animations */
+  .anim-moon-rock {
+    animation: moonRock 6s ease-in-out infinite;
+  }
+  .anim-sleep-mouth {
+    animation: sleepBreath 5s ease-in-out infinite;
+  }
+  .anim-twinkle-1 {
+    animation: twinkle 2.5s ease-in-out infinite;
+  }
+  .anim-twinkle-2 {
+    animation: twinkle 3.2s ease-in-out 1.2s infinite;
+  }
+  .anim-zzz-1 {
+    animation: floatZzz 3.6s ease-out infinite;
+  }
+  .anim-zzz-2 {
+    animation: floatZzz 3.6s ease-out 1.2s infinite;
+  }
+  .anim-zzz-3 {
+    animation: floatZzz 3.6s ease-out 2.4s infinite;
+  }
+
+  @keyframes moonRock {
+    0%,
+    100% {
+      transform: rotate(-4deg);
+    }
+    50% {
+      transform: rotate(4deg);
+    }
+  }
+  @keyframes sleepBreath {
+    0%,
+    100% {
+      transform: scale(0.85);
+      opacity: 0.7;
+    }
+    50% {
+      transform: scale(1.35);
+      opacity: 1;
+    }
+  }
+  @keyframes twinkle {
+    0%,
+    100% {
+      opacity: 0.25;
+      transform: scale(0.8);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.2);
+    }
+  }
+  @keyframes floatZzz {
+    0% {
+      transform: translate(0px, 4px) scale(0.7);
+      opacity: 0;
+    }
+    30% {
+      opacity: 0.95;
+    }
+    100% {
+      transform: translate(-8px, -10px) scale(1.1);
+      opacity: 0;
+    }
+  }
+
+  /* Cloud & Eye Glancing Animations */
+  .anim-cloud-drift {
+    animation: cloudDrift 5s ease-in-out infinite;
+  }
+  .anim-cloud-drift-slow {
+    animation: cloudDrift 7s ease-in-out reverse infinite;
+  }
+  .anim-look-around {
+    animation: lookAround 6s ease-in-out infinite;
+  }
+
+  @keyframes cloudDrift {
+    0%,
+    100% {
+      transform: translateX(-3px);
+    }
+    50% {
+      transform: translateX(4px);
+    }
+  }
+  @keyframes lookAround {
+    0%,
+    100% {
+      transform: translate(0px, 0px);
+    }
+    30% {
+      transform: translate(2.5px, -1.5px);
+    }
+    70% {
+      transform: translate(-2px, -1px);
+    }
+  }
+
+  /* Rain & Umbrella Animations */
+  .anim-rain-1 {
+    animation: rainFall 1.1s linear infinite;
+  }
+  .anim-rain-2 {
+    animation: rainFall 1.1s linear 0.35s infinite;
+  }
+  .anim-rain-3 {
+    animation: rainFall 1.1s linear 0.7s infinite;
+  }
+  .anim-umbrella-tilt {
+    animation: umbrellaTilt 3.5s ease-in-out infinite;
+  }
+
+  @keyframes rainFall {
+    0% {
+      transform: translate(0px, -4px);
+      opacity: 0;
+    }
+    30% {
+      opacity: 0.9;
+    }
+    100% {
+      transform: translate(-4px, 14px);
+      opacity: 0;
+    }
+  }
+  @keyframes umbrellaTilt {
+    0%,
+    100% {
+      transform: rotate(-2deg);
+    }
+    50% {
+      transform: rotate(2.5deg);
+    }
+  }
+
+  /* Thunder & Shock Animations */
+  .anim-lightning-1 {
+    animation: flashBolt 3.2s infinite;
+  }
+  .anim-lightning-2 {
+    animation: flashBolt 3.2s 1.6s infinite;
+  }
+  .anim-shock-shake {
+    animation: shockShake 1.6s ease-in-out infinite;
+  }
+
+  @keyframes flashBolt {
+    0%,
+    78%,
+    100% {
+      opacity: 0;
+    }
+    80%,
+    86% {
+      opacity: 1;
+    }
+    83% {
+      opacity: 0.2;
+    }
+  }
+  @keyframes shockShake {
+    0%,
+    70%,
+    100% {
+      transform: translate(0, 0);
+    }
+    75% {
+      transform: translate(-2px, 1px);
+    }
+    80% {
+      transform: translate(2px, -1px);
+    }
+    85% {
+      transform: translate(-2px, -1px);
+    }
+    90% {
+      transform: translate(2px, 1px);
+    }
+  }
+
+  /* Snow & Shivering Animations */
+  .anim-snow-1 {
+    animation: snowDrift 3.2s linear infinite;
+  }
+  .anim-snow-2 {
+    animation: snowDrift 3.2s linear 1.1s infinite;
+  }
+  .anim-snow-3 {
+    animation: snowDrift 3.2s linear 2.2s infinite;
+  }
+  .anim-shiver-cold {
+    animation: shiverCold 0.45s ease-in-out infinite;
+  }
+
+  @keyframes snowDrift {
+    0% {
+      transform: translate(0px, -6px);
+      opacity: 0;
+    }
+    25% {
+      opacity: 0.95;
+    }
+    75% {
+      opacity: 0.95;
+    }
+    100% {
+      transform: translate(4px, 24px);
+      opacity: 0;
+    }
+  }
+  @keyframes shiverCold {
+    0%,
+    100% {
+      transform: translateX(-0.7px);
+    }
+    50% {
+      transform: translateX(0.7px);
+    }
+  }
+
+  /* Fog & Scanning Animations */
+  .anim-fog-back {
+    animation: fogSlide 6s ease-in-out infinite;
+  }
+  .anim-fog-front-1 {
+    animation: fogSlide 4.5s ease-in-out reverse infinite;
+  }
+  .anim-fog-front-2 {
+    animation: fogSlide 5.5s ease-in-out 1s infinite;
+  }
+  .anim-scan-eyes {
+    animation: scanEyes 4.5s ease-in-out infinite;
+  }
+
+  @keyframes fogSlide {
+    0%,
+    100% {
+      transform: translateX(-6px);
+    }
+    50% {
+      transform: translateX(6px);
+    }
+  }
+  @keyframes scanEyes {
+    0%,
+    100% {
+      transform: translateX(-3px);
+    }
+    50% {
+      transform: translateX(3px);
+    }
+  }
+
+  /* =========================================================================
+     COMPACT GLYPH STYLES
+     ========================================================================= */
   .weather-art-compact {
     display: inline-flex;
     align-items: center;

@@ -27,7 +27,6 @@
   import { onMount, tick } from 'svelte'
   import {
     Plus,
-    Search,
     FolderOpen,
     Trash2,
     List,
@@ -39,6 +38,7 @@
     Image as ImageIcon
   } from 'lucide-svelte'
   import BackButton from '../components/BackButton.svelte'
+  import SearchInput from '../components/SearchInput.svelte'
   import ScrollView from '../components/ScrollView.svelte'
   import { islandTooltip } from '../services/islandTooltip'
   import {
@@ -645,15 +645,11 @@
           {/if}
         </div>
 
-        <div class="board-search-box">
-          <Search size={13} class="board-search-icon" />
-          <input
-            type="text"
-            placeholder="Search notes..."
-            class="board-search-input"
-            bind:value={drawerSearchQuery}
-          />
-        </div>
+        <SearchInput
+          bind:value={drawerSearchQuery}
+          placeholder="Search notes..."
+          maxWidth="220px"
+        />
 
         <div class="board-header-right">
           <button

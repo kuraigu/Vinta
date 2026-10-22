@@ -41,6 +41,14 @@
   position: relative;
 }
 
+.expanded-view.has-hero-weather {
+  padding-top: 0;
+}
+
+.expanded-view.has-hero-weather .social-feed-container {
+  padding-top: 0;
+}
+
 .expanded-view::before {
   content: '';
   position: absolute;
@@ -115,36 +123,6 @@
   color: var(--vinta-text-primary);
   line-height: 1.1;
   word-break: break-word;
-}
-
-.greeting-dots-pattern {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 140px;
-  height: 100%;
-  pointer-events: none;
-  z-index: 1;
-  background-image: radial-gradient(
-    circle at center,
-    var(--vinta-text-primary) 1px,
-    transparent 1.4px
-  );
-  background-size: 10px 10px;
-  background-position: top 4px right 4px;
-  opacity: 0.14;
-  mask-image: radial-gradient(
-    circle at 100% 0%,
-    #000 10%,
-    rgba(0, 0, 0, 0.5) 45%,
-    transparent 80%
-  );
-  -webkit-mask-image: radial-gradient(
-    circle at 100% 0%,
-    #000 10%,
-    rgba(0, 0, 0, 0.5) 45%,
-    transparent 80%
-  );
 }
 
 .time-subtle-bar {
@@ -397,9 +375,8 @@
 /* Calendar Overview Card - Feed Widget */
 .calendar-card-feed {
   width: 100%;
-  min-height: 200px;
   height: auto;
-  border-radius: 18px;
+  border-radius: 20px;
   box-sizing: border-box;
 }
 

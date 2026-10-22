@@ -34,6 +34,7 @@
   import BackButton from './BackButton.svelte'
   import RefreshButton from './RefreshButton.svelte'
   import ScrollView from './ScrollView.svelte'
+  import CapsulePattern from './patterns/CapsulePattern.svelte'
   import WeatherArt, {
     type WeatherConditionType
   } from '../illustrations/weather/WeatherArt.svelte'
@@ -47,11 +48,21 @@
   let {
     expanded = false,
     variant = 'widget',
-    simulateOffline = false
+    simulateOffline = false,
+    salutation = '',
+    userName = '',
+    dateText = '',
+    timeText = '',
+    amPmText = ''
   }: {
     expanded?: boolean
-    variant?: 'widget' | 'page'
+    variant?: 'widget' | 'page' | 'home-hero'
     simulateOffline?: boolean
+    salutation?: string
+    userName?: string
+    dateText?: string
+    timeText?: string
+    amPmText?: string
   } = $props()
 
   let weather = $state<WeatherData | null>(null)
@@ -245,22 +256,41 @@
   }
 </script>
 
-{#snippet bannerCard(isPage: boolean)}
+{#snippet bannerCard(cardMode: 'widget' | 'page' | 'home-hero')}
+  {@const isPage = cardMode === 'page'}
+  {@const isHomeHero = cardMode === 'home-hero'}
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
     class="weather-banner-card {illustrationType}"
     class:variant-page={isPage}
-    onclick={() => (!isPage ? (isForecastOpen = !isForecastOpen) : null)}
+    class:variant-home-hero={isHomeHero}
+    onclick={() =>
+      !isPage && !isHomeHero ? (isForecastOpen = !isForecastOpen) : null}
   >
     <!-- GPU-Accelerated Dynamic Ambient Background Landscape Waves & Atmospheric FX -->
     <div class="weather-card-aura-bg {illustrationType}" aria-hidden="true">
       <!-- Layered Flowing Landscape Wave Contours -->
-      <svg class="weather-waves-canvas" viewBox="0 0 400 120" preserveAspectRatio="none">
-        <path class="wave-contour wave-contour-back" d="M -50 70 Q 70 35 190 65 T 450 50 L 450 130 L -50 130 Z" />
-        <path class="wave-contour wave-contour-mid" d="M -50 82 Q 90 55 220 80 T 450 68 L 450 130 L -50 130 Z" />
-        <path class="wave-contour wave-contour-front" d="M -50 94 Q 110 75 250 92 T 450 85 L 450 130 L -50 130 Z" />
+      <svg
+        class="weather-waves-canvas"
+        viewBox="0 0 400 120"
+        preserveAspectRatio="none"
+      >
+        <path
+          class="wave-contour wave-contour-back"
+          d="M -50 70 Q 70 35 190 65 T 450 50 L 450 130 L -50 130 Z"
+        />
+        <path
+          class="wave-contour wave-contour-mid"
+          d="M -50 82 Q 90 55 220 80 T 450 68 L 450 130 L -50 130 Z"
+        />
+        <path
+          class="wave-contour wave-contour-front"
+          d="M -50 94 Q 110 75 250 92 T 450 85 L 450 130 L -50 130 Z"
+        />
       </svg>
+
+      <CapsulePattern align="right" rows={16} cols={20} />
 
       {#if illustrationType === 'sunny'}
         <!-- Concentric Radial Sun Pulses from Top Right -->
@@ -322,7 +352,64 @@
       {/if}
     </div>
 
-    {#if loading && !weather}
+    {#if isHomeHero}
+      <div class="banner-top-layout home-hero-layout">
+        <div class="banner-left-content home-hero-left">
+          {#if salutation}
+            <span class="hero-banner-salutation">{salutation},</span>
+          {/if}
+          {#if userName}
+            <h1 class="hero-banner-username">{userName}</h1>
+          {/if}
+          {#if weather}
+            <div class="hero-banner-weather-row">
+              <span class="hero-weather-temp"
+                >{displayTemp.val}°{unitLetter}</span
+              >
+              <span class="sub-divider">•</span>
+              <span class="hero-weather-cond">{bannerConditionTitle}</span>
+              <span class="sub-divider">•</span>
+              <span class="hero-weather-loc">
+                <MapPin size={10} class="loc-pin" />
+                {$weatherLocationStore.name || shortCityName}
+              </span>
+            </div>
+          {/if}
+
+          {#if timeText}
+            <div class="hero-banner-time-row">
+              <span class="hero-banner-time">{timeText}</span>
+              {#if amPmText}
+                <span class="hero-banner-ampm">{amPmText}</span>
+              {/if}
+            </div>
+          {/if}
+        </div>
+
+        <div class="banner-right-art home-hero-art">
+          <div class="weather-art-wrap">
+            <div
+              class="weather-art-link"
+              role="link"
+              tabindex="0"
+              aria-label="Open weather page"
+              onclick={(e) => {
+                e.stopPropagation()
+                openWeatherPage()
+              }}
+              onkeydown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  openWeatherPage()
+                }
+              }}
+            >
+              <WeatherArt type={illustrationType} variant="hero" />
+            </div>
+          </div>
+        </div>
+      </div>
+    {:else if loading && !weather}
       <div class="banner-loading">
         <RefreshCw size={18} class="spin-icon" />
         <span>Loading live weather...</span>
@@ -426,7 +513,9 @@
 
           <div class="forecast-strip-box">
             {#each weather.forecast.slice(0, 4) as f (f.day)}
-              {@const forecastArtType = getForecastIllustrationType(f.weatherCode)}
+              {@const forecastArtType = getForecastIllustrationType(
+                f.weatherCode
+              )}
               {@const maxConv = convertTemp(f.tempMax, $weatherUnitStore)}
               {@const minConv = convertTemp(f.tempMin, $weatherUnitStore)}
               <div class="f-day-col">
@@ -471,18 +560,6 @@
     style="--weather-color: {weatherInfo.theme
       .color}; --weather-glow: {weatherInfo.theme.glow};"
   >
-    <div class="weather-header">
-      <div class="header-left">
-        <BackButton />
-        <span class="header-title-text">Weather</span>
-      </div>
-      <RefreshButton
-        loading={loading}
-        onclick={() => handleRetry()}
-        title="Refresh weather data"
-      />
-    </div>
-
     {#if loading && !weather}
       <div class="bento-tile-loading">
         <span>Loading live weather...</span>
@@ -500,7 +577,7 @@
       <ScrollView class="weather-scroll-area">
         <div class="weather-content-stream">
           <!-- Hero Illustrated Card (Identical to Home feed card) -->
-          {@render bannerCard(true)}
+          {@render bannerCard('page')}
 
           <!-- 7-Day Forecast Section: Consolidated into 1 Bento Card with Dividers -->
           {#if weather.forecast && weather.forecast.length > 0}
@@ -512,7 +589,9 @@
                 </div>
                 <div class="forecast-days-strip">
                   {#each weather.forecast as f, idx (f.day + idx)}
-                    {@const forecastArtType = getForecastIllustrationType(f.weatherCode)}
+                    {@const forecastArtType = getForecastIllustrationType(
+                      f.weatherCode
+                    )}
                     {@const maxConv = convertTemp(f.tempMax, $weatherUnitStore)}
                     {@const minConv = convertTemp(f.tempMin, $weatherUnitStore)}
                     <div class="forecast-col">
@@ -541,7 +620,7 @@
           <!-- Standardized Bento Metrics Grid -->
           <div class="bento-metrics-grid">
             <!-- Wind -->
-            <div class="bento-tile">
+            <div class="forecast-bento-card">
               <div class="tile-head">
                 <Wind size={13} class="tile-head-icon" />
                 <span>Wind</span>
@@ -556,7 +635,7 @@
             </div>
 
             <!-- UV Index -->
-            <div class="bento-tile">
+            <div class="forecast-bento-card">
               <div class="tile-head">
                 <Compass size={13} class="tile-head-icon" />
                 <span>UV Index</span>
@@ -573,7 +652,7 @@
             </div>
 
             <!-- Humidity -->
-            <div class="bento-tile">
+            <div class="forecast-bento-card">
               <div class="tile-head">
                 <Droplets size={13} class="tile-head-icon" />
                 <span>Humidity</span>
@@ -592,7 +671,7 @@
             </div>
 
             <!-- Pressure -->
-            <div class="bento-tile">
+            <div class="forecast-bento-card">
               <div class="tile-head">
                 <Gauge size={13} class="tile-head-icon" />
                 <span>Pressure</span>
@@ -605,7 +684,7 @@
             </div>
 
             <!-- Sun Timing -->
-            <div class="bento-tile">
+            <div class="forecast-bento-card">
               <div class="tile-head">
                 <Sun size={13} class="tile-head-icon" />
                 <span>Sun Timing</span>
@@ -620,7 +699,7 @@
             </div>
 
             <!-- Precipitation -->
-            <div class="bento-tile">
+            <div class="forecast-bento-card">
               <div class="tile-head">
                 <CloudRain size={13} class="tile-head-icon" />
                 <span>Precipitation</span>
@@ -636,11 +715,28 @@
           </div>
         </div>
       </ScrollView>
+
+      <!-- Header: title is centered via a 1fr / auto / 1fr grid (see CSS) -->
+      <div class="weather-header">
+        <div class="header-left">
+          <BackButton />
+        </div>
+        <span class="header-title-text">Weather</span>
+        <div class="header-right">
+          <RefreshButton
+            {loading}
+            onclick={() => handleRetry()}
+            title="Refresh weather data"
+          />
+        </div>
+      </div>
     {/if}
   </div>
+{:else if variant === 'home-hero'}
+  {@render bannerCard('home-hero')}
 {:else}
   <!-- WIDGET VARIANT (Home Feed Card) -->
-  {@render bannerCard(false)}
+  {@render bannerCard('widget')}
 {/if}
 
 <style src="./styles/Weather.css"></style>

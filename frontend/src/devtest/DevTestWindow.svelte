@@ -26,7 +26,7 @@
     addCalendarEvent,
     syncAllCalendarFeeds
   } from '../store'
-  import { applyThemeToDOM } from '../themes/engine'
+  import { applyThemeToDOM, refreshStylesheetsAndTheme } from '../themes/engine'
   import {
     debugBoundsOverlay,
     debugLogs,
@@ -70,8 +70,37 @@
     emitNavigate(targetMode, isExpandedMode)
   }
 
-  function handleReload() {
-    window.location.reload()
+  /**
+   * Refreshes stylesheets and reloads both the main Vinta island and the devtest window.
+   */
+  async function handleReload() {
+    const currentTheme = $themeStore || 'dark-gold'
+    try {
+      sessionStorage.setItem(
+        'vinta_devtest_window_state',
+        JSON.stringify({
+          mode: targetMode,
+          expand: isExpandedMode,
+          pinned: $devPinnedStore
+        })
+      )
+    } catch {
+      // Ignore storage errors
+    }
+    await refreshStylesheetsAndTheme(currentTheme)
+    try {
+      Events.Emit('devtest-reload-css', {
+        theme: currentTheme,
+        mode: targetMode,
+        expand: isExpandedMode,
+        pinned: $devPinnedStore
+      })
+    } catch {
+      // Ignore if runtime events not available
+    }
+    window.setTimeout(() => {
+      window.location.reload()
+    }, 60)
   }
 
   function togglePin() {
@@ -128,6 +157,23 @@
   }
 
   onMount(() => {
+    try {
+      const savedState = sessionStorage.getItem('vinta_devtest_window_state')
+      if (savedState) {
+        sessionStorage.removeItem('vinta_devtest_window_state')
+        const parsed = JSON.parse(savedState) as {
+          mode?: string
+          expand?: boolean
+          pinned?: boolean
+        }
+        if (parsed.mode) targetMode = parsed.mode
+        if (typeof parsed.expand === 'boolean') isExpandedMode = parsed.expand
+        if (typeof parsed.pinned === 'boolean') $devPinnedStore = parsed.pinned
+      }
+    } catch {
+      // Ignore storage errors
+    }
+
     const unsubSync = Events.On(
       'devtest-sync-page',
       (ev: { data: unknown }) => {
@@ -253,7 +299,7 @@
         class="action-btn"
         onclick={handleReload}
         use:islandTooltip={{
-          text: 'Reload Dev Tools',
+          text: 'Refresh CSS & Reload Dev Tools',
           position: 'bottom',
           align: 'right'
         }}

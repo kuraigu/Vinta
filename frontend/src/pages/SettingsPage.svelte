@@ -28,7 +28,7 @@
   let activeTab = $derived($activeSettingsTabStore)
 </script>
 
-<SidebarLayout title="Settings" dataVinta="settings-page">
+<SidebarLayout dataVinta="settings-page">
   {#snippet sidebar()}
     <SettingsSidebar />
   {/snippet}

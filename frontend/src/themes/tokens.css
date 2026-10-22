@@ -69,6 +69,7 @@
   --vinta-contrast-hover: #ff00ff;
 
   /* GEOMETRY & LAYOUT */
+  --vinta-dock-clearance: 56px;
   --vinta-radius-island: 18px;
   --vinta-radius-card: 16px;
   --vinta-radius-button: 10px;
@@ -139,4 +140,6 @@
   --vinta-agenda-rose-shadow: 0 4px 16px #ff00ff;
   --vinta-agenda-sky-bg: #ff00ff;
   --vinta-agenda-sky-shadow: 0 4px 16px #ff00ff;
+  --vinta-agenda-free-bg: #ff00ff;
+  --vinta-agenda-free-shadow: 0 4px 16px #ff00ff;
 }

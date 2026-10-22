@@ -154,7 +154,7 @@
 }
 
 .expanded-view {
-  padding: 50px 16px 12px 16px;
+  padding: var(--vinta-dock-clearance, 56px) 16px 12px 16px;
   height: 100%;
   width: 100%;
   box-sizing: border-box;

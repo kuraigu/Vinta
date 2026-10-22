@@ -9,7 +9,7 @@
 
 <script lang="ts">
   import { onMount, onDestroy, getContext } from 'svelte'
-  import { MapPin, Info, X, RefreshCw, ChevronDown } from 'lucide-svelte'
+  import { ChevronDown } from 'lucide-svelte'
   import Calendar from '../components/Calendar.svelte'
   import Weather from '../components/Weather.svelte'
   import DeviceStatusWidget from '../components/DeviceStatusWidget.svelte'
@@ -27,9 +27,7 @@
     dateFormatStore,
     formatUserDate,
     updateInfoStore,
-    updateLifecycleStatusStore,
     activeSettingsTabStore,
-    triggerApplyUpdate,
     type IslandConfig
   } from '../store'
 
@@ -67,18 +65,6 @@
     isUpdateSnoozed = true
   }
 
-  /**
-   * Triggers immediate application of a downloaded and verified update.
-   */
-  function handleApplyUpdate(e: MouseEvent) {
-    e.stopPropagation()
-    if (triggerApplyUpdate) {
-      triggerApplyUpdate()
-    } else {
-      openUpdatesTab()
-    }
-  }
-
   interface Props {
     expanded?: boolean
   }
@@ -87,6 +73,21 @@
 
   let scrollContainer: HTMLElement | undefined = $state()
   let isScrolledDown = $state(false)
+  let canScrollMore = $state(false)
+
+  /**
+   * Evaluates whether the home feed has vertical overflow below the current scroll position.
+   */
+  function updateScrollCueVisibility() {
+    if (!scrollContainer) {
+      canScrollMore = false
+      return
+    }
+    const maxScroll =
+      scrollContainer.scrollHeight - scrollContainer.clientHeight
+    isScrolledDown = scrollContainer.scrollTop > 20
+    canScrollMore = maxScroll > 8 && scrollContainer.scrollTop < maxScroll - 8
+  }
 
   /**
    * Updates scroll indicator state based on current scroll position.
@@ -94,9 +95,35 @@
   function handleFeedScroll(e: Event) {
     const target = e.currentTarget as HTMLElement
     if (target) {
-      isScrolledDown = target.scrollTop > 20
+      updateScrollCueVisibility()
     }
   }
+
+  /**
+   * Observes the home feed scroll container and content height to keep the scroll cue pill in sync.
+   */
+  function syncScrollCueObserverEffect() {
+    const el = scrollContainer
+    if (!el || typeof ResizeObserver === 'undefined') {
+      canScrollMore = false
+      return
+    }
+
+    updateScrollCueVisibility()
+    const ro = new ResizeObserver(() => {
+      updateScrollCueVisibility()
+    })
+    ro.observe(el)
+    const inner = el.firstElementChild
+    if (inner) {
+      ro.observe(inner)
+    }
+
+    return () => {
+      ro.disconnect()
+    }
+  }
+  $effect(syncScrollCueObserverEffect)
 
   /**
    * Smoothly scrolls the social feed downward when the scroll cue is clicked.
@@ -224,34 +251,6 @@
     return timeParts.h24 >= 12 ? 'PM' : 'AM'
   }
   let amPm = $derived.by(computeAmPm)
-
-  /**
-   * Resolves timezone label and GMT offset string for the active timezone.
-   */
-  function computeTimezoneDetails() {
-    try {
-      const now = new Date()
-      const tzFormatter = new Intl.DateTimeFormat('en-US', {
-        timeZone: currentTimezone,
-        timeZoneName: 'shortOffset'
-      })
-      const tzParts = tzFormatter.formatToParts(now)
-      const offsetPart =
-        tzParts.find((p) => p.type === 'timeZoneName')?.value || ''
-      const parts = currentTimezone.split('/')
-      const friendlyName = parts[parts.length - 1].replace(/_/g, ' ')
-      return {
-        timezoneName: friendlyName,
-        gmtOffset: offsetPart
-      }
-    } catch {
-      return {
-        timezoneName: currentTimezone,
-        gmtOffset: ''
-      }
-    }
-  }
-  let timezoneDetails = $derived.by(computeTimezoneDetails)
 </script>
 
 <div data-vinta="home-page" class="page-container">
@@ -281,45 +280,47 @@
       {/if}
     </div>
   {:else}
-    <div class="expanded-view">
+    <div class="expanded-view" class:has-hero-weather={$homeWidgetsVisibilityStore.weather}>
       <ScrollView
         class="home-feed-scroll"
         bind:element={scrollContainer}
         onscroll={handleFeedScroll}
       >
         <div class="social-feed-container">
-          <!-- Hero Greeting -->
-          <header class="home-hero-greeting">
-            <div class="greeting-dots-pattern" aria-hidden="true"></div>
-            <span class="hero-salutation">{salutationText},</span>
-            <h1 class="hero-username">{displayName}</h1>
-          </header>
+          {#if $homeWidgetsVisibilityStore.weather}
+            <!-- Full-Bleed Weather Hero Header (Background for Salutation + User + Time) -->
+            <Weather
+              expanded={true}
+              variant="home-hero"
+              salutation={salutationText}
+              userName={displayName}
+              dateText={$homeWidgetsVisibilityStore.clock
+                ? timeParts.friendlyDateText
+                : ''}
+              timeText={$homeWidgetsVisibilityStore.clock
+                ? `${formattedHours}:${timeParts.m}`
+                : ''}
+              amPmText={$homeWidgetsVisibilityStore.clock ? amPm : ''}
+            />
+          {:else}
+            <!-- Hero Greeting (Fallback when weather widget is disabled) -->
+            <header class="home-hero-greeting">
+              <span class="hero-salutation">{salutationText},</span>
+              <h1 class="hero-username">{displayName}</h1>
+            </header>
 
-          <!-- Unified Date, Time and Location Row -->
-          {#if $homeWidgetsVisibilityStore.clock}
-            <section class="time-subtle-bar">
-              <span class="meta-date-text">{timeParts.friendlyDateText}</span>
-              <span class="meta-bullet">•</span>
-              <span class="time-subtle-digits">
-                {formattedHours}<span class="colon-blink">:</span>{timeParts.m}
-              </span>
-              {#if amPm}
-                <span class="time-subtle-ampm">{amPm}</span>
-              {/if}
-              <span class="meta-bullet">•</span>
-              <div
-                class="meta-location-group"
-                title={timezoneDetails.timezoneName}
-              >
-                <MapPin size={11} class="meta-pin-icon" />
-                <span class="meta-city-name"
-                  >{timezoneDetails.timezoneName}</span
-                >
-                {#if timezoneDetails.gmtOffset}
-                  <span class="meta-offset">({timezoneDetails.gmtOffset})</span>
+            {#if $homeWidgetsVisibilityStore.clock}
+              <section class="time-subtle-bar">
+                <span class="meta-date-text">{timeParts.friendlyDateText}</span>
+                <span class="meta-bullet">•</span>
+                <span class="time-subtle-digits">
+                  {formattedHours}<span class="colon-blink">:</span>{timeParts.m}
+                </span>
+                {#if amPm}
+                  <span class="time-subtle-ampm">{amPm}</span>
                 {/if}
-              </div>
-            </section>
+              </section>
+            {/if}
           {/if}
 
           <!-- Update Glance Banner (Issue #161) -->
@@ -335,14 +336,7 @@
             <NotificationGlance />
           </section>
 
-          <!-- Illustrated Weather Banner -->
-          {#if $homeWidgetsVisibilityStore.weather}
-            <section class="weather-card-feed">
-              <Weather expanded={true} />
-            </section>
-          {/if}
-
-          <!-- Calendar Overview Card (Shared component with Go to Calendar button) -->
+          <!-- Calendar Agenda Card (Shared component with Go to Calendar button) -->
           {#if $homeWidgetsVisibilityStore.calendar}
             <section class="calendar-card-feed">
               <Calendar
@@ -362,11 +356,11 @@
         </div>
       </ScrollView>
 
-      <!-- Scroll cue indicator: fades out when feed is scrolled down -->
+      <!-- Scroll cue indicator: hides when feed has no overflow or is scrolled down -->
       <button
         type="button"
         class="home-scroll-cue-pill"
-        class:hidden={isScrolledDown}
+        class:hidden={!canScrollMore || isScrolledDown}
         onclick={scrollFeedDown}
         aria-label="Scroll down for more content"
       >

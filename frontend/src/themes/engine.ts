@@ -115,6 +115,32 @@ function auditThemeTokensInDev(themeId: string, themeCss: string): void {
 }
 
 /**
+ * Busts cache on any linked stylesheets in the document head and re-applies the active theme CSS.
+ *
+ * @param themeId - Active theme identifier to re-inject.
+ */
+export async function refreshStylesheetsAndTheme(
+  themeId: string
+): Promise<void> {
+  if (typeof document !== 'undefined') {
+    const links = document.querySelectorAll<HTMLLinkElement>(
+      'link[rel="stylesheet"]'
+    )
+    const bust = Date.now().toString()
+    links.forEach((link) => {
+      try {
+        const url = new URL(link.href, window.location.origin)
+        url.searchParams.set('t', bust)
+        link.href = url.toString()
+      } catch {
+        // Ignore invalid stylesheet URLs
+      }
+    })
+  }
+  await applyThemeToDOM(themeId)
+}
+
+/**
  * Applies a theme to the current DOM document by injecting CSS into the vinta.theme cascade layer.
  */
 export async function applyThemeToDOM(themeId: string): Promise<void> {
