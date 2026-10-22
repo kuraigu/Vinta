@@ -376,7 +376,7 @@
         in:fade={{ duration: 160 }}
         out:fade={{ duration: 80 }}
       >
-        <Dock {activePage} />
+        <Dock {activePage} {islandConfig} />
       </div>
     {/if}
   </div>

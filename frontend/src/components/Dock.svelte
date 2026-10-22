@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getContext } from 'svelte'
+  import { getContext, onMount, type Component } from 'svelte'
   import {
     Grid,
     House,
@@ -9,7 +9,8 @@
     Timer,
     Music,
     Bell,
-    Settings
+    Settings,
+    Folder
   } from 'lucide-svelte'
   import { AppControls } from '../utils/AppControls.svelte'
   import DockButton from './DockButton.svelte'
@@ -37,8 +38,23 @@
       (page: unknown, pageConfig: IslandConfig, expand?: boolean) => void
     >('navigate')
 
-  let { activePage }: { activePage: unknown; islandConfig?: IslandConfig } =
-    $props()
+  let {
+    activePage,
+    islandConfig
+  }: { activePage: unknown; islandConfig?: IslandConfig } = $props()
+
+  interface DockItem {
+    id: string
+    tooltip: string
+    icon: Component<{ size?: number }>
+    active: boolean
+    badge?: number
+    group: 'pinned' | 'dynamic'
+    onclick: (e: MouseEvent) => void
+  }
+
+  let isFolderOpen = $state(false)
+  let folderWrapperRef = $state<HTMLDivElement | null>(null)
 
   /**
    * Evaluates if any timer, stopwatch, or focus session is currently running.
@@ -78,11 +94,186 @@
   const showNotifs = $derived.by(checkShowNotifs)
 
   /**
-   * Checks if any dynamic task items are active.
+   * Builds the list of middle dock items (pinned favorites and dynamic tasks).
    */
-  const checkHasDynamicTasks = () =>
-    Boolean(showTimerDynamic || showMedia || showNotifs)
-  const hasDynamicTasks = $derived.by(checkHasDynamicTasks)
+  function computeMiddleItems(): DockItem[] {
+    const items: DockItem[] = []
+
+    if (
+      $dockPinnedAppsStore.calendar &&
+      $pageVisibilityStore.calendar !== false
+    ) {
+      items.push({
+        id: 'calendar',
+        tooltip: 'Calendar',
+        icon: Calendar,
+        active: activePage === CalendarPage,
+        group: 'pinned',
+        onclick: (e: MouseEvent) => AppControls.goCalendar(navigate, e)
+      })
+    }
+
+    if ($dockPinnedAppsStore.notes && $pageVisibilityStore.notes !== false) {
+      items.push({
+        id: 'notes',
+        tooltip: 'Notes',
+        icon: FileText,
+        active: activePage === NotesPage,
+        group: 'pinned',
+        onclick: (e: MouseEvent) => AppControls.goNotes(navigate, e)
+      })
+    }
+
+    if (
+      $dockPinnedAppsStore.calculator &&
+      $pageVisibilityStore.calculator !== false
+    ) {
+      items.push({
+        id: 'calculator',
+        tooltip: 'Calculator',
+        icon: Calculator,
+        active: activePage === CalculatorPage,
+        group: 'pinned',
+        onclick: (e: MouseEvent) => AppControls.goCalculator(navigate, e)
+      })
+    }
+
+    if ($dockPinnedAppsStore.timer && $pageVisibilityStore.timer !== false) {
+      items.push({
+        id: 'timer',
+        tooltip: 'Timer',
+        icon: Timer,
+        active: activePage === TimerPage,
+        group: 'pinned',
+        onclick: (e: MouseEvent) => AppControls.goTimer(navigate, e)
+      })
+    }
+
+    if (showTimerDynamic) {
+      items.push({
+        id: 'timer-dynamic',
+        tooltip: 'Timer',
+        icon: Timer,
+        active: activePage === TimerPage,
+        group: 'dynamic',
+        onclick: (e: MouseEvent) => AppControls.goTimer(navigate, e)
+      })
+    }
+
+    if (showMedia) {
+      items.push({
+        id: 'media',
+        tooltip: 'Now Playing',
+        icon: Music,
+        active: activePage === MediaPage,
+        group: 'dynamic',
+        onclick: (e: MouseEvent) => AppControls.goMedia(navigate, e)
+      })
+    }
+
+    if (showNotifs) {
+      items.push({
+        id: 'notifications',
+        tooltip: 'Notifications',
+        icon: Bell,
+        active: activePage === NotificationPage,
+        badge: $notifData.length > 0 ? $notifData.length : undefined,
+        group: 'dynamic',
+        onclick: (e: MouseEvent) => AppControls.goNotif(navigate, e)
+      })
+    }
+
+    return items
+  }
+  const middleItems = $derived.by(computeMiddleItems)
+
+  /**
+   * Computes which items fit inline on the dock and which fold into the Dock Folder
+   * when the current page's expanded width is smaller than the total dock width.
+   */
+  function computeDockLayout(): {
+    visibleItems: DockItem[]
+    folderItems: DockItem[]
+  } {
+    const pageW = islandConfig?.expanded?.w ?? 420
+    const availableW = pageW - 36
+    const totalCount = 3 + middleItems.length
+    const hasDyn = middleItems.some((i) => i.group === 'dynamic')
+    const dividerAllowance = hasDyn ? 22 : 0
+    const requiredFullW = totalCount * 36 + 16 + dividerAllowance
+
+    if (requiredFullW <= availableW) {
+      return { visibleItems: middleItems, folderItems: [] }
+    }
+
+    // Reserve space for 3 anchor buttons (Apps, Home, Settings) + 1 Folder button = 4 slots
+    const maxTotalButtons = Math.max(4, Math.floor((availableW - 16) / 36))
+    const maxVisibleMiddle = Math.max(0, maxTotalButtons - 4)
+
+    // Prioritize keeping the currently active page visible on the dock bar if possible
+    const activeIdx = middleItems.findIndex((i) => i.active)
+    if (activeIdx >= maxVisibleMiddle && maxVisibleMiddle > 0) {
+      const reordered = [...middleItems]
+      const [activeItem] = reordered.splice(activeIdx, 1)
+      reordered.splice(maxVisibleMiddle - 1, 0, activeItem)
+      return {
+        visibleItems: reordered.slice(0, maxVisibleMiddle),
+        folderItems: reordered.slice(maxVisibleMiddle)
+      }
+    }
+
+    return {
+      visibleItems: middleItems.slice(0, maxVisibleMiddle),
+      folderItems: middleItems.slice(maxVisibleMiddle)
+    }
+  }
+  const dockLayout = $derived.by(computeDockLayout)
+  const visiblePinned = $derived.by(() =>
+    dockLayout.visibleItems.filter((i) => i.group === 'pinned')
+  )
+  const visibleDynamic = $derived.by(() =>
+    dockLayout.visibleItems.filter((i) => i.group === 'dynamic')
+  )
+  const folderItems = $derived.by(() => dockLayout.folderItems)
+  const hasFolderActive = $derived.by(() =>
+    folderItems.some((item) => item.active)
+  )
+  const folderBadgeTotal = $derived.by(() =>
+    folderItems.reduce((sum, item) => sum + (item.badge || 0), 0)
+  )
+
+  function syncFolderState(): void {
+    if (folderItems.length === 0 && isFolderOpen) {
+      isFolderOpen = false
+    }
+  }
+  $effect(syncFolderState)
+
+  function toggleFolder(e: MouseEvent): void {
+    e.stopPropagation()
+    isFolderOpen = !isFolderOpen
+  }
+
+  function handleFolderItemClick(item: DockItem, e: MouseEvent): void {
+    isFolderOpen = false
+    item.onclick(e)
+  }
+
+  onMount(() => {
+    function handleOutsideClick(e: MouseEvent) {
+      if (
+        isFolderOpen &&
+        folderWrapperRef &&
+        !folderWrapperRef.contains(e.target as Node)
+      ) {
+        isFolderOpen = false
+      }
+    }
+    document.addEventListener('mousedown', handleOutsideClick)
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick)
+    }
+  })
 </script>
 
 <div class="dock-container">
@@ -109,93 +300,81 @@
     </div>
 
     <!-- Pinned Favorites -->
-    <div class="dock-group pinned-group">
-      {#if $dockPinnedAppsStore.calendar && $pageVisibilityStore.calendar !== false}
-        <DockButton
-          tooltip="Calendar"
-          tooltipPosition="bottom"
-          active={activePage === CalendarPage}
-          onclick={(e: MouseEvent) => AppControls.goCalendar(navigate, e)}
-        >
-          <Calendar size={18} />
-        </DockButton>
-      {/if}
+    {#if visiblePinned.length > 0}
+      <div class="dock-group pinned-group">
+        {#each visiblePinned as item (item.id)}
+          {@const Icon = item.icon}
+          <DockButton
+            tooltip={item.tooltip}
+            tooltipPosition="bottom"
+            active={item.active}
+            badge={item.badge}
+            onclick={item.onclick}
+          >
+            <Icon size={18} />
+          </DockButton>
+        {/each}
+      </div>
+    {/if}
 
-      {#if $dockPinnedAppsStore.notes && $pageVisibilityStore.notes !== false}
-        <DockButton
-          tooltip="Notes"
-          tooltipPosition="bottom"
-          active={activePage === NotesPage}
-          onclick={(e: MouseEvent) => AppControls.goNotes(navigate, e)}
-        >
-          <FileText size={18} />
-        </DockButton>
-      {/if}
-
-      {#if $dockPinnedAppsStore.calculator && $pageVisibilityStore.calculator !== false}
-        <DockButton
-          tooltip="Calculator"
-          tooltipPosition="bottom"
-          active={activePage === CalculatorPage}
-          onclick={(e: MouseEvent) => AppControls.goCalculator(navigate, e)}
-        >
-          <Calculator size={18} />
-        </DockButton>
-      {/if}
-
-      {#if $dockPinnedAppsStore.timer && $pageVisibilityStore.timer !== false}
-        <DockButton
-          tooltip="Timer"
-          tooltipPosition="bottom"
-          active={activePage === TimerPage}
-          onclick={(e: MouseEvent) => AppControls.goTimer(navigate, e)}
-        >
-          <Timer size={18} />
-        </DockButton>
-      {/if}
-    </div>
-
-    <!-- Dynamic Activity Section (Surfaces running Timer, Playing Media, Notifications) -->
-    {#if hasDynamicTasks}
+    <!-- Dynamic Activity Section -->
+    {#if visibleDynamic.length > 0}
       <div class="dock-divider" aria-hidden="true"></div>
 
       <div class="dock-group dynamic-group">
-        {#if showTimerDynamic}
+        {#each visibleDynamic as item (item.id)}
+          {@const Icon = item.icon}
           <DockButton
-            tooltip="Timer"
+            tooltip={item.tooltip}
             tooltipPosition="bottom"
-            active={activePage === TimerPage}
-            onclick={(e: MouseEvent) => AppControls.goTimer(navigate, e)}
+            active={item.active}
+            badge={item.badge}
+            onclick={item.onclick}
           >
-            <Timer size={18} />
+            <Icon size={18} />
           </DockButton>
-        {/if}
-
-        {#if showMedia}
-          <DockButton
-            tooltip="Now Playing"
-            tooltipPosition="bottom"
-            active={activePage === MediaPage}
-            onclick={(e: MouseEvent) => AppControls.goMedia(navigate, e)}
-          >
-            <Music size={18} />
-          </DockButton>
-        {/if}
-
-        {#if showNotifs}
-          <DockButton
-            tooltip="Notifications"
-            tooltipPosition="bottom"
-            active={activePage === NotificationPage}
-            badge={$notifData.length > 0 ? $notifData.length : undefined}
-            onclick={(e: MouseEvent) => AppControls.goNotif(navigate, e)}
-          >
-            <Bell size={18} />
-          </DockButton>
-        {/if}
+        {/each}
       </div>
 
       <div class="dock-divider" aria-hidden="true"></div>
+    {/if}
+
+    <!-- Overflow Dock Folder -->
+    {#if folderItems.length > 0}
+      <div class="dock-folder-wrapper" bind:this={folderWrapperRef}>
+        <DockButton
+          tooltip="More in Dock"
+          tooltipPosition="bottom"
+          active={isFolderOpen || hasFolderActive}
+          badge={!isFolderOpen && folderBadgeTotal > 0
+            ? folderBadgeTotal
+            : undefined}
+          onclick={toggleFolder}
+        >
+          <Folder size={17} />
+        </DockButton>
+
+        {#if isFolderOpen}
+          <div
+            class="dock-folder-popover"
+            role="menu"
+            aria-label="Overflow dock items"
+          >
+            {#each folderItems as item (item.id)}
+              {@const Icon = item.icon}
+              <DockButton
+                tooltip={item.tooltip}
+                tooltipPosition="bottom"
+                active={item.active}
+                badge={item.badge}
+                onclick={(e: MouseEvent) => handleFolderItemClick(item, e)}
+              >
+                <Icon size={18} />
+              </DockButton>
+            {/each}
+          </div>
+        {/if}
+      </div>
     {/if}
 
     <!-- Trailing Settings Anchor -->
@@ -247,5 +426,42 @@
     flex-shrink: 0;
     opacity: 1;
     box-shadow: none;
+  }
+
+  .dock-folder-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .dock-folder-popover {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: -12px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 8px;
+    border-radius: 14px;
+    background: var(--vinta-dock-popover-bg, #141d2c);
+    border: 1px solid
+      var(--vinta-dock-popover-border, rgba(255, 255, 255, 0.14));
+    box-shadow: var(
+      --vinta-dock-popover-shadow,
+      0 10px 30px rgba(0, 0, 0, 0.65)
+    );
+    z-index: 220;
+    animation: folder-popover-in 0.16s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  @keyframes folder-popover-in {
+    from {
+      opacity: 0;
+      transform: translateY(-4px) scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
   }
 </style>
