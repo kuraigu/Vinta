@@ -84,87 +84,94 @@
 </script>
 
 {#if isOpen}
-  <div class="alarm-create-card">
-    <span class="create-card-title">
-      {isEditing ? 'Edit Alarm Reminder' : 'New Alarm Reminder'}
-    </span>
-    <div class="create-inputs-row">
-      <CustomTimePicker bind:value={time} ariaLabel="Alarm time" />
-
-      <input
-        type="text"
-        class="alarm-label-input"
-        placeholder="Reminder label..."
-        bind:value={label}
-        aria-label="Alarm note"
-      />
-    </div>
-
-    <div class="alarm-repeat-selector">
-      <span class="repeat-row-label">Repeat:</span>
-      <div class="repeat-pills-row">
-        <button
-          class="repeat-pill"
-          class:active={repeat === 'once'}
-          onclick={() => {
-            repeat = 'once'
-          }}>Once</button
-        >
-        <button
-          class="repeat-pill"
-          class:active={repeat === 'daily'}
-          onclick={() => {
-            repeat = 'daily'
-          }}>Daily</button
-        >
-        <button
-          class="repeat-pill"
-          class:active={repeat === 'weekdays'}
-          onclick={() => {
-            repeat = 'weekdays'
-          }}>Weekdays</button
-        >
-        <button
-          class="repeat-pill"
-          class:active={repeat === 'custom'}
-          onclick={() => {
-            repeat = 'custom'
-          }}>Custom</button
-        >
-      </div>
-    </div>
-
-    {#if repeat === 'custom'}
-      <div class="custom-days-row">
-        {#each DAY_SHORT as dayLabel, idx (idx)}
-          <button
-            class="day-toggle-btn"
-            class:active={days.includes(idx)}
-            onclick={() => toggleDay(idx)}
-            use:islandTooltip={DAY_NAMES[idx]}
-          >
-            {dayLabel}
-          </button>
-        {/each}
-      </div>
-    {/if}
-
-    <div class="create-card-actions">
+  <div class="drawer-overlay">
+    <div class="drawer-header">
+      <span class="drawer-title">
+        {isEditing ? 'Edit Alarm Reminder' : 'New Alarm Reminder'}
+      </span>
       <button
-        class="card-act-btn save"
-        onclick={handleSave}
-        use:islandTooltip={'Save reminder'}
-      >
-        <Check size={14} />
-        <span>Save</span>
-      </button>
-      <button
-        class="card-act-btn cancel"
+        class="header-tool-btn"
         onclick={onCancel}
-        use:islandTooltip={'Cancel'}
+        use:islandTooltip={'Close'}
       >
-        <X size={14} />
-        <span>Cancel</span>
+        <X size={15} />
+      </button>
+    </div>
+
+    <div class="drawer-content">
+      <div class="drawer-row">
+        <span class="drawer-row-label">Time</span>
+        <div class="alarm-drawer-time-wrapper">
+          <CustomTimePicker bind:value={time} ariaLabel="Alarm time" align="right" />
+        </div>
+      </div>
+
+      <div class="drawer-row">
+        <span class="drawer-row-label">Label</span>
+        <input
+          type="text"
+          class="alarm-label-input"
+          placeholder="Reminder label..."
+          bind:value={label}
+          aria-label="Alarm note"
+        />
+      </div>
+
+      <div class="drawer-row">
+        <span class="drawer-row-label">Repeat</span>
+        <div class="repeat-pills-row">
+          <button
+            class="repeat-pill"
+            class:active={repeat === 'once'}
+            onclick={() => {
+              repeat = 'once'
+            }}>Once</button
+          >
+          <button
+            class="repeat-pill"
+            class:active={repeat === 'daily'}
+            onclick={() => {
+              repeat = 'daily'
+            }}>Daily</button
+          >
+          <button
+            class="repeat-pill"
+            class:active={repeat === 'weekdays'}
+            onclick={() => {
+              repeat = 'weekdays'
+            }}>Weekdays</button
+          >
+          <button
+            class="repeat-pill"
+            class:active={repeat === 'custom'}
+            onclick={() => {
+              repeat = 'custom'
+            }}>Custom</button
+          >
+        </div>
+      </div>
+
+      {#if repeat === 'custom'}
+        <div class="drawer-row">
+          <span class="drawer-row-label">Days</span>
+          <div class="custom-days-row">
+            {#each DAY_SHORT as dayLabel, idx (idx)}
+              <button
+                class="day-toggle-btn"
+                class:active={days.includes(idx)}
+                onclick={() => toggleDay(idx)}
+                use:islandTooltip={DAY_NAMES[idx]}
+              >
+                {dayLabel}
+              </button>
+            {/each}
+          </div>
+        </div>
+      {/if}
+
+      <button class="drawer-confirm-btn" onclick={handleSave}>
+        <Check size={15} />
+        <span>{isEditing ? 'Save Changes' : 'Create Alarm'}</span>
       </button>
     </div>
   </div>

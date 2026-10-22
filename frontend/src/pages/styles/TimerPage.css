@@ -617,18 +617,24 @@
   justify-content: center;
   width: 30px;
   height: 30px;
-  border-radius: 9px;
+  border-radius: 50%;
   border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.1));
   background: var(--vinta-item-bg, rgba(255, 255, 255, 0.05));
   color: var(--vinta-text-secondary, #b0b0b0);
   cursor: pointer;
-  transition: all 0.18s ease;
+  transition: all 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
   outline: none;
+  flex-shrink: 0;
 }
 
 .header-tool-btn:hover {
   background: var(--vinta-hover, rgba(255, 255, 255, 0.1));
   color: var(--vinta-text-primary, #ffffff);
+  transform: scale(1.04);
+}
+
+.header-tool-btn:active {
+  transform: scale(0.96);
 }
 
 .header-tool-btn.active {
@@ -1105,121 +1111,54 @@
   font-size: 12px;
   font-weight: 700;
   color: var(--vinta-text-primary, #ffffff);
+  text-align: left;
 }
 
 .create-inputs-row {
   display: flex;
   align-items: center;
   gap: 8px;
+  width: 100%;
 }
 
-.create-inputs-row :global(.custom-time-picker) {
-  width: 110px;
+.alarm-drawer-time-wrapper {
+  width: 130px;
   flex-shrink: 0;
-}
-
-.alarm-time-steppers {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  background: var(--vinta-bg, rgba(0, 0, 0, 0.35));
-  border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.12));
-  border-radius: 9px;
-  padding: 3px 6px;
-  flex-shrink: 0;
-}
-
-.stepper-unit {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.unit-stepper-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 20px;
-  border-radius: 4px;
-  border: none;
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--vinta-text-secondary, #b0b0b0);
-  font-size: 11px;
-  font-weight: 700;
-  cursor: pointer;
-  outline: none;
-  transition: all 0.15s ease;
-}
-
-.unit-stepper-btn:hover {
-  background: rgba(255, 255, 255, 0.14);
-  color: var(--vinta-text-primary, #ffffff);
-}
-
-.unit-stepper-input {
-  width: 24px;
-  border: none;
-  background: transparent;
-  color: var(--vinta-text-primary, #ffffff);
-  font-size: 13px;
-  font-weight: 800;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-  outline: none;
-  padding: 0;
-  margin: 0;
-  -moz-appearance: textfield;
-}
-
-.unit-stepper-input::-webkit-outer-spin-button,
-.unit-stepper-input::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-.stepper-separator {
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--vinta-text-muted, #888888);
-  margin: 0 1px;
-  user-select: none;
-}
-
-.ampm-pill-btn {
-  padding: 2px 6px;
-  border-radius: 5px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--vinta-text-primary, #ffffff);
-  font-size: 10px;
-  font-weight: 700;
-  cursor: pointer;
-  outline: none;
-  margin-left: 2px;
-  transition: all 0.15s ease;
-}
-
-.ampm-pill-btn:hover {
-  background: rgba(255, 255, 255, 0.18);
 }
 
 .alarm-label-input {
-  flex: 1;
-  min-width: 0;
-  background: var(--vinta-bg, rgba(0, 0, 0, 0.35));
-  border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.12));
+  width: 220px;
+  max-width: 65%;
+  height: 32px;
+  box-sizing: border-box;
+  background: var(--vinta-contrast-bg, rgba(255, 255, 255, 0.06));
+  border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.14));
   color: var(--vinta-text-primary, #ffffff);
   border-radius: 9px;
-  padding: 5px 8px;
+  padding: 0 10px;
   font-size: 12px;
+  font-weight: 500;
   font-family: inherit;
+  text-align: left;
   outline: none;
-  transition: border-color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.alarm-label-input::placeholder {
+  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.45));
+}
+
+.alarm-label-input:hover {
+  background: var(--vinta-contrast-hover, rgba(255, 255, 255, 0.09));
 }
 
 .alarm-label-input:focus {
-  border-color: rgba(255, 255, 255, 0.3);
+  background: var(--vinta-contrast-hover, rgba(255, 255, 255, 0.09));
+  border-color: var(--vinta-accent-primary, #38bdf8);
+  box-shadow: 0 0 0 2px var(--vinta-accent-muted, rgba(56, 189, 248, 0.2));
 }
 
 .alarm-repeat-selector {
@@ -1347,7 +1286,8 @@
   display: flex;
   flex-direction: column;
   flex: 1;
-  max-height: 195px;
+  min-height: 0;
+  width: 100%;
   overflow: hidden;
   padding-right: 2px;
 }

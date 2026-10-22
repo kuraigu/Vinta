@@ -30,6 +30,10 @@
   let selectedHour = $state(9)
   let selectedMinute = $state(0)
   let selectedAmPm = $state<'AM' | 'PM'>('AM')
+  let hourInputText = $state('09')
+  let minuteInputText = $state('00')
+  let isEditingHour = $state(false)
+  let isEditingMinute = $state(false)
 
   /**
    * Syncs internal components from the 24h HH:MM value prop.
@@ -50,11 +54,16 @@
       selectedHour = h24 % 12 || 12
       selectedAmPm = h24 >= 12 ? 'PM' : 'AM'
     }
+
+    if (!isEditingHour) {
+      hourInputText = String(selectedHour).padStart(2, '0')
+    }
+    if (!isEditingMinute) {
+      minuteInputText = String(selectedMinute).padStart(2, '0')
+    }
   }
 
-  $effect(() => {
-    syncFromValue()
-  })
+  $effect(syncFromValue)
 
   /**
    * Updates the bound 24h value string from internal state components.
@@ -107,12 +116,46 @@
 
   function handleSelectHour(h: number): void {
     selectedHour = h
+    hourInputText = String(h).padStart(2, '0')
     emitValue()
   }
 
   function handleSelectMinute(m: number): void {
     selectedMinute = m
+    minuteInputText = String(m).padStart(2, '0')
     emitValue()
+  }
+
+  function handleHourTextInput(e: Event): void {
+    const raw = (e.currentTarget as HTMLInputElement).value.replace(/\D/g, '')
+    hourInputText = raw.slice(0, 2)
+    const parsed = parseInt(hourInputText, 10)
+    if (!isNaN(parsed)) {
+      const minH = is24H ? 0 : 1
+      const maxH = is24H ? 23 : 12
+      selectedHour = Math.max(minH, Math.min(maxH, parsed))
+      emitValue()
+    }
+  }
+
+  function handleHourBlur(): void {
+    isEditingHour = false
+    hourInputText = String(selectedHour).padStart(2, '0')
+  }
+
+  function handleMinuteTextInput(e: Event): void {
+    const raw = (e.currentTarget as HTMLInputElement).value.replace(/\D/g, '')
+    minuteInputText = raw.slice(0, 2)
+    const parsed = parseInt(minuteInputText, 10)
+    if (!isNaN(parsed)) {
+      selectedMinute = Math.max(0, Math.min(59, parsed))
+      emitValue()
+    }
+  }
+
+  function handleMinuteBlur(): void {
+    isEditingMinute = false
+    minuteInputText = String(selectedMinute).padStart(2, '0')
   }
 
   function handleSelectAmPm(ampm: 'AM' | 'PM'): void {
@@ -210,22 +253,32 @@
       <div class="digital-input-header">
         <div class="digital-inputs-pair">
           <input
-            type="number"
+            type="text"
+            inputmode="numeric"
+            maxlength="2"
             class="digit-box"
-            min={is24H ? 0 : 1}
-            max={is24H ? 23 : 12}
-            bind:value={selectedHour}
-            oninput={() => emitValue()}
+            value={hourInputText}
+            onfocus={(e) => {
+              isEditingHour = true
+              e.currentTarget.select()
+            }}
+            oninput={handleHourTextInput}
+            onblur={handleHourBlur}
             aria-label="Hours"
           />
           <span class="digit-colon">:</span>
           <input
-            type="number"
+            type="text"
+            inputmode="numeric"
+            maxlength="2"
             class="digit-box"
-            min="0"
-            max="59"
-            bind:value={selectedMinute}
-            oninput={() => emitValue()}
+            value={minuteInputText}
+            onfocus={(e) => {
+              isEditingMinute = true
+              e.currentTarget.select()
+            }}
+            oninput={handleMinuteTextInput}
+            onblur={handleMinuteBlur}
             aria-label="Minutes"
           />
         </div>
