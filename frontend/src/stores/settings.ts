@@ -22,7 +22,15 @@ import type { DateFormatOption } from '../utils/dateFormatter'
 
 export type IslandConfig = {
   minimal: { w: number; h: number; r: number }
-  expanded: { w: number; h: number; r: number }
+  expanded: {
+    w: number
+    h: number
+    r: number
+    minH?: number
+    maxH?: number
+    minW?: number
+    maxW?: number
+  }
   borderColor?: string
   glowColor?: string
 }
@@ -483,6 +491,47 @@ export function calculateHomeMinimalWidth(
   const contentW = activeSlots.reduce((sum, w) => sum + w, 0)
   const gapsW = Math.max(0, activeSlots.length - 1) * GAP
   return Math.max(130, PADDING + contentW + gapsW)
+}
+
+/**
+ * Calculates the dynamic height for the expanded Home Page based on active glance cards,
+ * clamped between minimum and maximum bounds defined in the island configuration.
+ */
+export function calculateHomeExpandedHeight(
+  visibility: HomeWidgetsVisibility,
+  hasNotification: boolean = false,
+  hasUpdate: boolean = false,
+  minH: number = 260,
+  maxH: number = 640
+): number {
+  const GAP = 12
+  const CONTAINER_PADDING = 52 // clearance padding for dock & edges
+
+  // 1. Header segment (Weather hero full-bleed or salutation greeting)
+  let totalHeight = visibility.weather ? 160 : 96
+
+  // 2. Update notice banner
+  if (hasUpdate) {
+    totalHeight += GAP + 68
+  }
+
+  // 3. Notification glance card (only renders if unread notifications exist)
+  if (hasNotification) {
+    totalHeight += GAP + 84
+  }
+
+  // 4. Calendar glance agenda
+  if (visibility.calendar) {
+    totalHeight += GAP + 114
+  }
+
+  // 5. Quick Controls / Action Center glance
+  if (visibility.actionCenter) {
+    totalHeight += GAP + 104
+  }
+
+  const computedHeight = totalHeight + CONTAINER_PADDING
+  return Math.max(minH, Math.min(maxH, computedHeight))
 }
 
 // ============================================================================

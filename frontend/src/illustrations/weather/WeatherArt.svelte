@@ -83,6 +83,13 @@
           <stop offset="100%" stop-color="#1e293b" />
         </linearGradient>
 
+        <!-- High-Contrast Moonlit Nocturnal & Storm Cloud Gradient -->
+        <linearGradient id="cloudNightLitGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#cbd5e1" />
+          <stop offset="50%" stop-color="#64748b" />
+          <stop offset="100%" stop-color="#334155" />
+        </linearGradient>
+
         <linearGradient id="sweatGrad" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stop-color="#bae6fd" />
           <stop offset="100%" stop-color="#0284c7" />
@@ -519,11 +526,13 @@
           </g>
         </g>
 
-        <!-- Foreground Nocturnal Cloud -->
+        <!-- Foreground Nocturnal Cloud (Moonlit Slate with Rim Highlight) -->
         <path
           class="anim-cloud-drift"
           d="M 58 48 A 8 8 0 0 1 51 40 A 9 9 0 0 1 61 31 A 11 11 0 0 1 80 29 A 10 10 0 0 1 91 39 A 8 8 0 0 1 91 48 Z"
-          fill="url(#cloudDarkGrad)"
+          fill="url(#cloudNightLitGrad)"
+          stroke="rgba(226, 232, 240, 0.38)"
+          stroke-width="0.8"
           filter="url(#softShadow)"
         />
       {:else if type === 'rain'}
@@ -534,8 +543,10 @@
         <path
           class="anim-cloud-drift-slow"
           d="M 32 32 A 10 10 0 0 1 23 22 A 12 12 0 0 1 36 10 A 15 15 0 0 1 62 8 A 14 14 0 0 1 80 20 A 10 10 0 0 1 80 32 Z"
-          fill="url(#cloudDarkGrad)"
-          opacity="0.9"
+          fill="url(#cloudNightLitGrad)"
+          stroke="rgba(226, 232, 240, 0.3)"
+          stroke-width="0.8"
+          opacity="0.92"
         />
 
         <!-- Animated Falling Rain Streaks -->
@@ -615,7 +626,9 @@
         <!-- Dark Thunderhead at Top -->
         <path
           d="M 26 34 A 11 11 0 0 1 16 23 A 13 13 0 0 1 30 10 A 16 16 0 0 1 62 7 A 15 15 0 0 1 88 20 A 11 11 0 0 1 88 34 Z"
-          fill="url(#cloudDarkGrad)"
+          fill="url(#cloudNightLitGrad)"
+          stroke="rgba(226, 232, 240, 0.32)"
+          stroke-width="0.8"
           filter="url(#softShadow)"
         />
 

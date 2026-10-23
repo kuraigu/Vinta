@@ -1,7 +1,7 @@
 <script module lang="ts">
   export const config = {
     minimal: { w: 330, h: 35, r: 16 },
-    expanded: { w: 430, h: 640, r: 28 },
+    expanded: { w: 430, h: 640, r: 28, minH: 260, maxH: 640 },
     borderColor: 'var(--vinta-island-border-idle)',
     glowColor: 'var(--vinta-island-glow-idle)'
   }
@@ -280,7 +280,10 @@
       {/if}
     </div>
   {:else}
-    <div class="expanded-view" class:has-hero-weather={$homeWidgetsVisibilityStore.weather}>
+    <div
+      class="expanded-view"
+      class:has-hero-weather={$homeWidgetsVisibilityStore.weather}
+    >
       <ScrollView
         class="home-feed-scroll"
         bind:element={scrollContainer}
@@ -314,7 +317,8 @@
                 <span class="meta-date-text">{timeParts.friendlyDateText}</span>
                 <span class="meta-bullet">•</span>
                 <span class="time-subtle-digits">
-                  {formattedHours}<span class="colon-blink">:</span>{timeParts.m}
+                  {formattedHours}<span class="colon-blink">:</span
+                  >{timeParts.m}
                 </span>
                 {#if amPm}
                   <span class="time-subtle-ampm">{amPm}</span>
@@ -327,7 +331,9 @@
           {#if $updateInfoStore?.updateAvailable && !isUpdateSnoozed}
             <UpdateGlanceCard
               onClick={openUpdatesTab}
-              onDismiss={snoozeUpdate}
+              onDismiss={() => {
+                snoozeUpdate
+              }}
             />
           {/if}
 

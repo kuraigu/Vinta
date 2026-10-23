@@ -67,6 +67,9 @@
     type IslandConfig,
     homeWidgetsVisibilityStore,
     calculateHomeMinimalWidth,
+    calculateHomeExpandedHeight,
+    notifData,
+    updateInfoStore,
     batteryDataStore,
     wirelessDataStore,
     weatherLocationStore,
@@ -382,6 +385,35 @@
       : islandConfig.minimal.w
   )
 
+  let hasActiveNotification = $derived(
+    $notifData.some(
+      (n) =>
+        !n.isUpdate &&
+        !n.title?.toLowerCase().includes('update available') &&
+        !(
+          (n.appName?.toLowerCase() === 'vinta' ||
+            n.aumid?.toLowerCase().includes('vinta')) &&
+          n.title?.toLowerCase().includes('update')
+        )
+    )
+  )
+
+  let hasActiveUpdateBanner = $derived(
+    Boolean($updateInfoStore?.updateAvailable)
+  )
+
+  let currentExpandedH = $derived(
+    activePage === HomePage
+      ? calculateHomeExpandedHeight(
+          $homeWidgetsVisibilityStore,
+          hasActiveNotification,
+          hasActiveUpdateBanner,
+          islandConfig.expanded.minH ?? 260,
+          islandConfig.expanded.maxH ?? islandConfig.expanded.h
+        )
+      : islandConfig.expanded.h
+  )
+
   let currentIslandW = $derived(
     isHidden
       ? hiddenBounds.w
@@ -555,10 +587,30 @@
           ? calculateHomeMinimalWidth($homeWidgetsVisibilityStore, hasBattery)
           : effectiveConfig.minimal.w
 
+    const hasActiveNotif = $notifData.some(
+      (n) =>
+        !n.isUpdate &&
+        !n.title?.toLowerCase().includes('update available') &&
+        !(
+          (n.appName?.toLowerCase() === 'vinta' ||
+            n.aumid?.toLowerCase().includes('vinta')) &&
+          n.title?.toLowerCase().includes('update')
+        )
+    )
+    const hasActiveUpdate = Boolean($updateInfoStore?.updateAvailable)
+
     const baseH = isHid
       ? hiddenBounds.h
       : isExp
-        ? effectiveConfig.expanded.h
+        ? isEffectiveHome
+          ? calculateHomeExpandedHeight(
+              $homeWidgetsVisibilityStore,
+              hasActiveNotif,
+              hasActiveUpdate,
+              effectiveConfig.expanded.minH ?? 260,
+              effectiveConfig.expanded.maxH ?? effectiveConfig.expanded.h
+            )
+          : effectiveConfig.expanded.h
         : effectiveConfig.minimal.h
 
     const maxMonW = activeMonitor?.width ? activeMonitor.width - 24 : 1920
@@ -1518,6 +1570,7 @@
       {hideTrigger}
       {islandConfig}
       {currentMinimalW}
+      {currentExpandedH}
       {hiddenBounds}
       {activeOpacity}
       {glowOpacity}
