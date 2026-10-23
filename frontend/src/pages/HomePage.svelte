@@ -11,6 +11,7 @@
   import { onMount, onDestroy, getContext } from 'svelte'
   import { ChevronDown } from 'lucide-svelte'
   import Calendar from '../components/Calendar.svelte'
+  import CalendarGlance from '../components/CalendarGlance.svelte'
   import Weather from '../components/Weather.svelte'
   import DeviceStatusWidget from '../components/DeviceStatusWidget.svelte'
   import ActionCenterGlance from '../components/ActionCenterGlance.svelte'
@@ -342,14 +343,10 @@
             <NotificationGlance />
           </section>
 
-          <!-- Calendar Agenda Card (Shared component with Go to Calendar button) -->
+          <!-- Calendar Agenda Glance Card -->
           {#if $homeWidgetsVisibilityStore.calendar}
             <section class="calendar-card-feed">
-              <Calendar
-                expanded={true}
-                showGoToCalendar={true}
-                onOpenCalendar={openCalendar}
-              />
+              <CalendarGlance onOpenCalendar={openCalendar} />
             </section>
           {/if}
 

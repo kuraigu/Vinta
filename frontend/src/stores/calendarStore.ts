@@ -37,6 +37,13 @@ export interface CalendarAppState {
   lastSyncError?: string
 }
 
+export interface CalendarPendingAction {
+  action: 'add'
+  date?: string
+}
+
+export const calendarPendingActionStore = writable<CalendarPendingAction | null>(null)
+
 const STORAGE_KEY_EVENTS = 'vinta_calendar_events'
 const STORAGE_KEY_FEEDS = 'vinta_calendar_feeds'
 

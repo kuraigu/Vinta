@@ -16,6 +16,7 @@
   } from 'lucide-svelte'
   import {
     calendarStore,
+    calendarPendingActionStore,
     setSelectedCalendarDate,
     addCalendarEvent,
     updateCalendarEvent,
@@ -330,6 +331,17 @@
     formDescription = ''
     isModalOpen = true
   }
+
+  function handlePendingCalendarAction() {
+    if (variant === 'page' && $calendarPendingActionStore) {
+      const pending = $calendarPendingActionStore
+      calendarPendingActionStore.set(null)
+      if (pending.action === 'add') {
+        handleOpenAddModal(pending.date)
+      }
+    }
+  }
+  $effect(handlePendingCalendarAction)
 
   function handleOpenEditModal(event: CalendarEvent) {
     editingEventId = event.id

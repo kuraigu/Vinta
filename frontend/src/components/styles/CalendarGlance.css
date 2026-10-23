@@ -1,0 +1,194 @@
+/* ============================================================================
+   Calendar Glance Card Stylesheet (Home Page Feed)
+   Follows docs/DESIGN.md: theme tokens, bento radii, no hardcoded colors
+   ============================================================================ */
+
+.calendar-glance-card {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: var(--vinta-radius-card, 20px);
+  background: var(--vinta-surface-card);
+  border: 1px solid var(--vinta-border);
+  box-shadow: var(--vinta-contrast-border), var(--vinta-dock-popover-shadow);
+  box-sizing: border-box;
+  color: var(--vinta-text-primary);
+  gap: 10px;
+  transition:
+    background-color 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+    box-shadow 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.calendar-glance-card:hover {
+  background: var(--vinta-surface-elevated);
+  border-color: var(--vinta-contrast-hover);
+  box-shadow: var(--vinta-contrast-border), var(--vinta-dock-popover-shadow);
+}
+
+.glance-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 8px;
+}
+
+.glance-title-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--vinta-text-primary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.glance-event-count {
+  color: var(--vinta-text-muted);
+  font-weight: 500;
+  font-size: 0.7rem;
+}
+
+.glance-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.glance-add-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: var(--vinta-radius-button, 8px);
+  background: var(--vinta-accent-muted, rgba(56, 189, 248, 0.14));
+  border: none;
+  color: var(--vinta-accent-primary, #38bdf8);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+  white-space: nowrap;
+}
+
+.glance-add-btn:hover {
+  background: var(--vinta-accent-primary, #38bdf8);
+  color: var(--vinta-text-on-accent, #000000);
+  box-shadow: 0 2px 8px var(--vinta-accent-muted, rgba(14, 165, 233, 0.35));
+}
+
+.glance-agenda-container {
+  width: 100%;
+  max-height: 140px;
+  min-height: 36px;
+  display: flex;
+  flex-direction: column;
+}
+
+:global(.glance-scroll-view) {
+  width: 100%;
+  height: 100%;
+  flex: 1;
+  min-height: 0;
+}
+
+.glance-events-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.glance-empty-card,
+.glance-event-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: var(--vinta-item-bg, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.08));
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.empty-main,
+.event-main {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.empty-chip,
+.event-time-chip {
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 10.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--vinta-text-primary);
+}
+
+.empty-title {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--vinta-text-muted);
+}
+
+.event-title {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--vinta-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.event-location {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  color: var(--vinta-text-muted);
+  flex-shrink: 0;
+}
+
+/* Category Accent Borders & Backgrounds */
+.card-color-indigo {
+  border-left: 3px solid #818cf8;
+}
+
+.card-color-emerald {
+  border-left: 3px solid #34d399;
+}
+
+.card-color-amber {
+  border-left: 3px solid #fbbf24;
+}
+
+.card-color-purple {
+  border-left: 3px solid #c084fc;
+}
+
+.card-color-rose {
+  border-left: 3px solid #fb7185;
+}
+
+.card-color-sky {
+  border-left: 3px solid #38bdf8;
+}
