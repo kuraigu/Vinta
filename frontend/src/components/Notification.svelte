@@ -623,6 +623,7 @@
       )}
         {@const displayBrand = getDisplayBrand(notif)}
         {@const iconUrl = displayBrand.icon}
+        {@const isAvatarIcon = Boolean(iconUrl && !isGenericAppLogo(notif))}
         {@const isExpanded = expandedIds.has(notif.id)}
         {@const canOpen = canOpenApp(notif)}
         <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -726,73 +727,75 @@
           {/if}
 
           <div class="notif-item-layout">
-            <div class="notif-item-avatar-col">
-              <div class="icon-wrapper">
-                <div class="notif-avatar-icon">
-                  {#if isImageUrl(iconUrl)}
-                    <img
-                      src={iconUrl!}
-                      alt="app icon"
-                      class="notif-img-icon"
-                      onerror={(e) => {
-                        const img = e.currentTarget as HTMLImageElement
-                        img.style.display = 'none'
-                        if (img.nextElementSibling) {
-                          ;(
-                            img.nextElementSibling as HTMLElement
-                          ).style.display = 'block'
-                        }
-                      }}
-                    />
-                    <div style="display: none;">
-                      {#if displayBrand.appIcon && isImageUrl(displayBrand.appIcon)}
-                        <img
-                          src={displayBrand.appIcon}
-                          alt="app icon"
-                          class="notif-img-icon"
-                          onerror={(e) => {
-                            const img = e.currentTarget as HTMLImageElement
-                            img.style.display = 'none'
-                            if (img.nextElementSibling) {
-                              ;(
-                                img.nextElementSibling as HTMLElement
-                              ).style.display = 'block'
-                            }
-                          }}
-                        />
-                        <div style="display: none;">
+            {#if !nested || isAvatarIcon}
+              <div class="notif-item-avatar-col">
+                <div class="icon-wrapper">
+                  <div class="notif-avatar-icon">
+                    {#if isImageUrl(iconUrl)}
+                      <img
+                        src={iconUrl!}
+                        alt="app icon"
+                        class="notif-img-icon"
+                        onerror={(e) => {
+                          const img = e.currentTarget as HTMLImageElement
+                          img.style.display = 'none'
+                          if (img.nextElementSibling) {
+                            ;(
+                              img.nextElementSibling as HTMLElement
+                            ).style.display = 'block'
+                          }
+                        }}
+                      />
+                      <div style="display: none;">
+                        {#if displayBrand.appIcon && isImageUrl(displayBrand.appIcon)}
+                          <img
+                            src={displayBrand.appIcon}
+                            alt="app icon"
+                            class="notif-img-icon"
+                            onerror={(e) => {
+                              const img = e.currentTarget as HTMLImageElement
+                              img.style.display = 'none'
+                              if (img.nextElementSibling) {
+                                ;(
+                                  img.nextElementSibling as HTMLElement
+                                ).style.display = 'block'
+                              }
+                            }}
+                          />
+                          <div style="display: none;">
+                            {@render fallbackIcon(displayBrand, 24)}
+                          </div>
+                        {:else}
                           {@render fallbackIcon(displayBrand, 24)}
-                        </div>
-                      {:else}
+                        {/if}
+                      </div>
+                    {:else if displayBrand.appIcon && isImageUrl(displayBrand.appIcon)}
+                      <img
+                        src={displayBrand.appIcon}
+                        alt="app icon"
+                        class="notif-img-icon"
+                        onerror={(e) => {
+                          const img = e.currentTarget as HTMLImageElement
+                          img.style.display = 'none'
+                          if (img.nextElementSibling) {
+                            ;(
+                              img.nextElementSibling as HTMLElement
+                            ).style.display = 'block'
+                          }
+                        }}
+                      />
+                      <div style="display: none;">
                         {@render fallbackIcon(displayBrand, 24)}
-                      {/if}
-                    </div>
-                  {:else if displayBrand.appIcon && isImageUrl(displayBrand.appIcon)}
-                    <img
-                      src={displayBrand.appIcon}
-                      alt="app icon"
-                      class="notif-img-icon"
-                      onerror={(e) => {
-                        const img = e.currentTarget as HTMLImageElement
-                        img.style.display = 'none'
-                        if (img.nextElementSibling) {
-                          ;(
-                            img.nextElementSibling as HTMLElement
-                          ).style.display = 'block'
-                        }
-                      }}
-                    />
-                    <div style="display: none;">
+                      </div>
+                    {:else if iconUrl}
+                      <span class="icon-text">{iconUrl}</span>
+                    {:else}
                       {@render fallbackIcon(displayBrand, 24)}
-                    </div>
-                  {:else if iconUrl}
-                    <span class="icon-text">{iconUrl}</span>
-                  {:else}
-                    {@render fallbackIcon(displayBrand, 24)}
-                  {/if}
+                    {/if}
+                  </div>
                 </div>
               </div>
-            </div>
+            {/if}
 
             <div class="notif-item-content-col">
               <div class="notif-item-body">
@@ -1018,7 +1021,7 @@
                   {#if !expandedGroups.has(group.brandName)}
                     <div class="notif-group-preview">
                       <div class="notif-item-layout">
-                        {#if group.items[0].icon && isImageUrl(group.items[0].icon) && group.items[0].icon !== group.brandIcon}
+                        {#if group.items[0].icon && isImageUrl(group.items[0].icon) && !isGenericAppLogo(group.items[0])}
                           <div class="notif-item-avatar-col">
                             <div class="icon-wrapper">
                               <div class="notif-avatar-icon">
