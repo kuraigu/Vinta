@@ -24,6 +24,7 @@
     GetBatteryStatus
   } from '../../bindings/Vinta/backend/app.js'
   import { islandTooltip } from '../services/islandTooltip'
+  import BentoCard from './BentoCard.svelte'
 
   let wireless = $derived($wirelessDataStore)
   let battery = $derived($batteryDataStore)
@@ -163,7 +164,7 @@
   let saverTooltip = $derived.by(computeSaverTooltip)
 </script>
 
-<div class="action-center-glance-card">
+<BentoCard variant="bento" class="action-center-glance-card">
   <div class="glance-header">
     <div class="glance-title-group">
       <SlidersHorizontal size={12} />
@@ -247,6 +248,6 @@
       <span class="toggle-label">Saver</span>
     </button>
   </div>
-</div>
+</BentoCard>
 
 <style src="./styles/ActionCenterGlance.css"></style>

@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Snippet, ComponentType } from 'svelte'
+  import BentoCard from '../BentoCard.svelte'
 
   interface Props {
     label: string
@@ -23,11 +24,7 @@
   }: Props = $props()
 </script>
 
-<div
-  class="setting-item"
-  class:flex-col={flexCol}
-  class:item-disabled={disabled}
->
+<BentoCard variant="setting" {flexCol} {disabled}>
   <div class="setting-label-group">
     {#if IconComponent}
       <div class="setting-icon-col">
@@ -52,59 +49,19 @@
       {@render children()}
     </div>
   {/if}
-</div>
+</BentoCard>
 
 <style>
-  .setting-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 13px 15px;
-    border-radius: 16px;
-    background: var(--vinta-surface-card);
-    border: 1px solid var(--vinta-border);
-    box-shadow: var(--vinta-contrast-border), var(--vinta-dock-popover-shadow);
-    transition:
-      opacity 0.2s ease,
-      border-color 0.2s ease,
-      box-shadow 0.2s ease,
-      background 0.2s ease;
+  :global(.vinta-bento-card.variant-setting.flex-col) .setting-control {
+    width: 100%;
   }
 
-  .setting-item:hover {
-    border-color: var(--vinta-contrast-hover);
-    background: var(--vinta-surface-elevated);
-    box-shadow: var(--vinta-contrast-border), var(--vinta-dock-popover-shadow);
+  :global(.vinta-bento-card.variant-setting.flex-col) .setting-control > :global(*) {
+    width: 100%;
   }
 
-  .setting-item.item-disabled {
-    opacity: 0.42;
-    cursor: not-allowed;
-  }
-
-  .setting-item.item-disabled:hover {
-    border-color: var(--vinta-border);
-    background: var(--vinta-surface-card);
-    box-shadow: var(--vinta-contrast-border), var(--vinta-dock-popover-shadow);
-  }
-
-  .setting-item.item-disabled .setting-icon-col {
+  :global(.vinta-bento-card.variant-setting.card-disabled) .setting-icon-col {
     opacity: 0.6;
-  }
-
-  .setting-item.flex-col {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-  }
-
-  .setting-item.flex-col .setting-control {
-    width: 100%;
-  }
-
-  .setting-item.flex-col .setting-control > :global(*) {
-    width: 100%;
   }
 
   .setting-label-group {

@@ -46,7 +46,8 @@
   interface DockItem {
     id: string
     tooltip: string
-    icon: Component<{ size?: number }>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    icon: any
     active: boolean
     badge?: number
     group: 'pinned' | 'dynamic'

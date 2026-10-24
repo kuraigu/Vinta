@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { ArrowUpRight, ShieldCheck, GitBranch } from 'lucide-svelte'
+  import BentoCard from '../../BentoCard.svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
   import appIcon from '@appicon'
@@ -115,7 +116,7 @@
 
 <div class="setting-group about-page">
   <!-- Brand Hero with Consolidated Version and Build Specs -->
-  <div class="about-hero-card">
+  <BentoCard variant="announcement" class="about-hero-card">
     <div class="about-logo-wrapper">
       <img src={appIcon} alt="Vinta" class="about-logo-img" />
     </div>
@@ -142,7 +143,7 @@
         <span class="capsule-build">build {displayBuild}</span>
       </div>
     </div>
-  </div>
+  </BentoCard>
 
   <!-- Project Links Bento -->
   <SettingItem label="Project Resources" flexCol={true}>
@@ -170,7 +171,7 @@
 
   <!-- Maintainers and Contributors -->
   {#if maintainers.length > 0 || generalContributors.length > 0}
-    <div class="about-card contributors-card">
+    <BentoCard variant="bento" class="contributors-card">
       <div class="specs-header">Project Credits</div>
       <div class="contributors-list">
         {#each [...maintainers, ...generalContributors] as c (c.handle)}
@@ -202,7 +203,7 @@
         <span>View Full Contributor Roster</span>
         <ArrowUpRight size={12} />
       </a>
-    </div>
+    </BentoCard>
   {/if}
 </div>
 
@@ -213,25 +214,10 @@
     gap: 10px;
   }
 
-  .about-hero-card {
+  :global(.about-hero-card) {
     display: flex;
     align-items: center;
-    width: 100%;
-    padding: 10px 14px;
-    border-radius: var(--vinta-radius-card, 16px);
-    background: var(--vinta-surface-card, rgba(255, 255, 255, 0.04));
-    border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.08));
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    box-sizing: border-box;
-    cursor: pointer;
-    text-align: left;
-    transition:
-      background 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-      border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-      transform 0.15s ease;
-    user-select: none;
-    -webkit-user-select: none;
+    gap: 12px;
   }
 
   .about-logo-wrapper {
@@ -318,26 +304,6 @@
     font-size: 10.5px;
   }
 
-  .about-card {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    padding: 10px 14px;
-    border-radius: var(--vinta-radius-card, 16px);
-    background: var(--vinta-surface-card, rgba(255, 255, 255, 0.04));
-    border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.08));
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    box-sizing: border-box;
-    cursor: pointer;
-    text-align: left;
-    transition:
-      background 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-      border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-      transform 0.15s ease;
-    user-select: none;
-    -webkit-user-select: none;
-  }
 
   .about-links-row {
     display: flex;

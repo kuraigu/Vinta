@@ -3,28 +3,9 @@
    Follows docs/DESIGN.md: theme tokens, bento radii, no hardcoded colors
    ============================================================================ */
 
-.calendar-glance-card {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  padding: 12px 14px;
-  border-radius: var(--vinta-radius-card, 20px);
-  background: var(--vinta-surface-card);
-  border: 1px solid var(--vinta-border);
-  box-shadow: var(--vinta-contrast-border), var(--vinta-dock-popover-shadow);
-  box-sizing: border-box;
-  color: var(--vinta-text-primary);
+:global(.calendar-glance-card) {
   gap: 10px;
-  transition:
-    background-color 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
-    border-color 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
-    box-shadow 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-
-.calendar-glance-card:hover {
-  background: var(--vinta-surface-elevated);
-  border-color: var(--vinta-contrast-hover);
-  box-shadow: var(--vinta-contrast-border), var(--vinta-dock-popover-shadow);
+  padding: 12px 14px;
 }
 
 .glance-header {

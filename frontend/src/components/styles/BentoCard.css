@@ -1,0 +1,90 @@
+/* ============================================================================
+   BentoCard Unified Squircle Stylesheet
+   ============================================================================ */
+
+.vinta-bento-card {
+  position: relative;
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: var(--vinta-radius-card, 16px);
+  transition:
+    opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    background 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.15s ease;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Default Bento Variant (Dashboard Cards) */
+.vinta-bento-card.variant-bento {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 14px;
+  background: var(--vinta-surface-card);
+  border: 1px solid var(--vinta-border);
+  box-shadow: var(--vinta-contrast-border), var(--vinta-dock-popover-shadow);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.vinta-bento-card.variant-bento:hover {
+  background: var(--vinta-surface-elevated);
+  border-color: var(--vinta-contrast-hover);
+  box-shadow: var(--vinta-contrast-border), var(--vinta-dock-popover-shadow);
+}
+
+/* Setting Item Variant */
+.vinta-bento-card.variant-setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 15px;
+  background: var(--vinta-surface-card);
+  border: 1px solid var(--vinta-border);
+  box-shadow: var(--vinta-contrast-border), var(--vinta-dock-popover-shadow);
+}
+
+.vinta-bento-card.variant-setting:hover {
+  border-color: var(--vinta-contrast-hover);
+  background: var(--vinta-surface-elevated);
+  box-shadow: var(--vinta-contrast-border), var(--vinta-dock-popover-shadow);
+}
+
+/* Announcement / Hero Variant */
+.vinta-bento-card.variant-announcement {
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--vinta-surface-card, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.08));
+  box-shadow: var(--vinta-contrast-border), var(--vinta-dock-popover-shadow);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.vinta-bento-card.variant-announcement:hover {
+  background: var(--vinta-surface-elevated);
+  border-color: var(--vinta-contrast-hover);
+}
+
+/* Layout modifiers */
+.vinta-bento-card.flex-col {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.vinta-bento-card.card-disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.vinta-bento-card.card-disabled:hover {
+  border-color: var(--vinta-border);
+  background: var(--vinta-surface-card);
+  box-shadow: var(--vinta-contrast-border), var(--vinta-dock-popover-shadow);
+}

@@ -12,6 +12,7 @@
   } from '../services/iconService'
   import { islandTooltip } from '../services/islandTooltip'
   import ActionCapsule from './ActionCapsule.svelte'
+  import BentoCard from './BentoCard.svelte'
   import appIcon from '@appicon'
 
   const navigate =
@@ -105,12 +106,10 @@
 </script>
 
 {#if latestNotif}
-  <div
+  <BentoCard
+    variant="bento"
     class="notification-glance-card"
-    role="button"
-    tabindex="0"
     onclick={openNotifications}
-    onkeydown={(e) => e.key === 'Enter' && openNotifications()}
   >
     <div class="glance-top-row">
       <div class="glance-brand-group">
@@ -168,39 +167,17 @@
         <p class="glance-message">{latestNotif.message}</p>
       {/if}
     </div>
-  </div>
+  </BentoCard>
 {/if}
 
 <style>
-  .notification-glance-card {
-    display: flex;
-    flex-direction: column;
+  :global(.notification-glance-card) {
     gap: 8px;
-    width: 100%;
     padding: 10px 14px;
-    border-radius: var(--vinta-radius-card, 16px);
-    background: var(--vinta-surface-card, rgba(255, 255, 255, 0.04));
-    border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.08));
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    box-sizing: border-box;
     cursor: pointer;
-    text-align: left;
-    transition:
-      background 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-      border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-      transform 0.15s ease;
-    user-select: none;
-    -webkit-user-select: none;
   }
 
-  .notification-glance-card:hover {
-    background: var(--vinta-surface-elevated);
-    border-color: var(--vinta-contrast-hover);
-    box-shadow: var(--vinta-contrast-border), var(--vinta-dock-popover-shadow);
-  }
-
-  .notification-glance-card:active {
+  :global(.notification-glance-card:active) {
     transform: scale(0.992);
   }
 

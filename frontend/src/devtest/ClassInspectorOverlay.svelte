@@ -1,8 +1,4 @@
-<script lang="ts">
-  import { onMount } from 'svelte'
-  import { Events } from '@wailsio/runtime'
-  import { debugClassInspector } from './debugConfig'
-
+<script module lang="ts">
   export interface InspectorHoverPayload {
     tag: string
     classes: string[]
@@ -11,6 +7,12 @@
     width: number
     height: number
   }
+</script>
+
+<script lang="ts">
+  import { onMount } from 'svelte'
+  import { Events } from '@wailsio/runtime'
+  import { debugClassInspector } from './debugConfig'
 
   let hoveredRect = $state<{
     left: number

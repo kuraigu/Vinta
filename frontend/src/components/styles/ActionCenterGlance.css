@@ -1,29 +1,7 @@
-.action-center-glance-card {
-  display: flex;
-  flex-direction: column;
+:global(.action-center-glance-card) {
   gap: 10px;
-  width: 100%;
   padding: 12px 14px 14px 14px;
-  border-radius: 18px;
-  background: var(--vinta-surface-card);
-  border: 1px solid var(--vinta-border);
-  box-shadow: var(--vinta-contrast-border), var(--vinta-dock-popover-shadow);
-  box-sizing: border-box;
-  transition:
-    background-color 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
-    border-color 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
-    box-shadow 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
-  color: var(--vinta-text-primary);
 }
-
-/* Commenting this out as I feel this is uneccessary, but I'll leave it here for now.
-  -Innoh Reloza (DippedInSoju)
-.action-center-glance-card:hover {
-  background: var(--vinta-surface-elevated);
-  border-color: var(--vinta-contrast-hover);
-  box-shadow: var(--vinta-contrast-border), var(--vinta-dock-popover-shadow);
-}
-*/
 
 .glance-header {
   display: flex;

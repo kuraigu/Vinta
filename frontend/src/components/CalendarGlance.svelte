@@ -13,6 +13,7 @@
   import ActionCapsule from './ActionCapsule.svelte'
   import ScrollView from './ScrollView.svelte'
   import DiamondPattern from './patterns/DiamondPattern.svelte'
+  import BentoCard from './BentoCard.svelte'
   import {
     timeFormatStore,
     dateFormatStore,
@@ -80,7 +81,7 @@
   }
 </script>
 
-<div class="calendar-glance-card">
+<BentoCard variant="bento" class="calendar-glance-card">
   <div class="glance-header">
     <div class="glance-title-group">
       <CalendarDays size={13} />
@@ -151,6 +152,6 @@
       </ScrollView>
     {/if}
   </div>
-</div>
+</BentoCard>
 
 <style src="./styles/CalendarGlance.css"></style>
