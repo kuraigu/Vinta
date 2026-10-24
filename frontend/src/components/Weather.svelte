@@ -48,21 +48,11 @@
   let {
     expanded = false,
     variant = 'widget',
-    simulateOffline = false,
-    salutation = '',
-    userName = '',
-    dateText = '',
-    timeText = '',
-    amPmText = ''
+    simulateOffline = false
   }: {
     expanded?: boolean
-    variant?: 'widget' | 'page' | 'home-hero'
+    variant?: 'widget' | 'page'
     simulateOffline?: boolean
-    salutation?: string
-    userName?: string
-    dateText?: string
-    timeText?: string
-    amPmText?: string
   } = $props()
 
   let weather = $state<WeatherData | null>(null)
@@ -256,17 +246,14 @@
   }
 </script>
 
-{#snippet bannerCard(cardMode: 'widget' | 'page' | 'home-hero')}
+{#snippet bannerCard(cardMode: 'widget' | 'page')}
   {@const isPage = cardMode === 'page'}
-  {@const isHomeHero = cardMode === 'home-hero'}
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
     class="weather-banner-card {illustrationType}"
     class:variant-page={isPage}
-    class:variant-home-hero={isHomeHero}
-    onclick={() =>
-      !isPage && !isHomeHero ? (isForecastOpen = !isForecastOpen) : null}
+    onclick={() => (!isPage ? (isForecastOpen = !isForecastOpen) : null)}
   >
     <!-- GPU-Accelerated Dynamic Ambient Background Landscape Waves & Atmospheric FX -->
     <div class="weather-card-aura-bg {illustrationType}" aria-hidden="true">
@@ -352,64 +339,7 @@
       {/if}
     </div>
 
-    {#if isHomeHero}
-      <div class="banner-top-layout home-hero-layout">
-        <div class="banner-left-content home-hero-left">
-          {#if salutation}
-            <span class="hero-banner-salutation">{salutation},</span>
-          {/if}
-          {#if userName}
-            <h1 class="hero-banner-username">{userName}</h1>
-          {/if}
-          {#if weather}
-            <div class="hero-banner-weather-row">
-              <span class="hero-weather-temp"
-                >{displayTemp.val}°{unitLetter}</span
-              >
-              <span class="sub-divider">•</span>
-              <span class="hero-weather-cond">{bannerConditionTitle}</span>
-              <span class="sub-divider">•</span>
-              <span class="hero-weather-loc">
-                <MapPin size={10} class="loc-pin" />
-                {$weatherLocationStore.name || shortCityName}
-              </span>
-            </div>
-          {/if}
-
-          {#if timeText}
-            <div class="hero-banner-time-row">
-              <span class="hero-banner-time">{timeText}</span>
-              {#if amPmText}
-                <span class="hero-banner-ampm">{amPmText}</span>
-              {/if}
-            </div>
-          {/if}
-        </div>
-
-        <div class="banner-right-art home-hero-art">
-          <div class="weather-art-wrap">
-            <div
-              class="weather-art-link"
-              role="link"
-              tabindex="0"
-              aria-label="Open weather page"
-              onclick={(e) => {
-                e.stopPropagation()
-                openWeatherPage()
-              }}
-              onkeydown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault()
-                  openWeatherPage()
-                }
-              }}
-            >
-              <WeatherArt type={illustrationType} variant="hero" />
-            </div>
-          </div>
-        </div>
-      </div>
-    {:else if loading && !weather}
+    {#if loading && !weather}
       <div class="banner-loading">
         <RefreshCw size={18} class="spin-icon" />
         <span>Loading live weather...</span>
@@ -732,8 +662,6 @@
       </div>
     {/if}
   </div>
-{:else if variant === 'home-hero'}
-  {@render bannerCard('home-hero')}
 {:else}
   <!-- WIDGET VARIANT (Home Feed Card) -->
   {@render bannerCard('widget')}

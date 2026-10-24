@@ -97,7 +97,7 @@ func main() {
 		Frameless:         true,
 		AlwaysOnTop:       true,
 		DisableResize:     true,
-		Hidden:            true,
+		Hidden:            !app.IsTestMode(),
 		BackgroundType:    application.BackgroundTypeTransparent,
 		BackgroundColour:  application.NewRGBA(0, 0, 0, 0),
 		IgnoreMouseEvents: false,
@@ -111,6 +111,7 @@ func main() {
 	app.Setup(wailsApp, win)
 
 	if app.IsTestMode() {
+		win.Show()
 		devWin := wailsApp.Window.NewWithOptions(application.WebviewWindowOptions{
 			Title:            "Vinta Dev Tools",
 			Width:            500,

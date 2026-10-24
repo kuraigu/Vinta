@@ -13,6 +13,7 @@
   import Calendar from '../components/Calendar.svelte'
   import CalendarGlance from '../components/CalendarGlance.svelte'
   import Weather from '../components/Weather.svelte'
+  import WeatherGlance from '../components/WeatherGlance.svelte'
   import DeviceStatusWidget from '../components/DeviceStatusWidget.svelte'
   import ActionCenterGlance from '../components/ActionCenterGlance.svelte'
   import NotificationGlance from '../components/NotificationGlance.svelte'
@@ -293,14 +294,9 @@
         <div class="social-feed-container">
           {#if $homeWidgetsVisibilityStore.weather}
             <!-- Full-Bleed Weather Hero Header (Background for Salutation + User + Time) -->
-            <Weather
-              expanded={true}
-              variant="home-hero"
+            <WeatherGlance
               salutation={salutationText}
               userName={displayName}
-              dateText={$homeWidgetsVisibilityStore.clock
-                ? timeParts.friendlyDateText
-                : ''}
               timeText={$homeWidgetsVisibilityStore.clock
                 ? `${formattedHours}:${timeParts.m}`
                 : ''}

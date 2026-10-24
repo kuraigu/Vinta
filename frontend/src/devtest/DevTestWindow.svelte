@@ -12,7 +12,8 @@
     Moon,
     RefreshCw,
     Copy,
-    Check
+    Check,
+    Eye
   } from 'lucide-svelte'
   import CustomSelect from '../components/CustomSelect.svelte'
   import CustomTooltip from '../components/CustomTooltip.svelte'
@@ -194,6 +195,9 @@
       }
     )
 
+    // Emit initial navigation on mount so the main island spawns and syncs with devtest window
+    emitNavigate(targetMode, isExpandedMode)
+
     return () => {
       unsubSync()
       unsubInspectorHover()
@@ -214,6 +218,20 @@
     </div>
 
     <div class="header-actions">
+      <button
+        class="action-btn"
+        onclick={() => {
+          $devPinnedStore = true
+          emitNavigate(targetMode, isExpandedMode)
+        }}
+        use:islandTooltip={{
+          text: 'Show / Wake Island',
+          position: 'bottom'
+        }}
+      >
+        <Eye size={14} strokeWidth={2.2} />
+      </button>
+
       <button
         class="action-btn {$devPinnedStore ? 'active' : ''}"
         onclick={togglePin}

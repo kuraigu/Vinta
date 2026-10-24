@@ -675,6 +675,7 @@
     else if (page === CalculatorPage) pageId = 'calculator'
     else if (page === TimerPage) pageId = 'timer'
     else if (page === CalendarPage) pageId = 'calendar'
+    else if (page === WeatherPage) pageId = 'weather'
 
     $activePageIdStore = pageId
     try {
