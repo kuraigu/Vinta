@@ -20,10 +20,10 @@
 
 <div
   class="vinta-dot-pattern variant-{variant} {className}"
-  style:color={color}
+  style:color
   style:--dot-size={dotSize}
   style:--grid-size={gridSize}
-  style:opacity={opacity}
+  style:opacity
   aria-hidden="true"
 ></div>
 

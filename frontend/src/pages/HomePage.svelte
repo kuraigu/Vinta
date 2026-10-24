@@ -356,9 +356,7 @@
 
           <!-- Update Glance Banner (Issue #161) -->
           {#if $updateInfoStore?.updateAvailable && !isUpdateSnoozed}
-            <UpdateGlanceCard
-              onClick={openUpdatesTab}
-            />
+            <UpdateGlanceCard onClick={openUpdatesTab} />
           {/if}
 
           <!-- Notification Glance Card (High priority alerts right after updates) -->
@@ -384,7 +382,9 @@
 
           <!-- Studio Branding Footer (Issue #185 / Category 7) -->
           <footer class="home-brand-footer">
-            <span class="home-brand-text">Vinta by FreeMatrix Studios & Contributors</span>
+            <span class="home-brand-text"
+              >Vinta by FreeMatrix Studios & Contributors</span
+            >
             <span class="home-version-pill">v{displayVersion}</span>
           </footer>
         </div>

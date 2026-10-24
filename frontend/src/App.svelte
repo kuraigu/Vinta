@@ -1275,7 +1275,9 @@
     }
 
     try {
-      const savedDevReload = sessionStorage.getItem('vinta_devtest_reload_state')
+      const savedDevReload = sessionStorage.getItem(
+        'vinta_devtest_reload_state'
+      )
       if (savedDevReload) {
         sessionStorage.removeItem('vinta_devtest_reload_state')
         const parsed = JSON.parse(savedDevReload) as {

@@ -173,7 +173,9 @@
       {/if}
       <span class="hud-tag">{hoveredInfo.tag}</span>
       {#if hoveredInfo.classes.length > 0}
-        <span class="hud-classes">.{hoveredInfo.classes.slice(0, 3).join('.')}</span>
+        <span class="hud-classes"
+          >.{hoveredInfo.classes.slice(0, 3).join('.')}</span
+        >
       {/if}
       <span class="hud-dims">{hoveredInfo.width}×{hoveredInfo.height}</span>
     </div>

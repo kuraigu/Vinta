@@ -56,7 +56,9 @@
     width: 100%;
   }
 
-  :global(.vinta-bento-card.variant-setting.flex-col) .setting-control > :global(*) {
+  :global(.vinta-bento-card.variant-setting.flex-col)
+    .setting-control
+    > :global(*) {
     width: 100%;
   }
 

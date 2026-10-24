@@ -91,12 +91,15 @@
     closeTooltip="Close"
     onClose={onCancel}
   >
-
     <div class="drawer-content">
       <div class="drawer-row">
         <span class="drawer-row-label">Time</span>
         <div class="alarm-drawer-time-wrapper">
-          <CustomTimePicker bind:value={time} ariaLabel="Alarm time" align="right" />
+          <CustomTimePicker
+            bind:value={time}
+            ariaLabel="Alarm time"
+            align="right"
+          />
         </div>
       </div>
 

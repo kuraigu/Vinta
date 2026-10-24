@@ -127,10 +127,7 @@
       <div class="drawer-row">
         <span class="drawer-row-label">Hours</span>
         <div class="drawer-stepper">
-          <button
-            class="stepper-btn"
-            onclick={() => stepHours(-1)}>-</button
-          >
+          <button class="stepper-btn" onclick={() => stepHours(-1)}>-</button>
           <input
             type="text"
             inputmode="numeric"
@@ -148,20 +145,14 @@
             }}
             aria-label="Hours"
           />
-          <button
-            class="stepper-btn"
-            onclick={() => stepHours(1)}>+</button
-          >
+          <button class="stepper-btn" onclick={() => stepHours(1)}>+</button>
         </div>
       </div>
 
       <div class="drawer-row">
         <span class="drawer-row-label">Minutes</span>
         <div class="drawer-stepper">
-          <button
-            class="stepper-btn"
-            onclick={() => stepMinutes(-1)}>-</button
-          >
+          <button class="stepper-btn" onclick={() => stepMinutes(-1)}>-</button>
           <input
             type="text"
             inputmode="numeric"
@@ -179,20 +170,14 @@
             }}
             aria-label="Minutes"
           />
-          <button
-            class="stepper-btn"
-            onclick={() => stepMinutes(1)}>+</button
-          >
+          <button class="stepper-btn" onclick={() => stepMinutes(1)}>+</button>
         </div>
       </div>
 
       <div class="drawer-row">
         <span class="drawer-row-label">Seconds</span>
         <div class="drawer-stepper">
-          <button
-            class="stepper-btn"
-            onclick={() => stepSeconds(-1)}>-</button
-          >
+          <button class="stepper-btn" onclick={() => stepSeconds(-1)}>-</button>
           <input
             type="text"
             inputmode="numeric"
@@ -210,10 +195,7 @@
             }}
             aria-label="Seconds"
           />
-          <button
-            class="stepper-btn"
-            onclick={() => stepSeconds(1)}>+</button
-          >
+          <button class="stepper-btn" onclick={() => stepSeconds(1)}>+</button>
         </div>
       </div>
 

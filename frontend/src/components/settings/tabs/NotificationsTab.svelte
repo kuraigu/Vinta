@@ -220,7 +220,10 @@
   }
 
   input:checked + .slider {
-    background-color: var(--vinta-accent-primary, var(--vinta-primary, #38bdf8));
+    background-color: var(
+      --vinta-accent-primary,
+      var(--vinta-primary, #38bdf8)
+    );
   }
 
   input:checked + .slider:before {

@@ -911,10 +911,7 @@
 
           <div class="form-group">
             <span class="form-label">Date</span>
-            <CustomDatePicker
-              bind:value={formDate}
-              ariaLabel="Event date"
-            />
+            <CustomDatePicker bind:value={formDate} ariaLabel="Event date" />
           </div>
 
           {#if !formIsAllDay}
@@ -945,8 +942,7 @@
                 <button
                   class="color-pill-btn {color}"
                   class:active={formColor === color}
-                  onclick={() =>
-                    (formColor = color as CalendarEvent['color'])}
+                  onclick={() => (formColor = color as CalendarEvent['color'])}
                   type="button"
                   aria-label="{color} category"
                 ></button>

@@ -636,7 +636,10 @@
           style="transform: translateX({itemDragOffsets.get(
             `item-${notif.id}`
           ) || 0}px); opacity: {itemDragOffsets.has(`item-${notif.id}`)
-            ? Math.max(0.2, 1 - Math.abs(itemDragOffsets.get(`item-${notif.id}`) || 0) / 220)
+            ? Math.max(
+                0.2,
+                1 - Math.abs(itemDragOffsets.get(`item-${notif.id}`) || 0) / 220
+              )
             : 1}; transition: {itemDragOffsets.has(`item-${notif.id}`)
             ? 'none'
             : 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease'};"
@@ -888,8 +891,17 @@
                 )}
                 style="transform: translateX({itemDragOffsets.get(
                   `group-${group.brandName}`
-                ) || 0}px); opacity: {itemDragOffsets.has(`group-${group.brandName}`)
-                  ? Math.max(0.2, 1 - Math.abs(itemDragOffsets.get(`group-${group.brandName}`) || 0) / 220)
+                ) || 0}px); opacity: {itemDragOffsets.has(
+                  `group-${group.brandName}`
+                )
+                  ? Math.max(
+                      0.2,
+                      1 -
+                        Math.abs(
+                          itemDragOffsets.get(`group-${group.brandName}`) || 0
+                        ) /
+                          220
+                    )
                   : 1}; transition: {itemDragOffsets.has(
                   `group-${group.brandName}`
                 )

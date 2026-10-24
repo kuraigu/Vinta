@@ -123,7 +123,9 @@
     <div class="about-hero-details">
       <div class="about-brand-header-row">
         <span class="about-brand-title">{appInfo.name}</span>
-        <span class="about-brand-studio">by FreeMatrix Studios & Contributors</span>
+        <span class="about-brand-studio"
+          >by FreeMatrix Studios & Contributors</span
+        >
       </div>
 
       <div class="about-release-capsule">
@@ -320,7 +322,6 @@
     font-variant-numeric: tabular-nums;
     font-size: 10.5px;
   }
-
 
   .about-links-row {
     display: flex;

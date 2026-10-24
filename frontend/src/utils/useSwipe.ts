@@ -165,7 +165,8 @@ export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
         // Ignore pointer capture errors
       }
 
-      isVerticalScroll = requestedAxis === 'y' || (requestedAxis === 'both' && isVertical)
+      isVerticalScroll =
+        requestedAxis === 'y' || (requestedAxis === 'both' && isVertical)
       if (isVerticalScroll && !scrollTarget) {
         scrollTarget = findScrollableContainer(node, e.target as HTMLElement)
       }

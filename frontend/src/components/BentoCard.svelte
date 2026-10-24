@@ -3,7 +3,8 @@
   import './styles/BentoCard.css'
 
   export type BentoVariant = 'bento' | 'setting' | 'announcement'
-  export type BentoColor = 'blue' | 'amber' | 'primary' | 'danger' | 'emerald' | 'purple'
+  export type BentoColor =
+    'blue' | 'amber' | 'primary' | 'danger' | 'emerald' | 'purple'
 
   interface Props {
     variant?: BentoVariant
@@ -31,7 +32,9 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-  class="vinta-bento-card variant-{variant} {color ? `color-${color}` : ''} {className}"
+  class="vinta-bento-card variant-{variant} {color
+    ? `color-${color}`
+    : ''} {className}"
   class:flex-col={flexCol}
   class:card-disabled={disabled}
   {style}

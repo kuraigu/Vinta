@@ -275,7 +275,6 @@
     gap: 2px;
   }
 
-
   .glance-action-btn.dismiss {
     width: 20px;
     height: 20px;

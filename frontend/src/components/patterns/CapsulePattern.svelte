@@ -38,10 +38,7 @@
   let colIndices = $derived.by(computeColIndices)
 </script>
 
-<div
-  class="vinta-capsule-pattern align-{align} {className}"
-  aria-hidden="true"
->
+<div class="vinta-capsule-pattern align-{align} {className}" aria-hidden="true">
   {#each rowIndices as r (r)}
     <div class="capsule-row" class:offset={r % 2 !== 0}>
       {#each colIndices as c (c)}
@@ -51,9 +48,7 @@
         {@const widthVar =
           WIDTH_VARIANTS[(r * 2 + c * 5) % WIDTH_VARIANTS.length]}
         <span
-          class="capsule-cell {isLight
-            ? 'light'
-            : 'dark'} {variant} {widthVar}"
+          class="capsule-cell {isLight ? 'light' : 'dark'} {variant} {widthVar}"
         ></span>
       {/each}
     </div>

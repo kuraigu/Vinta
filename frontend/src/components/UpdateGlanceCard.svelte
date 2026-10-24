@@ -209,7 +209,9 @@
 
   :global(.update-glance-arrow) {
     color: rgba(255, 255, 255, 0.7);
-    transition: transform 0.15s ease, color 0.15s ease;
+    transition:
+      transform 0.15s ease,
+      color 0.15s ease;
     flex-shrink: 0;
   }
 
