@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { Check, X } from 'lucide-svelte'
+  import { Check } from 'lucide-svelte'
   import CustomTimePicker from '../CustomTimePicker.svelte'
+  import DrawerPanel from '../DrawerPanel.svelte'
   import { islandTooltip } from '../../services/islandTooltip'
   import type { AlarmRepeat } from '../../store'
 
@@ -84,19 +85,12 @@
 </script>
 
 {#if isOpen}
-  <div class="drawer-overlay">
-    <div class="drawer-header">
-      <span class="drawer-title">
-        {isEditing ? 'Edit Alarm Reminder' : 'New Alarm Reminder'}
-      </span>
-      <button
-        class="header-tool-btn"
-        onclick={onCancel}
-        use:islandTooltip={'Close'}
-      >
-        <X size={15} />
-      </button>
-    </div>
+  <DrawerPanel
+    title={isEditing ? 'Edit Alarm Reminder' : 'New Alarm Reminder'}
+    variant="overlay"
+    closeTooltip="Close"
+    onClose={onCancel}
+  >
 
     <div class="drawer-content">
       <div class="drawer-row">
@@ -174,5 +168,5 @@
         <span>{isEditing ? 'Save Changes' : 'Create Alarm'}</span>
       </button>
     </div>
-  </div>
+  </DrawerPanel>
 {/if}

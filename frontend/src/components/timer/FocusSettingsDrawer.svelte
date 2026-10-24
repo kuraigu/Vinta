@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { X } from 'lucide-svelte'
+  import DrawerPanel from '../DrawerPanel.svelte'
   import { islandTooltip } from '../../services/islandTooltip'
   import { timerAppStore, updateFocusSettings } from '../../store'
 
@@ -12,18 +12,12 @@
 </script>
 
 {#if isOpen}
-  <div class="drawer-overlay">
-    <div class="drawer-header">
-      <span class="drawer-title">Focus Settings</span>
-      <button
-        class="header-tool-btn"
-        onclick={onClose}
-        use:islandTooltip={'Close settings'}
-      >
-        <X size={15} />
-      </button>
-    </div>
-
+  <DrawerPanel
+    title="Focus Settings"
+    variant="overlay"
+    closeTooltip="Close settings"
+    {onClose}
+  >
     <div class="drawer-content">
       <div class="focus-presets-row">
         <button
@@ -228,5 +222,5 @@
         </label>
       </div>
     </div>
-  </div>
+  </DrawerPanel>
 {/if}

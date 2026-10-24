@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { Music2, Check, X, Pin } from 'lucide-svelte'
+  import { Music2, Check, Pin } from 'lucide-svelte'
   import { islandTooltip } from '../services/islandTooltip'
   import { resolveAppBrand, nativeIconsStore } from '../services/iconService'
   import { pinnedMediaSourceStore } from '../store'
+  import DrawerPanel from './DrawerPanel.svelte'
   import './styles/MediaSourcesDrawer.css'
 
   interface MediaSession {
@@ -52,25 +53,13 @@
   }
 </script>
 
-<div class="session-drawer-panel">
-  <div class="session-drawer-header">
-    <div class="session-header-title-group">
-      <span class="session-header-title">Media Sources</span>
-      <span class="session-count-tag">{sessions.length}</span>
-    </div>
-    <button
-      class="session-close-btn"
-      use:islandTooltip={{ text: 'Close Sources', align: 'right' }}
-      aria-label="Close Sources"
-      onclick={(e) => {
-        e.stopPropagation()
-        onClose()
-      }}
-    >
-      <X size={13} />
-    </button>
-  </div>
-
+<DrawerPanel
+  title="Media Sources"
+  tag={sessions.length}
+  closeTooltip="Close Sources"
+  variant="embedded"
+  {onClose}
+>
   <div class="session-drawer-list">
     {#each sessions as s (s.id)}
       {@const isSelected =
@@ -147,4 +136,4 @@
       </div>
     {/each}
   </div>
-</div>
+</DrawerPanel>

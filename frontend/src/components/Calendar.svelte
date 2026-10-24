@@ -30,6 +30,7 @@
   import BackButton from './BackButton.svelte'
   import ScrollView from './ScrollView.svelte'
   import ActionCapsule from './ActionCapsule.svelte'
+  import EditorModal from './EditorModal.svelte'
   import CustomDatePicker from './CustomDatePicker.svelte'
   import CustomTimePicker from './CustomTimePicker.svelte'
   import DiamondPattern from './patterns/DiamondPattern.svelte'
@@ -885,171 +886,143 @@
       </div>
     {/snippet}
 
-    <!-- EVENT CREATION / EDITING MODAL (Self-contained in Calendar component) -->
-    {#if isModalOpen}
-      <div
-        class="modal-backdrop"
-        onclick={() => (isModalOpen = false)}
-        onkeydown={(e) => {
-          if (e.key === 'Escape') isModalOpen = false
-        }}
-        role="presentation"
-      >
-        <div
-          class="modal-dialog"
-          onclick={(e) => e.stopPropagation()}
-          onkeydown={(e) => e.stopPropagation()}
-          role="dialog"
-          tabindex="-1"
-          aria-modal="true"
-        >
-          <div class="modal-header">
-            <span class="modal-title">
-              {modalMode === 'edit' ? 'Edit Event' : 'Add New Event'}
-            </span>
-            <button
-              type="button"
-              class="modal-close-btn"
-              onclick={() => (isModalOpen = false)}
-              aria-label="Close modal"
-            >
-              <X size={15} />
-            </button>
+    <!-- EVENT CREATION / EDITING MODAL (Unified via EditorModal) -->
+    <EditorModal
+      isOpen={isModalOpen}
+      title={modalMode === 'edit' ? 'Edit Event' : 'Add New Event'}
+      onClose={() => (isModalOpen = false)}
+    >
+      <ScrollView class="modal-form-scroll">
+        <div class="modal-form">
+          <div class="form-group">
+            <div class="form-label-row">
+              <label class="form-label" for="cal-event-title">Title</label>
+              <span class="char-count">{formTitle.length}/60</span>
+            </div>
+            <input
+              id="cal-event-title"
+              class="form-input"
+              type="text"
+              placeholder="Meeting or event title"
+              maxlength="60"
+              bind:value={formTitle}
+            />
           </div>
 
-          <ScrollView class="modal-form-scroll">
-            <div class="modal-form">
-              <div class="form-group">
-                <div class="form-label-row">
-                  <label class="form-label" for="cal-event-title">Title</label>
-                  <span class="char-count">{formTitle.length}/60</span>
-                </div>
-                <input
-                  id="cal-event-title"
-                  class="form-input"
-                  type="text"
-                  placeholder="Meeting or event title"
-                  maxlength="60"
-                  bind:value={formTitle}
+          <div class="form-group">
+            <span class="form-label">Date</span>
+            <CustomDatePicker
+              bind:value={formDate}
+              ariaLabel="Event date"
+            />
+          </div>
+
+          {#if !formIsAllDay}
+            <div class="form-row time-pickers-row">
+              <div class="form-group time-field">
+                <span class="form-label">Start Time</span>
+                <CustomTimePicker
+                  bind:value={formStartTime}
+                  ariaLabel="Start time"
+                  align="left"
                 />
               </div>
-
-              <div class="form-group">
-                <span class="form-label">Date</span>
-                <CustomDatePicker
-                  bind:value={formDate}
-                  ariaLabel="Event date"
+              <div class="form-group time-field">
+                <span class="form-label">End Time</span>
+                <CustomTimePicker
+                  bind:value={formEndTime}
+                  ariaLabel="End time"
+                  align="right"
                 />
-              </div>
-
-              {#if !formIsAllDay}
-                <div class="form-row time-pickers-row">
-                  <div class="form-group time-field">
-                    <span class="form-label">Start Time</span>
-                    <CustomTimePicker
-                      bind:value={formStartTime}
-                      ariaLabel="Start time"
-                      align="left"
-                    />
-                  </div>
-                  <div class="form-group time-field">
-                    <span class="form-label">End Time</span>
-                    <CustomTimePicker
-                      bind:value={formEndTime}
-                      ariaLabel="End time"
-                      align="right"
-                    />
-                  </div>
-                </div>
-              {/if}
-
-              <div class="form-group">
-                <span class="form-label">Category Color</span>
-                <div class="color-pills-row">
-                  {#each ['indigo', 'emerald', 'amber', 'purple', 'rose', 'sky'] as color (color)}
-                    <button
-                      class="color-pill-btn {color}"
-                      class:active={formColor === color}
-                      onclick={() =>
-                        (formColor = color as CalendarEvent['color'])}
-                      type="button"
-                      aria-label="{color} category"
-                    ></button>
-                  {/each}
-                </div>
-              </div>
-
-              <div class="form-group">
-                <div class="form-label-row">
-                  <label class="form-label" for="cal-event-loc"
-                    >Location (Optional)</label
-                  >
-                  <span class="char-count">{formLocation.length}/80</span>
-                </div>
-                <input
-                  id="cal-event-loc"
-                  class="form-input"
-                  type="text"
-                  placeholder="Room, office, or meeting link"
-                  maxlength="80"
-                  bind:value={formLocation}
-                />
-              </div>
-
-              <div class="form-group">
-                <div class="form-label-row">
-                  <label class="form-label" for="cal-event-desc"
-                    >Description (Optional)</label
-                  >
-                  <span class="char-count">{formDescription.length}/200</span>
-                </div>
-                <textarea
-                  id="cal-event-desc"
-                  class="form-input form-textarea"
-                  placeholder="Additional notes"
-                  maxlength="200"
-                  rows="2"
-                  bind:value={formDescription}></textarea>
               </div>
             </div>
-          </ScrollView>
+          {/if}
 
-          <div class="modal-footer">
-            {#if modalMode === 'edit'}
-              <button
-                type="button"
-                class="modal-btn-delete"
-                onclick={handleDeleteEditingEvent}
-                aria-label="Delete event"
-              >
-                <Trash2 size={13} />
-                <span>Delete</span>
-              </button>
-            {:else}
-              <div></div>
-            {/if}
-
-            <div class="modal-footer-right">
-              <button
-                type="button"
-                class="modal-btn-cancel"
-                onclick={() => (isModalOpen = false)}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                class="modal-btn-submit"
-                onclick={handleSaveEvent}
-                disabled={!formTitle.trim()}
-              >
-                {modalMode === 'edit' ? 'Save Changes' : 'Create Event'}
-              </button>
+          <div class="form-group">
+            <span class="form-label">Category Color</span>
+            <div class="color-pills-row">
+              {#each ['indigo', 'emerald', 'amber', 'purple', 'rose', 'sky'] as color (color)}
+                <button
+                  class="color-pill-btn {color}"
+                  class:active={formColor === color}
+                  onclick={() =>
+                    (formColor = color as CalendarEvent['color'])}
+                  type="button"
+                  aria-label="{color} category"
+                ></button>
+              {/each}
             </div>
+          </div>
+
+          <div class="form-group">
+            <div class="form-label-row">
+              <label class="form-label" for="cal-event-loc"
+                >Location (Optional)</label
+              >
+              <span class="char-count">{formLocation.length}/80</span>
+            </div>
+            <input
+              id="cal-event-loc"
+              class="form-input"
+              type="text"
+              placeholder="Room, office, or meeting link"
+              maxlength="80"
+              bind:value={formLocation}
+            />
+          </div>
+
+          <div class="form-group">
+            <div class="form-label-row">
+              <label class="form-label" for="cal-event-desc"
+                >Description (Optional)</label
+              >
+              <span class="char-count">{formDescription.length}/200</span>
+            </div>
+            <textarea
+              id="cal-event-desc"
+              class="form-input form-textarea"
+              placeholder="Additional notes"
+              maxlength="200"
+              rows="2"
+              bind:value={formDescription}></textarea>
           </div>
         </div>
-      </div>
-    {/if}
+      </ScrollView>
+
+      {#snippet footer()}
+        {#if modalMode === 'edit'}
+          <button
+            type="button"
+            class="modal-btn-delete"
+            onclick={handleDeleteEditingEvent}
+            aria-label="Delete event"
+          >
+            <Trash2 size={13} />
+            <span>Delete</span>
+          </button>
+        {:else}
+          <div></div>
+        {/if}
+
+        <div class="modal-footer-right">
+          <button
+            type="button"
+            class="modal-btn-cancel"
+            onclick={() => (isModalOpen = false)}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="modal-btn-submit"
+            onclick={handleSaveEvent}
+            disabled={!formTitle.trim()}
+          >
+            {modalMode === 'edit' ? 'Save Changes' : 'Create Event'}
+          </button>
+        </div>
+      {/snippet}
+    </EditorModal>
   {/if}
 </div>
 

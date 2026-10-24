@@ -1,0 +1,148 @@
+/* ============================================================================
+   DrawerPanel Unified Stylesheet
+   ============================================================================ */
+
+.vinta-drawer-panel {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  contain: layout paint;
+}
+
+/* Embedded Variant (used in popovers, media player, glance cards) */
+.vinta-drawer-panel.variant-embedded {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  margin-top: 4px;
+  margin-bottom: 2px;
+  gap: 4px;
+  padding: 8px 10px 10px 10px;
+  background: var(--vinta-surface-card, rgba(14, 14, 20, 0.85));
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.1));
+  border-radius: var(--vinta-radius-card, 16px);
+  box-shadow: var(--vinta-dock-popover-shadow, 0 4px 20px rgba(0, 0, 0, 0.45));
+  animation: vintaDrawerFadeIn 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Overlay Variant (fullscreen sliding sheet inside an application page like Timer/Alarms) */
+.vinta-drawer-panel.variant-overlay {
+  position: absolute;
+  inset: 0;
+  background: var(--vinta-bg, #141414);
+  padding: var(--vinta-dock-clearance, 56px) 20px 14px 20px;
+  justify-content: space-between;
+  z-index: 50;
+  border-radius: inherit;
+  animation: vintaDrawerSlideUp 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes vintaDrawerFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes vintaDrawerSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.vinta-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 2px 8px 2px;
+  border-bottom: 1px solid var(--vinta-border-light, rgba(255, 255, 255, 0.1));
+}
+
+.vinta-drawer-panel.variant-overlay .vinta-drawer-header {
+  padding: 0 0 10px 0;
+  margin-bottom: 10px;
+  border-bottom: none;
+}
+
+.vinta-drawer-title-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.vinta-drawer-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--vinta-text-secondary, rgba(255, 255, 255, 0.6));
+}
+
+.vinta-drawer-panel.variant-overlay .vinta-drawer-title {
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: -0.01em;
+  color: var(--vinta-text-primary, #ffffff);
+}
+
+.vinta-drawer-tag {
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: var(--vinta-radius-pill, 9999px);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--vinta-primary, #38bdf8);
+}
+
+.vinta-drawer-close-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--vinta-radius-button, 6px);
+  border: none;
+  background: var(--vinta-item-bg, rgba(255, 255, 255, 0.08));
+  color: var(--vinta-text-secondary, rgba(255, 255, 255, 0.6));
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.vinta-drawer-close-btn:hover {
+  background: var(--vinta-hover, rgba(255, 255, 255, 0.18));
+  color: var(--vinta-text-primary, #ffffff);
+}
+
+.vinta-drawer-panel.variant-overlay .vinta-drawer-close-btn {
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  color: var(--vinta-text-secondary, #cbd5e1);
+}
+
+.vinta-drawer-panel.variant-overlay .vinta-drawer-close-btn:hover {
+  background: var(--vinta-hover, rgba(255, 255, 255, 0.1));
+  color: var(--vinta-text-primary, #ffffff);
+}
+
+.vinta-drawer-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
