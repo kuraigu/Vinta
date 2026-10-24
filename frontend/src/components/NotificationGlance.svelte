@@ -114,26 +114,28 @@
     <div class="glance-top-row">
       <div class="glance-brand-group">
         <div class="glance-avatar-container">
-          {#if resolvedIcon}
-            <img
-              src={resolvedIcon}
-              alt=""
-              class="glance-app-icon"
-              onerror={(e) => {
-                const target = e.currentTarget as HTMLImageElement
-                target.style.display = 'none'
-                const fallback = target.nextElementSibling as HTMLElement
-                if (fallback) fallback.style.display = 'flex'
-              }}
-            />
-            <div class="glance-fallback-icon" style="display: none;">
-              <Bell size={13} />
-            </div>
-          {:else}
-            <div class="glance-fallback-icon">
-              <Bell size={13} />
-            </div>
-          {/if}
+          {#key latestNotif?.id}
+            {#if resolvedIcon}
+              <img
+                src={resolvedIcon}
+                alt=""
+                class="glance-app-icon"
+                onerror={(e) => {
+                  const target = e.currentTarget as HTMLImageElement
+                  target.style.display = 'none'
+                  const fallback = target.nextElementSibling as HTMLElement
+                  if (fallback) fallback.style.display = 'flex'
+                }}
+              />
+              <div class="glance-fallback-icon" style="display: none;">
+                <Bell size={13} />
+              </div>
+            {:else}
+              <div class="glance-fallback-icon">
+                <Bell size={13} />
+              </div>
+            {/if}
+          {/key}
         </div>
         <span class="glance-app-name">{appDisplayName}</span>
         {#if unreadCount > 1}
@@ -175,6 +177,8 @@
     gap: 8px;
     padding: 10px 14px;
     cursor: pointer;
+    text-align: left;
+    align-items: flex-start;
   }
 
   :global(.notification-glance-card:active) {
@@ -300,6 +304,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    text-align: left;
   }
 
   .glance-message {
@@ -313,5 +318,6 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
     word-break: break-word;
+    text-align: left;
   }
 </style>
