@@ -310,6 +310,8 @@
               e.stopPropagation()
               snoozeRingingAlarm()
             }}
+            use:islandTooltip={'Snooze alarm'}
+            aria-label="Snooze alarm"
           >
             <Clock size={12} />
           </button>
@@ -319,6 +321,8 @@
               e.stopPropagation()
               dismissRingingAlarm()
             }}
+            use:islandTooltip={'Dismiss alarm'}
+            aria-label="Dismiss alarm"
           >
             <X size={13} />
           </button>
@@ -326,18 +330,6 @@
       </div>
     {:else}
       <div class="timer-minimal">
-        <DotPattern
-          variant="minimal-left"
-          class="minimal-dots-bg {activeMinimalMode === 'timer'
-            ? 'mode-timer'
-            : activeMinimalMode === 'stopwatch'
-              ? 'mode-stopwatch'
-              : activeMinimalMode === 'focus' &&
-                  $timerAppStore.focus.phase === 'focus'
-                ? 'mode-focus'
-                : 'mode-break'}"
-        />
-
         <div class="minimal-info-trigger">
           <span class="minimal-mode-label">{minimalModeLabel}</span>
 
