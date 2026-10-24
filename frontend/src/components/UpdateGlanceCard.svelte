@@ -1,17 +1,16 @@
 <script lang="ts">
-  import { onMount } from 'svelte'
-  import { RefreshCw, Info, X } from 'lucide-svelte'
+  import { RefreshCw, Info, ChevronRight } from 'lucide-svelte'
   import {
     updateInfoStore,
     updateLifecycleStatusStore,
     triggerApplyUpdate
   } from '../store'
+  import CirclePattern from './patterns/CirclePattern.svelte'
+  import ActionCapsule from './ActionCapsule.svelte'
 
   let {
-    onDismiss,
     onClick
   }: {
-    onDismiss?: () => void
     onClick?: () => void
   } = $props()
 
@@ -21,18 +20,13 @@
     if (onClick) onClick()
   }
 
-  function handleDismiss(e: MouseEvent) {
-    e.stopPropagation()
-    if (onDismiss) onDismiss()
-  }
-
   function handleRestart(e: MouseEvent) {
     e.stopPropagation()
     triggerApplyUpdate()
   }
 </script>
 
-<!-- Shared Reusable Update Card -->
+<!-- Shared Reusable Update Card with Atmospheric Bento Backdrop -->
 <section
   class="update-glance-card {isReady ? 'ready' : 'available'}"
   role="button"
@@ -40,72 +34,65 @@
   onclick={handleCardClick}
   onkeydown={(e) => e.key === 'Enter' && handleCardClick()}
 >
-  <div class="update-glance-icon">
-    {#if isReady}
-      <RefreshCw size={14} class="update-spin-icon" />
-    {:else}
-      <Info size={14} />
-    {/if}
+  <div class="update-glance-pattern-wrap" aria-hidden="true">
+    <CirclePattern align="right" rows={8} cols={18} />
   </div>
 
-  <div class="update-glance-text">
-    <span class="update-glance-title">
-      {isReady
-        ? 'Update Ready to Install'
-        : `Vinta ${$updateInfoStore?.latestVersion || 'Update'}`}
-    </span>
-    <span class="update-glance-sub">
+  <div class="update-glance-body">
+    <div class="update-glance-icon">
       {#if isReady}
-        Update package downloaded and verified against SHA-256 manifest.
-      {:else if $updateLifecycleStatusStore === 'verifying'}
-        Verifying SHA-256 package checksum against release manifest...
-      {:else if $updateLifecycleStatusStore === 'downloading'}
-        Downloading update package...
-      {:else if $updateLifecycleStatusStore === 'paused'}
-        Download paused. Click resume to continue from current offset.
+        <RefreshCw size={14} class="update-spin-icon" />
       {:else}
-        A new release is available for download and installation.
+        <Info size={14} />
       {/if}
-    </span>
-  </div>
+    </div>
 
-  <div class="update-glance-actions">
-    {#if isReady}
-      <button
-        type="button"
-        class="update-action-btn restart"
-        onclick={handleRestart}
-        title="Restart Vinta"
-      >
-        Restart
-      </button>
-    {/if}
+    <div class="update-glance-text">
+      <span class="update-glance-title">
+        {isReady
+          ? 'Update Ready to Install'
+          : `Vinta ${$updateInfoStore?.latestVersion || 'Update'}`}
+      </span>
+      <span class="update-glance-sub">
+        {#if isReady}
+          Update package downloaded and verified against SHA-256 manifest.
+        {:else if $updateLifecycleStatusStore === 'verifying'}
+          Verifying SHA-256 package checksum against release manifest...
+        {:else if $updateLifecycleStatusStore === 'downloading'}
+          Downloading update package...
+        {:else if $updateLifecycleStatusStore === 'paused'}
+          Download paused. Click to view status in settings.
+        {:else}
+          A new release is available for download and installation.
+        {/if}
+      </span>
+    </div>
 
-    <button
-      type="button"
-      class="update-dismiss-btn"
-      onclick={handleDismiss}
-      title="Dismiss for this session"
-      aria-label="Dismiss update banner"
-    >
-      <X size={12} />
-    </button>
+    <div class="update-glance-actions">
+      {#if isReady}
+        <ActionCapsule
+          label="Restart"
+          variant="frosted"
+          onclick={handleRestart}
+          tooltip="Restart Vinta to complete update"
+        />
+      {:else}
+        <ChevronRight size={16} class="update-glance-arrow" />
+      {/if}
+    </div>
   </div>
 </section>
 
 <style>
   .update-glance-card {
-    display: flex;
-    align-items: center;
-    text-align: left;
-    gap: 12px;
+    position: relative;
     width: 100%;
-    padding: 12px 14px;
-    border-radius: 16px;
+    border-radius: var(--vinta-radius-card, 16px);
     box-sizing: border-box;
     cursor: pointer;
     user-select: none;
     -webkit-user-select: none;
+    overflow: hidden;
     background: linear-gradient(135deg, #0284c7 0%, #0369a1 50%, #1d4ed8 100%);
     border: 1px solid rgba(255, 255, 255, 0.25);
     box-shadow:
@@ -134,14 +121,34 @@
       0 4px 16px rgba(5, 150, 105, 0.28);
   }
 
+  .update-glance-pattern-wrap {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.32;
+    z-index: 0;
+  }
+
+  .update-glance-body {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    text-align: left;
+    gap: 12px;
+    width: 100%;
+    padding: 11px 14px;
+    box-sizing: border-box;
+  }
+
   .update-glance-icon {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 10px;
-    background: rgba(255, 255, 255, 0.22);
+    width: 30px;
+    height: 30px;
+    border-radius: 9px;
+    background: rgba(255, 255, 255, 0.2);
     color: #ffffff;
     flex-shrink: 0;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
@@ -172,7 +179,7 @@
 
   .update-glance-title {
     display: block;
-    font-size: 13.5px;
+    font-size: 13px;
     font-weight: 700;
     letter-spacing: -0.01em;
     color: #ffffff;
@@ -184,8 +191,8 @@
 
   .update-glance-sub {
     display: block;
-    font-size: 11.5px;
-    color: rgba(255, 255, 255, 0.86);
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.88);
     line-height: 1.35;
     white-space: nowrap;
     overflow: hidden;
@@ -200,46 +207,14 @@
     flex-shrink: 0;
   }
 
-  .update-action-btn {
-    font-size: 0.72rem;
-    font-weight: 600;
-    padding: 4px 10px;
-    border-radius: 8px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    background: rgba(255, 255, 255, 0.14);
+  :global(.update-glance-arrow) {
+    color: rgba(255, 255, 255, 0.7);
+    transition: transform 0.15s ease, color 0.15s ease;
+    flex-shrink: 0;
+  }
+
+  .update-glance-card:hover :global(.update-glance-arrow) {
     color: #ffffff;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-
-  .update-action-btn:hover {
-    background: rgba(255, 255, 255, 0.22);
-    border-color: rgba(255, 255, 255, 0.32);
-    transform: translateY(-0.5px);
-  }
-
-  .update-action-btn.restart {
-    background: rgba(255, 255, 255, 0.25);
-    border-color: rgba(255, 255, 255, 0.35);
-    color: #ffffff;
-  }
-
-  .update-dismiss-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 22px;
-    height: 22px;
-    border-radius: 6px;
-    border: none;
-    background: transparent;
-    color: rgba(255, 255, 255, 0.75);
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-
-  .update-dismiss-btn:hover {
-    background: rgba(255, 255, 255, 0.18);
-    color: #ffffff;
+    transform: translateX(2px);
   }
 </style>

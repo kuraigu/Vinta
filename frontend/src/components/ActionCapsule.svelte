@@ -7,6 +7,7 @@
     label: string
     icon?: Component
     tooltip?: string
+    variant?: 'default' | 'accent' | 'frosted'
     onclick?: (e: MouseEvent) => void
     class?: string
   }
@@ -15,12 +16,18 @@
     label,
     icon: IconComponent,
     tooltip,
+    variant = 'default',
     onclick,
     class: className = ''
   }: Props = $props()
 </script>
 
-<button type="button" class="action-capsule-btn {className}" {onclick}>
+<button
+  type="button"
+  class="action-capsule-btn variant-{variant} {className}"
+  {onclick}
+  use:islandTooltip={tooltip || ''}
+>
   {#if IconComponent}
     <IconComponent size={12} class="capsule-icon" />
   {/if}
@@ -53,6 +60,23 @@
     background: rgba(255, 255, 255, 0.14);
     color: var(--vinta-text-primary);
     border-color: rgba(255, 255, 255, 0.22);
+  }
+
+  .action-capsule-btn.variant-frosted {
+    background: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+  }
+
+  .action-capsule-btn.variant-frosted:hover {
+    background: rgba(255, 255, 255, 0.24);
+    border-color: rgba(255, 255, 255, 0.35);
+    color: #ffffff;
+  }
+
+  .action-capsule-btn.variant-accent {
+    background: var(--vinta-accent-primary, #38bdf8);
+    color: var(--vinta-text-on-accent, #ffffff);
   }
 
   .action-capsule-btn:active {

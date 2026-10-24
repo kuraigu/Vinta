@@ -17,6 +17,8 @@
   import SettingItem from '../SettingItem.svelte'
   import SettingBanner from '../SettingBanner.svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
+  import BentoCard from '../../BentoCard.svelte'
+  import CirclePattern from '../../patterns/CirclePattern.svelte'
   import CustomSelect from '../../CustomSelect.svelte'
   import {
     updateInfoStore,
@@ -202,7 +204,16 @@
 
     <!-- Update Available & Download Card: directly below Check for Updates -->
     {#if $updateInfoStore?.updateAvailable}
-      <div class="update-card">
+      <BentoCard
+        variant="announcement"
+        color={$updateLifecycleStatusStore === 'ready' ? 'emerald' : 'blue'}
+        flexCol={true}
+        class="update-card"
+      >
+        <div class="update-card-pattern-wrap" aria-hidden="true">
+          <CirclePattern align="right" rows={10} cols={20} />
+        </div>
+
         <div class="update-header">
           <div class="update-badge-icon">
             {#if $updateLifecycleStatusStore === 'ready'}
@@ -345,7 +356,7 @@
             >
           </div>
         {/if}
-      </div>
+      </BentoCard>
     {/if}
 
     <SettingItem

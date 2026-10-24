@@ -328,9 +328,6 @@
           {#if $updateInfoStore?.updateAvailable && !isUpdateSnoozed}
             <UpdateGlanceCard
               onClick={openUpdatesTab}
-              onDismiss={() => {
-                snoozeUpdate
-              }}
             />
           {/if}
 
