@@ -158,10 +158,9 @@
    * Evaluates whether a notification's current icon is simply the generic application logo.
    */
   function isGenericAppLogo(notif: NotificationItem): boolean {
-    const app = (notif.appName || notif.aumid || '').toLowerCase()
-    if (app.includes('vinta')) return false
     if (!notif.icon) return true
     if (notif.appLogo && notif.icon === notif.appLogo) return true
+    if (notif.icon === appIcon) return true
     const brand = getDisplayBrand(notif)
     if (brand.appIcon && notif.icon === brand.appIcon) return true
     if (brand.icon && notif.icon === brand.icon) return true
