@@ -1645,8 +1645,8 @@
       <ControlsSatellite
         {activePage}
         {expanded}
-        expandedHeight={islandConfig.expanded.h}
-        expandedWidth={islandConfig.expanded.w}
+        expandedHeight={currentExpandedH}
+        expandedWidth={currentIslandW}
         activeMonitorWidth={activeMonitor.width}
         monitorLeft={activeMonitor.left}
         primaryCenter={displayLayout.primaryCenter}

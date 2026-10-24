@@ -347,7 +347,11 @@
     cursor: default;
     border-radius: var(--sat-radius-tl) var(--sat-radius-tr)
       var(--sat-radius-br) var(--sat-radius-bl);
-    transition: height 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    transition:
+      height 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+      top 0.32s cubic-bezier(0.2, 0.8, 0.2, 1),
+      left 0.32s cubic-bezier(0.2, 0.8, 0.2, 1),
+      right 0.32s cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 
   /* Bridge across the gap to ensure continuous pointer capture during hover transition */
