@@ -46,7 +46,7 @@
     getActiveSatelliteFootprint,
     resyncAllSatellites
   } from './stores/satellites'
-  import { applyThemeToDOM } from './themes/engine'
+  import { applyThemeToDOM, refreshStylesheetsAndTheme } from './themes/engine'
   import {
     themeStore,
     autoHideStore,
@@ -67,6 +67,9 @@
     type IslandConfig,
     homeWidgetsVisibilityStore,
     calculateHomeMinimalWidth,
+    calculateHomeExpandedHeight,
+    notifData,
+    updateInfoStore,
     batteryDataStore,
     wirelessDataStore,
     weatherLocationStore,
@@ -87,7 +90,12 @@
     displayLayoutStore
   } from './store'
   import { hideTooltip } from './stores/tooltip'
-  import { debugBoundsOverlay, debugLogs } from './devtest/debugConfig'
+  import {
+    debugBoundsOverlay,
+    debugLogs,
+    debugClassInspector
+  } from './devtest/debugConfig'
+  import ClassInspectorOverlay from './devtest/ClassInspectorOverlay.svelte'
 
   function syncDebugBoundsOverlay(enabled: boolean) {
     if (typeof document !== 'undefined') {
@@ -377,6 +385,35 @@
       : islandConfig.minimal.w
   )
 
+  let hasActiveNotification = $derived(
+    $notifData.some(
+      (n) =>
+        !n.isUpdate &&
+        !n.title?.toLowerCase().includes('update available') &&
+        !(
+          (n.appName?.toLowerCase() === 'vinta' ||
+            n.aumid?.toLowerCase().includes('vinta')) &&
+          n.title?.toLowerCase().includes('update')
+        )
+    )
+  )
+
+  let hasActiveUpdateBanner = $derived(
+    Boolean($updateInfoStore?.updateAvailable)
+  )
+
+  let currentExpandedH = $derived(
+    activePage === HomePage
+      ? calculateHomeExpandedHeight(
+          $homeWidgetsVisibilityStore,
+          hasActiveNotification,
+          hasActiveUpdateBanner,
+          islandConfig.expanded.minH ?? 260,
+          islandConfig.expanded.maxH ?? islandConfig.expanded.h
+        )
+      : islandConfig.expanded.h
+  )
+
   let currentIslandW = $derived(
     isHidden
       ? hiddenBounds.w
@@ -550,10 +587,30 @@
           ? calculateHomeMinimalWidth($homeWidgetsVisibilityStore, hasBattery)
           : effectiveConfig.minimal.w
 
+    const hasActiveNotif = $notifData.some(
+      (n) =>
+        !n.isUpdate &&
+        !n.title?.toLowerCase().includes('update available') &&
+        !(
+          (n.appName?.toLowerCase() === 'vinta' ||
+            n.aumid?.toLowerCase().includes('vinta')) &&
+          n.title?.toLowerCase().includes('update')
+        )
+    )
+    const hasActiveUpdate = Boolean($updateInfoStore?.updateAvailable)
+
     const baseH = isHid
       ? hiddenBounds.h
       : isExp
-        ? effectiveConfig.expanded.h
+        ? isEffectiveHome
+          ? calculateHomeExpandedHeight(
+              $homeWidgetsVisibilityStore,
+              hasActiveNotif,
+              hasActiveUpdate,
+              effectiveConfig.expanded.minH ?? 260,
+              effectiveConfig.expanded.maxH ?? effectiveConfig.expanded.h
+            )
+          : effectiveConfig.expanded.h
         : effectiveConfig.minimal.h
 
     const maxMonW = activeMonitor?.width ? activeMonitor.width - 24 : 1920
@@ -618,6 +675,7 @@
     else if (page === CalculatorPage) pageId = 'calculator'
     else if (page === TimerPage) pageId = 'timer'
     else if (page === CalendarPage) pageId = 'calendar'
+    else if (page === WeatherPage) pageId = 'weather'
 
     $activePageIdStore = pageId
     try {
@@ -680,17 +738,31 @@
     resetHideTimer()
   }
 
+  let wasRingingAlarm = false
+
   /**
-   * Automatically reveals the island and displays the ringing alarm when triggered.
+   * Automatically reveals the island and displays the ringing alarm when triggered,
+   * and returns the minimized island to the fallback page when dismissed or snoozed.
    */
   function handleRingingAlarmNavigation(): void {
     const ringing = $timerAppStore.ringingAlarm
     if (ringing) {
+      wasRingingAlarm = true
       if (isHidden) {
         showWidget()
       }
       if (activePage !== TimerPage) {
         navigateTo(TimerPage, timerConfig, false)
+      }
+    } else if (wasRingingAlarm) {
+      wasRingingAlarm = false
+      if (
+        !expanded &&
+        activePage === TimerPage &&
+        !isAnyTimerRunning($timerAppStore)
+      ) {
+        const fallback = getFallbackPage()
+        navigateTo(fallback.page as Component, fallback.config, false)
       }
     }
   }
@@ -914,9 +986,19 @@
       requestAnimationFrame(() => {
         const b = getBoundsForState()
         bounds.syncBounds(b, 0, islandNode, false, isHidden)
-        bounds.syncPillBounds(islandNode, isHidden)
+        bounds.syncPillBounds(islandNode, isHidden, true)
       })
     })
+
+    window.setTimeout(() => {
+      bounds.syncPillBounds(islandNode, isHidden, true)
+      resyncAllSatellites()
+    }, 120)
+
+    window.setTimeout(() => {
+      bounds.syncPillBounds(islandNode, isHidden, true)
+      resyncAllSatellites()
+    }, 320)
 
     const handleOverlayChange = (e: Event) => {
       const detail = (e as CustomEvent).detail as
@@ -1176,27 +1258,50 @@
       onModeSwitchHotkey: handleModeSwitchHotkey
     })
 
+    const pageMappings: Record<
+      string,
+      { page: Component; config: IslandConfig }
+    > = {
+      home: { page: HomePage, config: homeConfig },
+      media: { page: MediaPage, config: mediaConfig },
+      notifications: { page: NotificationPage, config: notifConfig },
+      notes: { page: NotesPage, config: notesConfig },
+      apps: { page: AppsPage, config: appsConfig },
+      settings: { page: SettingsPage, config: settingsConfig },
+      calculator: { page: CalculatorPage, config: calcConfig },
+      timer: { page: TimerPage, config: timerConfig },
+      calendar: { page: CalendarPage, config: calendarConfig },
+      weather: { page: WeatherPage, config: weatherConfig }
+    }
+
+    try {
+      const savedDevReload = sessionStorage.getItem(
+        'vinta_devtest_reload_state'
+      )
+      if (savedDevReload) {
+        sessionStorage.removeItem('vinta_devtest_reload_state')
+        const parsed = JSON.parse(savedDevReload) as {
+          mode?: string
+          expand?: boolean
+          pinned?: boolean
+        }
+        if (typeof parsed.pinned === 'boolean') {
+          $devPinnedStore = parsed.pinned
+        }
+        if (parsed.mode && pageMappings[parsed.mode]) {
+          const match = pageMappings[parsed.mode]
+          navigateTo(match.page, match.config, Boolean(parsed.expand))
+        }
+      }
+    } catch {
+      // Ignore storage errors
+    }
+
     const unsubDevTestNavigate = Events.On(
       'devtest-navigate',
       (ev: { data: unknown }) => {
         const data = ev?.data as { mode?: string; expand?: boolean }
         if (!data?.mode) return
-
-        const pageMappings: Record<
-          string,
-          { page: Component; config: IslandConfig }
-        > = {
-          home: { page: HomePage, config: homeConfig },
-          media: { page: MediaPage, config: mediaConfig },
-          notifications: { page: NotificationPage, config: notifConfig },
-          notes: { page: NotesPage, config: notesConfig },
-          apps: { page: AppsPage, config: appsConfig },
-          settings: { page: SettingsPage, config: settingsConfig },
-          calculator: { page: CalculatorPage, config: calcConfig },
-          timer: { page: TimerPage, config: timerConfig },
-          calendar: { page: CalendarPage, config: calendarConfig },
-          weather: { page: WeatherPage, config: weatherConfig }
-        }
 
         const match = pageMappings[data.mode]
         if (match) {
@@ -1226,6 +1331,37 @@
       }
     )
 
+    const unsubDevTestReloadCss = Events.On(
+      'devtest-reload-css',
+      async (ev: { data: unknown }) => {
+        const data = ev?.data as {
+          theme?: string
+          mode?: string
+          expand?: boolean
+          pinned?: boolean
+        }
+        const targetTheme = data?.theme || $themeStore || 'dark-gold'
+        await refreshStylesheetsAndTheme(targetTheme)
+        try {
+          sessionStorage.setItem(
+            'vinta_devtest_reload_state',
+            JSON.stringify({
+              mode: data?.mode || $activePageIdStore || 'home',
+              expand:
+                typeof data?.expand === 'boolean' ? data.expand : expanded,
+              pinned:
+                typeof data?.pinned === 'boolean'
+                  ? data.pinned
+                  : $devPinnedStore
+            })
+          )
+        } catch {
+          // Ignore storage errors
+        }
+        window.location.reload()
+      }
+    )
+
     const unsubDevTestBounds = Events.On(
       'devtest-bounds-overlay',
       (ev: { data: unknown }) => {
@@ -1247,6 +1383,16 @@
         const data = ev?.data as { enabled?: boolean }
         if (typeof data?.enabled === 'boolean') {
           $debugLogs = data.enabled
+        }
+      }
+    )
+
+    const unsubDevTestInspector = Events.On(
+      'devtest-class-inspector',
+      (ev: { data: unknown }) => {
+        const data = ev?.data as { enabled?: boolean }
+        if (typeof data?.enabled === 'boolean') {
+          $debugClassInspector = data.enabled
         }
       }
     )
@@ -1312,8 +1458,10 @@
       unsubDevTestNavigate()
       unsubDevTestPin()
       unsubDevTestTheme()
+      unsubDevTestReloadCss()
       unsubDevTestBounds()
       unsubDevTestLogs()
+      unsubDevTestInspector()
       unsubDevTestBattery()
       unsubDevTestWireless()
       unsubDevTestWeather()
@@ -1337,7 +1485,7 @@
   })
 
   $effect(function handleActiveThemeChange() {
-    const currentTheme = $themeStore || 'oled-dark'
+    const currentTheme = $themeStore || 'dark-gold'
     applyThemeToDOM(currentTheme)
   })
 </script>
@@ -1425,6 +1573,7 @@
       {hideTrigger}
       {islandConfig}
       {currentMinimalW}
+      {currentExpandedH}
       {hiddenBounds}
       {activeOpacity}
       {glowOpacity}
@@ -1498,8 +1647,8 @@
       <ControlsSatellite
         {activePage}
         {expanded}
-        expandedHeight={islandConfig.expanded.h}
-        expandedWidth={islandConfig.expanded.w}
+        expandedHeight={currentExpandedH}
+        expandedWidth={currentIslandW}
         activeMonitorWidth={activeMonitor.width}
         monitorLeft={activeMonitor.left}
         primaryCenter={displayLayout.primaryCenter}
@@ -1514,5 +1663,6 @@
 </div>
 
 <CustomTooltip />
+<ClassInspectorOverlay />
 
 <style src="./App.css"></style>

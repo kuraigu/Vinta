@@ -144,8 +144,8 @@
   .ctx-menu {
     position: fixed;
     z-index: 999999;
-    background: var(--c-bg);
-    border: 1px solid var(--c-border);
+    background: var(--vinta-bg);
+    border: 1px solid var(--vinta-border);
     border-radius: 8px;
     padding: 4px;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
@@ -163,7 +163,7 @@
     text-align: left;
     font-size: 12.5px;
     font-family: inherit;
-    color: var(--c-text-secondary);
+    color: var(--vinta-text-secondary);
     cursor: pointer;
     border-radius: 5px;
     transition:
@@ -173,8 +173,8 @@
   }
 
   .ctx-item:hover {
-    background: var(--c-hover);
-    color: var(--c-text-primary);
+    background: var(--vinta-hover);
+    color: var(--vinta-text-primary);
   }
 
   .ctx-item.disabled {
@@ -185,7 +185,7 @@
 
   .ctx-divider {
     height: 1px;
-    background: var(--c-border);
+    background: var(--vinta-border);
     margin: 4px 6px;
   }
 </style>

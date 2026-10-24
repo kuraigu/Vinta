@@ -2,7 +2,7 @@
   /**
    * WeatherArt
    *
-   * Reusable vector weather illustration supporting rich hero artwork
+   * Reusable vector weather illustration supporting animated Vinta mascot hero artwork
    * and compact glyph rendering across all weather conditions.
    */
   export type WeatherConditionType =
@@ -18,615 +18,693 @@
   let {
     type = 'sunny',
     variant = 'hero',
+    monochrome = false,
     class: className = ''
   }: {
     type?: WeatherConditionType
-    variant?: 'hero' | 'compact'
+    variant?: 'hero' | 'compact' | 'mini'
+    monochrome?: boolean
     class?: string
   } = $props()
 </script>
 
 {#if variant === 'hero'}
   <!-- =========================================================================
-       HERO VOLUMETRIC ARTWORK (Banner Cards and Full Weather Page)
+       HERO ANIMATED VINTA MASCOT ARTWORK (Banner Cards and Full Weather Page)
        ========================================================================= -->
   <div class="weather-art-hero {className}">
-    {#if type === 'sunny'}
-      <!-- Radiant Sun with Soft, Warm Golden Palette -->
-      <svg class="hero-svg" viewBox="0 0 120 100" aria-label="Sunny weather">
-        <defs>
-          <radialGradient id="sunAura" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="#ffffff" stop-opacity="0.3" />
-            <stop offset="50%" stop-color="#fef08a" stop-opacity="0.12" />
-            <stop offset="100%" stop-color="#fef08a" stop-opacity="0" />
-          </radialGradient>
-          <linearGradient id="sunBodyGrad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stop-color="#ffffff" />
-            <stop offset="40%" stop-color="#fef9c3" />
-            <stop offset="100%" stop-color="#fde047" />
-          </linearGradient>
-        </defs>
+    <svg class="hero-svg" viewBox="0 0 120 100" aria-label="{type} weather">
+      <defs>
+        <!-- Vinta Mascot Clip Paths -->
+        <clipPath id="vintaHeadClip">
+          <circle cx="60" cy="62" r="27" />
+        </clipPath>
 
-        <!-- Ambient Soft Atmosphere Halo -->
-        <circle cx="60" cy="50" r="44" fill="url(#sunAura)" />
+        <clipPath id="vintaEarsClip">
+          <rect x="28" y="51" width="6" height="20" rx="3" />
+          <rect x="86" y="51" width="6" height="20" rx="3" />
+        </clipPath>
 
-        <!-- Soft Corona Rays with Rounded Ends -->
-        <g
-          stroke="#fef08a"
-          stroke-width="2.2"
-          stroke-linecap="round"
-          opacity="0.75"
-        >
-          <line x1="60" y1="17" x2="60" y2="24" />
-          <line x1="60" y1="76" x2="60" y2="83" />
-          <line x1="27" y1="50" x2="34" y2="50" />
-          <line x1="86" y1="50" x2="93" y2="50" />
-          <line x1="37" y1="27" x2="42" y2="32" />
-          <line x1="78" y1="68" x2="83" y2="73" />
-          <line x1="37" y1="73" x2="42" y2="68" />
-          <line x1="78" y1="32" x2="83" y2="27" />
+        <!-- Reusable Vinta Robot Base Chassis (Centered at 60, 62) -->
+        <g id="vintaBotChassis">
+          <!-- Side Ear Pods (Split Two-Tone Slate) -->
+          <g clip-path="url(#vintaEarsClip)">
+            <rect x="27" y="50" width="66" height="11" fill="#68788e" />
+            <rect x="27" y="61" width="66" height="12" fill="#475569" />
+          </g>
+
+          <!-- Main Spherical Head Dome -->
+          <g clip-path="url(#vintaHeadClip)">
+            <!-- Upper Light Slate Metallic Half -->
+            <rect x="30" y="32" width="60" height="30" fill="#94a3b8" />
+            <!-- Lower Dark Slate Metallic Half -->
+            <rect x="30" y="62" width="60" height="30" fill="#475569" />
+
+            <!-- Forehead Geometric Crest: Outer Dark Navy Wedges -->
+            <polygon points="36,41 40,37 51,48 48,48" fill="#182232" />
+            <polygon points="84,41 80,37 69,48 72,48" fill="#182232" />
+
+            <!-- Forehead Geometric Crest: Mid Slate Stripes -->
+            <polygon points="40,37 46,33 55,48 51,48" fill="#3e4c5e" />
+            <polygon points="80,37 74,33 65,48 69,48" fill="#3e4c5e" />
+
+            <!-- Forehead Geometric Crest: Center Shield Diamond -->
+            <polygon points="60,33 69,41 64,48 56,48 51,41" fill="#2e3b4e" />
+          </g>
+
+          <!-- Outer Visor Frame Bezel -->
+          <rect
+            x="34.5"
+            y="46.5"
+            width="51"
+            height="34"
+            rx="12.5"
+            fill="#2b3748"
+          />
+
+          <!-- Inner Deep Space Visor Screen -->
+          <rect x="37" y="49" width="46" height="29" rx="10.5" fill="#09101d" />
         </g>
 
-        <!-- Luminous Warm Sun Orb -->
+        <!-- Weather Element Gradients & Filters -->
+        <linearGradient id="sunCoreGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#fef08a" />
+          <stop offset="50%" stop-color="#facc15" />
+          <stop offset="100%" stop-color="#f97316" />
+        </linearGradient>
+
+        <radialGradient id="sunAuraGrad" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#fde047" stop-opacity="0.45" />
+          <stop offset="60%" stop-color="#f59e0b" stop-opacity="0.15" />
+          <stop offset="100%" stop-color="#f59e0b" stop-opacity="0" />
+        </radialGradient>
+
+        <linearGradient id="moonGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#ffffff" />
+          <stop offset="45%" stop-color="#fef9c3" />
+          <stop offset="100%" stop-color="#facc15" />
+        </linearGradient>
+
+        <linearGradient id="cloudLightGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#ffffff" />
+          <stop offset="60%" stop-color="#f1f5f9" />
+          <stop offset="100%" stop-color="#cbd5e1" />
+        </linearGradient>
+
+        <linearGradient id="cloudNightLitGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#cbd5e1" />
+          <stop offset="50%" stop-color="#64748b" />
+          <stop offset="100%" stop-color="#334155" />
+        </linearGradient>
+
+        <linearGradient id="sweatGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#bae6fd" />
+          <stop offset="100%" stop-color="#0284c7" />
+        </linearGradient>
+
+        <linearGradient id="umbrellaGrad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#38bdf8" />
+          <stop offset="100%" stop-color="#0284c7" />
+        </linearGradient>
+
+        <linearGradient id="beanieGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#ef4444" />
+          <stop offset="50%" stop-color="#dc2626" />
+          <stop offset="100%" stop-color="#991b1b" />
+        </linearGradient>
+
+        <linearGradient id="fogBandGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#cbd5e1" stop-opacity="0" />
+          <stop offset="25%" stop-color="#f8fafc" stop-opacity="0.85" />
+          <stop offset="75%" stop-color="#e2e8f0" stop-opacity="0.85" />
+          <stop offset="100%" stop-color="#cbd5e1" stop-opacity="0" />
+        </linearGradient>
+
+        <!-- Signature Vinta Golden Face Glow -->
+        <filter id="vintaEyeGlow" x="-40%" y="-40%" width="180%" height="180%">
+          <feDropShadow
+            dx="0"
+            dy="0"
+            stdDeviation="2.2"
+            flood-color="#facc15"
+            flood-opacity="0.85"
+          />
+        </filter>
+
+        <filter id="amberGlow" x="-30%" y="-30%" width="160%" height="160%">
+          <feDropShadow
+            dx="0"
+            dy="0"
+            stdDeviation="2"
+            flood-color="#facc15"
+            flood-opacity="0.9"
+          />
+        </filter>
+
+        <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow
+            dx="0"
+            dy="5"
+            stdDeviation="5"
+            flood-color="#0f172a"
+            flood-opacity="0.35"
+          />
+        </filter>
+      </defs>
+
+      {#if type === 'sunny'}
+        <!-- ===============================================================
+             SUNNY: Blazing Sun Behind + Sweating Overheated Vinta Bot
+             =============================================================== -->
         <circle
+          class="anim-pulse-aura"
           cx="60"
-          cy="50"
-          r="20"
-          fill="url(#sunBodyGrad)"
-          filter="drop-shadow(0 4px 14px rgba(254, 240, 138, 0.35))"
+          cy="40"
+          r="46"
+          fill="url(#sunAuraGrad)"
         />
-      </svg>
-    {:else if type === 'night'}
-      <!-- Luminous Full Celestial Moon with Crater Maria & Sparkling Constellations -->
-      <svg class="hero-svg" viewBox="0 0 120 100" aria-label="Clear night sky">
-        <defs>
-          <radialGradient id="moonAura" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="#ffffff" stop-opacity="0.38" />
-            <stop offset="45%" stop-color="#c7d2fe" stop-opacity="0.22" />
-            <stop offset="75%" stop-color="#818cf8" stop-opacity="0.08" />
-            <stop offset="100%" stop-color="#4f46e5" stop-opacity="0" />
-          </radialGradient>
-          <linearGradient id="moonBodyGrad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stop-color="#ffffff" />
-            <stop offset="35%" stop-color="#f8fafc" />
-            <stop offset="70%" stop-color="#e2e8f0" />
-            <stop offset="100%" stop-color="#cbd5e1" />
-          </linearGradient>
-          <radialGradient id="moonLimbShadow" cx="35%" cy="35%" r="65%">
-            <stop offset="60%" stop-color="#ffffff" stop-opacity="0" />
-            <stop offset="88%" stop-color="#818cf8" stop-opacity="0.2" />
-            <stop offset="100%" stop-color="#312e81" stop-opacity="0.45" />
-          </radialGradient>
-          <filter
-            id="moonGlowFilter"
-            x="-30%"
-            y="-30%"
-            width="160%"
-            height="160%"
+
+        <!-- Rotating Sun at the Back -->
+        <g class="anim-spin-sun" style="transform-origin: 60px 32px;">
+          <g
+            stroke="#fde047"
+            stroke-width="2.8"
+            stroke-linecap="round"
+            opacity="0.85"
           >
-            <feDropShadow
-              dx="0"
-              dy="0"
-              stdDeviation="6"
-              flood-color="#c7d2fe"
-              flood-opacity="0.5"
-            />
-            <feDropShadow
-              dx="0"
-              dy="4"
-              stdDeviation="12"
-              flood-color="#818cf8"
-              flood-opacity="0.35"
-            />
-          </filter>
-        </defs>
+            <line x1="60" y1="2" x2="60" y2="8" />
+            <line x1="60" y1="56" x2="60" y2="62" />
+            <line x1="30" y1="32" x2="36" y2="32" />
+            <line x1="84" y1="32" x2="90" y2="32" />
+            <line x1="39" y1="11" x2="43" y2="15" />
+            <line x1="77" y1="49" x2="81" y2="53" />
+            <line x1="39" y1="53" x2="43" y2="49" />
+            <line x1="77" y1="15" x2="81" y2="11" />
+          </g>
+          <circle cx="60" cy="32" r="18" fill="url(#sunCoreGrad)" />
+        </g>
 
-        <!-- Ambient Celestial Lunar Halo -->
-        <circle cx="60" cy="50" r="44" fill="url(#moonAura)" />
+        <!-- Vinta Mascot Character -->
+        <g class="anim-float-hot" filter="url(#softShadow)">
+          <use href="#vintaBotChassis" />
 
-        <!-- Starfield & Constellation Sparkles -->
+          <!-- Heat Flush Cheeks -->
+          <ellipse
+            cx="43"
+            cy="69"
+            rx="3.5"
+            ry="2"
+            fill="#fb7185"
+            opacity="0.5"
+          />
+          <ellipse
+            cx="77"
+            cy="69"
+            rx="3.5"
+            ry="2"
+            fill="#fb7185"
+            opacity="0.5"
+          />
+
+          <!-- Squinting Golden Eyes & Overheated Wavy Mouth -->
+          <g
+            filter="url(#vintaEyeGlow)"
+            stroke="#facc15"
+            stroke-width="2.6"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            fill="none"
+          >
+            <path d="M 45 57 L 52 61 L 45 65" />
+            <path d="M 75 57 L 68 61 L 75 65" />
+            <path
+              d="M 50 71 Q 53.5 68 57 71 T 64 71 T 70 71"
+              stroke-width="2.2"
+            />
+          </g>
+
+          <!-- Animated Sweat Drops -->
+          <g class="anim-sweat-1">
+            <path
+              d="M 83 45 C 83 45 87 50 87 52.5 A 2.5 2.5 0 1 1 82 52.5 C 82 50 83 45 83 45 Z"
+              fill="url(#sweatGrad)"
+            />
+          </g>
+          <g class="anim-sweat-2">
+            <path
+              d="M 36 49 C 36 49 39 53 39 55 A 2 2 0 1 1 35 55 C 35 53 36 49 36 49 Z"
+              fill="url(#sweatGrad)"
+            />
+          </g>
+        </g>
+      {:else if type === 'night'}
+        <!-- ===============================================================
+             NIGHT: Crescent Moon, Twinkling Stars + Sleeping Vinta Bot
+             =============================================================== -->
         <g fill="#ffffff">
-          <!-- 4-Point Primary Cross Sparkle -->
-          <path
-            d="M 28 22 L 29 25 L 32 26 L 29 27 L 28 30 L 27 27 L 24 26 L 27 25 Z"
-            opacity="0.95"
-            filter="drop-shadow(0 0 3px #ffffff)"
-          />
-          <path
-            d="M 94 24 L 95 26 L 97 27 L 95 28 L 94 30 L 93 28 L 91 27 L 93 26 Z"
-            opacity="0.9"
-            filter="drop-shadow(0 0 3px #ffffff)"
-          />
-          <!-- Star Dots -->
-          <circle
-            cx="20"
-            cy="52"
-            r="1.4"
-            opacity="0.8"
-            filter="drop-shadow(0 0 2px #ffffff)"
-          />
-          <circle cx="36" cy="74" r="1.6" opacity="0.85" />
-          <circle
-            cx="98"
-            cy="62"
-            r="1.8"
-            opacity="0.9"
-            filter="drop-shadow(0 0 2px #ffffff)"
-          />
-          <circle cx="84" cy="78" r="1.3" opacity="0.75" />
-          <circle cx="102" cy="42" r="1.2" opacity="0.7" />
+          <circle class="anim-twinkle-1" cx="22" cy="24" r="1.5" />
+          <circle class="anim-twinkle-2" cx="46" cy="14" r="1.2" />
+          <circle class="anim-twinkle-1" cx="100" cy="48" r="1.6" />
+          <circle class="anim-twinkle-2" cx="18" cy="54" r="1.2" />
         </g>
 
-        <!-- Luminous Celestial Moon Sphere -->
-        <g filter="url(#moonGlowFilter)">
-          <circle cx="60" cy="50" r="22" fill="url(#moonBodyGrad)" />
-          <!-- Limb Depth Overlay -->
-          <circle cx="60" cy="50" r="22" fill="url(#moonLimbShadow)" />
-
-          <!-- Soft Lunar Maria & Crater Formations -->
-          <!-- Mare Tranquillitatis -->
-          <circle cx="53" cy="43" r="4.8" fill="#94a3b8" opacity="0.28" />
-          <circle cx="51.5" cy="42" r="3.6" fill="#64748b" opacity="0.18" />
-          <!-- Mare Imbrium -->
-          <circle cx="68" cy="42" r="3.8" fill="#94a3b8" opacity="0.26" />
-          <!-- Tycho Crater -->
-          <circle cx="62" cy="60" r="3.2" fill="#94a3b8" opacity="0.32" />
-          <!-- Oceanus Procellarum / Minor Craters -->
-          <circle cx="72" cy="52" r="2.4" fill="#94a3b8" opacity="0.22" />
-          <circle cx="48" cy="56" r="2.0" fill="#94a3b8" opacity="0.2" />
-          <circle cx="61" cy="49" r="1.6" fill="#94a3b8" opacity="0.16" />
-        </g>
-      </svg>
-    {:else if type === 'rain'}
-      <!-- Wide Volumetric Rain Cloud with Compact Fluid Raindrops -->
-      <svg class="hero-svg" viewBox="0 0 120 100" aria-label="Rainy weather">
-        <defs>
-          <linearGradient id="rainBackCloud" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#64748b" />
-            <stop offset="100%" stop-color="#334155" />
-          </linearGradient>
-          <linearGradient id="rainFrontCloud" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#ffffff" />
-            <stop offset="45%" stop-color="#e2e8f0" />
-            <stop offset="100%" stop-color="#94a3b8" />
-          </linearGradient>
-          <linearGradient id="rainDropGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#7dd3fc" />
-            <stop offset="100%" stop-color="#0284c7" />
-          </linearGradient>
-        </defs>
-
-        <!-- Secondary Background Storm Cloud -->
+        <!-- Glowing Crescent Moon in Background -->
         <path
-          d="M 42 50 A 14 14 0 0 1 30 36 A 16 16 0 0 1 48 20 A 18 18 0 0 1 80 18 A 18 18 0 0 1 98 34 A 14 14 0 0 1 98 50 Z"
-          fill="url(#rainBackCloud)"
-          opacity="0.6"
+          class="anim-moon-rock"
+          style="transform-origin: 84px 26px;"
+          d="M 86 10 C 75 10 66 19 66 30 C 66 37 70 44 76 47 C 72 44 70 39 70 34 C 70 24 78 16 88 16 C 91 16 94 17 97 19 C 94 13 90 10 86 10 Z"
+          fill="url(#moonGrad)"
+          filter="url(#amberGlow)"
         />
 
-        <!-- Wide Primary Foreground Cloud -->
-        <path
-          d="M 32 56 A 16 16 0 0 1 18 40 A 18 18 0 0 1 34 22 A 22 22 0 0 1 70 18 A 22 22 0 0 1 98 32 A 16 16 0 0 1 98 56 Z"
-          fill="url(#rainFrontCloud)"
-          filter="drop-shadow(0 4px 10px rgba(15, 23, 42, 0.32))"
-        />
+        <!-- Sleeping Vinta Mascot -->
+        <g class="anim-float-sleep" filter="url(#softShadow)">
+          <use href="#vintaBotChassis" />
 
-        <!-- Compact Angled Fluid Raindrops Spread Horizontally -->
-        <g
-          stroke="url(#rainDropGrad)"
-          stroke-width="2.6"
-          stroke-linecap="round"
-          opacity="0.95"
-        >
-          <line x1="28" y1="63" x2="24" y2="74" />
-          <line x1="43" y1="64" x2="39" y2="75" />
-          <line x1="58" y1="63" x2="54" y2="74" />
-          <line x1="73" y1="64" x2="69" y2="75" />
-          <line x1="88" y1="63" x2="84" y2="74" />
-        </g>
-      </svg>
-    {:else if type === 'thunder'}
-      <!-- Volumetric Cumulonimbus Thunderhead with Electric Discharge -->
-      <svg
-        class="hero-svg"
-        viewBox="0 0 120 100"
-        aria-label="Thunderstorm weather"
-      >
-        <defs>
-          <radialGradient id="thunderFlashGlow" cx="54%" cy="48%" r="48%">
-            <stop offset="0%" stop-color="#ffffff" stop-opacity="0.5" />
-            <stop offset="35%" stop-color="#c7d2fe" stop-opacity="0.25" />
-            <stop offset="70%" stop-color="#818cf8" stop-opacity="0.08" />
-            <stop offset="100%" stop-color="#4338ca" stop-opacity="0" />
-          </radialGradient>
-          <linearGradient id="thunderBackCloud" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#475569" />
-            <stop offset="50%" stop-color="#312e81" />
-            <stop offset="100%" stop-color="#0f172a" />
-          </linearGradient>
-          <linearGradient id="thunderFrontCloud" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#f8fafc" />
-            <stop offset="16%" stop-color="#cbd5e1" />
-            <stop offset="55%" stop-color="#475569" />
-            <stop offset="100%" stop-color="#1e1b4b" />
-          </linearGradient>
-          <linearGradient id="thunderBoltGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#ffffff" />
-            <stop offset="20%" stop-color="#e0f2fe" />
-            <stop offset="50%" stop-color="#fef08a" />
-            <stop offset="85%" stop-color="#facc15" />
-            <stop offset="100%" stop-color="#f59e0b" />
-          </linearGradient>
-          <filter
-            id="boltElectricGlow"
-            x="-40%"
-            y="-40%"
-            width="180%"
-            height="180%"
-          >
-            <feGaussianBlur
-              in="SourceGraphic"
-              stdDeviation="3.2"
-              result="blurWide"
-            />
-            <feGaussianBlur
-              in="SourceGraphic"
-              stdDeviation="1.2"
-              result="blurTight"
-            />
-            <feMerge>
-              <feMergeNode in="blurWide" />
-              <feMergeNode in="blurTight" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
-
-        <!-- Internal Lightning Discharge Glow -->
-        <ellipse
-          cx="60"
-          cy="46"
-          rx="48"
-          ry="28"
-          fill="url(#thunderFlashGlow)"
-        />
-
-        <!-- Rear Anvil Tempest Mass -->
-        <path
-          d="M 42 50 A 14 14 0 0 1 30 36 A 16 16 0 0 1 48 20 A 18 18 0 0 1 80 18 A 18 18 0 0 1 98 34 A 14 14 0 0 1 98 50 Z"
-          fill="url(#thunderBackCloud)"
-          opacity="0.6"
-        />
-
-        <!-- Realistic Branching Fractal Lightning Discharge (Positioned Behind Foreground Cloud) -->
-        <g filter="url(#boltElectricGlow)">
-          <!-- Outer Atmospheric Ionization Aura (Diffused Electric Violet-Cyan Halo) -->
+          <!-- Peaceful Sleeping Golden Arcs & Breathing Mouth -->
           <g
-            stroke="#818cf8"
+            filter="url(#vintaEyeGlow)"
+            stroke="#facc15"
+            stroke-width="2.6"
             stroke-linecap="round"
-            stroke-linejoin="miter"
-            opacity="0.45"
             fill="none"
           >
-            <!-- Primary Downward Strike Trunk -->
-            <path
-              d="M 58 26 L 54 36 L 62 45 L 53 54 L 59 63 L 49 74 L 55 82 L 47 91 L 51 96"
-              stroke-width="3.8"
+            <path d="M 44 60 Q 49 66 54 60" />
+            <path d="M 66 60 Q 71 66 76 60" />
+            <circle
+              class="anim-sleep-mouth"
+              style="transform-origin: 60px 71px;"
+              cx="60"
+              cy="71"
+              r="2.4"
+              fill="#facc15"
+              stroke="none"
             />
-            <!-- Major Right Lateral Fork -->
-            <path d="M 59 63 L 69 69 L 76 77 L 84 82" stroke-width="2.6" />
-            <path d="M 69 69 L 66 78 L 70 85" stroke-width="1.8" />
-            <!-- Major Left Stepped Fork -->
-            <path d="M 53 54 L 43 62 L 37 72 L 31 79" stroke-width="2.6" />
-            <path d="M 43 62 L 47 70 L 44 77" stroke-width="1.8" />
-            <!-- Lower Tertiary Step -->
-            <path d="M 55 82 L 62 87 L 65 93" stroke-width="1.8" />
-            <!-- Upper Intracloud Arc Behind Anvil -->
-            <path d="M 54 36 L 43 32 L 36 36 L 29 33" stroke-width="2.2" />
-          </g>
-
-          <!-- Mid High-Energy Ionization Plasma Sheath (Electric Cyan-Gold) -->
-          <g
-            stroke="url(#thunderBoltGrad)"
-            stroke-linecap="round"
-            stroke-linejoin="miter"
-            opacity="0.92"
-            fill="none"
-          >
-            <!-- Primary Downward Strike Trunk -->
-            <path
-              d="M 58 26 L 54 36 L 62 45 L 53 54 L 59 63 L 49 74 L 55 82 L 47 91 L 51 96"
-              stroke-width="2.0"
-            />
-            <!-- Major Right Lateral Fork -->
-            <path d="M 59 63 L 69 69 L 76 77 L 84 82" stroke-width="1.3" />
-            <path d="M 69 69 L 66 78 L 70 85" stroke-width="0.9" />
-            <!-- Major Left Stepped Fork -->
-            <path d="M 53 54 L 43 62 L 37 72 L 31 79" stroke-width="1.3" />
-            <path d="M 43 62 L 47 70 L 44 77" stroke-width="0.9" />
-            <!-- Lower Tertiary Step -->
-            <path d="M 55 82 L 62 87 L 65 93" stroke-width="0.9" />
-            <!-- Upper Intracloud Arc Behind Anvil -->
-            <path d="M 54 36 L 43 32 L 36 36 L 29 33" stroke-width="1.1" />
-          </g>
-
-          <!-- Incandescent Superheated Plasma Core (Pure White Filament) -->
-          <g
-            stroke="#ffffff"
-            stroke-linecap="round"
-            stroke-linejoin="miter"
-            opacity="1"
-            fill="none"
-          >
-            <!-- Primary Downward Strike Trunk -->
-            <path
-              d="M 58 26 L 54 36 L 62 45 L 53 54 L 59 63 L 49 74 L 55 82 L 47 91 L 51 96"
-              stroke-width="1.0"
-            />
-            <!-- Major Right Lateral Fork -->
-            <path d="M 59 63 L 69 69 L 76 77 L 84 82" stroke-width="0.65" />
-            <path d="M 69 69 L 66 78 L 70 85" stroke-width="0.45" />
-            <!-- Major Left Stepped Fork -->
-            <path d="M 53 54 L 43 62 L 37 72 L 31 79" stroke-width="0.65" />
-            <path d="M 43 62 L 47 70 L 44 77" stroke-width="0.45" />
-            <!-- Lower Tertiary Step -->
-            <path d="M 55 82 L 62 87 L 65 93" stroke-width="0.45" />
-            <!-- Upper Intracloud Arc Behind Anvil -->
-            <path d="M 54 36 L 43 32 L 36 36 L 29 33" stroke-width="0.55" />
           </g>
         </g>
 
-        <!-- Primary Billowing Storm Cloud with Silver Rim Highlight (In Front of Lightning) -->
-        <path
-          d="M 32 56 A 16 16 0 0 1 18 40 A 18 18 0 0 1 34 22 A 22 22 0 0 1 70 18 A 22 22 0 0 1 98 32 A 16 16 0 0 1 98 56 Z"
-          fill="url(#thunderFrontCloud)"
-          filter="drop-shadow(0 4px 14px rgba(15, 23, 42, 0.45))"
+        <!-- Floating Zzz Particles -->
+        <g
+          fill="#fef08a"
+          font-family="system-ui, sans-serif"
+          font-weight="800"
+          text-anchor="middle"
+        >
+          <text class="anim-zzz-1" x="33" y="38" font-size="9">Z</text>
+          <text class="anim-zzz-2" x="25" y="28" font-size="7">z</text>
+          <text class="anim-zzz-3" x="19" y="20" font-size="5.5">z</text>
+        </g>
+      {:else if type === 'cloudy'}
+        <!-- ===============================================================
+             CLOUDY: Peeking Sun + Drifting Fluffy Clouds + Signature Vinta Bot
+             =============================================================== -->
+        <circle
+          cx="34"
+          cy="24"
+          r="14"
+          fill="url(#sunCoreGrad)"
+          filter="url(#amberGlow)"
         />
 
-        <!-- Ambient Ionized Precipitation Streaks -->
-        <g
-          stroke="#93c5fd"
-          stroke-width="1.8"
-          stroke-linecap="round"
-          opacity="0.45"
-        >
-          <line x1="28" y1="62" x2="25" y2="72" />
-          <line x1="38" y1="65" x2="35" y2="76" />
-          <line x1="82" y1="64" x2="79" y2="75" />
-          <line x1="92" y1="62" x2="89" y2="72" />
-        </g>
-      </svg>
-    {:else if type === 'snow'}
-      <!-- Wide Winter Cloud with Floating Snow Crystals -->
-      <svg class="hero-svg" viewBox="0 0 120 100" aria-label="Snowy weather">
-        <defs>
-          <linearGradient id="snowCloud" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#ffffff" />
-            <stop offset="60%" stop-color="#e2e8f0" />
-            <stop offset="100%" stop-color="#94a3b8" />
-          </linearGradient>
-        </defs>
-
-        <!-- Wide Frosty Cloud Body -->
+        <!-- Background Cloud Puff -->
         <path
-          d="M 32 56 A 16 16 0 0 1 18 40 A 18 18 0 0 1 34 22 A 22 22 0 0 1 70 18 A 22 22 0 0 1 98 32 A 16 16 0 0 1 98 56 Z"
-          fill="url(#snowCloud)"
-          filter="drop-shadow(0 4px 10px rgba(15, 23, 42, 0.28))"
+          class="anim-cloud-drift-slow"
+          d="M 22 42 A 9 9 0 0 1 15 33 A 10 10 0 0 1 26 23 A 12 12 0 0 1 46 21 A 11 11 0 0 1 56 32 A 9 9 0 0 1 56 42 Z"
+          fill="url(#cloudLightGrad)"
+          opacity="0.88"
         />
 
-        <!-- Falling Snow Crystals Spread Horizontally -->
-        <g
-          fill="#ffffff"
-          opacity="0.95"
-          filter="drop-shadow(0 0 3px rgba(255, 255, 255, 0.8))"
-        >
-          <circle cx="28" cy="67" r="2.2" />
-          <circle cx="43" cy="73" r="1.8" />
-          <circle cx="58" cy="66" r="2.4" />
-          <circle cx="73" cy="73" r="1.8" />
-          <circle cx="88" cy="67" r="2.2" />
-        </g>
-      </svg>
-    {:else if type === 'fog'}
-      <!-- Atmospheric Misty Cloud with Layered Drifting Fog Ribbons -->
-      <svg class="hero-svg" viewBox="0 0 120 100" aria-label="Foggy weather">
-        <defs>
-          <linearGradient id="fogCloudBody" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#ffffff" />
-            <stop offset="55%" stop-color="#e2e8f0" />
-            <stop offset="100%" stop-color="#94a3b8" />
-          </linearGradient>
-          <linearGradient id="fogRibbonGrad1" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stop-color="#cbd5e1" stop-opacity="0.15" />
-            <stop offset="25%" stop-color="#ffffff" stop-opacity="0.9" />
-            <stop offset="75%" stop-color="#e2e8f0" stop-opacity="0.9" />
-            <stop offset="100%" stop-color="#cbd5e1" stop-opacity="0.15" />
-          </linearGradient>
-          <linearGradient id="fogRibbonGrad2" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stop-color="#94a3b8" stop-opacity="0.15" />
-            <stop offset="25%" stop-color="#cbd5e1" stop-opacity="0.8" />
-            <stop offset="75%" stop-color="#e2e8f0" stop-opacity="0.8" />
-            <stop offset="100%" stop-color="#94a3b8" stop-opacity="0.15" />
-          </linearGradient>
-        </defs>
+        <!-- Vinta Mascot with Exact Signature Squircle Eyes & Filled Smile -->
+        <g class="anim-float-calm" filter="url(#softShadow)">
+          <use href="#vintaBotChassis" />
 
-        <!-- Wide Misty Floating Cloud Base -->
+          <g
+            class="anim-look-around"
+            filter="url(#vintaEyeGlow)"
+            fill="#facc15"
+          >
+            <!-- Left & Right Signature Rounded Squircle Eyes -->
+            <rect x="43" y="53" width="13" height="13" rx="5.5" />
+            <rect x="64" y="53" width="13" height="13" rx="5.5" />
+            <!-- Signature Filled Crescent Smile -->
+            <path d="M 52 68.5 Q 60 70.5 68 68.5 C 67 75.5 53 75.5 52 68.5 Z" />
+          </g>
+        </g>
+
+        <!-- Foreground Fluffy Cloud Overlapping Top-Right of Bot -->
         <path
-          d="M 32 54 A 16 16 0 0 1 18 38 A 18 18 0 0 1 34 20 A 22 22 0 0 1 70 16 A 22 22 0 0 1 98 30 A 16 16 0 0 1 98 54 Z"
-          fill="url(#fogCloudBody)"
-          filter="drop-shadow(0 4px 10px rgba(15, 23, 42, 0.28))"
+          class="anim-cloud-drift"
+          d="M 62 48 A 8 8 0 0 1 55 40 A 9 9 0 0 1 65 31 A 11 11 0 0 1 84 29 A 10 10 0 0 1 95 39 A 8 8 0 0 1 95 48 Z"
+          fill="url(#cloudLightGrad)"
+          filter="url(#softShadow)"
+        />
+      {:else if type === 'cloudy-night'}
+        <!-- ===============================================================
+             CLOUDY NIGHT: Moon + Nocturnal Clouds + Cozy Vinta Bot
+             =============================================================== -->
+        <g fill="#ffffff">
+          <circle class="anim-twinkle-1" cx="22" cy="20" r="1.4" />
+          <circle class="anim-twinkle-2" cx="98" cy="18" r="1.5" />
+        </g>
+
+        <!-- Crescent Moon Behind Cloud -->
+        <path
+          d="M 42 10 C 33 10 26 17 26 26 C 26 32 29 37 34 40 C 31 37 29 33 29 29 C 29 21 35 15 43 15 C 46 15 48 16 50 17 C 48 12 45 10 42 10 Z"
+          fill="url(#moonGrad)"
+          filter="url(#amberGlow)"
+        />
+
+        <!-- Vinta Mascot with Happy Nocturnal Expression -->
+        <g class="anim-float-calm" filter="url(#softShadow)">
+          <use href="#vintaBotChassis" />
+
+          <g
+            class="anim-look-around"
+            filter="url(#vintaEyeGlow)"
+            fill="#facc15"
+          >
+            <rect x="43" y="53.5" width="13" height="12.5" rx="5.5" />
+            <rect x="64" y="53.5" width="13" height="12.5" rx="5.5" />
+            <path d="M 52.5 69 Q 60 70.5 67.5 69 C 66.5 75 53.5 75 52.5 69 Z" />
+          </g>
+        </g>
+
+        <!-- Foreground Nocturnal Cloud -->
+        <path
+          class="anim-cloud-drift"
+          d="M 58 47 A 8 8 0 0 1 51 39 A 9 9 0 0 1 61 30 A 11 11 0 0 1 80 28 A 10 10 0 0 1 91 38 A 8 8 0 0 1 91 47 Z"
+          fill="url(#cloudNightLitGrad)"
+          stroke="rgba(226, 232, 240, 0.38)"
+          stroke-width="0.8"
+          filter="url(#softShadow)"
+        />
+      {:else if type === 'rain'}
+        <!-- ===============================================================
+             RAIN: Storm Cloud + Falling Raindrops + Vinta Bot Under Umbrella
+             =============================================================== -->
+        <!-- Upper Rain Cloud -->
+        <path
+          class="anim-cloud-drift-slow"
+          d="M 32 29 A 10 10 0 0 1 23 19 A 12 12 0 0 1 36 7 A 15 15 0 0 1 62 5 A 14 14 0 0 1 80 17 A 10 10 0 0 1 80 29 Z"
+          fill="url(#cloudNightLitGrad)"
+          stroke="rgba(226, 232, 240, 0.3)"
+          stroke-width="0.8"
           opacity="0.92"
         />
 
-        <!-- Drifting Atmospheric Fog Ribbons Floating Across & Underneath Cloud -->
-        <g>
-          <rect
-            x="20"
-            y="53"
-            width="80"
-            height="5.5"
-            rx="2.75"
-            fill="url(#fogRibbonGrad1)"
-          />
-          <rect
-            x="14"
-            y="63"
-            width="92"
-            height="6"
-            rx="3"
-            fill="url(#fogRibbonGrad1)"
-          />
-          <rect
-            x="26"
-            y="73"
-            width="68"
-            height="5"
-            rx="2.5"
-            fill="url(#fogRibbonGrad2)"
-          />
-          <rect
-            x="38"
-            y="82"
-            width="44"
-            height="4"
-            rx="2"
-            fill="url(#fogRibbonGrad2)"
-            opacity="0.6"
-          />
-        </g>
-      </svg>
-    {:else if type === 'cloudy-night'}
-      <!-- Cloudy Night: Layered Volumetric Nocturnal Clouds with Ambient Starfield (No Moon) -->
-      <svg class="hero-svg" viewBox="0 0 120 100" aria-label="Cloudy night sky">
-        <defs>
-          <radialGradient id="nightSkyAura" cx="50%" cy="40%" r="55%">
-            <stop offset="0%" stop-color="#475569" stop-opacity="0.35" />
-            <stop offset="60%" stop-color="#312e81" stop-opacity="0.18" />
-            <stop offset="100%" stop-color="#1e1b4b" stop-opacity="0" />
-          </radialGradient>
-          <linearGradient id="nightCloudBack" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#475569" />
-            <stop offset="100%" stop-color="#1e293b" />
-          </linearGradient>
-          <linearGradient id="nightCloudFront" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#cbd5e1" />
-            <stop offset="40%" stop-color="#94a3b8" />
-            <stop offset="100%" stop-color="#334155" />
-          </linearGradient>
-        </defs>
-
-        <!-- Subtle Ambient Night Aura -->
-        <circle cx="60" cy="44" r="36" fill="url(#nightSkyAura)" />
-
-        <!-- Starfield Glimpses in Upper Night Sky -->
-        <g fill="#ffffff">
-          <circle
-            cx="26"
-            cy="22"
-            r="1.6"
-            opacity="0.85"
-            filter="drop-shadow(0 0 3px #ffffff)"
-          />
-          <circle
-            cx="94"
-            cy="20"
-            r="1.8"
-            opacity="0.9"
-            filter="drop-shadow(0 0 3px #ffffff)"
-          />
-          <circle cx="60" cy="14" r="1.3" opacity="0.75" />
-          <circle cx="84" cy="34" r="1.2" opacity="0.65" />
+        <!-- Animated Falling Rain Streaks -->
+        <g
+          stroke="#38bdf8"
+          stroke-width="2"
+          stroke-linecap="round"
+          opacity="0.85"
+        >
+          <line class="anim-rain-1" x1="25" y1="33" x2="22" y2="42" />
+          <line class="anim-rain-2" x1="42" y1="31" x2="39" y2="40" />
+          <line class="anim-rain-3" x1="60" y1="33" x2="57" y2="42" />
+          <line class="anim-rain-1" x1="78" y1="32" x2="75" y2="41" />
+          <line class="anim-rain-2" x1="93" y1="39" x2="90" y2="48" />
         </g>
 
-        <!-- Secondary Rear Ambient Night Cloud Depth -->
+        <!-- Vinta Mascot Sheltering Under Umbrella -->
+        <g class="anim-float-calm" filter="url(#softShadow)">
+          <use href="#vintaBotChassis" />
+
+          <!-- Pensive / Gloomy Golden Eyes & Pout -->
+          <g filter="url(#vintaEyeGlow)" fill="#facc15">
+            <!-- Flat-topped Droopy Squircle Eyes -->
+            <path
+              d="M 43 57 L 56 59 L 56 63 A 4 4 0 0 1 52 67 L 47 67 A 4 4 0 0 1 43 63 Z"
+            />
+            <path
+              d="M 77 57 L 64 59 L 64 63 A 4 4 0 0 0 68 67 L 73 67 A 4 4 0 0 0 77 63 Z"
+            />
+            <!-- Small Pout Mouth -->
+            <path
+              d="M 55 73 Q 60 69.5 65 73"
+              fill="none"
+              stroke="#facc15"
+              stroke-width="2.4"
+              stroke-linecap="round"
+            />
+          </g>
+
+          <!-- Sleek Cyber Umbrella Canopy Over Vinta Bot -->
+          <g class="anim-umbrella-tilt" style="transform-origin: 60px 38px;">
+            <path
+              d="M 60 24 L 60 39"
+              stroke="#94a3b8"
+              stroke-width="2.5"
+              stroke-linecap="round"
+            />
+            <path
+              d="M 22 39 C 22 19 98 19 98 39 Q 85 35 72 39 Q 60 35 48 39 Q 35 35 22 39 Z"
+              fill="url(#umbrellaGrad)"
+            />
+            <circle cx="60" cy="21" r="2.5" fill="#38bdf8" />
+          </g>
+        </g>
+      {:else if type === 'thunder'}
+        <!-- ===============================================================
+             THUNDER: Flashing Lightning + Startled Shivering Vinta Bot
+             =============================================================== -->
+        <!-- Dark Thunderhead at Top -->
         <path
-          d="M 44 56 A 14 14 0 0 1 32 42 A 16 16 0 0 1 50 26 A 18 18 0 0 1 82 24 A 18 18 0 0 1 100 40 A 14 14 0 0 1 100 56 Z"
-          fill="url(#nightCloudBack)"
+          d="M 26 31 A 11 11 0 0 1 16 20 A 13 13 0 0 1 30 7 A 16 16 0 0 1 62 4 A 15 15 0 0 1 88 17 A 11 11 0 0 1 88 31 Z"
+          fill="url(#cloudNightLitGrad)"
+          stroke="rgba(226, 232, 240, 0.32)"
+          stroke-width="0.8"
+          filter="url(#softShadow)"
+        />
+
+        <!-- Flashing Lightning Bolts Left & Right -->
+        <polygon
+          class="anim-lightning-1"
+          points="27,28 17,46 26,46 20,64 36,42 26,42"
+          fill="#facc15"
+          filter="url(#amberGlow)"
+        />
+        <polygon
+          class="anim-lightning-2"
+          points="89,26 80,43 88,43 83,59 97,39 88,39"
+          fill="#fef08a"
+          filter="url(#amberGlow)"
+        />
+
+        <!-- Startled Jittering Vinta Mascot -->
+        <g class="anim-shock-shake" filter="url(#softShadow)">
+          <use href="#vintaBotChassis" />
+
+          <!-- Shocked Hollow Golden Squircle Eyes & Surprised Mouth -->
+          <g filter="url(#vintaEyeGlow)">
+            <rect
+              x="44"
+              y="54"
+              width="11"
+              height="11"
+              rx="4.5"
+              fill="none"
+              stroke="#facc15"
+              stroke-width="2.5"
+            />
+            <circle cx="49.5" cy="59.5" r="1.8" fill="#fef08a" />
+
+            <rect
+              x="65"
+              y="54"
+              width="11"
+              height="11"
+              rx="4.5"
+              fill="none"
+              stroke="#facc15"
+              stroke-width="2.5"
+            />
+            <circle cx="70.5" cy="59.5" r="1.8" fill="#fef08a" />
+
+            <ellipse cx="60" cy="71.5" rx="4.2" ry="3.2" fill="#facc15" />
+          </g>
+        </g>
+      {:else if type === 'snow'}
+        <!-- ===============================================================
+             SNOW: Falling Snowflakes + Chilly Vinta Bot in Winter Beanie
+             =============================================================== -->
+        <!-- Falling Snowflakes -->
+        <g fill="#ffffff" opacity="0.9">
+          <circle class="anim-snow-1" cx="22" cy="24" r="2.2" />
+          <circle class="anim-snow-2" cx="40" cy="16" r="1.8" />
+          <circle class="anim-snow-3" cx="82" cy="18" r="2.4" />
+          <circle class="anim-snow-1" cx="98" cy="28" r="1.7" />
+          <circle class="anim-snow-2" cx="16" cy="55" r="1.9" />
+          <circle class="anim-snow-3" cx="102" cy="60" r="2.1" />
+        </g>
+
+        <!-- Chilly Shivering Vinta Mascot with Knit Beanie -->
+        <g class="anim-shiver-cold" filter="url(#softShadow)">
+          <use href="#vintaBotChassis" />
+
+          <!-- Rosy Cold Cheeks -->
+          <ellipse
+            cx="43"
+            cy="69"
+            rx="3.5"
+            ry="2.2"
+            fill="#f43f5e"
+            opacity="0.55"
+          />
+          <ellipse
+            cx="77"
+            cy="69"
+            rx="3.5"
+            ry="2.2"
+            fill="#f43f5e"
+            opacity="0.55"
+          />
+
+          <!-- Chilly Golden Squircle Eyes & Shivering Wavy Mouth -->
+          <g filter="url(#vintaEyeGlow)">
+            <rect
+              x="44"
+              y="54"
+              width="11.5"
+              height="11.5"
+              rx="5"
+              fill="#facc15"
+            />
+            <rect
+              x="64.5"
+              y="54"
+              width="11.5"
+              height="11.5"
+              rx="5"
+              fill="#facc15"
+            />
+            <path
+              d="M 51 71.5 Q 53.2 69 55.5 71.5 T 60 71.5 T 64.5 71.5 T 69 71.5"
+              fill="none"
+              stroke="#facc15"
+              stroke-width="2.2"
+              stroke-linecap="round"
+            />
+          </g>
+
+          <!-- Cozy Winter Beanie Hat Sitting on Vinta Dome -->
+          <g>
+            <!-- Fluffy Pom-Pom -->
+            <circle cx="60" cy="21" r="5.5" fill="#ffffff" />
+            <!-- Beanie Dome -->
+            <path d="M 35 43 C 35 23 85 23 85 43 Z" fill="url(#beanieGrad)" />
+            <!-- Ribbed Beanie Cuff -->
+            <rect
+              x="32"
+              y="38.5"
+              width="56"
+              height="8.5"
+              rx="4.25"
+              fill="#f8fafc"
+            />
+            <line
+              x1="44"
+              y1="39.5"
+              x2="44"
+              y2="46"
+              stroke="#cbd5e1"
+              stroke-width="1.5"
+              stroke-linecap="round"
+            />
+            <line
+              x1="54"
+              y1="39.5"
+              x2="54"
+              y2="46"
+              stroke="#cbd5e1"
+              stroke-width="1.5"
+              stroke-linecap="round"
+            />
+            <line
+              x1="66"
+              y1="39.5"
+              x2="66"
+              y2="46"
+              stroke="#cbd5e1"
+              stroke-width="1.5"
+              stroke-linecap="round"
+            />
+            <line
+              x1="76"
+              y1="39.5"
+              x2="76"
+              y2="46"
+              stroke="#cbd5e1"
+              stroke-width="1.5"
+              stroke-linecap="round"
+            />
+          </g>
+        </g>
+      {:else if type === 'fog'}
+        <!-- ===============================================================
+             FOG: Drifting Mist Layers + Vinta Bot Peering Side-to-Side
+             =============================================================== -->
+        <!-- Back Fog Ribbon -->
+        <rect
+          class="anim-fog-back"
+          x="10"
+          y="33"
+          width="90"
+          height="7"
+          rx="3.5"
+          fill="url(#fogBandGrad)"
           opacity="0.65"
         />
 
-        <!-- Wide Primary Foreground Nocturnal Fluffy Cloud -->
-        <path
-          d="M 32 64 A 16 16 0 0 1 18 48 A 18 18 0 0 1 34 30 A 22 22 0 0 1 70 26 A 22 22 0 0 1 98 40 A 16 16 0 0 1 98 64 Z"
-          fill="url(#nightCloudFront)"
-          filter="drop-shadow(0 4px 12px rgba(15, 23, 42, 0.45))"
-        />
-      </svg>
-    {:else}
-      <!-- Cloudy (Partly Cloudy): Sun Directly at the Back of Wide Fluffy Cloud -->
-      <svg
-        class="hero-svg"
-        viewBox="0 0 120 100"
-        aria-label="Partly cloudy weather"
-      >
-        <defs>
-          <radialGradient id="sunBackAura" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stop-color="#ffffff" stop-opacity="0.45" />
-            <stop offset="50%" stop-color="#fef08a" stop-opacity="0.2" />
-            <stop offset="100%" stop-color="#fef08a" stop-opacity="0" />
-          </radialGradient>
-          <linearGradient id="sunBackBody" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stop-color="#ffffff" />
-            <stop offset="35%" stop-color="#fef9c3" />
-            <stop offset="100%" stop-color="#fde047" />
-          </linearGradient>
-          <linearGradient id="cloudyBackCloud" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#cbd5e1" />
-            <stop offset="100%" stop-color="#94a3b8" />
-          </linearGradient>
-          <linearGradient id="cloudyFrontCloud" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="#ffffff" />
-            <stop offset="50%" stop-color="#f1f5f9" />
-            <stop offset="100%" stop-color="#cbd5e1" />
-          </linearGradient>
-        </defs>
+        <!-- Vinta Mascot Peering Through the Mist -->
+        <g class="anim-float-calm" filter="url(#softShadow)">
+          <use href="#vintaBotChassis" />
 
-        <!-- Ambient Sun Glow at Back -->
-        <circle cx="50" cy="34" r="28" fill="url(#sunBackAura)" />
-
-        <!-- Corona Rays Radiating from the Sun Behind Cloud -->
-        <g
-          stroke="#fef08a"
-          stroke-width="2.2"
-          stroke-linecap="round"
-          opacity="0.8"
-        >
-          <line x1="50" y1="8" x2="50" y2="14" />
-          <line x1="30" y1="16" x2="35" y2="21" />
-          <line x1="70" y1="16" x2="65" y2="21" />
-          <line x1="22" y1="34" x2="28" y2="34" />
-          <line x1="78" y1="34" x2="72" y2="34" />
+          <!-- Narrowed Golden Squircle Eyes Scanning Left & Right -->
+          <g class="anim-scan-eyes" filter="url(#vintaEyeGlow)" fill="#facc15">
+            <rect x="43" y="56.5" width="12.5" height="6.5" rx="3.2" />
+            <rect x="64.5" y="56.5" width="12.5" height="6.5" rx="3.2" />
+            <path
+              d="M 54 70.5 L 65 69"
+              stroke="#facc15"
+              stroke-width="2.4"
+              stroke-linecap="round"
+            />
+          </g>
         </g>
 
-        <!-- Radiant Golden Sun Positioned Directly at the Back of Cloud -->
-        <circle
-          cx="50"
-          cy="34"
-          r="19"
-          fill="url(#sunBackBody)"
-          filter="drop-shadow(0 0 10px rgba(254, 240, 138, 0.45))"
+        <!-- Foreground Drifting Fog Layers Partially Obscuring Vinta Bot -->
+        <rect
+          class="anim-fog-front-1"
+          x="14"
+          y="65"
+          width="92"
+          height="6.5"
+          rx="3.25"
+          fill="url(#fogBandGrad)"
         />
-
-        <!-- Secondary Rear Ambient Cloud Depth -->
-        <path
-          d="M 44 56 A 14 14 0 0 1 32 42 A 16 16 0 0 1 50 26 A 18 18 0 0 1 82 24 A 18 18 0 0 1 100 40 A 14 14 0 0 1 100 56 Z"
-          fill="url(#cloudyBackCloud)"
-          opacity="0.55"
+        <rect
+          class="anim-fog-front-2"
+          x="22"
+          y="77"
+          width="76"
+          height="6"
+          rx="3"
+          fill="url(#fogBandGrad)"
+          opacity="0.9"
         />
-
-        <!-- Wide Primary Foreground Fluffy Cloud in Front of Sun -->
-        <path
-          d="M 32 64 A 16 16 0 0 1 18 48 A 18 18 0 0 1 34 30 A 22 22 0 0 1 70 26 A 22 22 0 0 1 98 40 A 16 16 0 0 1 98 64 Z"
-          fill="url(#cloudyFrontCloud)"
-          filter="drop-shadow(0 4px 12px rgba(15, 23, 42, 0.28))"
-        />
-      </svg>
-    {/if}
+      {/if}
+    </svg>
   </div>
 {:else}
   <!-- =========================================================================
        COMPACT GLYPH VARIANT (Minimized Dynamic Island Capsule Pill)
        ========================================================================= -->
-  <div class="weather-art-compact {className}">
+  <div
+    class="weather-art-compact {className}"
+    class:variant-mini={variant === 'mini'}
+    class:monochrome
+  >
     {#if type === 'sunny'}
       <svg
         class="compact-svg"
@@ -715,7 +793,6 @@
         <path d="M16 19h.01" />
       </svg>
     {:else if type === 'fog'}
-      <!-- Standard well-proportioned CloudFog outline -->
       <svg
         class="compact-svg"
         viewBox="0 0 24 24"
@@ -733,7 +810,6 @@
         <line x1="9" y1="21" x2="17" y2="21" />
       </svg>
     {:else if type === 'cloudy-night'}
-      <!-- Cloudy Night: Wide Fluffy Nocturnal Cloud (No Moon) -->
       <svg
         class="compact-svg"
         viewBox="0 0 24 24"
@@ -748,7 +824,6 @@
         />
       </svg>
     {:else}
-      <!-- Cloudy (Partly Cloudy) with Wide Aspect Ratio and Sun at the Back -->
       <svg
         class="compact-svg"
         viewBox="0 0 24 24"
@@ -789,6 +864,359 @@
     object-fit: contain;
   }
 
+  /* =========================================================================
+     HERO MASCOT & WEATHER ANIMATIONS
+     ========================================================================= */
+
+  /* Gentle Floating Motions */
+  .anim-float-calm {
+    animation: floatCalm 4s ease-in-out infinite;
+  }
+  .anim-float-hot {
+    animation: floatHot 2.6s ease-in-out infinite;
+  }
+  .anim-float-sleep {
+    animation: floatSleep 5s ease-in-out infinite;
+  }
+
+  @keyframes floatCalm {
+    0%,
+    100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-3.5px);
+    }
+  }
+  @keyframes floatHot {
+    0%,
+    100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(2.5px);
+    }
+  }
+  @keyframes floatSleep {
+    0%,
+    100% {
+      transform: translateY(0px) rotate(-1deg);
+    }
+    50% {
+      transform: translateY(-3px) rotate(1deg);
+    }
+  }
+
+  /* Sun & Heat Animations */
+  .anim-spin-sun {
+    animation: spinSun 24s linear infinite;
+  }
+  .anim-pulse-aura {
+    animation: pulseAura 3s ease-in-out infinite;
+    transform-origin: 60px 40px;
+  }
+  .anim-sweat-1 {
+    animation: sweatDrop 2.2s ease-in infinite;
+  }
+  .anim-sweat-2 {
+    animation: sweatDrop 2.2s ease-in 1.1s infinite;
+  }
+
+  @keyframes spinSun {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @keyframes pulseAura {
+    0%,
+    100% {
+      transform: scale(0.95);
+      opacity: 0.8;
+    }
+    50% {
+      transform: scale(1.08);
+      opacity: 1;
+    }
+  }
+  @keyframes sweatDrop {
+    0% {
+      transform: translateY(0px);
+      opacity: 0;
+    }
+    20% {
+      opacity: 1;
+    }
+    80% {
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(11px);
+      opacity: 0;
+    }
+  }
+
+  /* Night & Sleep Animations */
+  .anim-moon-rock {
+    animation: moonRock 6s ease-in-out infinite;
+  }
+  .anim-sleep-mouth {
+    animation: sleepBreath 5s ease-in-out infinite;
+  }
+  .anim-twinkle-1 {
+    animation: twinkle 2.5s ease-in-out infinite;
+  }
+  .anim-twinkle-2 {
+    animation: twinkle 3.2s ease-in-out 1.2s infinite;
+  }
+  .anim-zzz-1 {
+    animation: floatZzz 3.6s ease-out infinite;
+  }
+  .anim-zzz-2 {
+    animation: floatZzz 3.6s ease-out 1.2s infinite;
+  }
+  .anim-zzz-3 {
+    animation: floatZzz 3.6s ease-out 2.4s infinite;
+  }
+
+  @keyframes moonRock {
+    0%,
+    100% {
+      transform: rotate(-4deg);
+    }
+    50% {
+      transform: rotate(4deg);
+    }
+  }
+  @keyframes sleepBreath {
+    0%,
+    100% {
+      transform: scale(0.85);
+      opacity: 0.7;
+    }
+    50% {
+      transform: scale(1.35);
+      opacity: 1;
+    }
+  }
+  @keyframes twinkle {
+    0%,
+    100% {
+      opacity: 0.25;
+      transform: scale(0.8);
+    }
+    50% {
+      opacity: 1;
+      transform: scale(1.2);
+    }
+  }
+  @keyframes floatZzz {
+    0% {
+      transform: translate(0px, 4px) scale(0.7);
+      opacity: 0;
+    }
+    30% {
+      opacity: 0.95;
+    }
+    100% {
+      transform: translate(-8px, -10px) scale(1.1);
+      opacity: 0;
+    }
+  }
+
+  /* Cloud & Eye Glancing Animations */
+  .anim-cloud-drift {
+    animation: cloudDrift 5s ease-in-out infinite;
+  }
+  .anim-cloud-drift-slow {
+    animation: cloudDrift 7s ease-in-out reverse infinite;
+  }
+  .anim-look-around {
+    animation: lookAround 6s ease-in-out infinite;
+  }
+
+  @keyframes cloudDrift {
+    0%,
+    100% {
+      transform: translateX(-3px);
+    }
+    50% {
+      transform: translateX(4px);
+    }
+  }
+  @keyframes lookAround {
+    0%,
+    100% {
+      transform: translate(0px, 0px);
+    }
+    30% {
+      transform: translate(2.5px, -1.5px);
+    }
+    70% {
+      transform: translate(-2px, -1px);
+    }
+  }
+
+  /* Rain & Umbrella Animations */
+  .anim-rain-1 {
+    animation: rainFall 1.1s linear infinite;
+  }
+  .anim-rain-2 {
+    animation: rainFall 1.1s linear 0.35s infinite;
+  }
+  .anim-rain-3 {
+    animation: rainFall 1.1s linear 0.7s infinite;
+  }
+  .anim-umbrella-tilt {
+    animation: umbrellaTilt 3.5s ease-in-out infinite;
+  }
+
+  @keyframes rainFall {
+    0% {
+      transform: translate(0px, -4px);
+      opacity: 0;
+    }
+    30% {
+      opacity: 0.9;
+    }
+    100% {
+      transform: translate(-4px, 14px);
+      opacity: 0;
+    }
+  }
+  @keyframes umbrellaTilt {
+    0%,
+    100% {
+      transform: rotate(-2deg);
+    }
+    50% {
+      transform: rotate(2.5deg);
+    }
+  }
+
+  /* Thunder & Shock Animations */
+  .anim-lightning-1 {
+    animation: flashBolt 3.2s infinite;
+  }
+  .anim-lightning-2 {
+    animation: flashBolt 3.2s 1.6s infinite;
+  }
+  .anim-shock-shake {
+    animation: shockShake 1.6s ease-in-out infinite;
+  }
+
+  @keyframes flashBolt {
+    0%,
+    78%,
+    100% {
+      opacity: 0;
+    }
+    80%,
+    86% {
+      opacity: 1;
+    }
+    83% {
+      opacity: 0.2;
+    }
+  }
+  @keyframes shockShake {
+    0%,
+    70%,
+    100% {
+      transform: translate(0, 0);
+    }
+    75% {
+      transform: translate(-2px, 1px);
+    }
+    80% {
+      transform: translate(2px, -1px);
+    }
+    85% {
+      transform: translate(-2px, -1px);
+    }
+    90% {
+      transform: translate(2px, 1px);
+    }
+  }
+
+  /* Snow & Shivering Animations */
+  .anim-snow-1 {
+    animation: snowDrift 3.2s linear infinite;
+  }
+  .anim-snow-2 {
+    animation: snowDrift 3.2s linear 1.1s infinite;
+  }
+  .anim-snow-3 {
+    animation: snowDrift 3.2s linear 2.2s infinite;
+  }
+  .anim-shiver-cold {
+    animation: shiverCold 0.45s ease-in-out infinite;
+  }
+
+  @keyframes snowDrift {
+    0% {
+      transform: translate(0px, -6px);
+      opacity: 0;
+    }
+    25% {
+      opacity: 0.95;
+    }
+    75% {
+      opacity: 0.95;
+    }
+    100% {
+      transform: translate(4px, 24px);
+      opacity: 0;
+    }
+  }
+  @keyframes shiverCold {
+    0%,
+    100% {
+      transform: translateX(-0.7px);
+    }
+    50% {
+      transform: translateX(0.7px);
+    }
+  }
+
+  /* Fog & Scanning Animations */
+  .anim-fog-back {
+    animation: fogSlide 6s ease-in-out infinite;
+  }
+  .anim-fog-front-1 {
+    animation: fogSlide 4.5s ease-in-out reverse infinite;
+  }
+  .anim-fog-front-2 {
+    animation: fogSlide 5.5s ease-in-out 1s infinite;
+  }
+  .anim-scan-eyes {
+    animation: scanEyes 4.5s ease-in-out infinite;
+  }
+
+  @keyframes fogSlide {
+    0%,
+    100% {
+      transform: translateX(-6px);
+    }
+    50% {
+      transform: translateX(6px);
+    }
+  }
+  @keyframes scanEyes {
+    0%,
+    100% {
+      transform: translateX(-3px);
+    }
+    50% {
+      transform: translateX(3px);
+    }
+  }
+
+  /* =========================================================================
+     COMPACT GLYPH STYLES
+     ========================================================================= */
   .weather-art-compact {
     display: inline-flex;
     align-items: center;
@@ -799,8 +1227,23 @@
     user-select: none;
   }
 
+  .weather-art-compact.variant-mini {
+    width: 22px;
+    height: 22px;
+  }
+
   .compact-svg {
     width: 100%;
     height: 100%;
+  }
+
+  .weather-art-compact.monochrome :global(svg) {
+    stroke: #ffffff !important;
+  }
+
+  .weather-art-compact.monochrome :global(svg path),
+  .weather-art-compact.monochrome :global(svg line),
+  .weather-art-compact.monochrome :global(svg circle) {
+    stroke: #ffffff !important;
   }
 </style>

@@ -190,7 +190,7 @@
     background-color: rgba(255, 255, 255, 0.2);
     transition: 0.3s;
     border-radius: 20px;
-    border: 1px solid var(--c-border);
+    border: 1px solid var(--vinta-border);
   }
 
   .slider:before {
@@ -206,7 +206,10 @@
   }
 
   input:checked + .slider {
-    background-color: var(--c-primary, #6366f1);
+    background-color: var(
+      --vinta-accent-primary,
+      var(--vinta-primary, #38bdf8)
+    );
   }
 
   input:checked + .slider:before {
@@ -218,7 +221,7 @@
     background: rgba(255, 255, 255, 0.06);
     padding: 2px;
     border-radius: 8px;
-    border: 1px solid var(--c-border);
+    border: 1px solid var(--vinta-border);
   }
 
   .segment-control.full-width {
@@ -231,7 +234,7 @@
   .segment-control button {
     background: transparent;
     border: none;
-    color: var(--c-text-secondary);
+    color: var(--vinta-text-secondary);
     padding: 4px 10px;
     font-size: 11px;
     border-radius: 6px;
@@ -249,7 +252,7 @@
 
   .segment-control button.active {
     background: rgba(255, 255, 255, 0.12);
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
     font-weight: 600;
   }
 </style>

@@ -138,14 +138,16 @@ export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
       !hasMovedFar &&
       (Math.abs(dx) > dragThresh || Math.abs(dy) > dragThresh)
     ) {
-      const isVertical = Math.abs(dy) >= Math.abs(dx)
+      const isVertical = Math.abs(dy) > Math.abs(dx)
 
       if (requestedAxis === 'x' && isVertical) {
+        // Disengage if user is scrolling vertically in an x-only swipe component
         isDragging = false
         opts.onDragEnd?.()
         return
       }
       if (requestedAxis === 'y' && !isVertical) {
+        // Disengage if user is scrolling horizontally in a y-only swipe component
         isDragging = false
         opts.onDragEnd?.()
         return
@@ -163,8 +165,9 @@ export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
         // Ignore pointer capture errors
       }
 
-      isVerticalScroll = isVertical
-      if (isVertical && !scrollTarget) {
+      isVerticalScroll =
+        requestedAxis === 'y' || (requestedAxis === 'both' && isVertical)
+      if (isVerticalScroll && !scrollTarget) {
         scrollTarget = findScrollableContainer(node, e.target as HTMLElement)
       }
       isLockedToAxis = true
@@ -181,6 +184,8 @@ export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
 
       scrollTarget.scrollTop -= effectiveStep
       opts.onDragMove?.({ x: 0, y: dy })
+    } else if (requestedAxis === 'x') {
+      opts.onDragMove?.({ x: dx, y: 0 })
     } else {
       opts.onDragMove?.({ x: dx, y: dy })
     }

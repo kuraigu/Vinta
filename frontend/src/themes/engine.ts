@@ -1,5 +1,7 @@
 import type { ThemeInfo } from './types.js'
-import oledDarkManifest from './presets/oled-dark/manifest.json'
+import tokensRawCss from './tokens.css?raw'
+import darkGoldManifest from './presets/dark-gold/manifest.json'
+import darkGoldCss from './presets/dark-gold/style.css?raw'
 import nordFrostManifest from './presets/nord-frost/manifest.json'
 import nordFrostCss from './presets/nord-frost/style.css?raw'
 import colorblindSafeManifest from './presets/colorblind-safe/manifest.json'
@@ -18,9 +20,9 @@ const STYLE_TAG_ID = 'vinta-active-theme'
  */
 export const BUILTIN_THEMES: ThemeInfo[] = [
   {
-    manifest: oledDarkManifest as ThemeInfo['manifest'],
+    manifest: darkGoldManifest as ThemeInfo['manifest'],
     isBuiltIn: true,
-    path: 'frontend/src/themes/presets/oled-dark'
+    path: 'frontend/src/themes/presets/dark-gold'
   },
   {
     manifest: nordFrostManifest as ThemeInfo['manifest'],
@@ -68,8 +70,8 @@ export async function openThemesFolder(): Promise<void> {
  * Retrieves the entry CSS stylesheet content for a specific theme ID.
  */
 export async function getThemeCss(id: string): Promise<string> {
-  if (id === 'oled-dark') {
-    return ''
+  if (id === 'dark-gold') {
+    return darkGoldCss
   }
   if (id === 'nord-frost') {
     return nordFrostCss
@@ -78,6 +80,64 @@ export async function getThemeCss(id: string): Promise<string> {
     return colorblindSafeCss
   }
   return await getThemeCssFromBackend(id)
+}
+
+/**
+ * Extracts all declared `--vinta-*` token names from a raw CSS stylesheet.
+ *
+ * @param css - Raw CSS string to scan for custom property declarations.
+ * @returns Unique set of declared `--vinta-*` token names.
+ */
+function extractDeclaredTokens(css: string): Set<string> {
+  const matches = css.match(/--vinta-[a-z0-9-]+(?=\s*:)/g) ?? []
+  return new Set(matches)
+}
+
+/**
+ * Logs a development-only console warning if a theme stylesheet omits tokens declared in `tokens.css`.
+ *
+ * @param themeId - Active theme identifier.
+ * @param themeCss - Raw CSS content of the active theme.
+ */
+function auditThemeTokensInDev(themeId: string, themeCss: string): void {
+  if (!import.meta.env.DEV) {
+    return
+  }
+  const declared = extractDeclaredTokens(tokensRawCss)
+  const implemented = extractDeclaredTokens(themeCss)
+  const missing = [...declared].filter((token) => !implemented.has(token))
+  if (missing.length > 0) {
+    console.warn(
+      `[Vinta Theme Audit] Theme "${themeId}" is missing ${missing.length} token(s) declared in tokens.css (using dark-gold fallback):`,
+      missing
+    )
+  }
+}
+
+/**
+ * Busts cache on any linked stylesheets in the document head and re-applies the active theme CSS.
+ *
+ * @param themeId - Active theme identifier to re-inject.
+ */
+export async function refreshStylesheetsAndTheme(
+  themeId: string
+): Promise<void> {
+  if (typeof document !== 'undefined') {
+    const links = document.querySelectorAll<HTMLLinkElement>(
+      'link[rel="stylesheet"]'
+    )
+    const bust = Date.now().toString()
+    links.forEach((link) => {
+      try {
+        const url = new URL(link.href, window.location.origin)
+        url.searchParams.set('t', bust)
+        link.href = url.toString()
+      } catch {
+        // Ignore invalid stylesheet URLs
+      }
+    })
+  }
+  await applyThemeToDOM(themeId)
 }
 
 /**
@@ -97,32 +157,42 @@ export async function applyThemeToDOM(themeId: string): Promise<void> {
     document.head.appendChild(styleTag)
   }
 
-  const normalizedId = themeId || 'oled-dark'
+  const normalizedId = themeId || 'dark-gold'
   document.documentElement.dataset.theme = normalizedId
 
-  if (normalizedId === 'oled-dark') {
-    styleTag.textContent = ''
+  if (normalizedId === 'dark-gold') {
+    auditThemeTokensInDev(normalizedId, darkGoldCss)
+    styleTag.textContent = `@layer vinta.theme {\n${darkGoldCss}\n}`
     return
   }
 
   if (normalizedId === 'nord-frost') {
+    auditThemeTokensInDev(normalizedId, nordFrostCss)
     styleTag.textContent = `@layer vinta.theme {\n${nordFrostCss}\n}`
+    return
+  }
+
+  if (normalizedId === 'colorblind-safe') {
+    auditThemeTokensInDev(normalizedId, colorblindSafeCss)
+    styleTag.textContent = `@layer vinta.theme {\n${colorblindSafeCss}\n}`
     return
   }
 
   try {
     const rawCss = await getThemeCss(normalizedId)
     if (rawCss) {
+      auditThemeTokensInDev(normalizedId, rawCss)
       styleTag.textContent = `@layer vinta.theme {\n${rawCss}\n}`
     } else {
-      styleTag.textContent = ''
+      styleTag.textContent = `@layer vinta.theme {\n${darkGoldCss}\n}`
+      document.documentElement.dataset.theme = 'dark-gold'
     }
   } catch (err) {
     console.warn(
-      `Failed to load theme "${normalizedId}", falling back to oled-dark:`,
+      `Failed to load theme "${normalizedId}", falling back to dark-gold:`,
       err
     )
-    styleTag.textContent = ''
-    document.documentElement.dataset.theme = 'oled-dark'
+    styleTag.textContent = `@layer vinta.theme {\n${darkGoldCss}\n}`
+    document.documentElement.dataset.theme = 'dark-gold'
   }
 }

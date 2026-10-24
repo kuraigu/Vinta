@@ -1,15 +1,97 @@
-# Vinta Theme Packager
-# Compresses a theme directory into a valid .vintatheme bundle
+# Vinta Theme Packager & Token Auditor
+# Compresses a theme directory into a valid .vintatheme bundle and warns about unapplied tokens
 
 param(
-    [Parameter(Mandatory = $true, Position = 0)]
+    [Parameter(Mandatory = $false, Position = 0)]
     [string]$ThemePath,
 
     [Parameter(Mandatory = $false, Position = 1)]
-    [string]$OutputPath
+    [string]$OutputPath,
+
+    [Parameter(Mandatory = $false)]
+    [switch]$CheckOnly
 )
 
 $ErrorActionPreference = 'Stop'
+$repoRoot = Split-Path -Parent $PSScriptRoot
+$tokensCssPath = Join-Path $repoRoot "frontend\src\themes\tokens.css"
+
+function Get-DeclaredVintaTokens {
+    param([string]$CssFilePath)
+    if (-not (Test-Path $CssFilePath -PathType Leaf)) {
+        return @()
+    }
+    $content = Get-Content -Raw -Path $CssFilePath -Encoding UTF8
+    $matchesList = [regex]::Matches($content, '--vinta-[a-z0-9-]+(?=\s*:)')
+    return @($matchesList | ForEach-Object { $_.Value } | Select-Object -Unique)
+}
+
+function Test-ThemeTokens {
+    param(
+        [string]$TargetDir,
+        [string[]]$BaseTokens
+    )
+    $manifestFile = Join-Path $TargetDir "manifest.json"
+    $entryRel = "style.css"
+    $themeName = Split-Path -Leaf $TargetDir
+
+    if (Test-Path $manifestFile -PathType Leaf) {
+        try {
+            $m = Get-Content -Raw -Path $manifestFile -Encoding UTF8 | ConvertFrom-Json
+            if ($m.entry) { $entryRel = $m.entry }
+            if ($m.id) { $themeName = "$($m.name) ($($m.id))" }
+        } catch {
+            # Ignore manifest parse failure during token audit
+        }
+    }
+
+    $cssFile = Join-Path $TargetDir $entryRel
+    if (-not (Test-Path $cssFile -PathType Leaf)) {
+        Write-Warning "[Theme Audit] Entry stylesheet '$entryRel' not found in $TargetDir"
+        return
+    }
+
+    $implementedTokens = Get-DeclaredVintaTokens -CssFilePath $cssFile
+    $missingTokens = @($BaseTokens | Where-Object { $implementedTokens -notcontains $_ })
+
+    if ($missingTokens.Count -gt 0) {
+        Write-Host "WARNING: Theme '$themeName' is missing $($missingTokens.Count) token(s) declared in tokens.css (will fall back to dark-gold):" -ForegroundColor Yellow
+        foreach ($t in $missingTokens) {
+            Write-Host "  - $t" -ForegroundColor Yellow
+        }
+    } else {
+        Write-Host "[Theme Audit] '$themeName' implements all $($BaseTokens.Count) tokens declared in tokens.css." -ForegroundColor DarkGray
+    }
+}
+
+$baseTokens = Get-DeclaredVintaTokens -CssFilePath $tokensCssPath
+
+if ($CheckOnly) {
+    if ($ThemePath) {
+        if (-not (Test-Path $ThemePath -PathType Container)) {
+            Write-Warning "Theme directory not found: $ThemePath"
+            exit 0
+        }
+        Test-ThemeTokens -TargetDir (Resolve-Path $ThemePath).Path -BaseTokens $baseTokens
+    } else {
+        $presetsDir = Join-Path $repoRoot "frontend\src\themes\presets"
+        if (Test-Path $presetsDir -PathType Container) {
+            Get-ChildItem -Path $presetsDir -Directory | ForEach-Object {
+                Test-ThemeTokens -TargetDir $_.FullName -BaseTokens $baseTokens
+            }
+        }
+        $templateDir = Join-Path $repoRoot "templates\theme"
+        if (Test-Path $templateDir -PathType Container) {
+            Test-ThemeTokens -TargetDir $templateDir -BaseTokens $baseTokens
+        }
+    }
+    exit 0
+}
+
+if (-not $ThemePath) {
+    Write-Error "ThemePath is required when packaging a theme (or pass -CheckOnly to audit built-in presets)."
+    exit 1
+}
 
 if (-not (Test-Path $ThemePath -PathType Container)) {
     Write-Error "Theme directory not found: $ThemePath"
@@ -46,6 +128,11 @@ $entryFile = Join-Path $resolvedThemePath $manifest.entry
 if (-not (Test-Path $entryFile -PathType Leaf)) {
     Write-Error "Entry stylesheet '$($manifest.entry)' not found in theme directory."
     exit 1
+}
+
+# Audit declared tokens against tokens.css (non-blocking warning)
+if ($baseTokens.Count -gt 0) {
+    Test-ThemeTokens -TargetDir $resolvedThemePath -BaseTokens $baseTokens
 }
 
 # Determine destination path

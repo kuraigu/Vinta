@@ -83,3 +83,5 @@ build/CMakeCache.txt
 build/cmake_install.cmake
 build/*.vcxproj*
 build/*.slnx
+build/vintaservices.dir/
+build/x64/

@@ -51,17 +51,19 @@
   }
 
   .scroll-view::-webkit-scrollbar {
-    width: 3px;
+    width: 5px;
   }
   .scroll-view::-webkit-scrollbar-track {
     background: transparent;
   }
   .scroll-view::-webkit-scrollbar-thumb {
-    background: var(--c-scrollbar-thumb, rgba(255, 255, 255, 0.18));
-    border-radius: 3px;
-    transition: background 0.2s ease;
+    background: var(--vinta-scrollbar-thumb, rgba(255, 255, 255, 0.22));
+    border-radius: 5px;
+    transition:
+      background 0.2s ease,
+      width 0.2s ease;
   }
   .scroll-view:hover::-webkit-scrollbar-thumb {
-    background: var(--c-scrollbar-thumb-hover, rgba(255, 255, 255, 0.35));
+    background: var(--vinta-scrollbar-thumb-hover, rgba(255, 255, 255, 0.45));
   }
 </style>

@@ -10,7 +10,7 @@
   let {
     width = '2px',
     height = '60%',
-    color = 'var(--c-item-bg)',
+    color = 'var(--vinta-item-bg)',
     radius = '999px'
   }: Props = $props()
 </script>

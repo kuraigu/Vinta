@@ -43,7 +43,8 @@ export class WindowBoundsManager {
    */
   public syncPillBounds(
     islandNode?: HTMLElement | null,
-    isHidden: boolean = false
+    isHidden: boolean = false,
+    force: boolean = false
   ): void {
     if (islandNode) {
       this.activeIslandNode = islandNode
@@ -139,7 +140,7 @@ export class WindowBoundsManager {
     const sig = hitRects
       .map((r) => `${r.left},${r.top},${r.width},${r.height}`)
       .join(';')
-    if (sig === this.lastHitRectsSignature) {
+    if (!force && sig === this.lastHitRectsSignature) {
       return
     }
     this.lastHitRectsSignature = sig

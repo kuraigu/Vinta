@@ -37,6 +37,13 @@ export interface CalendarAppState {
   lastSyncError?: string
 }
 
+export interface CalendarPendingAction {
+  action: 'add'
+  date?: string
+}
+
+export const calendarPendingActionStore = writable<CalendarPendingAction | null>(null)
+
 const STORAGE_KEY_EVENTS = 'vinta_calendar_events'
 const STORAGE_KEY_FEEDS = 'vinta_calendar_feeds'
 
@@ -435,23 +442,22 @@ export function checkCalendarEventReminders(): void {
 
     notifiedEventKeys.add(notifyKey)
 
-    let message = ''
-    if (event.location && event.description) {
-      message = `${event.location} • ${event.description}`
-    } else if (event.location) {
-      message = `Location: ${event.location}`
-    } else if (event.description) {
-      message = event.description
+    const parts: string[] = []
+    if (event.location?.trim()) {
+      parts.push(event.location.trim())
+    }
+    if (event.description?.trim()) {
+      parts.push(event.description.trim())
+    } else if (event.endTime?.trim()) {
+      parts.push(`Until ${event.endTime.trim()}`)
     } else if (event.isAllDay) {
-      message = 'All-day event scheduled for today'
-    } else {
-      message = event.endTime
-        ? `Scheduled until ${event.endTime}`
-        : `Scheduled event starting at ${event.startTime}`
+      parts.push('All day')
     }
 
+    const message = parts.join(' • ')
+
     sendVintaNotification({
-      title: event.title,
+      title: event.title?.trim() || 'Calendar Event',
       message,
       subApp: 'Agenda'
     })

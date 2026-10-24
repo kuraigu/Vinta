@@ -27,7 +27,6 @@
   import { onMount, tick } from 'svelte'
   import {
     Plus,
-    Search,
     FolderOpen,
     Trash2,
     List,
@@ -39,6 +38,7 @@
     Image as ImageIcon
   } from 'lucide-svelte'
   import BackButton from '../components/BackButton.svelte'
+  import SearchInput from '../components/SearchInput.svelte'
   import ScrollView from '../components/ScrollView.svelte'
   import { islandTooltip } from '../services/islandTooltip'
   import {
@@ -570,44 +570,7 @@
   {#if viewMode === 'board'}
     <!-- Main Notes Screen (Displays all note cards) -->
     <div class="notes-board-view">
-      <div class="board-header">
-        <div class="board-header-left">
-          <BackButton title="Back to Apps" />
-          <span class="board-title">Quick Notes</span>
-          {#if notes.length > 0}
-            <span class="board-count-pill">{notes.length}</span>
-          {/if}
-        </div>
-
-        <div class="board-search-box">
-          <Search size={13} class="board-search-icon" />
-          <input
-            type="text"
-            placeholder="Search notes..."
-            class="board-search-input"
-            bind:value={drawerSearchQuery}
-          />
-        </div>
-
-        <div class="board-header-right">
-          <button
-            class="board-action-btn"
-            use:islandTooltip={'Open Notes Folder in Explorer'}
-            onclick={handleOpenFolder}
-          >
-            <FolderOpen size={14} />
-          </button>
-          <button
-            class="board-action-btn new-note-action"
-            use:islandTooltip={'Create Note'}
-            onclick={createNewNote}
-          >
-            <Plus size={16} />
-          </button>
-        </div>
-      </div>
-
-      <!-- Notes Grid inside ScrollView with dock clearance -->
+      <!-- Notes Grid inside ScrollView -->
       <div class="board-grid-wrapper">
         <ScrollView>
           {#if filteredDrawerNotes.length === 0}
@@ -672,17 +635,129 @@
           {/if}
         </ScrollView>
       </div>
+
+      <div class="board-header">
+        <div class="board-header-left">
+          <BackButton title="Back to Apps" />
+          <span class="board-title">Quick Notes</span>
+          {#if notes.length > 0}
+            <span class="board-count-pill">{notes.length}</span>
+          {/if}
+        </div>
+
+        <SearchInput
+          bind:value={drawerSearchQuery}
+          placeholder="Search notes..."
+          maxWidth="220px"
+        />
+
+        <div class="board-header-right">
+          <button
+            class="board-action-btn"
+            use:islandTooltip={{
+              text: 'Open Notes Folder in Explorer',
+              position: 'top'
+            }}
+            onclick={handleOpenFolder}
+          >
+            <FolderOpen size={14} />
+          </button>
+          <button
+            class="board-action-btn new-note-action"
+            use:islandTooltip={{ text: 'Create Note', position: 'top' }}
+            onclick={createNewNote}
+          >
+            <Plus size={16} />
+          </button>
+        </div>
+      </div>
     </div>
   {:else}
-    <!-- Active Note Editor (User approved sticky canvas) -->
-    <!-- Subtle Banner Header -->
+    <!-- Active Note Editor (Sticky canvas with bottom toolbar & banner header) -->
+    <div class="notes-main-canvas">
+      <ScrollView>
+        <div
+          bind:this={editorRef}
+          class="editor-surface"
+          contenteditable="true"
+          oninput={triggerAutoSave}
+          onpaste={handlePaste}
+          onkeydown={handleKeyDown}
+          role="textbox"
+          tabindex="0"
+        ></div>
+      </ScrollView>
+    </div>
+
+    <!-- Compact Formatting Toolbar -->
+    <div class="notes-toolbar">
+      <div class="toolbar-actions-group">
+        <button
+          class="tool-action-btn"
+          use:islandTooltip={{ text: 'Bold (Ctrl+B)', position: 'top' }}
+          onclick={() => applyFormat('bold')}
+        >
+          <Bold size={13} />
+        </button>
+
+        <button
+          class="tool-action-btn"
+          use:islandTooltip={{ text: 'Italic (Ctrl+I)', position: 'top' }}
+          onclick={() => applyFormat('italic')}
+        >
+          <Italic size={13} />
+        </button>
+
+        <button
+          class="tool-action-btn"
+          use:islandTooltip={{ text: 'Underline (Ctrl+U)', position: 'top' }}
+          onclick={() => applyFormat('underline')}
+        >
+          <Underline size={13} />
+        </button>
+
+        <button
+          class="tool-action-btn"
+          use:islandTooltip={{ text: 'Strikethrough', position: 'top' }}
+          onclick={() => applyFormat('strikeThrough')}
+        >
+          <Strikethrough size={13} />
+        </button>
+
+        <button
+          class="tool-action-btn"
+          use:islandTooltip={{ text: 'Bullet List', position: 'top' }}
+          onclick={() => applyFormat('insertUnorderedList')}
+        >
+          <ListOrdered size={13} />
+        </button>
+
+        <button
+          class="tool-action-btn"
+          use:islandTooltip={{ text: 'Attach image', position: 'top' }}
+          onclick={() => fileInputRef?.click()}
+        >
+          <ImageIcon size={13} />
+        </button>
+      </div>
+
+      <div class="save-state-tag">
+        {#if saveStatus === 'saving'}
+          <span>Saving...</span>
+        {:else if saveStatus === 'saved'}
+          <span class="state-saved-text">Saved</span>
+        {/if}
+      </div>
+    </div>
+
+    <!-- Subtle Banner Header (Positioned at bottom, swapped with top Dock) -->
     <div class="banner-header">
       <div class="banner-left-group">
         <BackButton onback={handleBackToBoard} title="Back to Notes" />
 
         <button
           class="banner-btn"
-          use:islandTooltip={'All notes'}
+          use:islandTooltip={{ text: 'All notes', position: 'top' }}
           onclick={handleBackToBoard}
         >
           <List size={15} />
@@ -690,7 +765,7 @@
 
         <button
           class="banner-btn"
-          use:islandTooltip={'New note'}
+          use:islandTooltip={{ text: 'New note', position: 'top' }}
           onclick={createNewNote}
         >
           <Plus size={16} />
@@ -718,7 +793,7 @@
               class="swatch-dot-btn dot-{c} {activeNote?.color === c
                 ? 'selected'
                 : ''}"
-              use:islandTooltip={`${c} color`}
+              use:islandTooltip={{ text: `${c} color`, position: 'top' }}
               aria-label={`${c} color`}
               onclick={() => handleSelectColor(c)}
             ></button>
@@ -727,7 +802,10 @@
 
         <button
           class="banner-btn"
-          use:islandTooltip={'Open Notes Folder in Explorer'}
+          use:islandTooltip={{
+            text: 'Open Notes Folder in Explorer',
+            position: 'top'
+          }}
           onclick={handleOpenFolder}
         >
           <FolderOpen size={14} />
@@ -735,89 +813,12 @@
 
         <button
           class="banner-btn"
-          use:islandTooltip={'Delete note'}
+          use:islandTooltip={{ text: 'Delete note', position: 'top' }}
           onclick={handleDeleteActiveNote}
         >
           <Trash2 size={14} />
         </button>
       </div>
-    </div>
-
-    <!-- Compact Formatting Toolbar -->
-    <div class="notes-toolbar">
-      <div class="toolbar-actions-group">
-        <button
-          class="tool-action-btn"
-          use:islandTooltip={'Bold (Ctrl+B)'}
-          onclick={() => applyFormat('bold')}
-        >
-          <Bold size={13} />
-        </button>
-
-        <button
-          class="tool-action-btn"
-          use:islandTooltip={'Italic (Ctrl+I)'}
-          onclick={() => applyFormat('italic')}
-        >
-          <Italic size={13} />
-        </button>
-
-        <button
-          class="tool-action-btn"
-          use:islandTooltip={'Underline (Ctrl+U)'}
-          onclick={() => applyFormat('underline')}
-        >
-          <Underline size={13} />
-        </button>
-
-        <button
-          class="tool-action-btn"
-          use:islandTooltip={'Strikethrough'}
-          onclick={() => applyFormat('strikeThrough')}
-        >
-          <Strikethrough size={13} />
-        </button>
-
-        <button
-          class="tool-action-btn"
-          use:islandTooltip={'Bullet List'}
-          onclick={() => applyFormat('insertUnorderedList')}
-        >
-          <ListOrdered size={13} />
-        </button>
-
-        <button
-          class="tool-action-btn"
-          use:islandTooltip={'Attach image'}
-          onclick={() => fileInputRef?.click()}
-        >
-          <ImageIcon size={13} />
-        </button>
-      </div>
-
-      <div class="save-state-tag">
-        {#if saveStatus === 'saving'}
-          <span>Saving...</span>
-        {:else if saveStatus === 'saved'}
-          <span class="state-saved-text">Saved</span>
-        {/if}
-      </div>
-    </div>
-
-    <!-- Main Text Area (Using ScrollView and clearing bottom dock) -->
-    <div class="notes-main-canvas">
-      <ScrollView>
-        <div
-          bind:this={editorRef}
-          class="editor-surface"
-          contenteditable="true"
-          oninput={triggerAutoSave}
-          onpaste={handlePaste}
-          onkeydown={handleKeyDown}
-          role="textbox"
-          tabindex="0"
-        ></div>
-      </ScrollView>
     </div>
   {/if}
 </div>

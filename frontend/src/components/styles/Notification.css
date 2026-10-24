@@ -5,7 +5,7 @@
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  color: var(--c-text-primary);
+  color: var(--vinta-text-primary);
 }
 
 .banner-view-container {
@@ -39,8 +39,8 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  border: 2px solid var(--c-bg);
-  background: var(--c-bg);
+  border: 2px solid var(--vinta-bg);
+  background: var(--vinta-bg);
   object-fit: contain;
   z-index: 2;
 }
@@ -53,7 +53,7 @@
   height: 36px;
   flex-shrink: 0;
   font-size: 22px;
-  background: var(--c-item-bg);
+  background: var(--vinta-item-bg);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -76,7 +76,7 @@
 
 .banner-app {
   font-size: 0.7rem;
-  color: var(--c-text-muted);
+  color: var(--vinta-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   font-weight: 700;
@@ -92,7 +92,7 @@
   width: 100%;
   font-size: 0.95rem;
   font-weight: 600;
-  color: var(--c-text-primary);
+  color: var(--vinta-text-primary);
   line-height: 1.2;
   margin-bottom: 0px;
   overflow: hidden;
@@ -106,7 +106,7 @@
   -webkit-box-orient: vertical;
   width: 100%;
   font-size: 0.85rem;
-  color: var(--c-text-secondary);
+  color: var(--vinta-text-secondary);
   line-height: 1.3;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -120,7 +120,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  background: var(--c-subtle-bg, rgba(0, 0, 0, 0.15));
+  background: rgba(0, 0, 0, 0.15);
   max-height: 140px;
 }
 
@@ -140,7 +140,7 @@
   flex-shrink: 0;
   border-radius: 7px;
   overflow: hidden;
-  background: var(--c-item-bg);
+  background: var(--vinta-item-bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -154,7 +154,7 @@
 }
 
 .expanded-view {
-  padding: 14px 16px 58px 16px;
+  padding: var(--vinta-dock-clearance, 56px) 16px 12px 16px;
   height: 100%;
   width: 100%;
   box-sizing: border-box;
@@ -180,16 +180,16 @@
 
 h3 {
   margin: 0;
-  color: var(--c-text-primary);
+  color: var(--vinta-text-primary);
   font-size: 15px;
   font-weight: 700;
   letter-spacing: -0.01em;
 }
 
 .dismiss-item-btn {
-  background: var(--c-contrast-bg);
-  border: 1px solid var(--c-contrast-bg);
-  color: var(--c-text-secondary);
+  background: var(--vinta-contrast-bg);
+  border: 1px solid var(--vinta-contrast-bg);
+  color: var(--vinta-text-secondary);
   width: 26px;
   height: 26px;
   border-radius: 50%;
@@ -201,9 +201,9 @@ h3 {
 }
 
 .dismiss-item-btn:hover {
-  background: var(--c-danger-hover-bg);
-  color: var(--c-danger);
-  border-color: var(--c-danger);
+  background: var(--vinta-accent-danger-hover-bg);
+  color: var(--vinta-accent-danger);
+  border-color: var(--vinta-accent-danger);
   transform: translateY(-1px);
   box-shadow: 0 2px 8px rgba(255, 59, 48, 0.2);
 }
@@ -212,9 +212,9 @@ h3 {
 .dnd-btn {
   border: none;
   outline: none;
-  background: var(--c-contrast-bg);
-  box-shadow: var(--c-contrast-bg-border);
-  color: var(--c-text-secondary);
+  background: var(--vinta-contrast-bg);
+  box-shadow: var(--vinta-contrast-border);
+  color: var(--vinta-text-secondary);
   font-size: 11px;
   font-weight: 600;
   height: 28px;
@@ -229,8 +229,8 @@ h3 {
 }
 
 .dnd-btn:hover {
-  background: var(--c-contrast-bg-hover);
-  color: var(--c-text-primary);
+  background: var(--vinta-contrast-hover);
+  color: var(--vinta-text-primary);
   transform: translateY(-1px);
 }
 
@@ -240,9 +240,9 @@ h3 {
 }
 
 .dnd-btn.dnd-active {
-  color: var(--c-dnd-active-text);
-  background: var(--c-dnd-active-bg);
-  box-shadow: var(--c-dnd-active-border);
+  color: var(--vinta-dnd-active-text);
+  background: var(--vinta-dnd-active-bg);
+  box-shadow: var(--vinta-dnd-active-border);
 }
 
 .dnd-zzz-icon {
@@ -259,7 +259,7 @@ h3 {
   font-size: 8px;
   font-weight: 800;
   line-height: 1;
-  color: var(--c-dnd-active-text);
+  color: var(--vinta-dnd-active-text);
   letter-spacing: -0.5px;
   pointer-events: none;
   font-family:
@@ -274,32 +274,32 @@ h3 {
 }
 
 .dnd-btn.dnd-active:hover {
-  background: var(--c-dnd-active-bg);
+  background: var(--vinta-dnd-active-bg);
   transform: translateY(-1px);
 }
 
 .clear-btn:hover {
-  background: var(--c-clear-btn-hover-bg);
-  color: var(--c-clear-btn-hover-text);
-  box-shadow: var(--c-clear-btn-hover-border);
+  background: var(--vinta-clear-btn-hover-bg);
+  color: var(--vinta-clear-btn-hover-text);
+  box-shadow: var(--vinta-clear-btn-hover-border);
   transform: translateY(-1px);
 }
 
 :global(.notif-list) {
   width: 100%;
   flex: 1;
-  min-height: 0; /* CRITICAL: prevents flex child from overflowing parent */
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding-right: 5px; /* for scrollbar */
+  padding-right: 5px;
   outline: none;
 }
 
 .notif-item {
   padding: 14px 12px;
-  background: var(--c-item-bg);
-  border: 1px solid var(--c-border);
+  background: var(--vinta-item-bg);
+  border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.08));
   position: relative;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
@@ -307,10 +307,10 @@ h3 {
 }
 
 .notif-item:hover {
-  background-color: var(--c-hover);
-  border-color: rgba(255, 255, 255, 0.16);
+  background: var(--vinta-surface-elevated);
+  border-color: var(--vinta-contrast-hover);
+  box-shadow: var(--vinta-contrast-border), var(--vinta-dock-popover-shadow);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .notif-item:active {
@@ -353,7 +353,7 @@ h3 {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--c-text-muted);
+  color: var(--vinta-text-muted);
   opacity: 0.6;
   transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   flex-shrink: 0;
@@ -389,7 +389,7 @@ h3 {
   border: none;
   position: relative;
   width: 100%;
-  margin-bottom: 8px;
+  margin-bottom: 0;
   box-sizing: border-box;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -400,8 +400,8 @@ h3 {
 
 .notif-group-header {
   padding: 14px 12px;
-  background: var(--c-item-bg);
-  border: 1px solid var(--c-border);
+  background: var(--vinta-item-bg);
+  border: 1px solid var(--vinta-border);
   border-radius: 14px;
   display: flex;
   flex-direction: column;
@@ -413,8 +413,8 @@ h3 {
 }
 
 .notif-group-header:hover {
-  background-color: var(--c-contrast-bg);
-  border-color: var(--c-hover);
+  background-color: var(--vinta-contrast-bg);
+  border-color: var(--vinta-hover);
 }
 
 .notif-group-header-top {
@@ -440,13 +440,13 @@ h3 {
   gap: 10px;
   margin-top: 10px;
   padding-left: 12px;
-  border-left: 1px dashed var(--c-hover);
+  border-left: 1px dashed var(--vinta-hover);
 }
 
 .expand-indicator {
-  color: var(--c-text-secondary);
-  background: var(--c-contrast-bg);
-  border: 1px solid var(--c-contrast-bg);
+  color: var(--vinta-text-secondary);
+  background: var(--vinta-contrast-bg);
+  border: 1px solid var(--vinta-contrast-bg);
   border-radius: 50%;
   width: 26px;
   height: 26px;
@@ -458,9 +458,9 @@ h3 {
 
 .expand-indicator,
 .expand-indicator-btn {
-  color: var(--c-text-secondary);
-  background: var(--c-contrast-bg);
-  border: 1px solid var(--c-contrast-bg);
+  color: var(--vinta-text-secondary);
+  background: var(--vinta-contrast-bg);
+  border: 1px solid var(--vinta-contrast-bg);
   border-radius: 50%;
   width: 26px;
   height: 26px;
@@ -475,9 +475,9 @@ h3 {
 
 .expand-indicator:hover,
 .expand-indicator-btn:hover {
-  background: var(--c-hover);
-  color: var(--c-text-primary);
-  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.14);
+  color: var(--vinta-text-primary);
+  border-color: rgba(255, 255, 255, 0.22);
 }
 
 /* Keep visible when expanded so user can collapse */
@@ -500,11 +500,11 @@ h3 {
   height: 24px;
   flex-shrink: 0;
   font-size: 14px;
-  background: var(--c-hover);
+  background: var(--vinta-hover);
   border-radius: 6px;
   overflow: hidden;
   box-shadow:
-    inset 0 1px 0 var(--c-hover),
+    inset 0 1px 0 var(--vinta-hover),
     0 2px 4px rgba(0, 0, 0, 0.2);
   transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -517,8 +517,8 @@ h3 {
   height: 38px;
   flex-shrink: 0;
   font-size: 18px;
-  background: var(--c-icon-badge-bg);
-  border: 1px solid var(--c-icon-badge-border);
+  background: var(--vinta-icon-badge-bg);
+  border: 1px solid var(--vinta-icon-badge-border);
   border-radius: 50%;
   overflow: hidden;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
@@ -565,7 +565,7 @@ h3 {
 .notif-item-app {
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--c-text-primary);
+  color: var(--vinta-text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -575,7 +575,7 @@ h3 {
 .notif-item-time {
   font-size: 0.65rem;
   font-weight: 600;
-  color: var(--c-text-muted);
+  color: var(--vinta-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   opacity: 0.8;
@@ -600,7 +600,7 @@ h3 {
 .notif-item-title {
   font-weight: 600;
   font-size: 0.95rem;
-  color: var(--c-text-primary);
+  color: var(--vinta-text-primary);
   line-height: 1.4;
   padding-right: 8px;
   white-space: nowrap;
@@ -618,7 +618,7 @@ h3 {
 .notif-item-message {
   margin: 0;
   font-size: 0.85rem;
-  color: var(--c-text-muted);
+  color: var(--vinta-text-muted);
   line-height: 1.4;
   width: 100%;
   display: -webkit-box;
@@ -643,7 +643,7 @@ h3 {
 .clear-btn:focus-visible,
 .dismiss-item-btn:focus-visible,
 .notif-item:focus-visible {
-  outline: 2px solid var(--c-primary);
+  outline: 2px solid var(--vinta-accent-primary);
   outline-offset: 2px;
 }
 
@@ -660,7 +660,7 @@ h3 {
   max-height: 250px;
   display: block;
   object-fit: scale-down;
-  background-color: var(--c-contrast-bg);
+  background-color: var(--vinta-contrast-bg);
 }
 
 /* Expanded notification bottom action row — aligned to the right with the time */
@@ -684,9 +684,9 @@ h3 {
   gap: 4px;
   padding: 2px 8px;
   border-radius: 999px;
-  background: var(--c-hover);
-  border: 1px solid var(--c-border);
-  color: var(--c-text-secondary);
+  background: var(--vinta-contrast-bg);
+  border: 1px solid var(--vinta-contrast-bg);
+  color: var(--vinta-text-secondary);
   font-size: 0.68rem;
   font-weight: 500;
   cursor: pointer;
@@ -709,7 +709,7 @@ h3 {
 .notif-item:hover .open-app-btn:hover {
   opacity: 1;
   background: rgba(255, 255, 255, 0.14);
-  color: var(--c-text-primary);
+  color: var(--vinta-text-primary);
   border-color: rgba(255, 255, 255, 0.22);
 }
 
@@ -719,7 +719,7 @@ h3 {
 
 .empty-state {
   text-align: center;
-  color: var(--c-text-muted);
+  color: var(--vinta-text-muted);
   margin-top: 2rem;
   font-size: 0.9rem;
 }
@@ -728,9 +728,9 @@ h3 {
 .notif-group.unified-card {
   display: flex;
   flex-direction: column;
-  margin-bottom: 8px;
-  background: var(--c-item-bg);
-  border: 1px solid var(--c-border);
+  margin-bottom: 0;
+  background: var(--vinta-item-bg);
+  border: 1px solid var(--vinta-border);
   border-radius: 14px;
   position: relative;
   overflow: hidden;
@@ -738,9 +738,9 @@ h3 {
 }
 
 .notif-group.unified-card:hover {
-  background: var(--c-hover);
-  border-color: rgba(255, 255, 255, 0.16);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+  background: var(--vinta-surface-elevated);
+  border-color: var(--vinta-contrast-hover);
+  box-shadow: var(--vinta-contrast-border), var(--vinta-dock-popover-shadow);
 }
 
 .notif-group-header {
@@ -754,8 +754,8 @@ h3 {
 }
 
 .notif-count-badge {
-  background: var(--c-primary);
-  color: var(--c-text-on-accent, #ffffff);
+  background: var(--vinta-accent-primary);
+  color: var(--vinta-text-on-accent, #ffffff);
   font-size: 0.68rem;
   font-weight: 700;
   padding: 2px 8px;
@@ -778,10 +778,10 @@ h3 {
   gap: 8px;
   margin: 0 16px 12px;
   padding: 12px;
-  background: var(--c-danger-hover-bg);
-  border: 1px solid var(--c-danger);
+  background: var(--vinta-accent-danger-hover-bg);
+  border: 1px solid var(--vinta-accent-danger);
   border-radius: 8px;
-  color: var(--c-danger);
+  color: var(--vinta-accent-danger);
   font-size: 13px;
   line-height: 1.4;
 }
@@ -798,7 +798,7 @@ h3 {
 .notif-item.nested {
   background: transparent;
   border: none;
-  border-top: 1px solid var(--c-contrast-bg);
+  border-top: 1px solid var(--vinta-contrast-bg);
   border-radius: 0;
   padding: 10px 12px;
   box-shadow: none;
@@ -815,7 +815,8 @@ h3 {
 }
 
 .notif-item.nested:hover {
-  background-color: var(--c-hover);
+  background-color: var(--vinta-contrast-hover);
   transform: none;
   border-color: transparent;
+  box-shadow: none;
 }

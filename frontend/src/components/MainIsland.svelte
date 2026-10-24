@@ -33,6 +33,7 @@
     hideTrigger?: number
     islandConfig: IslandConfig
     currentMinimalW: number
+    currentExpandedH?: number
     hiddenBounds: { w: number; h: number; r: number }
     activeOpacity?: number
     glowOpacity?: number
@@ -79,6 +80,7 @@
     hideTrigger = 0,
     islandConfig,
     currentMinimalW,
+    currentExpandedH,
     hiddenBounds,
     activeOpacity = 1,
     glowOpacity = 0.6,
@@ -286,7 +288,7 @@
     height: {isHidden
     ? hiddenBounds.h
     : expanded
-      ? islandConfig.expanded.h
+      ? (currentExpandedH ?? islandConfig.expanded.h)
       : islandConfig.minimal.h}px;
     --island-r: {isHidden
     ? hiddenBounds.r
@@ -295,13 +297,17 @@
       : islandConfig.minimal.r}px;
     border-radius: 0 0 var(--island-r) var(--island-r);
     --island-border-color: {isHidden
-    ? 'var(--c-border)'
-    : islandConfig.borderColor || 'transparent'};
+    ? 'var(--vinta-border)'
+    : islandConfig.borderColor || 'var(--vinta-island-border-idle)'};
     --island-glow-color: {isHidden
     ? 'transparent'
-    : islandConfig.glowColor || 'transparent'};
-    --island-hidden-glow: {islandConfig.glowColor ||
-    'rgba(255, 255, 255, 0.6)'};
+    : islandConfig.glowColor && islandConfig.glowColor !== 'transparent'
+      ? islandConfig.glowColor
+      : 'var(--vinta-island-glow-idle)'};
+    --island-hidden-glow: {islandConfig.glowColor &&
+  islandConfig.glowColor !== 'transparent'
+    ? islandConfig.glowColor
+    : 'rgba(255, 255, 255, 0.6)'};
     --island-glow-opacity: {glowOpacity};
     --island-anim: {islandAnim};
   "
@@ -372,7 +378,7 @@
         in:fade={{ duration: 160 }}
         out:fade={{ duration: 80 }}
       >
-        <Dock {activePage} />
+        <Dock {activePage} {islandConfig} />
       </div>
     {/if}
   </div>

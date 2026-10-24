@@ -20,18 +20,18 @@
   gap: 8px;
   font-size: 13px;
   font-weight: 700;
-  color: var(--c-text-primary);
+  color: var(--vinta-text-primary);
   text-align: left;
   letter-spacing: -0.01em;
 }
 
 .section-title :global(svg) {
-  color: var(--c-primary);
+  color: var(--vinta-primary);
 }
 
 .divider {
   height: 1px;
-  background: var(--c-border);
+  background: var(--vinta-border);
   margin: 6px 0;
   opacity: 0.6;
 }
@@ -136,8 +136,8 @@
 }
 
 input:checked + .slider {
-  background-color: var(--c-primary);
-  border-color: var(--c-primary);
+  background-color: var(--vinta-primary);
+  border-color: var(--vinta-primary);
 }
 
 input:checked + .slider:before {

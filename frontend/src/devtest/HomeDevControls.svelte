@@ -60,7 +60,7 @@
     background: rgba(255, 255, 255, 0.04);
     padding: 3px;
     border-radius: 8px;
-    border: 1px solid var(--c-border);
+    border: 1px solid var(--vinta-border);
   }
 
   .subtab-btn {
@@ -72,7 +72,7 @@
     padding: 5px 6px;
     font-size: 10.5px;
     font-weight: 600;
-    color: var(--c-text-secondary);
+    color: var(--vinta-text-secondary);
     background: transparent;
     border: none;
     border-radius: 6px;
@@ -81,11 +81,11 @@
   }
 
   .subtab-btn:hover {
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
   }
 
   .subtab-btn.active {
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
     background: rgba(255, 255, 255, 0.1);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   }

@@ -5,15 +5,33 @@
   import NotificationPage, {
     config as notifConfig
   } from '../pages/NotificationPage.svelte'
-  import { nativeIconsStore } from '../services/iconService'
+  import {
+    nativeIconsStore,
+    parseAumid,
+    requestNativeAppIcon
+  } from '../services/iconService'
   import { islandTooltip } from '../services/islandTooltip'
+  import ActionCapsule from './ActionCapsule.svelte'
+  import BentoCard from './BentoCard.svelte'
+  import appIcon from '@appicon'
 
   const navigate =
     getContext<
       (page: unknown, pageConfig: IslandConfig, expand?: boolean) => void
     >('navigate')
 
-  let notifications = $derived($notifData)
+  let notifications = $derived(
+    $notifData.filter(
+      (n) =>
+        !n.isUpdate &&
+        !n.title?.toLowerCase().includes('update available') &&
+        !(
+          (n.appName?.toLowerCase() === 'vinta' ||
+            n.aumid?.toLowerCase().includes('vinta')) &&
+          n.title?.toLowerCase().includes('update')
+        )
+    )
+  )
   let latestNotif = $derived(notifications.length > 0 ? notifications[0] : null)
   let unreadCount = $derived(notifications.length)
   let nativeIcons = $derived($nativeIconsStore)
@@ -34,69 +52,103 @@
 
   function resolveIconUrl(notif: typeof latestNotif): string | null {
     if (!notif) return null
-    if (notif.icon && notif.icon.length > 0) return notif.icon
-    if (notif.aumid && nativeIcons[notif.aumid]) return nativeIcons[notif.aumid]
-    if (notif.appName && nativeIcons[notif.appName])
+
+    const rawInput = notif.appName || notif.aumid || ''
+    const isVinta =
+      rawInput.toLowerCase().includes('vinta') ||
+      (notif.title || '').toLowerCase().includes('vinta')
+
+    if (isVinta) {
+      return notif.icon || notif.appLogo || appIcon
+    }
+
+    if (notif.appLogo && notif.appLogo.length > 0) {
+      return notif.appLogo
+    }
+
+    const parsed = parseAumid(rawInput)
+    const searchApp = (parsed.processName || notif.appName || '').trim()
+    const searchAumid = (notif.aumid || '').trim()
+    const iconKey = `${searchApp.toLowerCase()}|${searchAumid.toLowerCase()}`
+
+    if (nativeIcons[iconKey]) {
+      return nativeIcons[iconKey]
+    }
+    if (notif.aumid && nativeIcons[notif.aumid]) {
+      return nativeIcons[notif.aumid]
+    }
+    if (notif.appName && nativeIcons[notif.appName]) {
       return nativeIcons[notif.appName]
-    if (notif.appLogo) return notif.appLogo
-    return null
+    }
+
+    // Trigger asynchronous extraction if not in cache yet
+    if (searchApp || searchAumid) {
+      const extracted = requestNativeAppIcon(searchApp, searchAumid)
+      if (extracted) return extracted
+    }
+
+    // 3. Fall back to notif.icon if it doesn't match a wide hero image
+    if (notif.icon && notif.icon.length > 0 && notif.icon !== notif.heroImage) {
+      return notif.icon
+    }
+
+    // 4. Default to standard app icon if available
+    return notif.icon || null
   }
 
   let resolvedIcon = $derived(resolveIconUrl(latestNotif))
   let appDisplayName = $derived(
-    latestNotif?.appName || latestNotif?.aumid || 'Notification'
+    latestNotif?.appName ||
+      (latestNotif?.aumid
+        ? parseAumid(latestNotif.aumid).displayName
+        : 'Notification')
   )
 </script>
 
 {#if latestNotif}
-  <div
+  <BentoCard
+    variant="bento"
     class="notification-glance-card"
-    role="button"
-    tabindex="0"
     onclick={openNotifications}
-    onkeydown={(e) => e.key === 'Enter' && openNotifications()}
   >
     <div class="glance-top-row">
       <div class="glance-brand-group">
         <div class="glance-avatar-container">
-          {#if resolvedIcon}
-            <img
-              src={resolvedIcon}
-              alt=""
-              class="glance-app-icon"
-              onerror={(e) => {
-                const target = e.currentTarget as HTMLImageElement
-                target.style.display = 'none'
-                const fallback = target.nextElementSibling as HTMLElement
-                if (fallback) fallback.style.display = 'flex'
-              }}
-            />
-            <div class="glance-fallback-icon" style="display: none;">
-              <Bell size={13} />
-            </div>
-          {:else}
-            <div class="glance-fallback-icon">
-              <Bell size={13} />
-            </div>
-          {/if}
+          {#key latestNotif?.id}
+            {#if resolvedIcon}
+              <img
+                src={resolvedIcon}
+                alt=""
+                class="glance-app-icon"
+                onerror={(e) => {
+                  const target = e.currentTarget as HTMLImageElement
+                  target.style.display = 'none'
+                  const fallback = target.nextElementSibling as HTMLElement
+                  if (fallback) fallback.style.display = 'flex'
+                }}
+              />
+              <div class="glance-fallback-icon" style="display: none;">
+                <Bell size={13} />
+              </div>
+            {:else}
+              <div class="glance-fallback-icon">
+                <Bell size={13} />
+              </div>
+            {/if}
+          {/key}
         </div>
         <span class="glance-app-name">{appDisplayName}</span>
         {#if unreadCount > 1}
-          <span class="glance-count-badge">+{unreadCount - 1}</span>
+          <span class="glance-count-badge">{unreadCount - 1}+</span>
         {/if}
       </div>
 
       <div class="glance-actions-group">
-        <button
-          type="button"
-          class="glance-action-btn view"
+        <ActionCapsule
+          label="View"
           onclick={openNotifications}
-          use:islandTooltip={'Open Notification Center'}
-          aria-label="View notifications"
-        >
-          <span>View</span>
-          <ChevronRight size={13} />
-        </button>
+          tooltip="Open Notification Center"
+        />
         <button
           type="button"
           class="glance-action-btn dismiss"
@@ -117,38 +169,19 @@
         <p class="glance-message">{latestNotif.message}</p>
       {/if}
     </div>
-  </div>
+  </BentoCard>
 {/if}
 
 <style>
-  .notification-glance-card {
-    display: flex;
-    flex-direction: column;
+  :global(.notification-glance-card) {
     gap: 8px;
-    width: 100%;
     padding: 10px 14px;
-    border-radius: var(--vinta-radius-card, 16px);
-    background: var(--vinta-surface-card, rgba(255, 255, 255, 0.04));
-    border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.08));
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    box-sizing: border-box;
     cursor: pointer;
     text-align: left;
-    transition:
-      background 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-      border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-      transform 0.15s ease;
-    user-select: none;
-    -webkit-user-select: none;
+    align-items: flex-start;
   }
 
-  .notification-glance-card:hover {
-    background: var(--vinta-hover, rgba(255, 255, 255, 0.07));
-    border-color: var(--vinta-border-light, rgba(255, 255, 255, 0.14));
-  }
-
-  .notification-glance-card:active {
+  :global(.notification-glance-card:active) {
     transform: scale(0.992);
   }
 
@@ -209,13 +242,14 @@
   .glance-count-badge {
     font-size: 0.68rem;
     font-weight: 700;
-    color: var(--vinta-accent-primary, #60a5fa);
-    background: var(--vinta-accent-muted, rgba(96, 165, 250, 0.16));
-    border: 1px solid var(--vinta-accent-muted, rgba(96, 165, 250, 0.25));
+    color: var(--vinta-text-on-accent, #ffffff);
+    background: var(--vinta-accent-primary, #38bdf8);
+    border: none;
     border-radius: 999px;
     padding: 1px 6px;
     line-height: 1.2;
     flex-shrink: 0;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
   }
 
   .glance-actions-group {
@@ -239,18 +273,6 @@
     font-size: 0.72rem;
     font-weight: 500;
     gap: 2px;
-  }
-
-  .glance-action-btn.view {
-    background: rgba(255, 255, 255, 0.06);
-    color: var(--vinta-text-secondary, rgba(255, 255, 255, 0.8));
-    padding: 3px 8px;
-    border-radius: 12px;
-  }
-
-  .glance-action-btn.view:hover {
-    background: var(--vinta-accent-muted, rgba(96, 165, 250, 0.2));
-    color: var(--vinta-accent-primary, #60a5fa);
   }
 
   .glance-action-btn.dismiss {
@@ -281,6 +303,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    text-align: left;
   }
 
   .glance-message {
@@ -294,5 +317,6 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
     word-break: break-word;
+    text-align: left;
   }
 </style>

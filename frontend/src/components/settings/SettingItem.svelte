@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Snippet, ComponentType } from 'svelte'
+  import BentoCard from '../BentoCard.svelte'
 
   interface Props {
     label: string
@@ -23,11 +24,7 @@
   }: Props = $props()
 </script>
 
-<div
-  class="setting-item"
-  class:flex-col={flexCol}
-  class:item-disabled={disabled}
->
+<BentoCard variant="setting" {flexCol} {disabled}>
   <div class="setting-label-group">
     {#if IconComponent}
       <div class="setting-icon-col">
@@ -52,83 +49,21 @@
       {@render children()}
     </div>
   {/if}
-</div>
+</BentoCard>
 
 <style>
-  .setting-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 13px 15px;
-    border-radius: 16px;
-    background:
-      linear-gradient(
-        145deg,
-        rgba(255, 255, 255, 0.055) 0%,
-        rgba(255, 255, 255, 0.018) 100%
-      ),
-      #15161c;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow:
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
-      0 3px 12px rgba(0, 0, 0, 0.12);
-    transition:
-      opacity 0.2s ease,
-      border-color 0.2s ease,
-      box-shadow 0.2s ease,
-      background 0.2s ease;
+  :global(.vinta-bento-card.variant-setting.flex-col) .setting-control {
+    width: 100%;
   }
 
-  .setting-item:hover {
-    border-color: rgba(255, 255, 255, 0.15);
-    background:
-      linear-gradient(
-        145deg,
-        rgba(255, 255, 255, 0.075) 0%,
-        rgba(255, 255, 255, 0.028) 100%
-      ),
-      #15161c;
-    box-shadow:
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.14),
-      0 5px 16px rgba(0, 0, 0, 0.16);
+  :global(.vinta-bento-card.variant-setting.flex-col)
+    .setting-control
+    > :global(*) {
+    width: 100%;
   }
 
-  .setting-item.item-disabled {
-    opacity: 0.42;
-    cursor: not-allowed;
-  }
-
-  .setting-item.item-disabled:hover {
-    border-color: rgba(255, 255, 255, 0.08);
-    background:
-      linear-gradient(
-        145deg,
-        rgba(255, 255, 255, 0.055) 0%,
-        rgba(255, 255, 255, 0.018) 100%
-      ),
-      #15161c;
-    box-shadow:
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
-      0 3px 12px rgba(0, 0, 0, 0.12);
-  }
-
-  .setting-item.item-disabled .setting-icon-col {
+  :global(.vinta-bento-card.variant-setting.card-disabled) .setting-icon-col {
     opacity: 0.6;
-  }
-
-  .setting-item.flex-col {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-  }
-
-  .setting-item.flex-col .setting-control {
-    width: 100%;
-  }
-
-  .setting-item.flex-col .setting-control > :global(*) {
-    width: 100%;
   }
 
   .setting-label-group {
@@ -147,9 +82,8 @@
     width: 28px;
     height: 28px;
     border-radius: 9px;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.09);
-    box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--vinta-border);
+    box-shadow: var(--vinta-contrast-border);
     flex-shrink: 0;
   }
 
@@ -168,7 +102,7 @@
     gap: 6px;
     font-size: 12.5px;
     font-weight: 600;
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
     text-align: left;
     line-height: 1.25;
   }
@@ -180,19 +114,19 @@
     letter-spacing: 0.04em;
     padding: 2px 7px;
     border-radius: 9999px;
-    background: rgba(56, 189, 248, 0.12);
-    color: var(--c-primary, #38bdf8);
-    border: 1px solid rgba(56, 189, 248, 0.25);
+    background: var(--vinta-accent-muted);
+    color: var(--vinta-accent-primary);
+    border: 1px solid var(--vinta-border-accent);
   }
 
   .setting-icon-col :global(.item-icon) {
-    color: var(--c-text-secondary);
+    color: var(--vinta-text-secondary);
   }
 
   .setting-description {
     font-size: 10.5px;
     line-height: 1.4;
-    color: var(--c-text-muted);
+    color: var(--vinta-text-muted);
     text-align: left;
   }
 

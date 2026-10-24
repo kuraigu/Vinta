@@ -7,7 +7,8 @@ import {
   CancelUpdateDownload,
   ApplyUpdate,
   SimulateUpdateAvailable,
-  SimulateDownloadCycle
+  SimulateDownloadCycle,
+  GetAppInfo
 } from '../../bindings/Vinta/backend/app.js'
 
 export interface ReleaseInfo {
@@ -51,6 +52,45 @@ export type UpdateLifecycleState =
   | 'verifying'
   | 'ready'
   | 'error'
+
+export interface AppInfoData {
+  name: string
+  version: string
+  gitCommit: string
+  buildType: string
+  buildTime: string
+  isOfficialBuild: boolean
+  goVersion: string
+  arch: string
+  os: string
+  wailsVersion: string
+  repoUrl: string
+}
+
+export const appInfoStore = writable<AppInfoData>({
+  name: 'Vinta',
+  version: '0.1.0',
+  gitCommit: 'dev',
+  buildType: 'Development',
+  buildTime: '',
+  isOfficialBuild: false,
+  goVersion: 'go1.23',
+  arch: 'amd64',
+  os: 'windows',
+  wailsVersion: 'v2.13.0',
+  repoUrl: 'https://github.com/kuraigu/Vinta'
+})
+
+// Hydrate application metadata from Wails backend on initialization
+if (typeof GetAppInfo === 'function') {
+  GetAppInfo()
+    .then((info) => {
+      if (info) {
+        appInfoStore.set(info as AppInfoData)
+      }
+    })
+    .catch(() => {})
+}
 
 export const devTestingStore = writable<boolean>(false)
 export const devPinnedStore = writable<boolean>(false)

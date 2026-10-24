@@ -14,6 +14,7 @@
     type BatteryData
   } from '../store'
   import { GetBatteryStatus } from '../../bindings/Vinta/backend/app.js'
+  import { islandTooltip } from '../services/islandTooltip'
 
   let simulatedPercentage = $state($batteryDataStore.percentage || 75)
   let simulatedCharging = $state(true)
@@ -91,7 +92,7 @@
     <button
       class="reset-btn"
       onclick={resetToHardware}
-      title="Reset to actual hardware power status"
+      use:islandTooltip={'Reset to actual hardware power status'}
     >
       <RefreshCw size={11} />
       <span>Live Hardware</span>
@@ -104,7 +105,7 @@
       class="preset-chip"
       onclick={() => setPreset(85, true, false, true, 'charging')}
     >
-      <Zap size={11} style="color: var(--c-success, #34c759)" />
+      <Zap size={11} style="color: var(--vinta-success, #34c759)" />
       <span>Charging (85%)</span>
     </button>
 
@@ -112,7 +113,7 @@
       class="preset-chip"
       onclick={() => setPreset(50, false, false, true, 'discharging')}
     >
-      <Battery size={11} style="color: var(--c-primary, #007aff)" />
+      <Battery size={11} style="color: var(--vinta-primary, #007aff)" />
       <span>Battery (50%)</span>
     </button>
 
@@ -120,7 +121,7 @@
       class="preset-chip"
       onclick={() => setPreset(15, false, true, true, 'discharging')}
     >
-      <BatteryWarning size={11} style="color: var(--c-warning, #ffcc00)" />
+      <BatteryWarning size={11} style="color: var(--vinta-warning, #ffcc00)" />
       <span>Low (15%)</span>
     </button>
 
@@ -128,7 +129,7 @@
       class="preset-chip"
       onclick={() => setPreset(5, false, true, true, 'discharging')}
     >
-      <BatteryWarning size={11} style="color: var(--c-danger, #ff3b30)" />
+      <BatteryWarning size={11} style="color: var(--vinta-danger, #ff3b30)" />
       <span>Critical (5%)</span>
     </button>
 
@@ -136,7 +137,7 @@
       class="preset-chip"
       onclick={() => setPreset(100, true, false, true, 'full')}
     >
-      <Zap size={11} style="color: var(--c-success, #34c759)" />
+      <Zap size={11} style="color: var(--vinta-success, #34c759)" />
       <span>Full (100%)</span>
     </button>
 
@@ -144,7 +145,7 @@
       class="preset-chip"
       onclick={() => setPreset(100, true, false, false, 'desktop')}
     >
-      <Plug size={11} style="color: var(--c-text-secondary)" />
+      <Plug size={11} style="color: var(--vinta-text-secondary)" />
       <span>Desktop (No Bat)</span>
     </button>
   </div>
@@ -219,7 +220,7 @@
     gap: 10px;
     padding: 12px 14px;
     background: rgba(255, 255, 255, 0.03);
-    border: 1px solid var(--c-border);
+    border: 1px solid var(--vinta-border);
     border-radius: 12px;
     margin-top: 6px;
     user-select: none;
@@ -235,7 +236,7 @@
   .dev-panel-title {
     font-size: 11px;
     font-weight: 700;
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
     text-transform: uppercase;
     letter-spacing: 0.04em;
   }
@@ -246,9 +247,9 @@
     gap: 4px;
     font-size: 10px;
     font-weight: 600;
-    color: var(--c-text-secondary);
+    color: var(--vinta-text-secondary);
     background: rgba(255, 255, 255, 0.06);
-    border: 1px solid var(--c-border);
+    border: 1px solid var(--vinta-border);
     padding: 3px 8px;
     border-radius: 6px;
     cursor: pointer;
@@ -256,7 +257,7 @@
   }
 
   .reset-btn:hover {
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
     background: rgba(255, 255, 255, 0.12);
   }
 
@@ -272,9 +273,9 @@
     gap: 4px;
     font-size: 10px;
     font-weight: 600;
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
     background: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--c-border);
+    border: 1px solid var(--vinta-border);
     padding: 4px 8px;
     border-radius: 6px;
     cursor: pointer;
@@ -298,7 +299,7 @@
     gap: 4px;
     padding: 8px 10px;
     background: rgba(255, 255, 255, 0.03);
-    border: 1px solid var(--c-border);
+    border: 1px solid var(--vinta-border);
     border-radius: 8px;
     text-align: left;
   }
@@ -316,18 +317,18 @@
   .control-label {
     font-size: 10px;
     font-weight: 600;
-    color: var(--c-text-secondary);
+    color: var(--vinta-text-secondary);
   }
 
   .control-value {
     font-size: 11px;
     font-weight: 700;
-    color: var(--c-primary, #007aff);
+    color: var(--vinta-primary, #007aff);
   }
 
   .dev-slider {
     width: 100%;
-    accent-color: var(--c-primary, #007aff);
+    accent-color: var(--vinta-primary, #007aff);
     cursor: pointer;
     margin: 2px 0;
   }
@@ -344,9 +345,9 @@
     gap: 4px;
     font-size: 10px;
     font-weight: 600;
-    color: var(--c-text-secondary);
+    color: var(--vinta-text-secondary);
     background: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--c-border);
+    border: 1px solid var(--vinta-border);
     padding: 3px 8px;
     border-radius: 6px;
     cursor: pointer;
@@ -355,7 +356,7 @@
 
   .dev-toggle-btn.active {
     color: #ffffff;
-    background: var(--c-primary, #007aff);
-    border-color: var(--c-primary, #007aff);
+    background: var(--vinta-primary, #007aff);
+    border-color: var(--vinta-primary, #007aff);
   }
 </style>

@@ -131,6 +131,8 @@ if "%~1"=="lint" (
     call npm run format
     if errorlevel 1 ( cd .. & exit /b !ERRORLEVEL! )
     cd ..
+    echo Auditing Theme Tokens...
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\pack-theme.ps1" -CheckOnly
     exit /b 0
 )
 

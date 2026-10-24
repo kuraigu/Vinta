@@ -114,7 +114,7 @@
 
   .ring-bg {
     fill: none;
-    stroke: var(--c-border);
+    stroke: var(--vinta-border);
     stroke-width: 6;
   }
 
@@ -126,13 +126,13 @@
   }
 
   .cpu {
-    --stat-color: var(--c-danger);
+    --stat-color: var(--vinta-danger);
     stroke: var(--stat-color);
     filter: drop-shadow(0 0 6px var(--stat-color));
   }
 
   .ram {
-    --stat-color: var(--c-primary);
+    --stat-color: var(--vinta-primary);
     stroke: var(--stat-color);
     filter: drop-shadow(0 0 6px var(--stat-color));
   }
@@ -151,14 +151,14 @@
   .value {
     font-size: 0.95rem;
     font-weight: 700;
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
     letter-spacing: -0.5px;
   }
 
   .label {
     font-size: 0.75rem;
     font-weight: 700;
-    color: var(--c-text-secondary);
+    color: var(--vinta-text-secondary);
     letter-spacing: 1px;
     text-transform: uppercase;
   }

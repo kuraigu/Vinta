@@ -57,7 +57,7 @@
     border-radius: 8px;
     background: transparent;
     border: none;
-    color: var(--c-text-secondary);
+    color: var(--vinta-text-secondary);
     font-size: 11px;
     font-weight: 500;
     cursor: pointer;
@@ -67,20 +67,20 @@
 
   .nav-item:hover {
     background: rgba(255, 255, 255, 0.06);
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
   }
 
   .nav-item.active {
     background: rgba(255, 255, 255, 0.1);
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
     font-weight: 600;
   }
 
   .nav-item :global(.nav-icon) {
-    color: var(--c-text-secondary);
+    color: var(--vinta-text-secondary);
   }
 
   .nav-item.active :global(.nav-icon) {
-    color: var(--c-primary, #6366f1);
+    color: var(--vinta-accent-primary, var(--vinta-primary, #38bdf8));
   }
 </style>

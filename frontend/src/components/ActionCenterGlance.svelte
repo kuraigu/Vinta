@@ -1,60 +1,112 @@
 <script lang="ts">
-  import { getContext } from 'svelte'
   import {
     SlidersHorizontal,
     Wifi,
     WifiOff,
-    Battery,
-    Zap,
+    Bluetooth,
+    BluetoothOff,
+    Plane,
     Leaf,
-    ArrowUpRight
+    Battery
   } from 'lucide-svelte'
-  import ActionCenterPage, {
-    config as actionCenterConfig
-  } from '../pages/ActionCenterPage.svelte'
   import {
     wirelessDataStore,
     batteryDataStore,
-    type IslandConfig
+    type WirelessData,
+    type BatteryData
   } from '../store'
   import {
     SetWifiEnabled,
-    SetBatterySaver
+    SetBluetoothEnabled,
+    SetAirplaneMode,
+    SetBatterySaver,
+    GetWirelessStatus,
+    GetBatteryStatus
   } from '../../bindings/Vinta/backend/app.js'
   import { islandTooltip } from '../services/islandTooltip'
-
-  const navigate =
-    getContext<
-      (page: unknown, pageConfig: IslandConfig, expand?: boolean) => void
-    >('navigate')
+  import BentoCard from './BentoCard.svelte'
 
   let wireless = $derived($wirelessDataStore)
   let battery = $derived($batteryDataStore)
 
-  function openActionCenter(e?: Event) {
-    if (e) e.stopPropagation()
-    if (navigate) {
-      navigate(ActionCenterPage, actionCenterConfig, true)
+  async function refreshWireless() {
+    if (typeof GetWirelessStatus === 'function') {
+      try {
+        const status = await GetWirelessStatus()
+        if (status) {
+          wirelessDataStore.set(status as unknown as WirelessData)
+        }
+      } catch {}
     }
   }
 
-  async function handleToggleWifi(e: Event) {
+  async function refreshBattery() {
+    if (typeof GetBatteryStatus === 'function') {
+      try {
+        const status = await GetBatteryStatus()
+        if (status) {
+          batteryDataStore.set(status as unknown as BatteryData)
+        }
+      } catch {}
+    }
+  }
+
+  async function handleToggleWifi(e: MouseEvent) {
     e.stopPropagation()
     const next = !wireless.wifiEnabled
     wirelessDataStore.update((w) => ({
       ...w,
       wifiEnabled: next,
+      airplaneMode: next ? false : w.airplaneMode,
       wifiConnected: next ? w.wifiConnected : false
     }))
     if (typeof SetWifiEnabled === 'function') {
       try {
         await SetWifiEnabled(next)
+        setTimeout(refreshWireless, 600)
       } catch {}
     }
   }
 
-  async function handleToggleSaver(e: Event) {
+  async function handleToggleBluetooth(e: MouseEvent) {
     e.stopPropagation()
+    if (!wireless.hasBluetooth) return
+    const next = !wireless.bluetoothEnabled
+    wirelessDataStore.update((w) => ({
+      ...w,
+      bluetoothEnabled: next,
+      airplaneMode: next ? false : w.airplaneMode,
+      bluetoothConnected: next ? w.bluetoothConnected : false
+    }))
+    if (typeof SetBluetoothEnabled === 'function') {
+      try {
+        await SetBluetoothEnabled(next)
+        setTimeout(refreshWireless, 600)
+      } catch {}
+    }
+  }
+
+  async function handleToggleAirplane(e: MouseEvent) {
+    e.stopPropagation()
+    const next = !wireless.airplaneMode
+    wirelessDataStore.update((w) => ({
+      ...w,
+      airplaneMode: next,
+      wifiEnabled: next ? false : true,
+      bluetoothEnabled: next ? false : w.bluetoothEnabled,
+      wifiConnected: next ? false : w.wifiConnected
+    }))
+    if (typeof SetAirplaneMode === 'function') {
+      try {
+        await SetAirplaneMode(next)
+        setTimeout(refreshWireless, 600)
+      } catch {}
+    }
+  }
+
+  async function handleToggleSaver(e: MouseEvent) {
+    e.stopPropagation()
+    if (!battery.hasBattery) return
     const next = !battery.batterySaver
     batteryDataStore.update((b) => ({
       ...b,
@@ -63,134 +115,139 @@
     if (typeof SetBatterySaver === 'function') {
       try {
         await SetBatterySaver(next)
+        setTimeout(refreshBattery, 600)
       } catch {}
     }
   }
 
-  function computeWifiSub(): string {
-    if (wireless.airplaneMode) return 'Airplane Mode'
-    if (!wireless.wifiEnabled) return 'Off'
-    if (wireless.wifiConnected && wireless.wifiSsid) {
-      return `${wireless.wifiSsid}${wireless.wifiSignal > 0 ? ` (${wireless.wifiSignal}%)` : ''}`
-    }
-    if (wireless.wifiConnected) return 'Connected'
-    return 'Disconnected'
-  }
-  let wifiSub = $derived.by(computeWifiSub)
+  let isWifiActive = $derived(wireless.wifiEnabled && !wireless.airplaneMode)
+  let isBtActive = $derived(
+    wireless.hasBluetooth && wireless.bluetoothEnabled && !wireless.airplaneMode
+  )
+  let isAirplaneActive = $derived(wireless.airplaneMode)
+  let isSaverActive = $derived(battery.hasBattery && battery.batterySaver)
 
-  function computeBatterySub(): string {
-    if (!battery.hasBattery) return 'Desktop Power'
-    if (battery.isCharging) return `Charging (${battery.percentage}%)`
-    if (battery.batterySaver) return `Battery Saver (${battery.percentage}%)`
-    return `${battery.percentage}% remaining`
+  function computeWifiTooltip(): string {
+    if (wireless.airplaneMode) return 'Wi-Fi: Disabled by Airplane mode'
+    if (!wireless.wifiEnabled) return 'Wi-Fi: Off (click to enable)'
+    if (wireless.wifiConnected && wireless.wifiSsid) {
+      return `Wi-Fi: Connected to ${wireless.wifiSsid}${wireless.wifiSignal > 0 ? ` (${wireless.wifiSignal}%)` : ''}`
+    }
+    return 'Wi-Fi: On (click to disable)'
   }
-  let batterySub = $derived.by(computeBatterySub)
+  let wifiTooltip = $derived.by(computeWifiTooltip)
+
+  function computeBtTooltip(): string {
+    if (!wireless.hasBluetooth) return 'Bluetooth: Not supported'
+    if (wireless.airplaneMode) return 'Bluetooth: Disabled by Airplane mode'
+    if (!wireless.bluetoothEnabled) return 'Bluetooth: Off (click to enable)'
+    if (wireless.bluetoothConnected && wireless.bluetoothDeviceName) {
+      return `Bluetooth: Connected to ${wireless.bluetoothDeviceName}`
+    }
+    return 'Bluetooth: On (click to disable)'
+  }
+  let btTooltip = $derived.by(computeBtTooltip)
+
+  function computeAirplaneTooltip(): string {
+    return isAirplaneActive
+      ? 'Airplane Mode: On (click to disable)'
+      : 'Airplane Mode: Off (click to enable)'
+  }
+  let airplaneTooltip = $derived.by(computeAirplaneTooltip)
+
+  function computeSaverTooltip(): string {
+    if (!battery.hasBattery) return 'Power: Desktop AC Connected'
+    return isSaverActive
+      ? `Battery Saver: On (${battery.percentage}%)`
+      : `Battery Saver: Off (${battery.percentage}%)`
+  }
+  let saverTooltip = $derived.by(computeSaverTooltip)
 </script>
 
-<div class="action-center-glance-card">
+<BentoCard variant="bento" class="action-center-glance-card">
   <div class="glance-header">
     <div class="glance-title-group">
       <SlidersHorizontal size={12} />
-      <span>Quick Details</span>
+      <span>Quick Controls</span>
     </div>
   </div>
 
-  <div class="glance-cards-list">
-    <!-- Wi-Fi Bento Card -->
-    <div class="glance-bento-card">
-      <div class="glance-card-left">
-        <div
-          class="glance-icon-circle"
-          class:is-off={!wireless.wifiEnabled || wireless.airplaneMode}
-        >
-          {#if wireless.wifiEnabled && !wireless.airplaneMode}
-            <Wifi size={16} />
-          {:else}
-            <WifiOff size={16} />
-          {/if}
-        </div>
-        <div class="glance-card-info">
-          <span class="glance-primary-text">Wi-Fi</span>
-          <span class="glance-secondary-text">{wifiSub}</span>
-        </div>
+  <div class="quick-toggle-row">
+    <!-- Wi-Fi Toggle -->
+    <button
+      type="button"
+      class="quick-toggle-btn"
+      class:active={isWifiActive}
+      class:disabled={wireless.airplaneMode}
+      onclick={handleToggleWifi}
+      use:islandTooltip={wifiTooltip}
+      aria-label="Toggle Wi-Fi"
+    >
+      <div class="toggle-icon-wrap">
+        {#if isWifiActive}
+          <Wifi size={18} />
+        {:else}
+          <WifiOff size={18} />
+        {/if}
       </div>
+      <span class="toggle-label">Wi-Fi</span>
+    </button>
 
-      <div class="glance-card-right">
-        <button
-          type="button"
-          class="glance-open-near-toggle"
-          onclick={openActionCenter}
-          use:islandTooltip={'Open Action Center'}
-          aria-label="Open Action Center"
-        >
-          <ArrowUpRight size={13} />
-        </button>
-
-        <label
-          class="toggle-switch"
-          class:disabled-switch={wireless.airplaneMode}
-          use:islandTooltip={wireless.wifiEnabled
-            ? 'Turn Wi-Fi off'
-            : 'Turn Wi-Fi on'}
-        >
-          <input
-            type="checkbox"
-            checked={wireless.wifiEnabled && !wireless.airplaneMode}
-            disabled={wireless.airplaneMode}
-            onchange={handleToggleWifi}
-          />
-          <span class="slider"></span>
-        </label>
+    <!-- Bluetooth Toggle -->
+    <button
+      type="button"
+      class="quick-toggle-btn"
+      class:active={isBtActive}
+      class:disabled={!wireless.hasBluetooth || wireless.airplaneMode}
+      onclick={handleToggleBluetooth}
+      use:islandTooltip={btTooltip}
+      aria-label="Toggle Bluetooth"
+    >
+      <div class="toggle-icon-wrap">
+        {#if isBtActive}
+          <Bluetooth size={18} />
+        {:else}
+          <BluetoothOff size={18} />
+        {/if}
       </div>
-    </div>
+      <span class="toggle-label">Bluetooth</span>
+    </button>
 
-    <!-- Battery / Saver Bento Card -->
-    {#if battery.hasBattery}
-      <div class="glance-bento-card">
-        <div class="glance-card-left">
-          <div class="glance-icon-circle" class:is-off={!battery.batterySaver}>
-            {#if battery.isCharging}
-              <Zap size={16} />
-            {:else if battery.batterySaver}
-              <Leaf size={16} />
-            {:else}
-              <Battery size={16} />
-            {/if}
-          </div>
-          <div class="glance-card-info">
-            <span class="glance-primary-text">Battery Saver</span>
-            <span class="glance-secondary-text">{batterySub}</span>
-          </div>
-        </div>
-
-        <div class="glance-card-right">
-          <button
-            type="button"
-            class="glance-open-near-toggle"
-            onclick={openActionCenter}
-            use:islandTooltip={'Open Action Center'}
-            aria-label="Open Action Center"
-          >
-            <ArrowUpRight size={13} />
-          </button>
-
-          <label
-            class="toggle-switch"
-            use:islandTooltip={battery.batterySaver
-              ? 'Turn Battery Saver off'
-              : 'Turn Battery Saver on'}
-          >
-            <input
-              type="checkbox"
-              checked={battery.batterySaver}
-              onchange={handleToggleSaver}
-            />
-            <span class="slider"></span>
-          </label>
-        </div>
+    <!-- Airplane Mode Toggle -->
+    <button
+      type="button"
+      class="quick-toggle-btn"
+      class:active={isAirplaneActive}
+      onclick={handleToggleAirplane}
+      use:islandTooltip={airplaneTooltip}
+      aria-label="Toggle Airplane Mode"
+    >
+      <div class="toggle-icon-wrap">
+        <Plane size={18} />
       </div>
-    {/if}
+      <span class="toggle-label">Airplane</span>
+    </button>
+
+    <!-- Battery Saver Toggle -->
+    <button
+      type="button"
+      class="quick-toggle-btn"
+      class:active={isSaverActive}
+      class:disabled={!battery.hasBattery}
+      onclick={handleToggleSaver}
+      use:islandTooltip={saverTooltip}
+      aria-label="Toggle Battery Saver"
+    >
+      <div class="toggle-icon-wrap">
+        {#if isSaverActive}
+          <Leaf size={18} />
+        {:else}
+          <Battery size={18} />
+        {/if}
+      </div>
+      <span class="toggle-label">Saver</span>
+    </button>
   </div>
-</div>
+</BentoCard>
 
 <style src="./styles/ActionCenterGlance.css"></style>

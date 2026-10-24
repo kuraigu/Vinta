@@ -36,79 +36,81 @@
   }
 </script>
 
-<div class="alarms-list-container">
-  {#if $timerAppStore.alarms.length === 0}
-    <EmptyState
-      icon={Bell}
-      title="No active alarms"
-      description="Set a scheduled reminder to keep track of tasks or alerts."
-      actionLabel="Add Alarm"
-      onAction={onOpenCreate}
-    />
-  {:else}
-    <ScrollView class="alarms-scroll-view">
-      {#each $timerAppStore.alarms as alarm (alarm.id)}
-        <div class="alarm-item-card" class:disabled={!alarm.enabled}>
-          <button
-            class="alarm-item-info"
-            onclick={() => onStartEdit(alarm)}
-            use:islandTooltip={'Click to edit alarm'}
-          >
-            <div class="alarm-time-row">
-              <span class="alarm-item-time"
-                >{formatAlarmDisplayTime(alarm.time, is24H)}</span
-              >
-              {#if alarm.repeat === 'once'}
-                <span class="alarm-repeat-badge">Once</span>
-              {:else if alarm.repeat === 'daily'}
-                <span class="alarm-repeat-badge">Every day</span>
-              {:else if alarm.repeat === 'weekdays'}
-                <div class="alarm-days-circles">
-                  {#each [1, 2, 3, 4, 5] as d (d)}
-                    <span class="alarm-day-circle">{DAY_SHORT[d]}</span>
-                  {/each}
-                </div>
-              {:else if alarm.repeat === 'custom' && alarm.days && alarm.days.length > 0}
-                <div class="alarm-days-circles">
-                  {#each [...alarm.days].sort((a, b) => a - b) as d (d)}
-                    <span class="alarm-day-circle">{DAY_SHORT[d]}</span>
-                  {/each}
-                </div>
-              {:else}
-                <span class="alarm-repeat-badge">Custom</span>
-              {/if}
-            </div>
-            <span class="alarm-item-label">{alarm.label || 'Reminder'}</span>
-          </button>
-
-          <div class="alarm-item-actions">
+<div class="tab-panel alarms-panel">
+  <div class="alarms-list-container">
+    {#if $timerAppStore.alarms.length === 0}
+      <EmptyState
+        icon={Bell}
+        title="No active alarms"
+        description="Set a scheduled reminder to keep track of tasks or alerts."
+        actionLabel="Add Alarm"
+        onAction={onOpenCreate}
+      />
+    {:else}
+      <ScrollView class="alarms-scroll-view">
+        {#each $timerAppStore.alarms as alarm (alarm.id)}
+          <div class="alarm-item-card" class:disabled={!alarm.enabled}>
             <button
-              class="alarm-action-btn"
+              class="alarm-item-info"
               onclick={() => onStartEdit(alarm)}
-              use:islandTooltip={'Edit alarm'}
+              use:islandTooltip={'Click to edit alarm'}
             >
-              <Pencil size={13} />
+              <div class="alarm-time-row">
+                <span class="alarm-item-time"
+                  >{formatAlarmDisplayTime(alarm.time, is24H)}</span
+                >
+                {#if alarm.repeat === 'once'}
+                  <span class="alarm-repeat-badge">Once</span>
+                {:else if alarm.repeat === 'daily'}
+                  <span class="alarm-repeat-badge">Every day</span>
+                {:else if alarm.repeat === 'weekdays'}
+                  <div class="alarm-days-circles">
+                    {#each [1, 2, 3, 4, 5] as d (d)}
+                      <span class="alarm-day-circle">{DAY_SHORT[d]}</span>
+                    {/each}
+                  </div>
+                {:else if alarm.repeat === 'custom' && alarm.days && alarm.days.length > 0}
+                  <div class="alarm-days-circles">
+                    {#each [...alarm.days].sort((a, b) => a - b) as d (d)}
+                      <span class="alarm-day-circle">{DAY_SHORT[d]}</span>
+                    {/each}
+                  </div>
+                {:else}
+                  <span class="alarm-repeat-badge">Custom</span>
+                {/if}
+              </div>
+              <span class="alarm-item-label">{alarm.label || 'Reminder'}</span>
             </button>
 
-            <label class="drawer-switch mini-switch">
-              <input
-                type="checkbox"
-                checked={alarm.enabled}
-                onchange={() => toggleAlarm(alarm.id)}
-              />
-              <span class="switch-slider"></span>
-            </label>
+            <div class="alarm-item-actions">
+              <button
+                class="alarm-action-btn"
+                onclick={() => onStartEdit(alarm)}
+                use:islandTooltip={'Edit alarm'}
+              >
+                <Pencil size={13} />
+              </button>
 
-            <button
-              class="alarm-delete-btn"
-              onclick={() => deleteAlarm(alarm.id)}
-              use:islandTooltip={'Delete alarm'}
-            >
-              <Trash2 size={13} />
-            </button>
+              <label class="drawer-switch mini-switch">
+                <input
+                  type="checkbox"
+                  checked={alarm.enabled}
+                  onchange={() => toggleAlarm(alarm.id)}
+                />
+                <span class="switch-slider"></span>
+              </label>
+
+              <button
+                class="alarm-delete-btn"
+                onclick={() => deleteAlarm(alarm.id)}
+                use:islandTooltip={'Delete alarm'}
+              >
+                <Trash2 size={13} />
+              </button>
+            </div>
           </div>
-        </div>
-      {/each}
-    </ScrollView>
-  {/if}
+        {/each}
+      </ScrollView>
+    {/if}
+  </div>
 </div>

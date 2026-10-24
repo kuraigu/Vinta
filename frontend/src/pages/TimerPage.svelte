@@ -26,6 +26,7 @@
     X
   } from 'lucide-svelte'
   import BackButton from '../components/BackButton.svelte'
+  import DotPattern from '../components/patterns/DotPattern.svelte'
   import HorizontalTabSelection, {
     type TabItem
   } from '../components/HorizontalTabSelection.svelte'
@@ -309,6 +310,8 @@
               e.stopPropagation()
               snoozeRingingAlarm()
             }}
+            use:islandTooltip={'Snooze alarm'}
+            aria-label="Snooze alarm"
           >
             <Clock size={12} />
           </button>
@@ -318,6 +321,8 @@
               e.stopPropagation()
               dismissRingingAlarm()
             }}
+            use:islandTooltip={'Dismiss alarm'}
+            aria-label="Dismiss alarm"
           >
             <X size={13} />
           </button>
@@ -325,17 +330,6 @@
       </div>
     {:else}
       <div class="timer-minimal">
-        <div
-          class="minimal-dots-bg"
-          class:mode-timer={activeMinimalMode === 'timer'}
-          class:mode-stopwatch={activeMinimalMode === 'stopwatch'}
-          class:mode-focus={activeMinimalMode === 'focus' &&
-            $timerAppStore.focus.phase === 'focus'}
-          class:mode-break={activeMinimalMode === 'focus' &&
-            $timerAppStore.focus.phase !== 'focus'}
-          aria-hidden="true"
-        ></div>
-
         <div class="minimal-info-trigger">
           <span class="minimal-mode-label">{minimalModeLabel}</span>
 
@@ -389,16 +383,19 @@
     {/if}
   {:else}
     <div class="timer-expanded">
-      <div
-        class="expanded-dots-bg"
-        class:mode-timer={$timerAppStore.activeTab === 'timer'}
-        class:mode-stopwatch={$timerAppStore.activeTab === 'stopwatch'}
-        class:mode-focus={$timerAppStore.activeTab === 'focus' &&
-          $timerAppStore.focus.phase === 'focus'}
-        class:mode-break={$timerAppStore.activeTab === 'focus' &&
-          $timerAppStore.focus.phase !== 'focus'}
-        aria-hidden="true"
-      ></div>
+      <DotPattern
+        variant="corner-tr"
+        class="expanded-dots-bg {$timerAppStore.activeTab === 'timer'
+          ? 'mode-timer'
+          : $timerAppStore.activeTab === 'stopwatch'
+            ? 'mode-stopwatch'
+            : $timerAppStore.activeTab === 'focus' &&
+                $timerAppStore.focus.phase === 'focus'
+              ? 'mode-focus'
+              : $timerAppStore.activeTab === 'focus'
+                ? 'mode-break'
+                : ''}"
+      />
 
       <div class="app-header">
         <BackButton />

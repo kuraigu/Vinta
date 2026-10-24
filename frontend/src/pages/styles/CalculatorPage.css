@@ -4,7 +4,7 @@
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
-  padding: 12px 14px 58px 14px; /* Integrated space above Dock */
+  padding: var(--vinta-dock-clearance, 56px) 14px 12px 14px;
   gap: 8px;
   user-select: none;
   overflow: hidden;
@@ -23,7 +23,7 @@
 .header-title {
   font-size: 14px;
   font-weight: 700;
-  color: var(--c-text-primary);
+  color: var(--vinta-text-primary);
   letter-spacing: -0.01em;
 }
 
@@ -37,8 +37,8 @@
   flex-direction: column;
   justify-content: space-between;
   height: 72px;
-  background: var(--c-item-bg);
-  border: 1px solid var(--c-border);
+  background: var(--vinta-item-bg);
+  border: 1px solid var(--vinta-border);
   border-radius: 16px;
   padding: 8px 14px;
   box-sizing: border-box;
@@ -57,7 +57,7 @@
 .history-text {
   font-size: 12px;
   font-weight: 500;
-  color: var(--c-text-secondary);
+  color: var(--vinta-text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -66,7 +66,7 @@
 .live-preview-text {
   font-size: 12px;
   font-weight: 600;
-  color: var(--c-accent, #38bdf8);
+  color: var(--vinta-primary);
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -82,7 +82,7 @@
 .main-expression {
   font-size: 28px;
   font-weight: 700;
-  color: var(--c-text-primary);
+  color: var(--vinta-text-primary);
   letter-spacing: -0.02em;
   line-height: 1;
   white-space: nowrap;
@@ -119,7 +119,7 @@
   justify-content: center;
   height: 42px;
   border-radius: 12px;
-  border: 1px solid var(--c-border);
+  border: 1px solid var(--vinta-border);
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
@@ -137,66 +137,66 @@
 
 /* Button Variants */
 .num-btn {
-  background: var(--c-item-bg);
-  color: var(--c-text-primary);
+  background: var(--vinta-item-bg);
+  color: var(--vinta-text-primary);
 }
 
 .num-btn:hover {
-  background: var(--c-hover-bg);
+  background: var(--vinta-hover);
 }
 
 .func-btn {
-  background: var(--c-contrast-bg);
-  color: var(--c-accent, #38bdf8);
+  background: var(--vinta-contrast-bg);
+  color: var(--vinta-primary);
   font-size: 14px;
   font-weight: 700;
 }
 
 .func-btn:hover {
-  background: var(--c-hover-bg);
-  color: var(--c-text-primary);
+  background: var(--vinta-hover);
+  color: var(--vinta-text-primary);
 }
 
 .backspace-btn {
-  color: var(--c-text-secondary);
+  color: var(--vinta-text-secondary);
 }
 
 .backspace-btn:hover {
-  color: #f87171;
+  color: var(--vinta-accent-danger, #f87171);
 }
 
 .action-btn {
-  background: var(--c-contrast-bg);
-  color: var(--c-text-secondary);
+  background: var(--vinta-contrast-bg);
+  color: var(--vinta-text-secondary);
   font-size: 15px;
   font-weight: 600;
 }
 
 .action-btn:hover {
-  background: var(--c-hover-bg);
-  color: var(--c-text-primary);
+  background: var(--vinta-hover);
+  color: var(--vinta-text-primary);
 }
 
 .op-btn {
-  background: var(--c-item-bg);
-  color: var(--c-primary, #38bdf8);
+  background: var(--vinta-item-bg);
+  color: var(--vinta-primary);
   font-size: 18px;
   font-weight: 700;
 }
 
 .op-btn:hover {
-  background: var(--c-hover-bg);
+  background: var(--vinta-hover);
 }
 
 .equals-btn {
-  background: var(--c-primary, #0284c7);
-  color: #ffffff;
+  background: var(--vinta-primary);
+  color: var(--vinta-text-on-accent);
   font-size: 20px;
   font-weight: 700;
-  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.35);
+  box-shadow: 0 2px 8px var(--vinta-accent-muted);
 }
 
 .equals-btn:hover {
-  background: var(--c-primary-hover, #0369a1);
-  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.5);
+  background: var(--vinta-primary-hover);
+  box-shadow: 0 4px 12px var(--vinta-accent-muted);
 }

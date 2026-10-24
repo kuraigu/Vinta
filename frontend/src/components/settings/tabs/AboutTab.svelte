@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { ArrowUpRight, ShieldCheck, GitBranch } from 'lucide-svelte'
+  import BentoCard from '../../BentoCard.svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
   import appIcon from '@appicon'
@@ -115,12 +116,17 @@
 
 <div class="setting-group about-page">
   <!-- Brand Hero with Consolidated Version and Build Specs -->
-  <div class="about-hero-card">
+  <BentoCard variant="announcement" class="about-hero-card">
     <div class="about-logo-wrapper">
       <img src={appIcon} alt="Vinta" class="about-logo-img" />
     </div>
     <div class="about-hero-details">
-      <span class="about-brand-title">{appInfo.name}</span>
+      <div class="about-brand-header-row">
+        <span class="about-brand-title">{appInfo.name}</span>
+        <span class="about-brand-studio"
+          >by FreeMatrix Studios & Contributors</span
+        >
+      </div>
 
       <div class="about-release-capsule">
         <span
@@ -142,7 +148,7 @@
         <span class="capsule-build">build {displayBuild}</span>
       </div>
     </div>
-  </div>
+  </BentoCard>
 
   <!-- Project Links Bento -->
   <SettingItem label="Project Resources" flexCol={true}>
@@ -170,7 +176,7 @@
 
   <!-- Maintainers and Contributors -->
   {#if maintainers.length > 0 || generalContributors.length > 0}
-    <div class="about-card contributors-card">
+    <BentoCard variant="bento" class="contributors-card">
       <div class="specs-header">Project Credits</div>
       <div class="contributors-list">
         {#each [...maintainers, ...generalContributors] as c (c.handle)}
@@ -202,7 +208,7 @@
         <span>View Full Contributor Roster</span>
         <ArrowUpRight size={12} />
       </a>
-    </div>
+    </BentoCard>
   {/if}
 </div>
 
@@ -213,36 +219,20 @@
     gap: 10px;
   }
 
-  .about-hero-card {
+  :global(.about-hero-card) {
     display: flex;
     align-items: center;
-    gap: 14px;
-    padding: 15px 17px;
-    border-radius: 18px;
-    background:
-      linear-gradient(
-        145deg,
-        rgba(255, 255, 255, 0.07) 0%,
-        rgba(255, 255, 255, 0.02) 100%
-      ),
-      #15161c;
-    border: 1px solid rgba(255, 255, 255, 0.09);
-    box-shadow:
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.12),
-      0 4px 18px rgba(0, 0, 0, 0.15);
+    gap: 12px;
   }
 
   .about-logo-wrapper {
     width: 44px;
     height: 44px;
-    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
     flex-shrink: 0;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
-    border: 1px solid var(--c-border);
   }
 
   .about-logo-img {
@@ -261,12 +251,26 @@
     text-align: left;
   }
 
+  .about-brand-header-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
   .about-brand-title {
     font-size: 16px;
     font-weight: 700;
     letter-spacing: -0.01em;
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
     line-height: 1.2;
+  }
+
+  .about-brand-studio {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--vinta-text-muted);
+    letter-spacing: -0.01em;
   }
 
   .about-release-capsule {
@@ -276,7 +280,7 @@
     padding: 3px 9px;
     border-radius: 8px;
     background: rgba(255, 255, 255, 0.04);
-    border: 1px solid var(--c-border);
+    border: 1px solid var(--vinta-border);
     font-size: 11px;
     line-height: 1.2;
     user-select: text;
@@ -289,7 +293,7 @@
     font-size: 10px;
     font-weight: 600;
     letter-spacing: 0.02em;
-    color: var(--c-text-secondary);
+    color: var(--vinta-text-secondary);
   }
 
   .capsule-channel.official {
@@ -308,33 +312,15 @@
 
   .capsule-version {
     font-weight: 600;
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
     font-variant-numeric: tabular-nums;
     font-size: 11px;
   }
 
   .capsule-build {
-    color: var(--c-text-muted);
+    color: var(--vinta-text-muted);
     font-variant-numeric: tabular-nums;
     font-size: 10.5px;
-  }
-
-  .about-card {
-    display: flex;
-    flex-direction: column;
-    padding: 13px 15px;
-    border-radius: 16px;
-    background:
-      linear-gradient(
-        145deg,
-        rgba(255, 255, 255, 0.055) 0%,
-        rgba(255, 255, 255, 0.018) 100%
-      ),
-      #15161c;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow:
-      inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
-      0 3px 12px rgba(0, 0, 0, 0.12);
   }
 
   .about-links-row {
@@ -351,7 +337,7 @@
   .specs-header {
     font-size: 11.5px;
     font-weight: 600;
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
     text-align: left;
     margin-bottom: 8px;
     letter-spacing: -0.01em;
@@ -371,9 +357,9 @@
     padding: 8px 10px;
     border-radius: 9px;
     background: rgba(255, 255, 255, 0.03);
-    border: 1px solid var(--c-border);
+    border: 1px solid var(--vinta-border);
     text-decoration: none;
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
     transition:
       background 0.15s ease,
       border-color 0.15s ease;
@@ -383,7 +369,7 @@
 
   .contributor-row:hover {
     background: rgba(255, 255, 255, 0.07);
-    border-color: var(--c-border-hover, rgba(255, 255, 255, 0.18));
+    border-color: var(--vinta-border-hover, rgba(255, 255, 255, 0.18));
   }
 
   .contributor-info {
@@ -398,7 +384,7 @@
   .contributor-name {
     font-size: 11.5px;
     font-weight: 600;
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -406,7 +392,7 @@
 
   .contributor-handle {
     font-size: 10px;
-    color: var(--c-text-muted);
+    color: var(--vinta-text-muted);
     font-weight: 500;
     white-space: nowrap;
   }
@@ -417,8 +403,8 @@
     padding: 2px 7px;
     border-radius: 6px;
     background: rgba(255, 255, 255, 0.08);
-    color: var(--c-text-secondary);
-    border: 1px solid var(--c-border);
+    color: var(--vinta-text-secondary);
+    border: 1px solid var(--vinta-border);
     flex-shrink: 0;
   }
 
@@ -434,7 +420,7 @@
     gap: 5px;
     font-size: 10.5px;
     font-weight: 600;
-    color: var(--c-primary, #6366f1);
+    color: var(--vinta-accent-primary, var(--vinta-primary, #38bdf8));
     text-decoration: none;
     margin-top: 8px;
     align-self: flex-start;

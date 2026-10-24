@@ -1,0 +1,145 @@
+/**
+ * Vinta Design System Base Tokens
+ *
+ * This file serves as the baseline definition for all CSS custom properties
+ * utilized across the Vinta application under the `@layer vinta.base` cascade layer.
+ *
+ * NOTICE:
+ * All tokens in this file are intentionally assigned the missing-texture fallback
+ * color (#ff00ff / magenta) or pink highlight fallbacks. This allows developers
+ * and theme creators to immediately identify any UI elements or tokens that have
+ * not been overridden by an active theme.
+ * 
+ * WARNING: 
+ * DO NOT EDIT THE COLORS HERE, EDIT THEM IN THE THEME CSS
+ * ONLY EDIT THIS FILE IF A NEW TOKEN IS TO BE ADDED
+ */
+
+:root {
+  /* ACCENT TOKENS */
+  --vinta-accent-primary: #ff00ff;
+  --vinta-primary: var(--vinta-accent-primary);
+  --vinta-accent-hover: #ff00ff;
+  --vinta-primary-hover: var(--vinta-accent-hover);
+  --vinta-accent-active: #ff00ff;
+  --vinta-accent-muted: #ff00ff;
+  --vinta-accent-purple: #ff00ff;
+  --vinta-accent-bronze: #ff00ff;
+  --vinta-accent-danger: #ff00ff;
+  --vinta-accent-danger-hover-bg: #ff00ff;
+  --vinta-accent-danger-hover-text: #ff00ff;
+  --vinta-accent-warning: #ff00ff;
+  --vinta-accent-warning-hover-bg: #ff00ff;
+  --vinta-accent-warning-hover-text: #ff00ff;
+  --vinta-accent-success: #ff00ff;
+  --vinta-accent-success-hover-bg: #ff00ff;
+  --vinta-accent-success-hover-text: #ff00ff;
+
+  /* BASE SURFACES */
+  --vinta-bg: #ff00ff;
+  --vinta-bg-opaque: #ff00ff;
+  --vinta-island-bg: #ff00ff;
+  --vinta-surface-card: #ff00ff;
+  --vinta-surface-elevated: #ff00ff;
+  --vinta-dock-popover-bg: #ff00ff;
+  --vinta-dock-popover-border: #ff00ff;
+  --vinta-dock-popover-shadow: 0 10px 30px rgba(255, 0, 255, 0.65);
+
+  /* BORDERS */
+  --vinta-border: #ff00ff;
+  --vinta-border-light: #ff00ff;
+  --vinta-border-accent: #ff00ff;
+
+  /* INTERACTIONS */
+  --vinta-hover: #ff00ff;
+  --vinta-item-bg: #ff00ff;
+
+  /* TYPOGRAPHY */
+  --vinta-text-primary: #ff00ff;
+  --vinta-text-secondary: #ff00ff;
+  --vinta-text-muted: #ff00ff;
+  --vinta-text-on-accent: #ff00ff;
+  --vinta-font-family:
+    'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    Helvetica, Arial, sans-serif;
+
+  /* CONTRAST SURFACES */
+  --vinta-contrast-bg: #ff00ff;
+  --vinta-contrast-border: inset 0 0 0 1px #ff00ff;
+  --vinta-contrast-hover: #ff00ff;
+
+  /* GEOMETRY & LAYOUT */
+  --vinta-dock-clearance: 56px;
+  --vinta-radius-island: 18px;
+  --vinta-radius-card: 16px;
+  --vinta-radius-button: 10px;
+  --vinta-radius-pill: 9999px;
+
+  /* ISLAND STATES & SHADOWS */
+  --vinta-island-border-idle: #ff00ff;
+  --vinta-island-border-notification: #ff00ff;
+  --vinta-island-glow-idle: #ff00ff;
+  --vinta-island-glow-notification: #ff00ff;
+  --vinta-island-shadow:
+    inset 1px 0 0 0 #ff00ff, inset -1px 0 0 0 #ff00ff, inset 0 -1px 0 0 #ff00ff,
+    0 1.5px 3.5px #ff00ff;
+  --vinta-island-hover-shadow: 0 2px 4.5px #ff00ff;
+
+  /* SCROLLBARS */
+  --vinta-scrollbar-thumb: #ff00ff;
+
+  /* COMPONENT SEMANTIC TOKENS */
+  --vinta-clear-btn-hover-bg: #ff00ff;
+  --vinta-clear-btn-hover-text: #ff00ff;
+  --vinta-clear-btn-hover-border: inset 0 0 0 1px #ff00ff;
+
+  --vinta-dnd-active-bg: #ff00ff;
+  --vinta-dnd-active-text: #ff00ff;
+  --vinta-dnd-active-border: inset 0 0 0 1px #ff00ff;
+
+  --vinta-calendar-today-glow: 0 4px 10px #ff00ff;
+  --vinta-clock-shadow: #ff00ff;
+
+  --vinta-icon-badge-bg: #ff00ff;
+  --vinta-icon-badge-border: #ff00ff;
+
+  --vinta-scrim: #ff00ff;
+
+  --vinta-collapse-btn-bg: #ff00ff;
+  --vinta-collapse-btn-hover-bg: #ff00ff;
+
+  --vinta-media-btn-active-bg: #ff00ff;
+  --vinta-media-btn-active-text: #ff00ff;
+  --vinta-media-btn-active-border: #ff00ff;
+  --vinta-media-btn-active-glow: 0 0 10px #ff00ff;
+
+  /* NOTES CARD TOKENS */
+  --vinta-note-card-bg: #ff00ff;
+  --vinta-note-card-hover-bg: #ff00ff;
+  --vinta-note-card-border: #ff00ff;
+  --vinta-note-yellow: #ff00ff;
+  --vinta-note-green: #ff00ff;
+  --vinta-note-pink: #ff00ff;
+  --vinta-note-purple: #ff00ff;
+  --vinta-note-blue: #ff00ff;
+  --vinta-note-charcoal: #ff00ff;
+
+  /* CALENDAR AGENDA CARD TOKENS */
+  --vinta-agenda-card-text: #ff00ff;
+  --vinta-agenda-diamond-dark: #ff00ff;
+  --vinta-agenda-diamond-light: #ff00ff;
+  --vinta-agenda-indigo-bg: #ff00ff;
+  --vinta-agenda-indigo-shadow: 0 4px 16px #ff00ff;
+  --vinta-agenda-emerald-bg: #ff00ff;
+  --vinta-agenda-emerald-shadow: 0 4px 16px #ff00ff;
+  --vinta-agenda-amber-bg: #ff00ff;
+  --vinta-agenda-amber-shadow: 0 4px 16px #ff00ff;
+  --vinta-agenda-purple-bg: #ff00ff;
+  --vinta-agenda-purple-shadow: 0 4px 16px #ff00ff;
+  --vinta-agenda-rose-bg: #ff00ff;
+  --vinta-agenda-rose-shadow: 0 4px 16px #ff00ff;
+  --vinta-agenda-sky-bg: #ff00ff;
+  --vinta-agenda-sky-shadow: 0 4px 16px #ff00ff;
+  --vinta-agenda-free-bg: #ff00ff;
+  --vinta-agenda-free-shadow: 0 4px 16px #ff00ff;
+}

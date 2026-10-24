@@ -22,6 +22,12 @@ export function dispatchTooltipBounds(
   rect: DOMRect | { left: number; top: number; width: number; height: number },
   radius: number = 7
 ): void {
+  if (
+    typeof document !== 'undefined' &&
+    document.body.classList.contains('devtest-window-body')
+  ) {
+    return
+  }
   const scale = window.devicePixelRatio || 1
   if (typeof SetTooltipBounds === 'function') {
     SetTooltipBounds({
@@ -43,6 +49,12 @@ export function dispatchTooltipBounds(
  * @param id - Unique identifier for the tooltip.
  */
 export function dismissTooltipBounds(id: string): void {
+  if (
+    typeof document !== 'undefined' &&
+    document.body.classList.contains('devtest-window-body')
+  ) {
+    return
+  }
   if (typeof ClearTooltipBounds === 'function') {
     ClearTooltipBounds(id).catch(() => {})
   }
@@ -52,6 +64,12 @@ export function dismissTooltipBounds(id: string): void {
  * Removes all active floating tooltip regions from the native window mask.
  */
 export function dismissAllTooltips(): void {
+  if (
+    typeof document !== 'undefined' &&
+    document.body.classList.contains('devtest-window-body')
+  ) {
+    return
+  }
   if (typeof ClearTooltipBounds === 'function') {
     ClearTooltipBounds('*').catch(() => {})
   }

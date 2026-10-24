@@ -95,7 +95,7 @@
   .range-slider {
     flex: 1;
     min-width: 0;
-    accent-color: var(--c-primary, #6366f1);
+    accent-color: var(--vinta-accent-primary, var(--vinta-primary, #38bdf8));
     height: 4px;
     border-radius: 2px;
     cursor: pointer;
@@ -106,7 +106,7 @@
     align-items: center;
     gap: 3px;
     background: rgba(0, 0, 0, 0.25);
-    border: 1px solid var(--c-border);
+    border: 1px solid var(--vinta-border);
     border-radius: 6px;
     padding: 2px 6px;
     flex-shrink: 0;
@@ -116,7 +116,7 @@
     width: 42px;
     background: transparent;
     border: none;
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
     font-size: 11px;
     font-weight: 600;
     text-align: right;
@@ -134,6 +134,6 @@
   .unit-label {
     font-size: 10px;
     font-weight: 500;
-    color: var(--c-text-secondary);
+    color: var(--vinta-text-secondary);
   }
 </style>

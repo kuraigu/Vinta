@@ -4,10 +4,10 @@
 
 .custom-tooltip {
   position: fixed;
-  background: var(--c-dock-popover-bg, rgba(20, 20, 24, 0.96));
+  background: var(--vinta-dock-popover-bg, rgba(20, 20, 24, 0.96));
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  color: var(--c-text-primary, #ffffff);
+  color: var(--vinta-text-primary, #ffffff);
   padding: 4px 8px;
   border-radius: 6px;
   font-size: 0.72rem;
@@ -15,8 +15,8 @@
   letter-spacing: -0.01em;
   white-space: nowrap;
   pointer-events: none;
-  box-shadow: var(--c-dock-popover-shadow, 0 4px 14px rgba(0, 0, 0, 0.5));
-  border: 1px solid var(--c-dock-popover-border, rgba(255, 255, 255, 0.12));
+  box-shadow: var(--vinta-dock-popover-shadow, 0 4px 14px rgba(0, 0, 0, 0.5));
+  border: 1px solid var(--vinta-dock-popover-border, rgba(255, 255, 255, 0.12));
   z-index: 99999;
 }
 
@@ -29,7 +29,7 @@
   transform: translateX(-50%);
   border-width: 4px 4px 0 4px;
   border-style: solid;
-  border-color: var(--c-dock-popover-border, rgba(255, 255, 255, 0.12))
+  border-color: var(--vinta-dock-popover-border, rgba(255, 255, 255, 0.12))
     transparent transparent transparent;
 }
 
@@ -53,7 +53,7 @@
   border-width: 0 4px 4px 4px;
   border-style: solid;
   border-color: transparent transparent
-    var(--c-dock-popover-border, rgba(255, 255, 255, 0.12)) transparent;
+    var(--vinta-dock-popover-border, rgba(255, 255, 255, 0.12)) transparent;
 }
 
 .custom-tooltip.pos-bottom.align-left::after {

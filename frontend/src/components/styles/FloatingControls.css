@@ -4,7 +4,7 @@
   align-items: stretch;
   gap: 0;
   width: 32px;
-  background: var(--c-dock-popover-bg);
+  background: var(--vinta-dock-popover-bg);
   border: none;
   box-shadow: none;
   pointer-events: auto;
@@ -143,21 +143,21 @@
   box-shadow: none !important;
   transform: none !important;
   background: transparent;
-  color: var(--c-text-secondary);
+  color: var(--vinta-text-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .floating-controls :global(.dock-btn:focus-visible) {
-  outline: 2px solid var(--c-primary, #6366f1) !important;
+  outline: 2px solid var(--vinta-primary, #6366f1) !important;
   outline-offset: -2px !important;
   background: color-mix(
     in srgb,
-    var(--c-dock-popover-bg) 75%,
+    var(--vinta-dock-popover-bg) 75%,
     #ffffff 25%
   ) !important;
-  color: var(--c-text-primary) !important;
+  color: var(--vinta-text-primary) !important;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2) !important;
   z-index: 10 !important;
 }
@@ -167,20 +167,20 @@
 }
 
 .floating-controls :global(.dock-btn:hover) {
-  color: var(--c-text-primary);
-  background: color-mix(in srgb, var(--c-dock-popover-bg) 82%, #ffffff 18%);
+  color: var(--vinta-text-primary);
+  background: color-mix(in srgb, var(--vinta-dock-popover-bg) 82%, #ffffff 18%);
 }
 
 .floating-controls :global(.dock-btn:active) {
-  background: color-mix(in srgb, var(--c-dock-popover-bg) 72%, #ffffff 28%);
+  background: color-mix(in srgb, var(--vinta-dock-popover-bg) 72%, #ffffff 28%);
 }
 
 .floating-controls :global(.dock-btn.danger:hover) {
   color: #ffffff;
-  background: var(--c-danger, #ff3b30);
+  background: var(--vinta-danger, #ff3b30);
 }
 
 .floating-controls :global(.dock-btn.danger:active) {
   color: #ffffff;
-  background: color-mix(in srgb, var(--c-danger, #ff3b30) 80%, #000000 20%);
+  background: color-mix(in srgb, var(--vinta-danger, #ff3b30) 80%, #000000 20%);
 }

@@ -34,29 +34,43 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding-bottom: 56px;
+  padding-top: 48px;
+  padding-bottom: 0;
   box-sizing: border-box;
   overflow: hidden;
   position: relative;
 }
 
-.page-header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 8px;
-  padding-top: 14px;
-  flex-shrink: 0;
-  width: 100%;
-  min-height: 28px;
-  box-sizing: border-box;
+.expanded-view.has-hero-weather {
+  padding-top: 0;
+}
+
+.expanded-view.has-hero-weather .social-feed-container {
+  padding-top: 0;
+}
+
+.expanded-view::before {
+  content: '';
+  position: absolute;
+  top: -60px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 280px;
+  height: 140px;
+  background: radial-gradient(
+    ellipse at top,
+    var(--vinta-accent-glow, rgba(99, 102, 241, 0.12)) 0%,
+    transparent 70%
+  );
+  pointer-events: none;
+  z-index: 0;
 }
 
 .page-title {
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 600;
   letter-spacing: -0.01em;
-  color: var(--c-text-primary);
+  color: var(--vinta-text-secondary);
   text-align: center;
 }
 
@@ -70,7 +84,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 12px 18px 24px 18px;
+  padding: 8px 18px 14px 18px;
   box-sizing: border-box;
   width: 100%;
 }
@@ -97,7 +111,7 @@
   font-size: 1.15rem;
   font-weight: 500;
   letter-spacing: -0.015em;
-  color: var(--c-text-secondary);
+  color: var(--vinta-text-secondary);
   line-height: 1.2;
 }
 
@@ -106,36 +120,9 @@
   font-size: 2.1rem;
   font-weight: 800;
   letter-spacing: -0.035em;
-  color: var(--c-text-primary);
+  color: var(--vinta-text-primary);
   line-height: 1.1;
   word-break: break-word;
-}
-
-.greeting-dots-pattern {
-  position: absolute;
-  top: -2px;
-  right: 0;
-  width: 120px;
-  height: 100%;
-  pointer-events: none;
-  background-image: radial-gradient(
-    circle,
-    var(--c-text-primary) 1.2px,
-    transparent 1.2px
-  );
-  background-size: 8px 8px;
-  opacity: 0.12;
-  mask-image: radial-gradient(
-    ellipse at top right,
-    rgba(0, 0, 0, 1) 20%,
-    transparent 75%
-  );
-  -webkit-mask-image: radial-gradient(
-    ellipse at top right,
-    rgba(0, 0, 0, 1) 20%,
-    transparent 75%
-  );
-  z-index: 1;
 }
 
 .time-subtle-bar {
@@ -147,237 +134,17 @@
   box-sizing: border-box;
   font-size: 0.8rem;
   font-weight: 500;
-  color: var(--c-text-muted);
-}
-
-/* Update Glance Banner (Issue #161) */
-.update-glance-card {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 8px 12px;
-  border-radius: 14px;
-  box-sizing: border-box;
-  cursor: pointer;
-  user-select: none;
-  background:
-    linear-gradient(
-      135deg,
-      rgba(59, 130, 246, 0.14) 0%,
-      rgba(147, 51, 234, 0.1) 100%
-    ),
-    var(--c-surface-elevated, rgba(25, 25, 30, 0.85));
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.12),
-    0 4px 14px rgba(0, 0, 0, 0.16);
-  transition:
-    transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.update-glance-card:hover {
-  transform: translateY(-1px);
-  border-color: rgba(255, 255, 255, 0.2);
-  box-shadow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.16),
-    0 6px 18px rgba(0, 0, 0, 0.22);
-}
-
-.update-glance-card.ready {
-  background:
-    linear-gradient(
-      135deg,
-      rgba(16, 185, 129, 0.16) 0%,
-      rgba(5, 150, 105, 0.12) 100%
-    ),
-    var(--c-surface-elevated, rgba(25, 25, 30, 0.85));
-  border-color: rgba(16, 185, 129, 0.25);
-}
-
-.update-glance-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--c-accent, #60a5fa);
-  flex-shrink: 0;
-}
-
-.update-glance-card.ready .update-glance-icon {
-  color: #34d399;
-}
-
-:global(.update-spin-icon) {
-  animation: spinSlow 3s linear infinite;
-}
-
-@keyframes spinSlow {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.update-glance-text {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
-  flex: 1;
-}
-
-.update-glance-title {
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  color: var(--c-text-primary, #ffffff);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.update-glance-sub {
-  font-size: 0.68rem;
-  color: var(--c-text-muted, rgba(255, 255, 255, 0.6));
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.update-glance-actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
-}
-
-.update-action-btn {
-  font-size: 0.72rem;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.12);
-  color: var(--c-text-primary, #ffffff);
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.update-action-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.28);
-  transform: translateY(-0.5px);
-}
-
-.update-action-btn.restart {
-  background: var(--c-accent, #3b82f6);
-  border-color: transparent;
-  color: #ffffff;
-}
-
-.update-action-btn.restart:hover {
-  filter: brightness(1.1);
-}
-
-.update-dismiss-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  border: none;
-  background: transparent;
-  color: var(--c-text-muted);
-  opacity: 0.6;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.update-dismiss-btn:hover {
-  opacity: 1;
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--c-text-primary);
-}
-
-.meta-date-text {
-  color: var(--c-text-secondary);
-  font-weight: 500;
-  letter-spacing: -0.01em;
-}
-
-.time-subtle-digits {
-  font-size: 0.85rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  color: var(--c-text-secondary);
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-}
-
-.colon-blink {
-  opacity: 0.8;
-}
-
-.time-subtle-ampm {
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: var(--c-text-muted);
-  text-transform: uppercase;
-  margin-left: -2px;
-  letter-spacing: 0.02em;
-}
-
-.meta-bullet {
-  font-size: 0.72rem;
-  color: var(--c-text-muted);
-  opacity: 0.45;
-}
-
-.meta-location-group {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.78rem;
-  font-weight: 500;
-  color: var(--c-text-muted);
-}
-
-:global(.meta-pin-icon) {
-  opacity: 0.85;
-  flex-shrink: 0;
-}
-
-.meta-city-name {
-  max-width: 160px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.meta-offset {
-  opacity: 0.85;
-  font-weight: 500;
-}
-
-/* 3. Illustrated Weather Banner */
-.weather-card-feed {
-  width: 100%;
-  box-sizing: border-box;
+  color: var(--vinta-text-muted);
 }
 
 /* Notification Glance Card Feed */
 .notification-card-feed {
   width: 100%;
   box-sizing: border-box;
+}
+
+.notification-card-feed:empty {
+  display: none;
 }
 
 /* Glance & Action Center Card Feed */
@@ -389,16 +156,45 @@
 /* Calendar Overview Card - Feed Widget */
 .calendar-card-feed {
   width: 100%;
-  min-height: 200px;
   height: auto;
-  border-radius: 18px;
+  border-radius: 20px;
   box-sizing: border-box;
+}
+
+/* Studio Branding Footer */
+.home-brand-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 0 6px 0;
+  width: 100%;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.home-brand-text {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.4));
+  letter-spacing: -0.01em;
+}
+
+.home-version-pill {
+  font-size: 10px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--vinta-surface-subtle, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.08));
+  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.5));
 }
 
 /* Bottom Floating Scroll Cue Pill */
 .home-scroll-cue-pill {
   position: absolute;
-  bottom: 60px;
+  bottom: 12px;
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -406,21 +202,26 @@
   gap: 4px;
   padding: 4px 10px;
   border-radius: 999px;
-  background: var(--vinta-surface-elevated, rgba(28, 28, 30, 0.72));
-  border: 1px solid var(--vinta-border-light, rgba(255, 255, 255, 0.12));
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  color: var(--vinta-text-secondary, rgba(255, 255, 255, 0.7));
+  /* I made it like this because I want the lighter color for the default pill
+  before hovering -Innoh Reloza (DippedInSoju) */
+  background: var(--vinta-surface-elevated, #1c273a);
+  border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.12));
+  color: var(--vinta-text-primary, #ffffff);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: -0.01em;
   cursor: pointer;
   z-index: 10;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.45),
+    var(--vinta-contrast-border);
   transition:
     opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1),
     transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
     background 0.2s ease,
+    border-color 0.2s ease,
     color 0.2s ease;
   user-select: none;
   -webkit-user-select: none;
@@ -428,8 +229,12 @@
 }
 
 .home-scroll-cue-pill:hover {
-  background: var(--vinta-hover, rgba(255, 255, 255, 0.1));
-  color: var(--vinta-text-primary, #ffffff);
+  background: var(--vinta-accent-primary, #38bdf8);
+  border-color: var(--vinta-accent-primary, #38bdf8);
+  color: var(--vinta-text-on-accent, #ffffff);
+  box-shadow:
+    0 6px 20px rgba(0, 0, 0, 0.55),
+    0 0 12px var(--vinta-accent-muted, rgba(56, 189, 248, 0.4));
 }
 
 .home-scroll-cue-pill:active {

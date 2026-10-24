@@ -1,7 +1,7 @@
 <script module lang="ts">
   export const config = {
     minimal: { w: 330, h: 35, r: 16 },
-    expanded: { w: 430, h: 500, r: 32 },
+    expanded: { w: 430, h: 640, r: 28, minH: 260, maxH: 640 },
     borderColor: 'var(--vinta-island-border-idle)',
     glowColor: 'var(--vinta-island-glow-idle)'
   }
@@ -9,12 +9,15 @@
 
 <script lang="ts">
   import { onMount, onDestroy, getContext } from 'svelte'
-  import { MapPin, Sparkles, X, RefreshCw, ChevronDown } from 'lucide-svelte'
+  import { ChevronDown } from 'lucide-svelte'
   import Calendar from '../components/Calendar.svelte'
+  import CalendarGlance from '../components/CalendarGlance.svelte'
   import Weather from '../components/Weather.svelte'
+  import WeatherGlance from '../components/WeatherGlance.svelte'
   import DeviceStatusWidget from '../components/DeviceStatusWidget.svelte'
   import ActionCenterGlance from '../components/ActionCenterGlance.svelte'
   import NotificationGlance from '../components/NotificationGlance.svelte'
+  import UpdateGlanceCard from '../components/UpdateGlanceCard.svelte'
   import ScrollView from '../components/ScrollView.svelte'
   import CalendarPage, { config as calendarConfig } from './CalendarPage.svelte'
   import SettingsPage, { config as settingsConfig } from './SettingsPage.svelte'
@@ -26,9 +29,9 @@
     dateFormatStore,
     formatUserDate,
     updateInfoStore,
-    updateLifecycleStatusStore,
+    appInfoStore,
+    notifData,
     activeSettingsTabStore,
-    triggerApplyUpdate,
     type IslandConfig
   } from '../store'
 
@@ -38,6 +41,34 @@
     >('navigate')
 
   let isUpdateSnoozed = $state(false)
+
+  /**
+   * Formats the application version for display in the footer.
+   */
+  function computeDisplayVersion() {
+    const ver = $appInfoStore?.version
+    if (!ver) return '0.1.0'
+    const trimmed = ver.replace(/^v/, '').replace(/-dev$/i, '')
+    return trimmed || '0.1.0'
+  }
+  let displayVersion = $derived.by(computeDisplayVersion)
+
+  /**
+   * Evaluates if there are active non-update notifications to display in the glance slot.
+   */
+  function computeHasStandardNotifications() {
+    return ($notifData || []).some(
+      (n) =>
+        !n.isUpdate &&
+        !n.title?.toLowerCase().includes('update available') &&
+        !(
+          (n.appName?.toLowerCase() === 'vinta' ||
+            n.aumid?.toLowerCase().includes('vinta')) &&
+          n.title?.toLowerCase().includes('update')
+        )
+    )
+  }
+  let hasStandardNotifications = $derived.by(computeHasStandardNotifications)
 
   /**
    * Navigates directly to the dedicated Calendar application page.
@@ -66,18 +97,6 @@
     isUpdateSnoozed = true
   }
 
-  /**
-   * Triggers immediate application of a downloaded and verified update.
-   */
-  function handleApplyUpdate(e: MouseEvent) {
-    e.stopPropagation()
-    if (triggerApplyUpdate) {
-      triggerApplyUpdate()
-    } else {
-      openUpdatesTab()
-    }
-  }
-
   interface Props {
     expanded?: boolean
   }
@@ -86,6 +105,21 @@
 
   let scrollContainer: HTMLElement | undefined = $state()
   let isScrolledDown = $state(false)
+  let canScrollMore = $state(false)
+
+  /**
+   * Evaluates whether the home feed has vertical overflow below the current scroll position.
+   */
+  function updateScrollCueVisibility() {
+    if (!scrollContainer) {
+      canScrollMore = false
+      return
+    }
+    const maxScroll =
+      scrollContainer.scrollHeight - scrollContainer.clientHeight
+    isScrolledDown = scrollContainer.scrollTop > 20
+    canScrollMore = maxScroll > 8 && scrollContainer.scrollTop < maxScroll - 8
+  }
 
   /**
    * Updates scroll indicator state based on current scroll position.
@@ -93,9 +127,35 @@
   function handleFeedScroll(e: Event) {
     const target = e.currentTarget as HTMLElement
     if (target) {
-      isScrolledDown = target.scrollTop > 20
+      updateScrollCueVisibility()
     }
   }
+
+  /**
+   * Observes the home feed scroll container and content height to keep the scroll cue pill in sync.
+   */
+  function syncScrollCueObserverEffect() {
+    const el = scrollContainer
+    if (!el || typeof ResizeObserver === 'undefined') {
+      canScrollMore = false
+      return
+    }
+
+    updateScrollCueVisibility()
+    const ro = new ResizeObserver(() => {
+      updateScrollCueVisibility()
+    })
+    ro.observe(el)
+    const inner = el.firstElementChild
+    if (inner) {
+      ro.observe(inner)
+    }
+
+    return () => {
+      ro.disconnect()
+    }
+  }
+  $effect(syncScrollCueObserverEffect)
 
   /**
    * Smoothly scrolls the social feed downward when the scroll cue is clicked.
@@ -223,34 +283,6 @@
     return timeParts.h24 >= 12 ? 'PM' : 'AM'
   }
   let amPm = $derived.by(computeAmPm)
-
-  /**
-   * Resolves timezone label and GMT offset string for the active timezone.
-   */
-  function computeTimezoneDetails() {
-    try {
-      const now = new Date()
-      const tzFormatter = new Intl.DateTimeFormat('en-US', {
-        timeZone: currentTimezone,
-        timeZoneName: 'shortOffset'
-      })
-      const tzParts = tzFormatter.formatToParts(now)
-      const offsetPart =
-        tzParts.find((p) => p.type === 'timeZoneName')?.value || ''
-      const parts = currentTimezone.split('/')
-      const friendlyName = parts[parts.length - 1].replace(/_/g, ' ')
-      return {
-        timezoneName: friendlyName,
-        gmtOffset: offsetPart
-      }
-    } catch {
-      return {
-        timezoneName: currentTimezone,
-        gmtOffset: ''
-      }
-    }
-  }
-  let timezoneDetails = $derived.by(computeTimezoneDetails)
 </script>
 
 <div data-vinta="home-page" class="page-container">
@@ -280,151 +312,89 @@
       {/if}
     </div>
   {:else}
-    <div class="expanded-view">
-      <!-- Standard Page Header (In compliance with Settings / SidebarLayout) -->
-      <div class="page-header">
-        <div class="page-title">Home</div>
-      </div>
-
+    <div
+      class="expanded-view"
+      class:has-hero-weather={$homeWidgetsVisibilityStore.weather}
+    >
       <ScrollView
         class="home-feed-scroll"
         bind:element={scrollContainer}
         onscroll={handleFeedScroll}
       >
         <div class="social-feed-container">
-          <!-- Hero Greeting -->
-          <header class="home-hero-greeting">
-            <div class="greeting-dots-pattern" aria-hidden="true"></div>
-            <span class="hero-salutation">{salutationText},</span>
-            <h1 class="hero-username">{displayName}</h1>
-          </header>
+          {#if $homeWidgetsVisibilityStore.weather}
+            <!-- Full-Bleed Weather Hero Header (Background for Salutation + User + Time) -->
+            <WeatherGlance
+              salutation={salutationText}
+              userName={displayName}
+              timeText={$homeWidgetsVisibilityStore.clock
+                ? `${formattedHours}:${timeParts.m}`
+                : ''}
+              amPmText={$homeWidgetsVisibilityStore.clock ? amPm : ''}
+            />
+          {:else}
+            <!-- Hero Greeting (Fallback when weather widget is disabled) -->
+            <header class="home-hero-greeting">
+              <span class="hero-salutation">{salutationText},</span>
+              <h1 class="hero-username">{displayName}</h1>
+            </header>
 
-          <!-- Unified Date, Time and Location Row -->
-          {#if $homeWidgetsVisibilityStore.clock}
-            <section class="time-subtle-bar">
-              <span class="meta-date-text">{timeParts.friendlyDateText}</span>
-              <span class="meta-bullet">•</span>
-              <span class="time-subtle-digits">
-                {formattedHours}<span class="colon-blink">:</span>{timeParts.m}
-              </span>
-              {#if amPm}
-                <span class="time-subtle-ampm">{amPm}</span>
-              {/if}
-              <span class="meta-bullet">•</span>
-              <div
-                class="meta-location-group"
-                title={timezoneDetails.timezoneName}
-              >
-                <MapPin size={11} class="meta-pin-icon" />
-                <span class="meta-city-name"
-                  >{timezoneDetails.timezoneName}</span
-                >
-                {#if timezoneDetails.gmtOffset}
-                  <span class="meta-offset">({timezoneDetails.gmtOffset})</span>
+            {#if $homeWidgetsVisibilityStore.clock}
+              <section class="time-subtle-bar">
+                <span class="meta-date-text">{timeParts.friendlyDateText}</span>
+                <span class="meta-bullet">•</span>
+                <span class="time-subtle-digits">
+                  {formattedHours}<span class="colon-blink">:</span
+                  >{timeParts.m}
+                </span>
+                {#if amPm}
+                  <span class="time-subtle-ampm">{amPm}</span>
                 {/if}
-              </div>
-            </section>
+              </section>
+            {/if}
           {/if}
 
           <!-- Update Glance Banner (Issue #161) -->
           {#if $updateInfoStore?.updateAvailable && !isUpdateSnoozed}
-            {@const isReady = $updateLifecycleStatusStore === 'ready'}
-            <section
-              class="update-glance-card {isReady ? 'ready' : 'available'}"
-              role="button"
-              tabindex="0"
-              onclick={openUpdatesTab}
-              onkeydown={(e) => e.key === 'Enter' && openUpdatesTab()}
-            >
-              <div class="update-glance-icon">
-                {#if isReady}
-                  <RefreshCw size={14} class="update-spin-icon" />
-                {:else}
-                  <Sparkles size={14} />
-                {/if}
-              </div>
-              <div class="update-glance-text">
-                <span class="update-glance-title">
-                  {isReady
-                    ? 'Update Ready to Install'
-                    : `Vinta ${$updateInfoStore.latestVersion || 'Update'} Available`}
-                </span>
-                <span class="update-glance-sub">
-                  {isReady
-                    ? 'Click to restart and apply improvements'
-                    : 'Click to review what is new in this release'}
-                </span>
-              </div>
-              <div class="update-glance-actions">
-                {#if isReady}
-                  <button
-                    class="update-action-btn restart"
-                    onclick={handleApplyUpdate}
-                    title="Restart Vinta"
-                  >
-                    Restart
-                  </button>
-                {:else}
-                  <button
-                    class="update-action-btn view"
-                    onclick={(e) => {
-                      e.stopPropagation()
-                      openUpdatesTab()
-                    }}
-                    title="View update details"
-                  >
-                    View
-                  </button>
-                {/if}
-                <button
-                  class="update-dismiss-btn"
-                  onclick={snoozeUpdate}
-                  title="Dismiss for this session"
-                  aria-label="Dismiss banner"
-                >
-                  <X size={12} />
-                </button>
-              </div>
+            <UpdateGlanceCard onClick={openUpdatesTab} />
+          {/if}
+
+          <!-- Notification Glance Card (High priority alerts right after updates) -->
+          {#if hasStandardNotifications}
+            <section class="notification-card-feed">
+              <NotificationGlance />
             </section>
           {/if}
 
-          <!-- Illustrated Weather Banner -->
-          {#if $homeWidgetsVisibilityStore.weather}
-            <section class="weather-card-feed">
-              <Weather expanded={true} />
+          <!-- Calendar Agenda Glance Card -->
+          {#if $homeWidgetsVisibilityStore.calendar}
+            <section class="calendar-card-feed">
+              <CalendarGlance onOpenCalendar={openCalendar} />
             </section>
           {/if}
 
-          <!-- Notification Glance Card -->
-          <section class="notification-card-feed">
-            <NotificationGlance />
-          </section>
-
-          <!-- Quick Details from Action Center (Modular Bento Card) -->
+          <!-- Quick Controls from Action Center (Modular Bento Card) -->
           {#if $homeWidgetsVisibilityStore.actionCenter}
             <section class="glance-card-feed">
               <ActionCenterGlance />
             </section>
           {/if}
 
-          <!-- Calendar Overview Card (Shared component with Go to Calendar button) -->
-          {#if $homeWidgetsVisibilityStore.calendar}
-            <section class="calendar-card-feed">
-              <Calendar
-                expanded={true}
-                showGoToCalendar={true}
-                onOpenCalendar={openCalendar}
-              />
-            </section>
-          {/if}
+          <!-- Studio Branding Footer (Issue #185 / Category 7) -->
+          <footer class="home-brand-footer">
+            <span class="home-brand-text"
+              >Vinta by FreeMatrix Studios & Contributors</span
+            >
+            <span class="home-version-pill">v{displayVersion}</span>
+          </footer>
         </div>
       </ScrollView>
 
-      <!-- Scroll cue indicator: fades out when feed is scrolled down -->
+      <!-- Scroll cue indicator: hides when feed has no overflow or is scrolled down -->
       <button
         type="button"
         class="home-scroll-cue-pill"
-        class:hidden={isScrolledDown}
+        class:hidden={!canScrollMore || isScrolledDown}
         onclick={scrollFeedDown}
         aria-label="Scroll down for more content"
       >

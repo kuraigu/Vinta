@@ -1015,9 +1015,10 @@ function checkAlarmsClock(): void {
     const sentDisplay = formatTimeBySetting(currentTime, use24H)
     const repeatDesc = formatAlarmRepeatDescription(target.repeat, target.days)
 
+    const label = target.label?.trim() || 'Alarm'
     sendToastNotification(
-      `Alarm: ${target.label} • ${scheduledDisplay}`,
-      `Scheduled for ${scheduledDisplay} (Triggered at ${sentDisplay}) • ${repeatDesc}`
+      label,
+      `${scheduledDisplay} • ${repeatDesc}`
     )
 
     timerAppStore.update((s) => ({
@@ -1091,9 +1092,10 @@ function checkAlarmsClock(): void {
       ringingItem.days
     )
 
+    const label = ringingItem.label?.trim() || 'Alarm'
     sendToastNotification(
-      `Alarm: ${ringingItem.label} • ${scheduledDisplay}`,
-      `Scheduled for ${scheduledDisplay} (Triggered at ${sentDisplay}) • ${repeatDesc}`
+      label,
+      `${scheduledDisplay} • ${repeatDesc}`
     )
   }
 

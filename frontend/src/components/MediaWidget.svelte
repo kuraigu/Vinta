@@ -1,4 +1,4 @@
-<script lang="ts" module>
+<script module lang="ts">
   import type { IslandConfig } from '../store'
 
   export const config: IslandConfig = {
@@ -19,6 +19,7 @@
   import Clock from './Clock.svelte'
   import BatteryWidget from './BatteryWidget.svelte'
   import DynamicEqualizer from './DynamicEqualizer.svelte'
+  import MediaSourcesDrawer from './MediaSourcesDrawer.svelte'
   import {
     globalMediaStore,
     audioPeakStore,
@@ -929,150 +930,24 @@
         </div>
       {/if}
       <div class="card-bg-overlay"></div>
-      <!-- Bottom legibility scrim: fades from --c-scrim to transparent -->
+      <!-- Bottom legibility scrim: fades from --vinta-scrim to transparent -->
       <div class="card-bg-scrim"></div>
     </div>
 
     <!-- Expanded Player Content -->
     <div class="expanded-card">
-      <!-- Top Bar: Glass Header Backdrop with Media Player title, Center Clock, App Badge -->
-      <div class="top-meta-bar">
-        <div class="app-brand">
-          <span class="app-name-text">Media Player</span>
-          {#if $pinnedMediaSourceStore && media.sourceApp === $pinnedMediaSourceStore}
-            <span
-              class="pinned-source-indicator"
-              use:islandTooltip={{
-                text: `Pinned Source: ${appBrand.name}`,
-                position: 'bottom'
-              }}
-            >
-              <Pin size={10} />
-            </span>
-          {/if}
-        </div>
-
-        <div class="top-clock-wrapper">
-          <Clock expanded={false} />
-        </div>
-
-        <button
-          class="device-badge clickable"
-          use:islandTooltip={{
-            text: `Switch to ${appBrand.name}`,
-            position: 'bottom'
-          }}
-          aria-label="Switch to {appBrand.name}"
-          onclick={handleFocusApp}
-        >
-          <span>{appBrand.name}</span>
-        </button>
-      </div>
-
       {#if isSessionMenuOpen && media.sessions && media.sessions.length > 1}
-        <!-- Dedicated Media Sources View Mode -->
-        <div class="session-drawer-panel">
-          <div class="session-drawer-header">
-            <div class="session-header-title-group">
-              <span class="session-header-title">Media Sources</span>
-              <span class="session-count-tag">{media.sessions.length}</span>
-            </div>
-            <button
-              class="session-close-btn"
-              use:islandTooltip={{ text: 'Close Sources', align: 'right' }}
-              aria-label="Close Sources"
-              onclick={(e) => {
-                e.stopPropagation()
-                isSessionMenuOpen = false
-              }}
-            >
-              <X size={13} />
-            </button>
-          </div>
-
-          <div class="session-drawer-list">
-            {#each media.sessions as s (s.id)}
-              {@const isSelected =
-                s.id === media.activeSessionId ||
-                (Boolean(media.title) && s.title === media.title) ||
-                (media.sessions.length === 1 &&
-                  s.sourceApp === media.sourceApp)}
-              {@const sBrand = getSessionBrand(s.sourceApp, s.id)}
-              <div
-                class="session-menu-item"
-                class:is-selected={isSelected}
-                onclick={(e) => handleSelectSession(s.id, e)}
-                onkeydown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    handleSelectSession(s.id, e as unknown as MouseEvent)
-                  }
-                }}
-                role="menuitem"
-                tabindex="0"
-              >
-                <div class="session-item-icon">
-                  {#if sBrand.icon}
-                    <img
-                      src={sBrand.icon}
-                      alt={sBrand.name}
-                      class="session-app-img"
-                      draggable="false"
-                      decoding="async"
-                      onerror={(e) => {
-                        const el = e.currentTarget as HTMLImageElement
-                        el.style.display = 'none'
-                      }}
-                    />
-                  {:else}
-                    <Music2 size={13} class="session-item-fallback-icon" />
-                  {/if}
-                </div>
-                <div class="session-item-info">
-                  <div
-                    class="session-item-title"
-                    title={s.title || sBrand.name}
-                  >
-                    {s.title || sBrand.name}
-                  </div>
-                  <div
-                    class="session-item-subtitle"
-                    title={s.artist || sBrand.name}
-                  >
-                    {s.artist || sBrand.name}
-                  </div>
-                </div>
-                <div class="session-item-status">
-                  {#if isSelected}
-                    <Check size={13} class="selected-check" />
-                  {:else if s.isPlaying}
-                    <div
-                      class="live-playing-dot"
-                      use:islandTooltip={'Playing'}
-                    ></div>
-                  {/if}
-                </div>
-                <button
-                  type="button"
-                  class="session-pin-btn"
-                  class:is-pinned={$pinnedMediaSourceStore === s.sourceApp}
-                  use:islandTooltip={{
-                    text:
-                      $pinnedMediaSourceStore === s.sourceApp
-                        ? 'Pinned Source (Click to unpin)'
-                        : 'Pin this source',
-                    position: 'top'
-                  }}
-                  onclick={(e) => handleTogglePinSource(s.sourceApp, e)}
-                  aria-label={$pinnedMediaSourceStore === s.sourceApp
-                    ? 'Unpin source'
-                    : 'Pin source'}
-                >
-                  <Pin size={11} />
-                </button>
-              </div>
-            {/each}
-          </div>
-        </div>
+        <MediaSourcesDrawer
+          sessions={media.sessions}
+          activeSessionId={media.activeSessionId}
+          activeTitle={media.title}
+          activeSourceApp={media.sourceApp}
+          onSelectSession={(id) => {
+            SelectMediaSession(id)
+            isSessionMenuOpen = false
+          }}
+          onClose={() => (isSessionMenuOpen = false)}
+        />
       {:else}
         <!-- Middle Row: Left-aligned Artist (Line 1) + Track Title (Line 2) + Hero Play/Pause Button -->
         <div class="middle-section">
@@ -1345,6 +1220,40 @@
           <span class="time-label">{formatTime(media.durationMs)}</span>
         </div>
       {/if}
+
+      <!-- Bottom Bar (Swapped with Top Dock): Media Player title, Center Clock, App Badge -->
+      <div class="top-meta-bar">
+        <div class="app-brand">
+          <span class="app-name-text">Media Player</span>
+          {#if $pinnedMediaSourceStore && media.sourceApp === $pinnedMediaSourceStore}
+            <span
+              class="pinned-source-indicator"
+              use:islandTooltip={{
+                text: `Pinned Source: ${appBrand.name}`,
+                position: 'top'
+              }}
+            >
+              <Pin size={10} />
+            </span>
+          {/if}
+        </div>
+
+        <div class="top-clock-wrapper">
+          <Clock expanded={false} />
+        </div>
+
+        <button
+          class="device-badge clickable"
+          use:islandTooltip={{
+            text: `Switch to ${appBrand.name}`,
+            position: 'top'
+          }}
+          aria-label="Switch to {appBrand.name}"
+          onclick={handleFocusApp}
+        >
+          <span>{appBrand.name}</span>
+        </button>
+      </div>
     </div>
   {/if}
 </div>

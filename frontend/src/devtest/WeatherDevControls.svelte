@@ -13,6 +13,7 @@
     searchCities,
     type GeocodingResult
   } from '../services/weatherService'
+  import { islandTooltip } from '../services/islandTooltip'
   import {
     Search,
     MapPin,
@@ -305,7 +306,7 @@
       <button
         class="city-pill reset-pill"
         onclick={resetToLiveWeather}
-        title="Clear simulation and fetch live weather"
+        use:islandTooltip={'Clear simulation and fetch live weather'}
       >
         Reset Live
       </button>
@@ -373,7 +374,7 @@
         class="unit-btn"
         class:active={currentUnit === 'kelvin'}
         onclick={() => toggleUnit('kelvin')}
-        title="Kelvin (Nerd Mode)"
+        use:islandTooltip={'Kelvin (Nerd Mode)'}
       >
         K
       </button>
@@ -384,7 +385,7 @@
         class="offline-toggle-btn"
         class:active={isOfflineSim}
         onclick={toggleOfflineMode}
-        title="Simulate Disconnected Network"
+        use:islandTooltip={'Simulate Disconnected Network'}
       >
         <WifiOff size={12} />
         <span>{isOfflineSim ? 'Offline Mode (On)' : 'Simulate Offline'}</span>
@@ -393,7 +394,7 @@
       <button
         class="clear-cache-btn"
         onclick={clearWeatherCache}
-        title="Clear Local Weather Cache to test Zero-Cache Error View"
+        use:islandTooltip={'Clear Local Weather Cache to test Zero-Cache Error View'}
       >
         <Trash2 size={12} />
         <span>Clear Cache</span>
@@ -407,11 +408,11 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
-    background: var(--c-item-bg);
-    border: 1px solid var(--c-border);
+    background: var(--vinta-item-bg);
+    border: 1px solid var(--vinta-border);
     border-radius: 14px;
     padding: 12px;
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
     font-size: 0.78rem;
   }
 
@@ -420,7 +421,7 @@
     align-items: center;
     gap: 6px;
     font-weight: 700;
-    color: var(--c-amber, #f59e0b);
+    color: var(--vinta-amber, #f59e0b);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     font-size: 0.72rem;
@@ -428,7 +429,7 @@
 
   .label {
     font-size: 0.72rem;
-    color: var(--c-text-muted);
+    color: var(--vinta-text-muted);
     font-weight: 600;
   }
 
@@ -436,7 +437,7 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    color: var(--c-primary);
+    color: var(--vinta-primary);
   }
 
   .preset-row {
@@ -454,9 +455,9 @@
   .city-pill {
     padding: 4px 10px;
     border-radius: 12px;
-    background: var(--c-bg);
-    border: 1px solid var(--c-border);
-    color: var(--c-text-primary);
+    background: var(--vinta-bg);
+    border: 1px solid var(--vinta-border);
+    color: var(--vinta-text-primary);
     font-size: 0.72rem;
     font-weight: 600;
     cursor: pointer;
@@ -464,9 +465,9 @@
   }
 
   .city-pill.active {
-    background: var(--c-primary);
+    background: var(--vinta-primary);
     color: #ffffff;
-    border-color: var(--c-primary);
+    border-color: var(--vinta-primary);
   }
 
   .city-pill.reset-pill {
@@ -488,8 +489,8 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    background: var(--c-bg);
-    border: 1px solid var(--c-border);
+    background: var(--vinta-bg);
+    border: 1px solid var(--vinta-border);
     border-radius: 10px;
     padding: 6px 10px;
   }
@@ -499,7 +500,7 @@
     background: transparent;
     border: none;
     outline: none;
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
     font-size: 0.75rem;
   }
 
@@ -509,8 +510,8 @@
     left: 0;
     right: 0;
     margin-top: 4px;
-    background: var(--c-dock-popover-bg, var(--c-bg));
-    border: 1px solid var(--c-border);
+    background: var(--vinta-dock-popover-bg, var(--vinta-bg));
+    border: 1px solid var(--vinta-border);
     border-radius: 10px;
     overflow: hidden;
     z-index: 10;
@@ -523,7 +524,7 @@
     padding: 6px 10px;
     background: transparent;
     border: none;
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
     font-size: 0.72rem;
     cursor: pointer;
     text-overflow: ellipsis;
@@ -532,7 +533,7 @@
   }
 
   .dropdown-item:hover {
-    background: var(--c-hover);
+    background: var(--vinta-hover);
   }
 
   .toggles-row {
@@ -552,18 +553,18 @@
   .unit-btn {
     padding: 3px 8px;
     border-radius: 8px;
-    background: var(--c-bg);
-    border: 1px solid var(--c-border);
-    color: var(--c-text-primary);
+    background: var(--vinta-bg);
+    border: 1px solid var(--vinta-border);
+    color: var(--vinta-text-primary);
     font-size: 0.72rem;
     font-weight: 600;
     cursor: pointer;
   }
 
   .unit-btn.active {
-    background: var(--c-primary);
+    background: var(--vinta-primary);
     color: #ffffff;
-    border-color: var(--c-primary);
+    border-color: var(--vinta-primary);
   }
 
   .offline-toggle-btn {
@@ -572,9 +573,9 @@
     gap: 5px;
     padding: 4px 10px;
     border-radius: 10px;
-    background: var(--c-bg);
-    border: 1px solid var(--c-border);
-    color: var(--c-text-muted);
+    background: var(--vinta-bg);
+    border: 1px solid var(--vinta-border);
+    color: var(--vinta-text-muted);
     font-size: 0.72rem;
     font-weight: 600;
     cursor: pointer;
@@ -582,9 +583,9 @@
   }
 
   .offline-toggle-btn.active {
-    background: var(--c-warning);
+    background: var(--vinta-warning);
     color: #000000;
-    border-color: var(--c-warning);
+    border-color: var(--vinta-warning);
   }
 
   .dev-btn-group {
@@ -599,9 +600,9 @@
     gap: 4px;
     padding: 4px 10px;
     border-radius: 10px;
-    background: var(--c-bg);
-    border: 1px solid var(--c-border);
-    color: var(--c-text-muted);
+    background: var(--vinta-bg);
+    border: 1px solid var(--vinta-border);
+    color: var(--vinta-text-muted);
     font-size: 0.72rem;
     font-weight: 600;
     cursor: pointer;
@@ -609,7 +610,7 @@
   }
 
   .clear-cache-btn:hover {
-    background: var(--c-hover);
-    color: var(--c-danger, #ef4444);
+    background: var(--vinta-hover);
+    color: var(--vinta-danger, #ef4444);
   }
 </style>

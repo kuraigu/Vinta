@@ -4,6 +4,8 @@
    * Displays an atmospheric pill with an icon, title, and description.
    */
   import type { Snippet, ComponentType } from 'svelte'
+  import BentoCard from '../BentoCard.svelte'
+  import CirclePattern from '../patterns/CirclePattern.svelte'
 
   interface Props {
     title?: string
@@ -23,7 +25,15 @@
   }: Props = $props()
 </script>
 
-<div class="setting-banner setting-banner--{variant}">
+<BentoCard
+  variant="announcement"
+  color={variant}
+  class="setting-banner setting-banner--{variant}"
+>
+  <div class="setting-banner-pattern-wrap" aria-hidden="true">
+    <CirclePattern align="right" rows={8} cols={18} />
+  </div>
+
   {#if IconComponent}
     <div class="setting-banner-icon-box">
       <IconComponent size={16} />
@@ -40,6 +50,6 @@
       {@render children()}
     {/if}
   </div>
-</div>
+</BentoCard>
 
 <style src="../styles/settings/SettingBanner.css"></style>

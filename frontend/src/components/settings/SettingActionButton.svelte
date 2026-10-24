@@ -68,9 +68,9 @@
     padding: 0 14px;
     border-radius: 9px;
     background: rgba(255, 255, 255, 0.06);
-    border: 1px solid var(--c-border);
+    border: 1px solid var(--vinta-border);
     box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
     font-size: 11.5px;
     font-weight: 600;
     cursor: pointer;
@@ -82,7 +82,7 @@
 
   .setting-btn:hover {
     background: rgba(255, 255, 255, 0.12);
-    border-color: var(--c-border-hover, rgba(255, 255, 255, 0.18));
+    border-color: var(--vinta-border-hover, rgba(255, 255, 255, 0.18));
   }
 
   .setting-btn:active {

@@ -422,7 +422,7 @@
     left: 0;
     background: linear-gradient(
       to right,
-      var(--c-nav-hint, rgba(99, 102, 241, 0.32)),
+      var(--vinta-nav-hint, rgba(99, 102, 241, 0.32)),
       transparent
     );
   }
@@ -431,7 +431,7 @@
     right: 0;
     background: linear-gradient(
       to left,
-      var(--c-nav-hint, rgba(99, 102, 241, 0.32)),
+      var(--vinta-nav-hint, rgba(99, 102, 241, 0.32)),
       transparent
     );
   }
@@ -456,7 +456,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
     opacity: 0.75;
     filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.4));
     pointer-events: none;
@@ -483,7 +483,7 @@
     width: 6px;
     height: 6px;
     border-radius: 3px;
-    background: var(--c-text-muted, rgba(255, 255, 255, 0.25));
+    background: var(--vinta-text-muted, rgba(255, 255, 255, 0.25));
     opacity: 0.4;
     border: none;
     padding: 0;
@@ -497,12 +497,12 @@
 
   .dot-btn:hover {
     opacity: 0.8;
-    background: var(--c-text-primary, rgba(255, 255, 255, 0.6));
+    background: var(--vinta-text-primary, rgba(255, 255, 255, 0.6));
   }
 
   .dot-btn.active {
     width: 18px;
     opacity: 1;
-    background: var(--c-primary, #6366f1);
+    background: var(--vinta-primary, #6366f1);
   }
 </style>

@@ -284,9 +284,9 @@
   }
 
   .select-trigger {
-    background: var(--c-contrast-bg, rgba(0, 0, 0, 0.3));
-    color: var(--c-text-primary);
-    border: 1px solid var(--c-border);
+    background: var(--vinta-contrast-bg, rgba(0, 0, 0, 0.3));
+    color: var(--vinta-text-primary);
+    border: 1px solid var(--vinta-border);
     padding: 6px 10px;
     border-radius: 6px;
     font-size: 0.8rem;
@@ -313,7 +313,7 @@
   .select-trigger:focus,
   .custom-select-wrapper:focus-within .select-trigger,
   .select-trigger:hover {
-    border-color: var(--c-primary);
+    border-color: var(--vinta-primary);
   }
 
   .label {
@@ -337,8 +337,8 @@
     pointer-events: auto !important;
     user-select: auto;
     max-height: 220px;
-    background: var(--c-bg);
-    border: 1px solid var(--c-border);
+    background: var(--vinta-bg);
+    border: 1px solid var(--vinta-border);
     border-radius: 8px;
     z-index: 999999;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
@@ -352,8 +352,8 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    background: var(--c-item-bg, rgba(255, 255, 255, 0.05));
-    border: 1px solid var(--c-border);
+    background: var(--vinta-item-bg, rgba(255, 255, 255, 0.05));
+    border: 1px solid var(--vinta-border);
     border-radius: 6px;
     padding: 4px 8px;
     margin-bottom: 6px;
@@ -361,7 +361,7 @@
   }
 
   :global(.search-icon) {
-    color: var(--c-text-muted);
+    color: var(--vinta-text-muted);
     flex-shrink: 0;
   }
 
@@ -370,7 +370,7 @@
     background: transparent;
     border: none;
     outline: none;
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
     font-size: 0.78rem;
     width: 100%;
   }
@@ -391,21 +391,21 @@
     background: transparent;
   }
   :global(.options-scroll-container::-webkit-scrollbar-thumb) {
-    background: var(--c-border);
+    background: var(--vinta-border);
     border-radius: 4px;
   }
 
   :global(.no-options) {
     padding: 8px;
     font-size: 0.78rem;
-    color: var(--c-text-muted);
+    color: var(--vinta-text-muted);
     text-align: center;
   }
 
   .option-item {
     background: transparent;
     border: none;
-    color: var(--c-text-secondary);
+    color: var(--vinta-text-secondary);
     padding: 6px 10px;
     text-align: left;
     font-size: 0.8rem;
@@ -420,13 +420,13 @@
   }
 
   .option-item:hover {
-    background: var(--c-hover);
-    color: var(--c-text-primary);
+    background: var(--vinta-hover);
+    color: var(--vinta-text-primary);
   }
 
   .option-item.selected {
-    background: var(--c-item-bg);
-    color: var(--c-primary);
+    background: var(--vinta-item-bg);
+    color: var(--vinta-primary);
     font-weight: 600;
   }
 </style>

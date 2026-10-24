@@ -338,7 +338,7 @@
     background-color: rgba(255, 255, 255, 0.2);
     transition: 0.3s;
     border-radius: 20px;
-    border: 1px solid var(--c-border);
+    border: 1px solid var(--vinta-border);
   }
 
   .slider:before {
@@ -354,7 +354,10 @@
   }
 
   input:checked + .slider {
-    background-color: var(--c-primary, #6366f1);
+    background-color: var(
+      --vinta-accent-primary,
+      var(--vinta-primary, #38bdf8)
+    );
   }
 
   input:checked + .slider:before {

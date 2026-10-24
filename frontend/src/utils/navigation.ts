@@ -124,7 +124,7 @@ export const AppControls = {
       navigate(MediaPage, mediaConfig, false)
       return
     }
-    if (currentPage === TimerPage) {
+    if (currentPage === TimerPage && isAnyTimerRunning(get(timerAppStore))) {
       navigate(TimerPage, timerConfig, false)
       return
     }

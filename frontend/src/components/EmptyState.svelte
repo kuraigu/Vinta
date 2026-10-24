@@ -50,7 +50,7 @@
       rgba(255, 255, 255, 0.04) 0%,
       rgba(255, 255, 255, 0.01) 100%
     );
-    border: 1px solid var(--c-border);
+    border: 1px solid var(--vinta-border);
     margin: 8px 0;
   }
 
@@ -61,8 +61,8 @@
     width: 52px;
     height: 52px;
     border-radius: 50%;
-    background: var(--c-item-bg);
-    color: var(--c-text-secondary);
+    background: var(--vinta-item-bg);
+    color: var(--vinta-text-secondary);
     margin-bottom: 12px;
     box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
   }
@@ -70,13 +70,13 @@
   .empty-state-title {
     font-size: 14px;
     font-weight: 600;
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
     margin: 0 0 6px 0;
   }
 
   .empty-state-description {
     font-size: 12px;
-    color: var(--c-text-muted);
+    color: var(--vinta-text-muted);
     line-height: 1.4;
     margin: 0;
     max-width: 260px;
@@ -87,7 +87,7 @@
     height: 32px;
     padding: 0 14px;
     border-radius: 16px;
-    background: var(--c-primary);
+    background: var(--vinta-primary);
     color: #ffffff;
     font-size: 12px;
     font-weight: 600;

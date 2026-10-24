@@ -145,15 +145,15 @@
               x2="100%"
               y2="100%"
             >
-              <stop offset="0%" stop-color="var(--c-primary)" />
-              <stop offset="100%" stop-color="var(--c-purple)" />
+              <stop offset="0%" stop-color="var(--vinta-primary)" />
+              <stop offset="100%" stop-color="var(--vinta-purple)" />
             </linearGradient>
             <filter id="ringGlow" x="-20%" y="-20%" width="140%" height="140%">
               <feDropShadow
                 dx="0"
                 dy="2"
                 stdDeviation="4"
-                flood-color="var(--c-primary)"
+                flood-color="var(--vinta-primary)"
                 flood-opacity="0.4"
               />
             </filter>
@@ -216,7 +216,7 @@
   .clock-container.minimal .time {
     font-size: 0.95rem;
     font-weight: 600;
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
     font-variant-numeric: tabular-nums;
     margin: 0;
     padding: 0;
@@ -267,11 +267,11 @@
     font-weight: 600;
     letter-spacing: 0.04em;
     text-transform: uppercase;
-    color: var(--c-text-muted);
-    background: var(--c-item-bg);
+    color: var(--vinta-text-muted);
+    background: var(--vinta-item-bg);
     padding: 4px 14px;
     border-radius: 20px;
-    border: 1px solid var(--c-border);
+    border: 1px solid var(--vinta-border);
   }
 
   /* CIRCULAR DIAL HUB DESIGN (FLOATING RING) */
@@ -299,7 +299,7 @@
 
   .dial-bg-ring {
     fill: none;
-    stroke: var(--c-contrast-bg);
+    stroke: var(--vinta-contrast-bg);
     stroke-width: 14;
     opacity: 0.8;
   }
@@ -330,7 +330,7 @@
     font-size: 0.65rem;
     font-weight: 700;
     letter-spacing: 0.08em;
-    color: var(--c-primary);
+    color: var(--vinta-primary);
     text-transform: uppercase;
     line-height: 1;
   }
@@ -342,7 +342,7 @@
     font-weight: 800;
     letter-spacing: -1px;
     line-height: 1.1;
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
   }
 
   .colon {
@@ -353,7 +353,7 @@
   .dial-seconds-pill {
     font-size: 0.68rem;
     font-weight: 700;
-    color: var(--c-text-muted);
+    color: var(--vinta-text-muted);
     font-variant-numeric: tabular-nums;
     line-height: 1;
     letter-spacing: 0.04em;
@@ -373,7 +373,7 @@
   .footer-meta-item {
     font-size: 0.82rem;
     font-weight: 700;
-    color: var(--c-text-primary);
+    color: var(--vinta-text-primary);
     letter-spacing: 0.02em;
   }
 
@@ -386,7 +386,7 @@
 
   .footer-dot {
     font-size: 0.75rem;
-    color: var(--c-text-muted);
+    color: var(--vinta-text-muted);
     opacity: 0.5;
   }
 </style>

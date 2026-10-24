@@ -205,6 +205,11 @@ func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 				applyInit(h)
 			}
 			services.SetFrontendReady(true)
+			a.initialShowOnce.Do(func() {
+				if a.window != nil {
+					a.window.Show()
+				}
+			})
 		})
 		win.OnWindowEvent(events.Common.WindowClosing, func(_ *application.WindowEvent) {
 			services.SetFrontendReady(false)
@@ -212,7 +217,11 @@ func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 		})
 
 		go func() {
-			time.Sleep(3000 * time.Millisecond)
+			if a.IsTestMode() {
+				time.Sleep(300 * time.Millisecond)
+			} else {
+				time.Sleep(3000 * time.Millisecond)
+			}
 			a.initialShowOnce.Do(func() {
 				if a.window != nil {
 					a.window.Show()

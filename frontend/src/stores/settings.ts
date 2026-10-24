@@ -22,7 +22,15 @@ import type { DateFormatOption } from '../utils/dateFormatter'
 
 export type IslandConfig = {
   minimal: { w: number; h: number; r: number }
-  expanded: { w: number; h: number; r: number }
+  expanded: {
+    w: number
+    h: number
+    r: number
+    minH?: number
+    maxH?: number
+    minW?: number
+    maxW?: number
+  }
   borderColor?: string
   glowColor?: string
 }
@@ -183,16 +191,16 @@ function persistentWritable<T>(key: string, initialValue: T) {
       } else {
         initial = parsed
       }
-      if (key === 'vinta_theme' && initial === 'dark') {
-        initial = 'oled-dark' as unknown as T
+      if (key === 'vinta_theme' && (initial === 'dark' || initial === 'oled-dark')) {
+        initial = 'dark-gold' as unknown as T
       }
     } catch {
       initial = initialValue
     }
   }
 
-  if (key === 'vinta_theme' && initial === 'dark') {
-    initial = 'oled-dark' as unknown as T
+  if (key === 'vinta_theme' && (initial === 'dark' || initial === 'oled-dark')) {
+    initial = 'dark-gold' as unknown as T
   }
 
   const store = writable<T>(initial)
@@ -228,7 +236,7 @@ function persistentWritable<T>(key: string, initialValue: T) {
 // Known legacy defaults to prune during one-time sparse migration
 const legacyV1Defaults: Record<string, unknown> = {
   vinta_autohide_display: 'dash',
-  vinta_theme: 'oled-dark',
+  vinta_theme: 'dark-gold',
   vinta_user_name: 'User',
   vinta_glow_intensity: 'subtle',
   vinta_opacity_minimal: 1.0,
@@ -302,8 +310,8 @@ if (typeof window !== 'undefined') {
                   ...diskVal
                 }
               }
-              if (item.key === 'vinta_theme' && diskVal === 'dark') {
-                diskVal = 'oled-dark'
+              if (item.key === 'vinta_theme' && (diskVal === 'dark' || diskVal === 'oled-dark')) {
+                diskVal = 'dark-gold'
               }
               localStorage.setItem(item.key, JSON.stringify(diskVal))
               item.store.set(diskVal)
@@ -333,7 +341,7 @@ export function getInitialTimezone(): string {
 // ============================================================================
 // 1. Appearance & Customization
 // ============================================================================
-export const themeStore = persistentWritable<string>('vinta_theme', 'oled-dark')
+export const themeStore = persistentWritable<string>('vinta_theme', 'dark-gold')
 export const userNameStore = persistentWritable<string>(
   'vinta_user_name',
   'User'
@@ -483,6 +491,47 @@ export function calculateHomeMinimalWidth(
   const contentW = activeSlots.reduce((sum, w) => sum + w, 0)
   const gapsW = Math.max(0, activeSlots.length - 1) * GAP
   return Math.max(130, PADDING + contentW + gapsW)
+}
+
+/**
+ * Calculates the dynamic height for the expanded Home Page based on active glance cards,
+ * clamped between minimum and maximum bounds defined in the island configuration.
+ */
+export function calculateHomeExpandedHeight(
+  visibility: HomeWidgetsVisibility,
+  hasNotification: boolean = false,
+  hasUpdate: boolean = false,
+  minH: number = 260,
+  maxH: number = 640
+): number {
+  const GAP = 12
+  const CONTAINER_PADDING = 52 // clearance padding for dock & edges
+
+  // 1. Header segment (Weather hero full-bleed or salutation greeting)
+  let totalHeight = visibility.weather ? 160 : 96
+
+  // 2. Update notice banner
+  if (hasUpdate) {
+    totalHeight += GAP + 68
+  }
+
+  // 3. Notification glance card (only renders if unread notifications exist)
+  if (hasNotification) {
+    totalHeight += GAP + 84
+  }
+
+  // 4. Calendar glance agenda
+  if (visibility.calendar) {
+    totalHeight += GAP + 114
+  }
+
+  // 5. Quick Controls / Action Center glance
+  if (visibility.actionCenter) {
+    totalHeight += GAP + 104
+  }
+
+  const computedHeight = totalHeight + CONTAINER_PADDING
+  return Math.max(minH, Math.min(maxH, computedHeight))
 }
 
 // ============================================================================

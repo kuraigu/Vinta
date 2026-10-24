@@ -3,11 +3,12 @@
   flex-direction: column;
   width: 100%;
   height: 100%;
+  padding-top: var(--vinta-dock-clearance, 56px);
   box-sizing: border-box;
   overflow: hidden;
   position: relative;
   text-align: left;
-  background: var(--c-bg, #18181b);
+  background: var(--vinta-bg, #18181b);
 }
 
 /* Subtle Banner Header */
@@ -18,7 +19,7 @@
   height: 44px;
   padding: 0 12px;
   background: var(--sticky-banner-bg, rgba(245, 158, 11, 0.16));
-  border-bottom: 1px solid var(--sticky-banner-border, rgba(245, 158, 11, 0.28));
+  border-top: 1px solid var(--sticky-banner-border, rgba(245, 158, 11, 0.28));
   gap: 10px;
   flex-shrink: 0;
   backdrop-filter: blur(12px);
@@ -45,19 +46,19 @@
   border-radius: 6px;
   background: transparent;
   border: none;
-  color: var(--c-text-secondary, rgba(255, 255, 255, 0.7));
+  color: var(--vinta-text-secondary, rgba(255, 255, 255, 0.7));
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .banner-btn:hover {
   background: rgba(255, 255, 255, 0.1);
-  color: var(--c-text-primary, #ffffff);
+  color: var(--vinta-text-primary, #ffffff);
 }
 
 .banner-btn.active {
   background: rgba(255, 255, 255, 0.15);
-  color: var(--c-text-primary, #ffffff);
+  color: var(--vinta-text-primary, #ffffff);
 }
 
 .banner-center-title {
@@ -73,7 +74,7 @@
   border: none;
   font-size: 0.95rem;
   font-weight: 700;
-  color: var(--c-text-primary, #ffffff);
+  color: var(--vinta-text-primary, #ffffff);
   outline: none;
   padding: 4px 8px;
   border-radius: 6px;
@@ -156,7 +157,7 @@
   height: 32px;
   padding: 0 12px;
   background: rgba(0, 0, 0, 0.2);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
   flex-shrink: 0;
   box-sizing: border-box;
 }
@@ -176,14 +177,14 @@
   border-radius: 4px;
   background: transparent;
   border: none;
-  color: var(--c-text-secondary, rgba(255, 255, 255, 0.65));
+  color: var(--vinta-text-secondary, rgba(255, 255, 255, 0.65));
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .tool-action-btn:hover {
   background: rgba(255, 255, 255, 0.1);
-  color: var(--c-text-primary, #ffffff);
+  color: var(--vinta-text-primary, #ffffff);
 }
 
 .tool-action-btn:active {
@@ -195,22 +196,21 @@
   align-items: center;
   font-size: 0.68rem;
   font-weight: 500;
-  color: var(--c-text-muted, rgba(255, 255, 255, 0.45));
+  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.45));
 }
 
 .state-saved-text {
-  color: var(--c-text-secondary, rgba(255, 255, 255, 0.65));
+  color: var(--vinta-text-secondary, rgba(255, 255, 255, 0.65));
 }
 
-/* Main Text Area with Dock clearance */
+/* Main Text Area */
 .notes-main-canvas {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
   position: relative;
-  /* Clears the bottom dock so content is never obscured */
-  padding-bottom: 58px;
+  padding-bottom: 4px;
   box-sizing: border-box;
   text-align: left;
 }
@@ -221,7 +221,7 @@
   padding: 16px 20px;
   font-size: 0.92rem;
   line-height: 1.6;
-  color: var(--c-text-primary, #ffffff);
+  color: var(--vinta-text-primary, #ffffff);
   outline: none;
   cursor: text;
   word-break: break-word;
@@ -232,7 +232,7 @@
 
 .editor-surface:empty::before {
   content: 'Take a note...';
-  color: var(--c-text-muted, rgba(255, 255, 255, 0.35));
+  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.35));
   pointer-events: none;
 }
 
@@ -264,7 +264,7 @@
 .drag-drop-overlay {
   position: absolute;
   inset: 0;
-  bottom: 58px;
+  top: 48px;
   background: rgba(14, 165, 233, 0.2);
   backdrop-filter: blur(4px);
   border: 2px dashed #0ea5e9;
@@ -283,7 +283,7 @@
 .notes-drawer-backdrop {
   position: absolute;
   inset: 0;
-  bottom: 58px;
+  top: 48px;
   background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(4px);
   z-index: 50;
@@ -322,7 +322,7 @@
 .drawer-title {
   font-size: 0.82rem;
   font-weight: 700;
-  color: var(--c-text-primary, #ffffff);
+  color: var(--vinta-text-primary, #ffffff);
 }
 
 .drawer-search-wrapper {
@@ -335,7 +335,7 @@
 :global(.drawer-search-icon) {
   position: absolute;
   left: 8px;
-  color: var(--c-text-muted, rgba(255, 255, 255, 0.4));
+  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.4));
   pointer-events: none;
 }
 
@@ -347,12 +347,12 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 0 8px 0 26px;
   font-size: 0.74rem;
-  color: var(--c-text-primary, #ffffff);
+  color: var(--vinta-text-primary, #ffffff);
   outline: none;
 }
 
 .drawer-search-input:focus {
-  border-color: var(--c-primary, #6366f1);
+  border-color: var(--vinta-primary, #6366f1);
 }
 
 .drawer-notes-list {
@@ -405,7 +405,7 @@
 .drawer-note-title {
   font-size: 0.76rem;
   font-weight: 600;
-  color: var(--c-text-primary, #ffffff);
+  color: var(--vinta-text-primary, #ffffff);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -413,44 +413,44 @@
 
 .drawer-note-date {
   font-size: 0.62rem;
-  color: var(--c-text-muted, rgba(255, 255, 255, 0.4));
+  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.4));
 }
 
 /* Banner color tokens */
 .color-yellow {
   --sticky-banner-bg: rgba(245, 158, 11, 0.18);
   --sticky-banner-border: rgba(245, 158, 11, 0.3);
-  --sticky-accent: #f59e0b;
+  --sticky-accent: var(--vinta-note-yellow, #f59e0b);
 }
 
 .color-green {
   --sticky-banner-bg: rgba(34, 197, 94, 0.18);
   --sticky-banner-border: rgba(34, 197, 94, 0.3);
-  --sticky-accent: #22c55e;
+  --sticky-accent: var(--vinta-note-green, #22c55e);
 }
 
 .color-pink {
   --sticky-banner-bg: rgba(236, 72, 153, 0.18);
   --sticky-banner-border: rgba(236, 72, 153, 0.3);
-  --sticky-accent: #ec4899;
+  --sticky-accent: var(--vinta-note-pink, #ec4899);
 }
 
 .color-purple {
   --sticky-banner-bg: rgba(168, 85, 247, 0.18);
   --sticky-banner-border: rgba(168, 85, 247, 0.3);
-  --sticky-accent: #a855f7;
+  --sticky-accent: var(--vinta-note-purple, #a855f7);
 }
 
 .color-blue {
   --sticky-banner-bg: rgba(14, 165, 233, 0.18);
   --sticky-banner-border: rgba(14, 165, 233, 0.3);
-  --sticky-accent: #0ea5e9;
+  --sticky-accent: var(--vinta-note-blue, #0ea5e9);
 }
 
 .color-charcoal {
   --sticky-banner-bg: rgba(148, 163, 184, 0.14);
   --sticky-banner-border: rgba(148, 163, 184, 0.25);
-  --sticky-accent: #94a3b8;
+  --sticky-accent: var(--vinta-note-charcoal, #94a3b8);
 }
 
 /* ==========================================================================
@@ -475,7 +475,7 @@
   gap: 12px;
   flex-shrink: 0;
   background: rgba(255, 255, 255, 0.03);
-  border-bottom: 1px solid var(--c-border, rgba(255, 255, 255, 0.08));
+  border-top: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.08));
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   box-sizing: border-box;
@@ -491,56 +491,17 @@
 .board-title {
   font-size: 0.88rem;
   font-weight: 700;
-  color: var(--c-text-primary, #ffffff);
+  color: var(--vinta-text-primary, #ffffff);
   letter-spacing: -0.01em;
 }
 
 .board-count-pill {
   font-size: 0.65rem;
   font-weight: 600;
-  color: var(--c-text-muted, rgba(255, 255, 255, 0.5));
+  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.5));
   background: rgba(255, 255, 255, 0.08);
   padding: 1px 6px;
   border-radius: 999px;
-}
-
-.board-search-box {
-  flex: 1;
-  max-width: 220px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  padding: 4px 8px;
-  transition:
-    border-color 0.15s ease,
-    background 0.15s ease;
-  box-sizing: border-box;
-}
-
-.board-search-box:focus-within {
-  border-color: rgba(255, 255, 255, 0.25);
-  background: rgba(0, 0, 0, 0.4);
-}
-
-.board-search-icon {
-  color: var(--c-text-muted, rgba(255, 255, 255, 0.4));
-  flex-shrink: 0;
-}
-
-.board-search-input {
-  width: 100%;
-  background: transparent;
-  border: none;
-  font-size: 0.76rem;
-  color: var(--c-text-primary, #ffffff);
-  outline: none;
-}
-
-.board-search-input::placeholder {
-  color: var(--c-text-muted, rgba(255, 255, 255, 0.35));
 }
 
 .board-header-right {
@@ -556,29 +517,29 @@
   justify-content: center;
   width: 28px;
   height: 28px;
-  border-radius: 7px;
+  border-radius: var(--vinta-radius-pill, 9999px);
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: var(--c-text-secondary, rgba(255, 255, 255, 0.7));
+  border: none;
+  color: var(--vinta-text-secondary, rgba(255, 255, 255, 0.7));
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .board-action-btn:hover {
   background: rgba(255, 255, 255, 0.12);
-  color: var(--c-text-primary, #ffffff);
+  color: var(--vinta-text-primary, #ffffff);
   transform: translateY(-1px);
 }
 
 .board-action-btn.new-note-action {
-  background: var(--c-primary, #38bdf8);
+  background: var(--vinta-primary, #38bdf8);
   color: #0f172a;
   border-color: transparent;
   font-weight: 700;
 }
 
 .board-action-btn.new-note-action:hover {
-  background: #7dd3fc;
+  background: var(--vinta-primary-hover, var(--vinta-accent-hover, #7dd3fc));
   color: #0f172a;
 }
 
@@ -593,16 +554,16 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  padding: 14px 16px 68px 16px;
+  padding: 0 16px 12px 16px;
   box-sizing: border-box;
 }
 
 .note-card {
   display: flex;
   flex-direction: column;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
+  background: var(--vinta-note-card-bg, var(--vinta-surface-card));
+  border: 1px solid var(--vinta-note-card-border, var(--vinta-border));
+  border-radius: var(--vinta-radius-card, 12px);
   overflow: hidden;
   cursor: pointer;
   min-height: 110px;
@@ -618,8 +579,8 @@
 
 .note-card:hover {
   transform: translateY(-2px);
-  background: rgba(255, 255, 255, 0.07);
-  border-color: var(--card-band-color, rgba(255, 255, 255, 0.2));
+  background: var(--vinta-note-card-hover-bg, var(--vinta-hover));
+  border-color: var(--vinta-note-band, var(--vinta-border-accent));
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
 }
 
@@ -629,7 +590,7 @@
   justify-content: space-between;
   height: 8px;
   width: 100%;
-  background: var(--card-band-color, #f59e0b);
+  background: var(--vinta-note-band, var(--vinta-note-yellow));
   flex-shrink: 0;
   position: relative;
 }
@@ -678,7 +639,7 @@
 .note-card-title {
   font-size: 0.82rem;
   font-weight: 700;
-  color: var(--c-text-primary, #ffffff);
+  color: var(--vinta-text-primary, #ffffff);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -687,7 +648,7 @@
 
 .note-card-snippet {
   font-size: 0.72rem;
-  color: var(--c-text-secondary, rgba(255, 255, 255, 0.65));
+  color: var(--vinta-text-secondary, rgba(255, 255, 255, 0.65));
   line-height: 1.35;
   margin: 0;
   display: -webkit-box;
@@ -704,14 +665,14 @@
   justify-content: space-between;
   padding: 4px 12px 8px 12px;
   font-size: 0.62rem;
-  color: var(--c-text-muted, rgba(255, 255, 255, 0.4));
+  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.4));
   flex-shrink: 0;
 }
 
 .note-card-has-img {
   display: flex;
   align-items: center;
-  color: var(--c-text-muted, rgba(255, 255, 255, 0.5));
+  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.5));
 }
 
 .empty-board-state {
@@ -720,7 +681,7 @@
   align-items: center;
   justify-content: center;
   padding: 48px 24px;
-  color: var(--c-text-muted, rgba(255, 255, 255, 0.4));
+  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.4));
   font-size: 0.85rem;
   gap: 12px;
 }
@@ -731,7 +692,7 @@
   gap: 6px;
   padding: 6px 14px;
   border-radius: 8px;
-  background: var(--c-primary, #38bdf8);
+  background: var(--vinta-primary, #38bdf8);
   color: #0f172a;
   border: none;
   font-size: 0.78rem;
@@ -744,25 +705,25 @@
 
 .board-create-btn:hover {
   transform: translateY(-1px);
-  background: #7dd3fc;
+  background: var(--vinta-primary-hover, var(--vinta-accent-hover, #7dd3fc));
 }
 
 /* Card color bands */
 .card-yellow {
-  --card-band-color: #f59e0b;
+  --vinta-note-band: var(--vinta-note-yellow, #f59e0b);
 }
 .card-green {
-  --card-band-color: #22c55e;
+  --vinta-note-band: var(--vinta-note-green, #22c55e);
 }
 .card-pink {
-  --card-band-color: #ec4899;
+  --vinta-note-band: var(--vinta-note-pink, #ec4899);
 }
 .card-purple {
-  --card-band-color: #a855f7;
+  --vinta-note-band: var(--vinta-note-purple, #a855f7);
 }
 .card-blue {
-  --card-band-color: #0ea5e9;
+  --vinta-note-band: var(--vinta-note-blue, #0ea5e9);
 }
 .card-charcoal {
-  --card-band-color: #94a3b8;
+  --vinta-note-band: var(--vinta-note-charcoal, #94a3b8);
 }

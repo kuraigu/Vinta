@@ -12,14 +12,23 @@
     inset calc(-1.5 * var(--island-glow-width)) 0 0 0 var(--island-glow-color),
     inset 0 calc(-1.5 * var(--island-glow-width)) 0 0 var(--island-glow-color);
   --island-hover-border:
-    inset var(--island-border-width) 0 0 0 var(--island-border-color),
-    inset calc(-1 * var(--island-border-width)) 0 0 0 var(--island-border-color),
-    inset 0 calc(-1 * var(--island-border-width)) 0 0 var(--island-border-color);
-  --island-hover-glow: 0 2px 5px var(--island-border-color);
+    inset var(--island-border-width) 0 0 0
+      var(--island-glow-color, var(--vinta-island-glow-idle)),
+    inset calc(-1 * var(--island-border-width)) 0 0 0
+      var(--island-glow-color, var(--vinta-island-glow-idle)),
+    inset 0 calc(-1 * var(--island-border-width)) 0 0
+      var(--island-glow-color, var(--vinta-island-glow-idle));
+  --island-hover-glow:
+    0 0 10px var(--island-glow-color, var(--vinta-island-glow-idle)),
+    0 0 2px var(--island-glow-color, var(--vinta-island-glow-idle));
+  --island-hover-drop-shadow: var(
+    --vinta-island-hover-shadow,
+    0 2px 4.5px rgba(0, 0, 0, 0.3)
+  );
 
   margin-top: 0;
   position: relative;
-  background: var(--c-bg);
+  background: var(--vinta-bg);
 
   background-clip: padding-box;
   -webkit-background-clip: padding-box;
@@ -28,7 +37,7 @@
   border-top: none;
   border-top-left-radius: 0 !important;
   border-top-right-radius: 0 !important;
-  box-shadow: var(--island-box-shadow);
+  box-shadow: var(--island-box-shadow, var(--vinta-island-shadow));
 
   transition:
     filter 0.4s ease,
@@ -42,7 +51,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--c-text-primary);
+  color: var(--vinta-text-primary);
   pointer-events: auto;
 
   transform: translateZ(0);
@@ -105,8 +114,8 @@
 
 .island.is-hidden {
   box-shadow: 0 1.5px 4.5px rgba(0, 0, 0, 0.18);
-  border-color: var(--c-border);
-  background-color: var(--c-bg);
+  border-color: var(--vinta-border);
+  background-color: var(--vinta-bg);
 }
 
 .island-drag-handle {
@@ -131,7 +140,7 @@
   width: 48px;
   height: 3.5px;
   border-radius: 9999px;
-  background: var(--c-text-primary, #ffffff);
+  background: var(--vinta-text-primary, #ffffff);
   opacity: 0.35;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
   transition:
@@ -170,7 +179,7 @@
   padding: 0 4px;
   box-sizing: border-box;
   z-index: 10;
-  color: var(--c-text-primary);
+  color: var(--vinta-text-primary);
   overflow: hidden;
 }
 
@@ -342,6 +351,10 @@
   transition:
     width var(--island-anim),
     height var(--island-anim);
+}
+
+.view.has-dock {
+  padding-top: var(--vinta-dock-height, 48px);
 }
 
 .dock-overlay-wrapper {

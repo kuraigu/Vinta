@@ -30,6 +30,10 @@ export const debugBoundsOverlay = createDebugFlag(
   false
 )
 export const debugLogs = createDebugFlag('vinta_debug_logs', false)
+export const debugClassInspector = createDebugFlag(
+  'vinta_debug_class_inspector',
+  false
+)
 
 if (typeof window !== 'undefined') {
   const isViteDev = Boolean(import.meta.env?.DEV)
@@ -43,6 +47,10 @@ if (typeof window !== 'undefined') {
       enableLogs: (enable = true) => {
         debugLogs.set(enable)
         console.log(`[Vinta:Debug] Verbose logs: ${enable ? 'ON' : 'OFF'}`)
+      },
+      showInspector: (enable = true) => {
+        debugClassInspector.set(enable)
+        console.log(`[Vinta:Debug] Class inspector: ${enable ? 'ON' : 'OFF'}`)
       },
       toggleBounds: () => {
         let current = false
@@ -60,12 +68,26 @@ if (typeof window !== 'undefined') {
         console.log(`[Vinta:Debug] Verbose logs: ${next ? 'ON' : 'OFF'}`)
         return next
       },
+      toggleInspector: () => {
+        let current = false
+        debugClassInspector.subscribe((v) => (current = v))()
+        const next = !current
+        debugClassInspector.set(next)
+        console.log(`[Vinta:Debug] Class inspector: ${next ? 'ON' : 'OFF'}`)
+        return next
+      },
       status: () => {
         let b = false
         let l = false
+        let i = false
         debugBoundsOverlay.subscribe((v) => (b = v))()
         debugLogs.subscribe((v) => (l = v))()
-        console.table({ 'Bounds Overlay': b, 'Verbose Logs': l })
+        debugClassInspector.subscribe((v) => (i = v))()
+        console.table({
+          'Bounds Overlay': b,
+          'Verbose Logs': l,
+          'Class Inspector': i
+        })
       }
     }
 
@@ -91,6 +113,17 @@ if (typeof window !== 'undefined') {
         let current = false
         debugLogs.subscribe((v) => (current = v))()
         debugLogs.set(!current)
+      }
+
+      // Ctrl + Shift + I or Ctrl + Alt + I -> Real-time Class Inspector Toggle
+      if (
+        (e.ctrlKey && e.shiftKey && e.code === 'KeyI') ||
+        (e.ctrlKey && e.altKey && e.code === 'KeyI')
+      ) {
+        e.preventDefault()
+        let current = false
+        debugClassInspector.subscribe((v) => (current = v))()
+        debugClassInspector.set(!current)
       }
     })
   }
