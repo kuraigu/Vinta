@@ -701,7 +701,7 @@ func getEnumSnipCallback() uintptr {
 				return 1
 			}
 
-			if isScreenClippingHost(h) {
+			if isScreenClippingHost(h) || isSnippingTool(h) {
 				enumSnipTargetHwnd = h
 				return 0
 			}
@@ -782,46 +782,25 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 		return enumSnipTargetHwnd
 	}
 
-	var lastElevatedSnipHwnd uintptr
-
 	reassertTopmost := func(curFg uintptr) {
 		snipHwnd := findActiveSnippingWindow(curFg)
 		if snipHwnd != 0 {
-			exStyle, _, _ := procGetWindowLong.Call(snipHwnd, uintptr(0xFFFFFFEC))
-			if exStyle&0x00000008 == 0 {
-				_, _, _ = procSetWindowPos.Call(
-					snipHwnd,
-					uintptr(^uintptr(0)),
-					0, 0, 0, 0,
-					0x0001|0x0002|0x0010,
-				)
-				lastElevatedSnipHwnd = snipHwnd
-			} else {
-				_, _, _ = procSetWindowPos.Call(
-					snipHwnd,
-					uintptr(^uintptr(0)),
-					0, 0, 0, 0,
-					0x0001|0x0002|0x0010,
-				)
-			}
+			// Subordinate Vinta immediately behind Snipping Tool window so its top toolbar controls stay visible and interactive
+			_, _, _ = procSetWindowPos.Call(
+				vintaHwnd,
+				snipHwnd,
+				0, 0, 0, 0,
+				0x0001|0x0002|0x0010|0x0400, // SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE | SWP_NOSENDCHANGING
+			)
 			return
 		}
 
-		if lastElevatedSnipHwnd != 0 {
-			_, _, _ = procSetWindowPos.Call(
-				lastElevatedSnipHwnd,
-				uintptr(^uintptr(1)),
-				0, 0, 0, 0,
-				0x0001|0x0002|0x0010,
-			)
-			lastElevatedSnipHwnd = 0
-		}
-
+		// Reassert Vinta as topmost when no Snipping Tool overlay is active
 		_, _, _ = procSetWindowPos.Call(
 			vintaHwnd,
-			uintptr(^uintptr(0)),
+			uintptr(^uintptr(0)), // HWND_TOPMOST
 			0, 0, 0, 0,
-			0x0001|0x0002|0x0010,
+			0x0001|0x0002|0x0010, // SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE
 		)
 	}
 
