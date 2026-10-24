@@ -143,6 +143,10 @@
   box-sizing: border-box;
 }
 
+.notification-card-feed:empty {
+  display: none;
+}
+
 /* Glance & Action Center Card Feed */
 .glance-card-feed {
   width: 100%;
@@ -155,6 +159,36 @@
   height: auto;
   border-radius: 20px;
   box-sizing: border-box;
+}
+
+/* Studio Branding Footer */
+.home-brand-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 0 6px 0;
+  width: 100%;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.home-brand-text {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.4));
+  letter-spacing: -0.01em;
+}
+
+.home-version-pill {
+  font-size: 10px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--vinta-surface-subtle, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.08));
+  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.5));
 }
 
 /* Bottom Floating Scroll Cue Pill */

@@ -121,7 +121,10 @@
       <img src={appIcon} alt="Vinta" class="about-logo-img" />
     </div>
     <div class="about-hero-details">
-      <span class="about-brand-title">{appInfo.name}</span>
+      <div class="about-brand-header-row">
+        <span class="about-brand-title">{appInfo.name}</span>
+        <span class="about-brand-studio">by FreeMatrix Studios & Contributors</span>
+      </div>
 
       <div class="about-release-capsule">
         <span
@@ -246,12 +249,26 @@
     text-align: left;
   }
 
+  .about-brand-header-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
   .about-brand-title {
     font-size: 16px;
     font-weight: 700;
     letter-spacing: -0.01em;
     color: var(--vinta-text-primary);
     line-height: 1.2;
+  }
+
+  .about-brand-studio {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--vinta-text-muted);
+    letter-spacing: -0.01em;
   }
 
   .about-release-capsule {

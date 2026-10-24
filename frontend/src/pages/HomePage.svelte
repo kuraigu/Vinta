@@ -29,6 +29,8 @@
     dateFormatStore,
     formatUserDate,
     updateInfoStore,
+    appInfoStore,
+    notifData,
     activeSettingsTabStore,
     type IslandConfig
   } from '../store'
@@ -39,6 +41,34 @@
     >('navigate')
 
   let isUpdateSnoozed = $state(false)
+
+  /**
+   * Formats the application version for display in the footer.
+   */
+  function computeDisplayVersion() {
+    const ver = $appInfoStore?.version
+    if (!ver) return '0.1.0'
+    const trimmed = ver.replace(/^v/, '').replace(/-dev$/i, '')
+    return trimmed || '0.1.0'
+  }
+  let displayVersion = $derived.by(computeDisplayVersion)
+
+  /**
+   * Evaluates if there are active non-update notifications to display in the glance slot.
+   */
+  function computeHasStandardNotifications() {
+    return ($notifData || []).some(
+      (n) =>
+        !n.isUpdate &&
+        !n.title?.toLowerCase().includes('update available') &&
+        !(
+          (n.appName?.toLowerCase() === 'vinta' ||
+            n.aumid?.toLowerCase().includes('vinta')) &&
+          n.title?.toLowerCase().includes('update')
+        )
+    )
+  }
+  let hasStandardNotifications = $derived.by(computeHasStandardNotifications)
 
   /**
    * Navigates directly to the dedicated Calendar application page.
@@ -332,9 +362,11 @@
           {/if}
 
           <!-- Notification Glance Card (High priority alerts right after updates) -->
-          <section class="notification-card-feed">
-            <NotificationGlance />
-          </section>
+          {#if hasStandardNotifications}
+            <section class="notification-card-feed">
+              <NotificationGlance />
+            </section>
+          {/if}
 
           <!-- Calendar Agenda Glance Card -->
           {#if $homeWidgetsVisibilityStore.calendar}
@@ -349,6 +381,12 @@
               <ActionCenterGlance />
             </section>
           {/if}
+
+          <!-- Studio Branding Footer (Issue #185 / Category 7) -->
+          <footer class="home-brand-footer">
+            <span class="home-brand-text">Vinta by FreeMatrix Studios & Contributors</span>
+            <span class="home-version-pill">v{displayVersion}</span>
+          </footer>
         </div>
       </ScrollView>
 
