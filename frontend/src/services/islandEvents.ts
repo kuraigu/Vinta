@@ -42,7 +42,8 @@ import {
   type UpdateCheckResult,
   type BatteryData,
   type WirelessData,
-  hiddenPillOffsetXStore
+  hiddenPillOffsetXStore,
+  displayLayoutStore
 } from '../store'
 import type { MonitorInfo } from '../../bindings/Vinta/backend/models.js'
 import { sendVintaNotification } from './vintaNotification.js'
@@ -116,6 +117,10 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
     callbacks.onModeSwitchHotkey?.()
   })
 
+  // Track last auto-hide notification timestamp per application to prevent spamming
+  const lastAutoHideNotifPerApp = new Map<string, number>()
+  const AUTO_HIDE_NOTIF_COOLDOWN_MS = 5 * 60 * 1000 // 5 minutes
+
   // Fullscreen / Game Mode Handling
   let wasHiddenBeforeGameMode = false
   onEvent('game-mode-enter', (payload: unknown) => {
@@ -128,33 +133,51 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
 
     let reason = ''
     let appName = ''
-    if (typeof payload === 'string') {
-      reason = payload
-    } else if (payload && typeof payload === 'object') {
+    if (payload && typeof payload === 'object') {
       const p = payload as Record<string, unknown>
       reason = String(p.reason || '')
       appName = String(p.appName || '')
+    } else if (typeof payload === 'string') {
+      reason = payload
     }
 
-    let reasonText = 'exclusive fullscreen application'
-    if (reason === 'presentation_mode') {
-      reasonText = 'presentation mode'
-    } else if (reason === 'borderless_fullscreen') {
-      reasonText = 'borderless fullscreen application'
-    }
+    const targetAppName = appName || 'Vinta'
+    const now = Date.now()
+    const lastSent = lastAutoHideNotifPerApp.get(targetAppName) || 0
 
-    const appPrefix = appName ? `${appName}: ` : ''
-    const newNotif = {
-      id: Date.now(),
-      appName: appName || 'Vinta',
-      title: 'Auto-Hidden for Fullscreen',
-      message: `${appPrefix}Vinta was automatically hidden to prevent overlay conflicts during ${reasonText}.`,
-      timestamp: Date.now()
-    }
+    // Only dispatch notification if cooldown has elapsed for this application
+    if (now - lastSent >= AUTO_HIDE_NOTIF_COOLDOWN_MS) {
+      lastAutoHideNotifPerApp.set(targetAppName, now)
 
-    notifData.update((items) =>
-      [newNotif, ...items].slice(0, MAX_NOTIFICATIONS)
-    )
+      let reasonText = 'an exclusive fullscreen application'
+      if (reason === 'presentation_mode') {
+        reasonText = 'presentation mode'
+      } else if (reason === 'unsupported_app') {
+        reasonText = 'an incompatible application'
+      } else if (reason === 'borderless_fullscreen') {
+        reasonText = 'a borderless fullscreen application'
+      }
+
+      const notifTitle = 'Auto-Hidden'
+      const notifMessage = appName
+        ? `${appName}: Hidden to prevent overlay conflicts with ${reasonText}.`
+        : `Vinta was hidden to prevent overlay conflicts with ${reasonText}.`
+
+      // Prune previous auto-hide notification for this specific application before dispatching
+      notifData.update((items) =>
+        items.filter(
+          (item) =>
+            !(item.title === notifTitle && item.appName === targetAppName)
+        )
+      )
+
+      sendVintaNotification({
+        title: notifTitle,
+        message: notifMessage,
+        subApp: appName || undefined,
+        playSound: false
+      })
+    }
   })
 
   onEvent('game-mode-exit', () => {
@@ -163,6 +186,7 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
     }
   })
 
+  let lastRelocateTime = 0
   onEvent('game-mode-relocate', (payload: unknown) => {
     const p = payload as {
       appName?: string
@@ -171,7 +195,7 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
       originalMonitor?: MonitorInfo
       reason?: string
     }
-    const appName = p?.appName || 'Application'
+    const appName = p?.appName || ''
     const targetName = p?.targetMonitor?.name || 'Secondary Display'
     const targetOffset = p?.targetOffset ?? 0
 
@@ -181,32 +205,52 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
       hiddenPillOffsetXStore.set(targetOffset)
     }
 
-    sendVintaNotification({
-      title: `Moved to ${targetName}`,
-      message: `${appName}: Vinta moved to ${targetName} to stay visible during exclusive fullscreen application.`,
-      subApp: 'Display Manager'
-    })
+    const now = Date.now()
+    if (now - lastRelocateTime > 5000) {
+      lastRelocateTime = now
+      const notifTitle = `Moved to ${targetName}`
+      const notifMessage = appName
+        ? `${appName}: Moved to ${targetName} to prevent overlay conflicts.`
+        : `Moved to ${targetName} to prevent overlay conflicts.`
+
+      sendVintaNotification({
+        title: notifTitle,
+        message: notifMessage,
+        subApp: 'Display Manager'
+      })
+    }
   })
 
-  onEvent('game-mode-return', (payload: unknown) => {
+  onEvent('game-mode-exit-relocate', (payload: unknown) => {
     const p = payload as {
       restoreOffset?: number
-      originalMonitorName?: string
+      restoredMonitor?: string
     }
-    const restoreOffset = p?.restoreOffset ?? 0
-    const origName = p?.originalMonitorName || 'Original Display'
 
     if (callbacks.onRelocateOffset) {
-      callbacks.onRelocateOffset(restoreOffset)
-    } else {
-      hiddenPillOffsetXStore.set(restoreOffset)
+      callbacks.onRelocateOffset(p?.restoreOffset ?? 0)
+    } else if (p?.restoreOffset !== undefined) {
+      hiddenPillOffsetXStore.set(p.restoreOffset)
     }
+  })
 
-    sendVintaNotification({
-      title: `Returned to ${origName}`,
-      message: `Vinta returned to ${origName}.`,
-      subApp: 'Display Manager'
-    })
+  onEvent('active-monitor-follow', (payload: unknown) => {
+    const p = payload as {
+      targetOffset?: number
+      targetMonitor?: MonitorInfo
+    }
+    const targetOffset = p?.targetOffset ?? 0
+    if (callbacks.onRelocateOffset) {
+      callbacks.onRelocateOffset(targetOffset)
+    } else {
+      hiddenPillOffsetXStore.set(targetOffset)
+    }
+    if (p?.targetMonitor) {
+      displayLayoutStore.update((layout) => ({
+        ...layout,
+        currentMonitor: p.targetMonitor as MonitorInfo
+      }))
+    }
   })
 
   // Media Playback Updates
@@ -342,7 +386,33 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
         timestamp: Date.now()
       }
 
-      notifData.update((n) => [newNotif, ...n].slice(0, MAX_NOTIFICATIONS))
+      const isVintaSelf =
+        aumid.toLowerCase().includes('freematrixstudios.vinta') ||
+        appName.toLowerCase().startsWith('vinta')
+
+      let isDuplicate = false
+      notifData.update((items) => {
+        if (isVintaSelf) {
+          const idx = items.findIndex(
+            (item) =>
+              item.title === title &&
+              item.appName.toLowerCase().startsWith('vinta')
+          )
+          if (idx !== -1) {
+            isDuplicate = true
+            // If already added by in-app dispatch, update its nativeId rather than duplicating
+            if (payload.id && !items[idx].nativeId) {
+              items[idx] = { ...items[idx], nativeId: payload.id }
+            }
+            return items
+          }
+        }
+        return [newNotif, ...items].slice(0, MAX_NOTIFICATIONS)
+      })
+
+      if (isDuplicate) {
+        return
+      }
 
       const isNotifEnabled = get(pageVisibilityStore).notifications
       const mediaIsActive =

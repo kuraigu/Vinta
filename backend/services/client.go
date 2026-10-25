@@ -31,6 +31,7 @@ var (
 	procClearNativeMediaArtCache  uintptr
 	procRequeryNativeMediaArtwork uintptr
 	procForceEmitNativeMediaState uintptr
+	procSendNativeToast           uintptr
 
 	mediaCallbackPtr uintptr
 	notifCallbackPtr uintptr
@@ -113,6 +114,7 @@ func ensureDLLLoadedLocked() bool {
 	procClearNativeMediaArtCache, _ = syscall.GetProcAddress(dllHandle, "ClearNativeMediaArtCache")
 	procRequeryNativeMediaArtwork, _ = syscall.GetProcAddress(dllHandle, "RequeryNativeMediaArtwork")
 	procForceEmitNativeMediaState, _ = syscall.GetProcAddress(dllHandle, "ForceEmitNativeMediaState")
+	procSendNativeToast, _ = syscall.GetProcAddress(dllHandle, "SendNativeToast")
 	return true
 }
 
@@ -281,6 +283,33 @@ func FocusMediaApp(sourceApp string) bool {
 
 	appBytes := append([]byte(sourceApp), 0)
 	ret, _, _ := syscall.SyscallN(proc, uintptr(unsafe.Pointer(&appBytes[0])))
+	return ret == 1
+}
+
+// SendNativeToast asks vintaservices.dll to post a native Windows toast notification via WinRT.
+func SendNativeToast(title, message string) bool {
+	serviceMu.Lock()
+	if !ensureDLLLoadedLocked() {
+		serviceMu.Unlock()
+		return false
+	}
+	proc := procSendNativeToast
+	serviceMu.Unlock()
+
+	if proc == 0 {
+		return false
+	}
+
+	wTitle, errTitle := windows.UTF16PtrFromString(title)
+	if errTitle != nil {
+		return false
+	}
+	wMsg, errMsg := windows.UTF16PtrFromString(message)
+	if errMsg != nil {
+		return false
+	}
+
+	ret, _, _ := syscall.SyscallN(proc, uintptr(unsafe.Pointer(wTitle)), uintptr(unsafe.Pointer(wMsg)))
 	return ret == 1
 }
 

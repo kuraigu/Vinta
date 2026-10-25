@@ -22,6 +22,9 @@ var assets embed.FS
 //go:embed build/windows/icon.ico
 var icon []byte
 
+//go:embed build/appicon.png
+var appIconPNG []byte
+
 //go:embed docs/CONTRIBUTORS.md
 var contributorsMD string
 
@@ -29,6 +32,16 @@ func main() {
 	defer backend.SetupPanicRecovery()
 
 	backend.SetEmbeddedContributors(contributorsMD)
+
+	appData := os.Getenv("APPDATA")
+	if appData != "" && len(appIconPNG) > 0 {
+		vintaDir := filepath.Join(appData, "FreeMatrix Studios", "Vinta")
+		_ = os.MkdirAll(vintaDir, 0755)
+		iconDest := filepath.Join(vintaDir, "appicon.png")
+		if _, err := os.Stat(iconDest); os.IsNotExist(err) {
+			_ = os.WriteFile(iconDest, appIconPNG, 0644)
+		}
+	}
 
 	app := backend.NewApp(icon)
 	devTools := devtest.NewDevTest()

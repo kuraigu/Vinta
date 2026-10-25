@@ -1,4 +1,5 @@
 import { get } from 'svelte/store'
+import { Events } from '@wailsio/runtime'
 import appIcon from '@appicon'
 import {
   notifData,
@@ -29,29 +30,33 @@ export function sendVintaNotification(options: VintaNotificationOptions): void {
   const appName = subApp ? `Vinta ${subApp}` : 'Vinta'
 
   // 1. In-app notification store
-  notifData.update((items) => [
-    {
-      id: Date.now() + Math.floor(Math.random() * 1000),
-      appName,
-      title,
-      message,
-      icon,
-      appLogo: icon,
-      timestamp: Date.now()
-    },
-    ...items.slice(0, MAX_NOTIFICATIONS - 1)
-  ])
+  const newItem = {
+    id: Date.now() + Math.floor(Math.random() * 1000),
+    appName,
+    title,
+    message,
+    icon,
+    appLogo: icon,
+    timestamp: Date.now()
+  }
 
-  // 2. Desktop toast notification
-  if (
-    typeof Notification !== 'undefined' &&
-    Notification.permission === 'granted'
-  ) {
-    try {
-      new Notification(title, { body: message, icon })
-    } catch {
-      // Ignore desktop notification failure
-    }
+  notifData.update((items) => {
+    // If an identical notification from Vinta exists, discard the old one and replace with latest
+    const filtered = items.filter(
+      (item) =>
+        !(
+          item.title === title &&
+          (item.appName === appName || item.appName.startsWith('Vinta'))
+        )
+    )
+    return [newItem, ...filtered].slice(0, MAX_NOTIFICATIONS)
+  })
+
+  // 2. Desktop OS toast notification (via native WinRT bridge)
+  try {
+    Events.Emit('send-native-notification', { title, message })
+  } catch {
+    // Ignore native notification event failure
   }
 
   // 3. Audio feedback chime if enabled and DND is inactive
