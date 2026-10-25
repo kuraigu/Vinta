@@ -32,7 +32,7 @@ tasks:
   kill:
     desc: Terminate any running Vinta application processes
     cmds:
-      - cmd.exe /c "taskkill /IM Vinta.exe /F >nul 2>&1 || exit 0"
+      - cmd.exe /c "taskkill /IM Vinta.exe /F /T >nul 2>&1 || exit 0"
     silent: true
 
   build:native:
@@ -51,7 +51,7 @@ tasks:
     desc: Start live development server (Vite + Wails) with DevTest panel enabled
     deps: [build:native]
     cmds:
-      - cmd.exe /c "taskkill /IM Vinta.exe /F >nul 2>&1 || exit 0"
+      - cmd.exe /c "taskkill /IM Vinta.exe /F /T >nul 2>&1 || exit 0"
       - wails3 dev -config ./build/config.yml -port 9245
 
   dev:frontend:
@@ -63,7 +63,7 @@ tasks:
   dev:nobuild:
     desc: Start live development server without rebuilding native C++ DLL
     cmds:
-      - cmd.exe /c "taskkill /IM Vinta.exe /F >nul 2>&1 || exit 0"
+      - cmd.exe /c "taskkill /IM Vinta.exe /F /T >nul 2>&1 || exit 0"
       - wails3 dev -config ./build/config.yml -port 9245
 
   icon:
@@ -107,7 +107,7 @@ tasks:
     desc: Build application binary (production by default, dev with DEV=true)
     deps: [build:native, icon, build:frontend, generate:syso]
     cmds:
-      - cmd.exe /c "taskkill /IM Vinta.exe /F >nul 2>&1 || exit 0"
+      - cmd.exe /c "taskkill /IM Vinta.exe /F /T >nul 2>&1 || exit 0"
       - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/increment_build.ps1
       - '{{if eq .DEV "true"}}go build -tags devtest -o "{{.BUILD_DIR}}/{{.APP_NAME}}.exe" .{{else}}go build -trimpath -ldflags="-w -s -H windowsgui" -o "{{.BUILD_DIR}}/{{.APP_NAME}}.exe" .{{end}}'
       - powershell.exe -NoProfile -Command "if (Test-Path wails_windows_amd64.syso) { Remove-Item -Force wails_windows_amd64.syso }"
@@ -116,7 +116,7 @@ tasks:
     desc: Build standalone production binary and Windows NSIS installer
     deps: [build:native, icon]
     cmds:
-      - cmd.exe /c "taskkill /IM Vinta.exe /F >nul 2>&1 || exit 0"
+      - cmd.exe /c "taskkill /IM Vinta.exe /F /T >nul 2>&1 || exit 0"
       - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/increment_build.ps1
       - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/package_installer.ps1
 
@@ -129,7 +129,7 @@ tasks:
     desc: Compile and run standalone binary
     deps: [build]
     cmds:
-      - cmd.exe /c "taskkill /IM Vinta.exe /F >nul 2>&1 || exit 0"
+      - cmd.exe /c "taskkill /IM Vinta.exe /F /T >nul 2>&1 || exit 0"
       - powershell.exe -NoProfile -Command "Start-Process 'build/bin/Vinta.exe'"
 
   run:debug:
@@ -139,19 +139,19 @@ tasks:
         vars:
           DEV: "true"
     cmds:
-      - cmd.exe /c "taskkill /IM Vinta.exe /F >nul 2>&1 || exit 0"
+      - cmd.exe /c "taskkill /IM Vinta.exe /F /T >nul 2>&1 || exit 0"
       - powershell.exe -NoProfile -Command "Start-Process 'build/bin/Vinta.exe' -ArgumentList '-debug'"
 
   run:nobuild:
     desc: Launch pre-built binary directly without rebuilding
     cmds:
-      - cmd.exe /c "taskkill /IM Vinta.exe /F >nul 2>&1 || exit 0"
+      - cmd.exe /c "taskkill /IM Vinta.exe /F /T >nul 2>&1 || exit 0"
       - cmd.exe /c "if defined FRONTEND_DEVSERVER_URL (build\bin\Vinta.exe) else (powershell.exe -NoProfile -Command \"Start-Process 'build/bin/Vinta.exe'\")"
 
   run:nobuild:debug:
     desc: Launch pre-built binary directly with debug flags
     cmds:
-      - cmd.exe /c "taskkill /IM Vinta.exe /F >nul 2>&1 || exit 0"
+      - cmd.exe /c "taskkill /IM Vinta.exe /F /T >nul 2>&1 || exit 0"
       - powershell.exe -NoProfile -Command "Start-Process 'build/bin/Vinta.exe' -ArgumentList '-debug'"
 
   test:
@@ -161,7 +161,7 @@ tasks:
         vars:
           DEV: "true"
     cmds:
-      - cmd.exe /c "taskkill /IM Vinta.exe /F >nul 2>&1 || exit 0"
+      - cmd.exe /c "taskkill /IM Vinta.exe /F /T >nul 2>&1 || exit 0"
       - powershell.exe -NoProfile -Command "Start-Process 'build/bin/Vinta.exe'"
 
   lint:native:

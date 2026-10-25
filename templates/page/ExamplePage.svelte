@@ -1,9 +1,6 @@
 <script module lang="ts">
   import type { IslandConfig } from '../../frontend/src/store'
 
-  /**
-   * Defines island dimensions for minimal and expanded views.
-   */
   export const config: IslandConfig = {
     minimal: { w: 320, h: 42, r: 21 },
     expanded: { w: 440, h: 420, r: 28 },
@@ -13,12 +10,9 @@
 </script>
 
 <script lang="ts">
-  import { ChevronLeft } from 'lucide-svelte'
+  import BackButton from '../../frontend/src/components/BackButton.svelte'
   import { AppControls, type NavFn } from '../../frontend/src/utils/AppControls.svelte'
 
-  /**
-   * Component properties for ExamplePage.
-   */
   interface Props {
     expanded?: boolean
     navigate?: NavFn
@@ -26,9 +20,9 @@
 
   let { expanded = false, navigate }: Props = $props()
 
-  function handleMinimize(e: MouseEvent) {
+  function handleMinimize() {
     if (navigate) {
-      AppControls.doMinimize(navigate, e)
+      AppControls.doMinimize(navigate)
     }
   }
 </script>
@@ -39,14 +33,7 @@
   class:is-expanded={expanded}
 >
   <header class="page-header">
-    <button
-      type="button"
-      class="back-btn"
-      onclick={handleMinimize}
-      aria-label="Back"
-    >
-      <ChevronLeft size={16} />
-    </button>
+    <BackButton onback={handleMinimize} title="Back" />
     <h1 class="page-title">Starter Page</h1>
   </header>
 
@@ -63,7 +50,7 @@
     flex-direction: column;
     padding: 12px 14px 56px 14px;
     box-sizing: border-box;
-    color: var(--vinta-text-primary, #ffffff);
+    color: var(--vinta-text-primary);
   }
 
   .page-header {
@@ -72,19 +59,6 @@
     gap: 8px;
     height: 32px;
     margin-bottom: 8px;
-  }
-
-  .back-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: var(--vinta-radius-button, 8px);
-    background: var(--vinta-item-bg, rgba(255, 255, 255, 0.06));
-    border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.1));
-    color: var(--vinta-text-secondary, rgba(255, 255, 255, 0.7));
-    cursor: pointer;
   }
 
   .page-title {
@@ -97,6 +71,6 @@
     flex: 1;
     overflow-y: auto;
     font-size: 12px;
-    color: var(--vinta-text-secondary, rgba(255, 255, 255, 0.7));
+    color: var(--vinta-text-secondary);
   }
 </style>
