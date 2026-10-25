@@ -40,6 +40,7 @@ BRIDGE_API int ExtractAppIconToFile(const char* sourceApp, const char* aumid, co
 BRIDGE_API void ClearNativeMediaArtCache(void);
 BRIDGE_API void RequeryNativeMediaArtwork(void);
 BRIDGE_API void ForceEmitNativeMediaState(void);
+BRIDGE_API int SendNativeToast(const wchar_t* title, const wchar_t* message);
 
 #ifdef __cplusplus
 }

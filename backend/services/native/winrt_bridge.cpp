@@ -74,3 +74,7 @@ extern "C" BRIDGE_API void RequeryNativeMediaArtwork(void) {
 extern "C" BRIDGE_API void ForceEmitNativeMediaState(void) {
     ForceEmitMediaState();
 }
+
+extern "C" BRIDGE_API int SendNativeToast(const wchar_t* title, const wchar_t* message) {
+    return SendToastNotification(title, message);
+}

@@ -139,7 +139,9 @@
         </div>
         <span class="glance-app-name">{appDisplayName}</span>
         {#if unreadCount > 1}
-          <span class="glance-count-badge">{unreadCount - 1}+</span>
+          <span class="glance-count-badge"
+            >{unreadCount > 9 ? '9+' : unreadCount}</span
+          >
         {/if}
       </div>
 

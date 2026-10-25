@@ -120,7 +120,7 @@
   let islandConfig = $state<IslandConfig>(homeConfig)
 
   let expanded = $state(false)
-  let isDockVisible = $state(false)
+  let isDockVisible = $derived(expanded)
   let islandTransitionTimeout: number | undefined
 
   let previousExpanded: boolean | undefined = undefined
@@ -137,14 +137,16 @@
     previousExpanded = isExp
 
     hideTooltip()
+    gestures.finishSettling()
+
+    // Immediate hit testing reset on expansion state change
+    bounds.syncPillBounds(islandNode, isHidden, true)
+    bounds.startTrackingTransition(islandNode, isExp ? 350 : 250, false)
+
     clearTimeout(islandTransitionTimeout)
-    isDockVisible = false
     const transitionDuration = isExp ? 340 : 280
 
     islandTransitionTimeout = window.setTimeout(() => {
-      if (isExp) {
-        isDockVisible = true
-      }
       if (
         !gestures.isDragging &&
         !gestures.isTrackRegionActive &&
@@ -157,6 +159,7 @@
           islandNode,
           isHidden
         )
+        bounds.syncPillBounds(islandNode, isHidden, true)
       }
       if (!isExp) {
         bounds.trimMemory()
@@ -691,6 +694,7 @@
       currentLiveOffsetX = targetOffset
       $hiddenPillOffsetXStore = targetOffset
     }
+    bounds.syncPillBounds(islandNode, false, true)
     bounds.startTrackingTransition(islandNode, expand ? 350 : 250, false)
 
     triggerGlow()
@@ -779,7 +783,6 @@
     finishDragGesture()
 
     wasExpandedBeforeHide = expanded
-    isDockVisible = false
     const duration = wasExpandedBeforeHide ? 300 : 220
     islandAnim = wasExpandedBeforeHide
       ? '0.30s cubic-bezier(0.2, 0.8, 0.2, 1)'
@@ -942,6 +945,7 @@
         islandNode,
         isHidden
       )
+      bounds.syncPillBounds(islandNode, isHidden, true)
     }
     if (isHidden && $wakeMethodStore === 'hover') {
       hoverShowTimeout = window.setTimeout(showWidget, 150)
@@ -1249,6 +1253,14 @@
           }
           $displayLayoutStore = displayLayout
         }
+        bounds.syncBounds(
+          getBoundsForState(),
+          offset,
+          islandNode,
+          false,
+          isHidden
+        )
+        bounds.startLiveTracking(islandNode, 400)
       },
       onNotificationWake: () => {
         wasHiddenBeforeNotif = isHidden

@@ -5,7 +5,9 @@
     Timer,
     MousePointer,
     RotateCcw,
-    Monitor
+    Monitor,
+    MonitorSmartphone,
+    Maximize2
   } from 'lucide-svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingSlider from '../SettingSlider.svelte'
@@ -20,7 +22,9 @@
     wakeMethodStore,
     hiddenPillOffsetXStore,
     allowDragPositionStore,
-    displayLayoutStore
+    displayLayoutStore,
+    autoHideBorderlessStore,
+    followActiveDisplayStore
   } from '../../../store'
 
   const widgetContentOptions = [
@@ -128,6 +132,17 @@
 
   {#if $displayLayoutStore.monitors && $displayLayoutStore.monitors.length > 1}
     <SettingItem
+      label="Follow Active Display"
+      description="Automatically move Vinta to the display containing the active window"
+      icon={MonitorSmartphone}
+    >
+      <label class="toggle-switch">
+        <input type="checkbox" bind:checked={$followActiveDisplayStore} />
+        <span class="slider"></span>
+      </label>
+    </SettingItem>
+
+    <SettingItem
       label="Active Display"
       description="Select which connected monitor Vinta is positioned on"
       icon={Monitor}
@@ -145,6 +160,17 @@
       </div>
     </SettingItem>
   {/if}
+
+  <SettingItem
+    label="Auto-Hide for Borderless Fullscreen"
+    description="Automatically hide the island when borderless full-screen games or apps are active"
+    icon={Maximize2}
+  >
+    <label class="toggle-switch">
+      <input type="checkbox" bind:checked={$autoHideBorderlessStore} />
+      <span class="slider"></span>
+    </label>
+  </SettingItem>
 
   <SettingItem
     label="Center Island Position"

@@ -1,8 +1,13 @@
 #include "notification_service.h"
 #include "winrt_common.h"
+#include <shlobj.h>
+#include <propkey.h>
+#include <propvarutil.h>
+#include <wrl/client.h>
 
 #include <winrt/Windows.UI.Notifications.Management.h>
 #include <winrt/Windows.UI.Notifications.h>
+#include <winrt/Windows.Data.Xml.Dom.h>
 
 #include <atomic>
 #include <regex>
@@ -566,5 +571,139 @@ void StopNotificationService() {
     g_notifRunning = false;
     if (g_notifThread.joinable()) {
         g_notifThread.join();
+    }
+}
+
+static std::wstring GetVintaIconPath() {
+    wchar_t appData[MAX_PATH] = {0};
+    if (GetEnvironmentVariableW(L"APPDATA", appData, MAX_PATH) > 0) {
+        std::wstring iconPath = std::wstring(appData) + L"\\FreeMatrix Studios\\Vinta\\appicon.png";
+        DWORD attribs = GetFileAttributesW(iconPath.c_str());
+        if (attribs != INVALID_FILE_ATTRIBUTES && !(attribs & FILE_ATTRIBUTE_DIRECTORY)) {
+            return iconPath;
+        }
+    }
+    return L"";
+}
+
+static std::wstring EscapeXml(const std::wstring& src) {
+    std::wstring out;
+    out.reserve(src.size() + 16);
+    for (wchar_t c : src) {
+        switch (c) {
+            case L'&': out += L"&amp;"; break;
+            case L'<': out += L"&lt;"; break;
+            case L'>': out += L"&gt;"; break;
+            case L'\"': out += L"&quot;"; break;
+            case L'\'': out += L"&apos;"; break;
+            default: out += c; break;
+        }
+    }
+    return out;
+}
+
+static void EnsureAumidRegistered() {
+    static bool registered = false;
+    if (registered) return;
+    registered = true;
+
+    const wchar_t* aumid = L"FreeMatrixStudios.Vinta";
+    SetCurrentProcessExplicitAppUserModelID(aumid);
+
+    std::wstring iconPath = GetVintaIconPath();
+    wchar_t exePath[MAX_PATH] = {0};
+    GetModuleFileNameW(nullptr, exePath, MAX_PATH);
+
+    const wchar_t* iconToUse = !iconPath.empty() ? iconPath.c_str() : exePath;
+    const wchar_t* displayName = L"Vinta";
+
+    // 1. Register in HKCU\Software\Classes\AppUserModelId\FreeMatrixStudios.Vinta
+    HKEY hKeyClasses = nullptr;
+    const wchar_t* subkeyClasses = L"Software\\Classes\\AppUserModelId\\FreeMatrixStudios.Vinta";
+    if (RegCreateKeyExW(HKEY_CURRENT_USER, subkeyClasses, 0, nullptr, REG_OPTION_NON_VOLATILE, KEY_SET_VALUE, nullptr, &hKeyClasses, nullptr) == ERROR_SUCCESS) {
+        RegSetValueExW(hKeyClasses, L"DisplayName", 0, REG_SZ, reinterpret_cast<const BYTE*>(displayName), static_cast<DWORD>((wcslen(displayName) + 1) * sizeof(wchar_t)));
+        RegSetValueExW(hKeyClasses, L"IconUri", 0, REG_SZ, reinterpret_cast<const BYTE*>(iconToUse), static_cast<DWORD>((wcslen(iconToUse) + 1) * sizeof(wchar_t)));
+        RegSetValueExW(hKeyClasses, L"IconBackgroundColor", 0, REG_SZ, reinterpret_cast<const BYTE*>(L"0"), static_cast<DWORD>((wcslen(L"0") + 1) * sizeof(wchar_t)));
+        RegCloseKey(hKeyClasses);
+    }
+
+    // 2. Register in HKCU\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\FreeMatrixStudios.Vinta
+    HKEY hKeySettings = nullptr;
+    const wchar_t* subkeySettings = L"Software\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings\\FreeMatrixStudios.Vinta";
+    if (RegCreateKeyExW(HKEY_CURRENT_USER, subkeySettings, 0, nullptr, REG_OPTION_NON_VOLATILE, KEY_SET_VALUE, nullptr, &hKeySettings, nullptr) == ERROR_SUCCESS) {
+        DWORD one = 1;
+        RegSetValueExW(hKeySettings, L"DisplayName", 0, REG_SZ, reinterpret_cast<const BYTE*>(displayName), static_cast<DWORD>((wcslen(displayName) + 1) * sizeof(wchar_t)));
+        RegSetValueExW(hKeySettings, L"IconUri", 0, REG_SZ, reinterpret_cast<const BYTE*>(iconToUse), static_cast<DWORD>((wcslen(iconToUse) + 1) * sizeof(wchar_t)));
+        RegSetValueExW(hKeySettings, L"ShowInActionCenter", 0, REG_DWORD, reinterpret_cast<const BYTE*>(&one), sizeof(DWORD));
+        RegSetValueExW(hKeySettings, L"Enabled", 0, REG_DWORD, reinterpret_cast<const BYTE*>(&one), sizeof(DWORD));
+        RegCloseKey(hKeySettings);
+    }
+
+    // 3. Ensure Start Menu Programs shortcut exists with System.AppUserModel.ID
+    PWSTR programsPath = nullptr;
+    if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_Programs, 0, nullptr, &programsPath))) {
+        std::wstring shortcutPath = std::wstring(programsPath) + L"\\Vinta.lnk";
+        CoTaskMemFree(programsPath);
+
+        if (exePath[0] != L'\0') {
+            Microsoft::WRL::ComPtr<IShellLinkW> shellLink;
+            if (SUCCEEDED(CoCreateInstance(CLSID_ShellLink, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&shellLink)))) {
+                shellLink->SetPath(exePath);
+                if (!iconPath.empty()) {
+                    shellLink->SetIconLocation(iconPath.c_str(), 0);
+                } else {
+                    shellLink->SetIconLocation(exePath, 0);
+                }
+
+                Microsoft::WRL::ComPtr<IPropertyStore> propertyStore;
+                if (SUCCEEDED(shellLink.As(&propertyStore))) {
+                    PROPVARIANT pv;
+                    if (SUCCEEDED(InitPropVariantFromString(aumid, &pv))) {
+                        propertyStore->SetValue(PKEY_AppUserModel_ID, pv);
+                        propertyStore->Commit();
+                        PropVariantClear(&pv);
+                    }
+                }
+
+                Microsoft::WRL::ComPtr<IPersistFile> persistFile;
+                if (SUCCEEDED(shellLink.As(&persistFile))) {
+                    persistFile->Save(shortcutPath.c_str(), TRUE);
+                }
+            }
+        }
+    }
+}
+
+int SendToastNotification(const wchar_t* title, const wchar_t* message) {
+    try {
+        if (!title && !message) return 0;
+        std::wstring wTitle = title ? title : L"Vinta";
+        std::wstring wMessage = message ? message : L"";
+
+        EnsureAumidRegistered();
+
+        std::wstring iconPath = GetVintaIconPath();
+        std::wstring iconUri = iconPath;
+        for (wchar_t& ch : iconUri) {
+            if (ch == L'\\') ch = L'/';
+        }
+
+        std::wstring xmlStr = L"<toast><visual><binding template=\"ToastGeneric\">";
+        xmlStr += L"<text>" + EscapeXml(wTitle) + L"</text>";
+        if (!wMessage.empty()) {
+            xmlStr += L"<text>" + EscapeXml(wMessage) + L"</text>";
+        }
+        if (!iconUri.empty()) {
+            xmlStr += L"<image placement=\"appLogoOverride\" hint-crop=\"circle\" src=\"file:///" + iconUri + L"\"/>";
+        }
+        xmlStr += L"</binding></visual></toast>";
+
+        winrt::Windows::Data::Xml::Dom::XmlDocument toastXml;
+        toastXml.LoadXml(xmlStr);
+        winrt_notif::ToastNotification toast(toastXml);
+        winrt_notif::ToastNotificationManager::CreateToastNotifier(L"FreeMatrixStudios.Vinta").Show(toast);
+        return 1;
+    } catch (...) {
+        return 0;
     }
 }

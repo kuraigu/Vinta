@@ -490,6 +490,13 @@ export function SendMediaControl(action: string): $CancellablePromise<void> {
 }
 
 /**
+ * SendNativeNotification dispatches an OS toast notification via native Windows WinRT services.
+ */
+export function SendNativeNotification(title: string, message: string): $CancellablePromise<void> {
+    return $Call.ByID(3559044933, title, message);
+}
+
+/**
  * SetAirplaneMode toggles the system Airplane mode.
  */
 export function SetAirplaneMode(enabled: boolean): $CancellablePromise<boolean> {
@@ -564,6 +571,13 @@ export function SetDragCapture(enable: boolean): $CancellablePromise<void> {
  */
 export function SetFloatingControlsBounds(width: number, height: number, radius: number, gap: number): $CancellablePromise<void> {
     return $Call.ByID(2706679968, width, height, radius, gap);
+}
+
+/**
+ * SetFollowActiveDisplay configures whether Vinta dynamically tracks the active monitor with the mouse or foreground window.
+ */
+export function SetFollowActiveDisplay(enabled: boolean): $CancellablePromise<void> {
+    return $Call.ByID(103202128, enabled);
 }
 
 /**

@@ -22,7 +22,6 @@ var (
 	user32                       = syscall.NewLazyDLL("user32.dll")
 	procGetWindowLong            = user32.NewProc("GetWindowLongW")
 	procSetWindowLong            = user32.NewProc("SetWindowLongW")
-	procSetWindowLongPtr         = user32.NewProc("SetWindowLongPtrW")
 	procFindWindow               = user32.NewProc("FindWindowW")
 	procGetDesktopWindow         = user32.NewProc("GetDesktopWindow")
 	procGetWindow                = user32.NewProc("GetWindow")
@@ -45,6 +44,7 @@ var (
 	procSetWindowRgn             = user32.NewProc("SetWindowRgn")
 	procGetForegroundWindow      = user32.NewProc("GetForegroundWindow")
 	procSetForegroundWindow      = user32.NewProc("SetForegroundWindow")
+	procWindowFromPoint          = user32.NewProc("WindowFromPoint")
 
 	shell32                          = syscall.NewLazyDLL("shell32.dll")
 	procSHQueryUserNotificationState = shell32.NewProc("SHQueryUserNotificationState")
@@ -115,9 +115,17 @@ const (
 	//nolint:revive // Windows API constants
 	MONITOR_DEFAULTTONEAREST = 2
 	//nolint:revive // Windows API constants
+	GA_ROOT = 2
+	//nolint:revive // Windows API constants
 	GWL_STYLE = -16
 	//nolint:revive // Windows API constants
+	WS_POPUP = 0x80000000
+	//nolint:revive // Windows API constants
 	WS_CAPTION = 0x00C00000
+	//nolint:revive // Windows API constants
+	WS_MAXIMIZE = 0x01000000
+	//nolint:revive // Windows API constants
+	WS_THICKFRAME = 0x00040000
 	//nolint:revive // Windows API constants
 	SW_HIDE = 0
 	//nolint:revive // Windows API constants
@@ -135,6 +143,8 @@ const (
 	SWP_FRAMECHANGED = 0x0020
 	//nolint:revive // Windows API constants
 	SWP_SHOWWINDOW = 0x0040
+	//nolint:revive // Windows API constants
+	SWP_HIDEWINDOW = 0x0080
 	//nolint:revive // Windows API constants
 	SWP_NOCOPYBITS = 0x0100
 	//nolint:revive // Windows API constants
@@ -246,7 +256,7 @@ func GetDisplayMetrics() (vLeft, vTop, vWidth, vHeight, pCenter int, monitors []
 	currVh := int(vh)
 
 	cachedDisplayMu.RLock()
-	if time.Since(lastDisplayFetch) < 10*time.Second && cachedDisplayLayout.VirtualWidth > 0 &&
+	if time.Since(lastDisplayFetch) < 1*time.Second && cachedDisplayLayout.VirtualWidth > 0 &&
 		cachedDisplayLayout.VirtualWidth == currVw && cachedDisplayLayout.VirtualHeight == currVh {
 		layout := cachedDisplayLayout
 		cachedDisplayMu.RUnlock()
@@ -257,7 +267,7 @@ func GetDisplayMetrics() (vLeft, vTop, vWidth, vHeight, pCenter int, monitors []
 	cachedDisplayMu.Lock()
 	defer cachedDisplayMu.Unlock()
 
-	if time.Since(lastDisplayFetch) < 10*time.Second && cachedDisplayLayout.VirtualWidth > 0 &&
+	if time.Since(lastDisplayFetch) < 1*time.Second && cachedDisplayLayout.VirtualWidth > 0 &&
 		cachedDisplayLayout.VirtualWidth == currVw && cachedDisplayLayout.VirtualHeight == currVh {
 		layout := cachedDisplayLayout
 		return layout.VirtualLeft, layout.VirtualTop, layout.VirtualWidth, layout.VirtualHeight, layout.PrimaryCenter, layout.Monitors
@@ -409,6 +419,73 @@ func (a *App) getHwnd() uintptr {
 	return getMyWindowHwnd()
 }
 
+// isDesktopOrShell determines whether the window belongs to standard desktop backgrounds, shells, or taskbars.
+func isDesktopOrShell(hwnd uintptr) bool {
+	if hwnd == 0 {
+		return false
+	}
+	var classBuf [256]uint16
+	_, _, _ = procGetClassName.Call(hwnd, uintptr(unsafe.Pointer(&classBuf[0])), 256)
+	className := syscall.UTF16ToString(classBuf[:])
+	return className == "WorkerW" || className == "Progman" ||
+		className == "Shell_TrayWnd" || className == "Shell_SecondaryTrayWnd" ||
+		className == "Windows.UI.Core.CoreWindow"
+}
+
+// isMonitorCoveredByFullscreen checks whether the specified monitor is occupied by a fullscreen application.
+func isMonitorCoveredByFullscreen(m MonitorInfo, vintaHwnd uintptr) bool {
+	centerX := m.Left + m.Width/2
+	centerY := m.Top + m.Height/2
+	ptPacked := (uintptr(uint32(centerX)) & 0xFFFFFFFF) | ((uintptr(uint32(centerY)) & 0xFFFFFFFF) << 32)
+	topHwnd, _, _ := procWindowFromPoint.Call(ptPacked)
+	if topHwnd == 0 {
+		return false
+	}
+	rootHwnd, _, _ := procGetAncestor.Call(topHwnd, uintptr(GA_ROOT))
+	if rootHwnd == 0 || rootHwnd == vintaHwnd {
+		return false
+	}
+
+	if isDesktopOrShell(rootHwnd) || isSnippingTool(rootHwnd) || isScreenClippingHost(rootHwnd) {
+		return false
+	}
+
+	vis, _, _ := procIsWindowVisible.Call(rootHwnd)
+	iconic, _, _ := procIsIconic.Call(rootHwnd)
+	if vis == 0 || iconic != 0 {
+		return false
+	}
+
+	var rc rect32
+	res, _, _ := procGetWindowRect.Call(rootHwnd, uintptr(unsafe.Pointer(&rc)))
+	if res == 0 {
+		return false
+	}
+
+	covers := int(rc.Left) <= m.Left+4 &&
+		int(rc.Top) <= m.Top+4 &&
+		int(rc.Right) >= m.Left+m.Width-4 &&
+		int(rc.Bottom) >= m.Top+m.Height-4
+
+	if !covers {
+		return false
+	}
+
+	var style uint32
+	if procGetWindowLong.Find() == nil {
+		gwl := int32(GWL_STYLE)
+		resStyle, _, _ := procGetWindowLong.Call(rootHwnd, uintptr(gwl))
+		style = uint32(resStyle)
+	}
+
+	// Maximized windows with a caption/titlebar are not fullscreen applications
+	if (style&WS_CAPTION == WS_CAPTION) && ((style & WS_MAXIMIZE) != 0) {
+		return false
+	}
+
+	return (style&WS_CAPTION) == 0 || (style&WS_POPUP) != 0
+}
+
 // windowCoversMonitor determines whether the foreground window covers the monitor where Vinta is hosted.
 func windowCoversMonitor(fgHwnd uintptr, vintaMon MonitorInfo) (bool, monitorInfoW) {
 	var mi monitorInfoW
@@ -416,16 +493,7 @@ func windowCoversMonitor(fgHwnd uintptr, vintaMon MonitorInfo) (bool, monitorInf
 		return false, mi
 	}
 
-	if isSnippingTool(fgHwnd) || isScreenClippingHost(fgHwnd) {
-		return false, mi
-	}
-
-	var classBuf [256]uint16
-	_, _, _ = procGetClassName.Call(fgHwnd, uintptr(unsafe.Pointer(&classBuf[0])), 256)
-	className := syscall.UTF16ToString(classBuf[:])
-	if className == "WorkerW" || className == "Progman" ||
-		className == "Shell_TrayWnd" || className == "Shell_SecondaryTrayWnd" ||
-		className == "Windows.UI.Core.CoreWindow" {
+	if isSnippingTool(fgHwnd) || isScreenClippingHost(fgHwnd) || isDesktopOrShell(fgHwnd) {
 		return false, mi
 	}
 
@@ -613,60 +681,6 @@ func getWindowAppName(hwnd uintptr) string {
 	return ""
 }
 
-// getWindowProcessName resolves the underlying executable basename of a given HWND.
-func getWindowProcessName(hwnd uintptr) string {
-	if hwnd == 0 {
-		return ""
-	}
-	var pid uint32
-	_, _, _ = procGetWindowThreadProcessID.Call(hwnd, uintptr(unsafe.Pointer(&pid)))
-	if pid == 0 {
-		return ""
-	}
-	hProc, _, _ := procOpenProcess.Call(0x1000, 0, uintptr(pid))
-	if hProc == 0 {
-		hProc, _, _ = procOpenProcess.Call(0x0400, 0, uintptr(pid))
-	}
-	if hProc == 0 {
-		return ""
-	}
-	defer func() { _, _, _ = procCloseHandle.Call(hProc) }()
-
-	var buf [1024]uint16
-	size := uint32(len(buf))
-	resQuery, _, _ := procQueryFullProcessImageName.Call(hProc, 0, uintptr(unsafe.Pointer(&buf[0])), uintptr(unsafe.Pointer(&size)))
-	if resQuery == 0 {
-		size = uint32(len(buf))
-		resQuery, _, _ = procQueryFullProcessImageName.Call(hProc, 1, uintptr(unsafe.Pointer(&buf[0])), uintptr(unsafe.Pointer(&size)))
-	}
-	if resQuery != 0 {
-		exePath := syscall.UTF16ToString(buf[:size])
-		baseName := filepath.Base(exePath)
-		ext := filepath.Ext(baseName)
-		if ext != "" {
-			baseName = strings.TrimSuffix(baseName, ext)
-		}
-		return strings.TrimSpace(baseName)
-	}
-	return ""
-}
-
-// isWhitelistedForDemotion evaluates whether the application is on the whitelist of legacy exclusive fullscreen games.
-func isWhitelistedForDemotion(procName string) bool {
-	p := strings.ToLower(strings.TrimSpace(procName))
-	return p == "stardew valley" || p == "stardewvalley" || p == "stardewmoddingapi"
-}
-
-// setWindowLongPtr updates a window attribute with 64-bit compatibility.
-func setWindowLongPtr(hwnd uintptr, nIndex int32, dwNewLong uintptr) uintptr {
-	if procSetWindowLongPtr.Find() == nil {
-		res, _, _ := procSetWindowLongPtr.Call(hwnd, uintptr(nIndex), dwNewLong)
-		return res
-	}
-	res, _, _ := procSetWindowLong.Call(hwnd, uintptr(nIndex), dwNewLong)
-	return res
-}
-
 var (
 	enumSnipMu         sync.Mutex
 	enumSnipTargetHwnd uintptr
@@ -782,6 +796,11 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 		return enumSnipTargetHwnd
 	}
 
+	var (
+		autoHiddenByFullscreen bool
+		autoHiddenMu           sync.Mutex
+	)
+
 	reassertTopmost := func(curFg uintptr) {
 		snipHwnd := findActiveSnippingWindow(curFg)
 		if snipHwnd != 0 {
@@ -795,6 +814,13 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 			return
 		}
 
+		autoHiddenMu.Lock()
+		isHiddenByFS := autoHiddenByFullscreen
+		autoHiddenMu.Unlock()
+		if isHiddenByFS {
+			return
+		}
+
 		// Reassert Vinta as topmost when no Snipping Tool overlay is active
 		_, _, _ = procSetWindowPos.Call(
 			vintaHwnd,
@@ -803,12 +829,6 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 			0x0001|0x0002|0x0010, // SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE
 		)
 	}
-
-	var (
-		autoHiddenByFullscreen bool
-		autoHiddenMu           sync.Mutex
-		lastDemotedHwnd        uintptr
-	)
 
 	evaluateForegroundState := func() {
 		if !services.IsFrontendReady() {
@@ -821,7 +841,6 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 		}
 
 		appName := getWindowAppName(curFg)
-		procName := getWindowProcessName(curFg)
 
 		snipHwnd := findActiveSnippingWindow(curFg)
 		if snipHwnd != 0 {
@@ -849,33 +868,74 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 		if scale <= 0 {
 			scale = 1.0
 		}
-		vintaMon := a.GetCurrentMonitor()
-		covers, fgMonInfo := windowCoversMonitor(curFg, vintaMon)
 
-		// Tier 2: Whitelist Demotion Mode for legacy exclusive games (such as Stardew Valley)
-		if covers && isWhitelistedForDemotion(procName) {
-			if curFg != lastDemotedHwnd {
-				lastDemotedHwnd = curFg
-				gwlStyle := int32(GWL_STYLE)
-				newStyle := uintptr(0x80000000 | 0x10000000 | 0x04000000) // WS_POPUP | WS_VISIBLE | WS_CLIPSIBLINGS
-				setWindowLongPtr(curFg, gwlStyle, newStyle)
+		// 1. If currently relocated, check whether the triggering fullscreen application is still active/open
+		a.fullscreenRelocatedMu.Lock()
+		if a.isFullscreenRelocated {
+			triggerHwnd := a.fullscreenTriggerHwnd
+			isAlive := false
+			if triggerHwnd != 0 {
+				ret, _, _ := procIsWindow.Call(triggerHwnd)
+				if ret != 0 {
+					vis, _, _ := procIsWindowVisible.Call(triggerHwnd)
+					iconic, _, _ := procIsIconic.Call(triggerHwnd)
+					if vis != 0 && iconic == 0 {
+						isAlive = true
+					}
+				}
+			}
 
-				monW := uintptr(fgMonInfo.RcMonitor.Right - fgMonInfo.RcMonitor.Left)
-				monH := uintptr(fgMonInfo.RcMonitor.Bottom - fgMonInfo.RcMonitor.Top)
-				_, _, _ = procSetWindowPos.Call(
-					curFg,
-					uintptr(^uintptr(1)), // HWND_NOTOPMOST
-					uintptr(fgMonInfo.RcMonitor.Left),
-					uintptr(fgMonInfo.RcMonitor.Top),
-					monW,
-					monH,
-					0x0020|0x0010, // SWP_FRAMECHANGED | SWP_NOACTIVATE
-				)
+			if isAlive {
+				// The fullscreen application is still running. Keep Vinta on the secondary monitor.
+				a.fullscreenRelocatedMu.Unlock()
+				reassertTopmost(curFg)
+				return
+			}
+
+			// The trigger window has closed or minimized. Restore Vinta to its original monitor.
+			a.isFullscreenRelocated = false
+			a.fullscreenTriggerHwnd = 0
+			a.fullscreenTriggerMonID = 0
+			restoreOffset := a.originalFullscreenOffset
+			origMonID := a.originalFullscreenMonID
+			a.offsetX = restoreOffset
+			a.lastRelocateExitTime = time.Now()
+			a.fullscreenRelocatedMu.Unlock()
+
+			a.updateWindowRegion()
+
+			origMonName := "Original Display"
+			for _, m := range monitors {
+				if m.ID == origMonID {
+					origMonName = m.Name
+					break
+				}
+			}
+
+			if services.IsFrontendReady() {
+				if app := application.Get(); app != nil {
+					app.Event.Emit("game-mode-exit-relocate", map[string]interface{}{
+						"restoredMonitor": origMonName,
+						"restoreOffset":   restoreOffset,
+					})
+				}
 			}
 			reassertTopmost(curFg)
 			return
 		}
+		timeSinceRelocateExit := time.Since(a.lastRelocateExitTime)
+		a.fullscreenRelocatedMu.Unlock()
 
+		// Settle cooldown immediately after returning from relocation to prevent bounce loops
+		if timeSinceRelocateExit < 3*time.Second {
+			reassertTopmost(curFg)
+			return
+		}
+
+		vintaMon := a.GetCurrentMonitor()
+		covers, _ := windowCoversMonitor(curFg, vintaMon)
+
+		// Dynamic Fullscreen & Exclusive Ownership Evaluation
 		shouldHide := false
 		reason := ""
 
@@ -894,11 +954,39 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 		}
 
 		hasEx := hasExclusiveDisplayOwnership()
+		isD3DFullScreen := ret == 0 && qState == QUNS_RUNNING_D3D_FULL_SCREEN
 
-		if !shouldHide && covers {
-			if hasEx {
-				shouldHide = true
-				reason = "exclusive_fullscreen"
+		if covers {
+			var style uint32
+			if procGetWindowLong.Find() == nil {
+				gwl := int32(GWL_STYLE)
+				resStyle, _, _ := procGetWindowLong.Call(curFg, uintptr(gwl))
+				style = uint32(resStyle)
+			}
+
+			// Standard desktop windows with a titlebar are never fullscreen games
+			isMaximizedStandard := (style&WS_CAPTION == WS_CAPTION) && ((style & WS_MAXIMIZE) != 0)
+			isFrameless := (style & (WS_CAPTION | WS_THICKFRAME)) == 0
+			isPopupFullscreen := (style & WS_POPUP) != 0
+
+			if !isMaximizedStandard {
+				a.autoHideMu.RLock()
+				hideBorderless := a.autoHideBorderless
+				a.autoHideMu.RUnlock()
+
+				appNameLower := strings.ToLower(appName)
+				isKnownUnsupportedGame := strings.Contains(appNameLower, "stardew")
+
+				if hasEx || isD3DFullScreen {
+					shouldHide = true
+					reason = "exclusive_fullscreen"
+				} else if isKnownUnsupportedGame {
+					shouldHide = true
+					reason = "unsupported_app"
+				} else if (isFrameless || isPopupFullscreen) && hideBorderless {
+					shouldHide = true
+					reason = "borderless_fullscreen"
+				}
 			}
 		}
 
@@ -908,9 +996,12 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 				foundTarget := false
 				for _, m := range monitors {
 					if m.ID != vintaMon.ID {
-						targetMon = m
-						foundTarget = true
-						break
+						// Ensure this candidate monitor is not also occupied by a fullscreen application
+						if !isMonitorCoveredByFullscreen(m, vintaHwnd) {
+							targetMon = m
+							foundTarget = true
+							break
+						}
 					}
 				}
 
@@ -918,6 +1009,8 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 					a.fullscreenRelocatedMu.Lock()
 					if !a.isFullscreenRelocated {
 						a.isFullscreenRelocated = true
+						a.fullscreenTriggerHwnd = curFg
+						a.fullscreenTriggerMonID = vintaMon.ID
 						a.originalFullscreenOffset = a.offsetX
 						a.originalFullscreenMonID = vintaMon.ID
 
@@ -953,6 +1046,15 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 			if !autoHiddenByFullscreen {
 				autoHiddenByFullscreen = true
 				services.SetAppHidden(true)
+				if vintaHwnd != 0 {
+					// Drop topmost and hide native window completely to avoid interfering with exclusive DirectX mode
+					_, _, _ = procSetWindowPos.Call(
+						vintaHwnd,
+						uintptr(^uintptr(1)), // HWND_NOTOPMOST
+						0, 0, 0, 0,
+						SWP_NOSIZE|SWP_NOMOVE|SWP_NOACTIVATE|SWP_HIDEWINDOW,
+					)
+				}
 				if a.window != nil {
 					a.window.Hide()
 				}
@@ -969,39 +1071,18 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 			return
 		}
 
-		a.fullscreenRelocatedMu.Lock()
-		if a.isFullscreenRelocated {
-			a.isFullscreenRelocated = false
-			restoreOffset := a.originalFullscreenOffset
-			origMonID := a.originalFullscreenMonID
-			a.offsetX = restoreOffset
-			a.fullscreenRelocatedMu.Unlock()
-
-			a.updateWindowRegion()
-
-			origMonName := "Original Display"
-			for _, m := range monitors {
-				if m.ID == origMonID {
-					origMonName = m.Name
-					break
-				}
-			}
-
-			if services.IsFrontendReady() {
-				if app := application.Get(); app != nil {
-					app.Event.Emit("game-mode-exit-relocate", map[string]interface{}{
-						"restoredMonitor": origMonName,
-					})
-				}
-			}
-		} else {
-			a.fullscreenRelocatedMu.Unlock()
-		}
-
 		autoHiddenMu.Lock()
 		if autoHiddenByFullscreen {
 			autoHiddenByFullscreen = false
 			services.SetAppHidden(false)
+			if vintaHwnd != 0 {
+				_, _, _ = procSetWindowPos.Call(
+					vintaHwnd,
+					uintptr(^uintptr(0)), // HWND_TOPMOST
+					0, 0, 0, 0,
+					SWP_NOSIZE|SWP_NOMOVE|SWP_NOACTIVATE|SWP_SHOWWINDOW,
+				)
+			}
 			if a.window != nil {
 				a.window.Show()
 			}
@@ -1014,6 +1095,47 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 		autoHiddenMu.Unlock()
 
 		reassertTopmost(curFg)
+
+		// Active Display Follow Mode
+		a.autoHideMu.RLock()
+		followDisplay := a.followActiveDisplay
+		a.autoHideMu.RUnlock()
+
+		if followDisplay && len(monitors) > 1 && !a.isFullscreenRelocated {
+			hMonFg, _, _ := procMonitorFromWindow.Call(curFg, uintptr(MONITOR_DEFAULTTONEAREST))
+			if hMonFg != 0 {
+				var fgMi monitorInfoW
+				fgMi.CbSize = uint32(unsafe.Sizeof(fgMi))
+				if res, _, _ := procGetMonitorInfoW.Call(hMonFg, uintptr(unsafe.Pointer(&fgMi))); res != 0 {
+					var activeMon MonitorInfo
+					foundMon := false
+					for _, m := range monitors {
+						if m.Left == int(fgMi.RcMonitor.Left) && m.Top == int(fgMi.RcMonitor.Top) {
+							activeMon = m
+							foundMon = true
+							break
+						}
+					}
+					if foundMon && activeMon.ID != vintaMon.ID {
+						targetCenterScreenX := activeMon.Left + (activeMon.Width / 2)
+						scaledOffset := targetCenterScreenX - (vLeft + pCenter)
+						targetOffsetX := int(float64(scaledOffset) / scale)
+						if targetOffsetX != a.offsetX {
+							a.offsetX = targetOffsetX
+							a.updateWindowRegion()
+							if services.IsFrontendReady() {
+								if app := application.Get(); app != nil {
+									app.Event.Emit("active-monitor-follow", map[string]interface{}{
+										"targetMonitor": activeMon,
+										"targetOffset":  targetOffsetX,
+									})
+								}
+							}
+						}
+					}
+				}
+			}
+		}
 	}
 
 	go func() {
@@ -1304,6 +1426,13 @@ func (a *App) SetIsHidden(hidden bool) {
 func (a *App) SetAutoHideBorderless(enabled bool) {
 	a.autoHideMu.Lock()
 	a.autoHideBorderless = enabled
+	a.autoHideMu.Unlock()
+}
+
+// SetFollowActiveDisplay configures whether Vinta dynamically tracks the active monitor with the mouse or foreground window.
+func (a *App) SetFollowActiveDisplay(enabled bool) {
+	a.autoHideMu.Lock()
+	a.followActiveDisplay = enabled
 	a.autoHideMu.Unlock()
 }
 

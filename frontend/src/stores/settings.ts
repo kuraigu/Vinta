@@ -1,4 +1,5 @@
 import { writable, get } from 'svelte/store'
+import { Events } from '@wailsio/runtime'
 import {
   GetSettings,
   SaveSettings,
@@ -388,11 +389,25 @@ export const hiddenPillPositionStore = persistentWritable<HiddenPillPosition>('v
 export const wakeMethodStore = persistentWritable<'hover' | 'click'>('vinta_wakemethod', 'click')
 export const allowDragPositionStore = persistentWritable<boolean>('vinta_allow_drag_position', true)
 export const autoHideBorderlessStore = persistentWritable<boolean>('vinta_autohide_borderless', false)
+export const followActiveDisplayStore = persistentWritable<boolean>('vinta_follow_active_display', false)
 
-// Synchronize borderless auto-hide setting to native backend hooks
+// Synchronize borderless and active display settings to native backend hooks
 autoHideBorderlessStore.subscribe((val) => {
   if (typeof SetAutoHideBorderless === 'function') {
     SetAutoHideBorderless(val).catch(() => {})
+  }
+  try {
+    Events.Emit('set-autohide-borderless', val)
+  } catch {
+    // Ignore runtime event error
+  }
+})
+
+followActiveDisplayStore.subscribe((val) => {
+  try {
+    Events.Emit('set-follow-active-display', val)
+  } catch {
+    // Ignore runtime event error
   }
 })
 
