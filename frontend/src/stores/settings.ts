@@ -263,7 +263,9 @@ const legacyV1Defaults: Record<string, unknown> = {
   vinta_hardware_accel: true,
   autoCheckUpdates: true,
   vinta_update_channel: 'stable',
-  vinta_custom_update_repo: ''
+  vinta_custom_update_repo: '',
+  vinta_ui_scale: 1.0,
+  vinta_auto_discard_past_events: false
 }
 
 // Load disk settings on startup, apply sparse migration if needed, and synchronize stores
@@ -363,6 +365,7 @@ export const opacityHiddenStore = persistentWritable<number>(
   'vinta_opacity_hidden',
   1.0
 )
+export const uiScaleStore = persistentWritable<number>('vinta_ui_scale', 1.0)
 
 // ============================================================================
 // 2. Behavior & Auto-Hide
@@ -434,6 +437,7 @@ export const reminderSoundPresetStore = persistentWritable<AlarmSoundPreset>('vi
 export const timeFormatStore = persistentWritable<TimeFormatOption>('vinta_time_format', '12h')
 export const timezoneStore = persistentWritable<string>('vinta_timezone', getInitialTimezone())
 export const dateFormatStore = persistentWritable<DateFormatOption>('vinta_date_format', 'short')
+export const autoDiscardPastEventsStore = persistentWritable<boolean>('vinta_auto_discard_past_events', false)
 
 // ============================================================================
 // 5. Weather
@@ -520,10 +524,9 @@ export function calculateHomeExpandedHeight(
   maxH: number = 640
 ): number {
   const GAP = 12
-  const CONTAINER_PADDING = 52 // clearance padding for dock & edges
 
   // 1. Header segment (Weather hero full-bleed or salutation greeting)
-  let totalHeight = visibility.weather ? 160 : 96
+  let totalHeight = visibility.weather ? 178 : 96
 
   // 2. Update notice banner
   if (hasUpdate) {
@@ -532,20 +535,26 @@ export function calculateHomeExpandedHeight(
 
   // 3. Notification glance card (only renders if unread notifications exist)
   if (hasNotification) {
-    totalHeight += GAP + 84
+    totalHeight += GAP + 88
   }
 
   // 4. Calendar glance agenda
   if (visibility.calendar) {
-    totalHeight += GAP + 114
+    totalHeight += GAP + 104
   }
 
   // 5. Quick Controls / Action Center glance
   if (visibility.actionCenter) {
-    totalHeight += GAP + 104
+    totalHeight += GAP + 110
   }
 
-  const computedHeight = totalHeight + CONTAINER_PADDING
+  // 6. Studio Branding Footer ("Vinta by FreeMatrix Studios & Contributors")
+  totalHeight += GAP + 36
+
+  // 7. Bottom clearance for feed padding & island corner curvature
+  const BOTTOM_CLEARANCE = 24
+
+  const computedHeight = totalHeight + BOTTOM_CLEARANCE
   return Math.max(minH, Math.min(maxH, computedHeight))
 }
 
@@ -598,6 +607,17 @@ function sanitizeSettingsPayload(raw: Record<string, unknown>): Record<string, u
 
       if (key === 'vinta_hotkey_mode_switch') {
         sanitized[key] = typeof val === 'string' && val.trim() ? val.trim() : 'Alt+Shift+D'
+        continue
+      }
+
+      if (key === 'vinta_ui_scale') {
+        const num = typeof val === 'number' ? val : parseFloat(val as string)
+        sanitized[key] = isNaN(num) ? 1.0 : Math.max(1.0, Math.min(1.25, num))
+        continue
+      }
+
+      if (key === 'vinta_auto_discard_past_events') {
+        sanitized[key] = Boolean(val)
         continue
       }
 

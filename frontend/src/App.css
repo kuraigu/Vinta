@@ -46,6 +46,7 @@
   align-items: flex-start;
   justify-content: center;
   pointer-events: none;
+  zoom: var(--vinta-ui-scale, 1);
 }
 
 :global(.island-wrapper > *) {

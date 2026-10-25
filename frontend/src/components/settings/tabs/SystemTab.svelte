@@ -76,7 +76,9 @@
     'vinta_hardware_accel',
     'autoCheckUpdates',
     'vinta_update_channel',
-    'vinta_custom_update_repo'
+    'vinta_custom_update_repo',
+    'vinta_ui_scale',
+    'vinta_auto_discard_past_events'
   ])
 
   /**

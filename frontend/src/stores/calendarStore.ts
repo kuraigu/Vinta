@@ -4,6 +4,7 @@ import {
   SaveCalendarData
 } from '../../bindings/Vinta/backend/app.js'
 import { sendVintaNotification } from '../services/vintaNotification'
+import { autoDiscardPastEventsStore } from './settings'
 
 export interface CalendarEvent {
   id: string
@@ -167,6 +168,9 @@ if (typeof window !== 'undefined') {
       // Fallback to local storage state on disk read error
     } finally {
       isInitialCalendarDiskLoadComplete = true
+      if (get(autoDiscardPastEventsStore)) {
+        discardPastCalendarEvents()
+      }
     }
   }, 0)
 }
@@ -230,6 +234,30 @@ export function deleteCalendarEvent(id: string) {
     ...state,
     events: state.events.filter((evt) => evt.id !== id)
   }))
+}
+
+/**
+ * Prunes all local calendar events whose scheduled date precedes today.
+ *
+ * @returns Total count of removed past events.
+ */
+export function discardPastCalendarEvents(): number {
+  const todayKey = formatDateKey(new Date())
+  let count = 0
+  calendarStore.update((state) => {
+    const retained = state.events.filter((evt) => {
+      if (evt.date < todayKey) {
+        count++
+        return false
+      }
+      return true
+    })
+    return {
+      ...state,
+      events: retained
+    }
+  })
+  return count
 }
 
 /**

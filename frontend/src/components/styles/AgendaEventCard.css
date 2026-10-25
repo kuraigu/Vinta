@@ -1,0 +1,214 @@
+/* ============================================================================
+   AgendaEventCard Component Stylesheet
+   Follows docs/DESIGN.md: theme tokens, bento radii, no hardcoded colors
+   ============================================================================ */
+
+/* Compact / Tray Variant (Widget Mode & Calendar Glance) */
+.tray-event-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 36px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  transition: all 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+  color: var(--vinta-agenda-card-text, #ffffff);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.tray-empty-card {
+  background: var(--vinta-agenda-free-bg) !important;
+  border: none !important;
+  box-shadow: var(--vinta-agenda-free-shadow) !important;
+}
+
+.tray-card-main {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.tray-time-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2.5px 8px;
+  border-radius: 9999px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.tray-card-title {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tray-card-loc {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.85);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Detailed Variant (Full Calendar Page Agenda Stream) */
+.agenda-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 14px;
+  color: var(--vinta-agenda-card-text, #ffffff);
+  box-sizing: border-box;
+  overflow: hidden;
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.agenda-card:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.04);
+}
+
+.agenda-card-left {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.agenda-card-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.agenda-card-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.agenda-card-date-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1.5px 7px;
+  border-radius: 9999px;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 9.5px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.agenda-card-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.82);
+  min-width: 0;
+}
+
+.agenda-card-time {
+  font-weight: 500;
+}
+
+/* Theme Color Token Overrides */
+.card-color-indigo {
+  background: var(--vinta-agenda-indigo-bg) !important;
+  border: none !important;
+  box-shadow: var(--vinta-agenda-indigo-shadow) !important;
+}
+
+.card-color-emerald {
+  background: var(--vinta-agenda-emerald-bg) !important;
+  border: none !important;
+  box-shadow: var(--vinta-agenda-emerald-shadow) !important;
+}
+
+.card-color-amber {
+  background: var(--vinta-agenda-amber-bg) !important;
+  border: none !important;
+  box-shadow: var(--vinta-agenda-amber-shadow) !important;
+}
+
+.card-color-purple {
+  background: var(--vinta-agenda-purple-bg) !important;
+  border: none !important;
+  box-shadow: var(--vinta-agenda-purple-shadow) !important;
+}
+
+.card-color-rose {
+  background: var(--vinta-agenda-rose-bg) !important;
+  border: none !important;
+  box-shadow: var(--vinta-agenda-rose-shadow) !important;
+}
+
+.card-color-sky {
+  background: var(--vinta-agenda-sky-bg) !important;
+  border: none !important;
+  box-shadow: var(--vinta-agenda-sky-shadow) !important;
+}
+
+/* Card Actions */
+.tray-card-actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.tray-card-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.18);
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tray-card-action-btn:hover {
+  background: rgba(0, 0, 0, 0.35);
+  transform: scale(1.08);
+}
+
+.tray-card-action-btn.danger:hover {
+  background: rgba(239, 68, 68, 0.85);
+  color: #ffffff;
+}
