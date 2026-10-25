@@ -58,6 +58,7 @@
     opacityMinimalStore,
     opacityExpandedStore,
     opacityHiddenStore,
+    uiScaleStore,
     hiddenPillOffsetXStore,
     isIslandHiddenStore,
     notifSoundStore,
@@ -238,6 +239,20 @@
       }
     )
   })
+
+  function computeMaxScaleForActiveMonitor(): number {
+    const h = activeMonitor?.height || 1080
+    if (h <= 900) return 1.1
+    if (h <= 1080) return 1.2
+    return 1.25
+  }
+  let maxScaleForActiveMonitor = $derived.by(computeMaxScaleForActiveMonitor)
+
+  function computeEffectiveUiScale(): number {
+    const configured = $uiScaleStore || 1.0
+    return Math.max(1.0, Math.min(maxScaleForActiveMonitor, configured))
+  }
+  let effectiveUiScale = $derived.by(computeEffectiveUiScale)
 
   let extraDropdownW = $state(0)
   let extraDropdownH = $state(0)
@@ -1500,6 +1515,12 @@
     const currentTheme = $themeStore || 'dark-gold'
     applyThemeToDOM(currentTheme)
   })
+
+  $effect(function handleUiScaleSyncEffect() {
+    // Read reactive effective scale and resync native hit bounds
+    const _scale = effectiveUiScale
+    bounds.syncPillBounds(islandNode, isHidden, true)
+  })
 </script>
 
 <div
@@ -1566,6 +1587,7 @@
       transition: {gestures.isDragging || gestures.isInertia
       ? 'none'
       : islandAnim};
+      --vinta-ui-scale: {effectiveUiScale};
     "
   >
     <MainIsland

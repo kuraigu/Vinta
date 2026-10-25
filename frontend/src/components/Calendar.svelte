@@ -7,9 +7,7 @@
     CalendarDays,
     Clock,
     Plus,
-    Pencil,
     Trash2,
-    MapPin,
     ListFilter,
     X,
     Calendar as CalendarIcon
@@ -21,6 +19,7 @@
     addCalendarEvent,
     updateCalendarEvent,
     deleteCalendarEvent,
+    discardPastCalendarEvents,
     formatDateKey,
     type CalendarEvent
   } from '../stores/calendarStore'
@@ -33,10 +32,10 @@
   import EditorModal from './EditorModal.svelte'
   import CustomDatePicker from './CustomDatePicker.svelte'
   import CustomTimePicker from './CustomTimePicker.svelte'
-  import DiamondPattern from './patterns/DiamondPattern.svelte'
   import HorizontalTabSelection, {
     type TabItem
   } from './HorizontalTabSelection.svelte'
+  import AgendaEventCard from './AgendaEventCard.svelte'
   import {
     timeFormatStore,
     dateFormatStore,
@@ -237,6 +236,12 @@
   }
   let filteredAgendaEvents = $derived.by(computeFilteredAgendaEvents)
 
+  function computePastEventsCount(): number {
+    const todayKey = formatDateKey(new Date())
+    return $calendarStore.events.filter((e) => e.date < todayKey).length
+  }
+  let pastEventsCount = $derived.by(computePastEventsCount)
+
   function computeNextUpcomingEvent(): CalendarEvent | null {
     const todayKey = formatDateKey(new Date())
     const evts = $calendarStore.events
@@ -249,19 +254,6 @@
     return evts[0] || null
   }
   let nextUpcomingEvent = $derived.by(computeNextUpcomingEvent)
-
-  function formatEventTime(timeStr?: string): string {
-    if (!timeStr) return ''
-    if ($timeFormatStore === '24h') return timeStr
-    const parts = timeStr.split(':')
-    if (parts.length < 2) return timeStr
-    let h = parseInt(parts[0], 10)
-    const m = parts[1]
-    const ampm = h >= 12 ? 'PM' : 'AM'
-    h = h % 12
-    if (h === 0) h = 12
-    return `${h}:${m} ${ampm}`
-  }
 
   function handlePrev() {
     if (viewMode === 'month') {
@@ -467,14 +459,31 @@
                 ariaLabel="Filter agenda events"
               />
 
-              <button
-                type="button"
-                class="agenda-primary-add-btn"
-                onclick={() => handleOpenAddModal()}
-              >
-                <Plus size={13} />
-                <span>Add Event</span>
-              </button>
+              <div class="agenda-toolbar-actions">
+                {#if pastEventsCount > 0}
+                  <button
+                    type="button"
+                    class="agenda-clear-past-btn"
+                    onclick={() => discardPastCalendarEvents()}
+                    use:islandTooltip={{
+                      text: `Clear ${pastEventsCount} past ${pastEventsCount === 1 ? 'event' : 'events'}`
+                    }}
+                    aria-label="Clear past events"
+                  >
+                    <Trash2 size={12} />
+                    <span>Clear Past ({pastEventsCount})</span>
+                  </button>
+                {/if}
+
+                <button
+                  type="button"
+                  class="agenda-primary-add-btn"
+                  onclick={() => handleOpenAddModal()}
+                >
+                  <Plus size={13} />
+                  <span>Add Event</span>
+                </button>
+              </div>
             </div>
 
             <ScrollView class="calendar-agenda-scroll-view">
@@ -486,58 +495,12 @@
               {:else}
                 <div class="agenda-stream-list">
                   {#each filteredAgendaEvents as event (event.id)}
-                    <div class="agenda-card card-color-{event.color}">
-                      <div class="agenda-card-left">
-                        <div class="agenda-card-title-row">
-                          <span class="agenda-card-title">{event.title}</span>
-                          <span class="agenda-card-date-badge"
-                            >{formatUserDate(
-                              event.date,
-                              $dateFormatStore
-                            )}</span
-                          >
-                        </div>
-                        <div class="agenda-card-meta-row">
-                          <span class="agenda-card-time">
-                            {#if event.isAllDay}
-                              All Day
-                            {:else if event.startTime}
-                              {formatEventTime(event.startTime)}{event.endTime
-                                ? ` - ${formatEventTime(event.endTime)}`
-                                : ''}
-                            {:else}
-                              Scheduled
-                            {/if}
-                          </span>
-                          {#if event.location}
-                            <span>• {event.location}</span>
-                          {/if}
-                        </div>
-                      </div>
-
-                      <DiamondPattern align="center" />
-
-                      <div class="tray-card-actions">
-                        <button
-                          type="button"
-                          class="tray-card-action-btn"
-                          onclick={() => handleOpenEditModal(event)}
-                          aria-label="Edit event"
-                          use:islandTooltip={'Edit event'}
-                        >
-                          <Pencil size={12} />
-                        </button>
-                        <button
-                          type="button"
-                          class="tray-card-action-btn danger"
-                          onclick={() => deleteCalendarEvent(event.id)}
-                          aria-label="Delete event"
-                          use:islandTooltip={'Delete event'}
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-                    </div>
+                    <AgendaEventCard
+                      {event}
+                      variant="detailed"
+                      onEdit={handleOpenEditModal}
+                      onDelete={deleteCalendarEvent}
+                    />
                   {/each}
                 </div>
               {/if}
@@ -581,60 +544,17 @@
 
         <div class="calendar-tray-scroll-container home-agenda-list-wrap">
           {#if todayEvents.length === 0}
-            <div class="tray-event-card tray-empty-card">
-              <div class="tray-card-main">
-                <span class="tray-time-chip">All Day</span>
-                <span class="tray-card-title">Free all day</span>
-              </div>
-              <DiamondPattern align="center" size="compact" />
-            </div>
+            <AgendaEventCard isEmpty={true} />
           {:else}
             <ScrollView class="calendar-tray-scroll-view">
               <div class="agenda-tray-list">
                 {#each todayEvents as event (event.id)}
-                  <div class="tray-event-card card-color-{event.color}">
-                    <div class="tray-card-main">
-                      <span class="tray-time-chip">
-                        {#if event.isAllDay}
-                          All Day
-                        {:else if event.startTime}
-                          {formatEventTime(event.startTime)}{event.endTime
-                            ? ` - ${formatEventTime(event.endTime)}`
-                            : ''}
-                        {:else}
-                          Event
-                        {/if}
-                      </span>
-                      <span class="tray-card-title">{event.title}</span>
-                      {#if event.location}
-                        <span class="tray-card-loc">
-                          <MapPin size={9} />
-                          {event.location}
-                        </span>
-                      {/if}
-                    </div>
-                    <DiamondPattern align="center" size="compact" />
-                    <div class="tray-card-actions">
-                      <button
-                        type="button"
-                        class="tray-card-action-btn"
-                        onclick={() => handleOpenEditModal(event)}
-                        aria-label="Edit event"
-                        use:islandTooltip={'Edit event'}
-                      >
-                        <Pencil size={11} />
-                      </button>
-                      <button
-                        type="button"
-                        class="tray-card-action-btn danger"
-                        onclick={() => deleteCalendarEvent(event.id)}
-                        aria-label="Delete event"
-                        use:islandTooltip={'Delete event'}
-                      >
-                        <Trash2 size={11} />
-                      </button>
-                    </div>
-                  </div>
+                  <AgendaEventCard
+                    {event}
+                    variant="compact"
+                    onEdit={handleOpenEditModal}
+                    onDelete={deleteCalendarEvent}
+                  />
                 {/each}
               </div>
             </ScrollView>
@@ -785,61 +705,17 @@
 
             <div class="calendar-tray-scroll-container">
               {#if selectedDateEvents.length === 0}
-                <!-- Consistent Day Empty State Card (styled identically to event cards) -->
-                <div class="tray-event-card tray-empty-card">
-                  <div class="tray-card-main">
-                    <span class="tray-time-chip">All Day</span>
-                    <span class="tray-card-title">Free all day</span>
-                  </div>
-                  <DiamondPattern align="center" size="compact" />
-                </div>
+                <AgendaEventCard isEmpty={true} />
               {:else}
                 <ScrollView class="calendar-tray-scroll-view">
                   <div class="agenda-tray-list">
                     {#each selectedDateEvents as event (event.id)}
-                      <div class="tray-event-card card-color-{event.color}">
-                        <div class="tray-card-main">
-                          <span class="tray-time-chip">
-                            {#if event.isAllDay}
-                              All Day
-                            {:else if event.startTime}
-                              {formatEventTime(event.startTime)}{event.endTime
-                                ? ` - ${formatEventTime(event.endTime)}`
-                                : ''}
-                            {:else}
-                              Event
-                            {/if}
-                          </span>
-                          <span class="tray-card-title">{event.title}</span>
-                          {#if event.location}
-                            <span class="tray-card-loc">
-                              <MapPin size={9} />
-                              {event.location}
-                            </span>
-                          {/if}
-                        </div>
-                        <DiamondPattern align="center" size="compact" />
-                        <div class="tray-card-actions">
-                          <button
-                            type="button"
-                            class="tray-card-action-btn"
-                            onclick={() => handleOpenEditModal(event)}
-                            aria-label="Edit event"
-                            use:islandTooltip={'Edit event'}
-                          >
-                            <Pencil size={11} />
-                          </button>
-                          <button
-                            type="button"
-                            class="tray-card-action-btn danger"
-                            onclick={() => deleteCalendarEvent(event.id)}
-                            aria-label="Delete event"
-                            use:islandTooltip={'Delete event'}
-                          >
-                            <Trash2 size={11} />
-                          </button>
-                        </div>
-                      </div>
+                      <AgendaEventCard
+                        {event}
+                        variant="compact"
+                        onEdit={handleOpenEditModal}
+                        onDelete={deleteCalendarEvent}
+                      />
                     {/each}
                   </div>
                 </ScrollView>

@@ -10,7 +10,8 @@
     Upload,
     RefreshCw,
     Info,
-    ChevronDown
+    ChevronDown,
+    Scale
   } from 'lucide-svelte'
   import CustomSelect from '../../CustomSelect.svelte'
   import SettingItem from '../SettingItem.svelte'
@@ -20,7 +21,9 @@
     userNameStore,
     glowIntensityStore,
     opacityMinimalStore,
-    opacityExpandedStore
+    opacityExpandedStore,
+    uiScaleStore,
+    displayLayoutStore
   } from '../../../store'
   import {
     listThemes,
@@ -93,6 +96,50 @@
     { label: 'Subtle', value: 'subtle' },
     { label: 'Vibrant Glow', value: 'vibrant' }
   ]
+
+  const currentMonitor = $derived($displayLayoutStore.currentMonitor)
+  const monitorHeight = $derived(currentMonitor?.height || 1080)
+  const monitorWidth = $derived(currentMonitor?.width || 1920)
+
+  const maxAllowedScale = $derived(
+    monitorHeight <= 900 ? 1.1 : monitorHeight <= 1080 ? 1.2 : 1.25
+  )
+
+  const uiScaleOptions = $derived([
+    { label: '100% (Standard 1.0x)', value: '1' },
+    {
+      label:
+        monitorHeight <= 900 ? '110% (1.1x - Max for display)' : '110% (1.1x)',
+      value: '1.1'
+    },
+    ...(maxAllowedScale >= 1.2
+      ? [
+          {
+            label:
+              monitorHeight <= 1080
+                ? '120% (1.2x - Max for 1080p)'
+                : '120% (1.2x)',
+            value: '1.2'
+          }
+        ]
+      : []),
+    ...(maxAllowedScale >= 1.25
+      ? [{ label: '125% (1.25x - Large)', value: '1.25' }]
+      : [])
+  ])
+
+  let selectedScale = $state(String($uiScaleStore || 1.0))
+
+  function handleScaleEffect() {
+    const val = parseFloat(selectedScale)
+    if (!isNaN(val) && val >= 1.0) {
+      const clamped = Math.max(1.0, Math.min(maxAllowedScale, val))
+      if ($uiScaleStore !== clamped) {
+        $uiScaleStore = clamped
+      }
+    }
+  }
+  $effect(handleScaleEffect)
 </script>
 
 <div class="setting-group">
@@ -239,6 +286,20 @@
     <CustomSelect
       options={glowIntensityOptions}
       bind:value={$glowIntensityStore}
+      fullWidth={true}
+      direction="auto"
+    />
+  </SettingItem>
+
+  <SettingItem
+    label="UI Scale"
+    description="Proportionally scales the island interface (Display: {monitorWidth}×{monitorHeight})"
+    icon={Scale}
+    flexCol={true}
+  >
+    <CustomSelect
+      options={uiScaleOptions}
+      bind:value={selectedScale}
       fullWidth={true}
       direction="auto"
     />
