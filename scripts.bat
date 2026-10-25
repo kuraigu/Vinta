@@ -35,7 +35,7 @@ if "%~1"=="dev" (
         call :build_native
         if errorlevel 1 exit /b !ERRORLEVEL!
     )
-    taskkill /IM Vinta.exe /F 2>nul
+    taskkill /IM Vinta.exe /F /T 2>nul
     task dev
     if errorlevel 1 exit /b !ERRORLEVEL!
     exit /b 0
@@ -67,7 +67,7 @@ if "%~1"=="run" (
         )
     )
 
-    taskkill /IM Vinta.exe /F 2>nul
+    taskkill /IM Vinta.exe /F /T 2>nul
     if "!DO_BUILD!"=="1" (
         task build
         if errorlevel 1 exit /b !ERRORLEVEL!
@@ -92,7 +92,7 @@ if "%~1"=="test" (
             exit /b 1
         )
     )
-    taskkill /IM Vinta.exe /F 2>nul
+    taskkill /IM Vinta.exe /F /T 2>nul
     if "!DO_BUILD!"=="1" (
         task build DEV=true
         if errorlevel 1 exit /b !ERRORLEVEL!

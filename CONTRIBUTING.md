@@ -4,6 +4,15 @@ Thanks for helping make Vinta better. Whether you are fixing a bug, building a n
 
 Everyone who contributes (code, docs, bug reports, or QA testing) gets listed in [docs/CONTRIBUTORS.md](docs/CONTRIBUTORS.md) and inside the app under **Settings > About / Credits**.
 
+## Quick Index
+- [1. Ways to Contribute & Claiming Issues](#1-ways-to-contribute--claiming-issues) (testing, bug reports, claiming workflow)
+- [2. Developer Setup & Commands](#2-developer-setup--commands) (setup, Taskfile commands, debug hotkeys)
+- [3. How Vinta Works (Architecture)](#3-how-vinta-works-architecture) (backend, C++ bridge, satellites, page hierarchy)
+- [4. Building Components & Pages](#4-building-components--pages) (component-first rules, templates, runes, scoping)
+- [5. Creating & Packaging Themes](#5-creating--packaging-themes) (presets, theme packages, manifest format)
+- [6. Submitting a Pull Request](#6-submitting-a-pull-request) (branching, guidelines, PR checklist)
+- [7. Maintainer Release & Verification Guide](#7-maintainer-release--verification-guide) (releases, attestations, signatures)
+
 ---
 
 ## 1. Ways to Contribute & Claiming Issues
@@ -117,29 +126,33 @@ To keep navigation consistent when closing or minimizing overlays, Vinta uses a 
 
 ## 4. Building Components & Pages
 
-Before writing UI code, make sure to read [docs/DESIGN.md](docs/DESIGN.md) for our CSS token rules, bento styling, and stylesheet splitting guidelines.
+Before writing UI code, read [docs/DESIGN.md](docs/DESIGN.md) for our component-first workflow, token rules, and stylesheet splitting guidelines.
+
+### Component-First Rule
+Always check `frontend/src/components/` before creating a new component. Reuse existing primitives (such as `<BentoCard>`, `<BackButton>`, `<CustomSelect>`, `<ScrollView>`) or extend them with variants rather than writing duplicate markup and styles.
 
 ### Starter Templates
 
-You don't have to start from scratch. Copy one of our boilerplates in `templates/`:
+Boilerplates are available in `templates/`:
 
-| Template      | Location                                                                                   | What's inside                                                                                                     |
-| :------------ | :----------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------------------------------------- |
-| **Component** | [templates/component/ExampleComponent.svelte](templates/component/ExampleComponent.svelte) | Svelte 5+ runes (`$props`), minimal/expanded toggle, `--vinta-*` tokens, and `data-vinta` attributes.             |
-| **Page**      | [templates/page/ExamplePage.svelte](templates/page/ExamplePage.svelte)                     | Module `IslandConfig` bounds, `AppControls.doMinimize` setup, header back button, and 56px bottom dock clearance. |
-| **Theme**     | [templates/theme/](templates/theme/)                                                       | Ready-to-edit `manifest.json` and `style.css` with base token overrides and `data-vinta` examples.                |
+| Template      | Location                                                                                   | What's inside                                                                                                       |
+| :------------ | :----------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------ |
+| **Component** | [templates/component/ExampleComponent.svelte](templates/component/ExampleComponent.svelte) | Svelte 5+ runes (`$props`), `<BentoCard>`, and `--vinta-*` tokens.                                                  |
+| **Page**      | [templates/page/ExamplePage.svelte](templates/page/ExamplePage.svelte)                     | Module `IslandConfig` bounds, `<BackButton>`, `AppControls.doMinimize` setup, `data-vinta`, and 56px dock clearance. |
+| **Theme**     | [templates/theme/](templates/theme/)                                                       | Ready-to-edit `manifest.json` and `style.css` with token overrides and page-scoped selector examples.                 |
 
 ### Adding a New Component
 
-1. Create your `.svelte` file in `frontend/src/components/` (or copy `ExampleComponent.svelte`).
-2. Use **Svelte 5+ runes** for reactivity:
+1. Check `frontend/src/components/` first to ensure an existing component cannot handle the use case.
+2. Create your `.svelte` file in `frontend/src/components/` (or copy `ExampleComponent.svelte`).
+3. Use **Svelte 5+ runes** for reactivity:
    - Props: `let { expanded = false, title }: Props = $props()`
    - State: `let activeIndex = $state(0)`
    - Derived values: `let countLabel = $derived(...)`
-   - Effects: When using `$effect`, pass a named function so stack traces stay easy to read.
-3. Include both the compact view (`{#if !expanded}`) and expanded view (`{#else}`).
-4. Style with `--vinta-*` variables from `docs/DESIGN.md` and add a `data-vinta="<component-id>"` attribute to the root element so custom themes can target it.
-5. Register your widget in `ComponentGallery.svelte` or drop it into its parent page.
+   - Effects: When using `$effect`, pass a dedicated named function so stack traces stay easy to read.
+4. Include both the compact view (`{#if !expanded}`) and expanded view (`{#else}`) if building an expandable island widget.
+5. Style with `--vinta-*` variables. Reusable child components do not need `data-vinta` attributes; they inherit themes automatically via CSS tokens.
+6. Register your widget in `ComponentGallery.svelte` or drop it into its parent page.
 
 ### Adding a New Page
 
@@ -159,11 +172,12 @@ You don't have to start from scratch. Copy one of our boilerplates in `templates
    </script>
    ```
 
-3. Wire up your close/back buttons to `AppControls.doMinimize(navigate, e)`.
-4. Add at least `56px` of bottom padding (`padding-bottom: 56px;`) on the main scroll container so the bottom dock buttons don't cover up your content.
-5. Register the route in `frontend/src/store.ts` and `frontend/src/App.svelte`.
+3. Add a root `data-vinta="<page-name>"` attribute on the outermost container for theme scoping.
+4. Wire up your close or back navigation using `<BackButton />` or `AppControls.doMinimize(navigate, e)`.
+5. Add at least `56px` of bottom padding (`padding-bottom: 56px;`) on the main scroll container so bottom dock buttons do not cover content.
+6. Register the route in `frontend/src/store.ts` and `frontend/src/App.svelte`.
 
-> **Note on large `<style>` blocks:** Inline `<style>` is fine for small widgets. Once a component or page gets complex, split its CSS into `frontend/src/components/styles/` or `frontend/src/pages/styles/` using `<style src="..."></style>`. See [docs/DESIGN.md](docs/DESIGN.md) for the exact folder rules.
+> **Note on large `<style>` blocks:** Inline `<style>` is fine for small widgets. Once a component or page gets complex, split its CSS into `frontend/src/components/styles/` or `frontend/src/pages/styles/` using `<style src="..."></style>`. See [docs/DESIGN.md](docs/DESIGN.md) for folder conventions.
 
 ---
 
@@ -200,19 +214,19 @@ Every theme folder needs two files (grab the starter from [templates/theme/](tem
 ```
 
 **`style.css`**
-Override any `--vinta-*` variables inside `:root`. Anything you leave out falls back to the default built-in theme in `frontend/src/themes/tokens.css`
+Override any `--vinta-*` variables inside `:root`. Anything omitted falls back to the default built-in theme in `frontend/src/themes/presets/dark-gold/style.css` (while `tokens.css` holds base `#ff00ff` missing-token sentinels).
 
 ### 2. Targeting Specific Widgets with `data-vinta`
 
-If global variables aren't enough, you can style specific widgets directly in `style.css` using their `data-vinta` attributes (`calendar`, `calendar-page`, `weather-page`, `action-center-page`, `notification`, `notification-page`, `notes-page`, `calculator-page`, `media-widget`, `media-page`, `main-island`, `apps-page`, etc.):
+Themes customize specific pages and widgets by scoping selectors to their `data-vinta` attributes (`calendar-page`, `weather-page`, `action-center-page`, `notification-page`, `notes-page`, `calculator-page`, `media-page`, `main-island`, `apps-page`, etc.):
 
 ```css
-[data-vinta="calendar"] .calendar-agenda-tray {
+[data-vinta="calendar-page"] .calendar-agenda-tray {
 	background: #24252f !important;
 	border: 1px solid var(--vinta-border-accent) !important;
 }
 
-[data-vinta="calendar"] .tray-add-btn {
+[data-vinta="calendar-page"] .tray-add-btn {
 	background: var(--vinta-accent-primary) !important;
 	color: #000000 !important;
 }

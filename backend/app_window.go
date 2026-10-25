@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	goruntime "runtime"
+	"runtime/debug"
 	"strings"
 	"sync"
 	"syscall"
@@ -45,6 +46,7 @@ var (
 	procGetForegroundWindow      = user32.NewProc("GetForegroundWindow")
 	procSetForegroundWindow      = user32.NewProc("SetForegroundWindow")
 	procWindowFromPoint          = user32.NewProc("WindowFromPoint")
+	procEnumChildWindows         = user32.NewProc("EnumChildWindows")
 
 	shell32                          = syscall.NewLazyDLL("shell32.dll")
 	procSHQueryUserNotificationState = shell32.NewProc("SHQueryUserNotificationState")
@@ -1316,9 +1318,27 @@ func (a *App) SetIgnoreMouseEvents(ignore bool) {
 }
 
 var (
-	lastTrimTime time.Time
-	trimMu       sync.Mutex
+	lastTrimTime          time.Time
+	trimMu                sync.Mutex
+	enumChildWebviewOnce  sync.Once
+	enumChildWebviewPtr   uintptr
+	enumChildWebviewMu    sync.Mutex
+	discoveredWebviewPIDs []uint32
 )
+
+func getEnumChildWebviewCallback() uintptr {
+	enumChildWebviewOnce.Do(func() {
+		enumChildWebviewPtr = syscall.NewCallback(func(h, _ uintptr) uintptr {
+			var pid uint32
+			_, _, _ = procGetWindowThreadProcessID.Call(h, uintptr(unsafe.Pointer(&pid)))
+			if pid != 0 {
+				discoveredWebviewPIDs = append(discoveredWebviewPIDs, pid)
+			}
+			return 1
+		})
+	})
+	return enumChildWebviewPtr
+}
 
 // TrimMemory requests Windows to reclaim unused physical RAM pages from Vinta and child WebView2 processes.
 func (a *App) TrimMemory() {
@@ -1335,6 +1355,26 @@ func (a *App) TrimMemory() {
 	}
 
 	currentPID := uint32(os.Getpid())
+	targetPIDs := make(map[uint32]bool)
+
+	enumChildWebviewMu.Lock()
+	discoveredWebviewPIDs = discoveredWebviewPIDs[:0]
+	cb := getEnumChildWebviewCallback()
+	if hwnd := a.getHwnd(); hwnd != 0 && procEnumChildWindows.Find() == nil {
+		_, _, _ = procEnumChildWindows.Call(hwnd, cb, 0)
+	}
+	if a.devWindow != nil && procEnumChildWindows.Find() == nil {
+		if devHwnd := uintptr(a.devWindow.NativeWindow()); devHwnd != 0 {
+			_, _, _ = procEnumChildWindows.Call(devHwnd, cb, 0)
+		}
+	}
+	for _, pid := range discoveredWebviewPIDs {
+		if pid != currentPID {
+			targetPIDs[pid] = true
+		}
+	}
+	enumChildWebviewMu.Unlock()
+
 	snapshot, err := windows.CreateToolhelp32Snapshot(windows.TH32CS_SNAPPROCESS, 0)
 	if err == nil {
 		defer func() {
@@ -1364,19 +1404,29 @@ func (a *App) TrimMemory() {
 			}
 		}
 
-		childPIDs := make(map[uint32]bool)
 		for _, p := range allProcs {
 			if p.parentPID == currentPID && strings.Contains(p.exe, "msedgewebview2") {
-				childPIDs[p.pid] = true
-			}
-		}
-		for _, p := range allProcs {
-			if childPIDs[p.parentPID] && strings.Contains(p.exe, "msedgewebview2") {
-				childPIDs[p.pid] = true
+				targetPIDs[p.pid] = true
 			}
 		}
 
-		for pid := range childPIDs {
+		for {
+			added := false
+			for _, p := range allProcs {
+				if targetPIDs[p.parentPID] && strings.Contains(p.exe, "msedgewebview2") && !targetPIDs[p.pid] {
+					targetPIDs[p.pid] = true
+					added = true
+				}
+			}
+			if !added {
+				break
+			}
+		}
+
+		for pid := range targetPIDs {
+			if pid == currentPID {
+				continue
+			}
 			hChild, err := windows.OpenProcess(windows.PROCESS_SET_QUOTA|windows.PROCESS_QUERY_LIMITED_INFORMATION, false, pid)
 			if err == nil {
 				_, _, _ = procEmptyWorkingSet.Call(uintptr(hChild))
@@ -1384,6 +1434,8 @@ func (a *App) TrimMemory() {
 			}
 		}
 	}
+
+	debug.FreeOSMemory()
 
 	hProcess, _, _ := procGetCurrentProcess.Call()
 	if hProcess != 0 {
