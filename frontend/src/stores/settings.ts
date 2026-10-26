@@ -227,11 +227,21 @@ function persistentWritable<T>(key: string, initialValue: T) {
           delete userOverridesCache[key]
         }
         userOverridesCache['_sparse_migrated'] = true
+        userOverridesCache['_schema_version'] = CURRENT_SETTINGS_SCHEMA_VERSION
         syncSettingsToDisk()
       }
     }
   })
   return store
+}
+
+export const CURRENT_SETTINGS_SCHEMA_VERSION = 1
+
+export interface MigrationResult {
+  migrated: Record<string, unknown>
+  changed: boolean
+  fromVersion: number
+  toVersion: number
 }
 
 // Known legacy defaults to prune during one-time sparse migration
@@ -268,7 +278,72 @@ const legacyV1Defaults: Record<string, unknown> = {
   vinta_auto_discard_past_events: false
 }
 
-// Load disk settings on startup, apply sparse migration if needed, and synchronize stores
+type MigrationFn = (settings: Record<string, unknown>) => Record<string, unknown>
+
+const migrations: Record<number, MigrationFn> = {
+  1: (settings) => {
+    const updated = { ...settings }
+    if (!updated['_sparse_migrated']) {
+      for (const [k, legacyVal] of Object.entries(legacyV1Defaults)) {
+        if (k in updated && isDeepEqual(updated[k], legacyVal)) {
+          delete updated[k]
+        }
+      }
+      updated['_sparse_migrated'] = true
+    }
+    updated['_schema_version'] = 1
+    return updated
+  }
+}
+
+/**
+ * Executes pending schema migrations on a raw settings object up to CURRENT_SETTINGS_SCHEMA_VERSION.
+ *
+ * @param raw - Raw parsed settings configuration.
+ * @param fallbackVersion - Optional version from an export envelope ($schemaVersion).
+ * @returns Migration result containing the updated settings object and migration status.
+ */
+export function migrateSettings(
+  raw: Record<string, unknown>,
+  fallbackVersion?: number
+): MigrationResult {
+  let current = { ...raw }
+  let fromVersion = 0
+
+  if (typeof current['_schema_version'] === 'number') {
+    fromVersion = current['_schema_version']
+  } else if (typeof fallbackVersion === 'number') {
+    fromVersion = fallbackVersion
+  } else if (current['_sparse_migrated']) {
+    fromVersion = 0
+  }
+
+  let changed = false
+  for (let v = fromVersion + 1; v <= CURRENT_SETTINGS_SCHEMA_VERSION; v++) {
+    if (migrations[v]) {
+      current = migrations[v](current)
+      changed = true
+    }
+  }
+
+  if (current['_schema_version'] !== CURRENT_SETTINGS_SCHEMA_VERSION) {
+    current['_schema_version'] = CURRENT_SETTINGS_SCHEMA_VERSION
+    changed = true
+  }
+  if (!current['_sparse_migrated']) {
+    current['_sparse_migrated'] = true
+    changed = true
+  }
+
+  return {
+    migrated: current,
+    changed,
+    fromVersion,
+    toVersion: CURRENT_SETTINGS_SCHEMA_VERSION
+  }
+}
+
+// Load disk settings on startup, apply schema migrations, and synchronize stores
 if (typeof window !== 'undefined') {
   setTimeout(async () => {
     try {
@@ -276,30 +351,19 @@ if (typeof window !== 'undefined') {
         const json = await GetSettings()
         if (json && json !== '{}') {
           const parsed: Record<string, unknown> = JSON.parse(json)
-          let shouldResavePruned = false
+          const migration = migrateSettings(parsed)
 
-          if (!parsed['_sparse_migrated']) {
-            parsed['_sparse_migrated'] = true
-            shouldResavePruned = true
-
-            for (const [k, legacyVal] of Object.entries(legacyV1Defaults)) {
-              if (k in parsed && isDeepEqual(parsed[k], legacyVal)) {
-                delete parsed[k]
-              }
-            }
-          }
-
-          for (const [k, v] of Object.entries(parsed)) {
+          for (const [k, v] of Object.entries(migration.migrated)) {
             userOverridesCache[k] = v
           }
 
-          if (shouldResavePruned) {
+          if (migration.changed) {
             syncSettingsToDisk()
           }
 
           for (const item of registeredStores) {
-            if (item.key in parsed && parsed[item.key] !== undefined) {
-              let diskVal = parsed[item.key]
+            if (item.key in migration.migrated && migration.migrated[item.key] !== undefined) {
+              let diskVal = migration.migrated[item.key]
               if (
                 typeof item.initialValue === 'object' &&
                 item.initialValue !== null &&
@@ -689,6 +753,7 @@ function sanitizeSettingsPayload(raw: Record<string, unknown>): Record<string, u
   }
 
   sanitized['_sparse_migrated'] = true
+  sanitized['_schema_version'] = CURRENT_SETTINGS_SCHEMA_VERSION
   return sanitized
 }
 
@@ -740,13 +805,19 @@ export async function importSettingsFromFile(): Promise<SettingsImportResult> {
       return { success: false, error: 'Selected file is not valid JSON' }
     }
 
+    const envelopeVersion =
+      typeof parsed.$schemaVersion === 'number' ? parsed.$schemaVersion : undefined
+
     const settingsPayload =
       parsed.settings && typeof parsed.settings === 'object' && !Array.isArray(parsed.settings)
         ? (parsed.settings as Record<string, unknown>)
         : parsed
 
-    const sanitized = sanitizeSettingsPayload(settingsPayload)
-    const sanitizedKeys = Object.keys(sanitized).filter((k) => k !== '_sparse_migrated')
+    const migrated = migrateSettings(settingsPayload, envelopeVersion)
+    const sanitized = sanitizeSettingsPayload(migrated.migrated)
+    const sanitizedKeys = Object.keys(sanitized).filter(
+      (k) => k !== '_sparse_migrated' && k !== '_schema_version'
+    )
 
     if (sanitizedKeys.length === 0) {
       return { success: false, error: 'No recognizable settings found in file' }
