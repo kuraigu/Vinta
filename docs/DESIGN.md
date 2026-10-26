@@ -74,8 +74,9 @@ Vinta scopes theme overrides cleanly without polluting every individual element.
 - Every top-level page in `frontend/src/pages/` must declare a root `data-vinta="<page-id>"` attribute (for example: `data-vinta="home-page"`, `data-vinta="settings-page"`, `data-vinta="calendar-page"`).
 - Major top-level widget roots (`main-island`, `media-widget`, `notification`) also carry a `data-vinta` attribute.
 
-### Components Remain Pure & Token-Driven
-- Child components in `frontend/src/components/` do not need `data-vinta` attributes. They rely on semantic CSS class names and `--vinta-*` variables.
+### Components and Widgets
+- `data-vinta` is optional for components and widgets in `frontend/src/components/`. Standalone widgets (such as `media-widget`, `calendar`, `notification`) or components requiring dedicated theme targeting may declare a root `data-vinta="<id>"` attribute.
+- General child components remain token-driven without `data-vinta`, relying on semantic CSS class names and inherited `--vinta-*` variables.
 - When a theme needs to customize how a component looks on a specific page, target it through the page container:
   ```css
   [data-vinta="calendar-page"] .tray-add-btn {
