@@ -189,51 +189,6 @@
   flex-shrink: 0;
 }
 
-.mini-notif-indicator {
-  position: relative;
-  background: rgba(99, 102, 241, 0.25);
-  border: 1px solid rgba(99, 102, 241, 0.45);
-  color: #a5b4fc;
-  padding: 1px 5px;
-  height: 18px;
-  border-radius: 9px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.mini-notif-indicator:hover {
-  background: rgba(99, 102, 241, 0.45);
-  transform: scale(1.08);
-}
-
-.mini-notif-indicator.pulse-new {
-  animation: notifPing 0.7s infinite alternate ease-in-out;
-  background: rgba(239, 68, 68, 0.4);
-  border-color: #ef4444;
-  color: #ffffff;
-}
-
-@keyframes notifPing {
-  0% {
-    transform: scale(1);
-    box-shadow: 0 0 4px #ef4444;
-  }
-  100% {
-    transform: scale(1.12);
-    box-shadow: 0 0 10px #ef4444;
-  }
-}
-
-.mini-notif-count {
-  font-size: 8px;
-  font-weight: 700;
-  line-height: 1;
-}
-
 .minimal-clock-box {
   font-size: 0.68rem;
   font-weight: 600;

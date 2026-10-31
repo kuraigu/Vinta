@@ -61,8 +61,10 @@
   /* ISLAND STATES & SHADOWS */
   --vinta-island-border-idle: #10b981;
   --vinta-island-border-notification: #38bdf8;
+  --vinta-island-border-media: #ff3366;
   --vinta-island-glow-idle: #10b981;
   --vinta-island-glow-notification: #38bdf8;
+  --vinta-island-glow-media: #ff3366;
   --vinta-island-shadow:
     inset 1px 0 0 0 rgba(255, 255, 255, 0.08),
     inset -1px 0 0 0 rgba(255, 255, 255, 0.08),

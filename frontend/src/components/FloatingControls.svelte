@@ -3,10 +3,7 @@
   import {
     EyeOff,
     Minimize2,
-    Maximize2,
-    Power,
-    ChevronDown,
-    ChevronUp
+    Power
   } from 'lucide-svelte'
   import { AppControls } from '../utils/AppControls.svelte'
   import DockButton from './DockButton.svelte'
@@ -21,79 +18,21 @@
 
   type Props = {
     activePage: unknown
-    expanded?: boolean
     expandedTooltipSide?: 'right' | 'left'
-    onDrawerChange?: (isOpen: boolean) => void
   }
 
   let {
     activePage,
-    expanded = false,
-    expandedTooltipSide = 'right',
-    onDrawerChange
+    expandedTooltipSide = 'right'
   }: Props = $props()
-
-  let isDrawerOpen = $state(false)
-  let controlsEl = $state<HTMLDivElement | null>(null)
-
-  function handleOpenDrawer(e?: MouseEvent) {
-    if (e) e.stopPropagation()
-    isDrawerOpen = true
-    onDrawerChange?.(true)
-  }
-
-  function handleCloseDrawer(e?: MouseEvent) {
-    if (e) e.stopPropagation()
-    isDrawerOpen = false
-    onDrawerChange?.(false)
-  }
-
-  /**
-   * Automatically retracts drawer when the parent island expands.
-   */
-  function handleExpandedDrawerClose() {
-    if (expanded && isDrawerOpen) {
-      isDrawerOpen = false
-      onDrawerChange?.(false)
-    }
-  }
-
-  $effect(handleExpandedDrawerClose)
-
-  /**
-   * Closes the drawer when clicking outside the controls container.
-   */
-  function setupOutsideClickListener() {
-    if (expanded || !isDrawerOpen) return
-
-    function onPointerDown(e: PointerEvent) {
-      if (controlsEl && !controlsEl.contains(e.target as Node)) {
-        handleCloseDrawer()
-      }
-    }
-
-    window.addEventListener('pointerdown', onPointerDown)
-    return () => {
-      window.removeEventListener('pointerdown', onPointerDown)
-    }
-  }
-
-  $effect(setupOutsideClickListener)
 </script>
 
-<!-- svelte-ignore a11y_click_events_have_key_events -->
 <div
-  bind:this={controlsEl}
   class="floating-controls"
-  class:minimized={!expanded}
-  class:folded={!expanded && !isDrawerOpen}
   role="toolbar"
   aria-label="Window controls"
   tabindex="-1"
-  onclick={!expanded && !isDrawerOpen ? handleOpenDrawer : undefined}
 >
-  {#if expanded}
-    <!-- Expanded Card State: Vertical Dock attached to parent window -->
     <div class="button-wrapper">
       <DockButton
         shape="rounded"
@@ -117,77 +56,17 @@
       </DockButton>
     </div>
 
-    <div class="button-wrapper">
-      <DockButton
-        shape="rounded"
-        variant="danger"
-        tooltip=""
-        tooltipPosition={expandedTooltipSide}
-        onclick={(e: MouseEvent) => AppControls.doQuit(e)}
-      >
-        <Power size={13.5} strokeWidth={2.2} />
-      </DockButton>
-    </div>
-  {:else if !isDrawerOpen}
-    <!-- Minimized Island: Top-edge Pull-down Tab -->
-    <div class="button-wrapper">
-      <DockButton
-        shape="rounded"
-        tooltip="Window Controls"
-        tooltipPosition="bottom"
-        onclick={handleOpenDrawer}
-      >
-        <ChevronDown size={13.5} strokeWidth={2.2} />
-      </DockButton>
-    </div>
-  {:else}
-    <!-- Minimized Island: Dropped-down Vertical Drawer (Order: Retract, Expand, Hide, Quit) -->
-    <div class="button-wrapper">
-      <DockButton
-        shape="rounded"
-        tooltip=""
-        tooltipPosition="bottom"
-        onclick={handleCloseDrawer}
-      >
-        <ChevronUp size={13.5} strokeWidth={2.2} />
-      </DockButton>
-    </div>
-
-    <div class="button-wrapper">
-      <DockButton
-        shape="rounded"
-        tooltip=""
-        tooltipPosition="bottom"
-        onclick={(e: MouseEvent) =>
-          AppControls.doExpand(navigate, e, activePage)}
-      >
-        <Maximize2 size={13.5} strokeWidth={2.2} />
-      </DockButton>
-    </div>
-
-    <div class="button-wrapper">
-      <DockButton
-        shape="rounded"
-        tooltip=""
-        tooltipPosition="bottom"
-        onclick={(e: MouseEvent) => AppControls.doHide(navigate, hidePill, e)}
-      >
-        <EyeOff size={13.5} strokeWidth={2.2} />
-      </DockButton>
-    </div>
-
-    <div class="button-wrapper">
-      <DockButton
-        shape="rounded"
-        variant="danger"
-        tooltip=""
-        tooltipPosition="bottom"
-        onclick={(e: MouseEvent) => AppControls.doQuit(e)}
-      >
-        <Power size={13.5} strokeWidth={2.2} />
-      </DockButton>
-    </div>
-  {/if}
+  <div class="button-wrapper">
+    <DockButton
+      shape="rounded"
+      variant="danger"
+      tooltip=""
+      tooltipPosition={expandedTooltipSide}
+      onclick={(e: MouseEvent) => AppControls.doQuit(e)}
+    >
+      <Power size={13.5} strokeWidth={2.2} />
+    </DockButton>
+  </div>
 </div>
 
 <style src="./styles/FloatingControls.css"></style>

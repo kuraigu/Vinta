@@ -30,6 +30,7 @@
 
   import MainIsland from './components/MainIsland.svelte'
   import ControlsSatellite from './components/ControlsSatellite.svelte'
+  import NotificationSatellite from './components/NotificationSatellite.svelte'
   import CustomTooltip from './components/CustomTooltip.svelte'
   import { getFallbackPage } from './utils/navigation'
   import { initIslandEvents } from './services/islandEvents'
@@ -262,25 +263,6 @@
   let islandWrapperNode = $state<HTMLDivElement | null>(null)
   let islandNode = $state<HTMLDivElement | null>(null)
 
-  let isControlsDrawerOpen = $state(false)
-
-  function handleControlsDrawerChange(isOpen: boolean) {
-    if (isControlsDrawerOpen === isOpen) return
-    isControlsDrawerOpen = isOpen
-    if (isOpen) {
-      clearTimeout(hideTimeout)
-      isTimeoutActive = false
-    } else {
-      hideTrigger++
-    }
-    bounds.recoverRestingBounds(
-      getBoundsForState(),
-      clampedOffsetX,
-      islandNode,
-      isHidden
-    )
-  }
-
   let isTimeoutActive = $state(false)
   let hideTimeout: number | undefined
 
@@ -339,7 +321,6 @@
       $devPinnedStore ||
       isHovering ||
       isSatelliteHovering ||
-      isControlsDrawerOpen ||
       isHidden ||
       expanded ||
       !shouldCurrentPageAutoHide
@@ -500,7 +481,7 @@
   }
 
   function handleSmartEdgeOffsetAdjustment() {
-    if (!gestures.isDragging && !gestures.isInertia && !isControlsDrawerOpen) {
+    if (!gestures.isDragging && !gestures.isInertia) {
       let adjusted = false
       if (currentLiveOffsetX > allowedOffsets.max) {
         currentLiveOffsetX = allowedOffsets.max
@@ -793,7 +774,6 @@
     clearHoverGrace()
     clearTimeout(hideTimeout)
     isTimeoutActive = false
-    isControlsDrawerOpen = false
     isHovering = false
     finishDragGesture()
 
@@ -939,7 +919,6 @@
     }
     islandAnim = '0.32s cubic-bezier(0.2, 0.8, 0.2, 1)'
     expanded = true
-    isControlsDrawerOpen = false
     bounds.startTrackingTransition(islandNode, 350, false)
   }
 
@@ -1678,6 +1657,14 @@
     />
 
     {#if !isQuitting && !isHidden}
+      <NotificationSatellite
+        active={!isQuitting && !isHidden}
+        primaryCenter={displayLayout.primaryCenter}
+        {clampedOffsetX}
+        monitorLeft={activeMonitor.left}
+        activeMonitorWidth={activeMonitor.width}
+        islandWidth={currentIslandW}
+      />
       <ControlsSatellite
         {activePage}
         {expanded}
@@ -1690,7 +1677,6 @@
         active={!isQuitting && !isHidden}
         onmouseenter={handleSatelliteMouseEnter}
         onmouseleave={handleSatelliteMouseLeave}
-        onDrawerChange={handleControlsDrawerChange}
       />
     {/if}
   </div>

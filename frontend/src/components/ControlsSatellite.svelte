@@ -19,7 +19,6 @@
     active?: boolean
     onmouseenter?: (e: MouseEvent) => void
     onmouseleave?: (e: MouseEvent) => void
-    onDrawerChange?: (isOpen: boolean) => void
   }
 
   let {
@@ -33,11 +32,12 @@
     clampedOffsetX = 0,
     active = true,
     onmouseenter,
-    onmouseleave,
-    onDrawerChange
+    onmouseleave
   }: Props = $props()
 
-  let isDrawerOpen = $state(false)
+  const EXPANDED_RADII: FourPartRadii = [12, 12, 12, 12]
+  const EXPANDED_GAPS: FourPartGaps = [0, 6, 0, 6]
+
   const getInitialExpanded = () => expanded
   let layoutExpanded = $state(getInitialExpanded())
   let isTransitioning = $state(false)
@@ -46,10 +46,9 @@
 
   /**
    * Synchronizes satellite layout across island expansion and collapse cycles.
-   * Smoothly fades out during the island size transition (110ms) to prevent
-   * visual collisions and mismatched Win32 clipping regions between minimized
-   * and expanded states, then re-enters at the resting position once the island
-   * finishes animating.
+   * Delays mounting during island expansion (290ms) until the island finishes
+   * animating, avoiding any flash of the controls during expansion, and unmounts
+   * immediately on collapse.
    */
   function syncLayoutExpanded() {
     if (layoutExpanded === expanded) {
@@ -59,26 +58,21 @@
     clearTimeout(transitionTimer)
     clearTimeout(settleTimer)
 
-    // Fade out immediately to avoid mid-flight clipping or collision artifacts
-    isTransitioning = true
+    if (!expanded) {
+      layoutExpanded = false
+      isTransitioning = false
+      return
+    }
 
-    const islandDuration = expanded ? 290 : 210
+    isTransitioning = true
+    const islandDuration = 290
 
     transitionTimer = window.setTimeout(() => {
-      layoutExpanded = expanded
-      if (expanded) {
-        isDrawerOpen = false
-        onDrawerChange?.(false)
-      }
-
-      // Settle and fade in cleanly at the exact resting position
+      layoutExpanded = true
       settleTimer = window.setTimeout(() => {
         isTransitioning = false
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))
-          window.setTimeout(() => {
-            window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))
-          }, 250)
         }
       }, 30)
     }, islandDuration)
@@ -90,32 +84,6 @@
     clearTimeout(transitionTimer)
     clearTimeout(settleTimer)
   })
-
-  /**
-   * Handles drawer state toggles and notifies external listeners.
-   */
-  function handleDrawerChange(isOpen: boolean) {
-    isDrawerOpen = isOpen
-    onDrawerChange?.(isOpen)
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))
-      requestAnimationFrame(() => {
-        window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))
-      })
-    }
-  }
-
-  /**
-   * Automatically retracts the drawer if the main island enters expanded mode.
-   */
-  function handleAutoRetractDrawer() {
-    if (layoutExpanded && isDrawerOpen) {
-      isDrawerOpen = false
-      onDrawerChange?.(false)
-    }
-  }
-
-  $effect(handleAutoRetractDrawer)
 
   /**
    * Calculates which flank has more room to display the expanded tooltip.
@@ -140,54 +108,22 @@
    * Computes layout dimensions, 4-part gaps, and corner radii for the controls satellite.
    */
   function computeSatelliteBounds() {
-    if (expanded && layoutExpanded) {
-      const centerOffsetY = Math.max(0, Math.round((expandedHeight - 88) / 2))
-      const expandedRadii: FourPartRadii = [12, 12, 12, 12]
-      const expandedGaps: FourPartGaps = [0, 6, 0, 6]
-      return {
-        width: 32,
-        height: 88,
-        radius: 12,
-        radii: expandedRadii,
-        gap: 6,
-        gaps: expandedGaps,
-        offsetY: centerOffsetY,
-        tooltipPad: 0,
-        tooltipSide: 'top' as const
-      }
-    }
-
-    const drawerRadii: FourPartRadii = [0, 0, 12, 12]
-    const drawerGaps: FourPartGaps = [0, 6, 0, 6]
-
-    if (isDrawerOpen) {
-      return {
-        width: 32,
-        height: 116,
-        radius: 0,
-        radii: drawerRadii,
-        gap: 6,
-        gaps: drawerGaps,
-        offsetY: 0,
-        tooltipPad: 0,
-        tooltipSide: 'top' as const
-      }
-    }
-
+    const centerOffsetY = Math.max(0, Math.round((expandedHeight - 88) / 2))
     return {
       width: 32,
-      height: 24,
-      radius: 0,
-      radii: drawerRadii,
+      height: 88,
+      radius: 12,
+      radii: EXPANDED_RADII,
       gap: 6,
-      gaps: drawerGaps,
-      offsetY: 0,
+      gaps: EXPANDED_GAPS,
+      offsetY: centerOffsetY,
       tooltipPad: 0,
       tooltipSide: 'top' as const
     }
   }
 
   let satelliteBounds = $derived.by(computeSatelliteBounds)
+  const isControlsActive = $derived(active && expanded && layoutExpanded)
 </script>
 
 <SatelliteHost
@@ -200,8 +136,8 @@
   offsetY={satelliteBounds.offsetY}
   tooltipPad={satelliteBounds.tooltipPad}
   tooltipSide={satelliteBounds.tooltipSide}
-  active={active && !isTransitioning}
-  animateIn={!layoutExpanded}
+  active={isControlsActive && !isTransitioning}
+  animateIn={true}
   {onmouseenter}
   {onmouseleave}
 >
@@ -216,11 +152,6 @@
       transition: opacity 0.1s ease, transform 0.1s ease;
     "
   >
-    <FloatingControls
-      {activePage}
-      expanded={layoutExpanded}
-      {expandedTooltipSide}
-      onDrawerChange={handleDrawerChange}
-    />
+    <FloatingControls {activePage} {expandedTooltipSide} />
   </div>
 </SatelliteHost>

@@ -2,11 +2,16 @@
   display: flex;
   flex-direction: column;
   align-items: stretch;
+  justify-content: stretch;
   gap: 0;
   width: 32px;
+  height: 88px;
   background: var(--vinta-dock-popover-bg);
   border: none;
-  box-shadow: none;
+  border-radius: 12px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.09),
+    0 2px 7px rgba(0, 0, 0, 0.32);
   pointer-events: auto;
   user-select: none;
   cursor: default;
@@ -19,104 +24,100 @@
     opacity 0.2s ease;
 }
 
-.floating-controls:not(.minimized) {
-  height: 88px;
-  justify-content: stretch;
-  border-radius: 12px;
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.09),
-    0 2px 7px rgba(0, 0, 0, 0.32);
-}
-
-.floating-controls:not(.minimized) .button-wrapper {
+.floating-controls .button-wrapper {
   width: 32px;
   max-width: 32px;
 }
 
-.floating-controls:not(.minimized) .button-wrapper:first-child {
+.floating-controls .button-wrapper:first-child {
   height: 29px;
   flex: 0 0 29px;
 }
 
-.floating-controls:not(.minimized) .button-wrapper:nth-child(2) {
+.floating-controls .button-wrapper:nth-child(2) {
   height: 30px;
   flex: 0 0 30px;
 }
 
-.floating-controls:not(.minimized) .button-wrapper:last-child {
+.floating-controls .button-wrapper:last-child {
   height: 29px;
   flex: 0 0 29px;
 }
 
-.floating-controls:not(.minimized)
-  .button-wrapper:first-child
-  :global(.dock-btn) {
+.floating-controls .button-wrapper:first-child :global(.dock-btn) {
   border-top-left-radius: 12px !important;
   border-top-right-radius: 12px !important;
 }
 
-.floating-controls:not(.minimized)
-  .button-wrapper:last-child
-  :global(.dock-btn) {
+.floating-controls .button-wrapper:last-child :global(.dock-btn) {
   border-bottom-left-radius: 12px !important;
   border-bottom-right-radius: 12px !important;
 }
 
-.floating-controls.minimized {
-  flex-direction: column;
-  width: 32px;
-  height: 116px; /* 4 items * 29px */
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
-  border-bottom-left-radius: 12px;
-  border-bottom-right-radius: 12px;
-  box-shadow:
-    inset 1px 0 0 0 rgba(255, 255, 255, 0.08),
-    inset -1px 0 0 0 rgba(255, 255, 255, 0.08),
-    inset 0 -1px 0 0 rgba(255, 255, 255, 0.08),
-    0 2px 6px rgba(0, 0, 0, 0.24);
+.button-wrapper {
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  z-index: 1;
 }
 
-.floating-controls.minimized .button-wrapper {
-  width: 32px;
-  height: 29px;
-  flex: 0 0 29px;
+.button-wrapper:hover {
+  z-index: 2;
 }
 
-/* Bottom-most button rounds to match the drawer bottom edge */
-.floating-controls.minimized .button-wrapper:last-child :global(.dock-btn) {
-  border-bottom-left-radius: 12px !important;
-  border-bottom-right-radius: 12px !important;
+.floating-controls :global(.dock-btn) {
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  transform: none !important;
+  background: transparent;
+  color: var(--vinta-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* --- Folded Pull-down Handle State --- */
-.floating-controls.minimized.folded {
-  height: 24px; /* Slim notch/pull-tab hanging from top edge */
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
-  border-bottom-left-radius: 12px;
-  border-bottom-right-radius: 12px;
-  box-shadow:
-    inset 1px 0 0 0 rgba(255, 255, 255, 0.08),
-    inset -1px 0 0 0 rgba(255, 255, 255, 0.08),
-    inset 0 -1px 0 0 rgba(255, 255, 255, 0.08),
-    0 1.5px 5px rgba(0, 0, 0, 0.18);
-  opacity: 0.85;
-  cursor: pointer;
+.floating-controls :global(.dock-btn:focus-visible) {
+  outline: 2px solid var(--vinta-primary, #6366f1) !important;
+  outline-offset: -2px !important;
+  background: color-mix(
+    in srgb,
+    var(--vinta-dock-popover-bg) 75%,
+    #ffffff 25%
+  ) !important;
+  color: var(--vinta-text-primary) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2) !important;
+  z-index: 10 !important;
 }
 
-.floating-controls.minimized.folded:hover {
-  opacity: 1;
+.floating-controls :global(.dock-btn *) {
+  pointer-events: none !important;
 }
 
-.floating-controls.minimized.folded .button-wrapper {
-  height: 24px;
-  flex: 0 0 24px;
+.floating-controls :global(.dock-btn:hover) {
+  color: var(--vinta-text-primary);
+  background: color-mix(in srgb, var(--vinta-dock-popover-bg) 82%, #ffffff 18%);
 }
 
-.floating-controls.minimized.folded :global(.dock-btn) {
-  border-bottom-left-radius: 12px !important;
-  border-bottom-right-radius: 12px !important;
+.floating-controls :global(.dock-btn:active) {
+  background: color-mix(in srgb, var(--vinta-dock-popover-bg) 72%, #ffffff 28%);
+}
+
+.floating-controls :global(.dock-btn.danger:hover) {
+  color: #ffffff;
+  background: var(--vinta-danger, #ff3b30);
+}
+
+.floating-controls :global(.dock-btn.danger:active) {
+  color: #ffffff;
+  background: color-mix(in srgb, var(--vinta-danger, #ff3b30) 80%, #000000 20%);
 }
 
 .button-wrapper {

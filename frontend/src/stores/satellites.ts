@@ -116,10 +116,18 @@ export function setSatelliteTooltipPadding(
  * Unregisters a satellite dock and disengages its Win32 hit-test region.
  */
 export function unregisterSatellite(id: string) {
+  let wasPresent = false
   satellitesStore.update((store) => {
-    delete store[id]
+    if (store[id]) {
+      wasPresent = true
+      delete store[id]
+      return store
+    }
     return store
   })
+  if (!wasPresent) {
+    return
+  }
   if (typeof RemoveSatellite === 'function') {
     RemoveSatellite(id).catch(() => {})
   }

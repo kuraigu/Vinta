@@ -70,24 +70,31 @@
 
   let expandedGroups = new SvelteSet<string>()
 
-  function toggleGroupExpand(brandName: string) {
-    if (expandedGroups.has(brandName)) {
-      expandedGroups.delete(brandName)
+  function toggleGroupExpand(groupKey: string) {
+    if (expandedGroups.has(groupKey)) {
+      expandedGroups.delete(groupKey)
     } else {
-      expandedGroups.add(brandName)
+      expandedGroups.add(groupKey)
     }
   }
 
   let itemDragOffsets = new SvelteMap<string, number>()
 
-  function dismissGroup(brandName: string) {
+  function dismissGroup(groupKey: string) {
     notifData.update((n) =>
-      n.filter((x) => getDisplayBrand(x).name !== brandName)
+      n.filter((x) => {
+        const brand = getDisplayBrand(x)
+        const header = (x.title || '').trim() || 'Notification'
+        const k = `${brand.name}::${header}`
+        return k !== groupKey
+      })
     )
   }
 
   type NotificationGroup = {
+    groupKey: string
     brandName: string
+    headerTitle: string
     brandIcon: string | null
     brandAppIcon: string | null
     brandCategory?: string
@@ -163,7 +170,6 @@
     if (notif.icon === appIcon) return true
     const brand = getDisplayBrand(notif)
     if (brand.appIcon && notif.icon === brand.appIcon) return true
-    if (brand.icon && notif.icon === brand.icon) return true
     return false
   }
 
@@ -303,12 +309,15 @@
     const groups: Record<string, NotificationGroup> = {}
     for (const notif of processedNotifications) {
       const brand = getDisplayBrand(notif)
-      const groupKey = brand.name
+      const headerTitle = (notif.title || '').trim() || 'Notification'
+      const groupKey = `${brand.name}::${headerTitle}`
       if (!groups[groupKey]) {
         groups[groupKey] = {
-          brandName: groupKey,
-          brandIcon: brand.appIcon || brand.icon,
-          brandAppIcon: null,
+          groupKey,
+          brandName: brand.name,
+          headerTitle,
+          brandIcon: brand.appIcon,
+          brandAppIcon: brand.appIcon,
           brandCategory: brand.category,
           items: [],
           latestTimestamp: 0
@@ -462,7 +471,7 @@
     const nativeUri =
       nativeIcons[iconKey] || requestNativeAppIcon(searchApp, searchAumid)
 
-    const effectiveAppIcon = nativeUri || null
+    const effectiveAppIcon = notif.appLogo || nativeUri || null
     const effectiveIcon = defaultIcon || nativeUri || null
 
     return {
@@ -871,7 +880,7 @@
       {/snippet}
 
       <ScrollView class="notif-list">
-        {#each groupedNotifications as group (group.brandName)}
+        {#each groupedNotifications as group (group.groupKey)}
           <div
             animate:flip={{ duration: 300 }}
             in:fly={{ x: -20, duration: 300 }}
@@ -885,25 +894,25 @@
               <!-- svelte-ignore a11y_no_static_element_interactions -->
               <div
                 class="notif-group unified-card"
-                class:is-expanded={expandedGroups.has(group.brandName)}
+                class:is-expanded={expandedGroups.has(group.groupKey)}
                 class:is-swiping={itemDragOffsets.has(
-                  `group-${group.brandName}`
+                  `group-${group.groupKey}`
                 )}
                 style="transform: translateX({itemDragOffsets.get(
-                  `group-${group.brandName}`
+                  `group-${group.groupKey}`
                 ) || 0}px); opacity: {itemDragOffsets.has(
-                  `group-${group.brandName}`
+                  `group-${group.groupKey}`
                 )
                   ? Math.max(
                       0.2,
                       1 -
                         Math.abs(
-                          itemDragOffsets.get(`group-${group.brandName}`) || 0
+                          itemDragOffsets.get(`group-${group.groupKey}`) || 0
                         ) /
                           220
                     )
                   : 1}; transition: {itemDragOffsets.has(
-                  `group-${group.brandName}`
+                  `group-${group.groupKey}`
                 )
                   ? 'none'
                   : 'transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease'};"
@@ -914,21 +923,21 @@
                   ignoreSelector:
                     '.notif-actions, .expand-indicator, input, textarea, .no-swipe',
                   onDragMove: (offset) => {
-                    itemDragOffsets.set(`group-${group.brandName}`, offset.x)
+                    itemDragOffsets.set(`group-${group.groupKey}`, offset.x)
                   },
                   onDragEnd: () => {
-                    itemDragOffsets.delete(`group-${group.brandName}`)
+                    itemDragOffsets.delete(`group-${group.groupKey}`)
                   },
                   onSwipeRight: () => {
-                    dismissGroup(group.brandName)
+                    dismissGroup(group.groupKey)
                   },
                   onSwipeLeft: () => {
-                    dismissGroup(group.brandName)
+                    dismissGroup(group.groupKey)
                   }
                 }}
                 onclick={() => {
-                  if (!expandedGroups.has(group.brandName)) {
-                    toggleGroupExpand(group.brandName)
+                  if (!expandedGroups.has(group.groupKey)) {
+                    toggleGroupExpand(group.groupKey)
                   }
                 }}
               >
@@ -937,80 +946,44 @@
                 <div
                   class="notif-group-header"
                   onclick={(e) => {
-                    if (expandedGroups.has(group.brandName)) {
+                    if (expandedGroups.has(group.groupKey)) {
                       e.stopPropagation()
-                      toggleGroupExpand(group.brandName)
+                      toggleGroupExpand(group.groupKey)
                     }
                   }}
                 >
                   <div class="notif-group-header-top">
                     <div class="notif-item-app-group">
-                      <div class="icon-wrapper">
-                        <div class="notif-item-icon">
-                          {#if isImageUrl(group.brandIcon)}
-                            <img
-                              src={group.brandIcon}
-                              alt="app icon"
-                              class="notif-img-icon"
-                              onerror={(e) => {
-                                const img = e.currentTarget as HTMLImageElement
-                                img.style.display = 'none'
-                                if (img.nextElementSibling) {
-                                  ;(
-                                    img.nextElementSibling as HTMLElement
-                                  ).style.display = 'block'
-                                }
-                              }}
-                            />
-                            <div style="display: none;">
-                              {#if group.brandAppIcon && isImageUrl(group.brandAppIcon)}
-                                <img
-                                  src={group.brandAppIcon}
-                                  alt="app icon"
-                                  class="notif-img-icon"
-                                  onerror={(e) => {
-                                    const img =
-                                      e.currentTarget as HTMLImageElement
-                                    img.style.display = 'none'
-                                    if (img.nextElementSibling) {
-                                      ;(
-                                        img.nextElementSibling as HTMLElement
-                                      ).style.display = 'block'
-                                    }
-                                  }}
-                                />
-                                <div style="display: none;">
-                                  {@render fallbackIcon(group, 16)}
-                                </div>
-                              {:else}
-                                {@render fallbackIcon(group, 16)}
-                              {/if}
-                            </div>
-                          {:else if group.brandIcon}
-                            <span class="icon-text">{group.brandIcon}</span>
-                          {:else}
-                            {@render fallbackIcon(group, 16)}
-                          {/if}
-                        </div>
-                        {#if group.brandAppIcon && isImageUrl(group.brandAppIcon) && group.brandAppIcon !== group.brandIcon}
+                      <div class="notif-item-icon">
+                        {#if group.brandAppIcon && isImageUrl(group.brandAppIcon)}
                           <img
                             src={group.brandAppIcon}
-                            alt="app badge"
-                            class="app-badge"
+                            alt="app icon"
+                            class="notif-img-icon"
                             onerror={(e) => {
-                              ;(
-                                e.currentTarget as HTMLImageElement
-                              ).style.display = 'none'
+                              const img = e.currentTarget as HTMLImageElement
+                              img.style.display = 'none'
+                              if (img.nextElementSibling) {
+                                ;(
+                                  img.nextElementSibling as HTMLElement
+                                ).style.display = 'block'
+                              }
                             }}
                           />
+                          <div style="display: none;">
+                            {@render fallbackIcon(group, 16)}
+                          </div>
+                        {:else if group.brandIcon}
+                          <span class="icon-text">{group.brandIcon}</span>
+                        {:else}
+                          {@render fallbackIcon(group, 16)}
                         {/if}
                       </div>
                       <span class="notif-item-app">{group.brandName}</span>
-                      <span class="notif-count-badge">{group.items.length}</span
-                      >
+                      <span class="notif-count-badge">{group.items.length}</span>
                     </div>
                     <div class="time-and-dismiss">
-                      {#if !expandedGroups.has(group.brandName)}
+                      {#if !expandedGroups.has(group.groupKey)}
                         <span class="notif-item-time"
                           >{getRelativeTime(group.latestTimestamp)}</span
                         >
@@ -1019,7 +992,7 @@
                         <div
                           class="expand-indicator"
                           class:is-expanded={expandedGroups.has(
-                            group.brandName
+                            group.groupKey
                           )}
                         >
                           <ChevronDown size={14} />
@@ -1028,7 +1001,7 @@
                           class="dismiss-item-btn"
                           onclick={(e) => {
                             e.stopPropagation()
-                            dismissGroup(group.brandName)
+                            dismissGroup(group.groupKey)
                           }}
                           aria-label="Dismiss group"
                         >
@@ -1037,7 +1010,7 @@
                       </div>
                     </div>
                   </div>
-                  {#if !expandedGroups.has(group.brandName)}
+                  {#if !expandedGroups.has(group.groupKey)}
                     <div class="notif-group-preview">
                       <div class="notif-item-layout">
                         {#if group.items[0].icon && isImageUrl(group.items[0].icon) && !isGenericAppLogo(group.items[0])}
@@ -1057,7 +1030,7 @@
                           <div class="notif-item-body">
                             <div class="notif-item-title-row">
                               <span class="notif-item-title"
-                                >{group.items[0].title}</span
+                                >{group.headerTitle}</span
                               >
                             </div>
                             {#if group.items[0].message}
@@ -1072,7 +1045,7 @@
                   {/if}
                 </div>
 
-                {#if expandedGroups.has(group.brandName)}
+                {#if expandedGroups.has(group.groupKey)}
                   <div
                     class="notif-group-items"
                     transition:slide={{ duration: 250, easing: cubicOut }}
