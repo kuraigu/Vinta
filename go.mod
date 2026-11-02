@@ -4,8 +4,8 @@ go 1.26.0
 
 require (
 	github.com/pkg/browser v0.0.0-20240102092130-5ac0b6a4141c
-	github.com/wailsapp/wails/v3 v3.0.0-beta.26
-	golang.org/x/sys v0.48.0
+	github.com/wailsapp/wails/v3 v3.1.0-nightly.20261028
+	golang.org/x/sys v0.49.0
 )
 
 require (
