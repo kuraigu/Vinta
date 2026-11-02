@@ -980,7 +980,8 @@
                         {/if}
                       </div>
                       <span class="notif-item-app">{group.brandName}</span>
-                      <span class="notif-count-badge">{group.items.length}</span>
+                      <span class="notif-count-badge">{group.items.length}</span
+                      >
                     </div>
                     <div class="time-and-dismiss">
                       {#if !expandedGroups.has(group.groupKey)}
@@ -991,9 +992,7 @@
                       <div class="notif-actions">
                         <div
                           class="expand-indicator"
-                          class:is-expanded={expandedGroups.has(
-                            group.groupKey
-                          )}
+                          class:is-expanded={expandedGroups.has(group.groupKey)}
                         >
                           <ChevronDown size={14} />
                         </div>

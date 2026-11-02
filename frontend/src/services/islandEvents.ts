@@ -28,6 +28,7 @@ import {
   notifVolumeStore,
   dndStore,
   notifAutoWakeStore,
+  notifSatelliteEnabledStore,
   pageVisibilityStore,
   activeSettingsTabStore,
   updateInfoStore,
@@ -424,7 +425,9 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
       const shouldShowSatellite =
         !get(dndStore) &&
         isNotifEnabled &&
-        (currentPage !== HomePage && currentPage !== NotificationPage)
+        get(notifSatelliteEnabledStore) &&
+        currentPage !== HomePage &&
+        currentPage !== NotificationPage
 
       if (shouldShowSatellite) {
         showSatelliteNotification(newNotif)

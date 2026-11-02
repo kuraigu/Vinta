@@ -60,12 +60,15 @@
   --vinta-radius-card: 16px;
   --vinta-radius-button: 10px;
   --vinta-radius-pill: 9999px;
+  --vinta-dock-clearance: 56px;
 
   /* ISLAND STATES & SHADOWS */
   --vinta-island-border-idle: #10b981;
   --vinta-island-border-notification: #38bdf8;
+  --vinta-island-border-media: #ff3366;
   --vinta-island-glow-idle: #10b981;
   --vinta-island-glow-notification: #38bdf8;
+  --vinta-island-glow-media: #ff3366;
   --vinta-island-shadow:
     inset 1px 0 0 0 rgba(255, 255, 255, 0.08),
     inset -1px 0 0 0 rgba(255, 255, 255, 0.08),
@@ -128,6 +131,13 @@
   --vinta-agenda-rose-shadow: 0 4px 16px rgba(225, 29, 72, 0.28);
   --vinta-agenda-sky-bg: linear-gradient(135deg, #0284c7 0%, #0ea5e9 50%, #38bdf8 100%);
   --vinta-agenda-sky-shadow: 0 4px 16px rgba(14, 165, 233, 0.28);
+  --vinta-agenda-free-bg: linear-gradient(
+    135deg,
+    #1e293b 0%,
+    #334155 50%,
+    #475569 100%
+  );
+  --vinta-agenda-free-shadow: 0 4px 14px rgba(15, 23, 42, 0.32);
 }
 
 /* ==========================================================================

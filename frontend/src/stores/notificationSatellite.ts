@@ -1,6 +1,6 @@
 import { writable, get } from 'svelte/store'
 import type { AppNotification } from './system'
-import { autoHideDelayStore } from './settings'
+import { autoHideDelayStore, notifSatelliteEnabledStore } from './settings'
 
 export const satelliteNotification = writable<AppNotification | null>(null)
 
@@ -31,6 +31,7 @@ function handleAutoDismiss() {
  * Starts a countdown timer synced with notification auto-hide preference (or 8s default).
  */
 export function showSatelliteNotification(notif: AppNotification) {
+  if (!get(notifSatelliteEnabledStore)) return
   if (dismissTimer !== null) {
     window.clearTimeout(dismissTimer)
     dismissTimer = null

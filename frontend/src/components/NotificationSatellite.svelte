@@ -8,7 +8,10 @@
     pauseSatelliteTimer,
     resumeSatelliteTimer
   } from '../stores/notificationSatellite'
-  import { autoHideDelayStore } from '../stores/settings'
+  import {
+    autoHideDelayStore,
+    notifSatelliteEnabledStore
+  } from '../stores/settings'
   import {
     nativeIconsStore,
     parseAumid,
@@ -78,8 +81,11 @@
     const halfIslandW = islandWidth / 2
     const leftEdge = islandCenterOnScreen - halfIslandW
     const leftClearance = leftEdge - 12 - satelliteWidth
+    const rightEdge = islandCenterOnScreen + halfIslandW
+    const rightClearance =
+      activeMonitorWidth - (rightEdge + 12 + satelliteWidth)
 
-    if (leftClearance < 6) {
+    if (leftClearance < 6 && rightClearance >= 6) {
       return 'right'
     }
     return 'left'
@@ -199,6 +205,12 @@
     e.stopPropagation()
     dismissSatelliteNotification()
   }
+
+  $effect(function handleSatelliteDisabled() {
+    if (!$notifSatelliteEnabledStore && currentNotif !== null) {
+      dismissSatelliteNotification()
+    }
+  })
 </script>
 
 <SatelliteHost
@@ -208,7 +220,7 @@
   height={satelliteHeight}
   radius={satelliteRadii}
   gap={satelliteGaps}
-  active={active && currentNotif !== null}
+  active={active && currentNotif !== null && $notifSatelliteEnabledStore}
   onmouseenter={pauseSatelliteTimer}
   onmouseleave={resumeSatelliteTimer}
 >
@@ -243,8 +255,12 @@
     }}
     style="
       transform: translateX({swipeOffsetX}px);
-      opacity: {isSwiping ? Math.max(0.2, 1 - Math.abs(swipeOffsetX) / 140) : 1};
-      transition: {isSwiping ? 'none' : 'transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease'};
+      opacity: {isSwiping
+      ? Math.max(0.2, 1 - Math.abs(swipeOffsetX) / 140)
+      : 1};
+      transition: {isSwiping
+      ? 'none'
+      : 'transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease'};
     "
   >
     {#if currentNotif}
@@ -282,7 +298,9 @@
     <div class="satellite-content">
       <span class="satellite-header" title={displayTitle}>{displayTitle}</span>
       {#if displayMessage}
-        <span class="satellite-snippet" title={displayMessage}>{displayMessage}</span>
+        <span class="satellite-snippet" title={displayMessage}
+          >{displayMessage}</span
+        >
       {/if}
     </div>
 
@@ -298,4 +316,3 @@
 </SatelliteHost>
 
 <style src="./styles/NotificationSatellite.css"></style>
-
