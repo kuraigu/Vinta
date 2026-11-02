@@ -61,6 +61,7 @@
     'vinta_pinned_media_source',
     'vinta_dnd',
     'vinta_notif_autowake',
+    'vinta_notif_satellite_enabled',
     'vinta_media_autowake',
     'vinta_notif_sound',
     'vinta_notif_volume',

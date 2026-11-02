@@ -1,0 +1,183 @@
+.notification-satellite {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 0 10px 0 12px;
+  box-sizing: border-box;
+  background: var(--vinta-dock-popover-bg);
+  border: none;
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+  border-bottom-left-radius: 16px;
+  border-bottom-right-radius: 16px;
+  box-shadow:
+    inset 1px 0 0 0 rgba(255, 255, 255, 0.09),
+    inset -1px 0 0 0 rgba(255, 255, 255, 0.09),
+    inset 0 -1px 0 0 rgba(255, 255, 255, 0.09),
+    0 2px 7px rgba(0, 0, 0, 0.32);
+  cursor: pointer;
+  user-select: none;
+  gap: 10px;
+  overflow: hidden;
+  position: relative;
+  transition:
+    background-color 0.18s ease,
+    transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 0.18s ease;
+}
+
+.notification-satellite:hover {
+  background: var(--vinta-dock-popover-bg);
+  box-shadow:
+    inset 1px 0 0 0 rgba(255, 255, 255, 0.15),
+    inset -1px 0 0 0 rgba(255, 255, 255, 0.15),
+    inset 0 -1px 0 0 rgba(255, 255, 255, 0.15),
+    0 3px 9px rgba(0, 0, 0, 0.38);
+}
+
+.satellite-avatar-wrap {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: var(--vinta-card-header-bg);
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.notification-satellite:hover .satellite-avatar-wrap {
+  transform: scale(1.06);
+}
+
+.satellite-icon-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.satellite-icon-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--vinta-text-secondary);
+}
+
+.satellite-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  flex: 1;
+  min-width: 0;
+  gap: 2px;
+}
+
+.satellite-header {
+  font-family: var(--vinta-font-family);
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--vinta-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.satellite-snippet {
+  font-family: var(--vinta-font-family);
+  font-size: 10.5px;
+  font-weight: 400;
+  color: var(--vinta-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.satellite-dismiss-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--vinta-text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  transition:
+    background-color 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+    color 0.18s ease;
+}
+
+.satellite-dismiss-btn:hover {
+  background: var(--vinta-hover);
+  border-color: var(--vinta-border);
+  color: var(--vinta-text-primary);
+  transform: scale(1.14);
+}
+
+.satellite-dismiss-btn:active {
+  transform: scale(0.92);
+}
+
+.satellite-timeout-bar {
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 2px;
+  border-radius: 9999px;
+  background-color: var(--vinta-island-glow-notification, #38bdf8);
+  box-shadow:
+    0 0 6px 1px var(--vinta-island-glow-notification, #38bdf8),
+    0 0 12px 2px var(--vinta-island-glow-notification, #38bdf8);
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 14%,
+    black 86%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black 14%,
+    black 86%,
+    transparent 100%
+  );
+  animation: shrinkSatelliteBar linear forwards;
+  z-index: 20;
+  pointer-events: none;
+  filter: blur(0.2px);
+}
+
+.notification-satellite:hover .satellite-timeout-bar {
+  animation-play-state: paused;
+}
+
+@keyframes shrinkSatelliteBar {
+  0% {
+    width: 50%;
+    opacity: 0;
+  }
+  6% {
+    opacity: 0.85;
+  }
+  85% {
+    width: 8%;
+    opacity: 0.85;
+  }
+  100% {
+    width: 0%;
+    opacity: 0;
+  }
+}

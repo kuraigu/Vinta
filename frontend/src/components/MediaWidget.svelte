@@ -4,8 +4,8 @@
   export const config: IslandConfig = {
     minimal: { w: 368, h: 44, r: 16 },
     expanded: { w: 400, h: 225, r: 28 },
-    borderColor: 'rgba(255, 60, 100, 0.4)',
-    glowColor: 'rgba(255, 60, 100, 0.35)'
+    borderColor: 'var(--vinta-island-border-media, #ff3366)',
+    glowColor: 'var(--vinta-island-glow-media, #ff3366)'
   }
 </script>
 
@@ -17,15 +17,11 @@
     RequeryMediaArt
   } from '../../bindings/Vinta/backend/app.js'
   import Clock from './Clock.svelte'
-  import BatteryWidget from './BatteryWidget.svelte'
   import DynamicEqualizer from './DynamicEqualizer.svelte'
   import MediaSourcesDrawer from './MediaSourcesDrawer.svelte'
   import {
     globalMediaStore,
     audioPeakStore,
-    notifData,
-    batteryDataStore,
-    homeWidgetsVisibilityStore,
     pinnedMediaSourceStore,
     isIslandHiddenStore
   } from '../store'
@@ -33,7 +29,6 @@
     Volume1,
     Volume2,
     VolumeX,
-    Bell,
     Shuffle,
     Repeat,
     Repeat1,
@@ -44,9 +39,7 @@
     Pin
   } from 'lucide-svelte'
   import { getContext, untrack } from 'svelte'
-  import NotificationPage, {
-    config as notifConfig
-  } from '../pages/NotificationPage.svelte'
+
   import { islandTooltip } from '../services/islandTooltip'
   import { resolveAppBrand, nativeIconsStore } from '../services/iconService'
   import { enhanceArtwork } from '../utils/imageUpscaler'
@@ -63,7 +56,7 @@
   let { expanded = false }: Props = $props()
 
   let media = $derived($globalMediaStore)
-  let hasBattery = $derived($batteryDataStore.hasBattery)
+
   let nativeIcons = $derived($nativeIconsStore)
 
   function computeAppBrand() {
@@ -196,23 +189,6 @@
       volLockTimer = null
     }, 850)
   }
-
-  let prevNotifCount = $state(0)
-  let isNewNotif = $state(false)
-  let pulseTimeout: number
-
-  function handleNotifPulseEffect() {
-    const currentCount = $notifData.length
-    if (currentCount > prevNotifCount) {
-      isNewNotif = true
-      clearTimeout(pulseTimeout)
-      pulseTimeout = window.setTimeout(() => {
-        isNewNotif = false
-      }, 3500)
-    }
-    prevNotifCount = currentCount
-  }
-  $effect(handleNotifPulseEffect)
 
   let isSeekingLocked = $state(false)
   let targetSeekPos = $state(0)
@@ -866,25 +842,8 @@
         {/if}
       </div>
 
-      <!-- Minimal Re-used <Clock>, Bouncing Equalizer, Notification Indicator & Battery Indicator -->
+      <!-- Minimal Re-used <Clock> and Bouncing Equalizer -->
       <div class="minimal-right-meta">
-        {#if $notifData.length > 0}
-          <button
-            class="mini-notif-indicator {isNewNotif ? 'pulse-new' : ''}"
-            onclick={(e) => {
-              e.stopPropagation()
-              if (navigate) navigate(NotificationPage, notifConfig, true)
-            }}
-          >
-            <Bell size={10} />
-            <span class="mini-notif-count"
-              >{$notifData.length > 9 ? '9+' : $notifData.length}</span
-            >
-          </button>
-        {/if}
-        {#if $homeWidgetsVisibilityStore.battery && hasBattery}
-          <BatteryWidget />
-        {/if}
         <div class="minimal-clock-box">
           <Clock expanded={false} />
         </div>

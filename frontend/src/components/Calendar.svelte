@@ -9,7 +9,6 @@
     Plus,
     Trash2,
     ListFilter,
-    X,
     Calendar as CalendarIcon
   } from 'lucide-svelte'
   import {
@@ -20,6 +19,7 @@
     updateCalendarEvent,
     deleteCalendarEvent,
     discardPastCalendarEvents,
+    isCalendarEventPast,
     formatDateKey,
     type CalendarEvent
   } from '../stores/calendarStore'
@@ -36,12 +36,7 @@
     type TabItem
   } from './HorizontalTabSelection.svelte'
   import AgendaEventCard from './AgendaEventCard.svelte'
-  import {
-    timeFormatStore,
-    dateFormatStore,
-    formatUserDate,
-    type IslandConfig
-  } from '../store'
+  import { dateFormatStore, formatUserDate, type IslandConfig } from '../store'
   import { islandTooltip } from '../services/islandTooltip'
 
   let {
@@ -230,22 +225,20 @@
       return allAgendaEvents.filter((e) => e.date === todayKey)
     }
     if (agendaFilter === 'upcoming') {
-      return allAgendaEvents.filter((e) => e.date >= todayKey)
+      return allAgendaEvents.filter((e) => !isCalendarEventPast(e))
     }
     return allAgendaEvents
   }
   let filteredAgendaEvents = $derived.by(computeFilteredAgendaEvents)
 
   function computePastEventsCount(): number {
-    const todayKey = formatDateKey(new Date())
-    return $calendarStore.events.filter((e) => e.date < todayKey).length
+    return $calendarStore.events.filter((e) => isCalendarEventPast(e)).length
   }
   let pastEventsCount = $derived.by(computePastEventsCount)
 
   function computeNextUpcomingEvent(): CalendarEvent | null {
-    const todayKey = formatDateKey(new Date())
     const evts = $calendarStore.events
-      .filter((e) => e.date >= todayKey)
+      .filter((e) => !isCalendarEventPast(e))
       .sort((a, b) => {
         const c = a.date.localeCompare(b.date)
         if (c !== 0) return c

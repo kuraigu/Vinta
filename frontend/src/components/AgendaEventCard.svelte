@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Pencil, Trash2, MapPin } from 'lucide-svelte'
+  import { Pencil, Trash2, MapPin, BellRing } from 'lucide-svelte'
   import DiamondPattern from './patterns/DiamondPattern.svelte'
   import { islandTooltip } from '../services/islandTooltip'
   import { timeFormatStore, dateFormatStore, formatUserDate } from '../store'
@@ -51,9 +51,20 @@
     <div class="agenda-card-left">
       <div class="agenda-card-title-row">
         <span class="agenda-card-title">{event.title}</span>
-        <span class="agenda-card-date-badge">
-          {formatUserDate(event.date, $dateFormatStore)}
-        </span>
+        <div class="agenda-card-badges">
+          {#if event.notified}
+            <span
+              class="agenda-card-notified-badge"
+              use:islandTooltip={'Notified'}
+              aria-label="Notification delivered"
+            >
+              <BellRing size={9.5} />
+            </span>
+          {/if}
+          <span class="agenda-card-date-badge">
+            {formatUserDate(event.date, $dateFormatStore)}
+          </span>
+        </div>
       </div>
       <div class="agenda-card-meta-row">
         <span class="agenda-card-time">
@@ -105,17 +116,28 @@
 {:else}
   <div class="tray-event-card card-color-{event.color}">
     <div class="tray-card-main">
-      <span class="tray-time-chip">
-        {#if event.isAllDay}
-          All Day
-        {:else if event.startTime}
-          {formatEventTime(event.startTime)}{event.endTime
-            ? ` - ${formatEventTime(event.endTime)}`
-            : ''}
-        {:else}
-          Event
+      <div class="tray-card-chips-row">
+        <span class="tray-time-chip">
+          {#if event.isAllDay}
+            All Day
+          {:else if event.startTime}
+            {formatEventTime(event.startTime)}{event.endTime
+              ? ` - ${formatEventTime(event.endTime)}`
+              : ''}
+          {:else}
+            Event
+          {/if}
+        </span>
+        {#if event.notified}
+          <span
+            class="tray-card-notified-chip"
+            use:islandTooltip={'Notified'}
+            aria-label="Notification delivered"
+          >
+            <BellRing size={8} />
+          </span>
         {/if}
-      </span>
+      </div>
       <span class="tray-card-title">{event.title}</span>
       {#if event.location}
         <span class="tray-card-loc">

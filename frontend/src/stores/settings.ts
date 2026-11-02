@@ -263,6 +263,7 @@ const legacyV1Defaults: Record<string, unknown> = {
   vinta_autohide_borderless: false,
   vinta_dnd: false,
   vinta_notif_autowake: true,
+  vinta_notif_satellite_enabled: true,
   vinta_media_autowake: true,
   vinta_notif_sound: true,
   vinta_notif_volume: 0.8,
@@ -483,6 +484,7 @@ followActiveDisplayStore.subscribe((val) => {
 // ============================================================================
 export const dndStore = persistentWritable<boolean>('vinta_dnd', false)
 export const notifAutoWakeStore = persistentWritable<boolean>('vinta_notif_autowake', true)
+export const notifSatelliteEnabledStore = persistentWritable<boolean>('vinta_notif_satellite_enabled', true)
 export const mediaAutoWakeStore = persistentWritable<boolean>('vinta_media_autowake', true)
 export const notifSoundStore = persistentWritable<boolean>('vinta_notif_sound', true)
 export const notifVolumeStore = persistentWritable<number>('vinta_notif_volume', 0.8)

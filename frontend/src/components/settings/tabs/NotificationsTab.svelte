@@ -6,7 +6,8 @@
     Trash2,
     AlarmClock,
     Play,
-    TimerReset
+    TimerReset,
+    Orbit
   } from 'lucide-svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingSlider from '../SettingSlider.svelte'
@@ -17,6 +18,7 @@
     notifSoundStore,
     notifVolumeStore,
     notifAutoWakeStore,
+    notifSatelliteEnabledStore,
     alarmSoundPresetStore,
     alarmVolumeStore,
     alarmSnoozeMinutesStore,
@@ -92,6 +94,17 @@
   <SettingItem label="Auto-Wake Island on Notification" icon={Bell}>
     <label class="toggle-switch">
       <input type="checkbox" bind:checked={$notifAutoWakeStore} />
+      <span class="slider"></span>
+    </label>
+  </SettingItem>
+
+  <SettingItem
+    label="Show Notification Satellite"
+    description="Display alerts in a companion satellite capsule beside the island during media playback and other active views"
+    icon={Orbit}
+  >
+    <label class="toggle-switch">
+      <input type="checkbox" bind:checked={$notifSatelliteEnabledStore} />
       <span class="slider"></span>
     </label>
   </SettingItem>

@@ -28,6 +28,7 @@ import {
   notifVolumeStore,
   dndStore,
   notifAutoWakeStore,
+  notifSatelliteEnabledStore,
   pageVisibilityStore,
   activeSettingsTabStore,
   updateInfoStore,
@@ -47,6 +48,7 @@ import {
 } from '../store'
 import type { MonitorInfo } from '../../bindings/Vinta/backend/models.js'
 import { sendVintaNotification } from './vintaNotification.js'
+import { showSatelliteNotification } from '../stores/notificationSatellite'
 
 /**
  * Callbacks provided by the island orchestrator to handle system and runtime events.
@@ -415,15 +417,25 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
       }
 
       const isNotifEnabled = get(pageVisibilityStore).notifications
+      const currentPage = callbacks.getActivePage()
+      const isExpanded = callbacks.getIsExpanded()
       const mediaIsActive =
-        callbacks.getActivePage() === MediaPage &&
-        get(globalMediaStore).isPlaying
+        currentPage === MediaPage && get(globalMediaStore).isPlaying
 
-      if (
+      const shouldShowSatellite =
+        !get(dndStore) &&
+        isNotifEnabled &&
+        get(notifSatelliteEnabledStore) &&
+        currentPage !== HomePage &&
+        currentPage !== NotificationPage
+
+      if (shouldShowSatellite) {
+        showSatelliteNotification(newNotif)
+      } else if (
         !get(dndStore) &&
         get(notifAutoWakeStore) &&
         isNotifEnabled &&
-        !callbacks.getIsExpanded() &&
+        !isExpanded &&
         !mediaIsActive
       ) {
         callbacks.onNotificationWake?.()

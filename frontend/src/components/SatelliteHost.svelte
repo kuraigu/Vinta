@@ -130,25 +130,29 @@
    * Synchronizes bounds whenever geometry properties or offset change.
    */
   function syncSatelliteBoundsEffect() {
-    void {
-      width,
-      height,
-      gap,
-      offsetX,
-      offsetY,
-      active,
-      radius
-    }
-    syncSatelliteBounds()
-    if (active && lastActiveState !== active) {
-      lastActiveState = active
-      clearSettleTimeouts()
-      settleTimeout1 = window.setTimeout(syncSatelliteBounds, 80)
-      settleTimeout2 = window.setTimeout(syncSatelliteBounds, 250)
-      settleTimeout3 = window.setTimeout(syncSatelliteBounds, 350)
-    } else if (!active) {
-      lastActiveState = active
-      clearSettleTimeouts()
+    if (active) {
+      void {
+        width,
+        height,
+        gap,
+        offsetX,
+        offsetY,
+        radius
+      }
+      syncSatelliteBounds()
+      if (lastActiveState !== active) {
+        lastActiveState = active
+        clearSettleTimeouts()
+        settleTimeout1 = window.setTimeout(syncSatelliteBounds, 80)
+        settleTimeout2 = window.setTimeout(syncSatelliteBounds, 250)
+        settleTimeout3 = window.setTimeout(syncSatelliteBounds, 350)
+      }
+    } else {
+      if (lastActiveState !== false) {
+        lastActiveState = false
+        clearSettleTimeouts()
+        syncSatelliteBounds()
+      }
     }
   }
 

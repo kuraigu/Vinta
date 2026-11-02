@@ -19,6 +19,7 @@ export interface CalendarEvent {
   location?: string
   source: 'local' | 'synced'
   feedId?: string
+  notified?: boolean
 }
 
 export interface CalendarFeed {
@@ -169,10 +170,65 @@ if (typeof window !== 'undefined') {
     } finally {
       isInitialCalendarDiskLoadComplete = true
       if (get(autoDiscardPastEventsStore)) {
-        discardPastCalendarEvents()
+        discardPastCalendarEvents(true)
       }
     }
   }, 0)
+}
+
+autoDiscardPastEventsStore.subscribe((enabled) => {
+  if (enabled && isInitialCalendarDiskLoadComplete) {
+    discardPastCalendarEvents(false)
+  }
+})
+
+/**
+ * Calculates an implied 1-hour end time for an event with start time but no end time.
+ */
+function getImpliedEndTime(startTime: string): string {
+  const [hStr, mStr] = startTime.split(':')
+  const h = parseInt(hStr, 10)
+  const m = parseInt(mStr, 10)
+  if (isNaN(h) || isNaN(m)) return startTime
+  const totalM = h * 60 + m + 60
+  if (totalM >= 24 * 60) return '23:59'
+  const endH = String(Math.floor(totalM / 60)).padStart(2, '0')
+  const endM = String(totalM % 60).padStart(2, '0')
+  return `${endH}:${endM}`
+}
+
+/**
+ * Evaluates whether a calendar event has passed based on current local date and time.
+ *
+ * An event is past if:
+ * 1. Its scheduled date precedes today.
+ * 2. Its scheduled date is today, it is not an all-day event, and its end time has passed.
+ *
+ * @param evt - Target calendar event to evaluate.
+ * @param now - Reference timestamp (default: current system time).
+ * @returns True if event is in the past.
+ */
+export function isCalendarEventPast(evt: CalendarEvent, now = new Date()): boolean {
+  const todayKey = formatDateKey(now)
+  if (evt.date < todayKey) {
+    return true
+  }
+  if (evt.date > todayKey) {
+    return false
+  }
+  if (evt.isAllDay) {
+    return false
+  }
+  const currentHours = String(now.getHours()).padStart(2, '0')
+  const currentMinutes = String(now.getMinutes()).padStart(2, '0')
+  const currentTimeKey = `${currentHours}:${currentMinutes}`
+
+  const effectiveEnd =
+    evt.endTime?.trim() || (evt.startTime ? getImpliedEndTime(evt.startTime) : '')
+  if (effectiveEnd) {
+    return currentTimeKey >= effectiveEnd
+  }
+  return false
 }
 
 /**
@@ -198,6 +254,7 @@ export function addCalendarEvent(
   const newEvent: CalendarEvent = {
     source: 'local',
     ...eventData,
+    notified: false,
     id: `evt-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
   }
   calendarStore.update((state) => ({
@@ -218,9 +275,17 @@ export function updateCalendarEvent(
 ) {
   calendarStore.update((state) => ({
     ...state,
-    events: state.events.map((evt) =>
-      evt.id === id ? { ...evt, ...updates } : evt
-    )
+    events: state.events.map((evt) => {
+      if (evt.id !== id) return evt
+      const timeOrDateChanged =
+        (updates.date && updates.date !== evt.date) ||
+        (updates.startTime && updates.startTime !== evt.startTime)
+      return {
+        ...evt,
+        ...updates,
+        ...(timeOrDateChanged ? { notified: false } : {})
+      }
+    })
   }))
 }
 
@@ -237,16 +302,20 @@ export function deleteCalendarEvent(id: string) {
 }
 
 /**
- * Prunes all local calendar events whose scheduled date precedes today.
+ * Prunes calendar events whose scheduled date or time has passed.
  *
+ * @param onlyNotified - When true, only purges past events that have already been notified.
  * @returns Total count of removed past events.
  */
-export function discardPastCalendarEvents(): number {
-  const todayKey = formatDateKey(new Date())
+export function discardPastCalendarEvents(onlyNotified = false): number {
+  const now = new Date()
   let count = 0
   calendarStore.update((state) => {
     const retained = state.events.filter((evt) => {
-      if (evt.date < todayKey) {
+      if (isCalendarEventPast(evt, now)) {
+        if (onlyNotified && !evt.notified) {
+          return true
+        }
         count++
         return false
       }
@@ -414,13 +483,21 @@ export async function syncAllCalendarFeeds() {
       }
     }
 
-    calendarStore.update((s) => ({
-      ...s,
-      feeds: updatedFeeds,
-      // Retain local events while updating synced ones
-      events: [...s.events.filter((e) => e.source === 'local'), ...allSyncedEvents],
-      isSyncing: false
-    }))
+    calendarStore.update((s) => {
+      const previouslyNotifiedIds = new Set(
+        s.events.filter((e) => e.notified).map((e) => e.id)
+      )
+      const mergedSynced = allSyncedEvents.map((evt) =>
+        previouslyNotifiedIds.has(evt.id) ? { ...evt, notified: true } : evt
+      )
+      return {
+        ...s,
+        feeds: updatedFeeds,
+        // Retain local events while updating synced ones
+        events: [...s.events.filter((e) => e.source === 'local'), ...mergedSynced],
+        isSyncing: false
+      }
+    })
   } catch (err) {
     calendarStore.update((s) => ({
       ...s,
@@ -433,12 +510,12 @@ export async function syncAllCalendarFeeds() {
 // ============================================================================
 // Event Reminder Watcher
 // ============================================================================
-const notifiedEventKeys = new Set<string>()
 let reminderWatcherInterval: ReturnType<typeof setInterval> | null = null
 
 /**
- * Checks upcoming and active calendar events against the current system time
- * and dispatches one-shot Vinta notifications when scheduled start times arrive.
+ * Checks upcoming, in-progress, and concluded calendar events against current system time
+ * and dispatches one-shot Vinta notifications when scheduled times arrive or when launching
+ * after scheduled events have already started.
  */
 export function checkCalendarEventReminders(): void {
   const state = get(calendarStore)
@@ -450,36 +527,64 @@ export function checkCalendarEventReminders(): void {
   const currentMinutes = String(now.getMinutes()).padStart(2, '0')
   const currentTimeKey = `${currentHours}:${currentMinutes}`
 
+  const newlyNotifiedIds = new Set<string>()
+
   for (const event of state.events) {
+    if (event.notified) continue
+
+    // If event was scheduled before today and never notified, mark as notified to prevent stale spam
+    if (event.date < todayKey) {
+      newlyNotifiedIds.add(event.id)
+      continue
+    }
+
+    // Only process events scheduled for today
     if (event.date !== todayKey) continue
 
-    const isTimedMatch =
-      !event.isAllDay &&
-      event.startTime &&
-      event.startTime === currentTimeKey
+    const isAllDay = Boolean(event.isAllDay)
+    const isPast = isCalendarEventPast(event, now)
 
-    const isAllDayMorningMatch =
-      Boolean(event.isAllDay) &&
-      currentHours === '09' &&
-      currentMinutes === '00'
+    let shouldNotify = false
+    let statusPrefix = ''
 
-    if (!isTimedMatch && !isAllDayMorningMatch) continue
+    if (isAllDay) {
+      if (currentTimeKey >= '09:00') {
+        shouldNotify = true
+        statusPrefix = 'All Day'
+      }
+    } else if (event.startTime) {
+      if (currentTimeKey >= event.startTime) {
+        shouldNotify = true
+        if (isPast) {
+          statusPrefix = 'Missed event'
+        } else if (currentTimeKey === event.startTime) {
+          statusPrefix = 'Starting now'
+        } else {
+          statusPrefix = 'In progress'
+        }
+      }
+    }
 
-    const notifyKey = `${event.id}_${todayKey}_${event.startTime || 'allday'}`
-    if (notifiedEventKeys.has(notifyKey)) continue
+    if (!shouldNotify) continue
 
-    notifiedEventKeys.add(notifyKey)
+    newlyNotifiedIds.add(event.id)
+
+    const timeRangeStr = event.startTime
+      ? `${event.startTime}${event.endTime ? ` - ${event.endTime}` : ''}`
+      : 'Scheduled'
 
     const parts: string[] = []
+    if (statusPrefix) {
+      parts.push(`${statusPrefix} (${timeRangeStr})`)
+    } else {
+      parts.push(timeRangeStr)
+    }
+
     if (event.location?.trim()) {
       parts.push(event.location.trim())
     }
     if (event.description?.trim()) {
       parts.push(event.description.trim())
-    } else if (event.endTime?.trim()) {
-      parts.push(`Until ${event.endTime.trim()}`)
-    } else if (event.isAllDay) {
-      parts.push('All day')
     }
 
     const message = parts.join(' • ')
@@ -489,6 +594,20 @@ export function checkCalendarEventReminders(): void {
       message,
       subApp: 'Agenda'
     })
+  }
+
+  if (newlyNotifiedIds.size > 0) {
+    calendarStore.update((s) => ({
+      ...s,
+      events: s.events.map((e) =>
+        newlyNotifiedIds.has(e.id) ? { ...e, notified: true } : e
+      )
+    }))
+  }
+
+  // If auto-discard setting is active, prune past events that have been notified
+  if (get(autoDiscardPastEventsStore)) {
+    discardPastCalendarEvents(true)
   }
 }
 
