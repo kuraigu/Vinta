@@ -30,6 +30,7 @@
     timezoneStore,
     dateFormatStore,
     formatUserDate,
+    getCachedDateTimeFormat,
     updateInfoStore,
     appInfoStore,
     notifData,
@@ -222,7 +223,7 @@
    */
   function computeTimeParts() {
     try {
-      const formatter = new Intl.DateTimeFormat('en-US', {
+      const formatter = getCachedDateTimeFormat('en-US', {
         timeZone: currentTimezone,
         hour: 'numeric',
         minute: 'numeric',
@@ -232,7 +233,7 @@
         month: 'long',
         day: 'numeric',
         year: 'numeric'
-      } as Intl.DateTimeFormatOptions)
+      })
       const parts = formatter.formatToParts(time)
       const getVal = (type: string) =>
         parts.find((p) => p.type === type)?.value || '0'

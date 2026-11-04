@@ -62,19 +62,14 @@
       .join(' ')
   }
 
-  /**
-   * Generates SVG polygon coordinate points for gradient fill areas beneath sparklines.
-   *
-   * @param history - Array of numeric load values from 0 to 100.
-   * @param width - Viewport pixel width of the target sparkline.
-   * @param height - Viewport pixel height of the target sparkline.
-   * @returns Formatted SVG polygon points string.
-   */
-  function renderAreaPoints(history: number[], width = 340, height = 32): string {
-    if (!history || history.length < 2) return `0,${height} ${width},${height}`
-    const line = renderSparkline(history, width, height)
-    return `0,${height} ${line} ${width},${height}`
-  }
+  let cpuLine = $derived(renderSparkline(cpuHistory, 340, 32))
+  let cpuArea = $derived(`0,32 ${cpuLine} 340,32`)
+
+  let ramLine = $derived(renderSparkline(ramHistory, 340, 32))
+  let ramArea = $derived(`0,32 ${ramLine} 340,32`)
+
+  let gpuLine = $derived(renderSparkline(gpuHistory, 340, 32))
+  let gpuArea = $derived(`0,32 ${gpuLine} 340,32`)
 
   /**
    * Formats a megabyte count into a legible gigabyte string with one decimal place.
@@ -120,9 +115,9 @@
                 <stop offset="100%" stop-color="var(--vinta-accent-danger, #d55e00)" stop-opacity="0.0" />
               </linearGradient>
             </defs>
-            <polygon points={renderAreaPoints(cpuHistory, 340, 32)} fill="url(#grad-cpu)" />
+            <polygon points={cpuArea} fill="url(#grad-cpu)" />
             <polyline
-              points={renderSparkline(cpuHistory, 340, 32)}
+              points={cpuLine}
               class="sparkline-trace cpu"
             />
           </svg>
@@ -160,9 +155,9 @@
                 <stop offset="100%" stop-color="var(--vinta-primary, #56b4e9)" stop-opacity="0.0" />
               </linearGradient>
             </defs>
-            <polygon points={renderAreaPoints(ramHistory, 340, 32)} fill="url(#grad-ram)" />
+            <polygon points={ramArea} fill="url(#grad-ram)" />
             <polyline
-              points={renderSparkline(ramHistory, 340, 32)}
+              points={ramLine}
               class="sparkline-trace ram"
             />
           </svg>
@@ -202,9 +197,9 @@
                 <stop offset="100%" stop-color="var(--vinta-accent-purple, #cc79a7)" stop-opacity="0.0" />
               </linearGradient>
             </defs>
-            <polygon points={renderAreaPoints(gpuHistory, 340, 32)} fill="url(#grad-gpu)" />
+            <polygon points={gpuArea} fill="url(#grad-gpu)" />
             <polyline
-              points={renderSparkline(gpuHistory, 340, 32)}
+              points={gpuLine}
               class="sparkline-trace gpu"
             />
           </svg>

@@ -34,6 +34,11 @@
   --vinta-accent-success: #ff00ff;
   --vinta-accent-success-hover-bg: #ff00ff;
   --vinta-accent-success-hover-text: #ff00ff;
+  --vinta-danger: var(--vinta-accent-danger);
+  --vinta-warning: var(--vinta-accent-warning);
+  --vinta-success: var(--vinta-accent-success);
+  --vinta-purple: var(--vinta-accent-purple);
+  --vinta-bronze: var(--vinta-accent-bronze);
 
   /* BASE SURFACES */
   --vinta-bg: #ff00ff;

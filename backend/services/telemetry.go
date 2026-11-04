@@ -68,6 +68,7 @@ type telemetrySampler struct {
 	pdhQuery   uintptr
 	pdhCounter uintptr
 	pdhReady   bool
+	gpuBuf     []byte
 
 	activeListeners atomic.Int32
 	stopCh          chan struct{}
@@ -191,6 +192,7 @@ func (s *telemetrySampler) closePDH() {
 		s.pdhQuery = 0
 		s.pdhCounter = 0
 		s.pdhReady = false
+		s.gpuBuf = nil
 	}
 }
 
@@ -224,19 +226,22 @@ func (s *telemetrySampler) sampleGPU() float64 {
 		return 0
 	}
 
-	buf := make([]byte, bufSize)
+	if uint32(len(s.gpuBuf)) < bufSize {
+		s.gpuBuf = make([]byte, bufSize)
+	}
+
 	r, _, _ = procPdhGetFormattedCounterArrayW.Call(
 		s.pdhCounter,
 		uintptr(pdhFmtDouble),
 		uintptr(unsafe.Pointer(&bufSize)),
 		uintptr(unsafe.Pointer(&itemCount)),
-		uintptr(unsafe.Pointer(&buf[0])),
+		uintptr(unsafe.Pointer(&s.gpuBuf[0])),
 	)
 	if r != 0 {
 		return 0
 	}
 
-	items := (*[1 << 16]pdhFmtCounterValueItem)(unsafe.Pointer(&buf[0]))[:itemCount:itemCount]
+	items := (*[1 << 16]pdhFmtCounterValueItem)(unsafe.Pointer(&s.gpuBuf[0]))[:itemCount:itemCount]
 	var totalGPU float64
 	for i := range items {
 		if items[i].cStatus == 0 && items[i].doubleValue > 0 {
@@ -318,14 +323,16 @@ func StopTelemetryStream() {
 	defer sampler.mu.Unlock()
 
 	remaining := sampler.activeListeners.Add(-1)
-	if remaining <= 0 && sampler.isRunning {
+	if remaining <= 0 {
 		sampler.activeListeners.Store(0)
-		sampler.isRunning = false
-		if sampler.stopCh != nil {
-			close(sampler.stopCh)
-			sampler.stopCh = nil
+		if sampler.isRunning {
+			sampler.isRunning = false
+			if sampler.stopCh != nil {
+				close(sampler.stopCh)
+				sampler.stopCh = nil
+			}
+			sampler.closePDH()
 		}
-		sampler.closePDH()
 	}
 }
 
