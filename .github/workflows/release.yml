@@ -32,6 +32,7 @@ jobs:
   build-and-release:
     name: Build & Release Windows App
     runs-on: windows-latest
+    if: github.repository == 'kuraigu/Vinta'
     env:
       RELEASE_VERSION: ''
     steps:

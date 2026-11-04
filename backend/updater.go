@@ -674,18 +674,21 @@ func (a *App) DownloadUpdate(downloadURL, checksumsURL string) error {
 
 	if checksumsURL != "" {
 		expectedHash, err := a.fetchExpectedChecksum(checksumsURL, filepath.Base(downloadURL))
-		if err == nil && expectedHash != "" {
-			computedHash, err := computeFileSHA256(partPath)
-			if err != nil {
-				_ = os.Remove(partPath)
-				a.emitDownloadProgress("error", downloaded, totalBytes, 0, 0, "Failed to compute checksum: "+err.Error())
-				return err
-			}
-			if !strings.EqualFold(computedHash, expectedHash) {
-				_ = os.Remove(partPath)
-				a.emitDownloadProgress("error", downloaded, totalBytes, 0, 0, "Checksum verification failed: download corrupted.")
-				return fmt.Errorf("checksum mismatch: expected %s, got %s", expectedHash, computedHash)
-			}
+		if err != nil || expectedHash == "" {
+			_ = os.Remove(partPath)
+			a.emitDownloadProgress("error", downloaded, totalBytes, 0, 0, "Failed to retrieve release checksum manifest.")
+			return fmt.Errorf("failed to retrieve checksum manifest: %w", err)
+		}
+		computedHash, err := computeFileSHA256(partPath)
+		if err != nil {
+			_ = os.Remove(partPath)
+			a.emitDownloadProgress("error", downloaded, totalBytes, 0, 0, "Failed to compute checksum: "+err.Error())
+			return err
+		}
+		if !strings.EqualFold(computedHash, expectedHash) {
+			_ = os.Remove(partPath)
+			a.emitDownloadProgress("error", downloaded, totalBytes, 0, 0, "Checksum verification failed: download corrupted.")
+			return fmt.Errorf("checksum mismatch: expected %s, got %s", expectedHash, computedHash)
 		}
 	}
 
@@ -789,7 +792,10 @@ func (a *App) ApplyUpdate() error {
 
 // DownloadAndInstallUpdate downloads the installer executable for the update and executes it.
 func (a *App) DownloadAndInstallUpdate(downloadURL string) error {
-	if err := a.DownloadUpdate(downloadURL, ""); err != nil {
+	a.updaterMu.Lock()
+	checksumURL := a.activeChecksumURL
+	a.updaterMu.Unlock()
+	if err := a.DownloadUpdate(downloadURL, checksumURL); err != nil {
 		return err
 	}
 	return a.ApplyUpdate()
