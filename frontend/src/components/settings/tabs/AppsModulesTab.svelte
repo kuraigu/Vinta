@@ -12,7 +12,8 @@
     Calendar,
     Pin,
     CloudSun,
-    FolderDown
+    FolderDown,
+    Activity
   } from 'lucide-svelte'
   import SettingItem from '../SettingItem.svelte'
   import {
@@ -203,6 +204,17 @@
           type="checkbox"
           checked={$pageVisibilityStore.notifications}
           onchange={() => togglePage('notifications')}
+        />
+        <span class="slider"></span>
+      </label>
+    </SettingItem>
+
+    <SettingItem label="System Stats" icon={Activity}>
+      <label class="toggle-switch">
+        <input
+          type="checkbox"
+          checked={$pageVisibilityStore.performance !== false}
+          onchange={() => togglePage('performance')}
         />
         <span class="slider"></span>
       </label>
@@ -405,6 +417,17 @@
             type="checkbox"
             checked={$homeWidgetsVisibilityStore.actionCenter}
             onchange={() => toggleHomeWidget('actionCenter')}
+          />
+          <span class="slider"></span>
+        </label>
+      </SettingItem>
+
+      <SettingItem label="System Stats Glance" icon={Activity}>
+        <label class="toggle-switch">
+          <input
+            type="checkbox"
+            checked={Boolean($homeWidgetsVisibilityStore.systemStats)}
+            onchange={() => toggleHomeWidget('systemStats')}
           />
           <span class="slider"></span>
         </label>

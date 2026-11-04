@@ -142,6 +142,50 @@ export class BatteryStatus {
 }
 
 /**
+ * SystemTelemetry models snapshot metrics for hardware load and memory allocation.
+ */
+export class SystemTelemetry {
+    "cpuPercent": number;
+    "ramPercent": number;
+    "ramUsedMB": number;
+    "ramTotalMB": number;
+    "gpuPercent": number;
+    "timestampMs": number;
+
+    /** Creates a new SystemTelemetry instance. */
+    constructor($$source: Partial<SystemTelemetry> = {}) {
+        if (!("cpuPercent" in $$source)) {
+            this["cpuPercent"] = 0;
+        }
+        if (!("ramPercent" in $$source)) {
+            this["ramPercent"] = 0;
+        }
+        if (!("ramUsedMB" in $$source)) {
+            this["ramUsedMB"] = 0;
+        }
+        if (!("ramTotalMB" in $$source)) {
+            this["ramTotalMB"] = 0;
+        }
+        if (!("gpuPercent" in $$source)) {
+            this["gpuPercent"] = 0;
+        }
+        if (!("timestampMs" in $$source)) {
+            this["timestampMs"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SystemTelemetry instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SystemTelemetry {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new SystemTelemetry($$parsedSource as Partial<SystemTelemetry>);
+    }
+}
+
+/**
  * WirelessStatus represents the structured wireless and connectivity status.
  */
 export class WirelessStatus {

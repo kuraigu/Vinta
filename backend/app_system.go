@@ -157,3 +157,20 @@ func (a *App) ClearCache() error {
 
 	return nil
 }
+
+// GetSystemTelemetry retrieves instantaneous CPU, RAM, and GPU hardware metrics.
+func (a *App) GetSystemTelemetry() services.SystemTelemetry {
+	return services.GetCurrentTelemetry()
+}
+
+// StartSystemTelemetry initiates periodic background telemetry emission to the frontend.
+func (a *App) StartSystemTelemetry() bool {
+	services.StartTelemetryStream()
+	return true
+}
+
+// StopSystemTelemetry decrements active telemetry listeners and pauses the sampling loop when unobserved.
+func (a *App) StopSystemTelemetry() bool {
+	services.StopTelemetryStream()
+	return true
+}

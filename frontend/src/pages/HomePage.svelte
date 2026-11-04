@@ -16,6 +16,7 @@
   import WeatherGlance from '../components/WeatherGlance.svelte'
   import DeviceStatusWidget from '../components/DeviceStatusWidget.svelte'
   import ActionCenterGlance from '../components/ActionCenterGlance.svelte'
+  import SystemStats from '../components/SystemStats.svelte'
   import NotificationGlance from '../components/NotificationGlance.svelte'
   import UpdateGlanceCard from '../components/UpdateGlanceCard.svelte'
   import ScrollView from '../components/ScrollView.svelte'
@@ -403,6 +404,13 @@
           {#if $homeWidgetsVisibilityStore.actionCenter}
             <section class="glance-card-feed">
               <ActionCenterGlance />
+            </section>
+          {/if}
+
+          <!-- System Hardware Stats Glance (Modular Bento Card) -->
+          {#if $homeWidgetsVisibilityStore.systemStats}
+            <section class="glance-card-feed">
+              <SystemStats expanded={true} />
             </section>
           {/if}
 

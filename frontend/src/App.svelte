@@ -422,7 +422,7 @@
             islandConfig.expanded.maxH ?? islandConfig.expanded.h
           )
       : activePage === MediaPage && $isMediaDrawerOpenStore
-        ? 315
+        ? 335
         : islandConfig.expanded.h
   )
 

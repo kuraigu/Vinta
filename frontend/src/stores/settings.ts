@@ -56,6 +56,7 @@ export interface HomeWidgetsVisibility {
   battery: boolean
   wireless: boolean
   actionCenter: boolean
+  systemStats?: boolean
 }
 
 export const defaultHomeWidgetsVisibility: HomeWidgetsVisibility = {
@@ -64,7 +65,8 @@ export const defaultHomeWidgetsVisibility: HomeWidgetsVisibility = {
   weather: true,
   battery: true,
   wireless: true,
-  actionCenter: true
+  actionCenter: true,
+  systemStats: false
 }
 
 export interface PageVisibility {
@@ -78,6 +80,7 @@ export interface PageVisibility {
   calendar: boolean
   weather: boolean
   fileshelf: boolean
+  performance?: boolean
 }
 
 export const defaultPageVisibility: PageVisibility = {
@@ -90,7 +93,8 @@ export const defaultPageVisibility: PageVisibility = {
   timer: true,
   calendar: true,
   weather: true,
-  fileshelf: true
+  fileshelf: true,
+  performance: true
 }
 
 export interface DockPinnedApps {
@@ -628,7 +632,12 @@ export function calculateHomeExpandedHeight(
     totalHeight += GAP + 96
   }
 
-  // 6. Studio Branding Footer ("Vinta by FreeMatrix Studios & Contributors")
+  // 6. System Stats glance card
+  if (visibility.systemStats) {
+    totalHeight += GAP + 128
+  }
+
+  // 7. Studio Branding Footer ("Vinta by FreeMatrix Studios & Contributors")
   totalHeight += GAP + 24
 
   // 7. Bottom clearance for feed padding & island corner curvature

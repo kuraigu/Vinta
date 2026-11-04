@@ -285,6 +285,15 @@ export function GetSettings(): $CancellablePromise<string> {
 }
 
 /**
+ * GetSystemTelemetry retrieves instantaneous CPU, RAM, and GPU hardware metrics.
+ */
+export function GetSystemTelemetry(): $CancellablePromise<services$0.SystemTelemetry> {
+    return $Call.ByID(3760642775).then(($result: any) => {
+        return $$createType13($result);
+    });
+}
+
+/**
  * GetThemeCSS returns the CSS content for the specified theme ID.
  */
 export function GetThemeCSS(id: string): $CancellablePromise<string> {
@@ -310,7 +319,7 @@ export function GetUpdateRepo(): $CancellablePromise<string> {
  */
 export function GetWirelessStatus(): $CancellablePromise<services$0.WirelessStatus> {
     return $Call.ByID(794979391).then(($result: any) => {
-        return $$createType13($result);
+        return $$createType14($result);
     });
 }
 
@@ -333,7 +342,7 @@ export function ImportSettingsFileDialog(): $CancellablePromise<string> {
  */
 export function ImportThemeDialog(): $CancellablePromise<$models.ThemeInfo | null> {
     return $Call.ByID(1943468227).then(($result: any) => {
-        return $$createType15($result);
+        return $$createType16($result);
     });
 }
 
@@ -342,7 +351,7 @@ export function ImportThemeDialog(): $CancellablePromise<$models.ThemeInfo | nul
  */
 export function InspectShelfFiles(paths: string[]): $CancellablePromise<$models.ShelfFileItem[]> {
     return $Call.ByID(4271776190, paths).then(($result: any) => {
-        return $$createType16($result);
+        return $$createType17($result);
     });
 }
 
@@ -372,7 +381,7 @@ export function IsTestMode(): $CancellablePromise<boolean> {
  */
 export function ListNotes(): $CancellablePromise<$models.NoteFileInfo[]> {
     return $Call.ByID(2184398716).then(($result: any) => {
-        return $$createType18($result);
+        return $$createType19($result);
     });
 }
 
@@ -381,7 +390,7 @@ export function ListNotes(): $CancellablePromise<$models.NoteFileInfo[]> {
  */
 export function ListThemes(): $CancellablePromise<$models.ThemeInfo[]> {
     return $Call.ByID(44849841).then(($result: any) => {
-        return $$createType19($result);
+        return $$createType20($result);
     });
 }
 
@@ -425,7 +434,7 @@ export function PauseUpdateDownload(): $CancellablePromise<void> {
  */
 export function PromptChooseShelfFiles(): $CancellablePromise<$models.ShelfFileItem[]> {
     return $Call.ByID(2406650291).then(($result: any) => {
-        return $$createType16($result);
+        return $$createType17($result);
     });
 }
 
@@ -805,6 +814,13 @@ export function StartNativeFileDrag(paths: string[]): $CancellablePromise<void> 
 }
 
 /**
+ * StartSystemTelemetry initiates periodic background telemetry emission to the frontend.
+ */
+export function StartSystemTelemetry(): $CancellablePromise<boolean> {
+    return $Call.ByID(4081721051);
+}
+
+/**
  * Startup satisfies legacy startup calls if invoked.
  */
 export function Startup(): $CancellablePromise<void> {
@@ -819,11 +835,18 @@ export function StopInertiaGlide(): $CancellablePromise<number> {
 }
 
 /**
+ * StopSystemTelemetry decrements active telemetry listeners and pauses the sampling loop when unobserved.
+ */
+export function StopSystemTelemetry(): $CancellablePromise<boolean> {
+    return $Call.ByID(448542573);
+}
+
+/**
  * StripShelfImageMetadata re-encodes supported images (.jpg, .jpeg, .png) without EXIF or ancillary metadata.
  */
 export function StripShelfImageMetadata(paths: string[]): $CancellablePromise<$models.ShelfFileItem[]> {
     return $Call.ByID(4085277947, paths).then(($result: any) => {
-        return $$createType16($result);
+        return $$createType17($result);
     });
 }
 
@@ -876,10 +899,11 @@ const $$createType9 = $models.Contributor.createFrom;
 const $$createType10 = $Create.Array($$createType9);
 const $$createType11 = $models.MonitorInfo.createFrom;
 const $$createType12 = $models.DisplayLayout.createFrom;
-const $$createType13 = services$0.WirelessStatus.createFrom;
-const $$createType14 = $models.ThemeInfo.createFrom;
-const $$createType15 = $Create.Nullable($$createType14);
-const $$createType16 = $Create.Array($$createType0);
-const $$createType17 = $models.NoteFileInfo.createFrom;
-const $$createType18 = $Create.Array($$createType17);
-const $$createType19 = $Create.Array($$createType14);
+const $$createType13 = services$0.SystemTelemetry.createFrom;
+const $$createType14 = services$0.WirelessStatus.createFrom;
+const $$createType15 = $models.ThemeInfo.createFrom;
+const $$createType16 = $Create.Nullable($$createType15);
+const $$createType17 = $Create.Array($$createType0);
+const $$createType18 = $models.NoteFileInfo.createFrom;
+const $$createType19 = $Create.Array($$createType18);
+const $$createType20 = $Create.Array($$createType15);

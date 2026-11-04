@@ -5,5 +5,6 @@ export {
     AppAudioSession,
     AudioEndpoint,
     BatteryStatus,
+    SystemTelemetry,
     WirelessStatus
 } from "./models.js";
