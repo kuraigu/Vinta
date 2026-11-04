@@ -19,11 +19,13 @@
   import Clock from './Clock.svelte'
   import DynamicEqualizer from './DynamicEqualizer.svelte'
   import MediaSourcesDrawer from './MediaSourcesDrawer.svelte'
+  import AudioMixerDrawer from './AudioMixerDrawer.svelte'
   import {
     globalMediaStore,
     audioPeakStore,
     pinnedMediaSourceStore,
-    isIslandHiddenStore
+    isIslandHiddenStore,
+    isMediaDrawerOpenStore
   } from '../store'
   import {
     Volume1,
@@ -33,21 +35,14 @@
     Repeat,
     Repeat1,
     ListMusic,
-    Music2,
-    Check,
-    X,
-    Pin
+    Pin,
+    SlidersHorizontal
   } from 'lucide-svelte'
-  import { getContext, untrack } from 'svelte'
+  import { untrack } from 'svelte'
 
   import { islandTooltip } from '../services/islandTooltip'
   import { resolveAppBrand, nativeIconsStore } from '../services/iconService'
   import { enhanceArtwork } from '../utils/imageUpscaler'
-
-  const navigate =
-    getContext<
-      (page: unknown, pageConfig: IslandConfig, expand?: boolean) => void
-    >('navigate')
 
   interface Props {
     expanded?: boolean
@@ -108,6 +103,7 @@
   let isVolLocked = $state(false)
   let volLockTimer: ReturnType<typeof setTimeout> | null = null
   let isSessionMenuOpen = $state(false)
+  let isAudioMixerOpen = $state(false)
   let lastNonZeroVol = $state(50)
 
   function handleFocusApp(e: MouseEvent) {
@@ -125,26 +121,26 @@
   function toggleSessionMenu(e: MouseEvent) {
     e.stopPropagation()
     isSessionMenuOpen = !isSessionMenuOpen
-  }
-
-  function handleSelectSession(sessionId: string, e: MouseEvent) {
-    e.stopPropagation()
-    SelectMediaSession(sessionId)
-    isSessionMenuOpen = false
-  }
-
-  function handleTogglePinSource(sourceApp: string, e: MouseEvent) {
-    e.stopPropagation()
-    if ($pinnedMediaSourceStore === sourceApp) {
-      $pinnedMediaSourceStore = null
-    } else {
-      $pinnedMediaSourceStore = sourceApp
-      const match = media.sessions?.find((s) => s.sourceApp === sourceApp)
-      if (match) {
-        SelectMediaSession(match.id)
-      }
+    if (isSessionMenuOpen) {
+      isAudioMixerOpen = false
     }
   }
+
+  function toggleAudioMixer(e: MouseEvent) {
+    e.stopPropagation()
+    isAudioMixerOpen = !isAudioMixerOpen
+    if (isAudioMixerOpen) {
+      isSessionMenuOpen = false
+    }
+  }
+
+  function handleMediaDrawerStateEffect() {
+    $isMediaDrawerOpenStore = Boolean(isSessionMenuOpen || isAudioMixerOpen)
+    return () => {
+      $isMediaDrawerOpenStore = false
+    }
+  }
+  $effect(handleMediaDrawerStateEffect)
 
   function handlePinnedSourcePrioritizationEffect() {
     const pinned = $pinnedMediaSourceStore
@@ -164,13 +160,22 @@
 
   function handleSessionDismissEffect() {
     function onPointerDown(e: PointerEvent) {
+      const target = e.target as HTMLElement
+      if (!target) return
       if (isSessionMenuOpen) {
-        const target = e.target as HTMLElement
         if (
-          !target.closest('.session-drawer-panel') &&
+          !target.closest('.vinta-drawer-panel') &&
           !target.closest('.session-btn')
         ) {
           isSessionMenuOpen = false
+        }
+      }
+      if (isAudioMixerOpen) {
+        if (
+          !target.closest('.vinta-drawer-panel') &&
+          !target.closest('.mixer-btn')
+        ) {
+          isAudioMixerOpen = false
         }
       }
     }
@@ -668,11 +673,6 @@
     isDraggingVol || isVolLocked ? volVal : (media.volume ?? 50)
   )
 
-  function getSessionBrand(sourceApp: string, sessionId: string) {
-    void nativeIcons
-    return resolveAppBrand(sourceApp, sessionId)
-  }
-
   let miniTitleNode = $state<HTMLElement | null>(null)
   let expandedTitleNode = $state<HTMLElement | null>(null)
   let expandedArtistNode = $state<HTMLElement | null>(null)
@@ -894,7 +894,10 @@
     </div>
 
     <!-- Expanded Player Content -->
-    <div class="expanded-card">
+    <div
+      class="expanded-card"
+      class:has-active-drawer={isSessionMenuOpen || isAudioMixerOpen}
+    >
       {#if isSessionMenuOpen && media.sessions && media.sessions.length > 1}
         <MediaSourcesDrawer
           sessions={media.sessions}
@@ -907,6 +910,8 @@
           }}
           onClose={() => (isSessionMenuOpen = false)}
         />
+      {:else if isAudioMixerOpen}
+        <AudioMixerDrawer onClose={() => (isAudioMixerOpen = false)} />
       {:else}
         <!-- Middle Row: Left-aligned Artist (Line 1) + Track Title (Line 2) + Hero Play/Pause Button -->
         <div class="middle-section">
@@ -1092,6 +1097,18 @@
                 <span class="session-indicator-dot"></span>
               </button>
             {/if}
+
+            <button
+              class="action-btn mixer-btn"
+              class:is-active={isAudioMixerOpen}
+              use:islandTooltip={{
+                text: 'Audio Mixer & Soundscapes'
+              }}
+              aria-label="Audio Mixer & Soundscapes"
+              onclick={toggleAudioMixer}
+            >
+              <SlidersHorizontal size={14} />
+            </button>
           </div>
 
           <!-- Volume Slider Control -->
@@ -1178,41 +1195,41 @@
           </div>
           <span class="time-label">{formatTime(media.durationMs)}</span>
         </div>
+
+        <!-- Bottom Bar (Swapped with Top Dock): Media Player title, Center Clock, App Badge -->
+        <div class="top-meta-bar">
+          <div class="app-brand">
+            <span class="app-name-text">Media Player</span>
+            {#if $pinnedMediaSourceStore && media.sourceApp === $pinnedMediaSourceStore}
+              <span
+                class="pinned-source-indicator"
+                use:islandTooltip={{
+                  text: `Pinned Source: ${appBrand.name}`,
+                  position: 'top'
+                }}
+              >
+                <Pin size={10} />
+              </span>
+            {/if}
+          </div>
+
+          <div class="top-clock-wrapper">
+            <Clock expanded={false} />
+          </div>
+
+          <button
+            class="device-badge clickable"
+            use:islandTooltip={{
+              text: `Switch to ${appBrand.name}`,
+              position: 'top'
+            }}
+            aria-label="Switch to {appBrand.name}"
+            onclick={handleFocusApp}
+          >
+            <span>{appBrand.name}</span>
+          </button>
+        </div>
       {/if}
-
-      <!-- Bottom Bar (Swapped with Top Dock): Media Player title, Center Clock, App Badge -->
-      <div class="top-meta-bar">
-        <div class="app-brand">
-          <span class="app-name-text">Media Player</span>
-          {#if $pinnedMediaSourceStore && media.sourceApp === $pinnedMediaSourceStore}
-            <span
-              class="pinned-source-indicator"
-              use:islandTooltip={{
-                text: `Pinned Source: ${appBrand.name}`,
-                position: 'top'
-              }}
-            >
-              <Pin size={10} />
-            </span>
-          {/if}
-        </div>
-
-        <div class="top-clock-wrapper">
-          <Clock expanded={false} />
-        </div>
-
-        <button
-          class="device-badge clickable"
-          use:islandTooltip={{
-            text: `Switch to ${appBrand.name}`,
-            position: 'top'
-          }}
-          aria-label="Switch to {appBrand.name}"
-          onclick={handleFocusApp}
-        >
-          <span>{appBrand.name}</span>
-        </button>
-      </div>
     </div>
   {/if}
 </div>

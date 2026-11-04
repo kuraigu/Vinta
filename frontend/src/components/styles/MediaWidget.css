@@ -338,6 +338,10 @@
   pointer-events: auto;
 }
 
+.expanded-card.has-active-drawer {
+  padding: var(--vinta-dock-clearance, 56px) 10px 8px 10px;
+}
+
 .top-meta-bar {
   position: relative;
   display: flex;
@@ -706,7 +710,7 @@
   position: relative;
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--vinta-text-secondary);
   width: 28px;
   height: 28px;
   border-radius: 50%;
@@ -717,9 +721,14 @@
   transition: all 0.15s ease;
 }
 
+.action-btn svg {
+  color: inherit;
+  stroke: currentColor;
+}
+
 .action-btn:hover {
-  background: rgba(255, 255, 255, 0.14);
-  color: #ffffff;
+  background: var(--vinta-hover);
+  color: var(--vinta-text-primary);
   transform: scale(1.1);
   box-shadow: none;
 }
@@ -732,10 +741,10 @@
 }
 
 .action-btn.is-active {
-  background: #ffffff;
-  border: none;
-  color: #0d0d14;
-  box-shadow: 0 2px 8px rgba(255, 255, 255, 0.4);
+  background: var(--vinta-media-btn-active-bg);
+  border: 1px solid var(--vinta-media-btn-active-border);
+  color: var(--vinta-media-btn-active-text);
+  box-shadow: var(--vinta-media-btn-active-glow);
 }
 
 .volume-control {

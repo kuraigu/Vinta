@@ -4,7 +4,8 @@
     timeFormatStore,
     timezoneStore,
     dateFormatStore,
-    formatUserDate
+    formatUserDate,
+    getCachedDateTimeFormat
   } from '../store'
 
   interface Props {
@@ -32,7 +33,7 @@
   // Format parts according to selected timezone and date format
   let timeParts = $derived.by(() => {
     try {
-      const formatter = new Intl.DateTimeFormat('en-US', {
+      const formatter = getCachedDateTimeFormat('en-US', {
         timeZone: currentTimezone,
         hour: 'numeric',
         minute: 'numeric',
@@ -40,10 +41,9 @@
         hour12: false,
         weekday: 'long',
         month: 'short',
-        monthNumeric: '2-digit',
         day: '2-digit',
         year: 'numeric'
-      } as Intl.DateTimeFormatOptions)
+      })
       const parts = formatter.formatToParts(time)
       const getVal = (type: string) =>
         parts.find((p) => p.type === type)?.value || '0'
@@ -91,7 +91,7 @@
   // GMT Offset calculation based on selected timezone
   let gmtOffset = $derived.by(() => {
     try {
-      const parts = new Intl.DateTimeFormat('en-US', {
+      const parts = getCachedDateTimeFormat('en-US', {
         timeZone: currentTimezone,
         timeZoneName: 'shortOffset'
       }).formatToParts(time)

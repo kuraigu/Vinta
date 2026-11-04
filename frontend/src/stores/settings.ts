@@ -20,6 +20,11 @@ export type HiddenPillPosition = 'center' | 'top-left' | 'top-right'
 export type TimeFormatOption = '12h' | '24h'
 export type { DateFormatOption } from '../utils/dateFormatter'
 import type { DateFormatOption } from '../utils/dateFormatter'
+import {
+  inferDefaultTemperatureUnit,
+  inferDefaultTimeFormat,
+  inferDefaultDateFormat
+} from '../utils/localeInference'
 
 export type IslandConfig = {
   minimal: { w: number; h: number; r: number }
@@ -51,6 +56,7 @@ export interface HomeWidgetsVisibility {
   battery: boolean
   wireless: boolean
   actionCenter: boolean
+  systemStats?: boolean
 }
 
 export const defaultHomeWidgetsVisibility: HomeWidgetsVisibility = {
@@ -59,7 +65,8 @@ export const defaultHomeWidgetsVisibility: HomeWidgetsVisibility = {
   weather: true,
   battery: true,
   wireless: true,
-  actionCenter: true
+  actionCenter: true,
+  systemStats: false
 }
 
 export interface PageVisibility {
@@ -73,6 +80,7 @@ export interface PageVisibility {
   calendar: boolean
   weather: boolean
   fileshelf: boolean
+  performance?: boolean
 }
 
 export const defaultPageVisibility: PageVisibility = {
@@ -85,7 +93,8 @@ export const defaultPageVisibility: PageVisibility = {
   timer: true,
   calendar: true,
   weather: true,
-  fileshelf: true
+  fileshelf: true,
+  performance: true
 }
 
 export interface DockPinnedApps {
@@ -504,16 +513,16 @@ export const reminderSoundPresetStore = persistentWritable<AlarmSoundPreset>('vi
 // ============================================================================
 // 4. Time, Date & Localization
 // ============================================================================
-export const timeFormatStore = persistentWritable<TimeFormatOption>('vinta_time_format', '12h')
+export const timeFormatStore = persistentWritable<TimeFormatOption>('vinta_time_format', inferDefaultTimeFormat())
 export const timezoneStore = persistentWritable<string>('vinta_timezone', getInitialTimezone())
-export const dateFormatStore = persistentWritable<DateFormatOption>('vinta_date_format', 'short')
+export const dateFormatStore = persistentWritable<DateFormatOption>('vinta_date_format', inferDefaultDateFormat())
 export const autoDiscardPastEventsStore = persistentWritable<boolean>('vinta_auto_discard_past_events', false)
 
 // ============================================================================
 // 5. Weather
 // ============================================================================
 export const weatherLocationStore = persistentWritable<WeatherLocation>('vinta_weather_location', { name: 'Manila, Philippines', lat: 14.5995, lon: 120.9842 })
-export const weatherUnitStore = persistentWritable<TemperatureUnit>('vinta_weather_unit', 'celsius')
+export const weatherUnitStore = persistentWritable<TemperatureUnit>('vinta_weather_unit', inferDefaultTemperatureUnit())
 
 // ============================================================================
 // 6. Home & Page Visibility
@@ -623,7 +632,12 @@ export function calculateHomeExpandedHeight(
     totalHeight += GAP + 96
   }
 
-  // 6. Studio Branding Footer ("Vinta by FreeMatrix Studios & Contributors")
+  // 6. System Stats glance card
+  if (visibility.systemStats) {
+    totalHeight += GAP + 128
+  }
+
+  // 7. Studio Branding Footer ("Vinta by FreeMatrix Studios & Contributors")
   totalHeight += GAP + 24
 
   // 7. Bottom clearance for feed padding & island corner curvature

@@ -17,6 +17,11 @@
   --vinta-accent-success: #009e73;
   --vinta-accent-success-hover-bg: rgba(0, 158, 115, 0.15);
   --vinta-accent-success-hover-text: var(--vinta-accent-success);
+  --vinta-danger: var(--vinta-accent-danger);
+  --vinta-warning: var(--vinta-accent-warning);
+  --vinta-success: var(--vinta-accent-success);
+  --vinta-purple: var(--vinta-accent-purple);
+  --vinta-bronze: var(--vinta-accent-bronze);
 
   /* BASE SURFACES */
   --vinta-bg: #0d1117;
@@ -59,10 +64,10 @@
   --vinta-radius-pill: 9999px;
 
   /* ISLAND STATES & SHADOWS */
-  --vinta-island-border-idle: #009e73;
+  --vinta-island-border-idle: #56b4e9;
   --vinta-island-border-notification: #56b4e9;
   --vinta-island-border-media: #d55e00;
-  --vinta-island-glow-idle: #009e73;
+  --vinta-island-glow-idle: #56b4e9;
   --vinta-island-glow-notification: #56b4e9;
   --vinta-island-glow-media: #d55e00;
   --vinta-island-shadow:

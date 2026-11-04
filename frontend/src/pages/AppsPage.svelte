@@ -25,7 +25,8 @@
     Timer,
     Calendar as CalendarIcon,
     CloudSun,
-    FolderDown
+    FolderDown,
+    Activity
   } from 'lucide-svelte'
   import SearchInput from '../components/SearchInput.svelte'
   import HomePage, { config as homeConfig } from './HomePage.svelte'
@@ -47,6 +48,9 @@
   import ActionCenterPage, {
     config as actionCenterConfig
   } from './ActionCenterPage.svelte'
+  import PerformancePage, {
+    config as performanceConfig
+  } from './PerformancePage.svelte'
   import ScrollView from '../components/ScrollView.svelte'
   import { islandTooltip } from '../services/islandTooltip'
   import {
@@ -169,6 +173,14 @@
         activeSettingsTabStore.set('appearance')
         openApp(SettingsPage, settingsConfig)
       }
+    },
+    {
+      id: 'performance',
+      name: 'System Stats',
+      desc: 'CPU, RAM, and GPU stats',
+      icon: Activity,
+      visibilityKey: 'performance',
+      action: () => openApp(PerformancePage, performanceConfig)
     },
     {
       id: 'timer',

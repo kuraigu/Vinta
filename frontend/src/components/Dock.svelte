@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getContext, onMount, type Component } from 'svelte'
+  import { getContext, onMount } from 'svelte'
   import {
     Grid,
     House,
@@ -11,7 +11,8 @@
     Bell,
     Settings,
     Folder,
-    FolderDown
+    FolderDown,
+    Activity
   } from 'lucide-svelte'
   import { AppControls } from '../utils/AppControls.svelte'
   import DockButton from './DockButton.svelte'
@@ -24,6 +25,7 @@
   import MediaPage from '../pages/MediaPage.svelte'
   import NotificationPage from '../pages/NotificationPage.svelte'
   import SettingsPage from '../pages/SettingsPage.svelte'
+  import PerformancePage from '../pages/PerformancePage.svelte'
   import FileShelfPage from '../pages/FileShelfPage.svelte'
   import { fileShelfStore } from '../stores/fileShelf'
   import type { IslandConfig } from '../store'
@@ -107,6 +109,15 @@
       ($fileShelfStore.items.length > 0 || activePage === FileShelfPage)
     )
   const showFileShelfDynamic = $derived.by(checkShowFileShelfDynamic)
+
+  /**
+   * Evaluates whether the Performance monitor should appear dynamically when active.
+   */
+  const checkShowPerformanceDynamic = () =>
+    Boolean(
+      $pageVisibilityStore.performance !== false && activePage === PerformancePage
+    )
+  const showPerformanceDynamic = $derived.by(checkShowPerformanceDynamic)
 
   /**
    * Builds the list of middle dock items (pinned favorites and dynamic tasks).
@@ -228,6 +239,17 @@
         badge: $notifData.length > 0 ? $notifData.length : undefined,
         group: 'dynamic',
         onclick: (e: MouseEvent) => AppControls.goNotif(navigate, e)
+      })
+    }
+
+    if (showPerformanceDynamic) {
+      items.push({
+        id: 'performance-dynamic',
+        tooltip: 'System Stats',
+        icon: Activity,
+        active: activePage === PerformancePage,
+        group: 'dynamic',
+        onclick: (e: MouseEvent) => AppControls.goPerformance(navigate, e)
       })
     }
 

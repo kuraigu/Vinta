@@ -18,6 +18,9 @@ import CalendarPage, {
 import FileShelfPage, {
   config as fileShelfConfig
 } from '../pages/FileShelfPage.svelte'
+import PerformancePage, {
+  config as performanceConfig
+} from '../pages/PerformancePage.svelte'
 import {
   globalMediaStore,
   pageVisibilityStore,
@@ -115,6 +118,11 @@ export const AppControls = {
   goFileShelf: (navigate: NavFn, e?: Event) => {
     if (e) e.stopPropagation()
     navigate(FileShelfPage, fileShelfConfig, true)
+  },
+
+  goPerformance: (navigate: NavFn, e?: Event) => {
+    if (e) e.stopPropagation()
+    navigate(PerformancePage, performanceConfig, true)
   },
 
   goAbout: (navigate: NavFn, e?: Event) => {

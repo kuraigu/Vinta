@@ -17,19 +17,24 @@
   --vinta-accent-success: #a3be8c;
   --vinta-accent-success-hover-bg: rgba(163, 190, 140, 0.15);
   --vinta-accent-success-hover-text: var(--vinta-accent-success);
+  --vinta-danger: var(--vinta-accent-danger);
+  --vinta-warning: var(--vinta-accent-warning);
+  --vinta-success: var(--vinta-accent-success);
+  --vinta-purple: var(--vinta-accent-purple);
+  --vinta-bronze: var(--vinta-accent-bronze);
 
   /* BASE SURFACES */
   --vinta-bg: #2e3440;
   --vinta-bg-opaque: #2e3440;
   --vinta-island-bg: rgba(46, 52, 64, 0.94);
-  --vinta-surface-card: rgba(46, 52, 64, 0.9);
-  --vinta-surface-elevated: #3b4252;
+  --vinta-surface-card: #3b4252;
+  --vinta-surface-elevated: #434c5e;
   --vinta-dock-popover-bg: #2e3440;
   --vinta-dock-popover-border: rgba(216, 222, 233, 0.15);
   --vinta-dock-popover-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
 
   /* BORDERS */
-  --vinta-border: rgba(216, 222, 233, 0.12);
+  --vinta-border: rgba(216, 222, 233, 0.14);
   --vinta-border-light: rgba(216, 222, 233, 0.08);
   --vinta-border-accent: rgba(136, 192, 208, 0.35);
 
@@ -39,17 +44,17 @@
 
   /* TYPOGRAPHY */
   --vinta-text-primary: #eceff4;
-  --vinta-text-secondary: #e5e9f0;
-  --vinta-text-muted: #d8dee9;
+  --vinta-text-secondary: #d8dee9;
+  --vinta-text-muted: rgba(216, 222, 233, 0.55);
   --vinta-text-on-accent: #2e3440;
   --vinta-font-family:
     'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
     Helvetica, Arial, sans-serif;
 
   /* CONTRAST SURFACES */
-  --vinta-contrast-bg: rgba(59, 66, 82, 0.6);
+  --vinta-contrast-bg: #434c5e;
   --vinta-contrast-border: inset 0 0 0 1px rgba(216, 222, 233, 0.15);
-  --vinta-contrast-hover: rgba(76, 86, 106, 0.8);
+  --vinta-contrast-hover: #4c566a;
 
   /* GEOMETRY & LAYOUT */
   --vinta-dock-clearance: 56px;
@@ -59,11 +64,11 @@
   --vinta-radius-pill: 9999px;
 
   /* ISLAND STATES & SHADOWS */
-  --vinta-island-border-idle: #a3be8c;
-  --vinta-island-border-notification: #88c0d0;
+  --vinta-island-border-idle: #88c0d0;
+  --vinta-island-border-notification: #81a1c1;
   --vinta-island-border-media: #b48ead;
-  --vinta-island-glow-idle: #a3be8c;
-  --vinta-island-glow-notification: #88c0d0;
+  --vinta-island-glow-idle: #88c0d0;
+  --vinta-island-glow-notification: #81a1c1;
   --vinta-island-glow-media: #b48ead;
   --vinta-island-shadow:
     inset 1px 0 0 0 rgba(216, 222, 233, 0.08),

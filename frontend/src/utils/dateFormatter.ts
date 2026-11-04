@@ -144,3 +144,25 @@ export function formatUserDate(
       return `${wkShort}, ${mShort} ${day}`
   }
 }
+
+const dateTimeFormatCache = new Map<string, Intl.DateTimeFormat>()
+
+/**
+ * Retrieves a cached Intl.DateTimeFormat instance to avoid recompiling ICU formatters on rapid intervals.
+ *
+ * @param locale - BCP 47 language tag (e.g. 'en-US').
+ * @param options - Standard Intl.DateTimeFormat options.
+ * @returns Cached formatter instance.
+ */
+export function getCachedDateTimeFormat(
+  locale: string = 'en-US',
+  options?: Intl.DateTimeFormatOptions
+): Intl.DateTimeFormat {
+  const key = `${locale}:${options ? JSON.stringify(options) : ''}`
+  let fmt = dateTimeFormatCache.get(key)
+  if (!fmt) {
+    fmt = new Intl.DateTimeFormat(locale, options)
+    dateTimeFormatCache.set(key, fmt)
+  }
+  return fmt
+}

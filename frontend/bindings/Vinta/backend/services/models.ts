@@ -6,6 +6,94 @@
 import { Create as $Create } from "@wailsio/runtime";
 
 /**
+ * AppAudioSession represents an active Windows CoreAudio per-application session.
+ */
+export class AppAudioSession {
+    "pid": number;
+    "name": string;
+    "processName": string;
+    "path": string;
+    "volume": number;
+    "isMuted": boolean;
+    "peak": number;
+    "isActive": boolean;
+
+    /** Creates a new AppAudioSession instance. */
+    constructor($$source: Partial<AppAudioSession> = {}) {
+        if (!("pid" in $$source)) {
+            this["pid"] = 0;
+        }
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("processName" in $$source)) {
+            this["processName"] = "";
+        }
+        if (!("path" in $$source)) {
+            this["path"] = "";
+        }
+        if (!("volume" in $$source)) {
+            this["volume"] = 0;
+        }
+        if (!("isMuted" in $$source)) {
+            this["isMuted"] = false;
+        }
+        if (!("peak" in $$source)) {
+            this["peak"] = 0;
+        }
+        if (!("isActive" in $$source)) {
+            this["isActive"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new AppAudioSession instance from a string or object.
+     */
+    static createFrom($$source: any = {}): AppAudioSession {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new AppAudioSession($$parsedSource as Partial<AppAudioSession>);
+    }
+}
+
+/**
+ * AudioEndpoint represents an active audio playback or capture device.
+ */
+export class AudioEndpoint {
+    "id": string;
+    "name": string;
+    "isDefault": boolean;
+    "flow": string;
+
+    /** Creates a new AudioEndpoint instance. */
+    constructor($$source: Partial<AudioEndpoint> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("isDefault" in $$source)) {
+            this["isDefault"] = false;
+        }
+        if (!("flow" in $$source)) {
+            this["flow"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new AudioEndpoint instance from a string or object.
+     */
+    static createFrom($$source: any = {}): AudioEndpoint {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new AudioEndpoint($$parsedSource as Partial<AudioEndpoint>);
+    }
+}
+
+/**
  * BatteryStatus represents the structured battery and power status for the frontend.
  */
 export class BatteryStatus {
@@ -50,6 +138,50 @@ export class BatteryStatus {
     static createFrom($$source: any = {}): BatteryStatus {
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         return new BatteryStatus($$parsedSource as Partial<BatteryStatus>);
+    }
+}
+
+/**
+ * SystemTelemetry models snapshot metrics for hardware load and memory allocation.
+ */
+export class SystemTelemetry {
+    "cpuPercent": number;
+    "ramPercent": number;
+    "ramUsedMB": number;
+    "ramTotalMB": number;
+    "gpuPercent": number;
+    "timestampMs": number;
+
+    /** Creates a new SystemTelemetry instance. */
+    constructor($$source: Partial<SystemTelemetry> = {}) {
+        if (!("cpuPercent" in $$source)) {
+            this["cpuPercent"] = 0;
+        }
+        if (!("ramPercent" in $$source)) {
+            this["ramPercent"] = 0;
+        }
+        if (!("ramUsedMB" in $$source)) {
+            this["ramUsedMB"] = 0;
+        }
+        if (!("ramTotalMB" in $$source)) {
+            this["ramTotalMB"] = 0;
+        }
+        if (!("gpuPercent" in $$source)) {
+            this["gpuPercent"] = 0;
+        }
+        if (!("timestampMs" in $$source)) {
+            this["timestampMs"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SystemTelemetry instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SystemTelemetry {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new SystemTelemetry($$parsedSource as Partial<SystemTelemetry>);
     }
 }
 

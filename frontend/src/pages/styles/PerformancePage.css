@@ -1,0 +1,167 @@
+/* ============================================================================
+   Performance Page Stylesheet
+   ============================================================================ */
+
+.performance-page-layout {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  padding: var(--vinta-dock-clearance, 56px) 14px 10px 14px;
+  overflow: hidden;
+  border-radius: inherit;
+  contain: layout paint;
+}
+
+:global(.perf-scroll-view) {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+}
+
+.perf-cards-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding-bottom: 6px;
+  box-sizing: border-box;
+}
+
+:global(.perf-metric-card) {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--vinta-surface-card);
+  border: 1px solid var(--vinta-border-light);
+  border-radius: var(--vinta-radius-card);
+  transition: all 0.16s ease;
+}
+
+:global(.perf-metric-card:hover) {
+  border-color: var(--vinta-border);
+}
+
+.perf-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.perf-card-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.perf-card-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--vinta-text-primary);
+  letter-spacing: -0.01em;
+}
+
+.perf-card-percent {
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--vinta-font-family);
+  font-feature-settings: 'tnum';
+}
+
+.perf-card-percent.cpu,
+:global(.perf-card-icon.cpu) {
+  color: var(--vinta-accent-danger, #d55e00);
+}
+
+.perf-card-percent.ram,
+:global(.perf-card-icon.ram) {
+  color: var(--vinta-primary, #56b4e9);
+}
+
+.perf-card-percent.gpu,
+:global(.perf-card-icon.gpu) {
+  color: var(--vinta-accent-purple, #cc79a7);
+}
+
+/* Sparkline Area */
+.perf-sparkline-wrap {
+  width: 100%;
+  height: 32px;
+  overflow: hidden;
+  margin: 1px 0;
+}
+
+.perf-sparkline-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.sparkline-trace {
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sparkline-trace.cpu {
+  stroke: var(--vinta-accent-danger, #d55e00);
+}
+
+.sparkline-trace.ram {
+  stroke: var(--vinta-primary, #56b4e9);
+}
+
+.sparkline-trace.gpu {
+  stroke: var(--vinta-accent-purple, #cc79a7);
+}
+
+/* Meta Footer in Card */
+.perf-card-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding-top: 4px;
+  border-top: 1px solid var(--vinta-border-light);
+}
+
+.perf-meta-sub {
+  font-size: 10px;
+  color: var(--vinta-text-muted);
+}
+
+.perf-meta-val {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--vinta-text-secondary);
+}
+
+/* Bottom Navigation Footer Bar (Swapped with Top Dock) */
+.perf-meta-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 4px 2px 4px;
+  flex-shrink: 0;
+  border-top: 1px solid var(--vinta-border-light);
+  margin-top: auto;
+  box-sizing: border-box;
+}
+
+.perf-footer-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.perf-footer-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--vinta-text-secondary);
+  letter-spacing: -0.01em;
+}

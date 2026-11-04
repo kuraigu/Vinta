@@ -458,7 +458,7 @@
             expanded ? islandConfig.expanded.w : currentMinimalW,
             activeMonitorWidth ? activeMonitorWidth - 24 : 1920
           )}px; height: {expanded
-            ? islandConfig.expanded.h
+            ? (currentExpandedH ?? islandConfig.expanded.h)
             : islandConfig.minimal.h}px;"
         >
           {#if ActivePage}

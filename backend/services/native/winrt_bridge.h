@@ -42,6 +42,14 @@ BRIDGE_API void RequeryNativeMediaArtwork(void);
 BRIDGE_API void ForceEmitNativeMediaState(void);
 BRIDGE_API int SendNativeToast(const wchar_t* title, const wchar_t* message);
 
+BRIDGE_API int GetNativeAudioSessions(char* outJson, int maxLen);
+BRIDGE_API int SetNativeSessionVolume(uint32_t pid, int volumePercent);
+BRIDGE_API int SetNativeSessionMute(uint32_t pid, int mute);
+BRIDGE_API int GetNativeAudioEndpoints(char* outJson, int maxLen);
+BRIDGE_API int SetNativeDefaultAudioEndpoint(const wchar_t* endpointId);
+BRIDGE_API int SetNativeMasterAudioVolume(int percent);
+BRIDGE_API int ToggleNativeMasterAudioMute(void);
+
 #ifdef __cplusplus
 }
 #endif

@@ -163,8 +163,14 @@ export class WindowBoundsManager {
     this.stopLiveTracking()
 
     const startTime = performance.now()
+    let lastSyncTime = startTime
+    const THROTTLE_MS = 32
+
     const trackStep = (now: number) => {
-      this.syncPillBounds(this.activeIslandNode)
+      if (now - lastSyncTime >= THROTTLE_MS) {
+        lastSyncTime = now
+        this.syncPillBounds(this.activeIslandNode)
+      }
       if (durationMs !== undefined && now - startTime >= durationMs) {
         this.stopLiveTracking()
         this.syncPillBounds(this.activeIslandNode)

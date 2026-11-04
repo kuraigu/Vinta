@@ -1,8 +1,22 @@
 <script lang="ts">
-  // Note: This component is currently a mock component. It is simply graphical for now and does not have
-  // the necessary monitoring features yet. - kuraigu (Innoh Reloza)
+  import { onMount, getContext } from 'svelte'
+  import { Activity } from 'lucide-svelte'
+  import {
+    systemTelemetryStore,
+    subscribeToTelemetry
+  } from '../stores/systemTelemetry'
+  import { islandTooltip } from '../services/islandTooltip'
+  import BentoCard from './BentoCard.svelte'
+  import ActionCapsule from './ActionCapsule.svelte'
+  import PerformancePage, {
+    config as performanceConfig
+  } from '../pages/PerformancePage.svelte'
+  import type { IslandConfig } from '../store'
 
-  import { onMount } from 'svelte'
+  const navigate =
+    getContext<
+      (page: unknown, pageConfig: IslandConfig, expand?: boolean) => void
+    >('navigate')
 
   interface Props {
     expanded?: boolean
@@ -10,167 +24,131 @@
 
   let { expanded = false }: Props = $props()
 
-  // Mock data for CPU and RAM
-  let cpuUsage = $state(0)
-  let ramUsage = $state(0)
+  let telemetry = $derived($systemTelemetryStore)
 
   onMount(() => {
-    // Animate to some initial value shortly after mount
-    setTimeout(() => {
-      cpuUsage = 42
-      ramUsage = 68
-    }, 300)
-
-    // Randomly fluctuate every few seconds to simulate real activity
-    const interval = setInterval(() => {
-      cpuUsage = Math.max(
-        10,
-        Math.min(95, cpuUsage + (Math.random() * 20 - 10))
-      )
-      ramUsage = Math.max(20, Math.min(90, ramUsage + (Math.random() * 10 - 5)))
-    }, 2500)
-
-    return () => clearInterval(interval)
+    const unsubscribe = subscribeToTelemetry()
+    return () => {
+      unsubscribe()
+    }
   })
 
-  // Calculate SVG stroke dashes
-  const radius = 24
+  function handleCardClick() {
+    if (typeof navigate === 'function') {
+      navigate(PerformancePage, performanceConfig, true)
+    }
+  }
+
+  const radius = 22
   const circumference = 2 * Math.PI * radius
-  let cpuOffset = $derived(circumference - (cpuUsage / 100) * circumference)
-  let ramOffset = $derived(circumference - (ramUsage / 100) * circumference)
+
+  let cpuOffset = $derived(
+    circumference - (telemetry.cpuPercent / 100) * circumference
+  )
+  let ramOffset = $derived(
+    circumference - (telemetry.ramPercent / 100) * circumference
+  )
+  let gpuOffset = $derived(
+    circumference - (telemetry.gpuPercent / 100) * circumference
+  )
 </script>
 
 {#if expanded}
-  <div class="stats-card">
-    <div class="stat-item">
-      <div class="ring-container">
-        <svg class="ring" width="60" height="60">
-          <circle class="ring-bg" cx="30" cy="30" r={radius} />
-          <circle
-            class="ring-progress cpu"
-            cx="30"
-            cy="30"
-            r={radius}
-            style="stroke-dasharray: {circumference}; stroke-dashoffset: {cpuOffset};"
-          />
-        </svg>
-        <div class="ring-label">
-          <span class="value">{Math.round(cpuUsage)}%</span>
-        </div>
+  <BentoCard
+    variant="bento"
+    class="system-stats-glance-card"
+    onclick={handleCardClick}
+  >
+    <div class="glance-header">
+      <div class="glance-title-group">
+        <Activity size={12} />
+        <span>System Stats</span>
       </div>
-      <span class="label">CPU</span>
+      <div class="glance-actions-group">
+        <ActionCapsule
+          label="View"
+          onclick={(e) => {
+            e.stopPropagation()
+            handleCardClick()
+          }}
+          tooltip="Open System Stats"
+        />
+      </div>
     </div>
 
-    <div class="stat-item">
-      <div class="ring-container">
-        <svg class="ring" width="60" height="60">
-          <circle class="ring-bg" cx="30" cy="30" r={radius} />
-          <circle
-            class="ring-progress ram"
-            cx="30"
-            cy="30"
-            r={radius}
-            style="stroke-dasharray: {circumference}; stroke-dashoffset: {ramOffset};"
-          />
-        </svg>
-        <div class="ring-label">
-          <span class="value">{Math.round(ramUsage)}%</span>
+    <div class="system-stats-rings-row">
+      <!-- CPU Ring -->
+      <div
+        class="stat-item"
+        use:islandTooltip={{ text: `CPU: ${telemetry.cpuPercent}%` }}
+      >
+        <div class="ring-container">
+          <svg class="ring" width="56" height="56" viewBox="0 0 56 56">
+            <circle class="ring-bg" cx="28" cy="28" r={radius} />
+            <circle
+              class="ring-progress cpu"
+              cx="28"
+              cy="28"
+              r={radius}
+              style="stroke-dasharray: {circumference}; stroke-dashoffset: {cpuOffset};"
+            />
+          </svg>
+          <div class="ring-label">
+            <span class="value">{telemetry.cpuPercent}%</span>
+          </div>
         </div>
+        <span class="label">CPU</span>
       </div>
-      <span class="label">RAM</span>
+
+      <!-- RAM Ring -->
+      <div
+        class="stat-item"
+        use:islandTooltip={{
+          text: `RAM: ${telemetry.ramUsedMB} MB / ${telemetry.ramTotalMB} MB (${telemetry.ramPercent}%)`
+        }}
+      >
+        <div class="ring-container">
+          <svg class="ring" width="56" height="56" viewBox="0 0 56 56">
+            <circle class="ring-bg" cx="28" cy="28" r={radius} />
+            <circle
+              class="ring-progress ram"
+              cx="28"
+              cy="28"
+              r={radius}
+              style="stroke-dasharray: {circumference}; stroke-dashoffset: {ramOffset};"
+            />
+          </svg>
+          <div class="ring-label">
+            <span class="value">{telemetry.ramPercent}%</span>
+          </div>
+        </div>
+        <span class="label">RAM</span>
+      </div>
+
+      <!-- GPU Ring -->
+      <div
+        class="stat-item"
+        use:islandTooltip={{ text: `GPU: ${telemetry.gpuPercent}%` }}
+      >
+        <div class="ring-container">
+          <svg class="ring" width="56" height="56" viewBox="0 0 56 56">
+            <circle class="ring-bg" cx="28" cy="28" r={radius} />
+            <circle
+              class="ring-progress gpu"
+              cx="28"
+              cy="28"
+              r={radius}
+              style="stroke-dasharray: {circumference}; stroke-dashoffset: {gpuOffset};"
+            />
+          </svg>
+          <div class="ring-label">
+            <span class="value">{telemetry.gpuPercent}%</span>
+          </div>
+        </div>
+        <span class="label">GPU</span>
+      </div>
     </div>
-  </div>
+  </BentoCard>
 {/if}
 
-<style>
-  .stats-card {
-    padding: 0.8rem 1rem;
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-around;
-    height: 100%;
-    box-sizing: border-box;
-    /* Fade in when expanded */
-    animation: fadeScale 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  }
-
-  .stat-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .ring-container {
-    position: relative;
-    width: 60px;
-    height: 60px;
-  }
-
-  .ring {
-    transform: rotate(-90deg);
-  }
-
-  .ring-bg {
-    fill: none;
-    stroke: var(--vinta-border);
-    stroke-width: 6;
-  }
-
-  .ring-progress {
-    fill: none;
-    stroke-width: 6;
-    stroke-linecap: round;
-    transition: stroke-dashoffset 1.5s cubic-bezier(0.22, 1, 0.36, 1);
-  }
-
-  .cpu {
-    --stat-color: var(--vinta-danger);
-    stroke: var(--stat-color);
-    filter: drop-shadow(0 0 6px var(--stat-color));
-  }
-
-  .ram {
-    --stat-color: var(--vinta-primary);
-    stroke: var(--stat-color);
-    filter: drop-shadow(0 0 6px var(--stat-color));
-  }
-
-  .ring-label {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .value {
-    font-size: 0.95rem;
-    font-weight: 700;
-    color: var(--vinta-text-primary);
-    letter-spacing: -0.5px;
-  }
-
-  .label {
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: var(--vinta-text-secondary);
-    letter-spacing: 1px;
-    text-transform: uppercase;
-  }
-
-  @keyframes fadeScale {
-    0% {
-      opacity: 0;
-      transform: scale(0.9);
-    }
-    100% {
-      opacity: 1;
-      transform: scale(1);
-    }
-  }
-</style>
+<style src="./styles/SystemStats.css"></style>

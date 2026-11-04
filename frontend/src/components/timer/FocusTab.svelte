@@ -1,5 +1,13 @@
 <script lang="ts">
-  import { Play, Pause, RotateCcw, SkipForward } from 'lucide-svelte'
+  import {
+    Play,
+    Pause,
+    RotateCcw,
+    SkipForward,
+    Waves,
+    CloudRain,
+    Radio
+  } from 'lucide-svelte'
   import { islandTooltip } from '../../services/islandTooltip'
   import {
     timerAppStore,
@@ -9,6 +17,11 @@
     setFocusPhase,
     type FocusPhase
   } from '../../store'
+  import {
+    soundscapeStore,
+    playPreset,
+    type SoundscapePreset
+  } from '../../services/soundscapeService'
 
   const RADIUS = 70
   const CIRCUMFERENCE = 2 * Math.PI * RADIUS
@@ -40,6 +53,28 @@
   function handleFocusPhaseChange(phase: FocusPhase): void {
     setFocusPhase(phase)
   }
+
+  let soundscape = $derived($soundscapeStore)
+
+  function computeActiveSoundscapeLabel() {
+    if (!soundscape.isPlaying || soundscape.preset === 'none') return 'Ambience'
+    if (soundscape.preset === 'rain') return 'Rain'
+    if (soundscape.preset === 'brown') return 'Brown'
+    if (soundscape.preset === 'static') return 'Static'
+    return 'Ambience'
+  }
+  let activeSoundscapeLabel = $derived.by(computeActiveSoundscapeLabel)
+
+  function handleSoundscapeChipClick() {
+    if (!soundscape.isPlaying) {
+      playPreset(soundscape.preset === 'none' ? 'rain' : soundscape.preset)
+    } else {
+      const order: SoundscapePreset[] = ['rain', 'brown', 'static', 'none']
+      const curIdx = order.indexOf(soundscape.preset)
+      const next = order[(curIdx + 1) % order.length]
+      playPreset(next)
+    }
+  }
 </script>
 
 <div class="tab-panel">
@@ -57,6 +92,30 @@
           ></span>
         {/each}
       </div>
+    </div>
+
+    <div class="cycle-right-group">
+      <button
+        type="button"
+        class="focus-soundscape-chip"
+        class:is-active={soundscape.isPlaying}
+        onclick={handleSoundscapeChipClick}
+        use:islandTooltip={{
+          text: soundscape.isPlaying
+            ? `Ambience: ${activeSoundscapeLabel} (Click to switch/stop)`
+            : 'Focus soundscape: Click to play offline ambience'
+        }}
+        aria-label="Focus soundscape preset"
+      >
+        {#if soundscape.preset === 'rain'}
+          <CloudRain size={12} />
+        {:else if soundscape.preset === 'static'}
+          <Radio size={12} />
+        {:else}
+          <Waves size={12} />
+        {/if}
+        <span>{activeSoundscapeLabel}</span>
+      </button>
     </div>
   </div>
 

@@ -82,6 +82,11 @@ func main() {
 			WebviewUserDataPath:           filepath.Join(backend.GetAppDataDir(), "webview2"),
 			DisableQuitOnLastWindowClosed: false,
 			DisabledFeatures:              []string{"CalculateNativeWinOcclusion"},
+			AdditionalBrowserArgs: []string{
+				"--enable-gpu-rasterization",
+				"--enable-zero-copy",
+				"--ignore-gpu-blocklist",
+			},
 		},
 	})
 

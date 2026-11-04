@@ -159,6 +159,15 @@ export function FocusWindow(): $CancellablePromise<void> {
 }
 
 /**
+ * GetAppAudioSessions returns active audio application sessions.
+ */
+export function GetAppAudioSessions(): $CancellablePromise<services$0.AppAudioSession[]> {
+    return $Call.ByID(2457103343).then(($result: any) => {
+        return $$createType4($result);
+    });
+}
+
+/**
  * GetAppIcon is the Wails frontend binding to fetch the native application icon as a data URI.
  */
 export function GetAppIcon(sourceApp: string, aumid: string): $CancellablePromise<string> {
@@ -170,7 +179,16 @@ export function GetAppIcon(sourceApp: string, aumid: string): $CancellablePromis
  */
 export function GetAppInfo(): $CancellablePromise<$models.AppInfo> {
     return $Call.ByID(3850092932).then(($result: any) => {
-        return $$createType3($result);
+        return $$createType5($result);
+    });
+}
+
+/**
+ * GetAudioEndpoints returns active audio output devices.
+ */
+export function GetAudioEndpoints(): $CancellablePromise<services$0.AudioEndpoint[]> {
+    return $Call.ByID(3602306085).then(($result: any) => {
+        return $$createType7($result);
     });
 }
 
@@ -186,7 +204,7 @@ export function GetAutostart(): $CancellablePromise<boolean> {
  */
 export function GetBatteryStatus(): $CancellablePromise<services$0.BatteryStatus> {
     return $Call.ByID(1722351164).then(($result: any) => {
-        return $$createType4($result);
+        return $$createType8($result);
     });
 }
 
@@ -209,7 +227,7 @@ export function GetCalendarData(): $CancellablePromise<string> {
  */
 export function GetContributors(): $CancellablePromise<$models.Contributor[]> {
     return $Call.ByID(3055720143).then(($result: any) => {
-        return $$createType6($result);
+        return $$createType10($result);
     });
 }
 
@@ -218,7 +236,7 @@ export function GetContributors(): $CancellablePromise<$models.Contributor[]> {
  */
 export function GetCurrentMonitor(): $CancellablePromise<$models.MonitorInfo> {
     return $Call.ByID(3990780328).then(($result: any) => {
-        return $$createType7($result);
+        return $$createType11($result);
     });
 }
 
@@ -227,7 +245,7 @@ export function GetCurrentMonitor(): $CancellablePromise<$models.MonitorInfo> {
  */
 export function GetDisplayLayout(): $CancellablePromise<$models.DisplayLayout> {
     return $Call.ByID(2439750779).then(($result: any) => {
-        return $$createType8($result);
+        return $$createType12($result);
     });
 }
 
@@ -267,6 +285,15 @@ export function GetSettings(): $CancellablePromise<string> {
 }
 
 /**
+ * GetSystemTelemetry retrieves instantaneous CPU, RAM, and GPU hardware metrics.
+ */
+export function GetSystemTelemetry(): $CancellablePromise<services$0.SystemTelemetry> {
+    return $Call.ByID(3760642775).then(($result: any) => {
+        return $$createType13($result);
+    });
+}
+
+/**
  * GetThemeCSS returns the CSS content for the specified theme ID.
  */
 export function GetThemeCSS(id: string): $CancellablePromise<string> {
@@ -292,7 +319,7 @@ export function GetUpdateRepo(): $CancellablePromise<string> {
  */
 export function GetWirelessStatus(): $CancellablePromise<services$0.WirelessStatus> {
     return $Call.ByID(794979391).then(($result: any) => {
-        return $$createType9($result);
+        return $$createType14($result);
     });
 }
 
@@ -315,7 +342,7 @@ export function ImportSettingsFileDialog(): $CancellablePromise<string> {
  */
 export function ImportThemeDialog(): $CancellablePromise<$models.ThemeInfo | null> {
     return $Call.ByID(1943468227).then(($result: any) => {
-        return $$createType11($result);
+        return $$createType16($result);
     });
 }
 
@@ -324,7 +351,7 @@ export function ImportThemeDialog(): $CancellablePromise<$models.ThemeInfo | nul
  */
 export function InspectShelfFiles(paths: string[]): $CancellablePromise<$models.ShelfFileItem[]> {
     return $Call.ByID(4271776190, paths).then(($result: any) => {
-        return $$createType12($result);
+        return $$createType17($result);
     });
 }
 
@@ -354,7 +381,7 @@ export function IsTestMode(): $CancellablePromise<boolean> {
  */
 export function ListNotes(): $CancellablePromise<$models.NoteFileInfo[]> {
     return $Call.ByID(2184398716).then(($result: any) => {
-        return $$createType14($result);
+        return $$createType19($result);
     });
 }
 
@@ -363,7 +390,7 @@ export function ListNotes(): $CancellablePromise<$models.NoteFileInfo[]> {
  */
 export function ListThemes(): $CancellablePromise<$models.ThemeInfo[]> {
     return $Call.ByID(44849841).then(($result: any) => {
-        return $$createType15($result);
+        return $$createType20($result);
     });
 }
 
@@ -407,7 +434,7 @@ export function PauseUpdateDownload(): $CancellablePromise<void> {
  */
 export function PromptChooseShelfFiles(): $CancellablePromise<$models.ShelfFileItem[]> {
     return $Call.ByID(2406650291).then(($result: any) => {
-        return $$createType12($result);
+        return $$createType17($result);
     });
 }
 
@@ -559,6 +586,20 @@ export function SetAirplaneMode(enabled: boolean): $CancellablePromise<boolean> 
 }
 
 /**
+ * SetAppAudioMute toggles mute state for an application by its process ID.
+ */
+export function SetAppAudioMute(pid: number, mute: boolean): $CancellablePromise<boolean> {
+    return $Call.ByID(822994871, pid, mute);
+}
+
+/**
+ * SetAppAudioVolume adjusts the volume for an application by its process ID.
+ */
+export function SetAppAudioVolume(pid: number, volume: number): $CancellablePromise<boolean> {
+    return $Call.ByID(3023070040, pid, volume);
+}
+
+/**
  * SetAutoHideBorderless toggles automatic hiding when a borderless fullscreen window is detected on Vinta's monitor.
  */
 export function SetAutoHideBorderless(enabled: boolean): $CancellablePromise<void> {
@@ -598,6 +639,13 @@ export function SetClipboardMonitoring(copyEnabled: boolean, pasteEnabled: boole
  */
 export function SetCustomUpdateRepo(repo: string): $CancellablePromise<void> {
     return $Call.ByID(576870143, repo);
+}
+
+/**
+ * SetDefaultAudioEndpoint switches the active default playback device.
+ */
+export function SetDefaultAudioEndpoint(endpointID: string): $CancellablePromise<boolean> {
+    return $Call.ByID(1900376521, endpointID);
 }
 
 /**
@@ -668,6 +716,13 @@ export function SetIgnoreMouseEvents(ignore: boolean): $CancellablePromise<void>
  */
 export function SetIsHidden(hidden: boolean): $CancellablePromise<void> {
     return $Call.ByID(3839965369, hidden);
+}
+
+/**
+ * SetMasterAudioVolume sets the system master volume level (0-100).
+ */
+export function SetMasterAudioVolume(percent: number): $CancellablePromise<boolean> {
+    return $Call.ByID(592058441, percent);
 }
 
 /**
@@ -759,6 +814,13 @@ export function StartNativeFileDrag(paths: string[]): $CancellablePromise<void> 
 }
 
 /**
+ * StartSystemTelemetry initiates periodic background telemetry emission to the frontend.
+ */
+export function StartSystemTelemetry(): $CancellablePromise<boolean> {
+    return $Call.ByID(4081721051);
+}
+
+/**
  * Startup satisfies legacy startup calls if invoked.
  */
 export function Startup(): $CancellablePromise<void> {
@@ -773,12 +835,26 @@ export function StopInertiaGlide(): $CancellablePromise<number> {
 }
 
 /**
+ * StopSystemTelemetry decrements active telemetry listeners and pauses the sampling loop when unobserved.
+ */
+export function StopSystemTelemetry(): $CancellablePromise<boolean> {
+    return $Call.ByID(448542573);
+}
+
+/**
  * StripShelfImageMetadata re-encodes supported images (.jpg, .jpeg, .png) without EXIF or ancillary metadata.
  */
 export function StripShelfImageMetadata(paths: string[]): $CancellablePromise<$models.ShelfFileItem[]> {
     return $Call.ByID(4085277947, paths).then(($result: any) => {
-        return $$createType12($result);
+        return $$createType17($result);
     });
+}
+
+/**
+ * ToggleMasterAudioMute toggles the master audio mute state.
+ */
+export function ToggleMasterAudioMute(): $CancellablePromise<boolean> {
+    return $Call.ByID(699850388);
 }
 
 /**
@@ -813,16 +889,21 @@ export function UpdateIslandRect(x: number, y: number, w: number, h: number): $C
 const $$createType0 = $models.ShelfFileItem.createFrom;
 const $$createType1 = $models.UpdateCheckResult.createFrom;
 const $$createType2 = $Create.Nullable($$createType1);
-const $$createType3 = $models.AppInfo.createFrom;
-const $$createType4 = services$0.BatteryStatus.createFrom;
-const $$createType5 = $models.Contributor.createFrom;
-const $$createType6 = $Create.Array($$createType5);
-const $$createType7 = $models.MonitorInfo.createFrom;
-const $$createType8 = $models.DisplayLayout.createFrom;
-const $$createType9 = services$0.WirelessStatus.createFrom;
-const $$createType10 = $models.ThemeInfo.createFrom;
-const $$createType11 = $Create.Nullable($$createType10);
-const $$createType12 = $Create.Array($$createType0);
-const $$createType13 = $models.NoteFileInfo.createFrom;
-const $$createType14 = $Create.Array($$createType13);
-const $$createType15 = $Create.Array($$createType10);
+const $$createType3 = services$0.AppAudioSession.createFrom;
+const $$createType4 = $Create.Array($$createType3);
+const $$createType5 = $models.AppInfo.createFrom;
+const $$createType6 = services$0.AudioEndpoint.createFrom;
+const $$createType7 = $Create.Array($$createType6);
+const $$createType8 = services$0.BatteryStatus.createFrom;
+const $$createType9 = $models.Contributor.createFrom;
+const $$createType10 = $Create.Array($$createType9);
+const $$createType11 = $models.MonitorInfo.createFrom;
+const $$createType12 = $models.DisplayLayout.createFrom;
+const $$createType13 = services$0.SystemTelemetry.createFrom;
+const $$createType14 = services$0.WirelessStatus.createFrom;
+const $$createType15 = $models.ThemeInfo.createFrom;
+const $$createType16 = $Create.Nullable($$createType15);
+const $$createType17 = $Create.Array($$createType0);
+const $$createType18 = $models.NoteFileInfo.createFrom;
+const $$createType19 = $Create.Array($$createType18);
+const $$createType20 = $Create.Array($$createType15);

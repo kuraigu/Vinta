@@ -16,6 +16,7 @@
   import WeatherGlance from '../components/WeatherGlance.svelte'
   import DeviceStatusWidget from '../components/DeviceStatusWidget.svelte'
   import ActionCenterGlance from '../components/ActionCenterGlance.svelte'
+  import SystemStats from '../components/SystemStats.svelte'
   import NotificationGlance from '../components/NotificationGlance.svelte'
   import UpdateGlanceCard from '../components/UpdateGlanceCard.svelte'
   import ScrollView from '../components/ScrollView.svelte'
@@ -29,6 +30,7 @@
     timezoneStore,
     dateFormatStore,
     formatUserDate,
+    getCachedDateTimeFormat,
     updateInfoStore,
     appInfoStore,
     notifData,
@@ -88,14 +90,6 @@
       $activeSettingsTabStore = 'updates'
       navigate(SettingsPage, settingsConfig, true)
     }
-  }
-
-  /**
-   * Temporarily hides the update notification banner for the current session.
-   */
-  function snoozeUpdate(e: MouseEvent) {
-    e.stopPropagation()
-    isUpdateSnoozed = true
   }
 
   interface Props {
@@ -221,7 +215,7 @@
    */
   function computeTimeParts() {
     try {
-      const formatter = new Intl.DateTimeFormat('en-US', {
+      const formatter = getCachedDateTimeFormat('en-US', {
         timeZone: currentTimezone,
         hour: 'numeric',
         minute: 'numeric',
@@ -231,7 +225,7 @@
         month: 'long',
         day: 'numeric',
         year: 'numeric'
-      } as Intl.DateTimeFormatOptions)
+      })
       const parts = formatter.formatToParts(time)
       const getVal = (type: string) =>
         parts.find((p) => p.type === type)?.value || '0'
@@ -403,6 +397,13 @@
           {#if $homeWidgetsVisibilityStore.actionCenter}
             <section class="glance-card-feed">
               <ActionCenterGlance />
+            </section>
+          {/if}
+
+          <!-- System Hardware Stats Glance (Modular Bento Card) -->
+          {#if $homeWidgetsVisibilityStore.systemStats}
+            <section class="glance-card-feed">
+              <SystemStats expanded={true} />
             </section>
           {/if}
 

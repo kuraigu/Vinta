@@ -1012,7 +1012,7 @@ function checkAlarmsClock(): void {
 
     const use24H = get(timeFormatStore) === '24h'
     const scheduledDisplay = formatTimeBySetting(target.time, use24H)
-    const sentDisplay = formatTimeBySetting(currentTime, use24H)
+    const _sentDisplay = formatTimeBySetting(currentTime, use24H)
     const repeatDesc = formatAlarmRepeatDescription(target.repeat, target.days)
 
     const label = target.label?.trim() || 'Alarm'
@@ -1086,7 +1086,7 @@ function checkAlarmsClock(): void {
 
     const use24H = get(timeFormatStore) === '24h'
     const scheduledDisplay = formatTimeBySetting(ringingItem.time, use24H)
-    const sentDisplay = formatTimeBySetting(currentTime, use24H)
+    const _sentDisplay = formatTimeBySetting(currentTime, use24H)
     const repeatDesc = formatAlarmRepeatDescription(
       ringingItem.repeat,
       ringingItem.days
