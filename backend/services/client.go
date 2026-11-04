@@ -18,20 +18,20 @@ import (
 )
 
 var (
-	dllHandle                     syscall.Handle
-	procStartNativeWinRTServices  uintptr
-	procStopNativeWinRTServices   uintptr
-	procSendNativeMediaCommand    uintptr
-	procSetNativeRadioState       uintptr
-	procGetNativeRadiosStatus     uintptr
-	procSelectNativeMediaSession  uintptr
-	procFocusNativeMediaApp       uintptr
-	procFocusNativeApp            uintptr
-	procExtractAppIconToFile      uintptr
-	procClearNativeMediaArtCache  uintptr
-	procRequeryNativeMediaArtwork uintptr
-	procForceEmitNativeMediaState uintptr
-	procSendNativeToast           uintptr
+	dllHandle                         syscall.Handle
+	procStartNativeWinRTServices      uintptr
+	procStopNativeWinRTServices       uintptr
+	procSendNativeMediaCommand        uintptr
+	procSetNativeRadioState           uintptr
+	procGetNativeRadiosStatus         uintptr
+	procSelectNativeMediaSession      uintptr
+	procFocusNativeMediaApp           uintptr
+	procFocusNativeApp                uintptr
+	procExtractAppIconToFile          uintptr
+	procClearNativeMediaArtCache      uintptr
+	procRequeryNativeMediaArtwork     uintptr
+	procForceEmitNativeMediaState     uintptr
+	procSendNativeToast               uintptr
 	procGetNativeAudioSessions        uintptr
 	procSetNativeSessionVolume        uintptr
 	procSetNativeSessionMute          uintptr

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
+  import { SvelteMap } from 'svelte/reactivity'
   import {
     Volume2,
     VolumeX,
@@ -56,7 +57,7 @@
 
   let displaySessions = $derived.by(() => {
     const list = sessions || []
-    const map = new Map<number, (typeof list)[0]>()
+    const map = new SvelteMap<number, (typeof list)[0]>()
     for (const s of list) {
       if (!map.has(s.pid)) {
         map.set(s.pid, s)
@@ -199,7 +200,7 @@
           <span>No active application audio streams</span>
         </div>
       {:else}
-        {#each displaySessions as s, idx (s.id || s.pid + '-' + idx)}
+        {#each displaySessions as s, idx (s.pid + '-' + (s.processName || s.name) + '-' + idx)}
           {@const brand = resolveAppBrand(s.processName || s.name)}
           <div class="app-session-item">
             <div class="app-icon-wrap">

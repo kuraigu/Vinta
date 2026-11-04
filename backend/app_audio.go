@@ -47,4 +47,3 @@ func (a *App) SetMasterAudioVolume(percent float64) bool {
 func (a *App) ToggleMasterAudioMute() bool {
 	return services.ToggleNativeMasterMute()
 }
-

@@ -13,7 +13,8 @@ export interface SoundscapeState {
 const STORAGE_KEY_PRESET = 'vinta_soundscape_preset'
 const STORAGE_KEY_VOL = 'vinta_soundscape_volume'
 
-const initialPreset = (localStorage.getItem(STORAGE_KEY_PRESET) as SoundscapePreset) || 'none'
+const initialPreset =
+  (localStorage.getItem(STORAGE_KEY_PRESET) as SoundscapePreset) || 'none'
 const initialVol = Number(localStorage.getItem(STORAGE_KEY_VOL) ?? '65')
 
 export const soundscapeStore = writable<SoundscapeState>({
@@ -49,7 +50,10 @@ function ensureAudioContext(): AudioContext {
 /**
  * Creates a procedural seamless audio buffer for the chosen preset.
  */
-function createProceduralBuffer(ctx: AudioContext, preset: SoundscapePreset): AudioBuffer {
+function createProceduralBuffer(
+  ctx: AudioContext,
+  preset: SoundscapePreset
+): AudioBuffer {
   const sampleRate = ctx.sampleRate
   const durationSeconds = 5
   const frameCount = sampleRate * durationSeconds
@@ -121,7 +125,11 @@ function updateGainTarget(instant = false): void {
     masterGainNode.gain.cancelScheduledValues(now)
     masterGainNode.gain.setValueAtTime(effectiveGain, now)
   } else {
-    masterGainNode.gain.setTargetAtTime(effectiveGain, now, isMediaDucking ? 0.35 : 0.55)
+    masterGainNode.gain.setTargetAtTime(
+      effectiveGain,
+      now,
+      isMediaDucking ? 0.35 : 0.55
+    )
   }
 
   soundscapeStore.update((s) => ({
@@ -259,4 +267,3 @@ globalMediaStore.subscribe((media) => {
     updateGainTarget(false)
   }
 })
-

@@ -92,14 +92,6 @@
     }
   }
 
-  /**
-   * Temporarily hides the update notification banner for the current session.
-   */
-  function snoozeUpdate(e: MouseEvent) {
-    e.stopPropagation()
-    isUpdateSnoozed = true
-  }
-
   interface Props {
     expanded?: boolean
   }

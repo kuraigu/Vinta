@@ -14,7 +14,7 @@
   contain: layout paint;
 }
 
-.perf-scroll-view {
+:global(.perf-scroll-view) {
   flex: 1;
   min-height: 0;
   width: 100%;
@@ -29,7 +29,7 @@
   box-sizing: border-box;
 }
 
-.perf-metric-card {
+:global(.perf-metric-card) {
   padding: 10px 12px;
   display: flex;
   flex-direction: column;
@@ -40,7 +40,7 @@
   transition: all 0.16s ease;
 }
 
-.perf-metric-card:hover {
+:global(.perf-metric-card:hover) {
   border-color: var(--vinta-border);
 }
 
@@ -72,17 +72,17 @@
 }
 
 .perf-card-percent.cpu,
-.perf-card-icon.cpu {
+:global(.perf-card-icon.cpu) {
   color: var(--vinta-accent-danger, #d55e00);
 }
 
 .perf-card-percent.ram,
-.perf-card-icon.ram {
+:global(.perf-card-icon.ram) {
   color: var(--vinta-primary, #56b4e9);
 }
 
 .perf-card-percent.gpu,
-.perf-card-icon.gpu {
+:global(.perf-card-icon.gpu) {
   color: var(--vinta-accent-purple, #cc79a7);
 }
 

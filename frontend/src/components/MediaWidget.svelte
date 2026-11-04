@@ -35,22 +35,14 @@
     Repeat,
     Repeat1,
     ListMusic,
-    Music2,
-    Check,
-    X,
     Pin,
     SlidersHorizontal
   } from 'lucide-svelte'
-  import { getContext, untrack } from 'svelte'
+  import { untrack } from 'svelte'
 
   import { islandTooltip } from '../services/islandTooltip'
   import { resolveAppBrand, nativeIconsStore } from '../services/iconService'
   import { enhanceArtwork } from '../utils/imageUpscaler'
-
-  const navigate =
-    getContext<
-      (page: unknown, pageConfig: IslandConfig, expand?: boolean) => void
-    >('navigate')
 
   interface Props {
     expanded?: boolean
@@ -149,25 +141,6 @@
     }
   }
   $effect(handleMediaDrawerStateEffect)
-
-  function handleSelectSession(sessionId: string, e: MouseEvent) {
-    e.stopPropagation()
-    SelectMediaSession(sessionId)
-    isSessionMenuOpen = false
-  }
-
-  function handleTogglePinSource(sourceApp: string, e: MouseEvent) {
-    e.stopPropagation()
-    if ($pinnedMediaSourceStore === sourceApp) {
-      $pinnedMediaSourceStore = null
-    } else {
-      $pinnedMediaSourceStore = sourceApp
-      const match = media.sessions?.find((s) => s.sourceApp === sourceApp)
-      if (match) {
-        SelectMediaSession(match.id)
-      }
-    }
-  }
 
   function handlePinnedSourcePrioritizationEffect() {
     const pinned = $pinnedMediaSourceStore
@@ -699,11 +672,6 @@
   let currentVol = $derived(
     isDraggingVol || isVolLocked ? volVal : (media.volume ?? 50)
   )
-
-  function getSessionBrand(sourceApp: string, sessionId: string) {
-    void nativeIcons
-    return resolveAppBrand(sourceApp, sessionId)
-  }
 
   let miniTitleNode = $state<HTMLElement | null>(null)
   let expandedTitleNode = $state<HTMLElement | null>(null)

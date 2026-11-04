@@ -77,4 +77,3 @@ export function inferDefaultDateFormat(): DateFormatOption {
   }
   return 'short'
 }
-

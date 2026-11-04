@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getContext, onMount, type Component } from 'svelte'
+  import { getContext, onMount } from 'svelte'
   import {
     Grid,
     House,

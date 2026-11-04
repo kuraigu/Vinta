@@ -18,7 +18,7 @@ var (
 
 	pdh                              = syscall.NewLazyDLL("pdh.dll")
 	procPdhOpenQueryW                = pdh.NewProc("PdhOpenQueryW")
-	procPdhCloseQuery               = pdh.NewProc("PdhCloseQuery")
+	procPdhCloseQuery                = pdh.NewProc("PdhCloseQuery")
 	procPdhAddEnglishCounterW        = pdh.NewProc("PdhAddEnglishCounterW")
 	procPdhCollectQueryData          = pdh.NewProc("PdhCollectQueryData")
 	procPdhGetFormattedCounterArrayW = pdh.NewProc("PdhGetFormattedCounterArrayW")
@@ -41,6 +41,7 @@ type memoryStatusEx struct {
 	ullAvailExtendedVirtual uint64
 }
 
+//nolint:unused // Win32 PDH_FMT_COUNTERVALUE_ITEM_W ABI layout
 type pdhFmtCounterValueItem struct {
 	szName      *uint16
 	cStatus     uint32
@@ -335,4 +336,3 @@ func StopTelemetryStream() {
 		}
 	}
 }
-

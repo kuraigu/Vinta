@@ -11,7 +11,6 @@
   import {
     fetchWeatherData,
     convertTemp,
-    parseWmoCode,
     type WeatherData
   } from '../services/weatherService'
   import WeatherPage, {
@@ -40,8 +39,8 @@
   } = $props()
 
   let weather = $state<WeatherData | null>(null)
-  let loading = $state<boolean>(true)
-  let error = $state<boolean>(false)
+  let _loading = $state<boolean>(true)
+  let _error = $state<boolean>(false)
   let lastFetchKey = ''
 
   /**
@@ -53,21 +52,21 @@
     lon: number,
     offline: boolean
   ) {
-    loading = true
-    error = false
+    _loading = true
+    _error = false
 
     try {
       const data = await fetchWeatherData(name, lat, lon, offline)
       if (data) {
         weather = data
-        error = false
+        _error = false
       } else {
-        error = true
+        _error = true
       }
     } catch {
-      error = true
+      _error = true
     } finally {
-      loading = false
+      _loading = false
     }
   }
 
@@ -88,8 +87,8 @@
     const unsubMock = simulateWeatherStore.subscribe((mock) => {
       if (mock) {
         weather = mock
-        loading = false
-        error = false
+        _loading = false
+        _error = false
       } else {
         lastFetchKey = ''
         checkAndFetch()

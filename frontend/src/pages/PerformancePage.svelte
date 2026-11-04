@@ -49,14 +49,19 @@
    * @param height - Viewport pixel height of the target sparkline.
    * @returns Formatted SVG coordinates string.
    */
-  function renderSparkline(history: number[], width = 340, height = 32): string {
+  function renderSparkline(
+    history: number[],
+    width = 340,
+    height = 32
+  ): string {
     if (!history || history.length < 2) return `0,${height} ${width},${height}`
     const step = width / (history.length - 1)
     return history
       .map((val, idx) => {
         const x = Math.round(idx * step * 10) / 10
         const clamped = Math.max(0, Math.min(100, val))
-        const y = Math.round((height - (clamped / 100) * (height - 6) - 3) * 10) / 10
+        const y =
+          Math.round((height - (clamped / 100) * (height - 6) - 3) * 10) / 10
         return `${x},${y}`
       })
       .join(' ')
@@ -111,22 +116,31 @@
           >
             <defs>
               <linearGradient id="grad-cpu" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="var(--vinta-accent-danger, #d55e00)" stop-opacity="0.32" />
-                <stop offset="100%" stop-color="var(--vinta-accent-danger, #d55e00)" stop-opacity="0.0" />
+                <stop
+                  offset="0%"
+                  stop-color="var(--vinta-accent-danger, #d55e00)"
+                  stop-opacity="0.32"
+                />
+                <stop
+                  offset="100%"
+                  stop-color="var(--vinta-accent-danger, #d55e00)"
+                  stop-opacity="0.0"
+                />
               </linearGradient>
             </defs>
             <polygon points={cpuArea} fill="url(#grad-cpu)" />
-            <polyline
-              points={cpuLine}
-              class="sparkline-trace cpu"
-            />
+            <polyline points={cpuLine} class="sparkline-trace cpu" />
           </svg>
         </div>
 
         <div class="perf-card-meta-row">
           <span class="perf-meta-sub">Usage</span>
           <span class="perf-meta-val">
-            {telemetry.cpuPercent > 75 ? 'High' : telemetry.cpuPercent > 35 ? 'Moderate' : 'Normal'}
+            {telemetry.cpuPercent > 75
+              ? 'High'
+              : telemetry.cpuPercent > 35
+                ? 'Moderate'
+                : 'Normal'}
           </span>
         </div>
       </BentoCard>
@@ -151,21 +165,28 @@
           >
             <defs>
               <linearGradient id="grad-ram" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="var(--vinta-primary, #56b4e9)" stop-opacity="0.32" />
-                <stop offset="100%" stop-color="var(--vinta-primary, #56b4e9)" stop-opacity="0.0" />
+                <stop
+                  offset="0%"
+                  stop-color="var(--vinta-primary, #56b4e9)"
+                  stop-opacity="0.32"
+                />
+                <stop
+                  offset="100%"
+                  stop-color="var(--vinta-primary, #56b4e9)"
+                  stop-opacity="0.0"
+                />
               </linearGradient>
             </defs>
             <polygon points={ramArea} fill="url(#grad-ram)" />
-            <polyline
-              points={ramLine}
-              class="sparkline-trace ram"
-            />
+            <polyline points={ramLine} class="sparkline-trace ram" />
           </svg>
         </div>
 
         <div class="perf-card-meta-row">
           <span class="perf-meta-sub">
-            {formatGB(telemetry.ramUsedMB)} GB / {formatGB(telemetry.ramTotalMB)} GB
+            {formatGB(telemetry.ramUsedMB)} GB / {formatGB(
+              telemetry.ramTotalMB
+            )} GB
           </span>
           <span class="perf-meta-val">
             {formatGB(telemetry.ramTotalMB - telemetry.ramUsedMB)} GB Free
@@ -193,15 +214,20 @@
           >
             <defs>
               <linearGradient id="grad-gpu" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stop-color="var(--vinta-accent-purple, #cc79a7)" stop-opacity="0.32" />
-                <stop offset="100%" stop-color="var(--vinta-accent-purple, #cc79a7)" stop-opacity="0.0" />
+                <stop
+                  offset="0%"
+                  stop-color="var(--vinta-accent-purple, #cc79a7)"
+                  stop-opacity="0.32"
+                />
+                <stop
+                  offset="100%"
+                  stop-color="var(--vinta-accent-purple, #cc79a7)"
+                  stop-opacity="0.0"
+                />
               </linearGradient>
             </defs>
             <polygon points={gpuArea} fill="url(#grad-gpu)" />
-            <polyline
-              points={gpuLine}
-              class="sparkline-trace gpu"
-            />
+            <polyline points={gpuLine} class="sparkline-trace gpu" />
           </svg>
         </div>
 
