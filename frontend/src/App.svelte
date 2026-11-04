@@ -27,6 +27,7 @@
   import WeatherPage, {
     config as weatherConfig
   } from './pages/WeatherPage.svelte'
+  import FileShelfPage from './pages/FileShelfPage.svelte'
 
   import MainIsland from './components/MainIsland.svelte'
   import ControlsSatellite from './components/ControlsSatellite.svelte'
@@ -68,6 +69,7 @@
     globalMediaStore,
     type IslandConfig,
     homeWidgetsVisibilityStore,
+    homeMeasuredHeightStore,
     calculateHomeMinimalWidth,
     calculateHomeExpandedHeight,
     notifData,
@@ -403,13 +405,21 @@
 
   let currentExpandedH = $derived(
     activePage === HomePage
-      ? calculateHomeExpandedHeight(
-          $homeWidgetsVisibilityStore,
-          hasActiveNotification,
-          hasActiveUpdateBanner,
-          islandConfig.expanded.minH ?? 260,
-          islandConfig.expanded.maxH ?? islandConfig.expanded.h
-        )
+      ? $homeMeasuredHeightStore > 0
+        ? Math.max(
+            islandConfig.expanded.minH ?? 260,
+            Math.min(
+              islandConfig.expanded.maxH ?? 640,
+              $homeMeasuredHeightStore
+            )
+          )
+        : calculateHomeExpandedHeight(
+            $homeWidgetsVisibilityStore,
+            hasActiveNotification,
+            hasActiveUpdateBanner,
+            islandConfig.expanded.minH ?? 260,
+            islandConfig.expanded.maxH ?? islandConfig.expanded.h
+          )
       : islandConfig.expanded.h
   )
 
@@ -602,13 +612,21 @@
       ? hiddenBounds.h
       : isExp
         ? isEffectiveHome
-          ? calculateHomeExpandedHeight(
-              $homeWidgetsVisibilityStore,
-              hasActiveNotif,
-              hasActiveUpdate,
-              effectiveConfig.expanded.minH ?? 260,
-              effectiveConfig.expanded.maxH ?? effectiveConfig.expanded.h
-            )
+          ? $homeMeasuredHeightStore > 0
+            ? Math.max(
+                effectiveConfig.expanded.minH ?? 260,
+                Math.min(
+                  effectiveConfig.expanded.maxH ?? 640,
+                  $homeMeasuredHeightStore
+                )
+              )
+            : calculateHomeExpandedHeight(
+                $homeWidgetsVisibilityStore,
+                hasActiveNotif,
+                hasActiveUpdate,
+                effectiveConfig.expanded.minH ?? 260,
+                effectiveConfig.expanded.maxH ?? effectiveConfig.expanded.h
+              )
           : effectiveConfig.expanded.h
         : effectiveConfig.minimal.h
 
@@ -675,6 +693,7 @@
     else if (page === TimerPage) pageId = 'timer'
     else if (page === CalendarPage) pageId = 'calendar'
     else if (page === WeatherPage) pageId = 'weather'
+    else if (page === FileShelfPage) pageId = 'fileshelf'
 
     $activePageIdStore = pageId
     try {

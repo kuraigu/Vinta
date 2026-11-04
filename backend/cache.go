@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"io"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -98,17 +97,6 @@ func (c *Cache) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 		// http.ServeFile automatically handles reading, MIME types, and 404s if the file is missing
 		http.ServeFile(res, req, fullPath)
 		return
-	}
-
-	if strings.HasPrefix(req.URL.Path, "/local/") {
-		localPath := strings.TrimPrefix(req.URL.Path, "/local/")
-		if unescaped, err := url.PathUnescape(localPath); err == nil {
-			localPath = unescaped
-		}
-		if localPath != "" {
-			http.ServeFile(res, req, localPath)
-			return
-		}
 	}
 
 	// If it is not an icon request, return 404 so Wails knows to handle it normally

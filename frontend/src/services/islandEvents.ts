@@ -16,6 +16,10 @@ import NotificationPage, {
 import SettingsPage, {
   config as settingsConfig
 } from '../pages/SettingsPage.svelte'
+import FileShelfPage, {
+  config as fileShelfConfig
+} from '../pages/FileShelfPage.svelte'
+import { initFileShelfStore, addFilesToShelf } from '../stores/fileShelf'
 import { playNotifChime } from './audioService'
 import {
   themeStore,
@@ -570,6 +574,20 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
     if (mon && mon.id) {
       callbacks.onMonitorChanged(mon)
     }
+  })
+
+  // Native File Drop into File Holding Shelf
+  void initFileShelfStore()
+  onEvent('vinta-files-dropped', (droppedPaths: string[]) => {
+    if (!Array.isArray(droppedPaths) || droppedPaths.length === 0) return
+    if (get(pageVisibilityStore).fileshelf === false) return
+    void addFilesToShelf(droppedPaths).then((added) => {
+      if (added.length > 0) {
+        callbacks.showWidget()
+        callbacks.triggerGlow()
+        callbacks.navigateTo(FileShelfPage, fileShelfConfig, true)
+      }
+    })
   })
 
   // Immediate Media State Query

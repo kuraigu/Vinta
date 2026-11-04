@@ -11,7 +11,8 @@
     LayoutGrid,
     Calendar,
     Pin,
-    CloudSun
+    CloudSun,
+    FolderDown
   } from 'lucide-svelte'
   import SettingItem from '../SettingItem.svelte'
   import {
@@ -129,6 +130,17 @@
           type="checkbox"
           checked={$pageVisibilityStore.calculator}
           onchange={() => togglePage('calculator')}
+        />
+        <span class="slider"></span>
+      </label>
+    </SettingItem>
+
+    <SettingItem label="File Shelf" icon={FolderDown}>
+      <label class="toggle-switch">
+        <input
+          type="checkbox"
+          checked={$pageVisibilityStore.fileshelf !== false}
+          onchange={() => togglePage('fileshelf')}
         />
         <span class="slider"></span>
       </label>
@@ -461,6 +473,17 @@
           type="checkbox"
           checked={$dockPinnedAppsStore.weather}
           onchange={() => toggleDockPinned('weather')}
+        />
+        <span class="slider"></span>
+      </label>
+    </SettingItem>
+
+    <SettingItem label="Pin File Shelf" icon={FolderDown}>
+      <label class="toggle-switch">
+        <input
+          type="checkbox"
+          checked={$dockPinnedAppsStore.fileshelf}
+          onchange={() => toggleDockPinned('fileshelf')}
         />
         <span class="slider"></span>
       </label>

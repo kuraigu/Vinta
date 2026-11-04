@@ -24,7 +24,8 @@
     Calculator,
     Timer,
     Calendar as CalendarIcon,
-    CloudSun
+    CloudSun,
+    FolderDown
   } from 'lucide-svelte'
   import SearchInput from '../components/SearchInput.svelte'
   import HomePage, { config as homeConfig } from './HomePage.svelte'
@@ -40,6 +41,9 @@
   import TimerPage, { config as timerConfig } from './TimerPage.svelte'
   import CalendarPage, { config as calendarConfig } from './CalendarPage.svelte'
   import WeatherPage, { config as weatherConfig } from './WeatherPage.svelte'
+  import FileShelfPage, {
+    config as fileShelfConfig
+  } from './FileShelfPage.svelte'
   import ActionCenterPage, {
     config as actionCenterConfig
   } from './ActionCenterPage.svelte'
@@ -115,6 +119,14 @@
       icon: CalendarIcon,
       visibilityKey: 'calendar',
       action: () => openApp(CalendarPage, calendarConfig)
+    },
+    {
+      id: 'fileshelf',
+      name: 'File Shelf',
+      desc: 'Drag & drop file shelf',
+      icon: FolderDown,
+      visibilityKey: 'fileshelf',
+      action: () => openApp(FileShelfPage, fileShelfConfig)
     },
     {
       id: 'home',

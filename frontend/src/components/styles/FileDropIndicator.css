@@ -1,0 +1,114 @@
+.file-drop-indicator {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--vinta-bg);
+  backdrop-filter: blur(16px);
+  border-radius: inherit;
+  border: 1.5px dashed var(--vinta-accent-primary);
+  box-sizing: border-box;
+  pointer-events: none;
+  user-select: none;
+  overflow: hidden;
+  padding: 12px 16px;
+  gap: 8px;
+  animation: indicator-fade-in 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.file-drop-indicator.is-compact {
+  flex-direction: row;
+  padding: 0 14px;
+  gap: 8px;
+  border-style: solid;
+}
+
+@keyframes indicator-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.indicator-icon-badge {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--vinta-icon-badge-bg);
+  border: 1px solid var(--vinta-icon-badge-border);
+  color: var(--vinta-accent-primary);
+  flex-shrink: 0;
+}
+
+.file-drop-indicator.is-compact .indicator-icon-badge {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+}
+
+.indicator-text-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  text-align: center;
+}
+
+.file-drop-indicator.is-compact .indicator-text-group {
+  align-items: flex-start;
+  text-align: left;
+}
+
+.indicator-title {
+  font-family: var(--vinta-font-family);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--vinta-text-primary);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-drop-indicator.is-compact .indicator-title {
+  font-size: 11.5px;
+}
+
+.indicator-subtitle {
+  font-family: var(--vinta-font-family);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--vinta-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.indicator-progress-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: var(--vinta-border-light);
+  overflow: hidden;
+}
+
+.indicator-progress-fill {
+  height: 100%;
+  background: var(--vinta-accent-primary);
+  transition: width 0.06s linear;
+}

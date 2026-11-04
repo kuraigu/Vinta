@@ -23,6 +23,7 @@
   import SettingsPage, { config as settingsConfig } from './SettingsPage.svelte'
   import {
     homeWidgetsVisibilityStore,
+    homeMeasuredHeightStore,
     userNameStore,
     timeFormatStore,
     timezoneStore,
@@ -104,8 +105,33 @@
   let { expanded = false }: Props = $props()
 
   let scrollContainer: HTMLElement | undefined = $state()
+  let feedContainerEl: HTMLElement | undefined = $state()
   let isScrolledDown = $state(false)
   let canScrollMore = $state(false)
+
+  /**
+   * Dynamically synchronizes the measured height of the home social feed with the island frame.
+   */
+  function syncHomeFeedMeasuredHeight() {
+    const el = feedContainerEl
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const height = Math.ceil(entry.contentRect.height)
+        if (height > 0) {
+          const totalContentHeight = $homeWidgetsVisibilityStore.weather
+            ? height
+            : height + 48
+          homeMeasuredHeightStore.set(totalContentHeight)
+        }
+      }
+    })
+    ro.observe(el)
+    return () => {
+      ro.disconnect()
+    }
+  }
+  $effect(syncHomeFeedMeasuredHeight)
 
   /**
    * Evaluates whether the home feed has vertical overflow below the current scroll position.
@@ -321,7 +347,7 @@
         bind:element={scrollContainer}
         onscroll={handleFeedScroll}
       >
-        <div class="social-feed-container">
+        <div class="social-feed-container" bind:this={feedContainerEl}>
           {#if $homeWidgetsVisibilityStore.weather}
             <!-- Full-Bleed Weather Hero Header (Background for Salutation + User + Time) -->
             <WeatherGlance

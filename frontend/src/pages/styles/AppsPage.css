@@ -142,6 +142,11 @@
   --glow-color: rgba(56, 189, 248, 0.45);
 }
 
+.app-tile.app-fileshelf .tile-icon-box {
+  background: var(--vinta-accent-primary);
+  --glow-color: var(--vinta-accent-primary);
+}
+
 .app-tile.app-home .tile-icon-box {
   background: linear-gradient(135deg, #34d399 0%, #059669 100%);
   --glow-color: rgba(52, 211, 153, 0.45);

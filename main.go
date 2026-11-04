@@ -70,7 +70,7 @@ func main() {
 			Handler: application.AssetFileServerFS(assets),
 			Middleware: func(next http.Handler) http.Handler {
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					if strings.HasPrefix(r.URL.Path, "/icon-cache/") || strings.HasPrefix(r.URL.Path, "/local/") {
+					if strings.HasPrefix(r.URL.Path, "/icon-cache/") {
 						cache.ServeHTTP(w, r)
 						return
 					}
@@ -114,6 +114,7 @@ func main() {
 		BackgroundType:    application.BackgroundTypeTransparent,
 		BackgroundColour:  application.NewRGBA(0, 0, 0, 0),
 		IgnoreMouseEvents: false,
+		EnableFileDrop:    true,
 		Windows: application.WindowsWindow{
 			DisableFramelessWindowDecorations: true,
 			HiddenOnTaskbar:                   true,
