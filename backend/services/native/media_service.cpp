@@ -4,6 +4,35 @@
 #include <mmdeviceapi.h>
 #include <endpointvolume.h>
 #include <audiopolicy.h>
+#include <propkey.h>
+#include <functiondiscoverykeys_devpkey.h>
+
+#ifndef PKEY_Device_FriendlyName
+DEFINE_PROPERTYKEY(PKEY_Device_FriendlyName, 0xa45c254e, 0xdf1c, 0x4efd, 0x80, 0x20, 0x67, 0xd1, 0x46, 0xa8, 0x50, 0xe0, 14);
+#endif
+
+// Undocumented COM interface for changing default audio endpoint
+interface DECLSPEC_UUID("f8679f50-850a-41cf-9c72-430f290290c8")
+IPolicyConfig : public IUnknown
+{
+public:
+    virtual HRESULT STDMETHODCALLTYPE GetMixFormat(PCWSTR, WAVEFORMATEX**) = 0;
+    virtual HRESULT STDMETHODCALLTYPE GetDeviceFormat(PCWSTR, INT, WAVEFORMATEX**) = 0;
+    virtual HRESULT STDMETHODCALLTYPE ResetDeviceFormat(PCWSTR) = 0;
+    virtual HRESULT STDMETHODCALLTYPE SetDeviceFormat(PCWSTR, WAVEFORMATEX*, WAVEFORMATEX*) = 0;
+    virtual HRESULT STDMETHODCALLTYPE GetProcessingPeriod(PCWSTR, INT, PINT64, PINT64) = 0;
+    virtual HRESULT STDMETHODCALLTYPE SetProcessingPeriod(PCWSTR, PINT64) = 0;
+    virtual HRESULT STDMETHODCALLTYPE GetShareMode(PCWSTR, struct DeviceShareMode**) = 0;
+    virtual HRESULT STDMETHODCALLTYPE SetShareMode(PCWSTR, struct DeviceShareMode*) = 0;
+    virtual HRESULT STDMETHODCALLTYPE GetPropertyValue(PCWSTR, const PROPERTYKEY&, PROPVARIANT*) = 0;
+    virtual HRESULT STDMETHODCALLTYPE SetPropertyValue(PCWSTR, const PROPERTYKEY&, PROPVARIANT*) = 0;
+    virtual HRESULT STDMETHODCALLTYPE SetDefaultEndpoint(PCWSTR wszDeviceId, ERole eRole) = 0;
+    virtual HRESULT STDMETHODCALLTYPE SetEndpointVisibility(PCWSTR, INT) = 0;
+};
+
+class DECLSPEC_UUID("870af99c-171d-4f9e-af0d-e63df40c2bc9")
+CPolicyConfigClient;
+
 #include <psapi.h>
 #include <shellapi.h>
 #include <winrt/Windows.Media.Control.h>
@@ -1238,6 +1267,11 @@ static bool GetAllAppSessionVolumes(const std::string& sourceApp, std::vector<IS
                 float peak = 0.0f;
                 AudioSessionState state = AudioSessionStateInactive;
                 pControl2->GetState(&state);
+                if (state == AudioSessionStateExpired) {
+                    pControl2->Release();
+                    pSessionControl->Release();
+                    continue;
+                }
                 bool isActive = (state == AudioSessionStateActive);
 
                 IAudioMeterInformation* pMeter = nullptr;
@@ -1777,3 +1811,393 @@ int ExecuteMediaCommand(const char* command) {
 
     return 1;
 }
+
+int GetAllAudioSessionsJson(char* outBuf, int maxLen) {
+    if (!outBuf || maxLen <= 0) return 0;
+    ComInitScope com;
+
+    IMMDeviceEnumerator* pEnumerator = nullptr;
+    if (FAILED(CoCreateInstance(__uuidof(MMDeviceEnumerator), NULL, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void**)&pEnumerator)) || !pEnumerator) {
+        snprintf(outBuf, maxLen, "[]");
+        return 0;
+    }
+
+    IMMDevice* pDevice = nullptr;
+    HRESULT hr = pEnumerator->GetDefaultAudioEndpoint(eRender, eMultimedia, &pDevice);
+    pEnumerator->Release();
+    if (FAILED(hr) || !pDevice) {
+        snprintf(outBuf, maxLen, "[]");
+        return 0;
+    }
+
+    IAudioSessionManager2* pSessionMgr = nullptr;
+    hr = pDevice->Activate(__uuidof(IAudioSessionManager2), CLSCTX_ALL, NULL, (void**)&pSessionMgr);
+    pDevice->Release();
+    if (FAILED(hr) || !pSessionMgr) {
+        snprintf(outBuf, maxLen, "[]");
+        return 0;
+    }
+
+    IAudioSessionEnumerator* pSessionEnum = nullptr;
+    hr = pSessionMgr->GetSessionEnumerator(&pSessionEnum);
+    pSessionMgr->Release();
+    if (FAILED(hr) || !pSessionEnum) {
+        snprintf(outBuf, maxLen, "[]");
+        return 0;
+    }
+
+    int count = 0;
+    if (FAILED(pSessionEnum->GetCount(&count))) {
+        pSessionEnum->Release();
+        snprintf(outBuf, maxLen, "[]");
+        return 0;
+    }
+
+    std::ostringstream json;
+    json << "[";
+    bool first = true;
+
+    for (int i = 0; i < count; ++i) {
+        IAudioSessionControl* pSessionControl = nullptr;
+        if (SUCCEEDED(pSessionEnum->GetSession(i, &pSessionControl)) && pSessionControl) {
+            IAudioSessionControl2* pControl2 = nullptr;
+            if (SUCCEEDED(pSessionControl->QueryInterface(__uuidof(IAudioSessionControl2), (void**)&pControl2)) && pControl2) {
+                DWORD pid = 0;
+                pControl2->GetProcessId(&pid);
+
+                bool isSystem = (pControl2->IsSystemSoundsSession() == S_OK);
+
+                if (!isSystem && pid == 0) {
+                    pControl2->Release();
+                    pSessionControl->Release();
+                    continue;
+                }
+
+                AudioSessionState state = AudioSessionStateInactive;
+                pControl2->GetState(&state);
+                bool isActive = (state == AudioSessionStateActive);
+
+                float volume = 100.0f;
+                bool isMuted = false;
+                ISimpleAudioVolume* pVol = nullptr;
+                if (SUCCEEDED(pControl2->QueryInterface(__uuidof(ISimpleAudioVolume), (void**)&pVol)) && pVol) {
+                    float v = 1.0f;
+                    BOOL m = FALSE;
+                    pVol->GetMasterVolume(&v);
+                    pVol->GetMute(&m);
+                    volume = v * 100.0f;
+                    isMuted = (m == TRUE);
+                    pVol->Release();
+                }
+
+                float peak = 0.0f;
+                IAudioMeterInformation* pMeter = nullptr;
+                if (SUCCEEDED(pSessionControl->QueryInterface(__uuidof(IAudioMeterInformation), (void**)&pMeter)) && pMeter) {
+                    pMeter->GetPeakValue(&peak);
+                    pMeter->Release();
+                }
+
+                std::string procName;
+                std::string procPath;
+                if (pid != 0) {
+                    HANDLE hProcess = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, pid);
+                    if (hProcess) {
+                        char szPath[MAX_PATH] = {0};
+                        DWORD dwSize = MAX_PATH;
+                        if (QueryFullProcessImageNameA(hProcess, 0, szPath, &dwSize)) {
+                            procPath = szPath;
+                            size_t lastSlash = procPath.find_last_of("\\/");
+                            if (lastSlash != std::string::npos) procName = procPath.substr(lastSlash + 1);
+                            else procName = procPath;
+                        }
+                        CloseHandle(hProcess);
+                    }
+                } else if (isSystem) {
+                    procName = "System Sounds";
+                }
+
+                LPWSTR pswDisplayName = nullptr;
+                std::string dispName;
+                if (SUCCEEDED(pControl2->GetDisplayName(&pswDisplayName)) && pswDisplayName) {
+                    dispName = Utf16ToUtf8(pswDisplayName);
+                    CoTaskMemFree(pswDisplayName);
+                }
+                if (procName.empty()) {
+                    if (pid != 0) procName = "App (" + std::to_string(pid) + ")";
+                    else procName = "System Sounds";
+                }
+
+                if (dispName.empty() || dispName[0] == '@') {
+                    dispName = procName;
+                }
+
+                LPWSTR pswInstanceId = nullptr;
+                std::string instanceId;
+                if (SUCCEEDED(pControl2->GetSessionInstanceIdentifier(&pswInstanceId)) && pswInstanceId) {
+                    instanceId = Utf16ToUtf8(pswInstanceId);
+                    CoTaskMemFree(pswInstanceId);
+                }
+                if (instanceId.empty()) {
+                    instanceId = std::to_string(pid) + "-" + std::to_string(i);
+                }
+
+                if (!first) json << ",";
+                first = false;
+
+                json << "{"
+                     << "\"id\":\"" << EscapeJsonString(instanceId) << "\","
+                     << "\"pid\":" << pid << ","
+                     << "\"name\":\"" << EscapeJsonString(dispName) << "\","
+                     << "\"processName\":\"" << EscapeJsonString(procName) << "\","
+                     << "\"path\":\"" << EscapeJsonString(procPath) << "\","
+                     << "\"volume\":" << std::fixed << std::setprecision(1) << volume << ","
+                     << "\"isMuted\":" << (isMuted ? "true" : "false") << ","
+                     << "\"peak\":" << std::fixed << std::setprecision(3) << peak << ","
+                     << "\"isActive\":" << (isActive ? "true" : "false")
+                     << "}";
+
+                pControl2->Release();
+            }
+            pSessionControl->Release();
+        }
+    }
+
+    pSessionEnum->Release();
+    json << "]";
+
+    std::string out = json.str();
+    if (out.length() >= static_cast<size_t>(maxLen)) {
+        out = out.substr(0, maxLen - 1);
+    }
+    strncpy_s(outBuf, maxLen, out.c_str(), _TRUNCATE);
+    return static_cast<int>(out.length());
+}
+
+int SetAppAudioVolumeByPID(uint32_t pid, int volumePercent) {
+    ComInitScope com;
+    IMMDeviceEnumerator* pEnumerator = nullptr;
+    if (FAILED(CoCreateInstance(__uuidof(MMDeviceEnumerator), NULL, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void**)&pEnumerator)) || !pEnumerator) return 0;
+
+    IMMDevice* pDevice = nullptr;
+    HRESULT hr = pEnumerator->GetDefaultAudioEndpoint(eRender, eMultimedia, &pDevice);
+    pEnumerator->Release();
+    if (FAILED(hr) || !pDevice) return 0;
+
+    IAudioSessionManager2* pSessionMgr = nullptr;
+    hr = pDevice->Activate(__uuidof(IAudioSessionManager2), CLSCTX_ALL, NULL, (void**)&pSessionMgr);
+    pDevice->Release();
+    if (FAILED(hr) || !pSessionMgr) return 0;
+
+    IAudioSessionEnumerator* pSessionEnum = nullptr;
+    hr = pSessionMgr->GetSessionEnumerator(&pSessionEnum);
+    pSessionMgr->Release();
+    if (FAILED(hr) || !pSessionEnum) return 0;
+
+    int count = 0;
+    if (FAILED(pSessionEnum->GetCount(&count))) {
+        pSessionEnum->Release();
+        return 0;
+    }
+
+    float clamped = std::max(0.0f, std::min(1.0f, static_cast<float>(volumePercent) / 100.0f));
+    int applied = 0;
+
+    for (int i = 0; i < count; ++i) {
+        IAudioSessionControl* pSessionControl = nullptr;
+        if (SUCCEEDED(pSessionEnum->GetSession(i, &pSessionControl)) && pSessionControl) {
+            IAudioSessionControl2* pControl2 = nullptr;
+            if (SUCCEEDED(pSessionControl->QueryInterface(__uuidof(IAudioSessionControl2), (void**)&pControl2)) && pControl2) {
+                DWORD sPid = 0;
+                pControl2->GetProcessId(&sPid);
+                if (sPid == pid || (pid == 0 && pControl2->IsSystemSoundsSession() == S_OK)) {
+                    ISimpleAudioVolume* pVol = nullptr;
+                    if (SUCCEEDED(pControl2->QueryInterface(__uuidof(ISimpleAudioVolume), (void**)&pVol)) && pVol) {
+                        pVol->SetMasterVolume(clamped, NULL);
+                        pVol->Release();
+                        applied++;
+                    }
+                }
+                pControl2->Release();
+            }
+            pSessionControl->Release();
+        }
+    }
+
+    pSessionEnum->Release();
+    return applied;
+}
+
+int SetAppAudioMuteByPID(uint32_t pid, bool mute) {
+    ComInitScope com;
+    IMMDeviceEnumerator* pEnumerator = nullptr;
+    if (FAILED(CoCreateInstance(__uuidof(MMDeviceEnumerator), NULL, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void**)&pEnumerator)) || !pEnumerator) return 0;
+
+    IMMDevice* pDevice = nullptr;
+    HRESULT hr = pEnumerator->GetDefaultAudioEndpoint(eRender, eMultimedia, &pDevice);
+    pEnumerator->Release();
+    if (FAILED(hr) || !pDevice) return 0;
+
+    IAudioSessionManager2* pSessionMgr = nullptr;
+    hr = pDevice->Activate(__uuidof(IAudioSessionManager2), CLSCTX_ALL, NULL, (void**)&pSessionMgr);
+    pDevice->Release();
+    if (FAILED(hr) || !pSessionMgr) return 0;
+
+    IAudioSessionEnumerator* pSessionEnum = nullptr;
+    hr = pSessionMgr->GetSessionEnumerator(&pSessionEnum);
+    pSessionMgr->Release();
+    if (FAILED(hr) || !pSessionEnum) return 0;
+
+    int count = 0;
+    if (FAILED(pSessionEnum->GetCount(&count))) {
+        pSessionEnum->Release();
+        return 0;
+    }
+
+    int applied = 0;
+    for (int i = 0; i < count; ++i) {
+        IAudioSessionControl* pSessionControl = nullptr;
+        if (SUCCEEDED(pSessionEnum->GetSession(i, &pSessionControl)) && pSessionControl) {
+            IAudioSessionControl2* pControl2 = nullptr;
+            if (SUCCEEDED(pSessionControl->QueryInterface(__uuidof(IAudioSessionControl2), (void**)&pControl2)) && pControl2) {
+                DWORD sPid = 0;
+                pControl2->GetProcessId(&sPid);
+                if (sPid == pid || (pid == 0 && pControl2->IsSystemSoundsSession() == S_OK)) {
+                    ISimpleAudioVolume* pVol = nullptr;
+                    if (SUCCEEDED(pControl2->QueryInterface(__uuidof(ISimpleAudioVolume), (void**)&pVol)) && pVol) {
+                        pVol->SetMute(mute ? TRUE : FALSE, NULL);
+                        pVol->Release();
+                        applied++;
+                    }
+                }
+                pControl2->Release();
+            }
+            pSessionControl->Release();
+        }
+    }
+
+    pSessionEnum->Release();
+    return applied;
+}
+
+int GetAudioEndpointsJson(char* outBuf, int maxLen) {
+    if (!outBuf || maxLen <= 0) return 0;
+    ComInitScope com;
+
+    IMMDeviceEnumerator* pEnumerator = nullptr;
+    if (FAILED(CoCreateInstance(__uuidof(MMDeviceEnumerator), NULL, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void**)&pEnumerator)) || !pEnumerator) {
+        snprintf(outBuf, maxLen, "[]");
+        return 0;
+    }
+
+    std::wstring defaultId;
+    IMMDevice* pDefDev = nullptr;
+    if (SUCCEEDED(pEnumerator->GetDefaultAudioEndpoint(eRender, eMultimedia, &pDefDev)) && pDefDev) {
+        LPWSTR pStr = nullptr;
+        if (SUCCEEDED(pDefDev->GetId(&pStr)) && pStr) {
+            defaultId = pStr;
+            CoTaskMemFree(pStr);
+        }
+        pDefDev->Release();
+    }
+
+    IMMDeviceCollection* pCollection = nullptr;
+    if (FAILED(pEnumerator->EnumAudioEndpoints(eRender, DEVICE_STATE_ACTIVE, &pCollection)) || !pCollection) {
+        pEnumerator->Release();
+        snprintf(outBuf, maxLen, "[]");
+        return 0;
+    }
+
+    UINT count = 0;
+    pCollection->GetCount(&count);
+
+    std::ostringstream json;
+    json << "[";
+    bool first = true;
+
+    for (UINT i = 0; i < count; ++i) {
+        IMMDevice* pEndpoint = nullptr;
+        if (SUCCEEDED(pCollection->Item(i, &pEndpoint)) && pEndpoint) {
+            LPWSTR pId = nullptr;
+            std::string idStr;
+            bool isDef = false;
+            if (SUCCEEDED(pEndpoint->GetId(&pId)) && pId) {
+                if (defaultId == pId) isDef = true;
+                idStr = Utf16ToUtf8(pId);
+                CoTaskMemFree(pId);
+            }
+
+            std::string friendlyName;
+            IPropertyStore* pProps = nullptr;
+            if (SUCCEEDED(pEndpoint->OpenPropertyStore(STGM_READ, &pProps)) && pProps) {
+                PROPVARIANT varName;
+                PropVariantInit(&varName);
+                if (SUCCEEDED(pProps->GetValue(PKEY_Device_FriendlyName, &varName))) {
+                    if (varName.vt == VT_LPWSTR && varName.pwszVal) {
+                        friendlyName = Utf16ToUtf8(varName.pwszVal);
+                    }
+                }
+                PropVariantClear(&varName);
+                pProps->Release();
+            }
+
+            if (friendlyName.empty()) {
+                friendlyName = "Audio Output Device";
+            }
+
+            if (!first) json << ",";
+            first = false;
+
+            json << "{"
+                 << "\"id\":\"" << EscapeJsonString(idStr) << "\","
+                 << "\"name\":\"" << EscapeJsonString(friendlyName) << "\","
+                 << "\"isDefault\":" << (isDef ? "true" : "false") << ","
+                 << "\"flow\":\"render\""
+                 << "}";
+
+            pEndpoint->Release();
+        }
+    }
+
+    pCollection->Release();
+    pEnumerator->Release();
+    json << "]";
+
+    std::string out = json.str();
+    if (out.length() >= static_cast<size_t>(maxLen)) {
+        out = out.substr(0, maxLen - 1);
+    }
+    strncpy_s(outBuf, maxLen, out.c_str(), _TRUNCATE);
+    return static_cast<int>(out.length());
+}
+
+int SetDefaultAudioEndpoint(const wchar_t* endpointId) {
+    if (!endpointId || !*endpointId) return 0;
+    ComInitScope com;
+    IPolicyConfig* pPolicyConfig = nullptr;
+    HRESULT hr = CoCreateInstance(
+        __uuidof(CPolicyConfigClient),
+        nullptr,
+        CLSCTX_ALL,
+        __uuidof(IPolicyConfig),
+        (LPVOID*)&pPolicyConfig
+    );
+    if (SUCCEEDED(hr) && pPolicyConfig) {
+        pPolicyConfig->SetDefaultEndpoint(endpointId, eConsole);
+        pPolicyConfig->SetDefaultEndpoint(endpointId, eMultimedia);
+        pPolicyConfig->SetDefaultEndpoint(endpointId, eCommunications);
+        pPolicyConfig->Release();
+        return 1;
+    }
+    return 0;
+}
+
+int SetMasterVolumeNative(int percent) {
+    SetMasterAudioVolume(static_cast<float>(percent));
+    return 1;
+}
+
+int ToggleMasterMuteNative() {
+    ToggleMasterAudioMute();
+    return 1;
+}
+

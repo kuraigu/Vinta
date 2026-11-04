@@ -924,6 +924,47 @@
   gap: 4px;
 }
 
+.cycle-right-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.focus-soundscape-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: var(--vinta-radius-button);
+  border: 1px solid var(--vinta-border-light);
+  background: var(--vinta-item-bg);
+  color: var(--vinta-text-secondary);
+  font-size: 10px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.16s ease;
+  user-select: none;
+}
+
+.focus-soundscape-chip svg {
+  color: inherit;
+  stroke: currentColor;
+}
+
+.focus-soundscape-chip:hover {
+  background: var(--vinta-hover);
+  color: var(--vinta-text-primary);
+  border-color: var(--vinta-border);
+}
+
+.focus-soundscape-chip.is-active {
+  background: var(--vinta-surface-elevated);
+  border-color: var(--vinta-primary);
+  color: var(--vinta-primary);
+  font-weight: 600;
+}
+
 .focus-settings-trigger-btn {
   display: inline-flex;
   align-items: center;

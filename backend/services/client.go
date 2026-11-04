@@ -32,6 +32,13 @@ var (
 	procRequeryNativeMediaArtwork uintptr
 	procForceEmitNativeMediaState uintptr
 	procSendNativeToast           uintptr
+	procGetNativeAudioSessions        uintptr
+	procSetNativeSessionVolume        uintptr
+	procSetNativeSessionMute          uintptr
+	procGetNativeAudioEndpoints       uintptr
+	procSetNativeDefaultAudioEndpoint uintptr
+	procSetNativeMasterAudioVolume    uintptr
+	procToggleNativeMasterAudioMute   uintptr
 
 	mediaCallbackPtr uintptr
 	notifCallbackPtr uintptr
@@ -115,6 +122,13 @@ func ensureDLLLoadedLocked() bool {
 	procRequeryNativeMediaArtwork, _ = syscall.GetProcAddress(dllHandle, "RequeryNativeMediaArtwork")
 	procForceEmitNativeMediaState, _ = syscall.GetProcAddress(dllHandle, "ForceEmitNativeMediaState")
 	procSendNativeToast, _ = syscall.GetProcAddress(dllHandle, "SendNativeToast")
+	procGetNativeAudioSessions, _ = syscall.GetProcAddress(dllHandle, "GetNativeAudioSessions")
+	procSetNativeSessionVolume, _ = syscall.GetProcAddress(dllHandle, "SetNativeSessionVolume")
+	procSetNativeSessionMute, _ = syscall.GetProcAddress(dllHandle, "SetNativeSessionMute")
+	procGetNativeAudioEndpoints, _ = syscall.GetProcAddress(dllHandle, "GetNativeAudioEndpoints")
+	procSetNativeDefaultAudioEndpoint, _ = syscall.GetProcAddress(dllHandle, "SetNativeDefaultAudioEndpoint")
+	procSetNativeMasterAudioVolume, _ = syscall.GetProcAddress(dllHandle, "SetNativeMasterAudioVolume")
+	procToggleNativeMasterAudioMute, _ = syscall.GetProcAddress(dllHandle, "ToggleNativeMasterAudioMute")
 	return true
 }
 
@@ -182,6 +196,13 @@ func StopServicesListener() {
 		procFocusNativeMediaApp = 0
 		procFocusNativeApp = 0
 		procExtractAppIconToFile = 0
+		procGetNativeAudioSessions = 0
+		procSetNativeSessionVolume = 0
+		procSetNativeSessionMute = 0
+		procGetNativeAudioEndpoints = 0
+		procSetNativeDefaultAudioEndpoint = 0
+		procSetNativeMasterAudioVolume = 0
+		procToggleNativeMasterAudioMute = 0
 	}
 
 	isStarted = false
@@ -631,4 +652,198 @@ func fileExists(path string) bool {
 
 func logMsg(msg string) {
 	fmt.Printf("[VintaServices] %s\n", msg)
+}
+
+// AppAudioSession represents an active Windows CoreAudio per-application session.
+type AppAudioSession struct {
+	PID         uint32  `json:"pid"`
+	Name        string  `json:"name"`
+	ProcessName string  `json:"processName"`
+	Path        string  `json:"path"`
+	Volume      float32 `json:"volume"`
+	IsMuted     bool    `json:"isMuted"`
+	Peak        float32 `json:"peak"`
+	IsActive    bool    `json:"isActive"`
+}
+
+// AudioEndpoint represents an active audio playback or capture device.
+type AudioEndpoint struct {
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	IsDefault bool   `json:"isDefault"`
+	Flow      string `json:"flow"`
+}
+
+// GetNativeAudioSessions retrieves active per-app audio sessions from the CoreAudio bridge.
+func GetNativeAudioSessions() ([]AppAudioSession, error) {
+	serviceMu.Lock()
+	if !ensureDLLLoadedLocked() || procGetNativeAudioSessions == 0 {
+		serviceMu.Unlock()
+		return nil, fmt.Errorf("audio service unavailable")
+	}
+	proc := procGetNativeAudioSessions
+	serviceMu.Unlock()
+
+	buf := make([]byte, 65536)
+	ret, _, _ := syscall.SyscallN(
+		proc,
+		uintptr(unsafe.Pointer(&buf[0])),
+		uintptr(len(buf)),
+	)
+	if ret == 0 {
+		return []AppAudioSession{}, nil
+	}
+
+	n := 0
+	for n < len(buf) && buf[n] != 0 {
+		n++
+	}
+
+	var sessions []AppAudioSession
+	if err := json.Unmarshal(buf[:n], &sessions); err != nil {
+		return []AppAudioSession{}, err
+	}
+	return sessions, nil
+}
+
+// SetNativeSessionVolume sets the volume (0-100) for an app by PID.
+func SetNativeSessionVolume(pid uint32, volume float32) bool {
+	serviceMu.Lock()
+	if !ensureDLLLoadedLocked() || procSetNativeSessionVolume == 0 {
+		serviceMu.Unlock()
+		return false
+	}
+	proc := procSetNativeSessionVolume
+	serviceMu.Unlock()
+
+	volInt := int(math.Round(float64(volume)))
+	if volInt < 0 {
+		volInt = 0
+	}
+	if volInt > 100 {
+		volInt = 100
+	}
+
+	ret, _, _ := syscall.SyscallN(
+		proc,
+		uintptr(pid),
+		uintptr(volInt),
+	)
+	return ret > 0
+}
+
+// SetNativeSessionMute sets the mute state for an app by PID.
+func SetNativeSessionMute(pid uint32, mute bool) bool {
+	serviceMu.Lock()
+	if !ensureDLLLoadedLocked() || procSetNativeSessionMute == 0 {
+		serviceMu.Unlock()
+		return false
+	}
+	proc := procSetNativeSessionMute
+	serviceMu.Unlock()
+
+	var muteVal uintptr
+	if mute {
+		muteVal = 1
+	}
+
+	ret, _, _ := syscall.SyscallN(
+		proc,
+		uintptr(pid),
+		muteVal,
+	)
+	return ret > 0
+}
+
+// GetNativeAudioEndpoints retrieves active playback endpoints.
+func GetNativeAudioEndpoints() ([]AudioEndpoint, error) {
+	serviceMu.Lock()
+	if !ensureDLLLoadedLocked() || procGetNativeAudioEndpoints == 0 {
+		serviceMu.Unlock()
+		return nil, fmt.Errorf("audio service unavailable")
+	}
+	proc := procGetNativeAudioEndpoints
+	serviceMu.Unlock()
+
+	buf := make([]byte, 16384)
+	ret, _, _ := syscall.SyscallN(
+		proc,
+		uintptr(unsafe.Pointer(&buf[0])),
+		uintptr(len(buf)),
+	)
+	if ret == 0 {
+		return []AudioEndpoint{}, nil
+	}
+
+	n := 0
+	for n < len(buf) && buf[n] != 0 {
+		n++
+	}
+
+	var endpoints []AudioEndpoint
+	if err := json.Unmarshal(buf[:n], &endpoints); err != nil {
+		return []AudioEndpoint{}, err
+	}
+	return endpoints, nil
+}
+
+// SetNativeDefaultAudioEndpoint changes the default audio output device.
+func SetNativeDefaultAudioEndpoint(endpointID string) bool {
+	serviceMu.Lock()
+	if !ensureDLLLoadedLocked() || procSetNativeDefaultAudioEndpoint == 0 {
+		serviceMu.Unlock()
+		return false
+	}
+	proc := procSetNativeDefaultAudioEndpoint
+	serviceMu.Unlock()
+
+	wID, err := windows.UTF16PtrFromString(endpointID)
+	if err != nil {
+		return false
+	}
+
+	ret, _, _ := syscall.SyscallN(
+		proc,
+		uintptr(unsafe.Pointer(wID)),
+	)
+	return ret > 0
+}
+
+// SetNativeMasterVolume changes the master playback volume.
+func SetNativeMasterVolume(percent float32) bool {
+	serviceMu.Lock()
+	if !ensureDLLLoadedLocked() || procSetNativeMasterAudioVolume == 0 {
+		serviceMu.Unlock()
+		return false
+	}
+	proc := procSetNativeMasterAudioVolume
+	serviceMu.Unlock()
+
+	volInt := int(math.Round(float64(percent)))
+	if volInt < 0 {
+		volInt = 0
+	}
+	if volInt > 100 {
+		volInt = 100
+	}
+
+	ret, _, _ := syscall.SyscallN(
+		proc,
+		uintptr(volInt),
+	)
+	return ret > 0
+}
+
+// ToggleNativeMasterMute toggles master mute.
+func ToggleNativeMasterMute() bool {
+	serviceMu.Lock()
+	if !ensureDLLLoadedLocked() || procToggleNativeMasterAudioMute == 0 {
+		serviceMu.Unlock()
+		return false
+	}
+	proc := procToggleNativeMasterAudioMute
+	serviceMu.Unlock()
+
+	ret, _, _ := syscall.SyscallN(proc)
+	return ret > 0
 }

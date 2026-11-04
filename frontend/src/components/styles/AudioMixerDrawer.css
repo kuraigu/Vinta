@@ -1,0 +1,412 @@
+/* ============================================================================
+   Audio Mixer Drawer Stylesheet
+   ============================================================================ */
+
+.mixer-tab-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 0 6px 0;
+  border-bottom: 1px solid var(--vinta-border-light);
+  margin-bottom: 6px;
+}
+
+.mixer-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: var(--vinta-radius-button);
+  border: 1px solid transparent;
+  background: var(--vinta-item-bg);
+  color: var(--vinta-text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.16s ease;
+  user-select: none;
+}
+
+.mixer-tab-btn:hover {
+  background: var(--vinta-hover);
+  color: var(--vinta-text-primary);
+}
+
+.mixer-tab-btn.is-active {
+  background: var(--vinta-surface-elevated);
+  border-color: var(--vinta-border);
+  color: var(--vinta-primary);
+}
+
+.mixer-drawer-scroll {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.mixer-content-area {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  padding-right: 2px;
+  box-sizing: border-box;
+}
+
+/* Master Row */
+.master-volume-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--vinta-radius-button);
+  background: var(--vinta-surface-elevated);
+  border: 1px solid var(--vinta-border-light);
+}
+
+.master-label-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 65px;
+}
+
+.master-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--vinta-text-primary);
+}
+
+/* Per-App Session Rows */
+.app-session-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--vinta-radius-button);
+  background: var(--vinta-item-bg);
+  border: 1px solid transparent;
+  transition: all 0.16s ease;
+}
+
+.app-session-item:hover {
+  background: var(--vinta-hover);
+  border-color: var(--vinta-border-light);
+}
+
+.app-icon-wrap {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--vinta-icon-badge-bg);
+  border: 1px solid var(--vinta-icon-badge-border);
+  color: var(--vinta-text-secondary);
+  transition: all 0.16s ease;
+}
+
+.app-session-item:hover .app-icon-wrap {
+  background: var(--vinta-hover);
+  color: var(--vinta-text-primary);
+}
+
+.app-icon-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.app-name-wrap {
+  display: flex;
+  flex-direction: column;
+  width: 75px;
+  min-width: 75px;
+  overflow: hidden;
+}
+
+.app-name-text {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--vinta-text-primary);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.app-proc-text {
+  font-size: 9px;
+  color: var(--vinta-text-muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+/* Peak Meter Bar */
+.session-peak-bar {
+  width: 3px;
+  height: 18px;
+  background: var(--vinta-item-bg);
+  border-radius: 2px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column-reverse;
+  flex-shrink: 0;
+}
+
+.session-peak-fill {
+  width: 100%;
+  background: var(--vinta-primary);
+  transition: height 0.08s ease-out;
+}
+
+/* Slider Cluster */
+.session-slider-cluster {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.mini-mute-btn {
+  background: none;
+  border: none;
+  padding: 4px;
+  color: var(--vinta-text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--vinta-radius-button);
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.mini-mute-btn:hover {
+  color: var(--vinta-text-primary);
+  background: var(--vinta-hover);
+}
+
+.mini-mute-btn.is-muted {
+  color: var(--vinta-accent-warning);
+}
+
+.slider-track-wrap {
+  position: relative;
+  flex: 1;
+  height: 6px;
+  background: var(--vinta-item-bg);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.slider-track-fill {
+  height: 100%;
+  background: var(--vinta-primary);
+  border-radius: 3px;
+  pointer-events: none;
+}
+
+.slider-native-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  margin: 0;
+}
+
+.vol-readout-text {
+  font-size: 10px;
+  font-family: var(--vinta-font-family);
+  color: var(--vinta-text-secondary);
+  min-width: 28px;
+  text-align: right;
+}
+
+/* Ambient Soundscapes Tab */
+.soundscape-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px;
+}
+
+.preset-pill-group {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.preset-pill-btn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--vinta-radius-pill);
+  border: 1px solid var(--vinta-border-light);
+  background: var(--vinta-item-bg);
+  color: var(--vinta-text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.preset-pill-btn:hover {
+  background: var(--vinta-hover);
+  color: var(--vinta-text-primary);
+}
+
+.preset-pill-btn.is-active {
+  background: var(--vinta-primary);
+  border-color: var(--vinta-primary);
+  color: var(--vinta-text-on-accent);
+  font-weight: 600;
+}
+
+.soundscape-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--vinta-radius-button);
+  background: var(--vinta-item-bg);
+}
+
+.soundscape-play-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 14px;
+  border: none;
+  background: var(--vinta-primary);
+  color: var(--vinta-text-on-accent);
+  cursor: pointer;
+  transition: transform 0.14s ease;
+}
+
+.soundscape-play-btn:hover {
+  transform: scale(1.05);
+}
+
+.ducking-indicator-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9px;
+  color: var(--vinta-accent-warning);
+  background: var(--vinta-accent-warning-hover-bg);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* Endpoint Devices Tab */
+.endpoint-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.endpoint-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 10px;
+  border-radius: var(--vinta-radius-button);
+  background: var(--vinta-item-bg);
+  border: 1px solid transparent;
+  color: var(--vinta-text-primary);
+  cursor: pointer;
+  transition: all 0.16s ease;
+  width: 100%;
+  text-align: left;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.endpoint-item:hover {
+  background: var(--vinta-hover);
+  border-color: var(--vinta-border-light);
+}
+
+.endpoint-item.is-default {
+  background: var(--vinta-surface-elevated);
+  border-color: var(--vinta-border);
+}
+
+.endpoint-left-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.endpoint-icon-wrap {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: var(--vinta-icon-badge-bg);
+  border: 1px solid var(--vinta-icon-badge-border);
+  color: var(--vinta-text-secondary);
+  transition: all 0.16s ease;
+}
+
+.endpoint-item:hover .endpoint-icon-wrap {
+  background: var(--vinta-hover);
+  color: var(--vinta-text-primary);
+}
+
+.endpoint-item.is-default .endpoint-icon-wrap {
+  background: var(--vinta-surface-elevated);
+  border-color: var(--vinta-border-accent);
+  color: var(--vinta-primary);
+}
+
+.endpoint-name {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--vinta-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.endpoint-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--vinta-primary);
+  background: var(--vinta-surface-elevated);
+  border: 1px solid var(--vinta-border-accent);
+  padding: 2px 7px;
+  border-radius: var(--vinta-radius-pill);
+  flex-shrink: 0;
+}
+
+.empty-mixer-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 0;
+  font-size: 11px;
+  color: var(--vinta-text-muted);
+}

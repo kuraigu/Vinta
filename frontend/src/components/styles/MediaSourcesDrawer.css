@@ -2,30 +2,21 @@
    Media Sources Drawer Stylesheet
    ============================================================================ */
 
+.session-drawer-scroll {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+}
+
 .session-drawer-list {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  flex: 1;
-  min-height: 0;
-  max-height: 130px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding-top: 6px;
-  padding-right: 4px;
-}
-
-.session-drawer-list::-webkit-scrollbar {
-  width: 4px;
-}
-
-.session-drawer-list::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.session-drawer-list::-webkit-scrollbar-thumb {
-  background: var(--vinta-scrollbar-thumb, rgba(255, 255, 255, 0.2));
-  border-radius: 2px;
+  width: 100%;
+  padding-top: 4px;
+  padding-right: 2px;
+  box-sizing: border-box;
 }
 
 .session-menu-item {
@@ -33,10 +24,10 @@
   align-items: center;
   gap: 10px;
   padding: 8px 10px;
-  border-radius: var(--vinta-radius-button, 10px);
+  border-radius: var(--vinta-radius-button);
   border: 1px solid transparent;
-  background: var(--vinta-item-bg, rgba(255, 255, 255, 0.06));
-  color: var(--vinta-text-primary, #ffffff);
+  background: var(--vinta-item-bg);
+  color: var(--vinta-text-primary);
   cursor: pointer;
   transition: all 0.18s ease;
   text-align: left;
@@ -47,17 +38,17 @@
 }
 
 .session-menu-item:hover {
-  background: var(--vinta-hover, rgba(255, 255, 255, 0.12));
-  border-color: var(--vinta-border-light, rgba(255, 255, 255, 0.12));
+  background: var(--vinta-hover);
+  border-color: var(--vinta-border-light);
 }
 
 .session-menu-item.is-selected {
-  background: var(--vinta-surface-elevated, rgba(255, 255, 255, 0.08));
-  border-color: var(--vinta-border, rgba(255, 255, 255, 0.15));
+  background: var(--vinta-surface-elevated);
+  border-color: var(--vinta-border);
 }
 
 .session-menu-item.is-selected .session-item-title {
-  color: var(--vinta-primary, #38bdf8);
+  color: var(--vinta-primary);
 }
 
 .session-item-icon {
@@ -68,7 +59,10 @@
   align-items: center;
   justify-content: center;
   border-radius: 6px;
-  background: rgba(0, 0, 0, 0.25);
+  background: var(--vinta-icon-badge-bg);
+  border: 1px solid var(--vinta-icon-badge-border);
+  color: var(--vinta-text-secondary);
+  transition: all 0.18s ease;
 }
 
 .session-app-img {
@@ -78,8 +72,15 @@
   object-fit: contain;
 }
 
-.session-item-icon :global(svg) {
-  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.6));
+.session-menu-item:hover .session-item-icon {
+  background: var(--vinta-hover);
+  color: var(--vinta-text-primary);
+}
+
+.session-menu-item.is-selected .session-item-icon {
+  background: var(--vinta-surface-elevated);
+  border-color: var(--vinta-border-accent);
+  color: var(--vinta-primary);
 }
 
 .session-item-info {
@@ -93,7 +94,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: var(--vinta-text-primary, #ffffff);
+  color: var(--vinta-text-primary);
 }
 
 .session-item-subtitle {
@@ -102,7 +103,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.6));
+  color: var(--vinta-text-muted);
   margin-top: 1px;
 }
 
@@ -114,16 +115,17 @@
   width: 20px;
 }
 
-.session-item-status :global(.selected-check) {
-  color: var(--vinta-primary, #38bdf8);
+.session-item-status .selected-check {
+  color: var(--vinta-primary);
+  stroke: currentColor;
 }
 
 .live-playing-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: var(--vinta-accent-success, #10b981);
-  box-shadow: 0 0 6px var(--vinta-accent-success, #10b981);
+  background: var(--vinta-accent-success);
+  box-shadow: 0 0 6px var(--vinta-accent-success);
   animation: liveDotPulse 1.2s infinite ease-in-out;
 }
 
@@ -145,10 +147,10 @@
   justify-content: center;
   width: 22px;
   height: 22px;
-  border-radius: var(--vinta-radius-button, 6px);
-  border: none;
+  border-radius: var(--vinta-radius-button);
+  border: 1px solid transparent;
   background: transparent;
-  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.35));
+  color: var(--vinta-text-secondary);
   cursor: pointer;
   transition: all 0.15s ease;
   flex-shrink: 0;
@@ -156,11 +158,12 @@
 }
 
 .session-pin-btn:hover {
-  background: var(--vinta-hover, rgba(255, 255, 255, 0.12));
-  color: var(--vinta-text-primary, #ffffff);
+  background: var(--vinta-hover);
+  color: var(--vinta-text-primary);
 }
 
 .session-pin-btn.is-pinned {
-  color: var(--vinta-primary, #38bdf8);
-  background: rgba(56, 189, 248, 0.2);
+  color: var(--vinta-primary);
+  background: var(--vinta-surface-elevated);
+  border-color: var(--vinta-border-accent);
 }

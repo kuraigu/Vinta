@@ -85,6 +85,7 @@
     isSimulatingWirelessStore,
     devPinnedStore,
     activePageIdStore,
+    isMediaDrawerOpenStore,
     timerAppStore,
     isAnyTimerRunning,
     type BatteryData,
@@ -420,7 +421,9 @@
             islandConfig.expanded.minH ?? 260,
             islandConfig.expanded.maxH ?? islandConfig.expanded.h
           )
-      : islandConfig.expanded.h
+      : activePage === MediaPage && $isMediaDrawerOpenStore
+        ? 315
+        : islandConfig.expanded.h
   )
 
   let currentIslandW = $derived(

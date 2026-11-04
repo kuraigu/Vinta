@@ -25,7 +25,7 @@
   }: Props = $props()
 </script>
 
-<section
+<div
   class="vinta-drawer-panel variant-{variant} {className}"
   role="dialog"
   aria-label={title}
@@ -56,4 +56,4 @@
       {@render children()}
     {/if}
   </div>
-</section>
+</div>
