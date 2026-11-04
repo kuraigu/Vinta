@@ -10,7 +10,8 @@
     Music,
     Bell,
     Settings,
-    Folder
+    Folder,
+    FolderDown
   } from 'lucide-svelte'
   import { AppControls } from '../utils/AppControls.svelte'
   import DockButton from './DockButton.svelte'
@@ -23,6 +24,8 @@
   import MediaPage from '../pages/MediaPage.svelte'
   import NotificationPage from '../pages/NotificationPage.svelte'
   import SettingsPage from '../pages/SettingsPage.svelte'
+  import FileShelfPage from '../pages/FileShelfPage.svelte'
+  import { fileShelfStore } from '../stores/fileShelf'
   import type { IslandConfig } from '../store'
   import {
     notifData,
@@ -95,6 +98,17 @@
   const showNotifs = $derived.by(checkShowNotifs)
 
   /**
+   * Evaluates whether the File Shelf should appear dynamically when unpinned and holding items.
+   */
+  const checkShowFileShelfDynamic = () =>
+    Boolean(
+      !$dockPinnedAppsStore.fileshelf &&
+      $pageVisibilityStore.fileshelf !== false &&
+      ($fileShelfStore.items.length > 0 || activePage === FileShelfPage)
+    )
+  const showFileShelfDynamic = $derived.by(checkShowFileShelfDynamic)
+
+  /**
    * Builds the list of middle dock items (pinned favorites and dynamic tasks).
    */
   function computeMiddleItems(): DockItem[] {
@@ -150,6 +164,24 @@
       })
     }
 
+    if (
+      $dockPinnedAppsStore.fileshelf &&
+      $pageVisibilityStore.fileshelf !== false
+    ) {
+      items.push({
+        id: 'fileshelf',
+        tooltip: 'File Shelf',
+        icon: FolderDown,
+        active: activePage === FileShelfPage,
+        badge:
+          $fileShelfStore.items.length > 0
+            ? $fileShelfStore.items.length
+            : undefined,
+        group: 'pinned',
+        onclick: (e: MouseEvent) => AppControls.goFileShelf(navigate, e)
+      })
+    }
+
     if (showTimerDynamic) {
       items.push({
         id: 'timer-dynamic',
@@ -158,6 +190,21 @@
         active: activePage === TimerPage,
         group: 'dynamic',
         onclick: (e: MouseEvent) => AppControls.goTimer(navigate, e)
+      })
+    }
+
+    if (showFileShelfDynamic) {
+      items.push({
+        id: 'fileshelf-dynamic',
+        tooltip: 'File Shelf',
+        icon: FolderDown,
+        active: activePage === FileShelfPage,
+        badge:
+          $fileShelfStore.items.length > 0
+            ? $fileShelfStore.items.length
+            : undefined,
+        group: 'dynamic',
+        onclick: (e: MouseEvent) => AppControls.goFileShelf(navigate, e)
       })
     }
 

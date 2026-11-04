@@ -15,6 +15,9 @@ import TimerPage, { config as timerConfig } from '../pages/TimerPage.svelte'
 import CalendarPage, {
   config as calendarConfig
 } from '../pages/CalendarPage.svelte'
+import FileShelfPage, {
+  config as fileShelfConfig
+} from '../pages/FileShelfPage.svelte'
 import {
   globalMediaStore,
   pageVisibilityStore,
@@ -107,6 +110,11 @@ export const AppControls = {
   goCalendar: (navigate: NavFn, e?: Event) => {
     if (e) e.stopPropagation()
     navigate(CalendarPage, calendarConfig, true)
+  },
+
+  goFileShelf: (navigate: NavFn, e?: Event) => {
+    if (e) e.stopPropagation()
+    navigate(FileShelfPage, fileShelfConfig, true)
   },
 
   goAbout: (navigate: NavFn, e?: Event) => {

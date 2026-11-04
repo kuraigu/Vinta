@@ -72,6 +72,7 @@ export interface PageVisibility {
   timer: boolean
   calendar: boolean
   weather: boolean
+  fileshelf: boolean
 }
 
 export const defaultPageVisibility: PageVisibility = {
@@ -83,7 +84,8 @@ export const defaultPageVisibility: PageVisibility = {
   focus: true,
   timer: true,
   calendar: true,
-  weather: true
+  weather: true,
+  fileshelf: true
 }
 
 export interface DockPinnedApps {
@@ -92,6 +94,7 @@ export interface DockPinnedApps {
   calculator: boolean
   timer: boolean
   weather: boolean
+  fileshelf: boolean
 }
 
 export const defaultDockPinnedApps: DockPinnedApps = {
@@ -99,7 +102,8 @@ export const defaultDockPinnedApps: DockPinnedApps = {
   notes: true,
   calculator: true,
   timer: false,
-  weather: false
+  weather: false,
+  fileshelf: false
 }
 
 // ============================================================================
@@ -579,6 +583,11 @@ export function calculateHomeMinimalWidth(
 }
 
 /**
+ * Reactive store holding the dynamically measured client height of the Home Page feed.
+ */
+export const homeMeasuredHeightStore = writable<number>(0)
+
+/**
  * Calculates the dynamic height for the expanded Home Page based on active glance cards,
  * clamped between minimum and maximum bounds defined in the island configuration.
  */
@@ -592,33 +601,33 @@ export function calculateHomeExpandedHeight(
   const GAP = 12
 
   // 1. Header segment (Weather hero full-bleed or salutation greeting)
-  let totalHeight = visibility.weather ? 178 : 96
+  let totalHeight = visibility.weather ? 158 : (visibility.clock ? 98 : 74)
 
   // 2. Update notice banner
   if (hasUpdate) {
-    totalHeight += GAP + 68
+    totalHeight += GAP + 54
   }
 
   // 3. Notification glance card (only renders if unread notifications exist)
   if (hasNotification) {
-    totalHeight += GAP + 88
+    totalHeight += GAP + 78
   }
 
   // 4. Calendar glance agenda
   if (visibility.calendar) {
-    totalHeight += GAP + 104
+    totalHeight += GAP + 82
   }
 
   // 5. Quick Controls / Action Center glance
   if (visibility.actionCenter) {
-    totalHeight += GAP + 110
+    totalHeight += GAP + 96
   }
 
   // 6. Studio Branding Footer ("Vinta by FreeMatrix Studios & Contributors")
-  totalHeight += GAP + 36
+  totalHeight += GAP + 24
 
   // 7. Bottom clearance for feed padding & island corner curvature
-  const BOTTOM_CLEARANCE = 24
+  const BOTTOM_CLEARANCE = 10
 
   const computedHeight = totalHeight + BOTTOM_CLEARANCE
   return Math.max(minH, Math.min(maxH, computedHeight))

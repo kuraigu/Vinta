@@ -1,18 +1,24 @@
 <script lang="ts">
-  import { onMount, type Component } from 'svelte'
+  import { getContext, onMount, type Component } from 'svelte'
   import { fade } from 'svelte/transition'
   import Clock from './Clock.svelte'
   import Dock from './Dock.svelte'
+  import FileDropIndicator from './FileDropIndicator.svelte'
   import HomePage from '../pages/HomePage.svelte'
   import MediaPage from '../pages/MediaPage.svelte'
   import TimerPage from '../pages/TimerPage.svelte'
+  import FileShelfPage, {
+    config as fileShelfConfig
+  } from '../pages/FileShelfPage.svelte'
   import {
     autoHideDisplayStore,
     allowDragPositionStore,
     autoHideDelayStore,
+    pageVisibilityStore,
     type IslandConfig
   } from '../store'
   import type { IslandGestureController } from '../services/islandGestures'
+  import type { NavFn } from '../utils/navigation'
 
   /**
    * Component properties for MainIsland.
@@ -232,6 +238,83 @@
     onRecoverBounds?.()
   }
 
+  const navigate = getContext<NavFn | undefined>('navigate')
+
+  const FILE_HOLD_DURATION_MS = 950
+  let isHoldingFilesOverIsland = $state(false)
+  let fileHoldProgress = $state(0)
+  let fileHoldInterval: ReturnType<typeof setInterval> | null = null
+  let fileHoldStartTime = 0
+  let lastFileDragOverTime = 0
+
+  function stopFileHoldTimer(): void {
+    if (fileHoldInterval) {
+      clearInterval(fileHoldInterval)
+      fileHoldInterval = null
+    }
+    isHoldingFilesOverIsland = false
+    fileHoldProgress = 0
+    fileHoldStartTime = 0
+    lastFileDragOverTime = 0
+  }
+
+  function startOrRefreshFileHoldTimer(): void {
+    if ($pageVisibilityStore.fileshelf === false) return
+    onMouseEnter?.()
+    if (isHidden) {
+      onShowWidget?.()
+    }
+    if (expanded && activePage === FileShelfPage) {
+      stopFileHoldTimer()
+      return
+    }
+
+    lastFileDragOverTime = Date.now()
+    if (fileHoldInterval) return
+
+    fileHoldStartTime = Date.now()
+    isHoldingFilesOverIsland = true
+    fileHoldProgress = 5
+
+    fileHoldInterval = setInterval(() => {
+      const now = Date.now()
+      if (now - lastFileDragOverTime > 240) {
+        stopFileHoldTimer()
+        return
+      }
+      const elapsed = now - fileHoldStartTime
+      const pct = Math.min(100, (elapsed / FILE_HOLD_DURATION_MS) * 100)
+      fileHoldProgress = pct
+      if (elapsed >= FILE_HOLD_DURATION_MS) {
+        stopFileHoldTimer()
+        navigate?.(FileShelfPage, fileShelfConfig, true)
+      }
+    }, 40)
+  }
+
+  function handleIslandDragEnter(e: DragEvent): void {
+    if (!e.dataTransfer?.types?.includes('Files')) return
+    startOrRefreshFileHoldTimer()
+  }
+
+  function handleIslandDragOver(e: DragEvent): void {
+    if (!e.dataTransfer?.types?.includes('Files')) return
+    startOrRefreshFileHoldTimer()
+  }
+
+  function handleIslandDragLeave(e: DragEvent): void {
+    if (!e.dataTransfer?.types?.includes('Files')) return
+    const nextTarget = e.relatedTarget as Node | null
+    if (!nextTarget || !islandNode?.contains(nextTarget)) {
+      stopFileHoldTimer()
+      onMouseLeave?.()
+    }
+  }
+
+  function handleIslandDrop(): void {
+    stopFileHoldTimer()
+  }
+
   onMount(() => {
     const handleDocumentPointerLeave = (e: PointerEvent) => {
       if (!e.relatedTarget && onMouseLeave) {
@@ -240,6 +323,7 @@
     }
 
     const handleWindowBlur = () => {
+      stopFileHoldTimer()
       if (onMouseLeave) {
         onMouseLeave()
       }
@@ -252,6 +336,7 @@
     window.addEventListener('blur', handleWindowBlur)
 
     return () => {
+      stopFileHoldTimer()
       document.documentElement.removeEventListener(
         'pointerleave',
         handleDocumentPointerLeave
@@ -266,6 +351,7 @@
 <div
   bind:this={islandNode}
   data-vinta="main-island"
+  data-file-drop-target
   class="island {expanded ? 'expanded' : ''} {isTransitionGlow
     ? 'is-transition-glow'
     : ''} {isHidden ? 'is-hidden' : ''} {isQuitting ? 'is-quitting' : ''}"
@@ -274,6 +360,10 @@
   onpointerdown={handlePointerDown}
   oncontextmenu={handleContextMenu}
   onclick={handleIslandClick}
+  ondragenter={handleIslandDragEnter}
+  ondragover={handleIslandDragOver}
+  ondragleave={handleIslandDragLeave}
+  ondrop={handleIslandDrop}
   ontransitionend={handleTransitionEnd}
   ontransitioncancel={handleTransitionEnd}
   style="
@@ -312,6 +402,12 @@
     --island-anim: {islandAnim};
   "
 >
+  <FileDropIndicator
+    active={isHoldingFilesOverIsland}
+    progress={fileHoldProgress}
+    isCompact={!expanded}
+  />
+
   {#if isHidden}
     {#if $autoHideDisplayStore === 'clock'}
       <div

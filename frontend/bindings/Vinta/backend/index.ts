@@ -19,6 +19,7 @@ export {
     NoteFileInfo,
     ReleaseInfo,
     SatelliteBounds,
+    ShelfFileItem,
     ThemeInfo,
     TooltipBounds,
     UpdateCheckResult,

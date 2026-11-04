@@ -13,11 +13,21 @@
   font-size: 0.72rem;
   font-weight: 500;
   letter-spacing: -0.01em;
-  white-space: nowrap;
+  white-space: pre-line;
+  line-height: 1.35;
+  text-align: left;
   pointer-events: none;
   box-shadow: var(--vinta-dock-popover-shadow, 0 4px 14px rgba(0, 0, 0, 0.5));
   border: 1px solid var(--vinta-dock-popover-border, rgba(255, 255, 255, 0.12));
   z-index: 99999;
+}
+
+.custom-tooltip.align-center {
+  text-align: center;
+}
+
+.custom-tooltip.align-right {
+  text-align: right;
 }
 
 /* Caret arrows */

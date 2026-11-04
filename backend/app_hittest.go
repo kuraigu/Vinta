@@ -65,6 +65,13 @@ func (a *App) SetHitRects(rects []HitRect) {
 	}
 	a.pillHitMu.Unlock()
 
+	activeIslandMu.Lock()
+	if activeIslandHwnd != 0 {
+		activeIslandRects = make([]pillHitBounds, len(a.pillHitRects))
+		copy(activeIslandRects, a.pillHitRects)
+	}
+	activeIslandMu.Unlock()
+
 	if len(rects) > 0 {
 		a.initialShowOnce.Do(func() {
 			if a.window != nil {
@@ -96,8 +103,12 @@ func (a *App) UpdateIslandRect(x, y, w, h float64) {
 func (a *App) SetForceInteractive(active bool) {
 	a.pillHitMu.Lock()
 	a.isForceInteractive = active
+	outbound := a.isOutboundDragging
 	a.pillHitMu.Unlock()
 
+	if outbound {
+		return
+	}
 	hwnd := a.getHwnd()
 	if hwnd == 0 {
 		return
@@ -108,6 +119,39 @@ func (a *App) SetForceInteractive(active bool) {
 		a.isCurrentlyInteractive = true
 		style &^= WS_EX_TRANSPARENT
 		_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwl), style)
+		_, _, _ = procSetLayeredWindowAttrs.Call(hwnd, 0, 255, 2)
+	}
+}
+
+// IsOutboundDragging reports whether Vinta is actively performing an outbound OLE file drag.
+func (a *App) IsOutboundDragging() bool {
+	a.pillHitMu.RLock()
+	defer a.pillHitMu.RUnlock()
+	return a.isOutboundDragging
+}
+
+// setOutboundDragging toggles click-through transparency on the Vinta window during outbound OLE file drags.
+func (a *App) setOutboundDragging(active bool) {
+	a.pillHitMu.Lock()
+	a.isOutboundDragging = active
+	a.pillHitMu.Unlock()
+
+	hwnd := a.getHwnd()
+	if hwnd == 0 {
+		return
+	}
+	gwl := int32(GWL_EXSTYLE)
+	style, _, _ := procGetWindowLong.Call(hwnd, uintptr(gwl))
+	if active {
+		a.isCurrentlyInteractive = false
+		style |= WS_EX_LAYERED | WS_EX_TRANSPARENT
+		_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwl), style)
+		_, _, _ = procSetLayeredWindowAttrs.Call(hwnd, 0, 255, 2)
+	} else {
+		a.isCurrentlyInteractive = true
+		style &^= WS_EX_TRANSPARENT
+		_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwl), style)
+		_, _, _ = procSetLayeredWindowAttrs.Call(hwnd, 0, 255, 2)
 	}
 }
 
@@ -129,25 +173,28 @@ func (a *App) startHitTestingLoop(hwnd uintptr) {
 			}
 
 			a.pillHitMu.RLock()
+			outbound := a.isOutboundDragging
 			force := a.isForceInteractive
 			rects := make([]pillHitBounds, len(a.pillHitRects))
 			copy(rects, a.pillHitRects)
 			a.pillHitMu.RUnlock()
 
 			isHit := false
-			if force {
-				isHit = true
-			} else if len(rects) > 0 {
-				var pt point32
-				ret, _, _ := procGetCursorPos.Call(uintptr(unsafe.Pointer(&pt)))
-				if ret != 0 {
-					retScreen, _, _ := procScreenToClient.Call(hwnd, uintptr(unsafe.Pointer(&pt)))
-					if retScreen != 0 {
-						for _, rect := range rects {
-							if pt.X >= rect.left && pt.X <= rect.right &&
-								pt.Y >= rect.top && pt.Y <= rect.bottom {
-								isHit = true
-								break
+			if !outbound {
+				if force {
+					isHit = true
+				} else if len(rects) > 0 {
+					var pt point32
+					ret, _, _ := procGetCursorPos.Call(uintptr(unsafe.Pointer(&pt)))
+					if ret != 0 {
+						retScreen, _, _ := procScreenToClient.Call(hwnd, uintptr(unsafe.Pointer(&pt)))
+						if retScreen != 0 {
+							for _, rect := range rects {
+								if pt.X >= rect.left && pt.X <= rect.right &&
+									pt.Y >= rect.top && pt.Y <= rect.bottom {
+									isHit = true
+									break
+								}
 							}
 						}
 					}
@@ -163,6 +210,13 @@ func (a *App) startHitTestingLoop(hwnd uintptr) {
 				style &^= WS_EX_TRANSPARENT
 				needsUpdate = true
 			} else if !isHit && !hasTransparent {
+				// Never switch to WS_EX_TRANSPARENT while the left mouse button is held down during an inbound drag,
+				// because changing window styles mid-drag causes OLE to lose DragLeave/Drop synchronization and lock up File Explorer.
+				if !outbound {
+					if lmbState, _, _ := procGetAsyncKeyState.Call(0x01); (lmbState & 0x8000) != 0 {
+						continue
+					}
+				}
 				style |= WS_EX_TRANSPARENT
 				needsUpdate = true
 			}
@@ -170,6 +224,9 @@ func (a *App) startHitTestingLoop(hwnd uintptr) {
 			if needsUpdate {
 				a.isCurrentlyInteractive = isHit
 				_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwl), style)
+				if isHit {
+					_, _, _ = procSetLayeredWindowAttrs.Call(hwnd, 0, 255, 2)
+				}
 			}
 		}
 	}()

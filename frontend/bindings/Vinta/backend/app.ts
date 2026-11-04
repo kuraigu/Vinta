@@ -36,10 +36,26 @@ export function ApplyUpdate(): $CancellablePromise<void> {
 }
 
 /**
+ * BundleShelfZip compresses the specified files and directories into a timestamped .zip archive.
+ */
+export function BundleShelfZip(paths: string[]): $CancellablePromise<$models.ShelfFileItem> {
+    return $Call.ByID(2073873760, paths).then(($result: any) => {
+        return $$createType0($result);
+    });
+}
+
+/**
  * CancelFullscreenRelocate clears any temporary relocation state.
  */
 export function CancelFullscreenRelocate(): $CancellablePromise<void> {
     return $Call.ByID(3945761807);
+}
+
+/**
+ * CancelNativeFileDrag interrupts any in-progress native shell drag-and-drop session.
+ */
+export function CancelNativeFileDrag(): $CancellablePromise<void> {
+    return $Call.ByID(1373125594);
 }
 
 /**
@@ -54,7 +70,7 @@ export function CancelUpdateDownload(): $CancellablePromise<void> {
  */
 export function CheckForUpdates(force: boolean): $CancellablePromise<$models.UpdateCheckResult | null> {
     return $Call.ByID(1638718882, force).then(($result: any) => {
-        return $$createType1($result);
+        return $$createType2($result);
     });
 }
 
@@ -84,6 +100,13 @@ export function ClearCache(): $CancellablePromise<void> {
  */
 export function ClearTooltipBounds(id: string): $CancellablePromise<void> {
     return $Call.ByID(561175078, id);
+}
+
+/**
+ * CopyShelfPathsToClipboard copies the files to the system clipboard both as text and as native CF_HDROP file objects.
+ */
+export function CopyShelfPathsToClipboard(paths: string[]): $CancellablePromise<void> {
+    return $Call.ByID(2662184127, paths);
 }
 
 /**
@@ -147,7 +170,7 @@ export function GetAppIcon(sourceApp: string, aumid: string): $CancellablePromis
  */
 export function GetAppInfo(): $CancellablePromise<$models.AppInfo> {
     return $Call.ByID(3850092932).then(($result: any) => {
-        return $$createType2($result);
+        return $$createType3($result);
     });
 }
 
@@ -163,7 +186,7 @@ export function GetAutostart(): $CancellablePromise<boolean> {
  */
 export function GetBatteryStatus(): $CancellablePromise<services$0.BatteryStatus> {
     return $Call.ByID(1722351164).then(($result: any) => {
-        return $$createType3($result);
+        return $$createType4($result);
     });
 }
 
@@ -186,7 +209,7 @@ export function GetCalendarData(): $CancellablePromise<string> {
  */
 export function GetContributors(): $CancellablePromise<$models.Contributor[]> {
     return $Call.ByID(3055720143).then(($result: any) => {
-        return $$createType5($result);
+        return $$createType6($result);
     });
 }
 
@@ -195,7 +218,7 @@ export function GetContributors(): $CancellablePromise<$models.Contributor[]> {
  */
 export function GetCurrentMonitor(): $CancellablePromise<$models.MonitorInfo> {
     return $Call.ByID(3990780328).then(($result: any) => {
-        return $$createType6($result);
+        return $$createType7($result);
     });
 }
 
@@ -204,7 +227,7 @@ export function GetCurrentMonitor(): $CancellablePromise<$models.MonitorInfo> {
  */
 export function GetDisplayLayout(): $CancellablePromise<$models.DisplayLayout> {
     return $Call.ByID(2439750779).then(($result: any) => {
-        return $$createType7($result);
+        return $$createType8($result);
     });
 }
 
@@ -269,7 +292,7 @@ export function GetUpdateRepo(): $CancellablePromise<string> {
  */
 export function GetWirelessStatus(): $CancellablePromise<services$0.WirelessStatus> {
     return $Call.ByID(794979391).then(($result: any) => {
-        return $$createType8($result);
+        return $$createType9($result);
     });
 }
 
@@ -292,8 +315,24 @@ export function ImportSettingsFileDialog(): $CancellablePromise<string> {
  */
 export function ImportThemeDialog(): $CancellablePromise<$models.ThemeInfo | null> {
     return $Call.ByID(1943468227).then(($result: any) => {
-        return $$createType10($result);
+        return $$createType11($result);
     });
+}
+
+/**
+ * InspectShelfFiles validates local file paths and returns their metadata and thumbnail previews.
+ */
+export function InspectShelfFiles(paths: string[]): $CancellablePromise<$models.ShelfFileItem[]> {
+    return $Call.ByID(4271776190, paths).then(($result: any) => {
+        return $$createType12($result);
+    });
+}
+
+/**
+ * IsOutboundDragging reports whether Vinta is actively performing an outbound OLE file drag.
+ */
+export function IsOutboundDragging(): $CancellablePromise<boolean> {
+    return $Call.ByID(3884221974);
 }
 
 /**
@@ -315,7 +354,7 @@ export function IsTestMode(): $CancellablePromise<boolean> {
  */
 export function ListNotes(): $CancellablePromise<$models.NoteFileInfo[]> {
     return $Call.ByID(2184398716).then(($result: any) => {
-        return $$createType12($result);
+        return $$createType14($result);
     });
 }
 
@@ -324,7 +363,7 @@ export function ListNotes(): $CancellablePromise<$models.NoteFileInfo[]> {
  */
 export function ListThemes(): $CancellablePromise<$models.ThemeInfo[]> {
     return $Call.ByID(44849841).then(($result: any) => {
-        return $$createType13($result);
+        return $$createType15($result);
     });
 }
 
@@ -361,6 +400,15 @@ export function OpenWindowsSettings(target: string): $CancellablePromise<void> {
  */
 export function PauseUpdateDownload(): $CancellablePromise<void> {
     return $Call.ByID(2705463110);
+}
+
+/**
+ * PromptChooseShelfFiles opens a native multi-file selection dialog and returns the inspected shelf items.
+ */
+export function PromptChooseShelfFiles(): $CancellablePromise<$models.ShelfFileItem[]> {
+    return $Call.ByID(2406650291).then(($result: any) => {
+        return $$createType12($result);
+    });
 }
 
 /**
@@ -438,6 +486,13 @@ export function ResolveNativeAppIcon(sourceApp: string, aumid: string): $Cancell
  */
 export function ResumeUpdateDownload(): $CancellablePromise<void> {
     return $Call.ByID(3804646409);
+}
+
+/**
+ * RevealShelfFileInExplorer opens Windows Explorer with the specified file or folder selected.
+ */
+export function RevealShelfFileInExplorer(path: string): $CancellablePromise<void> {
+    return $Call.ByID(4026602364, path);
 }
 
 /**
@@ -693,6 +748,17 @@ export function StartInertiaGlide(startOffset: number, velocity: number, minOffs
 }
 
 /**
+ * StartNativeFileDrag initiates a native Windows Shell OLE drag-and-drop operation for the given file paths.
+ * 
+ * The drag loop runs on the Wails main UI thread. That thread shares its input queue with the
+ * WebView2 child windows, so DoDragDrop can take over the mouse capture the webview holds from
+ * the initial click. Running it on any other thread makes Windows cancel the drag immediately.
+ */
+export function StartNativeFileDrag(paths: string[]): $CancellablePromise<void> {
+    return $Call.ByID(2489292958, paths);
+}
+
+/**
  * Startup satisfies legacy startup calls if invoked.
  */
 export function Startup(): $CancellablePromise<void> {
@@ -704,6 +770,15 @@ export function Startup(): $CancellablePromise<void> {
  */
 export function StopInertiaGlide(): $CancellablePromise<number> {
     return $Call.ByID(446266388);
+}
+
+/**
+ * StripShelfImageMetadata re-encodes supported images (.jpg, .jpeg, .png) without EXIF or ancillary metadata.
+ */
+export function StripShelfImageMetadata(paths: string[]): $CancellablePromise<$models.ShelfFileItem[]> {
+    return $Call.ByID(4085277947, paths).then(($result: any) => {
+        return $$createType12($result);
+    });
 }
 
 /**
@@ -735,17 +810,19 @@ export function UpdateIslandRect(x: number, y: number, w: number, h: number): $C
 }
 
 // Private type creation functions
-const $$createType0 = $models.UpdateCheckResult.createFrom;
-const $$createType1 = $Create.Nullable($$createType0);
-const $$createType2 = $models.AppInfo.createFrom;
-const $$createType3 = services$0.BatteryStatus.createFrom;
-const $$createType4 = $models.Contributor.createFrom;
-const $$createType5 = $Create.Array($$createType4);
-const $$createType6 = $models.MonitorInfo.createFrom;
-const $$createType7 = $models.DisplayLayout.createFrom;
-const $$createType8 = services$0.WirelessStatus.createFrom;
-const $$createType9 = $models.ThemeInfo.createFrom;
-const $$createType10 = $Create.Nullable($$createType9);
-const $$createType11 = $models.NoteFileInfo.createFrom;
-const $$createType12 = $Create.Array($$createType11);
-const $$createType13 = $Create.Array($$createType9);
+const $$createType0 = $models.ShelfFileItem.createFrom;
+const $$createType1 = $models.UpdateCheckResult.createFrom;
+const $$createType2 = $Create.Nullable($$createType1);
+const $$createType3 = $models.AppInfo.createFrom;
+const $$createType4 = services$0.BatteryStatus.createFrom;
+const $$createType5 = $models.Contributor.createFrom;
+const $$createType6 = $Create.Array($$createType5);
+const $$createType7 = $models.MonitorInfo.createFrom;
+const $$createType8 = $models.DisplayLayout.createFrom;
+const $$createType9 = services$0.WirelessStatus.createFrom;
+const $$createType10 = $models.ThemeInfo.createFrom;
+const $$createType11 = $Create.Nullable($$createType10);
+const $$createType12 = $Create.Array($$createType0);
+const $$createType13 = $models.NoteFileInfo.createFrom;
+const $$createType14 = $Create.Array($$createType13);
+const $$createType15 = $Create.Array($$createType10);

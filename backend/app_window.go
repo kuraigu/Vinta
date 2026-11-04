@@ -47,6 +47,8 @@ var (
 	procSetForegroundWindow      = user32.NewProc("SetForegroundWindow")
 	procWindowFromPoint          = user32.NewProc("WindowFromPoint")
 	procEnumChildWindows         = user32.NewProc("EnumChildWindows")
+	procGetAsyncKeyState         = user32.NewProc("GetAsyncKeyState")
+	procSetLayeredWindowAttrs    = user32.NewProc("SetLayeredWindowAttributes")
 
 	shell32                          = syscall.NewLazyDLL("shell32.dll")
 	procSHQueryUserNotificationState = shell32.NewProc("SHQueryUserNotificationState")
@@ -537,13 +539,30 @@ func hasExclusiveDisplayOwnership() bool {
 	return res != 0
 }
 
-// isSnippingTool checks whether the window belongs to Windows Snipping Tool, ScreenClippingHost, or related overlays.
+// isSnippingTool checks whether the window belongs to Windows Snipping Tool, ScreenClippingHost,
+// or native context menus that must render above Vinta.
 func isSnippingTool(hwnd uintptr) bool {
 	if hwnd == 0 {
 		return false
 	}
 
 	checkHwnd := func(h uintptr) bool {
+		var classBuf [256]uint16
+		_, _, _ = procGetClassName.Call(h, uintptr(unsafe.Pointer(&classBuf[0])), 256)
+		className := syscall.UTF16ToString(classBuf[:])
+
+		// Native Win32 context menu (#32768) or screen clipping surface
+		if className == "#32768" ||
+			className == "ScreenClippingWindow" || strings.Contains(className, "ScreenClipping") {
+			return true
+		}
+
+		gwlStyle := int32(GWL_STYLE)
+		gwlExStyle := int32(GWL_EXSTYLE)
+		style, _, _ := procGetWindowLong.Call(h, uintptr(gwlStyle))
+		exStyle, _, _ := procGetWindowLong.Call(h, uintptr(gwlExStyle))
+		isTopmostOrPopup := (exStyle&WS_EX_TOPMOST) != 0 || (uint32(style)&WS_POPUP) != 0 || (uint32(style)&WS_CAPTION) == 0
+
 		var pid uint32
 		_, _, _ = procGetWindowThreadProcessID.Call(h, uintptr(unsafe.Pointer(&pid)))
 		if pid != 0 {
@@ -563,27 +582,30 @@ func isSnippingTool(hwnd uintptr) bool {
 				if res != 0 {
 					exePath := syscall.UTF16ToString(buf[:size])
 					baseName := strings.ToLower(filepath.Base(exePath))
-					if baseName == "screenclippinghost.exe" || baseName == "snippingtool.exe" ||
-						baseName == "screensketch.exe" || baseName == "snippingtoolapp.exe" {
+					if baseName == "screenclippinghost.exe" || baseName == "screensketch.exe" || baseName == "snippingtoolapp.exe" {
+						return true
+					}
+					if baseName == "snippingtool.exe" && isTopmostOrPopup {
+						return true
+					}
+					// Windows 11 XAML context menus and popups hosted by Explorer or Shell
+					if (baseName == "explorer.exe" || baseName == "shellexperiencehost.exe") &&
+						(className == "Xaml_WindowedPopupClass" || className == "Microsoft.UI.Content.PopupWindowSiteBridge") &&
+						(exStyle&WS_EX_TOPMOST) != 0 {
 						return true
 					}
 				}
 			}
 		}
 
-		var titleBuf [256]uint16
-		_, _, _ = procGetWindowTextW.Call(h, uintptr(unsafe.Pointer(&titleBuf[0])), 256)
-		title := strings.ToLower(syscall.UTF16ToString(titleBuf[:]))
-		if strings.Contains(title, "snipping tool") || strings.Contains(title, "screen snipping") ||
-			strings.Contains(title, "snip & sketch") || strings.Contains(title, "screen clipping") {
-			return true
-		}
-
-		var classBuf [256]uint16
-		_, _, _ = procGetClassName.Call(h, uintptr(unsafe.Pointer(&classBuf[0])), 256)
-		className := syscall.UTF16ToString(classBuf[:])
-		if className == "ScreenClippingWindow" || strings.Contains(className, "ScreenClipping") {
-			return true
+		if isTopmostOrPopup {
+			var titleBuf [256]uint16
+			_, _, _ = procGetWindowTextW.Call(h, uintptr(unsafe.Pointer(&titleBuf[0])), 256)
+			title := strings.ToLower(syscall.UTF16ToString(titleBuf[:]))
+			if strings.Contains(title, "snipping tool") || strings.Contains(title, "screen snipping") ||
+				strings.Contains(title, "snip & sketch") || strings.Contains(title, "screen clipping") {
+				return true
+			}
 		}
 
 		return false
@@ -718,8 +740,9 @@ func getEnumSnipCallback() uintptr {
 			}
 
 			if isScreenClippingHost(h) || isSnippingTool(h) {
+				// Record the match and keep enumerating so enumSnipTargetHwnd holds the lowest Z-order overlay
+				// (e.g. ensuring Vinta is placed behind both the Snipping Tool canvas and its floating control bar).
 				enumSnipTargetHwnd = h
-				return 0
 			}
 			return 1
 		})
@@ -786,16 +809,20 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 	}
 
 	findActiveSnippingWindow := func(curFg uintptr) uintptr {
-		if curFg != 0 && isSnippingTool(curFg) {
-			return curFg
-		}
-
 		enumSnipMu.Lock()
-		defer enumSnipMu.Unlock()
 		enumSnipTargetHwnd = 0
 		cb := getEnumSnipCallback()
 		_, _, _ = procEnumWindows.Call(cb, 0)
-		return enumSnipTargetHwnd
+		found := enumSnipTargetHwnd
+		enumSnipMu.Unlock()
+
+		if found != 0 {
+			return found
+		}
+		if curFg != 0 && isSnippingTool(curFg) {
+			return curFg
+		}
+		return 0
 	}
 
 	var (
@@ -804,6 +831,15 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 	)
 
 	reassertTopmost := func(curFg uintptr) {
+		if a.IsOutboundDragging() {
+			return
+		}
+		// While the left mouse button is held down (such as during an OS drag-and-drop operation),
+		// avoid calling SetWindowPos so OLE drag image windows stay above Vinta without cross-process deadlocks.
+		if lmbState, _, _ := procGetAsyncKeyState.Call(0x01); (lmbState & 0x8000) != 0 {
+			return
+		}
+
 		snipHwnd := findActiveSnippingWindow(curFg)
 		if snipHwnd != 0 {
 			// Subordinate Vinta immediately behind Snipping Tool window so its top toolbar controls stay visible and interactive
@@ -811,7 +847,7 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 				vintaHwnd,
 				snipHwnd,
 				0, 0, 0, 0,
-				0x0001|0x0002|0x0010|0x0400, // SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE | SWP_NOSENDCHANGING
+				0x0001|0x0002|0x0010|0x0400|0x4000, // SWP_NOSIZE | SWP_NOMOVE | SWP_NOACTIVATE | SWP_NOSENDCHANGING | SWP_ASYNCWINDOWPOS
 			)
 			return
 		}
@@ -833,7 +869,11 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 	}
 
 	evaluateForegroundState := func() {
-		if !services.IsFrontendReady() {
+		if !services.IsFrontendReady() || a.IsOutboundDragging() {
+			return
+		}
+		// Skip foreground window evaluation while the left mouse button is held down (such as during an active drag-and-drop).
+		if lmbState, _, _ := procGetAsyncKeyState.Call(0x01); (lmbState & 0x8000) != 0 {
 			return
 		}
 		curFg, _, _ := procGetForegroundWindow.Call()

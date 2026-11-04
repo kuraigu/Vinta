@@ -432,6 +432,59 @@ export class SatelliteBounds {
 }
 
 /**
+ * ShelfFileItem represents a local file or folder staged in the Vinta File Holding Shelf.
+ */
+export class ShelfFileItem {
+    "path": string;
+    "name": string;
+    "size": number;
+    "extension": string;
+    "isDir": boolean;
+    "category": string;
+    "previewData"?: string;
+    "modifiedTime": number;
+    "addedAt": number;
+
+    /** Creates a new ShelfFileItem instance. */
+    constructor($$source: Partial<ShelfFileItem> = {}) {
+        if (!("path" in $$source)) {
+            this["path"] = "";
+        }
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("size" in $$source)) {
+            this["size"] = 0;
+        }
+        if (!("extension" in $$source)) {
+            this["extension"] = "";
+        }
+        if (!("isDir" in $$source)) {
+            this["isDir"] = false;
+        }
+        if (!("category" in $$source)) {
+            this["category"] = "";
+        }
+        if (!("modifiedTime" in $$source)) {
+            this["modifiedTime"] = 0;
+        }
+        if (!("addedAt" in $$source)) {
+            this["addedAt"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ShelfFileItem instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ShelfFileItem {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ShelfFileItem($$parsedSource as Partial<ShelfFileItem>);
+    }
+}
+
+/**
  * ThemeInfo encapsulates manifest data and filesystem origin for frontend consumers.
  */
 export class ThemeInfo {

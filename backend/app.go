@@ -63,6 +63,7 @@ type App struct {
 	pillHitRects             []pillHitBounds
 	isForceInteractive       bool
 	isCurrentlyInteractive   bool
+	isOutboundDragging       bool
 	initialShowOnce          sync.Once
 	themeService             *ThemeService
 }
@@ -158,6 +159,7 @@ func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 			style, _, _ := procGetWindowLong.Call(hwnd, uintptr(gwl))
 			style = (style | WS_EX_TOOLWINDOW | WS_EX_TOPMOST | WS_EX_NOACTIVATE | WS_EX_LAYERED | WS_EX_TRANSPARENT) &^ WS_EX_APPWINDOW
 			_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwl), style)
+			_, _, _ = procSetLayeredWindowAttrs.Call(hwnd, 0, 255, 2)
 
 			_, _, _ = procSetWindowRgn.Call(hwnd, 0, 0)
 
@@ -237,6 +239,15 @@ func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 		win.OnWindowEvent(events.Common.WindowClosing, func(_ *application.WindowEvent) {
 			services.SetFrontendReady(false)
 			services.StopServicesListener()
+		})
+		win.OnWindowEvent(events.Common.WindowFilesDropped, func(event *application.WindowEvent) {
+			if event == nil || event.Context() == nil || a.IsOutboundDragging() {
+				return
+			}
+			dropped := event.Context().DroppedFiles()
+			if len(dropped) > 0 && wailsApp != nil {
+				wailsApp.Event.Emit("vinta-files-dropped", dropped)
+			}
 		})
 
 		go func() {
