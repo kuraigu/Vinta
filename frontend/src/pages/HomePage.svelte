@@ -19,6 +19,7 @@
   import SystemStats from '../components/SystemStats.svelte'
   import NotificationGlance from '../components/NotificationGlance.svelte'
   import UpdateGlanceCard from '../components/UpdateGlanceCard.svelte'
+  import SpotlightCarousel from '../components/SpotlightCarousel.svelte'
   import ScrollView from '../components/ScrollView.svelte'
   import CalendarPage, { config as calendarConfig } from './CalendarPage.svelte'
   import SettingsPage, { config as settingsConfig } from './SettingsPage.svelte'
@@ -377,6 +378,13 @@
           <!-- Update Glance Banner (Issue #161) -->
           {#if $updateInfoStore?.updateAvailable && !isUpdateSnoozed}
             <UpdateGlanceCard onClick={openUpdatesTab} />
+          {/if}
+
+          <!-- Spotlight Promotional Carousel (Issue #201) -->
+          {#if $homeWidgetsVisibilityStore.spotlight !== false}
+            <section class="spotlight-card-feed">
+              <SpotlightCarousel />
+            </section>
           {/if}
 
           <!-- Notification Glance Card (High priority alerts right after updates) -->
