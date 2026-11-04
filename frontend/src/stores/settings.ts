@@ -20,6 +20,11 @@ export type HiddenPillPosition = 'center' | 'top-left' | 'top-right'
 export type TimeFormatOption = '12h' | '24h'
 export type { DateFormatOption } from '../utils/dateFormatter'
 import type { DateFormatOption } from '../utils/dateFormatter'
+import {
+  inferDefaultTemperatureUnit,
+  inferDefaultTimeFormat,
+  inferDefaultDateFormat
+} from '../utils/localeInference'
 
 export type IslandConfig = {
   minimal: { w: number; h: number; r: number }
@@ -504,16 +509,16 @@ export const reminderSoundPresetStore = persistentWritable<AlarmSoundPreset>('vi
 // ============================================================================
 // 4. Time, Date & Localization
 // ============================================================================
-export const timeFormatStore = persistentWritable<TimeFormatOption>('vinta_time_format', '12h')
+export const timeFormatStore = persistentWritable<TimeFormatOption>('vinta_time_format', inferDefaultTimeFormat())
 export const timezoneStore = persistentWritable<string>('vinta_timezone', getInitialTimezone())
-export const dateFormatStore = persistentWritable<DateFormatOption>('vinta_date_format', 'short')
+export const dateFormatStore = persistentWritable<DateFormatOption>('vinta_date_format', inferDefaultDateFormat())
 export const autoDiscardPastEventsStore = persistentWritable<boolean>('vinta_auto_discard_past_events', false)
 
 // ============================================================================
 // 5. Weather
 // ============================================================================
 export const weatherLocationStore = persistentWritable<WeatherLocation>('vinta_weather_location', { name: 'Manila, Philippines', lat: 14.5995, lon: 120.9842 })
-export const weatherUnitStore = persistentWritable<TemperatureUnit>('vinta_weather_unit', 'celsius')
+export const weatherUnitStore = persistentWritable<TemperatureUnit>('vinta_weather_unit', inferDefaultTemperatureUnit())
 
 // ============================================================================
 // 6. Home & Page Visibility
