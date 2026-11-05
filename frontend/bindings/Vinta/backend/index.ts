@@ -11,6 +11,8 @@ export {
 };
 
 export {
+    AnnouncementItem,
+    AnnouncementsPayload,
     AppInfo,
     Contributor,
     DisplayLayout,

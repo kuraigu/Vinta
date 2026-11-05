@@ -58,6 +58,7 @@ export interface HomeWidgetsVisibility {
   actionCenter: boolean
   systemStats?: boolean
   spotlight?: boolean
+  announcements?: boolean
 }
 
 export const defaultHomeWidgetsVisibility: HomeWidgetsVisibility = {
@@ -68,7 +69,8 @@ export const defaultHomeWidgetsVisibility: HomeWidgetsVisibility = {
   wireless: true,
   actionCenter: true,
   systemStats: false,
-  spotlight: true
+  spotlight: true,
+  announcements: true
 }
 
 export interface PageVisibility {
@@ -624,27 +626,32 @@ export function calculateHomeExpandedHeight(
     totalHeight += GAP + 72
   }
 
-  // 4. Notification glance card (only renders if unread notifications exist)
+  // 4. Announcements & Release Notes glance card
+  if (visibility.announcements !== false) {
+    totalHeight += GAP + 68
+  }
+
+  // 5. Notification glance card (only renders if unread notifications exist)
   if (hasNotification) {
     totalHeight += GAP + 78
   }
 
-  // 5. Calendar glance agenda
+  // 6. Calendar glance agenda
   if (visibility.calendar) {
     totalHeight += GAP + 82
   }
 
-  // 6. Quick Controls / Action Center glance
+  // 7. Quick Controls / Action Center glance
   if (visibility.actionCenter) {
     totalHeight += GAP + 96
   }
 
-  // 7. System Stats glance card
+  // 8. System Stats glance card
   if (visibility.systemStats) {
     totalHeight += GAP + 128
   }
 
-  // 8. Studio Branding Footer ("Vinta by FreeMatrix Studios & Contributors")
+  // 9. Studio Branding Footer ("Vinta by FreeMatrix Studios & Contributors")
   totalHeight += GAP + 24
 
   // 7. Bottom clearance for feed padding & island corner curvature

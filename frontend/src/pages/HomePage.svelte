@@ -20,9 +20,13 @@
   import NotificationGlance from '../components/NotificationGlance.svelte'
   import UpdateGlanceCard from '../components/UpdateGlanceCard.svelte'
   import SpotlightCarousel from '../components/SpotlightCarousel.svelte'
+  import AnnouncementGlance from '../components/AnnouncementGlance.svelte'
   import ScrollView from '../components/ScrollView.svelte'
   import CalendarPage, { config as calendarConfig } from './CalendarPage.svelte'
   import SettingsPage, { config as settingsConfig } from './SettingsPage.svelte'
+  import AnnouncementsPage, {
+    config as announcementsConfig
+  } from './AnnouncementsPage.svelte'
   import {
     homeWidgetsVisibilityStore,
     homeMeasuredHeightStore,
@@ -90,6 +94,15 @@
     if (navigate) {
       $activeSettingsTabStore = 'updates'
       navigate(SettingsPage, settingsConfig, true)
+    }
+  }
+
+  /**
+   * Navigates directly to the dedicated Announcements & Release Notes page.
+   */
+  function openAnnouncementsPage() {
+    if (navigate) {
+      navigate(AnnouncementsPage, announcementsConfig, true)
     }
   }
 
@@ -384,6 +397,13 @@
           {#if $homeWidgetsVisibilityStore.spotlight !== false}
             <section class="spotlight-card-feed">
               <SpotlightCarousel />
+            </section>
+          {/if}
+
+          <!-- Developer Announcements & Release Notes Glance (Issue #159) -->
+          {#if $homeWidgetsVisibilityStore.announcements !== false}
+            <section class="announcements-card-feed">
+              <AnnouncementGlance onClick={openAnnouncementsPage} />
             </section>
           {/if}
 

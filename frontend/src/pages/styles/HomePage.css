@@ -138,12 +138,14 @@
 }
 
 /* Notification Glance Card Feed */
-.notification-card-feed {
+.notification-card-feed,
+.announcements-card-feed {
   width: 100%;
   box-sizing: border-box;
 }
 
-.notification-card-feed:empty {
+.notification-card-feed:empty,
+.announcements-card-feed:empty {
   display: none;
 }
 

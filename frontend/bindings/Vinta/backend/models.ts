@@ -6,6 +6,90 @@
 import { Create as $Create } from "@wailsio/runtime";
 
 /**
+ * AnnouncementItem represents a developer announcement or major release highlight.
+ */
+export class AnnouncementItem {
+    "id": string;
+    "title": string;
+    "body": string;
+    "url": string;
+    "publishedAt": string;
+    "authorName": string;
+    "authorAvatar": string;
+    "isUnread": boolean;
+
+    /** Creates a new AnnouncementItem instance. */
+    constructor($$source: Partial<AnnouncementItem> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("title" in $$source)) {
+            this["title"] = "";
+        }
+        if (!("body" in $$source)) {
+            this["body"] = "";
+        }
+        if (!("url" in $$source)) {
+            this["url"] = "";
+        }
+        if (!("publishedAt" in $$source)) {
+            this["publishedAt"] = "";
+        }
+        if (!("authorName" in $$source)) {
+            this["authorName"] = "";
+        }
+        if (!("authorAvatar" in $$source)) {
+            this["authorAvatar"] = "";
+        }
+        if (!("isUnread" in $$source)) {
+            this["isUnread"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new AnnouncementItem instance from a string or object.
+     */
+    static createFrom($$source: any = {}): AnnouncementItem {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new AnnouncementItem($$parsedSource as Partial<AnnouncementItem>);
+    }
+}
+
+/**
+ * AnnouncementsPayload encapsulates fetched announcements and unread state.
+ */
+export class AnnouncementsPayload {
+    "items": AnnouncementItem[];
+    "hasUnread": boolean;
+
+    /** Creates a new AnnouncementsPayload instance. */
+    constructor($$source: Partial<AnnouncementsPayload> = {}) {
+        if (!("items" in $$source)) {
+            this["items"] = [];
+        }
+        if (!("hasUnread" in $$source)) {
+            this["hasUnread"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new AnnouncementsPayload instance from a string or object.
+     */
+    static createFrom($$source: any = {}): AnnouncementsPayload {
+        const $$createField0_0 = $$createType1;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("items" in $$parsedSource) {
+            $$parsedSource["items"] = $$createField0_0($$parsedSource["items"]);
+        }
+        return new AnnouncementsPayload($$parsedSource as Partial<AnnouncementsPayload>);
+    }
+}
+
+/**
  * AppInfo represents structured application build, authenticity, and runtime metadata.
  */
 export class AppInfo {
@@ -152,8 +236,8 @@ export class DisplayLayout {
      * Creates a new DisplayLayout instance from a string or object.
      */
     static createFrom($$source: any = {}): DisplayLayout {
-        const $$createField5_0 = $$createType0;
-        const $$createField6_0 = $$createType1;
+        const $$createField5_0 = $$createType2;
+        const $$createField6_0 = $$createType3;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("currentMonitor" in $$parsedSource) {
             $$parsedSource["currentMonitor"] = $$createField5_0($$parsedSource["currentMonitor"]);
@@ -511,7 +595,7 @@ export class ThemeInfo {
      * Creates a new ThemeInfo instance from a string or object.
      */
     static createFrom($$source: any = {}): ThemeInfo {
-        const $$createField0_0 = $$createType2;
+        const $$createField0_0 = $$createType4;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("manifest" in $$parsedSource) {
             $$parsedSource["manifest"] = $$createField0_0($$parsedSource["manifest"]);
@@ -626,7 +710,7 @@ export class UpdateCheckResult {
      * Creates a new UpdateCheckResult instance from a string or object.
      */
     static createFrom($$source: any = {}): UpdateCheckResult {
-        const $$createField4_0 = $$createType3;
+        const $$createField4_0 = $$createType5;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("release" in $$parsedSource) {
             $$parsedSource["release"] = $$createField4_0($$parsedSource["release"]);
@@ -679,7 +763,7 @@ export class VintaThemeManifest {
      * Creates a new VintaThemeManifest instance from a string or object.
      */
     static createFrom($$source: any = {}): VintaThemeManifest {
-        const $$createField10_0 = $$createType4;
+        const $$createField10_0 = $$createType6;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("meta" in $$parsedSource) {
             $$parsedSource["meta"] = $$createField10_0($$parsedSource["meta"]);
@@ -689,8 +773,10 @@ export class VintaThemeManifest {
 }
 
 // Private type creation functions
-const $$createType0 = MonitorInfo.createFrom;
+const $$createType0 = AnnouncementItem.createFrom;
 const $$createType1 = $Create.Array($$createType0);
-const $$createType2 = VintaThemeManifest.createFrom;
-const $$createType3 = ReleaseInfo.createFrom;
-const $$createType4 = $Create.Map($Create.Any, $Create.Any);
+const $$createType2 = MonitorInfo.createFrom;
+const $$createType3 = $Create.Array($$createType2);
+const $$createType4 = VintaThemeManifest.createFrom;
+const $$createType5 = ReleaseInfo.createFrom;
+const $$createType6 = $Create.Map($Create.Any, $Create.Any);
