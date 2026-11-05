@@ -163,8 +163,18 @@ function isDeepEqual(a: unknown, b: unknown): boolean {
 /**
  * Flushes active user overrides to the disk settings.json file.
  */
-function syncSettingsToDisk() {
+export function syncSettingsToDisk(immediate: boolean = false) {
   if (saveSettingsTimeout) clearTimeout(saveSettingsTimeout)
+  if (immediate) {
+    try {
+      if (typeof SaveSettings === 'function') {
+        SaveSettings(JSON.stringify(userOverridesCache)).catch(() => {})
+      }
+    } catch {
+      // Ignore disk write failure
+    }
+    return
+  }
   saveSettingsTimeout = setTimeout(() => {
     try {
       if (typeof SaveSettings === 'function') {
@@ -237,14 +247,15 @@ function persistentWritable<T>(key: string, initialValue: T) {
         // Ignore storage write error
       }
 
+      if (!isDeepEqual(value, initialValue)) {
+        userOverridesCache[key] = value
+      } else {
+        delete userOverridesCache[key]
+      }
+      userOverridesCache['_sparse_migrated'] = true
+      userOverridesCache['_schema_version'] = CURRENT_SETTINGS_SCHEMA_VERSION
+
       if (isInitialDiskLoadComplete) {
-        if (!isDeepEqual(value, initialValue)) {
-          userOverridesCache[key] = value
-        } else {
-          delete userOverridesCache[key]
-        }
-        userOverridesCache['_sparse_migrated'] = true
-        userOverridesCache['_schema_version'] = CURRENT_SETTINGS_SCHEMA_VERSION
         syncSettingsToDisk()
       }
     }
@@ -548,6 +559,7 @@ export const autoCheckUpdatesStore = persistentWritable<boolean>('autoCheckUpdat
 export type UpdateChannel = 'stable' | 'prerelease' | 'testing'
 export const updateChannelStore = persistentWritable<UpdateChannel>('vinta_update_channel', 'stable')
 export const customUpdateRepoStore = persistentWritable<string>('vinta_custom_update_repo', '')
+export const hasCompletedOnboardingStore = persistentWritable<boolean>('vinta_has_completed_onboarding', false)
 
 // ============================================================================
 // Helpers

@@ -9,6 +9,7 @@
     variant?: '' | 'danger' | 'warning' | 'success'
     shape?: 'rounded' | 'circle'
     active?: boolean
+    disabled?: boolean
     badge?: number
     useCustomTooltip?: boolean
     children: Snippet
@@ -21,6 +22,7 @@
     variant = '',
     shape = 'rounded',
     active = false,
+    disabled = false,
     badge = undefined,
     useCustomTooltip = true,
     children
@@ -46,13 +48,14 @@
 <button
   class="dock-btn {variant} shape-{shape}"
   class:active
+  {disabled}
   onclick={(e) => {
     e.stopPropagation()
-    if (onclick) onclick(e)
+    if (!disabled && onclick) onclick(e)
   }}
-  use:islandTooltip={tooltipOpts}
-  title={!useCustomTooltip ? tooltip : undefined}
-  aria-label={tooltip}
+  use:islandTooltip={disabled ? { text: '' } : tooltipOpts}
+  title={!useCustomTooltip && !disabled ? tooltip : undefined}
+  aria-label={disabled ? undefined : tooltip}
 >
   {@render children()}
   {#if badge !== undefined && badge > 0}
@@ -85,6 +88,14 @@
 
   .dock-btn.shape-circle {
     border-radius: 50%;
+  }
+
+  .dock-btn:disabled {
+    opacity: 0.28;
+    cursor: not-allowed;
+    pointer-events: none;
+    transform: none !important;
+    filter: none !important;
   }
 
   .dock-btn:hover {

@@ -146,7 +146,7 @@ tasks:
     desc: Launch pre-built binary directly without rebuilding
     cmds:
       - cmd.exe /c "taskkill /IM Vinta.exe /F /T >nul 2>&1 || exit 0"
-      - cmd.exe /c "if defined FRONTEND_DEVSERVER_URL (build\bin\Vinta.exe) else (powershell.exe -NoProfile -Command \"Start-Process 'build/bin/Vinta.exe'\")"
+      - powershell.exe -NoProfile -Command "if (Test-Path env:FRONTEND_DEVSERVER_URL) { & build/bin/Vinta.exe } else { Start-Process build/bin/Vinta.exe }"
 
   run:nobuild:debug:
     desc: Launch pre-built binary directly with debug flags

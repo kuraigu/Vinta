@@ -21,12 +21,16 @@ import FileShelfPage, {
 import PerformancePage, {
   config as performanceConfig
 } from '../pages/PerformancePage.svelte'
+import OnboardingPage, {
+  config as onboardingConfig
+} from '../pages/OnboardingPage.svelte'
 import {
   globalMediaStore,
   pageVisibilityStore,
   activeSettingsTabStore,
   timerAppStore,
   isAnyTimerRunning,
+  hasCompletedOnboardingStore,
   type IslandConfig
 } from '../store'
 import { get } from 'svelte/store'
@@ -41,6 +45,10 @@ export function getFallbackPage(): {
   page: unknown
   config: IslandConfig
 } {
+  if (!get(hasCompletedOnboardingStore)) {
+    return { page: OnboardingPage, config: onboardingConfig }
+  }
+
   const timerState = get(timerAppStore)
   const isTimerEnabled = get(pageVisibilityStore).timer !== false
   if (isAnyTimerRunning(timerState) && isTimerEnabled) {
@@ -136,6 +144,9 @@ export const AppControls = {
       e.stopPropagation()
       e.preventDefault()
     }
+    if (!get(hasCompletedOnboardingStore)) {
+      return
+    }
     if (currentPage === MediaPage) {
       navigate(MediaPage, mediaConfig, false)
       return
@@ -169,6 +180,9 @@ export const AppControls = {
     if (e) {
       e.stopPropagation()
       e.preventDefault()
+    }
+    if (!get(hasCompletedOnboardingStore)) {
+      return
     }
     hidePill()
   },

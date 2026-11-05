@@ -48,7 +48,8 @@ import {
   type BatteryData,
   type WirelessData,
   hiddenPillOffsetXStore,
-  displayLayoutStore
+  displayLayoutStore,
+  hasCompletedOnboardingStore
 } from '../store'
 import type { MonitorInfo } from '../../bindings/Vinta/backend/models.js'
 import { sendVintaNotification } from './vintaNotification.js'
@@ -338,7 +339,8 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
       !prevIsPlaying &&
       !callbacks.getIsExpanded() &&
       callbacks.getActivePage() === HomePage &&
-      get(pageVisibilityStore).media
+      get(pageVisibilityStore).media &&
+      get(hasCompletedOnboardingStore)
     ) {
       callbacks.navigateTo(MediaPage, mediaConfig, false)
     } else if (!isPlaying && prevIsPlaying) {
@@ -440,7 +442,8 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
         get(notifAutoWakeStore) &&
         isNotifEnabled &&
         !isExpanded &&
-        !mediaIsActive
+        !mediaIsActive &&
+        get(hasCompletedOnboardingStore)
       ) {
         callbacks.onNotificationWake?.()
         callbacks.showWidget()
