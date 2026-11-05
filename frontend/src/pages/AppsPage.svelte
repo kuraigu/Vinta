@@ -26,7 +26,9 @@
     Calendar as CalendarIcon,
     CloudSun,
     FolderDown,
-    Activity
+    Activity,
+    Megaphone,
+    ScrollText
   } from 'lucide-svelte'
   import SearchInput from '../components/SearchInput.svelte'
   import HomePage, { config as homeConfig } from './HomePage.svelte'
@@ -51,6 +53,12 @@
   import PerformancePage, {
     config as performanceConfig
   } from './PerformancePage.svelte'
+  import AnnouncementsPage, {
+    config as announcementsConfig
+  } from './AnnouncementsPage.svelte'
+  import ReleaseNotesPage, {
+    config as releaseNotesConfig
+  } from './ReleaseNotesPage.svelte'
   import ScrollView from '../components/ScrollView.svelte'
   import { islandTooltip } from '../services/islandTooltip'
   import {
@@ -99,6 +107,20 @@
         activeSettingsTabStore.set('about')
         openApp(SettingsPage, settingsConfig)
       }
+    },
+    {
+      id: 'announcements',
+      name: 'Announcements',
+      desc: 'Developer updates',
+      icon: Megaphone,
+      action: () => openApp(AnnouncementsPage, announcementsConfig)
+    },
+    {
+      id: 'releasenotes',
+      name: 'Release Notes',
+      desc: "What's new in Vinta",
+      icon: ScrollText,
+      action: () => openApp(ReleaseNotesPage, releaseNotesConfig)
     },
     {
       id: 'actioncenter',

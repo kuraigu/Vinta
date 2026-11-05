@@ -57,6 +57,8 @@ export interface HomeWidgetsVisibility {
   wireless: boolean
   actionCenter: boolean
   systemStats?: boolean
+  spotlight?: boolean
+  announcements?: boolean
 }
 
 export const defaultHomeWidgetsVisibility: HomeWidgetsVisibility = {
@@ -66,7 +68,9 @@ export const defaultHomeWidgetsVisibility: HomeWidgetsVisibility = {
   battery: true,
   wireless: true,
   actionCenter: true,
-  systemStats: false
+  systemStats: false,
+  spotlight: true,
+  announcements: true
 }
 
 export interface PageVisibility {
@@ -159,8 +163,18 @@ function isDeepEqual(a: unknown, b: unknown): boolean {
 /**
  * Flushes active user overrides to the disk settings.json file.
  */
-function syncSettingsToDisk() {
+export function syncSettingsToDisk(immediate: boolean = false) {
   if (saveSettingsTimeout) clearTimeout(saveSettingsTimeout)
+  if (immediate) {
+    try {
+      if (typeof SaveSettings === 'function') {
+        SaveSettings(JSON.stringify(userOverridesCache)).catch(() => {})
+      }
+    } catch {
+      // Ignore disk write failure
+    }
+    return
+  }
   saveSettingsTimeout = setTimeout(() => {
     try {
       if (typeof SaveSettings === 'function') {
@@ -233,14 +247,15 @@ function persistentWritable<T>(key: string, initialValue: T) {
         // Ignore storage write error
       }
 
+      if (!isDeepEqual(value, initialValue)) {
+        userOverridesCache[key] = value
+      } else {
+        delete userOverridesCache[key]
+      }
+      userOverridesCache['_sparse_migrated'] = true
+      userOverridesCache['_schema_version'] = CURRENT_SETTINGS_SCHEMA_VERSION
+
       if (isInitialDiskLoadComplete) {
-        if (!isDeepEqual(value, initialValue)) {
-          userOverridesCache[key] = value
-        } else {
-          delete userOverridesCache[key]
-        }
-        userOverridesCache['_sparse_migrated'] = true
-        userOverridesCache['_schema_version'] = CURRENT_SETTINGS_SCHEMA_VERSION
         syncSettingsToDisk()
       }
     }
@@ -544,6 +559,7 @@ export const autoCheckUpdatesStore = persistentWritable<boolean>('autoCheckUpdat
 export type UpdateChannel = 'stable' | 'prerelease' | 'testing'
 export const updateChannelStore = persistentWritable<UpdateChannel>('vinta_update_channel', 'stable')
 export const customUpdateRepoStore = persistentWritable<string>('vinta_custom_update_repo', '')
+export const hasCompletedOnboardingStore = persistentWritable<boolean>('vinta_has_completed_onboarding', false)
 
 // ============================================================================
 // Helpers
@@ -617,27 +633,37 @@ export function calculateHomeExpandedHeight(
     totalHeight += GAP + 54
   }
 
-  // 3. Notification glance card (only renders if unread notifications exist)
+  // 3. Spotlight carousel banner
+  if (visibility.spotlight !== false) {
+    totalHeight += GAP + 72
+  }
+
+  // 4. Announcements & Release Notes glance card
+  if (visibility.announcements !== false) {
+    totalHeight += GAP + 68
+  }
+
+  // 5. Notification glance card (only renders if unread notifications exist)
   if (hasNotification) {
     totalHeight += GAP + 78
   }
 
-  // 4. Calendar glance agenda
+  // 6. Calendar glance agenda
   if (visibility.calendar) {
     totalHeight += GAP + 82
   }
 
-  // 5. Quick Controls / Action Center glance
+  // 7. Quick Controls / Action Center glance
   if (visibility.actionCenter) {
     totalHeight += GAP + 96
   }
 
-  // 6. System Stats glance card
+  // 8. System Stats glance card
   if (visibility.systemStats) {
     totalHeight += GAP + 128
   }
 
-  // 7. Studio Branding Footer ("Vinta by FreeMatrix Studios & Contributors")
+  // 9. Studio Branding Footer ("Vinta by FreeMatrix Studios & Contributors")
   totalHeight += GAP + 24
 
   // 7. Bottom clearance for feed padding & island corner curvature

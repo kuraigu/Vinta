@@ -1,0 +1,94 @@
+<script module lang="ts">
+  import type { IslandConfig } from '../store'
+
+  export const config: IslandConfig = {
+    minimal: { w: 320, h: 36, r: 18 },
+    expanded: { w: 440, h: 480, r: 28, minH: 320, maxH: 640 },
+    borderColor: 'var(--vinta-border)',
+    glowColor: 'transparent'
+  }
+</script>
+
+<script lang="ts">
+  import { onMount, getContext } from 'svelte'
+  import { ScrollText, ArrowUpRight } from 'lucide-svelte'
+  import BackButton from '../components/BackButton.svelte'
+  import BentoCard from '../components/BentoCard.svelte'
+  import ScrollView from '../components/ScrollView.svelte'
+  import MarkdownViewer from '../components/MarkdownViewer.svelte'
+  import { getReleaseNotes } from '../services/announcementsService'
+  import { appInfoStore } from '../store'
+  import HomePage, { config as homeConfig } from './HomePage.svelte'
+
+  let releaseNotes = $state('')
+  let isLoading = $state(true)
+
+  const navigate =
+    getContext<
+      (page: unknown, pageConfig: IslandConfig, expand?: boolean) => void
+    >('navigate')
+
+  function handleBack() {
+    if (typeof navigate === 'function') {
+      navigate(HomePage, homeConfig, true)
+    }
+  }
+
+  async function loadNotes() {
+    isLoading = true
+    const version = $appInfoStore?.version || '0.1.0'
+    releaseNotes = await getReleaseNotes(version)
+    isLoading = false
+  }
+
+  onMount(() => {
+    void loadNotes()
+  })
+</script>
+
+<div data-vinta="release-notes-page" class="release-notes-page-layout">
+  <header class="release-notes-header">
+    <div class="header-left">
+      <BackButton onback={handleBack} title="Back to Home" />
+      <div class="header-titles">
+        <h2 class="header-main-title">Release Notes</h2>
+        <span class="header-subtitle">What's new in Vinta</span>
+      </div>
+    </div>
+
+    <div class="version-tag-pill">
+      <ScrollText size={12} />
+      <span>v{$appInfoStore?.version || '0.1.0'}</span>
+    </div>
+  </header>
+
+  <div class="release-notes-body-wrap">
+    <ScrollView class="release-notes-scroll-view">
+      {#if isLoading}
+        <div class="notes-loading-state">
+          <span>Loading release notes...</span>
+        </div>
+      {:else}
+        <div class="notes-container">
+          <BentoCard variant="bento" class="release-notes-card">
+            <MarkdownViewer content={releaseNotes} />
+
+            {#if $appInfoStore?.repoUrl}
+              <a
+                href="{$appInfoStore.repoUrl}/releases"
+                target="_blank"
+                rel="noreferrer"
+                class="view-all-releases-link"
+              >
+                <span>View all releases on GitHub</span>
+                <ArrowUpRight size={12} />
+              </a>
+            {/if}
+          </BentoCard>
+        </div>
+      {/if}
+    </ScrollView>
+  </div>
+</div>
+
+<style src="./styles/ReleaseNotesPage.css"></style>

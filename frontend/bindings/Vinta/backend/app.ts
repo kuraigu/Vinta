@@ -241,11 +241,20 @@ export function GetCurrentMonitor(): $CancellablePromise<$models.MonitorInfo> {
 }
 
 /**
+ * GetDeveloperAnnouncements fetches official developer announcements with hash-based unread detection.
+ */
+export function GetDeveloperAnnouncements(): $CancellablePromise<$models.AnnouncementsPayload> {
+    return $Call.ByID(3040284799).then(($result: any) => {
+        return $$createType12($result);
+    });
+}
+
+/**
  * GetDisplayLayout returns multi-monitor geometry and composite virtual desktop layout.
  */
 export function GetDisplayLayout(): $CancellablePromise<$models.DisplayLayout> {
     return $Call.ByID(2439750779).then(($result: any) => {
-        return $$createType12($result);
+        return $$createType13($result);
     });
 }
 
@@ -278,6 +287,13 @@ export function GetNotifications(): $CancellablePromise<string> {
 }
 
 /**
+ * GetReleaseNotes retrieves release changelog markdown, prioritizing local disk cache.
+ */
+export function GetReleaseNotes(version: string): $CancellablePromise<string> {
+    return $Call.ByID(1769364479, version);
+}
+
+/**
  * GetSettings reads settings.json from %APPDATA%/FreeMatrix Studios/Vinta.
  */
 export function GetSettings(): $CancellablePromise<string> {
@@ -285,11 +301,20 @@ export function GetSettings(): $CancellablePromise<string> {
 }
 
 /**
+ * GetSystemDiagnostics gathers non-sensitive runtime diagnostics.
+ */
+export function GetSystemDiagnostics(): $CancellablePromise<$models.SystemDiagnostics> {
+    return $Call.ByID(306280716).then(($result: any) => {
+        return $$createType14($result);
+    });
+}
+
+/**
  * GetSystemTelemetry retrieves instantaneous CPU, RAM, and GPU hardware metrics.
  */
 export function GetSystemTelemetry(): $CancellablePromise<services$0.SystemTelemetry> {
     return $Call.ByID(3760642775).then(($result: any) => {
-        return $$createType13($result);
+        return $$createType15($result);
     });
 }
 
@@ -319,7 +344,7 @@ export function GetUpdateRepo(): $CancellablePromise<string> {
  */
 export function GetWirelessStatus(): $CancellablePromise<services$0.WirelessStatus> {
     return $Call.ByID(794979391).then(($result: any) => {
-        return $$createType14($result);
+        return $$createType16($result);
     });
 }
 
@@ -342,7 +367,7 @@ export function ImportSettingsFileDialog(): $CancellablePromise<string> {
  */
 export function ImportThemeDialog(): $CancellablePromise<$models.ThemeInfo | null> {
     return $Call.ByID(1943468227).then(($result: any) => {
-        return $$createType16($result);
+        return $$createType18($result);
     });
 }
 
@@ -351,7 +376,7 @@ export function ImportThemeDialog(): $CancellablePromise<$models.ThemeInfo | nul
  */
 export function InspectShelfFiles(paths: string[]): $CancellablePromise<$models.ShelfFileItem[]> {
     return $Call.ByID(4271776190, paths).then(($result: any) => {
-        return $$createType17($result);
+        return $$createType19($result);
     });
 }
 
@@ -381,7 +406,7 @@ export function IsTestMode(): $CancellablePromise<boolean> {
  */
 export function ListNotes(): $CancellablePromise<$models.NoteFileInfo[]> {
     return $Call.ByID(2184398716).then(($result: any) => {
-        return $$createType19($result);
+        return $$createType21($result);
     });
 }
 
@@ -390,8 +415,22 @@ export function ListNotes(): $CancellablePromise<$models.NoteFileInfo[]> {
  */
 export function ListThemes(): $CancellablePromise<$models.ThemeInfo[]> {
     return $Call.ByID(44849841).then(($result: any) => {
-        return $$createType20($result);
+        return $$createType22($result);
     });
+}
+
+/**
+ * MarkAnnouncementsRead clears the unread announcement state by recording the active hash.
+ */
+export function MarkAnnouncementsRead(): $CancellablePromise<void> {
+    return $Call.ByID(3467242654);
+}
+
+/**
+ * OpenFeedbackIssue launches the default browser with pre-filled sanitized system diagnostics.
+ */
+export function OpenFeedbackIssue(): $CancellablePromise<void> {
+    return $Call.ByID(3114944467);
 }
 
 /**
@@ -434,7 +473,7 @@ export function PauseUpdateDownload(): $CancellablePromise<void> {
  */
 export function PromptChooseShelfFiles(): $CancellablePromise<$models.ShelfFileItem[]> {
     return $Call.ByID(2406650291).then(($result: any) => {
-        return $$createType17($result);
+        return $$createType19($result);
     });
 }
 
@@ -846,7 +885,7 @@ export function StopSystemTelemetry(): $CancellablePromise<boolean> {
  */
 export function StripShelfImageMetadata(paths: string[]): $CancellablePromise<$models.ShelfFileItem[]> {
     return $Call.ByID(4085277947, paths).then(($result: any) => {
-        return $$createType17($result);
+        return $$createType19($result);
     });
 }
 
@@ -898,12 +937,14 @@ const $$createType8 = services$0.BatteryStatus.createFrom;
 const $$createType9 = $models.Contributor.createFrom;
 const $$createType10 = $Create.Array($$createType9);
 const $$createType11 = $models.MonitorInfo.createFrom;
-const $$createType12 = $models.DisplayLayout.createFrom;
-const $$createType13 = services$0.SystemTelemetry.createFrom;
-const $$createType14 = services$0.WirelessStatus.createFrom;
-const $$createType15 = $models.ThemeInfo.createFrom;
-const $$createType16 = $Create.Nullable($$createType15);
-const $$createType17 = $Create.Array($$createType0);
-const $$createType18 = $models.NoteFileInfo.createFrom;
-const $$createType19 = $Create.Array($$createType18);
-const $$createType20 = $Create.Array($$createType15);
+const $$createType12 = $models.AnnouncementsPayload.createFrom;
+const $$createType13 = $models.DisplayLayout.createFrom;
+const $$createType14 = $models.SystemDiagnostics.createFrom;
+const $$createType15 = services$0.SystemTelemetry.createFrom;
+const $$createType16 = services$0.WirelessStatus.createFrom;
+const $$createType17 = $models.ThemeInfo.createFrom;
+const $$createType18 = $Create.Nullable($$createType17);
+const $$createType19 = $Create.Array($$createType0);
+const $$createType20 = $models.NoteFileInfo.createFrom;
+const $$createType21 = $Create.Array($$createType20);
+const $$createType22 = $Create.Array($$createType17);

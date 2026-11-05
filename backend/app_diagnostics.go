@@ -1,0 +1,101 @@
+// Package backend provides diagnostic gathering and issue reporting for Vinta.
+package backend
+
+import (
+	"fmt"
+	"net/url"
+	"runtime"
+	"strings"
+
+	"golang.org/x/sys/windows/registry"
+)
+
+// SystemDiagnostics encapsulates sanitized environment and system metadata.
+type SystemDiagnostics struct {
+	AppVersion     string  `json:"appVersion"`
+	GitCommit      string  `json:"gitCommit"`
+	BuildType      string  `json:"buildType"`
+	OSName         string  `json:"osName"`
+	OSVersion      string  `json:"osVersion"`
+	WindowsBuild   string  `json:"windowsBuild"`
+	Architecture   string  `json:"architecture"`
+	DisplayCount   int     `json:"displayCount"`
+	PrimaryScale   float64 `json:"primaryScale"`
+	WebViewVersion string  `json:"webViewVersion"`
+}
+
+// GetSystemDiagnostics gathers non-sensitive runtime diagnostics.
+func (a *App) GetSystemDiagnostics() SystemDiagnostics {
+	osName := "Windows"
+	osVersion := ""
+	winBuild := ""
+
+	if k, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\Microsoft\Windows NT\CurrentVersion`, registry.QUERY_VALUE); err == nil {
+		if prod, _, err := k.GetStringValue("ProductName"); err == nil && prod != "" {
+			osName = prod
+		}
+		if disp, _, err := k.GetStringValue("DisplayVersion"); err == nil && disp != "" {
+			osVersion = disp
+		}
+		if bld, _, err := k.GetStringValue("CurrentBuild"); err == nil && bld != "" {
+			winBuild = bld
+		} else if bldNum, _, err := k.GetStringValue("CurrentBuildNumber"); err == nil && bldNum != "" {
+			winBuild = bldNum
+		}
+		_ = k.Close()
+	}
+
+	webViewVer := "Unknown"
+	if k, err := registry.OpenKey(registry.LOCAL_MACHINE, `SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}`, registry.QUERY_VALUE); err == nil {
+		if pv, _, err := k.GetStringValue("pv"); err == nil && pv != "" {
+			webViewVer = pv
+		}
+		_ = k.Close()
+	}
+
+	displayCount := 1
+	if count, _, _ := user32.NewProc("GetSystemMetrics").Call(80); count > 0 {
+		displayCount = int(count)
+	}
+
+	primaryScale := a.scale
+	if primaryScale <= 0 {
+		primaryScale = 1.0
+	}
+
+	return SystemDiagnostics{
+		AppVersion:     AppVersion,
+		GitCommit:      GitCommit,
+		BuildType:      BuildType,
+		OSName:         osName,
+		OSVersion:      osVersion,
+		WindowsBuild:   winBuild,
+		Architecture:   runtime.GOARCH,
+		DisplayCount:   displayCount,
+		PrimaryScale:   primaryScale,
+		WebViewVersion: webViewVer,
+	}
+}
+
+// OpenFeedbackIssue launches the default browser with pre-filled sanitized system diagnostics.
+func (a *App) OpenFeedbackIssue() error {
+	diag := a.GetSystemDiagnostics()
+
+	var sb strings.Builder
+	sb.WriteString("### Description\n<!-- Describe the issue or feature request in detail -->\n\n")
+	sb.WriteString("### Environment Diagnostics\n")
+	fmt.Fprintf(&sb, "- **Vinta Version**: %s (`%s`)\n", diag.AppVersion, diag.GitCommit)
+	fmt.Fprintf(&sb, "- **Build Channel**: %s\n", diag.BuildType)
+	fmt.Fprintf(&sb, "- **Operating System**: %s (Build %s, Version %s)\n", diag.OSName, diag.WindowsBuild, diag.OSVersion)
+	fmt.Fprintf(&sb, "- **Architecture**: %s\n", diag.Architecture)
+	fmt.Fprintf(&sb, "- **Displays**: %d screen(s), Primary Scale: %.2fx\n", diag.DisplayCount, diag.PrimaryScale)
+	fmt.Fprintf(&sb, "- **WebView2 Runtime**: %s\n", diag.WebViewVersion)
+
+	issueURL := fmt.Sprintf(
+		"https://github.com/kuraigu/Vinta/issues/new?title=%s&body=%s",
+		url.QueryEscape("[Bug]: "),
+		url.QueryEscape(sb.String()),
+	)
+
+	return a.OpenURL(issueURL)
+}

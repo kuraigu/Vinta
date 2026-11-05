@@ -19,14 +19,37 @@
 .glance-title-group {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.76rem;
-  font-weight: 700;
-  color: var(--vinta-text-primary);
+  gap: 8px;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  cursor: pointer;
+  flex: 1;
+}
+
+.glance-icon-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: var(--vinta-text-secondary);
+  flex-shrink: 0;
+}
+
+.glance-title-text {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--vinta-text-secondary);
+  letter-spacing: -0.01em;
+}
+
+.glance-title-group:hover .glance-title-text {
+  color: var(--vinta-text-primary);
 }
 
 .glance-event-count {
@@ -42,13 +65,40 @@
   flex-shrink: 0;
 }
 
+.glance-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--vinta-text-muted);
+}
+
+:global(.glance-nav-chevron) {
+  opacity: 0.6;
+  flex-shrink: 0;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease,
+    color 0.15s ease;
+}
+
+.glance-nav-btn:hover :global(.glance-nav-chevron),
+.glance-title-group:hover ~ .glance-actions :global(.glance-nav-chevron) {
+  opacity: 1;
+  transform: translateX(2px);
+  color: var(--vinta-text-primary);
+}
+
 .glance-add-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 4px;
-  height: 24px;
-  padding: 0 10px;
+  height: 22px;
+  padding: 0 8px;
   border-radius: var(--vinta-radius-button, 8px);
   background: var(--vinta-accent-muted, rgba(56, 189, 248, 0.14));
   border: none;

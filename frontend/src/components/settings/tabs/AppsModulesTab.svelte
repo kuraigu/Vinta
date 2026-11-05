@@ -13,7 +13,9 @@
     Pin,
     CloudSun,
     FolderDown,
-    Activity
+    Activity,
+    Sparkles,
+    Megaphone
   } from 'lucide-svelte'
   import SettingItem from '../SettingItem.svelte'
   import {
@@ -428,6 +430,28 @@
             type="checkbox"
             checked={Boolean($homeWidgetsVisibilityStore.systemStats)}
             onchange={() => toggleHomeWidget('systemStats')}
+          />
+          <span class="slider"></span>
+        </label>
+      </SettingItem>
+
+      <SettingItem label="Spotlight Carousel" icon={Sparkles}>
+        <label class="toggle-switch">
+          <input
+            type="checkbox"
+            checked={$homeWidgetsVisibilityStore.spotlight !== false}
+            onchange={() => toggleHomeWidget('spotlight')}
+          />
+          <span class="slider"></span>
+        </label>
+      </SettingItem>
+
+      <SettingItem label="Announcements Feed" icon={Megaphone}>
+        <label class="toggle-switch">
+          <input
+            type="checkbox"
+            checked={$homeWidgetsVisibilityStore.announcements !== false}
+            onchange={() => toggleHomeWidget('announcements')}
           />
           <span class="slider"></span>
         </label>

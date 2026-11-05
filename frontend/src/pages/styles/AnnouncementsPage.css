@@ -1,0 +1,238 @@
+/* ============================================================================
+   Developer Announcements Page Stylesheet
+   Token-driven layout matching Vinta Design System
+   ============================================================================ */
+
+[data-vinta='announcements-page'] {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: var(--vinta-dock-clearance, 56px) 16px 12px 16px;
+  gap: 12px;
+  overflow: hidden;
+  text-align: left;
+}
+
+.announcements-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  flex-shrink: 0;
+  padding-bottom: 2px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+}
+
+.header-titles {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  text-align: left;
+}
+
+.header-main-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: var(--vinta-text-primary);
+  text-align: left;
+}
+
+.header-subtitle {
+  font-size: 0.72rem;
+  color: var(--vinta-text-muted);
+  text-align: left;
+}
+
+.mark-all-read-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: var(--vinta-surface-card);
+  border: 1px solid var(--vinta-border);
+  color: var(--vinta-text-secondary);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mark-all-read-btn:hover {
+  background: var(--vinta-surface-elevated);
+  border-color: var(--vinta-contrast-hover);
+  color: var(--vinta-text-primary);
+}
+
+/* Scroll Area */
+.announcements-body-wrap {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+:global(.announcements-scroll-view) {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+}
+
+.announcements-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 2px 0 12px;
+  width: 100%;
+  text-align: left;
+}
+
+:global(.announcement-card-item) {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  padding: 12px 14px !important;
+  text-align: left;
+  align-items: flex-start;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.author-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 8px;
+}
+
+.author-info-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.author-avatar-box {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--vinta-border);
+  flex-shrink: 0;
+}
+
+.author-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.author-avatar-fallback {
+  color: var(--vinta-text-muted);
+}
+
+.author-name {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--vinta-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.post-meta-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.card-item-date {
+  font-size: 0.68rem;
+  color: var(--vinta-text-muted);
+  white-space: nowrap;
+}
+
+.card-unread-pill {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--vinta-accent-primary, #38bdf8);
+  color: #0b1120;
+}
+
+.card-item-title {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--vinta-text-primary);
+  line-height: 1.3;
+  text-align: left;
+  width: 100%;
+}
+
+.card-markdown-wrap {
+  width: 100%;
+  text-align: left;
+}
+
+.card-item-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--vinta-accent-primary, #38bdf8);
+  text-decoration: none;
+  align-self: flex-start;
+  transition: opacity 0.15s ease;
+}
+
+.card-item-link:hover {
+  opacity: 0.8;
+}
+
+/* Empty State */
+.announcements-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 6px;
+  padding: 32px 8px;
+  text-align: left;
+  color: var(--vinta-text-muted);
+}
+
+.empty-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--vinta-text-primary);
+  text-align: left;
+}
+
+.empty-sub {
+  font-size: 0.72rem;
+  max-width: 260px;
+  text-align: left;
+}

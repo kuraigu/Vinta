@@ -115,7 +115,8 @@
    */
   const checkShowPerformanceDynamic = () =>
     Boolean(
-      $pageVisibilityStore.performance !== false && activePage === PerformancePage
+      $pageVisibilityStore.performance !== false &&
+      activePage === PerformancePage
     )
   const showPerformanceDynamic = $derived.by(checkShowPerformanceDynamic)
 

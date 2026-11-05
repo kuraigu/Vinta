@@ -1,6 +1,6 @@
 <script lang="ts">
   import { getContext } from 'svelte'
-  import { CalendarDays, Plus } from 'lucide-svelte'
+  import { CalendarDays, Plus, ChevronRight } from 'lucide-svelte'
   import {
     calendarStore,
     calendarPendingActionStore,
@@ -10,7 +10,6 @@
   import CalendarPage, {
     config as calendarConfig
   } from '../pages/CalendarPage.svelte'
-  import ActionCapsule from './ActionCapsule.svelte'
   import ScrollView from './ScrollView.svelte'
   import BentoCard from './BentoCard.svelte'
   import AgendaEventCard from './AgendaEventCard.svelte'
@@ -67,9 +66,17 @@
 
 <BentoCard variant="bento" class="calendar-glance-card">
   <div class="glance-header">
-    <div class="glance-title-group">
-      <CalendarDays size={13} />
-      <span>{todayDateLabel}</span>
+    <div
+      class="glance-title-group"
+      role="button"
+      tabindex="0"
+      onclick={handleOpenCalendarPage}
+      onkeydown={(e) => e.key === 'Enter' && handleOpenCalendarPage()}
+    >
+      <div class="glance-icon-badge">
+        <CalendarDays size={12} />
+      </div>
+      <span class="glance-title-text">{todayDateLabel}</span>
       {#if todayEvents.length > 0}
         <span class="glance-event-count">
           • {todayEvents.length}
@@ -87,11 +94,14 @@
         <Plus size={12} />
         <span>Add Event</span>
       </button>
-      <ActionCapsule
-        label="Calendar"
+      <button
+        type="button"
+        class="glance-nav-btn"
         onclick={handleOpenCalendarPage}
-        tooltip="Open full Calendar page"
-      />
+        aria-label="Open Calendar"
+      >
+        <ChevronRight size={14} class="glance-nav-chevron" />
+      </button>
     </div>
   </div>
 

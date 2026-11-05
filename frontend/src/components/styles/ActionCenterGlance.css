@@ -8,17 +8,55 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
+  cursor: pointer;
+  user-select: none;
 }
 
 .glance-title-group {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  gap: 8px;
+  min-width: 0;
+}
+
+.glance-icon-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
   color: var(--vinta-text-secondary);
+  flex-shrink: 0;
+}
+
+.glance-title-text {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--vinta-text-secondary);
+  letter-spacing: -0.01em;
+}
+
+.glance-header:hover .glance-title-text {
+  color: var(--vinta-text-primary);
+}
+
+:global(.glance-nav-chevron) {
+  color: var(--vinta-text-muted);
+  opacity: 0.6;
+  flex-shrink: 0;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease,
+    color 0.15s ease;
+}
+
+.glance-header:hover :global(.glance-nav-chevron) {
+  opacity: 1;
+  transform: translateX(2px);
+  color: var(--vinta-text-primary);
 }
 
 .quick-toggle-row {

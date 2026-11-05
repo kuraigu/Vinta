@@ -11,6 +11,8 @@ export {
 };
 
 export {
+    AnnouncementItem,
+    AnnouncementsPayload,
     AppInfo,
     Contributor,
     DisplayLayout,
@@ -20,6 +22,7 @@ export {
     ReleaseInfo,
     SatelliteBounds,
     ShelfFileItem,
+    SystemDiagnostics,
     ThemeInfo,
     TooltipBounds,
     UpdateCheckResult,

@@ -1,10 +1,12 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { ArrowUpRight, ShieldCheck, GitBranch } from 'lucide-svelte'
+  import { ArrowUpRight, ShieldCheck, GitBranch, Bug } from 'lucide-svelte'
   import BentoCard from '../../BentoCard.svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
+  import ReleaseNotesGlance from '../../ReleaseNotesGlance.svelte'
   import appIcon from '@appicon'
+  import { reportFeedback } from '../../../services/feedbackService'
   import {
     GetAppInfo,
     GetContributors
@@ -98,6 +100,10 @@
   }
   let generalContributors = $derived(getGeneralContributors())
 
+  function handleReportFeedback() {
+    reportFeedback().catch(() => {})
+  }
+
   onMount(() => {
     GetAppInfo()
       .then((info) => {
@@ -162,17 +168,15 @@
         <ArrowUpRight size={13} strokeWidth={2} />
         <span>Repository</span>
       </SettingActionButton>
-      <SettingActionButton
-        href={`${appInfo.repoUrl}/releases`}
-        target="_blank"
-        rel="noreferrer"
-        fullWidth={true}
-      >
-        <ArrowUpRight size={13} strokeWidth={2} />
-        <span>Release Notes</span>
+      <SettingActionButton onclick={handleReportFeedback} fullWidth={true}>
+        <Bug size={13} strokeWidth={2} />
+        <span>Report Issue</span>
       </SettingActionButton>
     </div>
   </SettingItem>
+
+  <!-- Release Notes Glance -->
+  <ReleaseNotesGlance />
 
   <!-- Maintainers and Contributors -->
   {#if maintainers.length > 0 || generalContributors.length > 0}

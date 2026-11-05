@@ -202,15 +202,8 @@
     }
     if (expanded) return
 
-    const target = e.target as HTMLElement
-    if (
-      target.closest(
-        'button, input, select, textarea, a, .custom-select, [role="button"]'
-      )
-    ) {
-      return
-    }
     e.preventDefault()
+    e.stopPropagation()
     if (isHidden) {
       onShowWidget?.()
     } else {

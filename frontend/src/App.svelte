@@ -28,6 +28,9 @@
     config as weatherConfig
   } from './pages/WeatherPage.svelte'
   import FileShelfPage from './pages/FileShelfPage.svelte'
+  import OnboardingPage, {
+    config as onboardingConfig
+  } from './pages/OnboardingPage.svelte'
 
   import MainIsland from './components/MainIsland.svelte'
   import ControlsSatellite from './components/ControlsSatellite.svelte'
@@ -69,6 +72,8 @@
     globalMediaStore,
     type IslandConfig,
     homeWidgetsVisibilityStore,
+    hasCompletedOnboardingStore,
+    syncSettingsToDisk,
     homeMeasuredHeightStore,
     calculateHomeMinimalWidth,
     calculateHomeExpandedHeight,
@@ -121,12 +126,36 @@
   const gestures = new IslandGestureController()
 
   // Dynamic Routing
-  let activePage = $state<Component>(HomePage)
-  let islandConfig = $state<IslandConfig>(homeConfig)
+  let activePage = $state<Component>(
+    $hasCompletedOnboardingStore ? HomePage : OnboardingPage
+  )
+  let islandConfig = $state<IslandConfig>(
+    $hasCompletedOnboardingStore ? homeConfig : onboardingConfig
+  )
 
-  let expanded = $state(false)
-  let isDockVisible = $derived(expanded)
+  let expanded = $state(!$hasCompletedOnboardingStore)
+  let isDockVisible = $derived(expanded && activePage !== OnboardingPage)
   let islandTransitionTimeout: number | undefined
+
+  function handleOnboardingSync() {
+    if (!$hasCompletedOnboardingStore) {
+      if (activePage !== OnboardingPage) {
+        activePage = OnboardingPage
+        islandConfig = onboardingConfig
+        expanded = true
+        isPageDormant = false
+        isHidden = false
+      }
+    } else {
+      if (activePage === OnboardingPage) {
+        activePage = HomePage
+        islandConfig = homeConfig
+        expanded = false
+        $activePageIdStore = 'home'
+      }
+    }
+  }
+  $effect(handleOnboardingSync)
 
   let previousExpanded: boolean | undefined = undefined
 
@@ -654,6 +683,23 @@
     pageConfig: IslandConfig,
     expand: boolean = false
   ) {
+    if (page === HomePage && activePage === OnboardingPage) {
+      hasCompletedOnboardingStore.set(true)
+      try {
+        localStorage.setItem(
+          'vinta_has_completed_onboarding',
+          JSON.stringify(true)
+        )
+      } catch {}
+      syncSettingsToDisk(true)
+    } else if (
+      !$hasCompletedOnboardingStore &&
+      page !== OnboardingPage &&
+      page !== HomePage
+    ) {
+      return
+    }
+
     gestures.finishSettling()
     if (!expand && (gestures.isDragging || gestures.isInertia)) {
       finishDragGesture()
@@ -791,7 +837,12 @@
   $effect(handleRingingAlarmNavigation)
 
   function hideWidget() {
-    if (isHidden) return
+    if (
+      isHidden ||
+      !$hasCompletedOnboardingStore ||
+      activePage === OnboardingPage
+    )
+      return
     wasHiddenBeforeNotif = false
     clearHoverGrace()
     clearTimeout(hideTimeout)
@@ -1103,6 +1154,9 @@
     const handleWindowKeydownFailsafe = (e: KeyboardEvent) => {
       if (e.defaultPrevented) return
       if (e.key === 'Escape') {
+        if (!$hasCompletedOnboardingStore || activePage === OnboardingPage) {
+          return
+        }
         if (gestures.isDragging || gestures.isInertia) {
           finishDragGesture()
           return
@@ -1161,6 +1215,9 @@
     }
 
     const handleHotkeyToggle = () => {
+      if (!$hasCompletedOnboardingStore || activePage === OnboardingPage) {
+        return
+      }
       if (expanded && !isHidden) {
         const fallback = getFallbackPage()
         if (activePage !== fallback.page) {
@@ -1176,6 +1233,9 @@
     }
 
     const handleQuickNotesHotkey = () => {
+      if (!$hasCompletedOnboardingStore || activePage === OnboardingPage) {
+        return
+      }
       if (activePage === NotesPage && expanded && !isHidden) {
         const fallback = getFallbackPage()
         navigateTo(fallback.page as Component, fallback.config, false)
@@ -1185,6 +1245,9 @@
     }
 
     const handleModeSwitchHotkey = () => {
+      if (!$hasCompletedOnboardingStore || activePage === OnboardingPage) {
+        return
+      }
       if (isHidden) {
         showWidget()
         return
@@ -1680,7 +1743,10 @@
 
     {#if !isQuitting && !isHidden}
       <NotificationSatellite
-        active={!isQuitting && !isHidden}
+        active={!isQuitting &&
+          !isHidden &&
+          activePage !== OnboardingPage &&
+          $hasCompletedOnboardingStore}
         primaryCenter={displayLayout.primaryCenter}
         {clampedOffsetX}
         monitorLeft={activeMonitor.left}
