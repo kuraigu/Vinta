@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { getContext } from 'svelte'
   import {
     SlidersHorizontal,
     Wifi,
@@ -7,14 +8,19 @@
     BluetoothOff,
     Plane,
     Leaf,
-    Battery
+    Battery,
+    ChevronRight
   } from 'lucide-svelte'
   import {
     wirelessDataStore,
     batteryDataStore,
     type WirelessData,
-    type BatteryData
+    type BatteryData,
+    type IslandConfig
   } from '../store'
+  import ActionCenterPage, {
+    config as actionCenterConfig
+  } from '../pages/ActionCenterPage.svelte'
   import {
     SetWifiEnabled,
     SetBluetoothEnabled,
@@ -25,6 +31,17 @@
   } from '../../bindings/Vinta/backend/app.js'
   import { islandTooltip } from '../services/islandTooltip'
   import BentoCard from './BentoCard.svelte'
+
+  const navigate =
+    getContext<
+      (page: unknown, pageConfig: IslandConfig, expand?: boolean) => void
+    >('navigate')
+
+  function handleOpenActionCenter() {
+    if (typeof navigate === 'function') {
+      navigate(ActionCenterPage, actionCenterConfig, true)
+    }
+  }
 
   let wireless = $derived($wirelessDataStore)
   let battery = $derived($batteryDataStore)
@@ -165,11 +182,20 @@
 </script>
 
 <BentoCard variant="bento" class="action-center-glance-card">
-  <div class="glance-header">
+  <div
+    class="glance-header"
+    role="button"
+    tabindex="0"
+    onclick={handleOpenActionCenter}
+    onkeydown={(e) => e.key === 'Enter' && handleOpenActionCenter()}
+  >
     <div class="glance-title-group">
-      <SlidersHorizontal size={12} />
-      <span>Quick Controls</span>
+      <div class="glance-icon-badge">
+        <SlidersHorizontal size={12} />
+      </div>
+      <span class="glance-title-text">Quick Controls</span>
     </div>
+    <ChevronRight size={14} class="glance-nav-chevron" />
   </div>
 
   <div class="quick-toggle-row">

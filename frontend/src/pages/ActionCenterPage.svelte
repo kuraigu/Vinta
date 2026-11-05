@@ -20,8 +20,9 @@
     Leaf,
     Plug,
     Plane,
-    ArrowUpRight
+    ExternalLink
   } from 'lucide-svelte'
+  import BentoCard from '../components/BentoCard.svelte'
   import BackButton from '../components/BackButton.svelte'
   import { islandTooltip } from '../services/islandTooltip'
   import {
@@ -165,7 +166,7 @@
   <!-- Bento Action Cards Grid -->
   <div class="action-grid">
     <!-- Wi-Fi Card -->
-    <div class="bento-action-card">
+    <BentoCard variant="bento" class="bento-action-card">
       <div class="card-left">
         <div
           class="card-icon-circle"
@@ -200,7 +201,7 @@
           onclick={(e) => openSystemDialog('network', e)}
           aria-label="Open Windows Network Flyout"
         >
-          <ArrowUpRight size={13} />
+          <ExternalLink size={13} />
         </button>
         <label
           class="toggle-switch"
@@ -215,10 +216,10 @@
           <span class="slider"></span>
         </label>
       </div>
-    </div>
+    </BentoCard>
 
     <!-- Bluetooth Card -->
-    <div class="bento-action-card">
+    <BentoCard variant="bento" class="bento-action-card">
       <div class="card-left">
         <div
           class="card-icon-circle"
@@ -262,7 +263,7 @@
           onclick={(e) => openSystemDialog('bluetooth', e)}
           aria-label="Open Windows Bluetooth Settings"
         >
-          <ArrowUpRight size={13} />
+          <ExternalLink size={13} />
         </button>
         <label
           class="toggle-switch"
@@ -280,10 +281,10 @@
           <span class="slider"></span>
         </label>
       </div>
-    </div>
+    </BentoCard>
 
     <!-- Battery & Power Card -->
-    <div class="bento-action-card">
+    <BentoCard variant="bento" class="bento-action-card">
       <div class="card-left">
         <div class="card-icon-circle">
           {#if !battery.hasBattery}
@@ -311,7 +312,7 @@
           onclick={(e) => openSystemDialog('battery', e)}
           aria-label="Open Windows Power Settings"
         >
-          <ArrowUpRight size={13} />
+          <ExternalLink size={13} />
         </button>
         {#if battery.hasBattery}
           <label
@@ -327,10 +328,10 @@
           </label>
         {/if}
       </div>
-    </div>
+    </BentoCard>
 
     <!-- Airplane Mode Card -->
-    <div class="bento-action-card">
+    <BentoCard variant="bento" class="bento-action-card">
       <div class="card-left">
         <div class="card-icon-circle" class:is-off={!wireless.airplaneMode}>
           <Plane size={18} />
@@ -352,7 +353,7 @@
           onclick={(e) => openSystemDialog('airplane', e)}
           aria-label="Open Windows Airplane Mode Settings"
         >
-          <ArrowUpRight size={13} />
+          <ExternalLink size={13} />
         </button>
         <label class="toggle-switch">
           <input
@@ -363,7 +364,7 @@
           <span class="slider"></span>
         </label>
       </div>
-    </div>
+    </BentoCard>
   </div>
 </div>
 

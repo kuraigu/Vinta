@@ -222,7 +222,7 @@
               <img src={item.iconSrc} alt="" loading="lazy" />
             {:else if item.iconComponent}
               {@const Icon = item.iconComponent}
-              <Icon size={18} strokeWidth={2.2} />
+              <Icon size={13} strokeWidth={2.2} />
             {/if}
           </div>
 

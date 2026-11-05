@@ -1,8 +1,7 @@
 <script lang="ts">
   import { onMount, getContext } from 'svelte'
-  import { Megaphone } from 'lucide-svelte'
+  import { Megaphone, ChevronRight } from 'lucide-svelte'
   import BentoCard from './BentoCard.svelte'
-  import ActionCapsule from './ActionCapsule.svelte'
   import {
     getDeveloperAnnouncements,
     type AnnouncementItem
@@ -66,11 +65,7 @@
         {/if}
       </div>
 
-      <ActionCapsule
-        label="View"
-        onclick={handleOpen}
-        tooltip="View developer announcements"
-      />
+      <ChevronRight size={14} class="glance-nav-chevron" />
     </div>
 
     <div class="glance-content-preview">

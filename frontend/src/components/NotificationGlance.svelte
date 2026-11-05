@@ -11,7 +11,6 @@
     requestNativeAppIcon
   } from '../services/iconService'
   import { islandTooltip } from '../services/islandTooltip'
-  import ActionCapsule from './ActionCapsule.svelte'
   import BentoCard from './BentoCard.svelte'
   import appIcon from '@appicon'
 
@@ -146,11 +145,6 @@
       </div>
 
       <div class="glance-actions-group">
-        <ActionCapsule
-          label="View"
-          onclick={openNotifications}
-          tooltip="Open Notification Center"
-        />
         <button
           type="button"
           class="glance-action-btn dismiss"
