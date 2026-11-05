@@ -3,7 +3,7 @@
    Token-driven layout matching Vinta Design System
    ============================================================================ */
 
-[data-vinta="release-notes-page"] {
+[data-vinta='release-notes-page'] {
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -138,4 +138,3 @@
   font-size: 0.82rem;
   color: var(--vinta-text-muted);
 }
-

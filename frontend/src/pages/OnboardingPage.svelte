@@ -14,7 +14,6 @@
   import {
     ChevronRight,
     ChevronLeft,
-    Check,
     MousePointer,
     Move,
     LayoutGrid,
@@ -197,7 +196,8 @@
           <div class="feature-item-text">
             <span class="feature-item-title">Click to expand</span>
             <span class="feature-item-desc">
-              Click the top pill anytime to open widgets, or hover to take a quick peek.
+              Click the top pill anytime to open widgets, or hover to take a
+              quick peek.
             </span>
           </div>
         </div>
@@ -221,7 +221,8 @@
           <div class="feature-item-text">
             <span class="feature-item-title">Glance at what matters</span>
             <span class="feature-item-desc">
-              Check your calendar, weather, music player, and quick controls at a glance.
+              Check your calendar, weather, music player, and quick controls at
+              a glance.
             </span>
           </div>
         </div>
@@ -241,7 +242,11 @@
                 class:primary={$hiddenPillPositionStore === pos}
                 onclick={() => ($hiddenPillPositionStore = pos as any)}
               >
-                {pos === 'top-left' ? 'Left' : pos === 'top-right' ? 'Right' : 'Center'}
+                {pos === 'top-left'
+                  ? 'Left'
+                  : pos === 'top-right'
+                    ? 'Right'
+                    : 'Center'}
               </button>
             {/each}
           </div>
@@ -250,13 +255,16 @@
         <div class="onboarding-row-item">
           <div class="onboarding-row-label">
             <span class="row-label-title">Follow Active Screen</span>
-            <span class="row-label-desc">Move the island to whichever monitor you are working on</span>
+            <span class="row-label-desc"
+              >Move the island to whichever monitor you are working on</span
+            >
           </div>
           <button
             type="button"
             class="onboarding-btn"
             class:primary={$followActiveDisplayStore}
-            onclick={() => ($followActiveDisplayStore = !$followActiveDisplayStore)}
+            onclick={() =>
+              ($followActiveDisplayStore = !$followActiveDisplayStore)}
           >
             {$followActiveDisplayStore ? 'Enabled' : 'Disabled'}
           </button>
@@ -281,7 +289,9 @@
         <div class="onboarding-row-item">
           <div class="onboarding-row-label">
             <span class="row-label-title">Start with Windows</span>
-            <span class="row-label-desc">Launch Vinta automatically on startup</span>
+            <span class="row-label-desc"
+              >Launch Vinta automatically on startup</span
+            >
           </div>
           <button
             type="button"
@@ -297,7 +307,9 @@
         <div class="onboarding-row-item">
           <div class="onboarding-row-label">
             <span class="row-label-title">System Stats</span>
-            <span class="row-label-desc">Show CPU, RAM, and GPU stats in your home feed</span>
+            <span class="row-label-desc"
+              >Show CPU, RAM, and GPU stats in your home feed</span
+            >
           </div>
           <button
             type="button"
@@ -306,7 +318,11 @@
             onclick={handleToggleSystemStats}
           >
             <Activity size={13} />
-            <span>{$homeWidgetsVisibilityStore.systemStats ? 'Enabled' : 'Disabled'}</span>
+            <span
+              >{$homeWidgetsVisibilityStore.systemStats
+                ? 'Enabled'
+                : 'Disabled'}</span
+            >
           </button>
         </div>
       </div>
@@ -319,7 +335,8 @@
           <div class="feature-item-text">
             <span class="feature-item-title">Keyboard shortcut</span>
             <span class="feature-item-desc">
-              Press <strong>Alt+Shift+V</strong> anytime to quickly expand or hide the island.
+              Press <strong>Alt+Shift+V</strong> anytime to quickly expand or hide
+              the island.
             </span>
           </div>
         </div>
@@ -331,7 +348,8 @@
           <div class="feature-item-text">
             <span class="feature-item-title">Control dock satellite</span>
             <span class="feature-item-desc">
-              You can also open quick controls and settings anytime using the floating control dock.
+              You can also open quick controls and settings anytime using the
+              floating control dock.
             </span>
           </div>
         </div>
@@ -342,39 +360,27 @@
   <footer class="onboarding-footer">
     <div class="onboarding-steps-indicator">
       {#each steps as s, idx (s.id)}
-        <span
-          class="step-indicator-dot"
-          class:active={idx === currentStep}
+        <span class="step-indicator-dot" class:active={idx === currentStep}
         ></span>
       {/each}
     </div>
 
     <div class="onboarding-action-buttons">
       {#if currentStep > 0}
-        <button
-          type="button"
-          class="onboarding-btn"
-          onclick={handlePrev}
-        >
+        <button type="button" class="onboarding-btn" onclick={handlePrev}>
           <ChevronLeft size={13} strokeWidth={2.2} />
           <span>Back</span>
         </button>
       {:else}
-        <button
-          type="button"
-          class="onboarding-btn"
-          onclick={handleComplete}
-        >
+        <button type="button" class="onboarding-btn" onclick={handleComplete}>
           <span>Skip</span>
         </button>
       {/if}
 
-      <button
-        type="button"
-        class="onboarding-btn primary"
-        onclick={handleNext}
-      >
-        <span>{currentStep === steps.length - 1 ? 'Get Started' : 'Continue'}</span>
+      <button type="button" class="onboarding-btn primary" onclick={handleNext}>
+        <span
+          >{currentStep === steps.length - 1 ? 'Get Started' : 'Continue'}</span
+        >
         {#if currentStep < steps.length - 1}
           <ChevronRight size={13} strokeWidth={2.2} />
         {/if}
@@ -384,4 +390,3 @@
 </div>
 
 <style src="./styles/OnboardingPage.css"></style>
-

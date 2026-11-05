@@ -72,7 +72,7 @@
   flex-shrink: 0;
 }
 
-.glance-nav-chevron {
+:global(.glance-nav-chevron) {
   color: var(--vinta-text-muted);
   opacity: 0.6;
   flex-shrink: 0;
@@ -82,7 +82,7 @@
     color 0.15s ease;
 }
 
-.announcement-glance-wrap:hover .glance-nav-chevron {
+.announcement-glance-wrap:hover :global(.glance-nav-chevron) {
   opacity: 1;
   transform: translateX(2px);
   color: var(--vinta-text-primary);

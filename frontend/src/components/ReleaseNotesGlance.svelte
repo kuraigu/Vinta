@@ -27,7 +27,12 @@
       const ver = $appInfoStore?.version || '0.1.0'
       const raw = await getReleaseNotes(ver)
       if (raw) {
-        notesSnippet = raw.replace(/[#*`>-]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 110) + '...'
+        notesSnippet =
+          raw
+            .replace(/[#*`>-]+/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .slice(0, 110) + '...'
       }
     } catch {
       // Ignore background fetch error
@@ -57,7 +62,9 @@
           <ScrollText size={12} />
         </div>
         <span class="glance-brand-name">Release Notes</span>
-        <span class="glance-version-pill">v{$appInfoStore?.version || '0.1.0'}</span>
+        <span class="glance-version-pill"
+          >v{$appInfoStore?.version || '0.1.0'}</span
+        >
       </div>
 
       <ActionCapsule
@@ -72,11 +79,11 @@
         What's New in Vinta v{$appInfoStore?.version || '0.1.0'}
       </h4>
       <p class="glance-message">
-        {notesSnippet || 'Discover the latest features, improvements, and fixes in this build.'}
+        {notesSnippet ||
+          'Discover the latest features, improvements, and fixes in this build.'}
       </p>
     </div>
   </BentoCard>
 </div>
 
 <style src="./styles/ReleaseNotesGlance.css"></style>
-

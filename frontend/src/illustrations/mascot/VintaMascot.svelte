@@ -6,11 +6,7 @@
    * Supports dedicated expressive poses for onboarding, guides, and status states.
    */
   export type MascotPose =
-    | 'welcome'
-    | 'position'
-    | 'theme'
-    | 'settings'
-    | 'celebrate'
+    'welcome' | 'position' | 'theme' | 'settings' | 'celebrate'
 
   let {
     pose = 'welcome',
@@ -60,7 +56,13 @@
         <rect x="37" y="49" width="46" height="29" rx="10.5" fill="#09101d" />
       </g>
 
-      <filter id="vintaMascotEyeGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <filter
+        id="vintaMascotEyeGlow"
+        x="-40%"
+        y="-40%"
+        width="180%"
+        height="180%"
+      >
         <feDropShadow
           dx="0"
           dy="0"
@@ -70,7 +72,13 @@
         />
       </filter>
 
-      <filter id="vintaMascotShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <filter
+        id="vintaMascotShadow"
+        x="-20%"
+        y="-20%"
+        width="140%"
+        height="140%"
+      >
         <feDropShadow
           dx="0"
           dy="4"
@@ -85,7 +93,11 @@
       <use href="#vintaMascotChassis" />
 
       {#if pose === 'welcome'}
-        <g class="anim-look-around" filter="url(#vintaMascotEyeGlow)" fill="#facc15">
+        <g
+          class="anim-look-around"
+          filter="url(#vintaMascotEyeGlow)"
+          fill="#facc15"
+        >
           <rect x="43" y="53" width="13" height="13" rx="5.5" />
           <rect x="64" y="53" width="13" height="13" rx="5.5" />
           <path d="M 52 68.5 Q 60 70.5 68 68.5 C 67 75.5 53 75.5 52 68.5 Z" />

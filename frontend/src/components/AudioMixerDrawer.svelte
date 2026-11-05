@@ -154,231 +154,240 @@
   <ScrollView class="mixer-drawer-scroll">
     <div class="mixer-content-area">
       {#if activeTab === 'apps'}
-      <!-- Master Audio Card -->
-      <div class="master-volume-card">
-        <div class="master-label-group">
-          <button
-            class="mini-mute-btn"
-            class:is-muted={masterMuted}
-            onclick={() => void toggleMasterMute()}
-            use:islandTooltip={{ text: masterMuted ? 'Unmute Master' : 'Mute Master' }}
-            aria-label="Toggle Master Mute"
-          >
-            {#if masterMuted}
-              <VolumeX size={13} />
-            {:else if masterVol > 50}
-              <Volume2 size={13} />
-            {:else}
-              <Volume1 size={13} />
-            {/if}
-          </button>
-          <span class="master-title">Master</span>
-        </div>
-
-        <div class="session-slider-cluster">
-          <div class="slider-track-wrap">
-            <div
-              class="slider-track-fill"
-              style="width: {masterMuted ? 0 : masterVol}%;"
-            ></div>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={masterMuted ? 0 : masterVol}
-              class="slider-native-input"
-              oninput={handleMasterVolInput}
-            />
-          </div>
-          <span class="vol-readout-text">{masterMuted ? 0 : Math.round(masterVol)}%</span>
-        </div>
-      </div>
-
-      <!-- App Sessions List -->
-      {#if displaySessions.length === 0}
-        <div class="empty-mixer-state">
-          <span>No active application audio streams</span>
-        </div>
-      {:else}
-        {#each displaySessions as s, idx (s.pid + '-' + (s.processName || s.name) + '-' + idx)}
-          {@const brand = resolveAppBrand(s.processName || s.name)}
-          <div class="app-session-item">
-            <div class="app-icon-wrap">
-              {#if brand.icon}
-                <img
-                  src={brand.icon}
-                  alt={brand.name}
-                  class="app-icon-img"
-                  draggable="false"
-                  decoding="async"
-                />
+        <!-- Master Audio Card -->
+        <div class="master-volume-card">
+          <div class="master-label-group">
+            <button
+              class="mini-mute-btn"
+              class:is-muted={masterMuted}
+              onclick={() => void toggleMasterMute()}
+              use:islandTooltip={{
+                text: masterMuted ? 'Unmute Master' : 'Mute Master'
+              }}
+              aria-label="Toggle Master Mute"
+            >
+              {#if masterMuted}
+                <VolumeX size={13} />
+              {:else if masterVol > 50}
+                <Volume2 size={13} />
               {:else}
-                <Volume2 size={12} class="app-fallback-icon" />
+                <Volume1 size={13} />
               {/if}
-            </div>
-
-            <div class="app-name-wrap">
-              <span class="app-name-text" title={brand.name || s.name}>
-                {brand.name || s.name}
-              </span>
-              <span class="app-proc-text" title={s.processName || s.name}>
-                {s.processName || s.name}
-              </span>
-            </div>
-
-            <!-- Peak Meter Visualizer -->
-            <div class="session-peak-bar">
-              <div
-                class="session-peak-fill"
-                style="height: {s.isMuted ? 0 : Math.min(100, Math.round(s.peak * 100))}%;"
-              ></div>
-            </div>
-
-            <div class="session-slider-cluster">
-              <button
-                class="mini-mute-btn"
-                class:is-muted={s.isMuted}
-                onclick={() => void toggleAppMute(s.pid, s.isMuted)}
-                use:islandTooltip={{ text: s.isMuted ? 'Unmute' : 'Mute' }}
-                aria-label="Toggle App Mute"
-              >
-                {#if s.isMuted}
-                  <VolumeX size={12} />
-                {:else if s.volume > 50}
-                  <Volume2 size={12} />
-                {:else}
-                  <Volume1 size={12} />
-                {/if}
-              </button>
-
-              <div class="slider-track-wrap">
-                <div
-                  class="slider-track-fill"
-                  style="width: {s.isMuted ? 0 : s.volume}%;"
-                ></div>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={s.isMuted ? 0 : s.volume}
-                  class="slider-native-input"
-                  oninput={(e) => handleAppVolInput(s.pid, e)}
-                />
-              </div>
-
-              <span class="vol-readout-text">
-                {s.isMuted ? 0 : Math.round(s.volume)}%
-              </span>
-            </div>
+            </button>
+            <span class="master-title">Master</span>
           </div>
-        {/each}
-      {/if}
-    {:else if activeTab === 'ambience'}
-      <!-- Ambient Focus Soundscapes -->
-      <div class="soundscape-panel">
-        <div class="preset-pill-group">
-          <button
-            class="preset-pill-btn"
-            class:is-active={soundscape.preset === 'brown'}
-            onclick={() => handleSelectPreset('brown')}
-            use:islandTooltip={{ text: 'Deep Brownian rumble for deep concentration' }}
-          >
-            <Waves size={12} />
-            <span>Brown Noise</span>
-          </button>
-
-          <button
-            class="preset-pill-btn"
-            class:is-active={soundscape.preset === 'rain'}
-            onclick={() => handleSelectPreset('rain')}
-            use:islandTooltip={{ text: 'Gentle rainfall for calming focus' }}
-          >
-            <CloudRain size={12} />
-            <span>Gentle Rain</span>
-          </button>
-
-          <button
-            class="preset-pill-btn"
-            class:is-active={soundscape.preset === 'static'}
-            onclick={() => handleSelectPreset('static')}
-            use:islandTooltip={{ text: 'Warm analog tape hiss' }}
-          >
-            <Radio size={12} />
-            <span>Soft Static</span>
-          </button>
-        </div>
-
-        <div class="soundscape-controls-row">
-          <button
-            class="soundscape-play-btn"
-            onclick={toggleSoundscape}
-            use:islandTooltip={{ text: soundscape.isPlaying ? 'Pause Ambience' : 'Play Ambience' }}
-            aria-label="Toggle Ambient Sound"
-          >
-            {#if soundscape.isPlaying}
-              <Pause size={14} />
-            {:else}
-              <Play size={14} style="margin-left: 2px;" />
-            {/if}
-          </button>
 
           <div class="session-slider-cluster">
             <div class="slider-track-wrap">
               <div
                 class="slider-track-fill"
-                style="width: {soundscape.volume}%;"
+                style="width: {masterMuted ? 0 : masterVol}%;"
               ></div>
               <input
                 type="range"
                 min="0"
                 max="100"
-                value={soundscape.volume}
+                value={masterMuted ? 0 : masterVol}
                 class="slider-native-input"
-                oninput={handleSoundscapeVolInput}
+                oninput={handleMasterVolInput}
               />
             </div>
-            <span class="vol-readout-text">{soundscape.volume}%</span>
+            <span class="vol-readout-text"
+              >{masterMuted ? 0 : Math.round(masterVol)}%</span
+            >
           </div>
-
-          {#if soundscape.isDucked}
-            <span class="ducking-indicator-badge">Ducked</span>
-          {/if}
         </div>
-      </div>
-    {:else if activeTab === 'devices'}
-      <!-- Audio Output Devices -->
-      <div class="endpoint-list">
-        {#if endpoints.length === 0}
+
+        <!-- App Sessions List -->
+        {#if displaySessions.length === 0}
           <div class="empty-mixer-state">
-            <span>No playback devices found</span>
+            <span>No active application audio streams</span>
           </div>
         {:else}
-          {#each endpoints as ep (ep.id)}
-            <button
-              class="endpoint-item"
-              class:is-default={ep.isDefault}
-              onclick={() => void switchDefaultEndpoint(ep.id)}
-            >
-              <div class="endpoint-left-meta">
-                <div class="endpoint-icon-wrap">
-                  <Speaker size={13} class="endpoint-icon" />
-                </div>
-                <span class="endpoint-name">{ep.name}</span>
+          {#each displaySessions as s, idx (s.pid + '-' + (s.processName || s.name) + '-' + idx)}
+            {@const brand = resolveAppBrand(s.processName || s.name)}
+            <div class="app-session-item">
+              <div class="app-icon-wrap">
+                {#if brand.icon}
+                  <img
+                    src={brand.icon}
+                    alt={brand.name}
+                    class="app-icon-img"
+                    draggable="false"
+                    decoding="async"
+                  />
+                {:else}
+                  <Volume2 size={12} class="app-fallback-icon" />
+                {/if}
               </div>
-              {#if ep.isDefault}
-                <span class="endpoint-badge">
-                  <Check size={11} class="endpoint-badge-icon" />
-                  <span>Default</span>
+
+              <div class="app-name-wrap">
+                <span class="app-name-text" title={brand.name || s.name}>
+                  {brand.name || s.name}
                 </span>
-              {/if}
-            </button>
+                <span class="app-proc-text" title={s.processName || s.name}>
+                  {s.processName || s.name}
+                </span>
+              </div>
+
+              <!-- Peak Meter Visualizer -->
+              <div class="session-peak-bar">
+                <div
+                  class="session-peak-fill"
+                  style="height: {s.isMuted
+                    ? 0
+                    : Math.min(100, Math.round(s.peak * 100))}%;"
+                ></div>
+              </div>
+
+              <div class="session-slider-cluster">
+                <button
+                  class="mini-mute-btn"
+                  class:is-muted={s.isMuted}
+                  onclick={() => void toggleAppMute(s.pid, s.isMuted)}
+                  use:islandTooltip={{ text: s.isMuted ? 'Unmute' : 'Mute' }}
+                  aria-label="Toggle App Mute"
+                >
+                  {#if s.isMuted}
+                    <VolumeX size={12} />
+                  {:else if s.volume > 50}
+                    <Volume2 size={12} />
+                  {:else}
+                    <Volume1 size={12} />
+                  {/if}
+                </button>
+
+                <div class="slider-track-wrap">
+                  <div
+                    class="slider-track-fill"
+                    style="width: {s.isMuted ? 0 : s.volume}%;"
+                  ></div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    value={s.isMuted ? 0 : s.volume}
+                    class="slider-native-input"
+                    oninput={(e) => handleAppVolInput(s.pid, e)}
+                  />
+                </div>
+
+                <span class="vol-readout-text">
+                  {s.isMuted ? 0 : Math.round(s.volume)}%
+                </span>
+              </div>
+            </div>
           {/each}
         {/if}
-      </div>
-    {/if}
+      {:else if activeTab === 'ambience'}
+        <!-- Ambient Focus Soundscapes -->
+        <div class="soundscape-panel">
+          <div class="preset-pill-group">
+            <button
+              class="preset-pill-btn"
+              class:is-active={soundscape.preset === 'brown'}
+              onclick={() => handleSelectPreset('brown')}
+              use:islandTooltip={{
+                text: 'Deep Brownian rumble for deep concentration'
+              }}
+            >
+              <Waves size={12} />
+              <span>Brown Noise</span>
+            </button>
+
+            <button
+              class="preset-pill-btn"
+              class:is-active={soundscape.preset === 'rain'}
+              onclick={() => handleSelectPreset('rain')}
+              use:islandTooltip={{ text: 'Gentle rainfall for calming focus' }}
+            >
+              <CloudRain size={12} />
+              <span>Gentle Rain</span>
+            </button>
+
+            <button
+              class="preset-pill-btn"
+              class:is-active={soundscape.preset === 'static'}
+              onclick={() => handleSelectPreset('static')}
+              use:islandTooltip={{ text: 'Warm analog tape hiss' }}
+            >
+              <Radio size={12} />
+              <span>Soft Static</span>
+            </button>
+          </div>
+
+          <div class="soundscape-controls-row">
+            <button
+              class="soundscape-play-btn"
+              onclick={toggleSoundscape}
+              use:islandTooltip={{
+                text: soundscape.isPlaying ? 'Pause Ambience' : 'Play Ambience'
+              }}
+              aria-label="Toggle Ambient Sound"
+            >
+              {#if soundscape.isPlaying}
+                <Pause size={14} />
+              {:else}
+                <Play size={14} style="margin-left: 2px;" />
+              {/if}
+            </button>
+
+            <div class="session-slider-cluster">
+              <div class="slider-track-wrap">
+                <div
+                  class="slider-track-fill"
+                  style="width: {soundscape.volume}%;"
+                ></div>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={soundscape.volume}
+                  class="slider-native-input"
+                  oninput={handleSoundscapeVolInput}
+                />
+              </div>
+              <span class="vol-readout-text">{soundscape.volume}%</span>
+            </div>
+
+            {#if soundscape.isDucked}
+              <span class="ducking-indicator-badge">Ducked</span>
+            {/if}
+          </div>
+        </div>
+      {:else if activeTab === 'devices'}
+        <!-- Audio Output Devices -->
+        <div class="endpoint-list">
+          {#if endpoints.length === 0}
+            <div class="empty-mixer-state">
+              <span>No playback devices found</span>
+            </div>
+          {:else}
+            {#each endpoints as ep (ep.id)}
+              <button
+                class="endpoint-item"
+                class:is-default={ep.isDefault}
+                onclick={() => void switchDefaultEndpoint(ep.id)}
+              >
+                <div class="endpoint-left-meta">
+                  <div class="endpoint-icon-wrap">
+                    <Speaker size={13} class="endpoint-icon" />
+                  </div>
+                  <span class="endpoint-name">{ep.name}</span>
+                </div>
+                {#if ep.isDefault}
+                  <span class="endpoint-badge">
+                    <Check size={11} class="endpoint-badge-icon" />
+                    <span>Default</span>
+                  </span>
+                {/if}
+              </button>
+            {/each}
+          {/if}
+        </div>
+      {/if}
     </div>
   </ScrollView>
 </DrawerPanel>
 
 <style src="./styles/AudioMixerDrawer.css"></style>
-

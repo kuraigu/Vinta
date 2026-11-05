@@ -11,12 +11,7 @@
 
 <script lang="ts">
   import { onMount, getContext } from 'svelte'
-  import {
-    Megaphone,
-    CheckCheck,
-    ArrowUpRight,
-    User
-  } from 'lucide-svelte'
+  import { Megaphone, CheckCheck, ArrowUpRight, User } from 'lucide-svelte'
   import BackButton from '../components/BackButton.svelte'
   import BentoCard from '../components/BentoCard.svelte'
   import ScrollView from '../components/ScrollView.svelte'
@@ -70,7 +65,8 @@
       <BackButton onback={handleBack} title="Back to Home" />
       <div class="header-titles">
         <h2 class="header-main-title">Developer Announcements</h2>
-        <span class="header-subtitle">Updates and news from the Vinta team</span>
+        <span class="header-subtitle">Updates and news from the Vinta team</span
+        >
       </div>
     </div>
 
@@ -97,7 +93,9 @@
         <div class="announcements-empty-state">
           <Megaphone size={28} class="empty-icon" />
           <span class="empty-title">No announcements yet</span>
-          <span class="empty-sub">Developer updates will appear here when published.</span>
+          <span class="empty-sub"
+            >Developer updates will appear here when published.</span
+          >
         </div>
       {:else}
         <div class="announcements-list">
@@ -114,11 +112,15 @@
                         onerror={(e) => {
                           const target = e.currentTarget as HTMLImageElement
                           target.style.display = 'none'
-                          const fallback = target.nextElementSibling as HTMLElement
+                          const fallback =
+                            target.nextElementSibling as HTMLElement
                           if (fallback) fallback.style.display = 'flex'
                         }}
                       />
-                      <div class="author-avatar-fallback" style="display: none;">
+                      <div
+                        class="author-avatar-fallback"
+                        style="display: none;"
+                      >
                         <User size={11} />
                       </div>
                     {:else}
@@ -127,7 +129,9 @@
                       </div>
                     {/if}
                   </div>
-                  <span class="author-name">{item.authorName || 'Vinta Team'}</span>
+                  <span class="author-name"
+                    >{item.authorName || 'Vinta Team'}</span
+                  >
                 </div>
 
                 <div class="post-meta-right">

@@ -3,7 +3,7 @@
    Token-driven layout matching Vinta Design System
    ============================================================================ */
 
-[data-vinta="announcements-page"] {
+[data-vinta='announcements-page'] {
   display: flex;
   flex-direction: column;
   width: 100%;

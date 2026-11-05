@@ -31,7 +31,10 @@
     )
 
     // Code Blocks: ```code```
-    text = text.replace(/```([\s\S]*?)```/g, '<pre class="md-code-block"><code>$1</code></pre>')
+    text = text.replace(
+      /```([\s\S]*?)```/g,
+      '<pre class="md-code-block"><code>$1</code></pre>'
+    )
 
     // Inline Code: `code`
     text = text.replace(/`([^`]+)`/g, '<code class="md-inline-code">$1</code>')
@@ -54,7 +57,10 @@
     )
 
     // Unordered Lists: - item or * item
-    text = text.replace(/^\s*[-*]\s+(.*$)/gim, '<li class="md-list-item">$1</li>')
+    text = text.replace(
+      /^\s*[-*]\s+(.*$)/gim,
+      '<li class="md-list-item">$1</li>'
+    )
 
     // Paragraph line breaks (double newline to paragraph gap)
     const paragraphs = text.split(/\n{2,}/)
@@ -90,7 +96,9 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
+<!-- svelte-ignore a11y_click_events_have_key_events -->
 <div class="markdown-viewer-container" onclick={handleContainerClick}>
+  <!-- eslint-disable-next-line svelte/no-at-html-tags -->
   {@html htmlContent}
 </div>
 
@@ -182,4 +190,3 @@
     text-align: left;
   }
 </style>
-

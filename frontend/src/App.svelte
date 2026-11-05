@@ -837,7 +837,12 @@
   $effect(handleRingingAlarmNavigation)
 
   function hideWidget() {
-    if (isHidden || !$hasCompletedOnboardingStore || activePage === OnboardingPage) return
+    if (
+      isHidden ||
+      !$hasCompletedOnboardingStore ||
+      activePage === OnboardingPage
+    )
+      return
     wasHiddenBeforeNotif = false
     clearHoverGrace()
     clearTimeout(hideTimeout)
@@ -1738,7 +1743,10 @@
 
     {#if !isQuitting && !isHidden}
       <NotificationSatellite
-        active={!isQuitting && !isHidden && activePage !== OnboardingPage && $hasCompletedOnboardingStore}
+        active={!isQuitting &&
+          !isHidden &&
+          activePage !== OnboardingPage &&
+          $hasCompletedOnboardingStore}
         primaryCenter={displayLayout.primaryCenter}
         {clampedOffsetX}
         monitorLeft={activeMonitor.left}

@@ -1,11 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import {
-    ArrowUpRight,
-    ShieldCheck,
-    GitBranch,
-    Bug
-  } from 'lucide-svelte'
+  import { ArrowUpRight, ShieldCheck, GitBranch, Bug } from 'lucide-svelte'
   import BentoCard from '../../BentoCard.svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
@@ -173,10 +168,7 @@
         <ArrowUpRight size={13} strokeWidth={2} />
         <span>Repository</span>
       </SettingActionButton>
-      <SettingActionButton
-        onclick={handleReportFeedback}
-        fullWidth={true}
-      >
+      <SettingActionButton onclick={handleReportFeedback} fullWidth={true}>
         <Bug size={13} strokeWidth={2} />
         <span>Report Issue</span>
       </SettingActionButton>
