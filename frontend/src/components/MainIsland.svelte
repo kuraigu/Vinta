@@ -19,6 +19,9 @@
   } from '../store'
   import type { IslandGestureController } from '../services/islandGestures'
   import type { NavFn } from '../utils/navigation'
+  import ContextMenu, { type ContextMenuItem } from './ContextMenu.svelte'
+  import { reportFeedback } from '../services/feedbackService'
+  import { Quit } from '../../bindings/Vinta/backend/app.js'
 
   /**
    * Component properties for MainIsland.
@@ -190,6 +193,38 @@
     )
   }
 
+  let isContextMenuOpen = $state(false)
+  let contextMenuPos = $state({ x: 0, y: 0 })
+
+  function computeContextMenuItems(): ContextMenuItem[] {
+    return [
+      {
+        label: isHidden ? 'Show Island' : 'Hide Island',
+        action: () => (isHidden ? onShowWidget?.() : onHideWidget?.())
+      },
+      {
+        label: 'Report Feedback',
+        action: () => {
+          reportFeedback().catch(() => {})
+        }
+      },
+      {
+        label: 'div-1',
+        divider: true,
+        action: () => {}
+      },
+      {
+        label: 'Quit Vinta',
+        action: () => {
+          if (typeof Quit === 'function') {
+            Quit().catch(() => {})
+          }
+        }
+      }
+    ]
+  }
+  let contextMenuItems = $derived.by(computeContextMenuItems)
+
   function handleContextMenu(e: MouseEvent) {
     if (gestures.isDragging || gestures.isInertia) {
       if (gestures.isInertia) {
@@ -200,7 +235,6 @@
       e.stopPropagation()
       return
     }
-    if (expanded) return
 
     const target = e.target as HTMLElement
     if (
@@ -211,11 +245,9 @@
       return
     }
     e.preventDefault()
-    if (isHidden) {
-      onShowWidget?.()
-    } else {
-      onHideWidget?.()
-    }
+    e.stopPropagation()
+    contextMenuPos = { x: e.clientX, y: e.clientY }
+    isContextMenuOpen = true
   }
 
   function handleIslandClick(e: MouseEvent) {
@@ -489,5 +521,14 @@
     {/key}
   {/if}
 </div>
+
+{#if isContextMenuOpen}
+  <ContextMenu
+    x={contextMenuPos.x}
+    y={contextMenuPos.y}
+    items={contextMenuItems}
+    onclose={() => (isContextMenuOpen = false)}
+  />
+{/if}
 
 <style src="./styles/MainIsland.css"></style>

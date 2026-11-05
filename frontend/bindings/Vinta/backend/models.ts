@@ -569,6 +569,66 @@ export class ShelfFileItem {
 }
 
 /**
+ * SystemDiagnostics encapsulates sanitized environment and system metadata.
+ */
+export class SystemDiagnostics {
+    "appVersion": string;
+    "gitCommit": string;
+    "buildType": string;
+    "osName": string;
+    "osVersion": string;
+    "windowsBuild": string;
+    "architecture": string;
+    "displayCount": number;
+    "primaryScale": number;
+    "webViewVersion": string;
+
+    /** Creates a new SystemDiagnostics instance. */
+    constructor($$source: Partial<SystemDiagnostics> = {}) {
+        if (!("appVersion" in $$source)) {
+            this["appVersion"] = "";
+        }
+        if (!("gitCommit" in $$source)) {
+            this["gitCommit"] = "";
+        }
+        if (!("buildType" in $$source)) {
+            this["buildType"] = "";
+        }
+        if (!("osName" in $$source)) {
+            this["osName"] = "";
+        }
+        if (!("osVersion" in $$source)) {
+            this["osVersion"] = "";
+        }
+        if (!("windowsBuild" in $$source)) {
+            this["windowsBuild"] = "";
+        }
+        if (!("architecture" in $$source)) {
+            this["architecture"] = "";
+        }
+        if (!("displayCount" in $$source)) {
+            this["displayCount"] = 0;
+        }
+        if (!("primaryScale" in $$source)) {
+            this["primaryScale"] = 0;
+        }
+        if (!("webViewVersion" in $$source)) {
+            this["webViewVersion"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SystemDiagnostics instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SystemDiagnostics {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new SystemDiagnostics($$parsedSource as Partial<SystemDiagnostics>);
+    }
+}
+
+/**
  * ThemeInfo encapsulates manifest data and filesystem origin for frontend consumers.
  */
 export class ThemeInfo {

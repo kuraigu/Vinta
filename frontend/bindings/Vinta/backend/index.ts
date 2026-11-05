@@ -22,6 +22,7 @@ export {
     ReleaseInfo,
     SatelliteBounds,
     ShelfFileItem,
+    SystemDiagnostics,
     ThemeInfo,
     TooltipBounds,
     UpdateCheckResult,

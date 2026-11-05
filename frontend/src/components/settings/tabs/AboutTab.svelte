@@ -3,13 +3,15 @@
   import {
     ArrowUpRight,
     ShieldCheck,
-    GitBranch
+    GitBranch,
+    Bug
   } from 'lucide-svelte'
   import BentoCard from '../../BentoCard.svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
   import ReleaseNotesGlance from '../../ReleaseNotesGlance.svelte'
   import appIcon from '@appicon'
+  import { reportFeedback } from '../../../services/feedbackService'
   import {
     GetAppInfo,
     GetContributors
@@ -103,6 +105,10 @@
   }
   let generalContributors = $derived(getGeneralContributors())
 
+  function handleReportFeedback() {
+    reportFeedback().catch(() => {})
+  }
+
   onMount(() => {
     GetAppInfo()
       .then((info) => {
@@ -166,6 +172,13 @@
       >
         <ArrowUpRight size={13} strokeWidth={2} />
         <span>Repository</span>
+      </SettingActionButton>
+      <SettingActionButton
+        onclick={handleReportFeedback}
+        fullWidth={true}
+      >
+        <Bug size={13} strokeWidth={2} />
+        <span>Report Issue</span>
       </SettingActionButton>
     </div>
   </SettingItem>
