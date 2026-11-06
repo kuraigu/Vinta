@@ -1,3 +1,9 @@
+<!--
+  @component MainIsland
+  @description Core dynamic island capsule. Handles expansion and collapse animations,
+  drag-to-reposition mechanics, island auto-hide timers, backdrop blur effects, and
+  switching between the compact glance view and expanded full application pages.
+-->
 <script lang="ts">
   import { getContext, onMount, type Component } from 'svelte'
   import { fade } from 'svelte/transition'

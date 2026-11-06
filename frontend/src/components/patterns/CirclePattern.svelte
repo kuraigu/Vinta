@@ -1,3 +1,7 @@
+<!--
+  @component CirclePattern
+  @description Decorative background SVG grid of concentric circular dots.
+-->
 <script lang="ts">
   interface Props {
     align?: 'center' | 'right' | 'full'

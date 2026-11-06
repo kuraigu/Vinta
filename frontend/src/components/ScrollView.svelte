@@ -1,3 +1,8 @@
+<!--
+  @component ScrollView
+  @description Touch and mouse drag scroll container. Provides smooth momentum scrolling
+  with hidden scrollbars and customizable fade indicators at top and bottom edges.
+-->
 <script lang="ts">
   import { swipe } from '../utils/useSwipe'
   import type { Snippet } from 'svelte'

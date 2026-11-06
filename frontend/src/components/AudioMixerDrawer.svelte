@@ -1,3 +1,8 @@
+<!--
+  @component AudioMixerDrawer
+  @description Slide-out drawer displaying per-application volume sliders and audio output
+  device selectors.
+-->
 <script lang="ts">
   import { onMount } from 'svelte'
   import { SvelteMap } from 'svelte/reactivity'

@@ -1,3 +1,7 @@
+<!--
+  @component CustomTimePicker
+  @description Themed 12-hour or 24-hour time picker with scrollable hour and minute columns.
+-->
 <svelte:options />
 
 <script lang="ts">

@@ -1,3 +1,7 @@
+<!--
+  @component SpotlightCarousel
+  @description Horizontal carousel slider with momentum swipe gestures and dot indicators.
+-->
 <script lang="ts">
   import { onMount, getContext, type ComponentType } from 'svelte'
   import {

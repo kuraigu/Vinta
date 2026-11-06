@@ -1,3 +1,8 @@
+<!--
+  @component ComponentGallery
+  @description Developer preview page displaying all UI primitives, buttons, dropdowns,
+  and widgets in all visual states.
+-->
 <script lang="ts">
   import type { Snippet, Component } from 'svelte'
   import { ChevronLeft, ChevronRight } from 'lucide-svelte'

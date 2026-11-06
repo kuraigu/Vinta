@@ -1,3 +1,7 @@
+<!--
+  @component CapsulePattern
+  @description Decorative background SVG grid of subtle pill shapes used in themed card backgrounds.
+-->
 <script lang="ts">
   interface Props {
     align?: 'center' | 'right' | 'full'

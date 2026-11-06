@@ -1,3 +1,9 @@
+<!--
+  @component App
+  @description Root application container. Initializes theme variables, loads user
+  settings, binds global keyboard shortcuts (Esc to collapse, hotkeys to toggle pages),
+  and coordinates layout between the main island capsule and floating satellite widgets.
+-->
 <script lang="ts">
   import { onMount, setContext, type Component } from 'svelte'
   import {

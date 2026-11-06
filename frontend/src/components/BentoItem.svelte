@@ -1,3 +1,8 @@
+<!--
+  @component BentoItem
+  @description Compact item tile used inside bento cards for list entries, action rows,
+  or detail toggles.
+-->
 <script lang="ts">
   interface Props {
     children?: import('svelte').Snippet

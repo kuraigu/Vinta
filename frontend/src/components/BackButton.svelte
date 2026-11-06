@@ -1,3 +1,7 @@
+<!--
+  @component BackButton
+  @description Standard chevron button for navigating back to the home or previous page.
+-->
 <script lang="ts">
   import { getContext } from 'svelte'
   import { ArrowLeft } from 'lucide-svelte'

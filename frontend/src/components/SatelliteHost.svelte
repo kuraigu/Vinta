@@ -1,3 +1,9 @@
+<!--
+  @component SatelliteHost
+  @description Hit-test wrapper for floating satellite widgets. Observes the bounding
+  rectangle of child elements with a ResizeObserver and sends hit rects to the Go backend
+  so Windows treats the floating pills as clickable without making the empty space between them intercept clicks.
+-->
 <script lang="ts">
   import { onDestroy, type Snippet } from 'svelte'
   import { fly, scale } from 'svelte/transition'

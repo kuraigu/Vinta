@@ -1,3 +1,7 @@
+<!--
+  @component DotIndicator
+  @description Small status dot with optional pulsing glow animation for active states.
+-->
 <script lang="ts">
   interface Props {
     color?: string

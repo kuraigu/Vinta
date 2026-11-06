@@ -1,3 +1,7 @@
+<!--
+  @component DynamicEqualizer
+  @description Animated sound wave visualizer bars that bounce while media is actively playing.
+-->
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
   import { isIslandHiddenStore } from '../store'

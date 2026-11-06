@@ -1,3 +1,8 @@
+<!--
+  @component CustomDatePicker
+  @description Themed month-grid calendar picker for selecting dates without native
+  browser inputs. Supports localized month names, weekday headers, and previous/next navigation.
+-->
 <svelte:options />
 
 <script lang="ts">

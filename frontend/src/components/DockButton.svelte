@@ -1,3 +1,8 @@
+<!--
+  @component DockButton
+  @description Individual launcher icon in the dock. Renders app icons or Lucide SVGs,
+  shows tooltips on hover, and displays badge counts for unread notifications.
+-->
 <script lang="ts">
   import type { Snippet } from 'svelte'
   import { islandTooltip } from '../services/islandTooltip'

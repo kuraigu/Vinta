@@ -1,3 +1,7 @@
+<!--
+  @component FileDropIndicator
+  @description Animated dropzone overlay that appears over the island when dragging files from Explorer.
+-->
 <script lang="ts">
   import { FolderDown } from 'lucide-svelte'
 

@@ -1,3 +1,7 @@
+<!--
+  @component ReleaseNotesGlance
+  @description Preview card highlighting new features after a Vinta version update.
+-->
 <script lang="ts">
   import { onMount, getContext } from 'svelte'
   import { ScrollText } from 'lucide-svelte'

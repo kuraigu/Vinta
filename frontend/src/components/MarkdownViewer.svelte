@@ -1,3 +1,7 @@
+<!--
+  @component MarkdownViewer
+  @description Renders markdown text into styled HTML for release notes, changelogs, and announcements.
+-->
 <script lang="ts">
   import { Browser } from '@wailsio/runtime'
 

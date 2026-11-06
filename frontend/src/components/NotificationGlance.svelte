@@ -1,3 +1,7 @@
+<!--
+  @component NotificationGlance
+  @description Compact notification ticker in the collapsed island showing the latest toast snippet.
+-->
 <script lang="ts">
   import { getContext } from 'svelte'
   import { Bell, X } from 'lucide-svelte'

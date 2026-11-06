@@ -1,3 +1,7 @@
+<!--
+  @component DotPattern
+  @description Decorative background SVG matrix of subtle dot patterns.
+-->
 <script lang="ts">
   interface Props {
     variant?: 'minimal-left' | 'corner-tr' | 'full'

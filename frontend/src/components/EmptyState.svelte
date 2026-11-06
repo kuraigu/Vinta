@@ -1,3 +1,8 @@
+<!--
+  @component EmptyState
+  @description Clean placeholder view with icon, title, description, and optional action button
+  shown when a list or feed has no items.
+-->
 <script lang="ts">
   import type { ComponentType } from 'svelte'
 

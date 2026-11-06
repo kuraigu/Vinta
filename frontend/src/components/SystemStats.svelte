@@ -1,3 +1,7 @@
+<!--
+  @component SystemStats
+  @description Mini telemetry display showing CPU load, RAM utilization, and GPU usage percentages.
+-->
 <script lang="ts">
   import { onMount, getContext } from 'svelte'
   import { Activity } from 'lucide-svelte'

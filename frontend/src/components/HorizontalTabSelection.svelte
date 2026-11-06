@@ -1,3 +1,7 @@
+<!--
+  @component HorizontalTabSelection
+  @description Segmented pill tab switcher with an animated active highlight bar.
+-->
 <svelte:options />
 
 <script module lang="ts">

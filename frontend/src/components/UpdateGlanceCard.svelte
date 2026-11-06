@@ -1,3 +1,7 @@
+<!--
+  @component UpdateGlanceCard
+  @description Prompt card alerting the user when a new Vinta build is ready to install.
+-->
 <script lang="ts">
   import { RefreshCw, Info, ChevronRight } from 'lucide-svelte'
   import {

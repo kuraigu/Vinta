@@ -1,3 +1,8 @@
+<!--
+  @component BentoCard
+  @description Interactive card surface with subtle hover lift, rounded corners, optional
+  header icon/title, and slot content for widgets and controls.
+-->
 <script lang="ts">
   import type { Snippet } from 'svelte'
   import './styles/BentoCard.css'

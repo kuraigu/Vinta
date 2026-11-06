@@ -1,3 +1,8 @@
+<!--
+  @component AgendaEventCard
+  @description Calendar event row showing event title, start and end times, color pill,
+  and relative countdown ('in 15 mins').
+-->
 <script lang="ts">
   import { Pencil, Trash2, MapPin, BellRing } from 'lucide-svelte'
   import DiamondPattern from './patterns/DiamondPattern.svelte'

@@ -1,3 +1,7 @@
+<!--
+  @component CalendarGlance
+  @description Minimized calendar card displaying the upcoming agenda event and its countdown.
+-->
 <script lang="ts">
   import { getContext } from 'svelte'
   import { CalendarDays, Plus, ChevronRight } from 'lucide-svelte'

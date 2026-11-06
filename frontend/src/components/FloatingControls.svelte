@@ -1,3 +1,8 @@
+<!--
+  @component FloatingControls
+  @description Compact satellite toolbar for quick media skip, volume mute, and
+  island expand triggers.
+-->
 <script lang="ts">
   import { getContext } from 'svelte'
   import { EyeOff, Minimize2, Power } from 'lucide-svelte'

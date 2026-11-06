@@ -1,3 +1,8 @@
+<!--
+  @component EditorModal
+  @description Centered modal dialog wrapper with backdrop blur, title bar, action buttons,
+  and Escape key dismissal.
+-->
 <script lang="ts">
   import type { Snippet } from 'svelte'
   import { X } from 'lucide-svelte'
