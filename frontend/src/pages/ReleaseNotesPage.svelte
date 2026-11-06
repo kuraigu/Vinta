@@ -1,3 +1,9 @@
+<!--
+  @fileoverview Changelog and GitHub release notes viewer.
+
+  Fetches version release logs from GitHub, parses markdown formatting, and displays
+  feature highlights, bug fixes, and contributor attributions.
+-->
 <script module lang="ts">
   import type { IslandConfig } from '../store'
 
@@ -28,12 +34,18 @@
       (page: unknown, pageConfig: IslandConfig, expand?: boolean) => void
     >('navigate')
 
+  /**
+   * Navigates island viewport back to previous view or Home feed.
+   */
   function handleBack() {
     if (typeof navigate === 'function') {
       navigate(HomePage, homeConfig, true)
     }
   }
 
+  /**
+   * Fetches latest release notes from the GitHub API and extracts markdown changelog text.
+   */
   async function loadNotes() {
     isLoading = true
     const version = $appInfoStore?.version || '0.1.0'

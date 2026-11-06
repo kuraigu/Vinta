@@ -8,6 +8,12 @@
 </script>
 
 <script lang="ts">
+  /**
+   * @fileoverview Page container hosting the full-page Media Player and Soundscapes view.
+   *
+   * Sets up island sizing and mounts the comprehensive MediaWidget component.
+   */
+
   import MediaWidget from '../components/MediaWidget.svelte'
 
   let { expanded = false }: { expanded?: boolean } = $props()

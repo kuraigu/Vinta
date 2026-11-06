@@ -1,3 +1,9 @@
+<!--
+  @fileoverview Notification history feed and management component.
+
+  Captures Windows toast notifications via the backend service, groups notifications by
+  application or sender, caches sender avatars, and provides inline dismiss controls.
+-->
 <script lang="ts">
   import { flip } from 'svelte/animate'
   import { fly, fade, slide } from 'svelte/transition'
@@ -65,6 +71,11 @@
 
   let expandedIds = new SvelteSet<number>()
 
+  /**
+   * Toggles single notification body expansion to view full message text.
+   *
+   * @param id - Unique notification record identifier.
+   */
   function toggleExpand(id: number) {
     if (expandedIds.has(id)) {
       expandedIds.delete(id)
@@ -75,6 +86,11 @@
 
   let expandedGroups = new SvelteSet<string>()
 
+  /**
+   * Toggles expansion state of a notification group accordion.
+   *
+   * @param groupKey - Group identifier string.
+   */
   function toggleGroupExpand(groupKey: string) {
     if (expandedGroups.has(groupKey)) {
       expandedGroups.delete(groupKey)
@@ -85,6 +101,11 @@
 
   let itemDragOffsets = new SvelteMap<string, number>()
 
+  /**
+   * Dismisses all notifications belonging to a specific application or sender group.
+   *
+   * @param groupKey - Group identifier string.
+   */
   function dismissGroup(groupKey: string) {
     notifData.update((n) =>
       n.filter((x) => {
@@ -371,6 +392,12 @@
     return () => clearInterval(interval)
   })
 
+  /**
+   * Formats notification received timestamp into a human-readable relative time (e.g. "5m ago").
+   *
+   * @param timestamp - Millisecond epoch timestamp.
+   * @returns Relative time label.
+   */
   function getRelativeTime(timestamp?: number): string {
     if (!timestamp) return 'NOW'
     const diffSeconds = Math.max(0, Math.floor((now - timestamp) / 1000))
@@ -390,6 +417,9 @@
   let isConfirmingClear = $state(false)
   let clearConfirmTimeout: number
 
+  /**
+   * Flushes all recorded notifications from persistent storage and resets view.
+   */
   function handleClearAll() {
     if (notifications.length <= 2 || isConfirmingClear) {
       clearTimeout(clearConfirmTimeout)
@@ -404,10 +434,21 @@
     }
   }
 
+  /**
+   * Dismisses a single notification and updates unread badge indicators.
+   *
+   * @param id - Unique notification record identifier.
+   */
   function dismiss(id: number) {
     notifData.update((n) => n.filter((x) => x.id !== id))
   }
 
+  /**
+   * Evaluates whether an icon string points to a valid image URI or path.
+   *
+   * @param url - Image URI or filesystem path string.
+   * @returns True if string represents an image target.
+   */
   function isImageUrl(url: string | undefined): boolean {
     if (!url) return false
     return (
@@ -421,6 +462,12 @@
     )
   }
 
+  /**
+   * Determines whether clicking the notification card can bring the originating application forward.
+   *
+   * @param notif - Notification record.
+   * @returns True if source application can be activated.
+   */
   function canOpenApp(notif: NotificationItem): boolean {
     if (notif.isUpdate) return true
     if (notif.canOpen === false) return false
@@ -432,6 +479,12 @@
     return true
   }
 
+  /**
+   * Resolves application brand name and display icon for a notification card.
+   *
+   * @param notif - Notification item record.
+   * @returns Brand presentation metadata object.
+   */
   function getDisplayBrand(notif: {
     appName?: string
     aumid?: string

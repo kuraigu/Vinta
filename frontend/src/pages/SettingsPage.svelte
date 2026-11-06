@@ -1,3 +1,9 @@
+<!--
+  @fileoverview Primary settings hub hosting specialized preference tabs.
+
+  Renders the responsive settings sidebar navigation and mounts active tab views
+  for appearance, clock, weather, language, system, and modules.
+-->
 <script lang="ts" module>
   import type { IslandConfig } from '../store'
 

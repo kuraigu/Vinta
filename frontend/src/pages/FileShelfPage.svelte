@@ -8,6 +8,13 @@
 </script>
 
 <script lang="ts">
+  /**
+   * @fileoverview Drag and drop file holding shelf.
+   *
+   * Serves as a temporary desktop holding area for files and folders dragged from
+   * Windows Explorer or other apps, supporting batch removal and opening files in shell.
+   */
+
   import { SvelteSet } from 'svelte/reactivity'
   import { Call } from '@wailsio/runtime'
   import {
@@ -53,7 +60,7 @@
   let selectedPaths = new SvelteSet<string>()
 
   /**
-   * Prunes any selected paths that are no longer present in the shelf store.
+   * Synchronizes selected file paths set with the active shelf item list.
    */
   function syncSelectedPaths(): void {
     const valid = new Set($fileShelfStore.items.map((i) => i.path))
@@ -67,7 +74,9 @@
   $effect(syncSelectedPaths)
 
   /**
-   * Returns the active target paths for inline actions and background drags (chosen files if any are selected, otherwise all files).
+   * Extracts target filesystem paths from currently selected shelf tiles.
+   *
+   * @returns Array of absolute file path strings.
    */
   function computeTargetPaths(): string[] {
     if (selectedPaths.size > 0) {
@@ -81,7 +90,9 @@
   let targetPaths = $derived.by(computeTargetPaths)
 
   /**
-   * Checks whether the current target set contains any JPEG or PNG images that support EXIF stripping.
+   * Evaluates whether any selected files are image formats that support metadata stripping.
+   *
+   * @returns True if strippable image files are selected.
    */
   function computeHasStrippableImages(): boolean {
     const targetSet = new Set(targetPaths)
@@ -97,7 +108,9 @@
   let hasStrippableImages = $derived.by(computeHasStrippableImages)
 
   /**
-   * Toggles selection of a single shelf item by path.
+   * Toggles selection state for an individual file tile.
+   *
+   * @param path - Filesystem path of the item.
    */
   function toggleItemSelection(path: string): void {
     if (selectedPaths.has(path)) {
@@ -108,7 +121,7 @@
   }
 
   /**
-   * Toggles between choosing all staged items and clearing the current selection.
+   * Selects all files currently on the shelf, or deselects all if already fully selected.
    */
   function toggleSelectAll(): void {
     if (selectedPaths.size === $fileShelfStore.items.length) {
@@ -121,7 +134,7 @@
   }
 
   /**
-   * Removes currently chosen items from the shelf.
+   * Removes all currently selected items from the shelf.
    */
   function removeSelectedItems(): void {
     if (selectedPaths.size === 0) return
@@ -131,7 +144,9 @@
   }
 
   /**
-   * Tracks file drag enter to display the drop target highlight ring.
+   * Handles drag enter visual indicators over the drop target zone.
+   *
+   * @param e - Drag event.
    */
   function handleDragEnter(e: DragEvent): void {
     if (!e.dataTransfer?.types?.includes('Files')) return
@@ -140,7 +155,9 @@
   }
 
   /**
-   * Maintains drop highlight state while files hover over the shelf.
+   * Handles drag over events, verifying payload type and enabling copy drop effect.
+   *
+   * @param e - Drag event.
    */
   function handleDragOver(e: DragEvent): void {
     if (!e.dataTransfer?.types?.includes('Files')) return
@@ -149,6 +166,8 @@
 
   /**
    * Clears drop highlight state once dragged files leave the shelf region.
+   *
+   * @param e - Drag event.
    */
   function handleDragLeave(e: DragEvent): void {
     if (!e.dataTransfer?.types?.includes('Files')) return
@@ -159,7 +178,7 @@
   }
 
   /**
-   * Resets drop highlight state when files are dropped onto the shelf.
+   * Processes dropped filesystem files, adding new unique paths to the shelf store.
    */
   function handleDrop(): void {
     dragDepth = 0
@@ -167,7 +186,7 @@
   }
 
   /**
-   * Cancels the active drag session both locally in the store and in the native Windows Shell loop.
+   * Resets active drag-and-drop state indicators.
    */
   function cancelActiveDrag(): void {
     fileShelfStore.update((s) => ({
@@ -180,7 +199,9 @@
   }
 
   /**
-   * Handles Escape key to cancel an active drag banner or clear file selections.
+   * Handles keyboard shortcuts on the file shelf (Delete, Ctrl+A).
+   *
+   * @param e - Keyboard event.
    */
   function handleWindowKeyDown(e: KeyboardEvent): void {
     if (e.key === 'Escape') {
@@ -240,10 +261,10 @@
   }
 
   /**
-   * Formats a clean 3-line tooltip for a shelf tile:
-   * Line 1: Filename
-   * Line 2: Date Modified
-   * Line 3: Location (Folder path)
+   * Formats hover tooltip text displaying filename, size, and system path.
+   *
+   * @param item - Shelf file record.
+   * @returns Formatted tooltip text.
    */
   function formatTileTooltip(item: ShelfFileItem): string {
     const filename = item.name || 'Unknown'
@@ -272,7 +293,10 @@
   }
 
   /**
-   * Formats a compact uppercase extension label for a shelf tile.
+   * Derives file extension badge text for tile previews (e.g. "PNG", "PDF").
+   *
+   * @param item - Shelf file record.
+   * @returns Uppercase extension string.
    */
   function formatExtensionBadge(item: ShelfFileItem): string {
     if (item.isDir) return 'DIR'

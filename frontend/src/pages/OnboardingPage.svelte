@@ -1,3 +1,9 @@
+<!--
+  @fileoverview First-run interactive setup and onboarding wizard.
+
+  Guides new users through screen positioning, monitor alignment, theme selection,
+  autostart preferences, and essential keyboard shortcuts.
+-->
 <script module lang="ts">
   import type { IslandConfig } from '../store'
 

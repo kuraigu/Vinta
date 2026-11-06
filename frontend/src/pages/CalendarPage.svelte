@@ -10,6 +10,13 @@
 </script>
 
 <script lang="ts">
+  /**
+   * @fileoverview Page container hosting the full-page Calendar and Agenda interface.
+   *
+   * Configures the expanded island viewport dimensions for calendar operations and mounts
+   * the interactive Calendar component.
+   */
+
   import Calendar from '../components/Calendar.svelte'
 
   let { expanded = false }: { expanded?: boolean } = $props()
