@@ -1,87 +1,124 @@
 <script lang="ts">
+  import { onMount } from 'svelte'
+  import { SvelteSet } from 'svelte/reactivity'
   import { MapPin, Thermometer } from 'lucide-svelte'
   import SettingItem from '../SettingItem.svelte'
   import CustomSelect from '../../CustomSelect.svelte'
   import { weatherLocationStore, weatherUnitStore } from '../../../store'
-  import { searchCities } from '../../../services/weatherService'
+  import { searchCities, formatLocationName } from '../../../services/weatherService'
+  import {
+    GLOBAL_WEATHER_PRESETS,
+    detectAutoWeatherLocation,
+    type WeatherLocationPreset
+  } from '../../../services/weatherPresets'
 
-  const baseWeatherPresets = [
-    { name: 'Auto-detect (System IP)', lat: 14.5995, lon: 120.9842 },
-    { name: 'Manila, Philippines', lat: 14.5995, lon: 120.9842 },
-    { name: 'Quezon City, Philippines', lat: 14.676, lon: 121.0437 },
-    { name: 'Cebu City, Philippines', lat: 10.3157, lon: 123.8854 },
-    { name: 'Davao City, Philippines', lat: 7.1907, lon: 125.4553 },
-    { name: 'Baguio, Philippines', lat: 16.4023, lon: 120.596 },
-    { name: 'Singapore', lat: 1.3521, lon: 103.8198 },
-    { name: 'Bangkok, Thailand', lat: 13.7563, lon: 100.5018 },
-    { name: 'Kuala Lumpur, Malaysia', lat: 3.139, lon: 101.6869 },
-    { name: 'Jakarta, Indonesia', lat: -6.2088, lon: 106.8456 },
-    { name: 'Tokyo, Japan', lat: 35.6762, lon: 139.6503 },
-    { name: 'Seoul, South Korea', lat: 37.5665, lon: 126.978 },
-    { name: 'Beijing, China', lat: 39.9042, lon: 116.4074 },
-    { name: 'Shanghai, China', lat: 31.2304, lon: 121.4737 },
-    { name: 'Hong Kong', lat: 22.3193, lon: 114.1694 },
-    { name: 'New York, United States', lat: 40.7128, lon: -74.006 },
-    { name: 'Los Angeles, United States', lat: 34.0522, lon: -118.2437 },
-    { name: 'London, United Kingdom', lat: 51.5074, lon: -0.1278 },
-    { name: 'Paris, France', lat: 48.8566, lon: 2.3522 },
-    { name: 'Sydney, Australia', lat: -33.8688, lon: 151.2093 }
-  ]
+  const RECENTS_STORAGE_KEY = 'vinta_weather_recents'
 
-  let weatherOptions = $state(
-    baseWeatherPresets.map((p) => ({
-      label: p.name,
-      value: p.name,
-      payload: p
-    }))
-  )
+  let recentLocations = $state<WeatherLocationPreset[]>([])
+
+  onMount(() => {
+    try {
+      const raw = localStorage.getItem(RECENTS_STORAGE_KEY)
+      if (raw) {
+        recentLocations = JSON.parse(raw)
+      }
+    } catch {
+      // Ignore storage errors
+    }
+  })
+
+  function saveRecentLocation(loc: WeatherLocationPreset) {
+    if (loc.name.startsWith('Auto-detect')) return
+    const filtered = recentLocations.filter((item) => item.name !== loc.name)
+    const updated = [loc, ...filtered].slice(0, 5)
+    recentLocations = updated
+    try {
+      localStorage.setItem(RECENTS_STORAGE_KEY, JSON.stringify(updated))
+    } catch {
+      // Ignore storage errors
+    }
+  }
+
+  function buildPresetOptions(): { label: string; value: string; payload: WeatherLocationPreset }[] {
+    const list: { label: string; value: string; payload: WeatherLocationPreset }[] = []
+    const seen = new SvelteSet<string>()
+
+    // 1. Auto-detect first
+    const autoPreset = GLOBAL_WEATHER_PRESETS[0]
+    list.push({
+      label: autoPreset.name,
+      value: autoPreset.name,
+      payload: autoPreset
+    })
+    seen.add(autoPreset.name)
+
+    // 2. User recents (if any)
+    for (const r of recentLocations) {
+      if (!seen.has(r.name)) {
+        list.push({ label: r.name, value: r.name, payload: r })
+        seen.add(r.name)
+      }
+    }
+
+    // 3. Current active location if not already in presets
+    const currentName = $weatherLocationStore.name
+    if (currentName && !seen.has(currentName) && !currentName.startsWith('Auto-detect')) {
+      list.push({
+        label: currentName,
+        value: currentName,
+        payload: {
+          name: currentName,
+          lat: $weatherLocationStore.lat,
+          lon: $weatherLocationStore.lon
+        }
+      })
+      seen.add(currentName)
+    }
+
+    // 4. Global curated presets
+    for (let i = 1; i < GLOBAL_WEATHER_PRESETS.length; i++) {
+      const p = GLOBAL_WEATHER_PRESETS[i]
+      if (!seen.has(p.name)) {
+        list.push({ label: p.name, value: p.name, payload: p })
+        seen.add(p.name)
+      }
+    }
+
+    return list
+  }
+
+  let weatherOptions = $state(buildPresetOptions())
 
   let selectedWeatherCity = $derived($weatherLocationStore.name)
 
-  async function detectIpLocation() {
-    try {
-      const res = await fetch('https://ipapi.co/json/')
-      if (res.ok) {
-        const data = await res.json()
-        if (data.city && data.latitude && data.longitude) {
-          $weatherLocationStore = {
-            name: `${data.city}, ${data.country_name || 'Auto'}`,
-            lat: data.latitude,
-            lon: data.longitude
-          }
-          return
-        }
-      }
-    } catch {
-      // Fallback
-    }
+  async function handleAutoDetect() {
+    const loc = await detectAutoWeatherLocation()
     $weatherLocationStore = {
-      name: 'Manila, Philippines',
-      lat: 14.5995,
-      lon: 120.9842
+      name: loc.name,
+      lat: loc.lat,
+      lon: loc.lon
     }
   }
 
   async function handleWeatherSearch(query: string) {
     if (!query || query.trim().length < 2) {
-      weatherOptions = baseWeatherPresets.map((p) => ({
-        label: p.name,
-        value: p.name,
-        payload: p
-      }))
+      weatherOptions = buildPresetOptions()
       return
     }
 
     const results = await searchCities(query)
     if (results && results.length > 0) {
-      const searchedOpts = results.map((r) => ({
-        label: r.name,
-        value: r.name,
-        payload: { name: r.name, lat: r.latitude, lon: r.longitude }
-      }))
+      const searchedOpts = results.map((r) => {
+        const displayName = formatLocationName(r)
+        return {
+          label: displayName,
+          value: displayName,
+          payload: { name: displayName, lat: r.latitude, lon: r.longitude }
+        }
+      })
 
-      const existingValues = new Set(searchedOpts.map((o) => o.value))
-      const extraPresets = baseWeatherPresets
+      const existingValues = new SvelteSet(searchedOpts.map((o) => o.value))
+      const extraPresets = GLOBAL_WEATHER_PRESETS
         .filter((p) => !existingValues.has(p.name))
         .map((p) => ({
           label: p.name,
@@ -94,12 +131,13 @@
   }
 
   function handleSelectWeatherPayload(payload: unknown) {
-    const p = payload as { name: string; lat: number; lon: number }
+    const p = payload as WeatherLocationPreset
     if (p) {
       if (p.name.startsWith('Auto-detect')) {
-        detectIpLocation()
+        handleAutoDetect()
       } else {
         $weatherLocationStore = { name: p.name, lat: p.lat, lon: p.lon }
+        saveRecentLocation(p)
       }
     }
   }

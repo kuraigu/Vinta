@@ -1,9 +1,17 @@
 <script lang="ts">
   import { slide } from 'svelte/transition'
   import { ChevronDown, Search } from 'lucide-svelte'
+  import FlagIcon from './FlagIcon.svelte'
+
+  export interface SelectOption {
+    value: string
+    label: string
+    flag?: string
+    payload?: unknown
+  }
 
   interface Props {
-    options: { value: string; label: string; payload?: unknown }[]
+    options: SelectOption[]
     value: string
     placeholder?: string
     fullWidth?: boolean
@@ -133,9 +141,8 @@
     )
   }
 
-  let selectedLabel = $derived(
-    options.find((o) => o.value === value)?.label || value || placeholder
-  )
+  let selectedOption = $derived(options.find((o) => o.value === value))
+  let selectedLabel = $derived(selectedOption?.label || value || placeholder)
 
   function portal(node: HTMLElement) {
     document.body.appendChild(node)
@@ -213,7 +220,12 @@
     type="button"
     aria-expanded={isOpen}
   >
-    <span class="label" title={selectedLabel}>{selectedLabel}</span>
+    <div class="trigger-content">
+      {#if selectedOption?.flag}
+        <FlagIcon code={selectedOption.flag} size={14} />
+      {/if}
+      <span class="label" title={selectedLabel}>{selectedLabel}</span>
+    </div>
     <ChevronDown size={14} class="chevron {isOpen ? 'open' : ''}" />
   </button>
 
@@ -261,7 +273,10 @@
             onpointerdown={stopPropagation}
             type="button"
           >
-            {opt.label}
+            {#if opt.flag}
+              <FlagIcon code={opt.flag} size={14} />
+            {/if}
+            <span class="option-label">{opt.label}</span>
           </button>
         {:else}
           <div class="no-options">No results found</div>
@@ -314,6 +329,15 @@
   .custom-select-wrapper:focus-within .select-trigger,
   .select-trigger:hover {
     border-color: var(--vinta-primary);
+  }
+
+  .trigger-content {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    overflow: hidden;
+    flex: 1;
   }
 
   .label {
@@ -403,6 +427,9 @@
   }
 
   .option-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     background: transparent;
     border: none;
     color: var(--vinta-text-secondary);
@@ -417,6 +444,13 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     pointer-events: auto;
+  }
+
+  .option-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
   }
 
   .option-item:hover {

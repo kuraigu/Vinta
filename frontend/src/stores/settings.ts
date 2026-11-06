@@ -304,7 +304,8 @@ const legacyV1Defaults: Record<string, unknown> = {
   vinta_update_channel: 'stable',
   vinta_custom_update_repo: '',
   vinta_ui_scale: 1.0,
-  vinta_auto_discard_past_events: false
+  vinta_auto_discard_past_events: false,
+  vinta_locale: 'en'
 }
 
 type MigrationFn = (settings: Record<string, unknown>) => Record<string, unknown>
@@ -560,6 +561,28 @@ export type UpdateChannel = 'stable' | 'prerelease' | 'testing'
 export const updateChannelStore = persistentWritable<UpdateChannel>('vinta_update_channel', 'stable')
 export const customUpdateRepoStore = persistentWritable<string>('vinta_custom_update_repo', '')
 export const hasCompletedOnboardingStore = persistentWritable<boolean>('vinta_has_completed_onboarding', false)
+/**
+ * Resolves the initial display language by checking host system language preferences.
+ */
+function resolveInitialLocale(): string {
+  if (typeof navigator !== 'undefined') {
+    const list =
+      navigator.languages && navigator.languages.length > 0
+        ? navigator.languages
+        : [navigator.language]
+    for (const lang of list) {
+      if (!lang) continue
+      const lower = lang.toLowerCase()
+      if (lower.startsWith('fil') || lower.startsWith('tl')) return 'fil'
+      if (lower.startsWith('de')) return 'de'
+      if (lower.startsWith('en-gb') || lower.startsWith('en-uk')) return 'en-GB'
+      if (lower.startsWith('en')) return 'en'
+    }
+  }
+  return 'en'
+}
+
+export const localeStore = persistentWritable<string>('vinta_locale', resolveInitialLocale())
 
 // ============================================================================
 // Helpers

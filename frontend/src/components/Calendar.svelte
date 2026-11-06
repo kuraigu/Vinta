@@ -36,7 +36,12 @@
     type TabItem
   } from './HorizontalTabSelection.svelte'
   import AgendaEventCard from './AgendaEventCard.svelte'
-  import { dateFormatStore, formatUserDate, type IslandConfig } from '../store'
+  import {
+    dateFormatStore,
+    formatUserDate,
+    tStore,
+    type IslandConfig
+  } from '../store'
   import { islandTooltip } from '../services/islandTooltip'
 
   let {
@@ -90,11 +95,11 @@
     }
   ]
 
-  const AGENDA_FILTER_TABS: TabItem<'all' | 'today' | 'upcoming'>[] = [
-    { id: 'all', label: 'All', tooltip: 'Show all scheduled events' },
-    { id: 'today', label: 'Today', tooltip: "Show today's events" },
-    { id: 'upcoming', label: 'Upcoming', tooltip: 'Show upcoming events' }
-  ]
+  let agendaFilterTabs: TabItem<'all' | 'today' | 'upcoming'>[] = $derived([
+    { id: 'all', label: $tStore('calendar.filter_all'), tooltip: '' },
+    { id: 'today', label: $tStore('calendar.filter_today'), tooltip: '' },
+    { id: 'upcoming', label: $tStore('calendar.filter_upcoming'), tooltip: '' }
+  ])
 
   let timer: ReturnType<typeof setInterval>
 
@@ -446,7 +451,7 @@
           <div class="agenda-tab-view">
             <div class="agenda-toolbar-row">
               <HorizontalTabSelection
-                tabs={AGENDA_FILTER_TABS}
+                tabs={agendaFilterTabs}
                 bind:value={agendaFilter}
                 colorVariant="primary"
                 ariaLabel="Filter agenda events"
@@ -459,12 +464,21 @@
                     class="agenda-clear-past-btn"
                     onclick={() => discardPastCalendarEvents()}
                     use:islandTooltip={{
-                      text: `Clear ${pastEventsCount} past ${pastEventsCount === 1 ? 'event' : 'events'}`
+                      text: $tStore('calendar.clear_past_tooltip', {
+                        count: pastEventsCount,
+                        unit: pastEventsCount === 1 ? 'event' : 'events'
+                      })
                     }}
-                    aria-label="Clear past events"
+                    aria-label={$tStore('calendar.clear_past', {
+                      count: pastEventsCount
+                    })}
                   >
                     <Trash2 size={12} />
-                    <span>Clear Past ({pastEventsCount})</span>
+                    <span
+                      >{$tStore('calendar.clear_past', {
+                        count: pastEventsCount
+                      })}</span
+                    >
                   </button>
                 {/if}
 
@@ -474,7 +488,7 @@
                   onclick={() => handleOpenAddModal()}
                 >
                   <Plus size={13} />
-                  <span>Add Event</span>
+                  <span>{$tStore('calendar.add_event')}</span>
                 </button>
               </div>
             </div>
@@ -483,7 +497,7 @@
               {#if filteredAgendaEvents.length === 0}
                 <div class="agenda-empty-state">
                   <CalendarDays size={26} />
-                  <span>No events match this filter</span>
+                  <span>{$tStore('calendar.no_matching_events')}</span>
                 </div>
               {:else}
                 <div class="agenda-stream-list">
@@ -588,7 +602,7 @@
               onclick={jumpToToday}
               use:islandTooltip={'Jump to current day'}
             >
-              Today
+              {$tStore('calendar.today')}
             </button>
 
             <div class="month-stepper-pills">
@@ -860,10 +874,10 @@
             type="button"
             class="modal-btn-delete"
             onclick={handleDeleteEditingEvent}
-            aria-label="Delete event"
+            aria-label={$tStore('calendar.delete_event')}
           >
             <Trash2 size={13} />
-            <span>Delete</span>
+            <span>{$tStore('calendar.delete')}</span>
           </button>
         {:else}
           <div></div>
@@ -875,7 +889,7 @@
             class="modal-btn-cancel"
             onclick={() => (isModalOpen = false)}
           >
-            Cancel
+            {$tStore('calendar.cancel')}
           </button>
           <button
             type="button"
@@ -883,7 +897,9 @@
             onclick={handleSaveEvent}
             disabled={!formTitle.trim()}
           >
-            {modalMode === 'edit' ? 'Save Changes' : 'Create Event'}
+            {modalMode === 'edit'
+              ? $tStore('calendar.save_changes')
+              : $tStore('calendar.create_event')}
           </button>
         </div>
       {/snippet}

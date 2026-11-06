@@ -32,6 +32,7 @@
   import ScrollView from '../components/ScrollView.svelte'
   import { islandTooltip } from '../services/islandTooltip'
   import { hideTooltip } from '../stores/tooltip'
+  import { tStore } from '../store'
   import {
     fileShelfStore,
     removeFileFromShelf,
@@ -426,7 +427,7 @@
             <button
               type="button"
               class="inline-icon-btn danger-pill"
-              use:islandTooltip={'Clear all files from shelf'}
+              use:islandTooltip={$tStore('fileshelf.clear_shelf')}
               onclick={clearFileShelf}
             >
               <Trash2 size={12} />
@@ -454,7 +455,7 @@
         <div class="empty-icon-wrap">
           <FolderDown size={22} />
         </div>
-        <p class="empty-title">Drop files or folders here</p>
+        <p class="empty-title">{$tStore('fileshelf.drop_prompt')}</p>
         <p class="empty-subtitle">
           Stage files from File Explorer, Desktop, or apps, then drag them out
           whenever you need them.

@@ -35,7 +35,8 @@
     dockPinnedAppsStore,
     globalMediaStore,
     timerAppStore,
-    isAnyTimerRunning
+    isAnyTimerRunning,
+    tStore
   } from '../store'
 
   const navigate =
@@ -132,7 +133,7 @@
     ) {
       items.push({
         id: 'calendar',
-        tooltip: 'Calendar',
+        tooltip: $tStore('dock.calendar'),
         icon: Calendar,
         active: activePage === CalendarPage,
         group: 'pinned',
@@ -143,7 +144,7 @@
     if ($dockPinnedAppsStore.notes && $pageVisibilityStore.notes !== false) {
       items.push({
         id: 'notes',
-        tooltip: 'Notes',
+        tooltip: $tStore('dock.notes'),
         icon: FileText,
         active: activePage === NotesPage,
         group: 'pinned',
@@ -157,7 +158,7 @@
     ) {
       items.push({
         id: 'calculator',
-        tooltip: 'Calculator',
+        tooltip: $tStore('dock.calculator'),
         icon: Calculator,
         active: activePage === CalculatorPage,
         group: 'pinned',
@@ -168,7 +169,7 @@
     if ($dockPinnedAppsStore.timer && $pageVisibilityStore.timer !== false) {
       items.push({
         id: 'timer',
-        tooltip: 'Timer',
+        tooltip: $tStore('dock.timer'),
         icon: Timer,
         active: activePage === TimerPage,
         group: 'pinned',
@@ -182,7 +183,7 @@
     ) {
       items.push({
         id: 'fileshelf',
-        tooltip: 'File Shelf',
+        tooltip: $tStore('dock.file_shelf'),
         icon: FolderDown,
         active: activePage === FileShelfPage,
         badge:
@@ -197,7 +198,7 @@
     if (showTimerDynamic) {
       items.push({
         id: 'timer-dynamic',
-        tooltip: 'Timer',
+        tooltip: $tStore('dock.timer'),
         icon: Timer,
         active: activePage === TimerPage,
         group: 'dynamic',
@@ -208,7 +209,7 @@
     if (showFileShelfDynamic) {
       items.push({
         id: 'fileshelf-dynamic',
-        tooltip: 'File Shelf',
+        tooltip: $tStore('dock.file_shelf'),
         icon: FolderDown,
         active: activePage === FileShelfPage,
         badge:
@@ -223,7 +224,7 @@
     if (showMedia) {
       items.push({
         id: 'media',
-        tooltip: 'Now Playing',
+        tooltip: $tStore('dock.now_playing'),
         icon: Music,
         active: activePage === MediaPage,
         group: 'dynamic',
@@ -234,7 +235,7 @@
     if (showNotifs) {
       items.push({
         id: 'notifications',
-        tooltip: 'Notifications',
+        tooltip: $tStore('dock.notifications'),
         icon: Bell,
         active: activePage === NotificationPage,
         badge: $notifData.length > 0 ? $notifData.length : undefined,
@@ -246,7 +247,7 @@
     if (showPerformanceDynamic) {
       items.push({
         id: 'performance-dynamic',
-        tooltip: 'System Stats',
+        tooltip: $tStore('dock.system_stats'),
         icon: Activity,
         active: activePage === PerformancePage,
         group: 'dynamic',
@@ -348,11 +349,11 @@
 </script>
 
 <div class="dock-container">
-  <div class="dock" role="toolbar" aria-label="Quick Access Dock">
+  <div class="dock" role="toolbar" aria-label={$tStore('dock.dock_aria')}>
     <!-- Core Anchors -->
     <div class="dock-group core-group">
       <DockButton
-        tooltip="Apps"
+        tooltip={$tStore('dock.apps')}
         tooltipPosition="bottom"
         active={activePage === AppsPage}
         onclick={(e: MouseEvent) => AppControls.goApps(navigate, e)}
@@ -361,7 +362,7 @@
       </DockButton>
 
       <DockButton
-        tooltip="Home"
+        tooltip={$tStore('dock.home')}
         tooltipPosition="bottom"
         active={activePage === HomePage}
         onclick={(e: MouseEvent) => AppControls.goHome(navigate, e)}
@@ -414,7 +415,7 @@
     {#if folderItems.length > 0}
       <div class="dock-folder-wrapper" bind:this={folderWrapperRef}>
         <DockButton
-          tooltip="More in Dock"
+          tooltip={$tStore('dock.more')}
           tooltipPosition="bottom"
           active={isFolderOpen || hasFolderActive}
           badge={!isFolderOpen && folderBadgeTotal > 0
@@ -451,7 +452,7 @@
     <!-- Trailing Settings Anchor -->
     <div class="dock-group settings-group">
       <DockButton
-        tooltip="Settings"
+        tooltip={$tStore('dock.settings')}
         tooltipPosition="bottom"
         active={activePage === SettingsPage}
         onclick={(e: MouseEvent) => AppControls.goSettings(navigate, e)}

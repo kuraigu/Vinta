@@ -28,6 +28,7 @@
   import {
     wirelessDataStore,
     batteryDataStore,
+    tStore,
     type WirelessData,
     type BatteryData
   } from '../store'
@@ -138,18 +139,24 @@
   }
 
   let batteryStateLabel = $derived.by(() => {
-    if (!battery.hasBattery) return 'Desktop AC Power'
-    if (battery.isCharging) return `Charging (${battery.percentage}%)`
-    if (battery.state === 'full') return 'Fully Charged'
-    if (battery.batterySaver) return `Battery Saver (${battery.percentage}%)`
-    return `On Battery (${battery.percentage}%)`
+    if (!battery.hasBattery) return $tStore('action_center.desktop_ac')
+    if (battery.isCharging)
+      return $tStore('action_center.charging', { percent: battery.percentage })
+    if (battery.state === 'full') return $tStore('action_center.fully_charged')
+    if (battery.batterySaver)
+      return $tStore('action_center.battery_saver_pct', {
+        percent: battery.percentage
+      })
+    return $tStore('action_center.on_battery', { percent: battery.percentage })
   })
 
   function formatLifeTime(secs: number): string {
     if (secs <= 0 || secs >= 86400) return ''
     const hrs = Math.floor(secs / 3600)
     const mins = Math.floor((secs % 3600) / 60)
-    return hrs > 0 ? `${hrs}h ${mins}m left` : `${mins}m left`
+    return hrs > 0
+      ? $tStore('action_center.hours_mins_left', { hours: hrs, mins })
+      : $tStore('action_center.mins_left', { mins })
   }
 
   let remainingStr = $derived(formatLifeTime(battery.lifeTimeSeconds))
@@ -159,7 +166,7 @@
   <!-- Header -->
   <div class="action-header">
     <BackButton />
-    <span class="header-title">Action Center</span>
+    <span class="header-title">{$tStore('action_center.title')}</span>
     <div class="header-spacer"></div>
   </div>
 
@@ -179,16 +186,16 @@
           {/if}
         </div>
         <div class="card-info">
-          <span class="card-primary-text">Wi-Fi</span>
+          <span class="card-primary-text">{$tStore('action_center.wifi')}</span>
           <span class="card-secondary-text">
             {#if wireless.airplaneMode}
-              Turned off by Airplane mode
+              {$tStore('action_center.turned_off_airplane')}
             {:else if wireless.wifiEnabled}
               {wireless.wifiConnected
-                ? `${wireless.wifiSsid || 'Connected'} (${wireless.wifiSignal}%)`
-                : 'Disconnected'}
+                ? `${wireless.wifiSsid || $tStore('action_center.connected')} (${wireless.wifiSignal}%)`
+                : $tStore('action_center.disconnected')}
             {:else}
-              Off
+              {$tStore('common.off')}
             {/if}
           </span>
         </div>
@@ -197,9 +204,9 @@
         <button
           type="button"
           class="quick-open-btn"
-          use:islandTooltip={'Open Windows Network Flyout'}
+          use:islandTooltip={$tStore('action_center.open_network')}
           onclick={(e) => openSystemDialog('network', e)}
-          aria-label="Open Windows Network Flyout"
+          aria-label={$tStore('action_center.open_network')}
         >
           <ExternalLink size={13} />
         </button>
@@ -232,25 +239,30 @@
           {/if}
         </div>
         <div class="card-info">
-          <span class="card-primary-text">Bluetooth</span>
+          <span class="card-primary-text"
+            >{$tStore('action_center.bluetooth')}</span
+          >
           <span class="card-secondary-text">
             {#if !wireless.hasBluetooth}
-              No Bluetooth adapter installed
+              {$tStore('action_center.no_bluetooth')}
             {:else if wireless.airplaneMode}
-              Turned off by Airplane mode
+              {$tStore('action_center.turned_off_airplane')}
             {:else if wireless.bluetoothEnabled}
               {#if wireless.bluetoothConnected}
-                <span>{wireless.bluetoothDeviceName || 'Connected'}</span>
+                <span
+                  >{wireless.bluetoothDeviceName ||
+                    $tStore('action_center.connected')}</span
+                >
                 {#if wireless.bluetoothBattery !== undefined}
                   <span class="device-battery-badge"
                     >{wireless.bluetoothBattery}%</span
                   >
                 {/if}
               {:else}
-                Ready to connect
+                {$tStore('action_center.ready_to_connect')}
               {/if}
             {:else}
-              Off
+              {$tStore('common.off')}
             {/if}
           </span>
         </div>
@@ -259,9 +271,9 @@
         <button
           type="button"
           class="quick-open-btn"
-          use:islandTooltip={'Open Windows Bluetooth Settings'}
+          use:islandTooltip={$tStore('action_center.open_bluetooth')}
           onclick={(e) => openSystemDialog('bluetooth', e)}
-          aria-label="Open Windows Bluetooth Settings"
+          aria-label={$tStore('action_center.open_bluetooth')}
         >
           <ExternalLink size={13} />
         </button>
@@ -298,7 +310,9 @@
           {/if}
         </div>
         <div class="card-info">
-          <span class="card-primary-text">Battery & Power</span>
+          <span class="card-primary-text"
+            >{$tStore('action_center.battery_power')}</span
+          >
           <span class="card-secondary-text">
             {batteryStateLabel}{remainingStr ? ` • ${remainingStr}` : ''}
           </span>
@@ -308,16 +322,16 @@
         <button
           type="button"
           class="quick-open-btn"
-          use:islandTooltip={'Open Windows Power Settings'}
+          use:islandTooltip={$tStore('action_center.open_power')}
           onclick={(e) => openSystemDialog('battery', e)}
-          aria-label="Open Windows Power Settings"
+          aria-label={$tStore('action_center.open_power')}
         >
           <ExternalLink size={13} />
         </button>
         {#if battery.hasBattery}
           <label
             class="toggle-switch"
-            use:islandTooltip={'Toggle Battery Saver Mode'}
+            use:islandTooltip={$tStore('action_center.toggle_battery_saver')}
           >
             <input
               type="checkbox"
@@ -337,11 +351,13 @@
           <Plane size={18} />
         </div>
         <div class="card-info">
-          <span class="card-primary-text">Airplane Mode</span>
+          <span class="card-primary-text"
+            >{$tStore('action_center.airplane_mode')}</span
+          >
           <span class="card-secondary-text">
             {wireless.airplaneMode
-              ? 'All wireless radios disabled'
-              : 'Radios operating normally'}
+              ? $tStore('action_center.radios_disabled')
+              : $tStore('action_center.radios_normal')}
           </span>
         </div>
       </div>
@@ -349,9 +365,9 @@
         <button
           type="button"
           class="quick-open-btn"
-          use:islandTooltip={'Open Windows Airplane Mode Settings'}
+          use:islandTooltip={$tStore('action_center.open_airplane')}
           onclick={(e) => openSystemDialog('airplane', e)}
-          aria-label="Open Windows Airplane Mode Settings"
+          aria-label={$tStore('action_center.open_airplane')}
         >
           <ExternalLink size={13} />
         </button>

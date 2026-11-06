@@ -6,11 +6,13 @@
     weatherUnitStore,
     simulateOfflineStore,
     simulateWeatherStore,
+    tStore,
     type IslandConfig
   } from '../store'
   import {
     fetchWeatherData,
     convertTemp,
+    getWmoConditionKey,
     type WeatherData
   } from '../services/weatherService'
   import WeatherPage, {
@@ -144,13 +146,17 @@
   let illustrationType = $derived.by(computeIllustrationType)
 
   function computeBannerConditionTitle() {
-    if (!weather) return isNight ? 'Clear Night' : 'Sunny'
-    if (weather.condition) return weather.condition
-    if (weather.weatherCode === 0) return isNight ? 'Clear Night' : 'Sunny'
-    if (weather.weatherCode >= 1 && weather.weatherCode <= 3) {
-      return isNight ? 'Cloudy Night' : 'Partly Cloudy'
+    if (!weather) {
+      return isNight
+        ? $tStore('weather.conditions.clear_night')
+        : $tStore('weather.conditions.sunny')
     }
-    return weather.condition
+    const key = getWmoConditionKey(
+      weather.weatherCode ?? 0,
+      isNight,
+      weather.condition
+    )
+    return $tStore(key)
   }
   let bannerConditionTitle = $derived.by(computeBannerConditionTitle)
 

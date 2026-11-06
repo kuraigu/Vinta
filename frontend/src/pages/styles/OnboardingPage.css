@@ -79,6 +79,17 @@
   text-align: left;
 }
 
+.onboarding-inputs-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.onboarding-inputs-row .onboarding-input-card {
+  flex: 1;
+  min-width: 0;
+}
+
 .onboarding-input-card {
   display: flex;
   flex-direction: column;

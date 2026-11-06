@@ -22,6 +22,7 @@
     type AnnouncementItem
   } from '../services/announcementsService'
   import HomePage, { config as homeConfig } from './HomePage.svelte'
+  import { tStore } from '../store'
 
   let announcements = $state<AnnouncementItem[]>([])
   let hasUnread = $state(false)
@@ -62,9 +63,9 @@
 <div data-vinta="announcements-page" class="announcements-page-layout">
   <header class="announcements-page-header">
     <div class="header-left">
-      <BackButton onback={handleBack} title="Back to Home" />
+      <BackButton onback={handleBack} title={$tStore('common.back')} />
       <div class="header-titles">
-        <h2 class="header-main-title">Developer Announcements</h2>
+        <h2 class="header-main-title">{$tStore('announcements.page_title')}</h2>
         <span class="header-subtitle">Updates and news from the Vinta team</span
         >
       </div>
@@ -87,15 +88,14 @@
     <ScrollView class="announcements-scroll-view">
       {#if isLoading}
         <div class="announcements-empty-state">
-          <span>Loading announcements...</span>
+          <span>{$tStore('common.loading')}</span>
         </div>
       {:else if announcements.length === 0}
         <div class="announcements-empty-state">
           <Megaphone size={28} class="empty-icon" />
-          <span class="empty-title">No announcements yet</span>
-          <span class="empty-sub"
-            >Developer updates will appear here when published.</span
+          <span class="empty-title">{$tStore('announcements.empty_title')}</span
           >
+          <span class="empty-sub">{$tStore('announcements.empty_desc')}</span>
         </div>
       {:else}
         <div class="announcements-list">

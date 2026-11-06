@@ -9,7 +9,7 @@
   import AnnouncementsPage, {
     config as announcementsConfig
   } from '../pages/AnnouncementsPage.svelte'
-  import type { IslandConfig } from '../store'
+  import { tStore, type IslandConfig } from '../store'
 
   let {
     onClick
@@ -59,9 +59,11 @@
         <div class="glance-icon-badge">
           <Megaphone size={12} />
         </div>
-        <span class="glance-brand-name">Announcement</span>
+        <span class="glance-brand-name">{$tStore('announcements.title')}</span>
         {#if hasUnread}
-          <span class="glance-unread-pill">New</span>
+          <span class="glance-unread-pill"
+            >{$tStore('announcements.badge_new')}</span
+          >
         {/if}
       </div>
 
@@ -70,12 +72,12 @@
 
     <div class="glance-content-preview">
       <h4 class="glance-title">
-        {latestItem?.title || 'Welcome to Vinta!'}
+        {latestItem?.title || $tStore('announcements.default_title')}
       </h4>
       <p class="glance-message">
         {latestItem?.body
           ? latestItem.body.replace(/\r?\n+/g, ' ').slice(0, 110) + '...'
-          : 'Developer announcements and project updates appear here.'}
+          : $tStore('announcements.default_desc')}
       </p>
     </div>
   </BentoCard>

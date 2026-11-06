@@ -40,6 +40,7 @@
     appInfoStore,
     notifData,
     activeSettingsTabStore,
+    tStore,
     type IslandConfig
   } from '../store'
 
@@ -281,10 +282,10 @@
    */
   function computeSalutationText() {
     const hour = timeParts.h24
-    if (hour >= 5 && hour < 12) return 'Good morning'
-    if (hour >= 12 && hour < 17) return 'Good afternoon'
-    if (hour >= 17 && hour < 22) return 'Good evening'
-    return 'Good night'
+    if (hour >= 5 && hour < 12) return $tStore('home.good_morning')
+    if (hour >= 12 && hour < 17) return $tStore('home.good_afternoon')
+    if (hour >= 17 && hour < 22) return $tStore('home.good_evening')
+    return $tStore('home.good_night')
   }
   let salutationText = $derived.by(computeSalutationText)
 
@@ -437,9 +438,7 @@
 
           <!-- Studio Branding Footer (Issue #185 / Category 7) -->
           <footer class="home-brand-footer">
-            <span class="home-brand-text"
-              >Vinta by FreeMatrix Studios & Contributors</span
-            >
+            <span class="home-brand-text">{$tStore('home.brand_footer')}</span>
             <span class="home-version-pill">v{displayVersion}</span>
           </footer>
         </div>
@@ -451,9 +450,9 @@
         class="home-scroll-cue-pill"
         class:hidden={!canScrollMore || isScrolledDown}
         onclick={scrollFeedDown}
-        aria-label="Scroll down for more content"
+        aria-label={$tStore('home.scroll_cue_aria')}
       >
-        <span class="scroll-cue-text">More</span>
+        <span class="scroll-cue-text">{$tStore('home.scroll_cue_more')}</span>
         <ChevronDown size={13} class="scroll-cue-icon" />
       </button>
     </div>

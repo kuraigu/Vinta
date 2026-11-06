@@ -1,7 +1,15 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { Clock, Globe, Calendar, CalendarX, Trash2 } from 'lucide-svelte'
+  import {
+    Clock,
+    Globe,
+    Calendar,
+    CalendarX,
+    Trash2,
+    Check
+  } from 'lucide-svelte'
   import SettingItem from '../SettingItem.svelte'
+  import SettingActionButton from '../SettingActionButton.svelte'
   import CustomSelect from '../../CustomSelect.svelte'
   import {
     timeFormatStore,
@@ -153,17 +161,24 @@
     label="Clear Past Events"
     description="Manually removes all expired agenda items preceding today"
     icon={Trash2}
+    flexCol={true}
   >
-    <button type="button" class="setting-action-btn" onclick={handleClearPast}>
+    <SettingActionButton
+      variant={clearedCount !== null ? 'success' : 'default'}
+      fullWidth={true}
+      onclick={handleClearPast}
+    >
       {#if clearedCount !== null}
+        <Check size={13} />
         <span
           >Removed {clearedCount}
           {clearedCount === 1 ? 'event' : 'events'}</span
         >
       {:else}
+        <Trash2 size={13} />
         <span>Clear Past Events</span>
       {/if}
-    </button>
+    </SettingActionButton>
   </SettingItem>
 </div>
 
@@ -219,22 +234,5 @@
 
   input:checked + .slider:before {
     transform: translateX(14px);
-  }
-
-  .setting-action-btn {
-    padding: 6px 14px;
-    background: var(--vinta-item-bg, rgba(255, 255, 255, 0.05));
-    border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.08));
-    border-radius: var(--vinta-radius-button, 8px);
-    color: var(--vinta-text-primary, #ffffff);
-    font-size: 11.5px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-
-  .setting-action-btn:hover {
-    background: var(--vinta-hover, rgba(255, 255, 255, 0.1));
-    border-color: var(--vinta-accent-primary, #38bdf8);
   }
 </style>

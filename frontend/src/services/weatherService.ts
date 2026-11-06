@@ -57,6 +57,60 @@ export type WeatherTheme = {
   badgeBg: string
 }
 
+const CONDITION_STRING_MAP: Record<string, string> = {
+  'clear sky': 'weather.conditions.clear_sky',
+  'clear night': 'weather.conditions.clear_night',
+  sunny: 'weather.conditions.sunny',
+  'mainly clear': 'weather.conditions.mainly_clear',
+  'partly cloudy': 'weather.conditions.partly_cloudy',
+  'cloudy night': 'weather.conditions.cloudy_night',
+  overcast: 'weather.conditions.overcast',
+  foggy: 'weather.conditions.foggy',
+  rainy: 'weather.conditions.rainy',
+  snowy: 'weather.conditions.snowy',
+  thunderstorm: 'weather.conditions.thunderstorm'
+}
+
+/**
+ * Resolves the i18n translation key corresponding to a WMO weather code or string.
+ *
+ * @param code - Numeric WMO code.
+ * @param isNight - Whether current local time is nighttime.
+ * @param fallbackCondition - Optional literal condition string.
+ * @returns Translation catalog key for `$tStore()`.
+ */
+export function getWmoConditionKey(
+  code: number,
+  isNight: boolean = false,
+  fallbackCondition?: string
+): string {
+  if (fallbackCondition) {
+    const mapped = CONDITION_STRING_MAP[fallbackCondition.toLowerCase().trim()]
+    if (mapped) return mapped
+  }
+  if (code === 0) {
+    return isNight
+      ? 'weather.conditions.clear_night'
+      : 'weather.conditions.clear_sky'
+  }
+  if (code === 1) return 'weather.conditions.mainly_clear'
+  if (code === 2) {
+    return isNight
+      ? 'weather.conditions.cloudy_night'
+      : 'weather.conditions.partly_cloudy'
+  }
+  if (code === 3) return 'weather.conditions.overcast'
+  if (code === 45 || code === 48) return 'weather.conditions.foggy'
+  if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) {
+    return 'weather.conditions.rainy'
+  }
+  if (code >= 71 && code <= 77) return 'weather.conditions.snowy'
+  if (code >= 95 && code <= 99) return 'weather.conditions.thunderstorm'
+  return isNight
+    ? 'weather.conditions.cloudy_night'
+    : 'weather.conditions.partly_cloudy'
+}
+
 export function parseWmoCode(
   code: number,
   isNight: boolean = false
@@ -314,11 +368,32 @@ export async function fetchWeatherData(
   }
 }
 
+/**
+ * Formats a geocoding result into a human-readable display string with country and administrative division.
+ *
+ * @param item - Geocoding result.
+ * @returns Disambiguated location string (e.g. "Cambridge, England, United Kingdom").
+ */
+export function formatLocationName(item: {
+  name: string
+  country?: string
+  admin1?: string
+}): string {
+  const parts = [item.name]
+  if (item.admin1 && item.admin1 !== item.name) {
+    parts.push(item.admin1)
+  }
+  if (item.country && item.country !== item.name) {
+    parts.push(item.country)
+  }
+  return parts.join(', ')
+}
+
 export async function searchCities(query: string): Promise<GeocodingResult[]> {
   if (!query || query.trim().length < 2) return []
 
   try {
-    const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query.trim())}&count=5&language=en&format=json`
+    const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query.trim())}&count=10&language=en&format=json`
     const res = await fetch(url)
     if (!res.ok) return []
     const data = await res.json()

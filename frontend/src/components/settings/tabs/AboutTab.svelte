@@ -7,6 +7,7 @@
   import ReleaseNotesGlance from '../../ReleaseNotesGlance.svelte'
   import appIcon from '@appicon'
   import { reportFeedback } from '../../../services/feedbackService'
+  import { tStore } from '../../../store'
   import {
     GetAppInfo,
     GetContributors
@@ -129,9 +130,7 @@
     <div class="about-hero-details">
       <div class="about-brand-header-row">
         <span class="about-brand-title">{appInfo.name}</span>
-        <span class="about-brand-studio"
-          >by FreeMatrix Studios & Contributors</span
-        >
+        <span class="about-brand-studio">{$tStore('about.by_freematrix')}</span>
       </div>
 
       <div class="about-release-capsule">
@@ -142,22 +141,24 @@
         >
           {#if appInfo.isOfficialBuild}
             <ShieldCheck size={11} strokeWidth={2.2} />
-            <span>Official</span>
+            <span>{$tStore('about.official')}</span>
           {:else}
             <GitBranch size={11} strokeWidth={2.2} />
-            <span>Dev</span>
+            <span>{$tStore('about.dev')}</span>
           {/if}
         </span>
         <span class="capsule-divider"></span>
         <span class="capsule-version">v{displayVersion}</span>
         <span class="capsule-divider"></span>
-        <span class="capsule-build">build {displayBuild}</span>
+        <span class="capsule-build"
+          >{$tStore('about.build', { build: displayBuild })}</span
+        >
       </div>
     </div>
   </BentoCard>
 
   <!-- Project Links Bento -->
-  <SettingItem label="Project Resources" flexCol={true}>
+  <SettingItem label={$tStore('about.project_resources')} flexCol={true}>
     <div class="about-links-row">
       <SettingActionButton
         href={appInfo.repoUrl}
@@ -166,11 +167,11 @@
         fullWidth={true}
       >
         <ArrowUpRight size={13} strokeWidth={2} />
-        <span>Repository</span>
+        <span>{$tStore('about.repository')}</span>
       </SettingActionButton>
       <SettingActionButton onclick={handleReportFeedback} fullWidth={true}>
         <Bug size={13} strokeWidth={2} />
-        <span>Report Issue</span>
+        <span>{$tStore('about.report_issue')}</span>
       </SettingActionButton>
     </div>
   </SettingItem>
@@ -181,7 +182,7 @@
   <!-- Maintainers and Contributors -->
   {#if maintainers.length > 0 || generalContributors.length > 0}
     <BentoCard variant="bento" class="contributors-card">
-      <div class="specs-header">Project Credits</div>
+      <div class="specs-header">{$tStore('about.project_credits')}</div>
       <div class="contributors-list">
         {#each [...maintainers, ...generalContributors] as c (c.handle)}
           <a
@@ -209,7 +210,7 @@
         rel="noreferrer"
         class="contributor-full-link"
       >
-        <span>View Full Contributor Roster</span>
+        <span>{$tStore('about.view_full_roster')}</span>
         <ArrowUpRight size={12} />
       </a>
     </BentoCard>

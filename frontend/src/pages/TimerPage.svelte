@@ -41,6 +41,7 @@
   import {
     timerAppStore,
     timeFormatStore,
+    tStore,
     setActiveTimerTab,
     toggleCountdown,
     resetCountdown,
@@ -128,11 +129,11 @@
   }
 
   function formatAlarmRepeatBadge(alarm: AlarmItem): string {
-    if (alarm.repeat === 'once') return 'Once'
-    if (alarm.repeat === 'daily') return 'Every day'
-    if (alarm.repeat === 'weekdays') return 'Mon - Fri'
-    if (!alarm.days || alarm.days.length === 0) return 'Custom'
-    if (alarm.days.length === 7) return 'Every day'
+    if (alarm.repeat === 'once') return $tStore('timer.once')
+    if (alarm.repeat === 'daily') return $tStore('timer.every_day')
+    if (alarm.repeat === 'weekdays') return $tStore('timer.weekdays')
+    if (!alarm.days || alarm.days.length === 0) return $tStore('timer.custom')
+    if (alarm.days.length === 7) return $tStore('timer.every_day')
     return alarm.days.map((d) => DAY_SHORT[d]).join(', ')
   }
 
@@ -146,11 +147,13 @@
   let activeMinimalMode = $derived.by(computeActiveMinimalMode)
 
   function computeMinimalModeLabel() {
-    if (activeMinimalMode === 'timer') return 'Timer'
-    if (activeMinimalMode === 'stopwatch') return 'Stopwatch'
-    if ($timerAppStore.focus.phase === 'focus') return 'Focus'
-    if ($timerAppStore.focus.phase === 'shortBreak') return 'Break'
-    return 'Rest'
+    if (activeMinimalMode === 'timer') return $tStore('timer.countdown_tab')
+    if (activeMinimalMode === 'stopwatch') return $tStore('timer.stopwatch_tab')
+    if ($timerAppStore.focus.phase === 'focus')
+      return $tStore('timer.focus_tab')
+    if ($timerAppStore.focus.phase === 'shortBreak')
+      return $tStore('timer.break')
+    return $tStore('timer.rest')
   }
   let minimalModeLabel = $derived.by(computeMinimalModeLabel)
 
@@ -199,32 +202,32 @@
     setActiveTimerTab(tab)
   }
 
-  const TIMER_TABS: TabItem<TimerAppTab>[] = [
+  let timerTabs: TabItem<TimerAppTab>[] = $derived([
     {
       id: 'timer',
-      label: 'Timer',
+      label: $tStore('timer.countdown_tab'),
       icon: Hourglass,
-      tooltip: 'Countdown timer'
+      tooltip: $tStore('timer.countdown_tooltip')
     },
     {
       id: 'stopwatch',
-      label: 'Stopwatch',
+      label: $tStore('timer.stopwatch_tab'),
       icon: Clock,
-      tooltip: 'Precision stopwatch'
+      tooltip: $tStore('timer.stopwatch_tooltip')
     },
     {
       id: 'focus',
-      label: 'Focus',
+      label: $tStore('timer.focus_tab'),
       icon: Flame,
-      tooltip: 'Focus sprints & breaks'
+      tooltip: $tStore('timer.focus_tooltip')
     },
     {
       id: 'alarms',
-      label: 'Alarms',
+      label: $tStore('timer.alarms_tab'),
       icon: Bell,
-      tooltip: 'Scheduled reminders'
+      tooltip: $tStore('timer.alarms_tooltip')
     }
-  ]
+  ])
 
   let editingAlarm = $derived(
     editingAlarmId
@@ -401,10 +404,10 @@
         <BackButton />
 
         <HorizontalTabSelection
-          tabs={TIMER_TABS}
+          tabs={timerTabs}
           value={$timerAppStore.activeTab}
           onchange={handleTabSelect}
-          ariaLabel="Timer utilities"
+          ariaLabel={$tStore('timer.title')}
         />
 
         {#if $timerAppStore.activeTab === 'focus'}
@@ -429,7 +432,7 @@
                 openCreateAlarm()
               }
             }}
-            use:islandTooltip={'Add new alarm'}
+            use:islandTooltip={$tStore('timer.new_alarm')}
           >
             <Plus size={15} />
           </button>
@@ -475,18 +478,18 @@
             <button
               class="banner-action-btn snooze"
               onclick={() => snoozeRingingAlarm()}
-              use:islandTooltip={'Snooze alarm'}
+              use:islandTooltip={$tStore('timer.snooze')}
             >
               <Clock size={12} />
-              <span>Snooze</span>
+              <span>{$tStore('timer.snooze')}</span>
             </button>
             <button
               class="banner-action-btn stop"
               onclick={dismissRingingAlarm}
-              use:islandTooltip={'Stop alarm'}
+              use:islandTooltip={$tStore('timer.dismiss')}
             >
               <X size={12} />
-              <span>Stop</span>
+              <span>{$tStore('timer.dismiss')}</span>
             </button>
           </div>
         </div>

@@ -66,6 +66,7 @@
     activeSettingsTabStore,
     pageVisibilityStore,
     updateInfoStore,
+    tStore,
     type PageVisibility
   } from '../store'
 
@@ -86,10 +87,10 @@
 
   let searchQuery = $state('')
 
-  interface AppItem {
+  interface AppItemDef {
     id: string
-    name: string
-    desc: string
+    nameKey: string
+    descKey: string
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     icon: any
     badge?: boolean
@@ -97,11 +98,16 @@
     action: () => void
   }
 
-  const allApps: AppItem[] = [
+  interface ResolvedAppItem extends AppItemDef {
+    name: string
+    desc: string
+  }
+
+  const allApps: AppItemDef[] = [
     {
       id: 'about',
-      name: 'About',
-      desc: 'About Vinta',
+      nameKey: 'apps.about_name',
+      descKey: 'apps.about_desc',
       icon: Info,
       action: () => {
         activeSettingsTabStore.set('about')
@@ -110,69 +116,69 @@
     },
     {
       id: 'announcements',
-      name: 'Announcements',
-      desc: 'Developer updates',
+      nameKey: 'apps.announcements_name',
+      descKey: 'apps.announcements_desc',
       icon: Megaphone,
       action: () => openApp(AnnouncementsPage, announcementsConfig)
     },
     {
       id: 'releasenotes',
-      name: 'Release Notes',
-      desc: "What's new in Vinta",
+      nameKey: 'apps.releasenotes_name',
+      descKey: 'apps.releasenotes_desc',
       icon: ScrollText,
       action: () => openApp(ReleaseNotesPage, releaseNotesConfig)
     },
     {
       id: 'actioncenter',
-      name: 'Action Center',
-      desc: 'Quick settings',
+      nameKey: 'apps.actioncenter_name',
+      descKey: 'apps.actioncenter_desc',
       icon: SlidersHorizontal,
       visibilityKey: 'actioncenter',
       action: () => openApp(ActionCenterPage, actionCenterConfig)
     },
     {
       id: 'calculator',
-      name: 'Calculator',
-      desc: 'Calculator',
+      nameKey: 'apps.calculator_name',
+      descKey: 'apps.calculator_desc',
       icon: Calculator,
       visibilityKey: 'calculator',
       action: () => openApp(CalculatorPage, calculatorConfig)
     },
     {
       id: 'calendar',
-      name: 'Calendar',
-      desc: 'Schedule & events',
+      nameKey: 'apps.calendar_name',
+      descKey: 'apps.calendar_desc',
       icon: CalendarIcon,
       visibilityKey: 'calendar',
       action: () => openApp(CalendarPage, calendarConfig)
     },
     {
       id: 'fileshelf',
-      name: 'File Shelf',
-      desc: 'Drag & drop file shelf',
+      nameKey: 'apps.fileshelf_name',
+      descKey: 'apps.fileshelf_desc',
       icon: FolderDown,
       visibilityKey: 'fileshelf',
       action: () => openApp(FileShelfPage, fileShelfConfig)
     },
     {
       id: 'home',
-      name: 'Home',
-      desc: 'Widgets & clock',
+      nameKey: 'apps.home_name',
+      descKey: 'apps.home_desc',
       icon: House,
       action: () => openApp(HomePage, homeConfig)
     },
     {
       id: 'media',
-      name: 'Media',
-      desc: 'Now playing',
+      nameKey: 'apps.media_name',
+      descKey: 'apps.media_desc',
       icon: Music,
       visibilityKey: 'media',
       action: () => openApp(MediaPage, mediaConfig)
     },
     {
       id: 'notifs',
-      name: 'Notifications',
-      desc: 'Notifications',
+      nameKey: 'apps.notifs_name',
+      descKey: 'apps.notifs_desc',
       icon: Bell,
       badge: true,
       visibilityKey: 'notifications',
@@ -180,16 +186,16 @@
     },
     {
       id: 'notes',
-      name: 'Quick Notes',
-      desc: 'Quick notes',
+      nameKey: 'apps.notes_name',
+      descKey: 'apps.notes_desc',
       icon: FileText,
       visibilityKey: 'notes',
       action: () => openApp(NotesPage, notesConfig)
     },
     {
       id: 'settings',
-      name: 'Settings',
-      desc: 'Settings',
+      nameKey: 'apps.settings_name',
+      descKey: 'apps.settings_desc',
       icon: Settings,
       action: () => {
         activeSettingsTabStore.set('appearance')
@@ -198,32 +204,32 @@
     },
     {
       id: 'performance',
-      name: 'System Stats',
-      desc: 'CPU, RAM, and GPU stats',
+      nameKey: 'apps.performance_name',
+      descKey: 'apps.performance_desc',
       icon: Activity,
       visibilityKey: 'performance',
       action: () => openApp(PerformancePage, performanceConfig)
     },
     {
       id: 'timer',
-      name: 'Timer',
-      desc: 'Timer, stopwatch & focus',
+      nameKey: 'apps.timer_name',
+      descKey: 'apps.timer_desc',
       icon: Timer,
       visibilityKey: 'timer',
       action: () => openApp(TimerPage, timerConfig)
     },
     {
       id: 'weather',
-      name: 'Weather',
-      desc: 'Forecast & metrics',
+      nameKey: 'apps.weather_name',
+      descKey: 'apps.weather_desc',
       icon: CloudSun,
       visibilityKey: 'weather',
       action: () => openApp(WeatherPage, weatherConfig)
     },
     {
       id: 'updates',
-      name: 'Updates',
-      desc: 'Check for updates',
+      nameKey: 'apps.updates_name',
+      descKey: 'apps.updates_desc',
       icon: Download,
       badge: $updateInfoStore?.updateAvailable,
       action: () => {
@@ -238,9 +244,14 @@
    *
    * @returns Filtered and alphabetically sorted array of applications.
    */
-  function getFilteredApps(): AppItem[] {
+  function getFilteredApps(): ResolvedAppItem[] {
     const q = searchQuery.trim().toLowerCase()
-    const sorted = [...allApps].sort((a, b) => a.name.localeCompare(b.name))
+    const resolved: ResolvedAppItem[] = allApps.map((app) => ({
+      ...app,
+      name: $tStore(app.nameKey),
+      desc: $tStore(app.descKey)
+    }))
+    const sorted = [...resolved].sort((a, b) => a.name.localeCompare(b.name))
     if (!q) return sorted
     return sorted.filter(
       (app) =>
@@ -256,8 +267,10 @@
     {#if filteredApps.length === 0}
       <div class="empty-state">
         <Search size={22} class="empty-icon" />
-        <span class="empty-title">No apps found</span>
-        <span class="empty-desc">No applications match "{searchQuery}"</span>
+        <span class="empty-title">{$tStore('apps.no_apps_found')}</span>
+        <span class="empty-desc"
+          >{$tStore('apps.no_apps_match', { query: searchQuery })}</span
+        >
       </div>
     {:else}
       <div class="apps-grid">
@@ -268,7 +281,9 @@
             class="app-tile app-{app.id}"
             class:is-disabled={!isEnabled}
             use:islandTooltip={{
-              text: isEnabled ? app.desc : `${app.desc} (Disabled)`,
+              text: isEnabled
+                ? app.desc
+                : `${app.desc} (${$tStore('common.disabled')})`,
               position: 'bottom'
             }}
             onclick={(e) => {
@@ -297,11 +312,11 @@
 
   <div class="header">
     <div class="header-left">
-      <span class="title">Apps</span>
+      <span class="title">{$tStore('apps.title')}</span>
     </div>
     <SearchInput
       bind:value={searchQuery}
-      placeholder="Search apps..."
+      placeholder={$tStore('apps.search_placeholder')}
       maxWidth="175px"
     />
   </div>

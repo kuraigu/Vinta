@@ -182,3 +182,11 @@ tasks:
       - cmd.exe /c "cd frontend && npm run check && npm run lint && npm run format"
       - echo "Auditing Theme Tokens..."
       - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/pack-theme.ps1 -CheckOnly
+      - echo "Checking Locale Catalogs..."
+      - task: check-locales
+
+  check-locales:
+    desc: Check translation key parity and schema across all locale catalogs
+    aliases: [check-locals, locales:check]
+    cmds:
+      - node scripts/check-locales.js

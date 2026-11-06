@@ -11,6 +11,7 @@
   import { Delete } from 'lucide-svelte'
   import BackButton from '../components/BackButton.svelte'
   import { islandTooltip } from '../services/islandTooltip'
+  import { tStore } from '../store'
   import {
     evaluateExpression,
     isCalculationError
@@ -302,7 +303,7 @@
   <!-- Uniform Reusable Header -->
   <div class="calc-header">
     <BackButton />
-    <span class="header-title">Calculator</span>
+    <span class="header-title">{$tStore('calculator.title')}</span>
     <div class="header-spacer"></div>
   </div>
 
@@ -337,28 +338,28 @@
     <button
       class="calc-btn action-btn"
       onclick={handleClear}
-      use:islandTooltip={'All Clear'}
+      use:islandTooltip={$tStore('calculator.all_clear')}
     >
       C
     </button>
     <button
       class="calc-btn action-btn"
       onclick={() => handleParenthesis('(')}
-      use:islandTooltip={'Open Parenthesis'}
+      use:islandTooltip={$tStore('calculator.open_parenthesis')}
     >
       (
     </button>
     <button
       class="calc-btn action-btn"
       onclick={() => handleParenthesis(')')}
-      use:islandTooltip={'Close Parenthesis'}
+      use:islandTooltip={$tStore('calculator.close_parenthesis')}
     >
       )
     </button>
     <button
       class="calc-btn func-btn backspace-btn"
       onclick={handleBackspace}
-      use:islandTooltip={'Backspace'}
+      use:islandTooltip={$tStore('calculator.backspace')}
     >
       <Delete size={17} />
     </button>
@@ -367,28 +368,28 @@
     <button
       class="calc-btn func-btn"
       onclick={handleSquareRoot}
-      use:islandTooltip={'Square root'}
+      use:islandTooltip={$tStore('calculator.square_root')}
     >
       √
     </button>
     <button
       class="calc-btn func-btn"
       onclick={handleRoot}
-      use:islandTooltip={'Nth root (e.g. 3√27)'}
+      use:islandTooltip={$tStore('calculator.nth_root')}
     >
       ⁿ√
     </button>
     <button
       class="calc-btn func-btn"
       onclick={handlePower}
-      use:islandTooltip={'Power (xʸ)'}
+      use:islandTooltip={$tStore('calculator.power')}
     >
       xʸ
     </button>
     <button
       class="calc-btn op-btn"
       onclick={() => handleOperator('÷')}
-      use:islandTooltip={'Divide'}
+      use:islandTooltip={$tStore('calculator.divide')}
     >
       ÷
     </button>
@@ -400,7 +401,7 @@
     <button
       class="calc-btn op-btn"
       onclick={() => handleOperator('×')}
-      use:islandTooltip={'Multiply'}
+      use:islandTooltip={$tStore('calculator.multiply')}
     >
       ×
     </button>
@@ -412,7 +413,7 @@
     <button
       class="calc-btn op-btn"
       onclick={() => handleOperator('−')}
-      use:islandTooltip={'Subtract'}
+      use:islandTooltip={$tStore('calculator.subtract')}
     >
       −
     </button>
@@ -424,7 +425,7 @@
     <button
       class="calc-btn op-btn"
       onclick={() => handleOperator('+')}
-      use:islandTooltip={'Add'}
+      use:islandTooltip={$tStore('calculator.add')}
     >
       +
     </button>
@@ -433,7 +434,7 @@
     <button
       class="calc-btn num-btn"
       onclick={handleToggleSign}
-      use:islandTooltip={'Toggle sign'}
+      use:islandTooltip={$tStore('calculator.toggle_sign')}
     >
       ±
     </button>
@@ -442,7 +443,7 @@
     <button
       class="calc-btn equals-btn"
       onclick={handleEvaluate}
-      use:islandTooltip={'Calculate'}
+      use:islandTooltip={$tStore('calculator.calculate')}
     >
       =
     </button>

@@ -12,7 +12,7 @@
   import { ChevronUp } from 'lucide-svelte'
   import Notification from '../components/Notification.svelte'
   import { islandTooltip } from '../services/islandTooltip'
-  import { notifData } from '../store'
+  import { notifData, tStore } from '../store'
   import type { IslandConfig } from '../store'
   import HomePage, { config as homeConfig } from './HomePage.svelte'
 
@@ -37,7 +37,7 @@
     <div class="shrink-action">
       <button
         class="collapse-btn"
-        use:islandTooltip={'Collapse notification'}
+        use:islandTooltip={$tStore('notification.dismiss_tooltip')}
         onclick={(e: MouseEvent) => {
           if (e) e.stopPropagation()
           navigate(HomePage, homeConfig, false)

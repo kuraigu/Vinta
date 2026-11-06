@@ -14,6 +14,7 @@
   import {
     wirelessDataStore,
     batteryDataStore,
+    tStore,
     type WirelessData,
     type BatteryData,
     type IslandConfig
@@ -193,7 +194,7 @@
       <div class="glance-icon-badge">
         <SlidersHorizontal size={12} />
       </div>
-      <span class="glance-title-text">Quick Controls</span>
+      <span class="glance-title-text">{$tStore('quick_controls.title')}</span>
     </div>
     <ChevronRight size={14} class="glance-nav-chevron" />
   </div>
@@ -216,7 +217,7 @@
           <WifiOff size={18} />
         {/if}
       </div>
-      <span class="toggle-label">Wi-Fi</span>
+      <span class="toggle-label">{$tStore('quick_controls.wifi')}</span>
     </button>
 
     <!-- Bluetooth Toggle -->
@@ -236,7 +237,7 @@
           <BluetoothOff size={18} />
         {/if}
       </div>
-      <span class="toggle-label">Bluetooth</span>
+      <span class="toggle-label">{$tStore('quick_controls.bluetooth')}</span>
     </button>
 
     <!-- Airplane Mode Toggle -->
@@ -251,7 +252,7 @@
       <div class="toggle-icon-wrap">
         <Plane size={18} />
       </div>
-      <span class="toggle-label">Airplane</span>
+      <span class="toggle-label">{$tStore('quick_controls.airplane')}</span>
     </button>
 
     <!-- Battery Saver Toggle -->
@@ -271,7 +272,7 @@
           <Battery size={18} />
         {/if}
       </div>
-      <span class="toggle-label">Saver</span>
+      <span class="toggle-label">{$tStore('quick_controls.saver')}</span>
     </button>
   </div>
 </BentoCard>

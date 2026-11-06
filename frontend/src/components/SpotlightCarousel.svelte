@@ -8,7 +8,7 @@
     ChevronLeft
   } from 'lucide-svelte'
   import { Browser } from '@wailsio/runtime'
-  import { activeSettingsTabStore, type IslandConfig } from '../store'
+  import { activeSettingsTabStore, tStore, type IslandConfig } from '../store'
   import SettingsPage, {
     config as settingsConfig
   } from '../pages/SettingsPage.svelte'
@@ -40,11 +40,11 @@
       (page: unknown, pageConfig: IslandConfig, expand?: boolean) => void
     >('navigate')
 
-  const defaultSpotlightItems: SpotlightItem[] = [
+  let defaultSpotlightItems: SpotlightItem[] = $derived([
     {
       id: 'support',
-      title: 'Support Vinta',
-      description: 'Help fund development on Ko-fi & GitHub Sponsors',
+      title: $tStore('spotlight.support_title'),
+      description: $tStore('spotlight.support_desc'),
       iconType: 'component',
       iconComponent: Heart,
       badgeBg: 'var(--vinta-danger, #ef4444)',
@@ -53,8 +53,8 @@
     },
     {
       id: 'github',
-      title: 'Star on GitHub',
-      description: 'Support open source and help shape Vinta roadmap',
+      title: $tStore('spotlight.github_title'),
+      description: $tStore('spotlight.github_desc'),
       iconType: 'component',
       iconComponent: Star,
       badgeBg: 'var(--vinta-warning, #f59e0b)',
@@ -63,17 +63,18 @@
     },
     {
       id: 'appearance',
-      title: 'Personalize Your Island',
-      description: 'Customize themes, widget feeds, and screen positioning',
+      title: $tStore('spotlight.appearance_title'),
+      description: $tStore('spotlight.appearance_desc'),
       iconType: 'component',
       iconComponent: Palette,
       badgeBg: 'var(--vinta-accent-primary, #38bdf8)',
       badgeColor: '#0b1120',
       internalTab: 'appearance'
     }
-  ]
+  ])
 
-  let { items = defaultSpotlightItems }: Props = $props()
+  let { items }: Props = $props()
+  let computedItems = $derived(items ?? defaultSpotlightItems)
 
   let currentIndex = $state(0)
   let trackEl = $state<HTMLElement | null>(null)
@@ -111,7 +112,7 @@
    */
   function handleNext(e?: MouseEvent) {
     if (e) e.stopPropagation()
-    if (currentIndex >= items.length - 1) return
+    if (currentIndex >= computedItems.length - 1) return
     scrollToIndex(currentIndex + 1, true)
   }
 
@@ -119,8 +120,8 @@
    * Initializes active card with a random index and scrolls without animation.
    */
   function initializeRandomIndex() {
-    if (items.length > 1) {
-      currentIndex = Math.floor(Math.random() * items.length)
+    if (computedItems.length > 1) {
+      currentIndex = Math.floor(Math.random() * computedItems.length)
       requestAnimationFrame(() => {
         scrollToIndex(currentIndex, false)
       })
@@ -152,7 +153,7 @@
     if (
       closestIdx !== currentIndex &&
       closestIdx >= 0 &&
-      closestIdx < items.length
+      closestIdx < computedItems.length
     ) {
       currentIndex = closestIdx
     }
@@ -206,7 +207,7 @@
     }}
     onscroll={handleScroll}
   >
-    {#each items as item (item.id)}
+    {#each computedItems as item (item.id)}
       <button
         type="button"
         class="spotlight-card"
@@ -239,7 +240,7 @@
     {/each}
   </div>
 
-  {#if items.length > 1}
+  {#if computedItems.length > 1}
     <div class="spotlight-footer">
       <button
         type="button"
@@ -252,7 +253,7 @@
       </button>
 
       <div class="spotlight-dots">
-        {#each items as it, idx (it.id)}
+        {#each computedItems as it, idx (it.id)}
           <button
             type="button"
             class="spotlight-dot"
@@ -269,7 +270,7 @@
       <button
         type="button"
         class="spotlight-arrow-btn"
-        disabled={currentIndex >= items.length - 1}
+        disabled={currentIndex >= computedItems.length - 1}
         onclick={handleNext}
         aria-label="Next card"
       >

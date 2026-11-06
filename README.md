@@ -11,6 +11,19 @@ Vinta is an open-source, beautifully designed Dynamic Island widget built specif
 
 ---
 
+## Download
+
+Download the latest build for Windows 10/11 (64-bit):
+
+| File                                                                       | Type      | Notes                                                              |
+| :------------------------------------------------------------------------- | :-------- | :----------------------------------------------------------------- |
+| **[Vinta-Setup.exe](https://github.com/kuraigu/Vinta/releases/latest)**    | Installer | Standard setup with Start Menu and desktop shortcuts (Recommended) |
+| **[Vinta-Portable.zip](https://github.com/kuraigu/Vinta/releases/latest)** | Portable  | Just unzip and run `Vinta.exe` from anywhere                       |
+
+Browse previous releases, release notes, and SHA-256 integrity checksums on the official **[GitHub Releases](https://github.com/kuraigu/Vinta/releases)** page.
+
+---
+
 ## Origin & Vision
 
 The name **Vinta** comes from the iconic outrigger boats (_vinta_) of Mindanao, Philippines, celebrated for their colorful sails that glide gracefully across open waters.
@@ -21,15 +34,21 @@ Inspired by this heritage, Vinta brings that same fluid grace to your desktop in
 
 ## Features
 
-- **Floating Island Experience:** Seamlessly floats at the top of your screen with smooth backdrop blurs and transparent glass borders.
-- **Interactive Component Gallery:** Swipe or drag through your favorite widgets including weather forecasts, live clocks, system meters, and calendar views.
-- **Live Weather & Forecasts:** Real-time local temperatures, atmospheric conditions, daily high and low ranges, and multi-day forecasts.
-- **Intelligent Notification Hub:** Captures incoming Windows notifications in a clean pop-up banner with customizable audio chimes and quiet hours.
-- **Customizable Appearance & Themes:** Personalize your island with built-in presets (OLED Dark, Nord Frost) or create and install custom `.vintatheme` packages with CSS cascade layer overrides.
-- **Flexible Screen Positioning:** Drag the island horizontally to align with your setup, or double-click anytime to return it to center.
+Vinta sits at the top of your screen and stays out of your way until you need it. You can slide it horizontally with smooth inertia, or hide it completely when you're doing heavy work and want to avoid distractions.
+
+Inside the island, you get:
+
+- A media player that automatically pops up when supported media starts playing
+- A file shelf where you can temporarily drop files from different places before moving them all at once
+- Quick notes, a calculator, and a timer/alarm for everyday tasks
+- A calendar and agenda setup to keep track of your day
+- Incoming notifications from supported apps
+- Theme support and settings to customize how it looks and acts
+- Tells you the time, weather, and date through a glance
+- Plenty more things to discover once you use the app
 
 > [!NOTE]
-> **PC Gaming Note:** Vinta may not work well with **Exclusive Fullscreen** games, but works smoothly with **Fullscreen** and **Borderless** window modes. If Vinta hides or minimizes when launching a game, switch your game's display settings to **Fullscreen** or **Borderless**.
+> **PC Gaming Note:** Vinta works best with **Fullscreen** and **Borderless** window modes rather than **Exclusive Fullscreen**. If Vinta disappears when you launch a game, switching the game's display settings to **Fullscreen** or **Borderless** usually fixes it (though a few games block floating windows completely). On multi-monitor setups, if Vinta has to hide because a game doesn't support overlays, it will automatically move to your other display.
 
 ---
 
@@ -46,6 +65,7 @@ Inspired by this heritage, Vinta brings that same fluid grace to your desktop in
 ## Documentation & Community
 
 - [Contributing Guide](CONTRIBUTING.md): Instructions for contributing code, testing features, or reporting issues.
+- [Translation Guide](docs/TRANSLATIONS.md): Instructions for translating Vinta into other languages and testing locally.
 - [Design Principles](docs/DESIGN.md): Guidelines for UI component structure, styling rules, and design tokens.
 - [Contributors Hall of Fame](docs/CONTRIBUTORS.md): Recognition for developers, designers, and community members.
 - [Security Policy](SECURITY.md): Vulnerability reporting procedures and safety guidelines.
@@ -71,6 +91,8 @@ task dev      # Run live-reloading development server with DevTest panel
 task run      # Compile and launch release binary
 task lint     # Check formatting, Go linting, and TypeScript checks
 task build    # Build production executable to build/bin/Vinta.exe
+
+task help     # Check all commands
 ```
 
 > [!TIP]

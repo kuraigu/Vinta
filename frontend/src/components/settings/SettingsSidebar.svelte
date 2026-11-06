@@ -7,11 +7,12 @@
     Bell,
     Clock,
     CloudSun,
+    Languages,
     Cpu,
     Download,
     Info
   } from 'lucide-svelte'
-  import { activeSettingsTabStore } from '../../store'
+  import { activeSettingsTabStore, tStore } from '../../store'
 
   const categories = [
     { id: 'appearance', name: 'Appearance', icon: Palette },
@@ -21,6 +22,7 @@
     { id: 'notifications', name: 'Notifications', icon: Bell },
     { id: 'clock', name: 'Clock & Date', icon: Clock },
     { id: 'weather', name: 'Weather', icon: CloudSun },
+    { id: 'language', name: 'Language', icon: Languages },
     { id: 'system', name: 'System', icon: Cpu },
     { id: 'about', name: 'About', icon: Info },
     { id: 'updates', name: 'Updates', icon: Download }
@@ -35,7 +37,7 @@
       onclick={() => ($activeSettingsTabStore = cat.id)}
     >
       <cat.icon size={14} class="nav-icon" />
-      <span>{cat.name}</span>
+      <span>{$tStore('settings.tabs.' + cat.id)}</span>
     </button>
   {/each}
 </div>

@@ -20,12 +20,14 @@
     weatherUnitStore,
     simulateOfflineStore,
     simulateWeatherStore,
+    tStore,
     type IslandConfig
   } from '../store'
   import {
     fetchWeatherData,
     convertTemp,
     parseWmoCode,
+    getWmoConditionKey,
     type WeatherData
   } from '../services/weatherService'
   import WeatherPage, {
@@ -199,13 +201,17 @@
   }
 
   function computeBannerConditionTitle() {
-    if (!weather) return isNight ? 'Clear Night' : 'Sunny'
-    if (weather.condition) return weather.condition
-    if (weather.weatherCode === 0) return isNight ? 'Clear Night' : 'Sunny'
-    if (weather.weatherCode >= 1 && weather.weatherCode <= 3) {
-      return isNight ? 'Cloudy Night' : 'Partly Cloudy'
+    if (!weather) {
+      return isNight
+        ? $tStore('weather.conditions.clear_night')
+        : $tStore('weather.conditions.sunny')
     }
-    return weather.condition
+    const key = getWmoConditionKey(
+      weather.weatherCode ?? 0,
+      isNight,
+      weather.condition
+    )
+    return $tStore(key)
   }
   let bannerConditionTitle = $derived.by(computeBannerConditionTitle)
 
@@ -369,9 +375,11 @@
           <div class="banner-sub-meta">
             <span class="meta-sub-item">{bannerConditionTitle}</span>
             <span class="sub-divider">|</span>
-            <span class="meta-sub-item"
-              >Feels like {displayFeelsLike.val}°{unitLetter}</span
-            >
+            <span class="meta-sub-item">
+              {$tStore('weather.feels_like_temp', {
+                temp: `${displayFeelsLike.val}°${unitLetter}`
+              })}
+            </span>
           </div>
 
           <!-- Location Name -->
@@ -390,7 +398,11 @@
                 isForecastOpen = !isForecastOpen
               }}
             >
-              <span>{isForecastOpen ? 'Hide Forecast' : 'See Forecast'}</span>
+              <span
+                >{isForecastOpen
+                  ? $tStore('weather.hide_forecast')
+                  : $tStore('weather.see_forecast')}</span
+              >
               <ChevronDown
                 size={13}
                 strokeWidth={2.4}
@@ -410,8 +422,8 @@
                 e.stopPropagation()
                 openWeatherPage()
               }}
-              use:islandTooltip={'Weather details'}
-              aria-label="Weather details"
+              use:islandTooltip={$tStore('weather.details')}
+              aria-label={$tStore('weather.details')}
             >
               <MoreHorizontal size={14} />
             </button>
@@ -437,7 +449,7 @@
             </div>
             <div class="drawer-chip">
               <Droplets size={12} class="chip-icon" />
-              <span>{weather.humidity}% Humidity</span>
+              <span>{weather.humidity}% {$tStore('weather.humidity')}</span>
             </div>
           </div>
 
@@ -492,15 +504,15 @@
   >
     {#if loading && !weather}
       <div class="bento-tile-loading">
-        <span>Loading live weather...</span>
+        <span>{$tStore('weather.loading')}</span>
       </div>
     {:else if error && !weather}
       <div class="banner-error">
         <WifiOff size={24} class="offline-icon" />
-        <span class="error-title">Unable to fetch weather</span>
+        <span class="error-title">{$tStore('weather.unable_to_fetch')}</span>
         <button type="button" class="retry-btn" onclick={() => handleRetry()}>
           <RefreshCw size={12} />
-          <span>Retry</span>
+          <span>{$tStore('common.retry')}</span>
         </button>
       </div>
     {:else if weather}
@@ -515,7 +527,7 @@
               <div class="forecast-bento-card">
                 <div class="forecast-bento-header">
                   <CalendarDays size={13} />
-                  <span>7-Day Forecast</span>
+                  <span>{$tStore('weather.forecast_7day')}</span>
                 </div>
                 <div class="forecast-days-strip">
                   {#each weather.forecast as f, idx (f.day + idx)}
@@ -651,12 +663,12 @@
         <div class="header-left">
           <BackButton />
         </div>
-        <span class="header-title-text">Weather</span>
+        <span class="header-title-text">{$tStore('apps.weather_name')}</span>
         <div class="header-right">
           <RefreshButton
             {loading}
             onclick={() => handleRetry()}
-            title="Refresh weather data"
+            title={$tStore('common.retry')}
           />
         </div>
       </div>

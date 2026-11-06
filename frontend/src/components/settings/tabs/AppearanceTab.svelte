@@ -23,7 +23,8 @@
     opacityMinimalStore,
     opacityExpandedStore,
     uiScaleStore,
-    displayLayoutStore
+    displayLayoutStore,
+    tStore
   } from '../../../store'
   import {
     listThemes,
@@ -168,8 +169,8 @@
   </SettingItem>
 
   <SettingItem
-    label="Theme"
-    description="Color scheme for UI surfaces (Default: OLED Dark)"
+    label={$tStore('appearance.theme_label')}
+    description={$tStore('appearance.theme_desc')}
     icon={Moon}
     flexCol={true}
   >
@@ -188,7 +189,7 @@
           title="Import .vintatheme package"
         >
           <Upload size={13} strokeWidth={2.2} />
-          <span>Import Theme</span>
+          <span>{$tStore('appearance.import_theme')}</span>
         </button>
         <button
           type="button"
@@ -197,7 +198,7 @@
           title="Open Themes Folder in Windows Explorer"
         >
           <FolderOpen size={13} strokeWidth={2.2} />
-          <span>Open Folder</span>
+          <span>{$tStore('appearance.open_folder')}</span>
         </button>
         <button
           type="button"
@@ -211,7 +212,7 @@
             strokeWidth={2.2}
             class={isLoadingThemes ? 'spinning' : ''}
           />
-          <span>Refresh</span>
+          <span>{$tStore('appearance.refresh_themes')}</span>
         </button>
       </div>
 
@@ -225,7 +226,7 @@
           >
             <div class="toggle-left">
               <Info size={12} strokeWidth={2} />
-              <span>Theme Details</span>
+              <span>{$tStore('appearance.theme_details')}</span>
             </div>
             <ChevronDown
               size={12}
@@ -238,9 +239,9 @@
             <div class="theme-details-card">
               <div class="details-header">
                 <span class="details-author">
-                  Created by <span class="author-name"
-                    >{currentTheme.manifest.author}</span
-                  >
+                  {$tStore('appearance.created_by', {
+                    author: currentTheme.manifest.author
+                  })}
                 </span>
                 <div class="details-badges">
                   <span class="badge">v{currentTheme.manifest.version}</span>

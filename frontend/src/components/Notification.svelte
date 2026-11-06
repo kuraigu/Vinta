@@ -17,7 +17,12 @@
     Settings,
     Terminal
   } from 'lucide-svelte'
-  import { notifData, notificationPermissionDenied, dndStore } from '../store'
+  import {
+    notifData,
+    notificationPermissionDenied,
+    dndStore,
+    tStore
+  } from '../store'
   import { swipe } from '../utils/useSwipe'
   import { onMount } from 'svelte'
   import { SvelteSet, SvelteMap } from 'svelte/reactivity'
@@ -581,7 +586,7 @@
   {:else}
     <div class="expanded-view">
       <div class="notif-header">
-        <h3>Notifications</h3>
+        <h3>{$tStore('notification.page_title')}</h3>
         <div class="notif-header-actions">
           <button
             class="dnd-btn"
@@ -610,7 +615,11 @@
               aria-label="Clear all notifications"
             >
               <Trash2 size={14} />
-              <span>{isConfirmingClear ? 'Confirm?' : 'Clear'}</span>
+              <span
+                >{isConfirmingClear
+                  ? 'Confirm?'
+                  : $tStore('notification.clear_all')}</span
+              >
             </button>
           {/if}
         </div>
@@ -1059,7 +1068,7 @@
           </div>
         {/each}
         {#if notifications.length === 0}
-          <div class="empty-state">No new notifications</div>
+          <div class="empty-state">{$tStore('notification.empty_desc')}</div>
         {/if}
       </ScrollView>
     </div>

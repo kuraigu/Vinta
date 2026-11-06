@@ -3,7 +3,11 @@
   import { EyeOff, Minimize2, Power } from 'lucide-svelte'
   import { AppControls } from '../utils/AppControls.svelte'
   import DockButton from './DockButton.svelte'
-  import { hasCompletedOnboardingStore, type IslandConfig } from '../store'
+  import {
+    hasCompletedOnboardingStore,
+    tStore,
+    type IslandConfig
+  } from '../store'
   import OnboardingPage from '../pages/OnboardingPage.svelte'
 
   const navigate =
@@ -28,13 +32,13 @@
 <div
   class="floating-controls"
   role="toolbar"
-  aria-label="Window controls"
+  aria-label={$tStore('controls.window_controls')}
   tabindex="-1"
 >
   <div class="button-wrapper">
     <DockButton
       shape="rounded"
-      tooltip={isOnboarding ? '' : 'Minimize'}
+      tooltip={isOnboarding ? '' : $tStore('controls.minimize')}
       tooltipPosition={expandedTooltipSide}
       disabled={isOnboarding}
       onclick={(e: MouseEvent) =>
@@ -47,7 +51,7 @@
   <div class="button-wrapper">
     <DockButton
       shape="rounded"
-      tooltip={isOnboarding ? '' : 'Hide'}
+      tooltip={isOnboarding ? '' : $tStore('controls.hide')}
       tooltipPosition={expandedTooltipSide}
       disabled={isOnboarding}
       onclick={(e: MouseEvent) => AppControls.doHide(navigate, hidePill, e)}
@@ -60,7 +64,7 @@
     <DockButton
       shape="rounded"
       variant="danger"
-      tooltip="Quit Vinta"
+      tooltip={$tStore('controls.quit')}
       tooltipPosition={expandedTooltipSide}
       onclick={(e: MouseEvent) => AppControls.doQuit(e)}
     >
