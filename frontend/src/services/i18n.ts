@@ -1,8 +1,8 @@
 /**
- * Vinta Reactive Internationalization (i18n) Engine.
+ * @fileoverview Reactive translation and localization service.
  *
- * Provides reactive translation lookups, fallback resolution to English,
- * token interpolation, and dynamic drop-in locale loading from disk.
+ * Handles translation lookups, {token} interpolation, English fallbacks,
+ * and loads user-added JSON translation files from `%APPDATA%/FreeMatrix Studios/Vinta/locales`.
  */
 
 import { writable, derived, get } from 'svelte/store'

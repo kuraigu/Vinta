@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Hardware and OS telemetry state.
+ *
+ * Holds reactive stores for Windows notifications, active media player sessions,
+ * battery charge status, Wi-Fi and Bluetooth state, and display monitor layouts.
+ */
+
 import { writable } from 'svelte/store'
 import type { DisplayLayout } from '../../bindings/Vinta/backend/models.js'
 import {

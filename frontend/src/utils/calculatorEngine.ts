@@ -1,7 +1,8 @@
 /**
- * Safe, zero-eval arithmetic parser and evaluator for Vinta Calculator.
- * Supports standard arithmetic, superscript powers (e.g. 9⁵, 2³), square roots (√16),
- * editable nth-roots (e.g. ³√27, ⁴√16), parentheses, and floating-point precision stabilization.
+ * @fileoverview Arithmetic expression parser and evaluator.
+ *
+ * Parses math expressions with standard operator precedence, parentheses,
+ * powers, square roots, and nth-roots without using JavaScript `eval()`.
  */
 
 export interface CalculationResult {

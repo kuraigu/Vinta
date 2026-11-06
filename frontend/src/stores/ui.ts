@@ -1,3 +1,10 @@
+/**
+ * @fileoverview UI view state and developer debug flags.
+ *
+ * Tracks the current active page, whether the island is minimized into the pill,
+ * media drawer visibility, and test simulation overrides (mock battery, offline mode).
+ */
+
 import { writable } from 'svelte/store'
 import type { WeatherData } from '../services/weatherService'
 

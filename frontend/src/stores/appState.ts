@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Stores app version info and manages background updates.
+ *
+ * Keeps track of version numbers and git commits, checks GitHub for new releases,
+ * downloads installers, and triggers restarts when an update is ready.
+ */
+
 import { writable, get } from 'svelte/store'
 import {
   CheckForUpdates,

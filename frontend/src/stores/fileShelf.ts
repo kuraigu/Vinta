@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Temporary file drop shelf state.
+ *
+ * Holds files dragged in from Windows Explorer, provides previews, handles dragging
+ * files out to other apps, and supports batch zipping and EXIF metadata stripping.
+ */
+
 import { writable, get } from 'svelte/store'
 import { Call, Events } from '@wailsio/runtime'
 

@@ -1,7 +1,10 @@
-// ============================================================================
-// Vinta Store Facade
-// Re-exports all domain stores for 100% backward compatibility with existing imports.
-// ============================================================================
+/**
+ * @fileoverview Main store exports facade.
+ *
+ * Re-exports domain stores (settings, system, timer, calendar, telemetry)
+ * so components can import common stores from a single place.
+ */
+
 export * from './stores/settings'
 export * from './stores/system'
 export * from './stores/appState'

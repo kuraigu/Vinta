@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Island page navigation and default view resolver.
+ *
+ * Determines which page to show on wake (showing the timer if running, media player
+ * if playing, or onboarding on first run) and provides navigation helper functions.
+ */
+
 import HomePage, { config as homeConfig } from '../pages/HomePage.svelte'
 import AppsPage, { config as appsConfig } from '../pages/AppsPage.svelte'
 import SettingsPage, {

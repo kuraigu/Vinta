@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Manages calendar events and remote iCal feed subscriptions.
+ *
+ * Stores local events, fetches remote calendar subscriptions, triggers reminder
+ * notifications, and automatically removes past events when configured.
+ */
+
 import { writable, get } from 'svelte/store'
 import {
   GetCalendarData,

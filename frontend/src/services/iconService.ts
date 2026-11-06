@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Extracts and caches native Windows application icons.
+ *
+ * Requests high-resolution icons for running apps and Windows Store packages from
+ * the native backend, and parses Windows app IDs (AUMIDs) into clean display names.
+ */
+
 import { writable } from 'svelte/store'
 import { GetAppIcon } from '../../bindings/Vinta/backend/app.js'
 

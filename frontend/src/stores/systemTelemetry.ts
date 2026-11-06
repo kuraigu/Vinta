@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Live CPU, RAM, and GPU performance metrics.
+ *
+ * Receives hardware load numbers from the Go backend and maintains rolling history
+ * buffers for rendering sparkline charts on the performance page and home feed.
+ */
+
 import { writable } from 'svelte/store'
 import { Events } from '@wailsio/runtime'
 import {

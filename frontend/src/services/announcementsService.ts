@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Fetches developer announcements and GitHub release notes.
+ *
+ * Pulls update changelogs and announcements through the backend, caches the results,
+ * and tracks whether the user has unread announcements to show a badge on the home feed.
+ */
+
 import { Call } from '@wailsio/runtime'
 
 /**
@@ -23,10 +30,7 @@ export interface AnnouncementsPayload {
 }
 
 /**
- * Fetches release notes markdown for the specified version, prioritizing offline cache.
- *
- * @param version - Version tag to fetch release notes for
- * @returns Release notes markdown content
+ * Fetches release notes markdown for a specific version tag.
  */
 export async function getReleaseNotes(version: string): Promise<string> {
   try {
@@ -39,9 +43,7 @@ export async function getReleaseNotes(version: string): Promise<string> {
 }
 
 /**
- * Fetches developer announcements from the official release feed.
- *
- * @returns Announcements payload containing items and unread indicator
+ * Fetches announcements from the release feed.
  */
 export async function getDeveloperAnnouncements(): Promise<AnnouncementsPayload> {
   try {
@@ -54,7 +56,7 @@ export async function getDeveloperAnnouncements(): Promise<AnnouncementsPayload>
 }
 
 /**
- * Marks announcements as read by recording the active content hash.
+ * Marks announcements as read by saving the current content hash.
  */
 export async function markAnnouncementsRead(): Promise<void> {
   try {

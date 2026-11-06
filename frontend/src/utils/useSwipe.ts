@@ -1,3 +1,11 @@
+/**
+ * @fileoverview Touch and mouse drag scroll action with momentum inertia.
+ *
+ * Allows smooth dragging and flick scrolling across feed lists while ignoring
+ * clicks on sliders, buttons, and text inputs.
+ */
+
+/** Configuration options for the swipe and drag-scroll action. */
 export type SwipeOptions = {
   axis?: 'x' | 'y' | 'both'
   enableSwipe?: boolean
@@ -19,7 +27,7 @@ interface ExtendedPointerEvent extends PointerEvent {
 
 /**
  * Resolves the primary scrollable container.
- * Prefers the node itself, or checks ancestors/target if needed.
+ * Prefers the node itself, or checks ancestors and target if needed.
  */
 function findScrollableContainer(
   node: HTMLElement,

@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Synchronizes clickable screen areas with the Go backend.
+ *
+ * Measures the island capsule, satellites, and menus in screen pixels and forwards
+ * the rectangles to the native backend so transparent desktop areas remain clickable.
+ */
+
 import {
   SetHitRects,
   TrimMemory,

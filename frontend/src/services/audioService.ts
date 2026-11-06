@@ -1,4 +1,11 @@
-// Synthetic procedural audio chime synthesizer using Web Audio API
+/**
+ * @fileoverview Generates app sounds and notification chimes.
+ *
+ * Synthesizes two-tone notification bells, focus completion sounds, and
+ * alarm sounds (chime, radar, digital, marimba) using the Web Audio API without
+ * needing audio asset files.
+ */
+
 let audioCtx: AudioContext | null = null
 
 function getAudioContext(): AudioContext {
@@ -15,6 +22,9 @@ function getAudioContext(): AudioContext {
   return audioCtx
 }
 
+/**
+ * Plays a two-tone bell chime for incoming notifications.
+ */
 export function playNotifChime(volume = 0.8) {
   try {
     const ctx = getAudioContext()

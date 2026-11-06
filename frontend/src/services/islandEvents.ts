@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Coordinates backend system events with the frontend UI.
+ *
+ * Listens for OS events from the Go backend (media updates, toast notifications,
+ * display changes, battery/wireless status, hotkeys) and triggers UI updates.
+ */
+
 import type { Component } from 'svelte'
 import { get } from 'svelte/store'
 import { Events } from '@wailsio/runtime'

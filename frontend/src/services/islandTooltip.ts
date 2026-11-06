@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Svelte action for attaching tooltips to island buttons.
+ *
+ * Shows the custom tooltip component on hover and hides it when clicked or scrolled.
+ */
+
 import {
   showTooltip,
   hideTooltip,
@@ -7,11 +13,7 @@ import {
 export type IslandTooltipOptions = TooltipOptions
 
 /**
- * Svelte action for attaching a custom styled tooltip to an island element.
- * Triggers the CustomTooltip singleton host upon hover.
- *
- * @param node - The DOM element triggering the tooltip on hover.
- * @param options - Text label or configuration object with alignment and position.
+ * Attaches a tooltip to an element on pointer hover.
  */
 export function islandTooltip(
   node: HTMLElement,

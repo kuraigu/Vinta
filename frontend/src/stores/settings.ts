@@ -1,3 +1,10 @@
+/**
+ * @fileoverview User settings store with encrypted disk persistence.
+ *
+ * Stores user preferences (theme, auto-hide, 12h/24h time, weather location, hotkeys)
+ * and automatically saves changes to encrypted storage via the backend.
+ */
+
 import { writable, get } from 'svelte/store'
 import { Events } from '@wailsio/runtime'
 import {

@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Theme loading and CSS variable injection engine.
+ *
+ * Discovers built-in and user-installed themes, checks for missing CSS variables
+ * during development, and injects theme styles into the DOM.
+ */
+
 import type { ThemeInfo } from './types.js'
 import tokensRawCss from './tokens.css?raw'
 import darkGoldManifest from './presets/dark-gold/manifest.json'
