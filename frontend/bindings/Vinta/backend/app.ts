@@ -241,11 +241,21 @@ export function GetCurrentMonitor(): $CancellablePromise<$models.MonitorInfo> {
 }
 
 /**
+ * GetCustomLocales scans %APPDATA%/FreeMatrix Studios/Vinta/locales/ for *.json files
+ * and returns a map of locale identifier to raw JSON string.
+ */
+export function GetCustomLocales(): $CancellablePromise<{ [_ in string]?: string }> {
+    return $Call.ByID(3983095557).then(($result: any) => {
+        return $$createType12($result);
+    });
+}
+
+/**
  * GetDeveloperAnnouncements fetches official developer announcements with hash-based unread detection.
  */
 export function GetDeveloperAnnouncements(): $CancellablePromise<$models.AnnouncementsPayload> {
     return $Call.ByID(3040284799).then(($result: any) => {
-        return $$createType12($result);
+        return $$createType13($result);
     });
 }
 
@@ -254,7 +264,7 @@ export function GetDeveloperAnnouncements(): $CancellablePromise<$models.Announc
  */
 export function GetDisplayLayout(): $CancellablePromise<$models.DisplayLayout> {
     return $Call.ByID(2439750779).then(($result: any) => {
-        return $$createType13($result);
+        return $$createType14($result);
     });
 }
 
@@ -305,7 +315,7 @@ export function GetSettings(): $CancellablePromise<string> {
  */
 export function GetSystemDiagnostics(): $CancellablePromise<$models.SystemDiagnostics> {
     return $Call.ByID(306280716).then(($result: any) => {
-        return $$createType14($result);
+        return $$createType15($result);
     });
 }
 
@@ -314,7 +324,7 @@ export function GetSystemDiagnostics(): $CancellablePromise<$models.SystemDiagno
  */
 export function GetSystemTelemetry(): $CancellablePromise<services$0.SystemTelemetry> {
     return $Call.ByID(3760642775).then(($result: any) => {
-        return $$createType15($result);
+        return $$createType16($result);
     });
 }
 
@@ -344,7 +354,7 @@ export function GetUpdateRepo(): $CancellablePromise<string> {
  */
 export function GetWirelessStatus(): $CancellablePromise<services$0.WirelessStatus> {
     return $Call.ByID(794979391).then(($result: any) => {
-        return $$createType16($result);
+        return $$createType17($result);
     });
 }
 
@@ -367,7 +377,7 @@ export function ImportSettingsFileDialog(): $CancellablePromise<string> {
  */
 export function ImportThemeDialog(): $CancellablePromise<$models.ThemeInfo | null> {
     return $Call.ByID(1943468227).then(($result: any) => {
-        return $$createType18($result);
+        return $$createType19($result);
     });
 }
 
@@ -376,7 +386,7 @@ export function ImportThemeDialog(): $CancellablePromise<$models.ThemeInfo | nul
  */
 export function InspectShelfFiles(paths: string[]): $CancellablePromise<$models.ShelfFileItem[]> {
     return $Call.ByID(4271776190, paths).then(($result: any) => {
-        return $$createType19($result);
+        return $$createType20($result);
     });
 }
 
@@ -406,7 +416,7 @@ export function IsTestMode(): $CancellablePromise<boolean> {
  */
 export function ListNotes(): $CancellablePromise<$models.NoteFileInfo[]> {
     return $Call.ByID(2184398716).then(($result: any) => {
-        return $$createType21($result);
+        return $$createType22($result);
     });
 }
 
@@ -415,7 +425,7 @@ export function ListNotes(): $CancellablePromise<$models.NoteFileInfo[]> {
  */
 export function ListThemes(): $CancellablePromise<$models.ThemeInfo[]> {
     return $Call.ByID(44849841).then(($result: any) => {
-        return $$createType22($result);
+        return $$createType23($result);
     });
 }
 
@@ -431,6 +441,13 @@ export function MarkAnnouncementsRead(): $CancellablePromise<void> {
  */
 export function OpenFeedbackIssue(): $CancellablePromise<void> {
     return $Call.ByID(3114944467);
+}
+
+/**
+ * OpenLocalesFolder launches Windows Explorer targeting %APPDATA%/FreeMatrix Studios/Vinta/locales.
+ */
+export function OpenLocalesFolder(): $CancellablePromise<void> {
+    return $Call.ByID(3974861386);
 }
 
 /**
@@ -473,7 +490,7 @@ export function PauseUpdateDownload(): $CancellablePromise<void> {
  */
 export function PromptChooseShelfFiles(): $CancellablePromise<$models.ShelfFileItem[]> {
     return $Call.ByID(2406650291).then(($result: any) => {
-        return $$createType19($result);
+        return $$createType20($result);
     });
 }
 
@@ -885,7 +902,7 @@ export function StopSystemTelemetry(): $CancellablePromise<boolean> {
  */
 export function StripShelfImageMetadata(paths: string[]): $CancellablePromise<$models.ShelfFileItem[]> {
     return $Call.ByID(4085277947, paths).then(($result: any) => {
-        return $$createType19($result);
+        return $$createType20($result);
     });
 }
 
@@ -937,14 +954,15 @@ const $$createType8 = services$0.BatteryStatus.createFrom;
 const $$createType9 = $models.Contributor.createFrom;
 const $$createType10 = $Create.Array($$createType9);
 const $$createType11 = $models.MonitorInfo.createFrom;
-const $$createType12 = $models.AnnouncementsPayload.createFrom;
-const $$createType13 = $models.DisplayLayout.createFrom;
-const $$createType14 = $models.SystemDiagnostics.createFrom;
-const $$createType15 = services$0.SystemTelemetry.createFrom;
-const $$createType16 = services$0.WirelessStatus.createFrom;
-const $$createType17 = $models.ThemeInfo.createFrom;
-const $$createType18 = $Create.Nullable($$createType17);
-const $$createType19 = $Create.Array($$createType0);
-const $$createType20 = $models.NoteFileInfo.createFrom;
-const $$createType21 = $Create.Array($$createType20);
-const $$createType22 = $Create.Array($$createType17);
+const $$createType12 = $Create.Map($Create.Any, $Create.Any);
+const $$createType13 = $models.AnnouncementsPayload.createFrom;
+const $$createType14 = $models.DisplayLayout.createFrom;
+const $$createType15 = $models.SystemDiagnostics.createFrom;
+const $$createType16 = services$0.SystemTelemetry.createFrom;
+const $$createType17 = services$0.WirelessStatus.createFrom;
+const $$createType18 = $models.ThemeInfo.createFrom;
+const $$createType19 = $Create.Nullable($$createType18);
+const $$createType20 = $Create.Array($$createType0);
+const $$createType21 = $models.NoteFileInfo.createFrom;
+const $$createType22 = $Create.Array($$createType21);
+const $$createType23 = $Create.Array($$createType18);

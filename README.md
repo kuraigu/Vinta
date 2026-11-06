@@ -91,6 +91,8 @@ task dev      # Run live-reloading development server with DevTest panel
 task run      # Compile and launch release binary
 task lint     # Check formatting, Go linting, and TypeScript checks
 task build    # Build production executable to build/bin/Vinta.exe
+
+task help     # Check all commands
 ```
 
 > [!TIP]

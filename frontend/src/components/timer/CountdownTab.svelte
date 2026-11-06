@@ -3,6 +3,7 @@
   import { islandTooltip } from '../../services/islandTooltip'
   import {
     timerAppStore,
+    tStore,
     toggleCountdown,
     resetCountdown,
     setCountdownDuration
@@ -75,11 +76,13 @@
     <button
       class="dial-center-btn"
       onclick={onOpenCustom}
-      use:islandTooltip={'Click to edit duration'}
+      use:islandTooltip={$tStore('timer.click_to_edit')}
     >
       <span class="dial-large-digits">{timerCountdownDisplay}</span>
       <span class="dial-subtitle">
-        {$timerAppStore.timer.isRunning ? 'Counting down' : 'Tap to edit'}
+        {$timerAppStore.timer.isRunning
+          ? $tStore('timer.counting_down')
+          : $tStore('timer.tap_to_edit')}
       </span>
     </button>
   </div>
@@ -92,7 +95,9 @@
           class:active={$timerAppStore.timer.totalDurationSeconds ===
             preset.secs}
           onclick={() => setCountdownDuration(preset.secs)}
-          use:islandTooltip={`Set ${preset.label}`}
+          use:islandTooltip={$tStore('timer.set_preset', {
+            label: preset.label
+          })}
         >
           {preset.label}
         </button>
@@ -101,9 +106,9 @@
       <button
         class="preset-chip custom-trigger"
         onclick={onOpenCustom}
-        use:islandTooltip={'Set custom duration'}
+        use:islandTooltip={$tStore('timer.custom')}
       >
-        Custom...
+        {$tStore('timer.custom')}...
       </button>
     </div>
 
@@ -111,7 +116,7 @@
       <button
         class="ctrl-btn"
         onclick={resetCountdown}
-        use:islandTooltip={'Reset countdown'}
+        use:islandTooltip={$tStore('timer.reset')}
       >
         <RotateCcw size={15} />
       </button>
@@ -119,21 +124,23 @@
       <button
         class="primary-pill-btn"
         onclick={toggleCountdown}
-        use:islandTooltip={$timerAppStore.timer.isRunning ? 'Pause' : 'Start'}
+        use:islandTooltip={$timerAppStore.timer.isRunning
+          ? $tStore('timer.pause')
+          : $tStore('timer.start')}
       >
         {#if $timerAppStore.timer.isRunning}
           <Pause size={16} />
-          <span>Pause</span>
+          <span>{$tStore('timer.pause')}</span>
         {:else}
           <Play size={16} />
-          <span>Start</span>
+          <span>{$tStore('timer.start')}</span>
         {/if}
       </button>
 
       <button
         class="ctrl-btn"
         onclick={handleAddMinute}
-        use:islandTooltip={'Add 1 minute'}
+        use:islandTooltip={$tStore('timer.add_minute')}
       >
         <Plus size={15} />
       </button>

@@ -99,16 +99,67 @@ Open your JSON file in any text editor (such as VS Code, Notepad++, or Sublime T
 You do **not** need to install Node.js, Go, or compile Vinta to test your translation!
 
 1. Open Vinta on your PC.
-2. Open **Settings** (gear icon) and navigate to the **System** tab.
-3. In the **Language** section, click **Open Translations Folder**.
+2. Open **Settings** (gear icon) and navigate to the **Language** tab.
+3. Click **Open Translations Folder**.
    - Alternatively, navigate manually in Windows Explorer to:
      ```
      %APPDATA%\FreeMatrix Studios\Vinta\locales\
      ```
 4. Paste your `{locale}.json` file (e.g. `de.json`) into this folder.
 5. In Vinta, click **Reload Translations**.
-6. Select your language from the **Language** dropdown menu.
+6. Select your language from the **Application Language** dropdown menu.
 7. Browse through the island widgets (Home feed, Calendar, Action Center, Quick Controls, Settings) to verify that your translations display accurately and fit nicely within cards.
+
+---
+
+## Flags & Language Icons
+
+Vinta displays vector SVG country flags in language selectors to make languages easy to identify.
+
+### Automatic Flag Matching
+- When you name your translation file with a standard ISO code (e.g. `de.json`, `fr.json`, `es.json`), Vinta automatically matches it with the corresponding flag.
+- Built-in flag support includes:
+  - `en` / `en-US` (United States)
+  - `en-GB` (United Kingdom)
+  - `de` (Germany)
+  - `fr` (France)
+  - `es` (Spain)
+  - `it` (Italy)
+  - `ja` (Japan)
+  - `zh` / `zh-CN` (China)
+  - `ru` (Russia)
+  - `uk` (Ukraine)
+  - `pl` (Poland)
+  - `nl` (Netherlands)
+  - `fil` / `tl` / `ph` (Philippines)
+
+### Validating Your Catalog
+To verify that your translation file has zero missing keys, extra keys, or formatting errors, run the locale checker:
+
+```cmd
+task check-locales
+# or
+scripts.bat check-locales
+```
+
+*(Note: `task check-locals` is also supported as a convenient alias).*
+
+This validates all JSON files against `en.json` and outputs a clear report of missing, empty, or obsolete keys.
+
+### Adding a New Flag
+If your language code does not have a built-in flag yet, Vinta displays a clean globe icon (Globe) by default.
+
+To include an official flag with your pull request:
+1. Open [`frontend/src/components/FlagIcon.svelte`](../frontend/src/components/FlagIcon.svelte).
+2. Add an `{:else if normalized === '<your-code>'}` branch with a clean, lightweight vector SVG:
+   ```svelte
+   {:else if normalized === 'pt' || normalized === 'pt-br'}
+     <!-- Brazil Flag -->
+     <svg viewBox="0 0 720 504" class="flag-svg" aria-label="Português">
+       <!-- SVG Paths -->
+     </svg>
+   ```
+3. Ensure the SVG contains `class="flag-svg"` and an `aria-label` describing the language.
 
 ---
 

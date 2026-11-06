@@ -25,7 +25,8 @@
     audioPeakStore,
     pinnedMediaSourceStore,
     isIslandHiddenStore,
-    isMediaDrawerOpenStore
+    isMediaDrawerOpenStore,
+    tStore
   } from '../store'
   import {
     Volume1,
@@ -971,8 +972,12 @@
 
           <button
             class="hero-play-btn"
-            use:islandTooltip={media.isPlaying ? 'Pause' : 'Play'}
-            aria-label={media.isPlaying ? 'Pause' : 'Play'}
+            use:islandTooltip={media.isPlaying
+              ? $tStore('media.pause')
+              : $tStore('media.play')}
+            aria-label={media.isPlaying
+              ? $tStore('media.pause')
+              : $tStore('media.play')}
             onclick={(e) => handleControl('play_pause', e)}
           >
             {#if media.isPlaying}
@@ -1008,10 +1013,10 @@
                 use:islandTooltip={{
                   text:
                     media.isShuffleActive === undefined
-                      ? 'Shuffle: Not supported'
+                      ? $tStore('media.shuffle_not_supported')
                       : media.isShuffleActive
-                        ? 'Shuffle: On'
-                        : 'Shuffle: Off',
+                        ? $tStore('media.shuffle_on')
+                        : $tStore('media.shuffle_off'),
                   align: 'left'
                 }}
                 aria-label="Shuffle"
@@ -1023,8 +1028,11 @@
 
             <button
               class="action-btn"
-              use:islandTooltip={{ text: 'Previous Track', align: 'left' }}
-              aria-label="Previous Track"
+              use:islandTooltip={{
+                text: $tStore('media.previous_track'),
+                align: 'left'
+              }}
+              aria-label={$tStore('media.previous_track')}
               onclick={(e) => handleControl('prev', e)}
             >
               <svg
@@ -1039,8 +1047,8 @@
 
             <button
               class="action-btn"
-              use:islandTooltip={'Next Track'}
-              aria-label="Next Track"
+              use:islandTooltip={$tStore('media.next_track')}
+              aria-label={$tStore('media.next_track')}
               onclick={(e) => handleControl('next', e)}
             >
               <svg
@@ -1065,12 +1073,12 @@
                 use:islandTooltip={{
                   text:
                     media.autoRepeatMode === undefined
-                      ? 'Repeat: Not supported'
+                      ? $tStore('media.repeat_not_supported')
                       : media.autoRepeatMode === 1
-                        ? 'Repeat: One Track'
+                        ? $tStore('media.repeat_one')
                         : media.autoRepeatMode === 2
-                          ? 'Repeat: All Tracks'
-                          : 'Repeat: Off'
+                          ? $tStore('media.repeat_all')
+                          : $tStore('media.repeat_off')
                 }}
                 aria-label="Repeat"
                 onclick={(e) => handleControl('repeat', e)}
@@ -1088,7 +1096,9 @@
                 class="action-btn session-btn"
                 class:is-active={isSessionMenuOpen}
                 use:islandTooltip={{
-                  text: `Media Sources (${media.sessions.length})`
+                  text: $tStore('media.sources_count', {
+                    count: media.sessions.length
+                  })
                 }}
                 aria-label="Media Sources"
                 onclick={toggleSessionMenu}
@@ -1102,9 +1112,9 @@
               class="action-btn mixer-btn"
               class:is-active={isAudioMixerOpen}
               use:islandTooltip={{
-                text: 'Audio Mixer & Soundscapes'
+                text: $tStore('media.audio_mixer')
               }}
-              aria-label="Audio Mixer & Soundscapes"
+              aria-label={$tStore('media.audio_mixer')}
               onclick={toggleAudioMixer}
             >
               <SlidersHorizontal size={14} />
@@ -1116,10 +1126,14 @@
             <button
               class="vol-icon-btn"
               use:islandTooltip={{
-                text: media.isMuted ? 'Unmute' : 'Mute',
+                text: media.isMuted
+                  ? $tStore('media.unmute')
+                  : $tStore('media.mute'),
                 align: 'right'
               }}
-              aria-label={media.isMuted ? 'Unmute' : 'Mute'}
+              aria-label={media.isMuted
+                ? $tStore('media.unmute')
+                : $tStore('media.mute')}
               onclick={(e) => handleControl('toggle_mute', e)}
             >
               {#if media.isMuted || currentVol === 0}
@@ -1199,12 +1213,12 @@
         <!-- Bottom Bar (Swapped with Top Dock): Media Player title, Center Clock, App Badge -->
         <div class="top-meta-bar">
           <div class="app-brand">
-            <span class="app-name-text">Media Player</span>
+            <span class="app-name-text">{$tStore('media.title')}</span>
             {#if $pinnedMediaSourceStore && media.sourceApp === $pinnedMediaSourceStore}
               <span
                 class="pinned-source-indicator"
                 use:islandTooltip={{
-                  text: `Pinned Source: ${appBrand.name}`,
+                  text: $tStore('media.pinned_source', { name: appBrand.name }),
                   position: 'top'
                 }}
               >
@@ -1220,10 +1234,10 @@
           <button
             class="device-badge clickable"
             use:islandTooltip={{
-              text: `Switch to ${appBrand.name}`,
+              text: $tStore('media.switch_to', { name: appBrand.name }),
               position: 'top'
             }}
-            aria-label="Switch to {appBrand.name}"
+            aria-label={$tStore('media.switch_to', { name: appBrand.name })}
             onclick={handleFocusApp}
           >
             <span>{appBrand.name}</span>

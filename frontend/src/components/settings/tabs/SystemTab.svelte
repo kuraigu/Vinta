@@ -13,6 +13,7 @@
   import {
     autostartStore,
     hardwareAccelStore,
+    tStore,
     notifData,
     exportSettingsToFile,
     importSettingsFromFile
@@ -79,7 +80,8 @@
     'vinta_update_channel',
     'vinta_custom_update_repo',
     'vinta_ui_scale',
-    'vinta_auto_discard_past_events'
+    'vinta_auto_discard_past_events',
+    'vinta_locale'
   ])
 
   /**
@@ -224,14 +226,14 @@
 </script>
 
 <div class="setting-group">
-  <SettingItem label="Run on Windows Startup" icon={Power}>
+  <SettingItem label={$tStore('settings.startup_label')} icon={Power}>
     <label class="toggle-switch">
       <input type="checkbox" bind:checked={$autostartStore} />
       <span class="slider"></span>
     </label>
   </SettingItem>
 
-  <SettingItem label="Hardware Acceleration" icon={Cpu}>
+  <SettingItem label={$tStore('settings.hardware_accel_label')} icon={Cpu}>
     <label class="toggle-switch">
       <input type="checkbox" bind:checked={$hardwareAccelStore} />
       <span class="slider"></span>
@@ -239,8 +241,8 @@
   </SettingItem>
 
   <SettingItem
-    label="Clear Application Cache"
-    description={`Calculated cache size: ${cacheSizeStr}`}
+    label={$tStore('settings.cache_label')}
+    description={$tStore('settings.cache_desc', { size: cacheSizeStr })}
     icon={Database}
     flexCol={true}
   >
@@ -250,16 +252,17 @@
       onclick={handleClearCache}
     >
       {#if cacheCleared}
-        <Check size={13} /> Cleared
+        <Check size={13} />
+        {$tStore('settings.cache_cleared')}
       {:else}
-        Clear Cache
+        {$tStore('settings.cache_clear_btn')}
       {/if}
     </SettingActionButton>
   </SettingItem>
 
   <SettingItem
-    label="Export Settings"
-    description="Backup current configuration and preferences to a JSON file"
+    label={$tStore('settings.export_label')}
+    description={$tStore('settings.export_desc')}
     icon={Download}
     flexCol={true}
   >
@@ -270,17 +273,18 @@
       onclick={handleExportSettings}
     >
       {#if exportSuccess}
-        <Check size={13} /> Exported Successfully
+        <Check size={13} />
+        {$tStore('settings.export_success')}
       {:else}
-        <Download size={13} /> Export to JSON
+        <Download size={13} />
+        {$tStore('settings.export_btn')}
       {/if}
     </SettingActionButton>
   </SettingItem>
 
   <SettingItem
-    label="Import Settings"
-    description={importStatusMsg ||
-      'Restore previously exported settings with schema validation'}
+    label={$tStore('settings.import_label')}
+    description={importStatusMsg || $tStore('settings.import_desc')}
     icon={Upload}
     flexCol={true}
   >
@@ -291,16 +295,18 @@
       onclick={handleImportSettings}
     >
       {#if importSuccess}
-        <Check size={13} /> Settings Imported
+        <Check size={13} />
+        {$tStore('settings.import_success')}
       {:else}
-        <Upload size={13} /> Import from JSON
+        <Upload size={13} />
+        {$tStore('settings.import_btn')}
       {/if}
     </SettingActionButton>
   </SettingItem>
 
   <SettingItem
-    label="Reset All Settings to Default"
-    description="Restores all settings and layout states"
+    label={$tStore('settings.reset_label')}
+    description={$tStore('settings.reset_desc')}
     icon={RotateCcw}
     flexCol={true}
   >
@@ -309,7 +315,7 @@
       fullWidth={true}
       onclick={handleResetSettings}
     >
-      Reset All Settings
+      {$tStore('settings.reset_btn')}
     </SettingActionButton>
   </SettingItem>
 </div>

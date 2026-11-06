@@ -13,7 +13,12 @@
   import ScrollView from './ScrollView.svelte'
   import BentoCard from './BentoCard.svelte'
   import AgendaEventCard from './AgendaEventCard.svelte'
-  import { dateFormatStore, formatUserDate, type IslandConfig } from '../store'
+  import {
+    dateFormatStore,
+    formatUserDate,
+    tStore,
+    type IslandConfig
+  } from '../store'
 
   interface Props {
     onOpenCalendar?: () => void
@@ -79,8 +84,9 @@
       <span class="glance-title-text">{todayDateLabel}</span>
       {#if todayEvents.length > 0}
         <span class="glance-event-count">
-          • {todayEvents.length}
-          {todayEvents.length === 1 ? 'event' : 'events'}
+          • {todayEvents.length === 1
+            ? $tStore('calendar.event_single', { count: todayEvents.length })
+            : $tStore('calendar.event_plural', { count: todayEvents.length })}
         </span>
       {/if}
     </div>
@@ -89,25 +95,30 @@
         type="button"
         class="glance-add-btn"
         onclick={handleAddEvent}
-        aria-label="Add new calendar event"
+        aria-label={$tStore('calendar.add_event')}
       >
         <Plus size={12} />
-        <span>Add Event</span>
+        <span>{$tStore('calendar.add_event')}</span>
       </button>
       <button
         type="button"
         class="glance-nav-btn"
         onclick={handleOpenCalendarPage}
-        aria-label="Open Calendar"
+        aria-label={$tStore('calendar.open_calendar')}
       >
-        <ChevronRight size={14} class="glance-nav-chevron" />
+        <span>{$tStore('calendar.title')}</span>
+        <ChevronRight size={12} class="glance-nav-chevron" />
       </button>
     </div>
   </div>
 
   <div class="glance-agenda-container">
     {#if todayEvents.length === 0}
-      <AgendaEventCard isEmpty={true} />
+      <AgendaEventCard
+        isEmpty={true}
+        emptyTitle={$tStore('calendar.no_events_today')}
+        emptyChip={$tStore('calendar.all_day')}
+      />
     {:else}
       <ScrollView class="glance-scroll-view">
         <div class="glance-events-list">

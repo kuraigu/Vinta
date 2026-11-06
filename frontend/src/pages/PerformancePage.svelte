@@ -15,6 +15,7 @@
   import BackButton from '../components/BackButton.svelte'
   import BentoCard from '../components/BentoCard.svelte'
   import ScrollView from '../components/ScrollView.svelte'
+  import { tStore } from '../store'
   import {
     systemTelemetryStore,
     cpuHistoryStore,
@@ -101,7 +102,7 @@
         <div class="perf-card-header">
           <div class="perf-card-label">
             <Cpu size={14} class="perf-card-icon cpu" />
-            <span class="perf-card-name">Processor</span>
+            <span class="perf-card-name">{$tStore('performance.processor')}</span>
           </div>
           <span class="perf-card-percent cpu">{telemetry.cpuPercent}%</span>
         </div>
@@ -134,13 +135,13 @@
         </div>
 
         <div class="perf-card-meta-row">
-          <span class="perf-meta-sub">Usage</span>
+          <span class="perf-meta-sub">{$tStore('performance.usage')}</span>
           <span class="perf-meta-val">
             {telemetry.cpuPercent > 75
-              ? 'High'
+              ? $tStore('performance.high')
               : telemetry.cpuPercent > 35
-                ? 'Moderate'
-                : 'Normal'}
+                ? $tStore('performance.moderate')
+                : $tStore('performance.normal')}
           </span>
         </div>
       </BentoCard>
@@ -150,7 +151,7 @@
         <div class="perf-card-header">
           <div class="perf-card-label">
             <Activity size={14} class="perf-card-icon ram" />
-            <span class="perf-card-name">Memory</span>
+            <span class="perf-card-name">{$tStore('performance.memory')}</span>
           </div>
           <span class="perf-card-percent ram">{telemetry.ramPercent}%</span>
         </div>
@@ -189,7 +190,9 @@
             )} GB
           </span>
           <span class="perf-meta-val">
-            {formatGB(telemetry.ramTotalMB - telemetry.ramUsedMB)} GB Free
+            {$tStore('performance.gb_free', {
+              free: formatGB(telemetry.ramTotalMB - telemetry.ramUsedMB)
+            })}
           </span>
         </div>
       </BentoCard>
@@ -199,7 +202,7 @@
         <div class="perf-card-header">
           <div class="perf-card-label">
             <Zap size={14} class="perf-card-icon gpu" />
-            <span class="perf-card-name">Graphics</span>
+            <span class="perf-card-name">{$tStore('performance.graphics')}</span>
           </div>
           <span class="perf-card-percent gpu">{telemetry.gpuPercent}%</span>
         </div>
@@ -232,9 +235,11 @@
         </div>
 
         <div class="perf-card-meta-row">
-          <span class="perf-meta-sub">3D Engine</span>
+          <span class="perf-meta-sub">{$tStore('performance.engine_3d')}</span>
           <span class="perf-meta-val">
-            {telemetry.gpuPercent > 5 ? 'Active' : 'Idle'}
+            {telemetry.gpuPercent > 5
+              ? $tStore('performance.active')
+              : $tStore('performance.idle')}
           </span>
         </div>
       </BentoCard>
@@ -244,8 +249,8 @@
   <!-- Bottom Navigation Footer Bar (Swapped with Top Dock) -->
   <footer class="perf-meta-footer">
     <div class="perf-footer-left">
-      <BackButton title="Back to Apps" />
-      <span class="perf-footer-title">System Stats</span>
+      <BackButton title={$tStore('performance.back_to_apps')} />
+      <span class="perf-footer-title">{$tStore('performance.title')}</span>
     </div>
   </footer>
 </div>

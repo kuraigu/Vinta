@@ -57,6 +57,60 @@ export type WeatherTheme = {
   badgeBg: string
 }
 
+const CONDITION_STRING_MAP: Record<string, string> = {
+  'clear sky': 'weather.conditions.clear_sky',
+  'clear night': 'weather.conditions.clear_night',
+  'sunny': 'weather.conditions.sunny',
+  'mainly clear': 'weather.conditions.mainly_clear',
+  'partly cloudy': 'weather.conditions.partly_cloudy',
+  'cloudy night': 'weather.conditions.cloudy_night',
+  'overcast': 'weather.conditions.overcast',
+  'foggy': 'weather.conditions.foggy',
+  'rainy': 'weather.conditions.rainy',
+  'snowy': 'weather.conditions.snowy',
+  'thunderstorm': 'weather.conditions.thunderstorm'
+}
+
+/**
+ * Resolves the i18n translation key corresponding to a WMO weather code or string.
+ *
+ * @param code - Numeric WMO code.
+ * @param isNight - Whether current local time is nighttime.
+ * @param fallbackCondition - Optional literal condition string.
+ * @returns Translation catalog key for `$tStore()`.
+ */
+export function getWmoConditionKey(
+  code: number,
+  isNight: boolean = false,
+  fallbackCondition?: string
+): string {
+  if (fallbackCondition) {
+    const mapped = CONDITION_STRING_MAP[fallbackCondition.toLowerCase().trim()]
+    if (mapped) return mapped
+  }
+  if (code === 0) {
+    return isNight
+      ? 'weather.conditions.clear_night'
+      : 'weather.conditions.clear_sky'
+  }
+  if (code === 1) return 'weather.conditions.mainly_clear'
+  if (code === 2) {
+    return isNight
+      ? 'weather.conditions.cloudy_night'
+      : 'weather.conditions.partly_cloudy'
+  }
+  if (code === 3) return 'weather.conditions.overcast'
+  if (code === 45 || code === 48) return 'weather.conditions.foggy'
+  if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) {
+    return 'weather.conditions.rainy'
+  }
+  if (code >= 71 && code <= 77) return 'weather.conditions.snowy'
+  if (code >= 95 && code <= 99) return 'weather.conditions.thunderstorm'
+  return isNight
+    ? 'weather.conditions.cloudy_night'
+    : 'weather.conditions.partly_cloudy'
+}
+
 export function parseWmoCode(
   code: number,
   isNight: boolean = false

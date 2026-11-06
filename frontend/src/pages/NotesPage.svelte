@@ -41,6 +41,7 @@
   import SearchInput from '../components/SearchInput.svelte'
   import ScrollView from '../components/ScrollView.svelte'
   import { islandTooltip } from '../services/islandTooltip'
+  import { tStore } from '../store'
   import {
     ListNotes,
     ReadNote,
@@ -576,11 +577,11 @@
           {#if filteredDrawerNotes.length === 0}
             <div class="empty-board-state">
               {#if drawerSearchQuery}
-                <p>No notes matching "{drawerSearchQuery}"</p>
+                <p>{$tStore('notes.no_matching_notes', { query: drawerSearchQuery })}</p>
               {:else}
-                <p>No notes yet</p>
+                <p>{$tStore('notes.no_notes_yet')}</p>
                 <button class="board-create-btn" onclick={createNewNote}>
-                  <Plus size={14} /> Create your first note
+                  <Plus size={14} /> {$tStore('notes.new_note')}
                 </button>
               {/if}
             </div>
@@ -647,7 +648,7 @@
 
         <SearchInput
           bind:value={drawerSearchQuery}
-          placeholder="Search notes..."
+          placeholder={$tStore('notes.search_placeholder')}
           maxWidth="220px"
         />
 
@@ -765,7 +766,7 @@
 
         <button
           class="banner-btn"
-          use:islandTooltip={{ text: 'New note', position: 'top' }}
+          use:islandTooltip={{ text: $tStore('notes.new_note'), position: 'top' }}
           onclick={createNewNote}
         >
           <Plus size={16} />

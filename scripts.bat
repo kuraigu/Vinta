@@ -133,11 +133,24 @@ if "%~1"=="lint" (
     cd ..
     echo Auditing Theme Tokens...
     powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\pack-theme.ps1" -CheckOnly
+    if errorlevel 1 exit /b !ERRORLEVEL!
+    echo Checking Locale Catalogs...
+    node "%~dp0scripts\check-locales.js"
     exit /b 0
 )
 
 if "%~1"=="bindings" (
     task generate:bindings
+    exit /b !ERRORLEVEL!
+)
+
+if "%~1"=="check-locales" (
+    node "%~dp0scripts\check-locales.js"
+    exit /b !ERRORLEVEL!
+)
+
+if "%~1"=="check-locals" (
+    node "%~dp0scripts\check-locales.js"
     exit /b !ERRORLEVEL!
 )
 
@@ -160,6 +173,7 @@ echo   test                     Runs test suite with DevTest panel (-test)
 echo   bindings                 Generates TypeScript bindings for frontend from Go backend
 echo   installer                Builds standalone production binary and Windows NSIS installer
 echo   pack-theme ^<path^>        Packages a theme directory into a .vintatheme bundle
+echo   check-locales            Validates key parity and schema across all locale catalogs
 echo   lint                     Runs Go and Frontend linters and formatters
 exit /b 1
 

@@ -60,20 +60,29 @@
 
 .glance-actions {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
   flex-shrink: 0;
 }
 
 .glance-nav-btn {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
+  gap: 3px;
   background: none;
   border: none;
   padding: 0;
   cursor: pointer;
   color: var(--vinta-text-muted);
+  font-size: 11px;
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+
+.glance-nav-btn:hover {
+  color: var(--vinta-text-primary);
 }
 
 :global(.glance-nav-chevron) {

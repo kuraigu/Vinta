@@ -31,10 +31,14 @@
     followActiveDisplayStore,
     autostartStore,
     homeWidgetsVisibilityStore,
-    syncSettingsToDisk
+    syncSettingsToDisk,
+    localeStore,
+    availableLocalesStore,
+    tStore
   } from '../store'
   import { SetAutostart } from '../../bindings/Vinta/backend/app.js'
   import HomePage, { config as homeConfig } from './HomePage.svelte'
+  import CustomSelect from '../components/CustomSelect.svelte'
   import VintaMascot, {
     type MascotPose
   } from '../illustrations/mascot/VintaMascot.svelte'
@@ -48,43 +52,51 @@
 
   const steps: {
     id: string
-    title: string
-    subtitle: string
+    titleKey: string
+    subtitleKey: string
     pose: MascotPose
   }[] = [
     {
       id: 'welcome',
-      title: 'Welcome to Vinta',
-      subtitle: 'Your dynamic island assistant for Windows',
+      titleKey: 'onboarding.step_welcome_title',
+      subtitleKey: 'onboarding.step_welcome_sub',
       pose: 'welcome'
     },
     {
       id: 'positioning',
-      title: 'Screen & Alignment',
-      subtitle: 'Choose where the island rests on your display',
+      titleKey: 'onboarding.step_positioning_title',
+      subtitleKey: 'onboarding.step_positioning_sub',
       pose: 'position'
     },
     {
       id: 'theme',
-      title: 'Pick a Theme',
-      subtitle: 'Choose a style that matches your desktop',
+      titleKey: 'onboarding.step_theme_title',
+      subtitleKey: 'onboarding.step_theme_sub',
       pose: 'theme'
     },
     {
       id: 'system',
-      title: 'Quick Settings',
-      subtitle: 'A few helpful preferences you can change anytime',
+      titleKey: 'onboarding.step_system_title',
+      subtitleKey: 'onboarding.step_system_sub',
       pose: 'settings'
     },
     {
       id: 'ready',
-      title: "You're All Set",
-      subtitle: 'Vinta is ready to use on your PC',
+      titleKey: 'onboarding.step_ready_title',
+      subtitleKey: 'onboarding.step_ready_sub',
       pose: 'celebrate'
     }
   ]
 
   let stepData = $derived(steps[currentStep] || steps[0])
+
+  let localeOptions = $derived(
+    $availableLocalesStore.map((l) => ({
+      value: l.id,
+      label: l.name,
+      flag: l.flag || l.id
+    }))
+  )
 
   /**
    * Completes the onboarding wizard, persists status, and returns to HomePage.
@@ -157,35 +169,48 @@
       <VintaMascot pose={stepData.pose} />
     </div>
     <div class="onboarding-header-titles">
-      <h2 class="onboarding-title">{stepData.title}</h2>
-      <p class="onboarding-subtitle">{stepData.subtitle}</p>
+      <h2 class="onboarding-title">{$tStore(stepData.titleKey)}</h2>
+      <p class="onboarding-subtitle">{$tStore(stepData.subtitleKey)}</p>
     </div>
   </header>
 
   <div class="onboarding-body">
     {#if currentStep === 0}
       <div class="onboarding-feature-list">
-        <div class="onboarding-input-card">
-          <label for="onboarding-name-input" class="onboarding-input-label">
-            What should we call you?
-          </label>
-          <div class="onboarding-input-wrapper">
-            <User size={13} class="input-leading-icon" />
-            <input
-              id="onboarding-name-input"
-              type="text"
-              class="onboarding-name-field"
-              placeholder="Your name (e.g. Alex)"
-              maxlength="20"
-              bind:value={$userNameStore}
-              onblur={() => {
-                if (!$userNameStore || !$userNameStore.trim()) {
-                  $userNameStore = 'User'
-                } else {
-                  $userNameStore = $userNameStore.trim()
-                }
-              }}
+        <div class="onboarding-inputs-row">
+          <div class="onboarding-input-card">
+            <span class="onboarding-input-label">
+              {$tStore('settings.language_label')}
+            </span>
+            <CustomSelect
+              options={localeOptions}
+              bind:value={$localeStore}
+              fullWidth={true}
             />
+          </div>
+
+          <div class="onboarding-input-card">
+            <label for="onboarding-name-input" class="onboarding-input-label">
+              {$tStore('onboarding.name_prompt')}
+            </label>
+            <div class="onboarding-input-wrapper">
+              <User size={13} class="input-leading-icon" />
+              <input
+                id="onboarding-name-input"
+                type="text"
+                class="onboarding-name-field"
+                placeholder={$tStore('onboarding.name_placeholder')}
+                maxlength="20"
+                bind:value={$userNameStore}
+                onblur={() => {
+                  if (!$userNameStore || !$userNameStore.trim()) {
+                    $userNameStore = 'User'
+                  } else {
+                    $userNameStore = $userNameStore.trim()
+                  }
+                }}
+              />
+            </div>
           </div>
         </div>
 
@@ -194,10 +219,11 @@
             <MousePointer size={14} />
           </div>
           <div class="feature-item-text">
-            <span class="feature-item-title">Click to expand</span>
+            <span class="feature-item-title"
+              >{$tStore('onboarding.feature_expand_title')}</span
+            >
             <span class="feature-item-desc">
-              Click the top pill anytime to open widgets, or hover to take a
-              quick peek.
+              {$tStore('onboarding.feature_expand_desc')}
             </span>
           </div>
         </div>
@@ -207,9 +233,11 @@
             <Move size={14} />
           </div>
           <div class="feature-item-text">
-            <span class="feature-item-title">Move it anywhere</span>
+            <span class="feature-item-title"
+              >{$tStore('onboarding.feature_move_title')}</span
+            >
             <span class="feature-item-desc">
-              Drag the top handle to place the island wherever you prefer.
+              {$tStore('onboarding.feature_move_desc')}
             </span>
           </div>
         </div>
@@ -219,10 +247,11 @@
             <LayoutGrid size={14} />
           </div>
           <div class="feature-item-text">
-            <span class="feature-item-title">Glance at what matters</span>
+            <span class="feature-item-title"
+              >{$tStore('onboarding.feature_glance_title')}</span
+            >
             <span class="feature-item-desc">
-              Check your calendar, weather, music player, and quick controls at
-              a glance.
+              {$tStore('onboarding.feature_glance_desc')}
             </span>
           </div>
         </div>
@@ -231,8 +260,12 @@
       <div class="onboarding-feature-list">
         <div class="onboarding-row-item">
           <div class="onboarding-row-label">
-            <span class="row-label-title">Resting Alignment</span>
-            <span class="row-label-desc">Where the island docks when idle</span>
+            <span class="row-label-title"
+              >{$tStore('onboarding.resting_alignment')}</span
+            >
+            <span class="row-label-desc"
+              >{$tStore('onboarding.resting_alignment_desc')}</span
+            >
           </div>
           <div class="onboarding-action-buttons">
             {#each ['top-left', 'center', 'top-right'] as pos (pos)}
@@ -243,10 +276,10 @@
                 onclick={() => ($hiddenPillPositionStore = pos as any)}
               >
                 {pos === 'top-left'
-                  ? 'Left'
+                  ? $tStore('onboarding.align_left')
                   : pos === 'top-right'
-                    ? 'Right'
-                    : 'Center'}
+                    ? $tStore('onboarding.align_right')
+                    : $tStore('onboarding.align_center')}
               </button>
             {/each}
           </div>
@@ -254,9 +287,11 @@
 
         <div class="onboarding-row-item">
           <div class="onboarding-row-label">
-            <span class="row-label-title">Follow Active Screen</span>
+            <span class="row-label-title"
+              >{$tStore('onboarding.follow_screen')}</span
+            >
             <span class="row-label-desc"
-              >Move the island to whichever monitor you are working on</span
+              >{$tStore('onboarding.follow_screen_desc')}</span
             >
           </div>
           <button
@@ -266,7 +301,9 @@
             onclick={() =>
               ($followActiveDisplayStore = !$followActiveDisplayStore)}
           >
-            {$followActiveDisplayStore ? 'Enabled' : 'Disabled'}
+            {$followActiveDisplayStore
+              ? $tStore('common.enabled')
+              : $tStore('common.disabled')}
           </button>
         </div>
       </div>
@@ -288,9 +325,11 @@
       <div class="onboarding-feature-list">
         <div class="onboarding-row-item">
           <div class="onboarding-row-label">
-            <span class="row-label-title">Start with Windows</span>
+            <span class="row-label-title"
+              >{$tStore('onboarding.start_with_windows')}</span
+            >
             <span class="row-label-desc"
-              >Launch Vinta automatically on startup</span
+              >{$tStore('onboarding.start_with_windows_desc')}</span
             >
           </div>
           <button
@@ -300,15 +339,21 @@
             onclick={handleToggleAutostart}
           >
             <Power size={13} />
-            <span>{$autostartStore ? 'Enabled' : 'Disabled'}</span>
+            <span
+              >{$autostartStore
+                ? $tStore('common.enabled')
+                : $tStore('common.disabled')}</span
+            >
           </button>
         </div>
 
         <div class="onboarding-row-item">
           <div class="onboarding-row-label">
-            <span class="row-label-title">System Stats</span>
+            <span class="row-label-title"
+              >{$tStore('onboarding.system_stats')}</span
+            >
             <span class="row-label-desc"
-              >Show CPU, RAM, and GPU stats in your home feed</span
+              >{$tStore('onboarding.system_stats_desc')}</span
             >
           </div>
           <button
@@ -320,8 +365,8 @@
             <Activity size={13} />
             <span
               >{$homeWidgetsVisibilityStore.systemStats
-                ? 'Enabled'
-                : 'Disabled'}</span
+                ? $tStore('common.enabled')
+                : $tStore('common.disabled')}</span
             >
           </button>
         </div>
@@ -333,10 +378,11 @@
             <Keyboard size={14} />
           </div>
           <div class="feature-item-text">
-            <span class="feature-item-title">Keyboard shortcut</span>
+            <span class="feature-item-title"
+              >{$tStore('onboarding.tip_shortcut_title')}</span
+            >
             <span class="feature-item-desc">
-              Press <strong>Alt+Shift+V</strong> anytime to quickly expand or hide
-              the island.
+              {$tStore('onboarding.tip_shortcut_desc', { key: 'Alt+Shift+V' })}
             </span>
           </div>
         </div>
@@ -346,10 +392,11 @@
             <SlidersHorizontal size={14} />
           </div>
           <div class="feature-item-text">
-            <span class="feature-item-title">Control dock satellite</span>
+            <span class="feature-item-title"
+              >{$tStore('onboarding.tip_satellite_title')}</span
+            >
             <span class="feature-item-desc">
-              You can also open quick controls and settings anytime using the
-              floating control dock.
+              {$tStore('onboarding.tip_satellite_desc')}
             </span>
           </div>
         </div>
@@ -369,17 +416,19 @@
       {#if currentStep > 0}
         <button type="button" class="onboarding-btn" onclick={handlePrev}>
           <ChevronLeft size={13} strokeWidth={2.2} />
-          <span>Back</span>
+          <span>{$tStore('common.back')}</span>
         </button>
       {:else}
         <button type="button" class="onboarding-btn" onclick={handleComplete}>
-          <span>Skip</span>
+          <span>{$tStore('common.skip')}</span>
         </button>
       {/if}
 
       <button type="button" class="onboarding-btn primary" onclick={handleNext}>
         <span
-          >{currentStep === steps.length - 1 ? 'Get Started' : 'Continue'}</span
+          >{currentStep === steps.length - 1
+            ? $tStore('onboarding.btn_get_started')
+            : $tStore('common.continue')}</span
         >
         {#if currentStep < steps.length - 1}
           <ChevronRight size={13} strokeWidth={2.2} />

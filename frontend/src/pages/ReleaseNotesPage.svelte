@@ -17,7 +17,7 @@
   import ScrollView from '../components/ScrollView.svelte'
   import MarkdownViewer from '../components/MarkdownViewer.svelte'
   import { getReleaseNotes } from '../services/announcementsService'
-  import { appInfoStore } from '../store'
+  import { appInfoStore, tStore } from '../store'
   import HomePage, { config as homeConfig } from './HomePage.svelte'
 
   let releaseNotes = $state('')
@@ -49,10 +49,10 @@
 <div data-vinta="release-notes-page" class="release-notes-page-layout">
   <header class="release-notes-header">
     <div class="header-left">
-      <BackButton onback={handleBack} title="Back to Home" />
+      <BackButton onback={handleBack} title={$tStore('common.back_to_home')} />
       <div class="header-titles">
-        <h2 class="header-main-title">Release Notes</h2>
-        <span class="header-subtitle">What's new in Vinta</span>
+        <h2 class="header-main-title">{$tStore('release_notes.title')}</h2>
+        <span class="header-subtitle">{$tStore('release_notes.subtitle')}</span>
       </div>
     </div>
 
@@ -66,7 +66,7 @@
     <ScrollView class="release-notes-scroll-view">
       {#if isLoading}
         <div class="notes-loading-state">
-          <span>Loading release notes...</span>
+          <span>{$tStore('release_notes.loading')}</span>
         </div>
       {:else}
         <div class="notes-container">
@@ -80,7 +80,7 @@
                 rel="noreferrer"
                 class="view-all-releases-link"
               >
-                <span>View all releases on GitHub</span>
+                <span>{$tStore('release_notes.view_all_github')}</span>
                 <ArrowUpRight size={12} />
               </a>
             {/if}

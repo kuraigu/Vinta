@@ -1,7 +1,7 @@
 <script lang="ts">
   import { getContext } from 'svelte'
   import { Bell, X } from 'lucide-svelte'
-  import { notifData, type IslandConfig } from '../store'
+  import { notifData, tStore, type IslandConfig } from '../store'
   import NotificationPage, {
     config as notifConfig
   } from '../pages/NotificationPage.svelte'
@@ -100,7 +100,7 @@
     latestNotif?.appName ||
       (latestNotif?.aumid
         ? parseAumid(latestNotif.aumid).displayName
-        : 'Notification')
+        : $tStore('notification.title'))
   )
 </script>
 
@@ -149,8 +149,8 @@
           type="button"
           class="glance-action-btn dismiss"
           onclick={dismissLatest}
-          use:islandTooltip={'Dismiss notification'}
-          aria-label="Dismiss this notification"
+          use:islandTooltip={$tStore('notification.dismiss_tooltip')}
+          aria-label={$tStore('notification.dismiss_tooltip')}
         >
           <X size={12} />
         </button>
