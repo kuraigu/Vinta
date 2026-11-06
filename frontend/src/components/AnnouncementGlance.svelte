@@ -61,7 +61,9 @@
         </div>
         <span class="glance-brand-name">{$tStore('announcements.title')}</span>
         {#if hasUnread}
-          <span class="glance-unread-pill">{$tStore('announcements.badge_new')}</span>
+          <span class="glance-unread-pill"
+            >{$tStore('announcements.badge_new')}</span
+          >
         {/if}
       </div>
 

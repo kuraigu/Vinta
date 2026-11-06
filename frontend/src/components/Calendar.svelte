@@ -469,10 +469,16 @@
                         unit: pastEventsCount === 1 ? 'event' : 'events'
                       })
                     }}
-                    aria-label={$tStore('calendar.clear_past', { count: pastEventsCount })}
+                    aria-label={$tStore('calendar.clear_past', {
+                      count: pastEventsCount
+                    })}
                   >
                     <Trash2 size={12} />
-                    <span>{$tStore('calendar.clear_past', { count: pastEventsCount })}</span>
+                    <span
+                      >{$tStore('calendar.clear_past', {
+                        count: pastEventsCount
+                      })}</span
+                    >
                   </button>
                 {/if}
 

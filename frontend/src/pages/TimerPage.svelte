@@ -149,8 +149,10 @@
   function computeMinimalModeLabel() {
     if (activeMinimalMode === 'timer') return $tStore('timer.countdown_tab')
     if (activeMinimalMode === 'stopwatch') return $tStore('timer.stopwatch_tab')
-    if ($timerAppStore.focus.phase === 'focus') return $tStore('timer.focus_tab')
-    if ($timerAppStore.focus.phase === 'shortBreak') return $tStore('timer.break')
+    if ($timerAppStore.focus.phase === 'focus')
+      return $tStore('timer.focus_tab')
+    if ($timerAppStore.focus.phase === 'shortBreak')
+      return $tStore('timer.break')
     return $tStore('timer.rest')
   }
   let minimalModeLabel = $derived.by(computeMinimalModeLabel)

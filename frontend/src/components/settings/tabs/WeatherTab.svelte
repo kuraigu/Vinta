@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
+  import { SvelteSet } from 'svelte/reactivity'
   import { MapPin, Thermometer } from 'lucide-svelte'
   import SettingItem from '../SettingItem.svelte'
   import CustomSelect from '../../CustomSelect.svelte'
@@ -40,7 +41,7 @@
 
   function buildPresetOptions(): { label: string; value: string; payload: WeatherLocationPreset }[] {
     const list: { label: string; value: string; payload: WeatherLocationPreset }[] = []
-    const seen = new Set<string>()
+    const seen = new SvelteSet<string>()
 
     // 1. Auto-detect first
     const autoPreset = GLOBAL_WEATHER_PRESETS[0]
@@ -116,7 +117,7 @@
         }
       })
 
-      const existingValues = new Set(searchedOpts.map((o) => o.value))
+      const existingValues = new SvelteSet(searchedOpts.map((o) => o.value))
       const extraPresets = GLOBAL_WEATHER_PRESETS
         .filter((p) => !existingValues.has(p.name))
         .map((p) => ({

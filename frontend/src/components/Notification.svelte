@@ -615,7 +615,11 @@
               aria-label="Clear all notifications"
             >
               <Trash2 size={14} />
-              <span>{isConfirmingClear ? 'Confirm?' : $tStore('notification.clear_all')}</span>
+              <span
+                >{isConfirmingClear
+                  ? 'Confirm?'
+                  : $tStore('notification.clear_all')}</span
+              >
             </button>
           {/if}
         </div>

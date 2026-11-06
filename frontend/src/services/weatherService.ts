@@ -60,15 +60,15 @@ export type WeatherTheme = {
 const CONDITION_STRING_MAP: Record<string, string> = {
   'clear sky': 'weather.conditions.clear_sky',
   'clear night': 'weather.conditions.clear_night',
-  'sunny': 'weather.conditions.sunny',
+  sunny: 'weather.conditions.sunny',
   'mainly clear': 'weather.conditions.mainly_clear',
   'partly cloudy': 'weather.conditions.partly_cloudy',
   'cloudy night': 'weather.conditions.cloudy_night',
-  'overcast': 'weather.conditions.overcast',
-  'foggy': 'weather.conditions.foggy',
-  'rainy': 'weather.conditions.rainy',
-  'snowy': 'weather.conditions.snowy',
-  'thunderstorm': 'weather.conditions.thunderstorm'
+  overcast: 'weather.conditions.overcast',
+  foggy: 'weather.conditions.foggy',
+  rainy: 'weather.conditions.rainy',
+  snowy: 'weather.conditions.snowy',
+  thunderstorm: 'weather.conditions.thunderstorm'
 }
 
 /**

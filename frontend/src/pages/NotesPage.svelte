@@ -577,11 +577,16 @@
           {#if filteredDrawerNotes.length === 0}
             <div class="empty-board-state">
               {#if drawerSearchQuery}
-                <p>{$tStore('notes.no_matching_notes', { query: drawerSearchQuery })}</p>
+                <p>
+                  {$tStore('notes.no_matching_notes', {
+                    query: drawerSearchQuery
+                  })}
+                </p>
               {:else}
                 <p>{$tStore('notes.no_notes_yet')}</p>
                 <button class="board-create-btn" onclick={createNewNote}>
-                  <Plus size={14} /> {$tStore('notes.new_note')}
+                  <Plus size={14} />
+                  {$tStore('notes.new_note')}
                 </button>
               {/if}
             </div>
@@ -766,7 +771,10 @@
 
         <button
           class="banner-btn"
-          use:islandTooltip={{ text: $tStore('notes.new_note'), position: 'top' }}
+          use:islandTooltip={{
+            text: $tStore('notes.new_note'),
+            position: 'top'
+          }}
           onclick={createNewNote}
         >
           <Plus size={16} />

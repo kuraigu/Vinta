@@ -102,7 +102,9 @@
         <div class="perf-card-header">
           <div class="perf-card-label">
             <Cpu size={14} class="perf-card-icon cpu" />
-            <span class="perf-card-name">{$tStore('performance.processor')}</span>
+            <span class="perf-card-name"
+              >{$tStore('performance.processor')}</span
+            >
           </div>
           <span class="perf-card-percent cpu">{telemetry.cpuPercent}%</span>
         </div>
@@ -202,7 +204,8 @@
         <div class="perf-card-header">
           <div class="perf-card-label">
             <Zap size={14} class="perf-card-icon gpu" />
-            <span class="perf-card-name">{$tStore('performance.graphics')}</span>
+            <span class="perf-card-name">{$tStore('performance.graphics')}</span
+            >
           </div>
           <span class="perf-card-percent gpu">{telemetry.gpuPercent}%</span>
         </div>

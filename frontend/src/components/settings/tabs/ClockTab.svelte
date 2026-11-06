@@ -1,6 +1,13 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { Clock, Globe, Calendar, CalendarX, Trash2, Check } from 'lucide-svelte'
+  import {
+    Clock,
+    Globe,
+    Calendar,
+    CalendarX,
+    Trash2,
+    Check
+  } from 'lucide-svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
   import CustomSelect from '../../CustomSelect.svelte'

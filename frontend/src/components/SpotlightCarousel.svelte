@@ -8,11 +8,7 @@
     ChevronLeft
   } from 'lucide-svelte'
   import { Browser } from '@wailsio/runtime'
-  import {
-    activeSettingsTabStore,
-    tStore,
-    type IslandConfig
-  } from '../store'
+  import { activeSettingsTabStore, tStore, type IslandConfig } from '../store'
   import SettingsPage, {
     config as settingsConfig
   } from '../pages/SettingsPage.svelte'

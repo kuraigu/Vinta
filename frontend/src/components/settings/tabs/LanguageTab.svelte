@@ -1,10 +1,5 @@
 <script lang="ts">
-  import {
-    Languages,
-    FolderOpen,
-    RefreshCw,
-    Check
-  } from 'lucide-svelte'
+  import { Languages, FolderOpen, RefreshCw, Check } from 'lucide-svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
   import CustomSelect from '../../CustomSelect.svelte'
@@ -129,4 +124,3 @@
     }
   }
 </style>
-

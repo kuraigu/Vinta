@@ -144,41 +144,109 @@ const TIMEZONE_TO_COORDINATES_MAP: Record<string, WeatherLocationPreset> = {
   'Asia/Taipei': { name: 'Taipei, Taiwan', lat: 25.033, lon: 121.5654 },
   'Asia/Bangkok': { name: 'Bangkok, Thailand', lat: 13.7563, lon: 100.5018 },
   'Asia/Jakarta': { name: 'Jakarta, Indonesia', lat: -6.2088, lon: 106.8456 },
-  'Asia/Kuala_Lumpur': { name: 'Kuala Lumpur, Malaysia', lat: 3.139, lon: 101.6869 },
+  'Asia/Kuala_Lumpur': {
+    name: 'Kuala Lumpur, Malaysia',
+    lat: 3.139,
+    lon: 101.6869
+  },
   'Asia/Kolkata': { name: 'New Delhi, India', lat: 28.6139, lon: 77.209 },
   'Asia/Dubai': { name: 'Dubai, UAE', lat: 25.2048, lon: 55.2708 },
-  'Europe/London': { name: 'London, United Kingdom', lat: 51.5074, lon: -0.1278 },
+  'Europe/London': {
+    name: 'London, United Kingdom',
+    lat: 51.5074,
+    lon: -0.1278
+  },
   'Europe/Berlin': { name: 'Berlin, Germany', lat: 52.52, lon: 13.405 },
   'Europe/Paris': { name: 'Paris, France', lat: 48.8566, lon: 2.3522 },
   'Europe/Rome': { name: 'Rome, Italy', lat: 41.9028, lon: 12.4964 },
   'Europe/Madrid': { name: 'Madrid, Spain', lat: 40.4168, lon: -3.7038 },
-  'Europe/Amsterdam': { name: 'Amsterdam, Netherlands', lat: 52.3676, lon: 4.9041 },
+  'Europe/Amsterdam': {
+    name: 'Amsterdam, Netherlands',
+    lat: 52.3676,
+    lon: 4.9041
+  },
   'Europe/Brussels': { name: 'Brussels, Belgium', lat: 50.8503, lon: 4.3517 },
   'Europe/Zurich': { name: 'Zurich, Switzerland', lat: 47.3769, lon: 8.5417 },
   'Europe/Vienna': { name: 'Vienna, Austria', lat: 48.2082, lon: 16.3738 },
   'Europe/Warsaw': { name: 'Warsaw, Poland', lat: 52.2297, lon: 21.0122 },
-  'Europe/Prague': { name: 'Prague, Czech Republic', lat: 50.0755, lon: 14.4378 },
+  'Europe/Prague': {
+    name: 'Prague, Czech Republic',
+    lat: 50.0755,
+    lon: 14.4378
+  },
   'Europe/Stockholm': { name: 'Stockholm, Sweden', lat: 59.3293, lon: 18.0686 },
   'Europe/Athens': { name: 'Athens, Greece', lat: 37.9838, lon: 23.7275 },
   'Europe/Kyiv': { name: 'Kyiv, Ukraine', lat: 50.4501, lon: 30.5234 },
   'Europe/Istanbul': { name: 'Istanbul, Turkey', lat: 41.0082, lon: 28.9784 },
-  'America/New_York': { name: 'New York, United States', lat: 40.7128, lon: -74.006 },
-  'America/Chicago': { name: 'Chicago, United States', lat: 41.8781, lon: -87.6298 },
-  'America/Los_Angeles': { name: 'Los Angeles, United States', lat: 34.0522, lon: -118.2437 },
-  'America/Denver': { name: 'Denver, United States', lat: 39.7392, lon: -104.9903 },
-  'America/Phoenix': { name: 'Phoenix, United States', lat: 33.4484, lon: -112.074 },
+  'America/New_York': {
+    name: 'New York, United States',
+    lat: 40.7128,
+    lon: -74.006
+  },
+  'America/Chicago': {
+    name: 'Chicago, United States',
+    lat: 41.8781,
+    lon: -87.6298
+  },
+  'America/Los_Angeles': {
+    name: 'Los Angeles, United States',
+    lat: 34.0522,
+    lon: -118.2437
+  },
+  'America/Denver': {
+    name: 'Denver, United States',
+    lat: 39.7392,
+    lon: -104.9903
+  },
+  'America/Phoenix': {
+    name: 'Phoenix, United States',
+    lat: 33.4484,
+    lon: -112.074
+  },
   'America/Toronto': { name: 'Toronto, Canada', lat: 43.6532, lon: -79.3832 },
-  'America/Vancouver': { name: 'Vancouver, Canada', lat: 49.2827, lon: -123.1207 },
-  'America/Mexico_City': { name: 'Mexico City, Mexico', lat: 19.4326, lon: -99.1332 },
-  'America/Sao_Paulo': { name: 'São Paulo, Brazil', lat: -23.5505, lon: -46.6333 },
-  'America/Buenos_Aires': { name: 'Buenos Aires, Argentina', lat: -34.6037, lon: -58.3816 },
+  'America/Vancouver': {
+    name: 'Vancouver, Canada',
+    lat: 49.2827,
+    lon: -123.1207
+  },
+  'America/Mexico_City': {
+    name: 'Mexico City, Mexico',
+    lat: 19.4326,
+    lon: -99.1332
+  },
+  'America/Sao_Paulo': {
+    name: 'São Paulo, Brazil',
+    lat: -23.5505,
+    lon: -46.6333
+  },
+  'America/Buenos_Aires': {
+    name: 'Buenos Aires, Argentina',
+    lat: -34.6037,
+    lon: -58.3816
+  },
   'America/Santiago': { name: 'Santiago, Chile', lat: -33.4489, lon: -70.6693 },
   'America/Bogota': { name: 'Bogota, Colombia', lat: 4.711, lon: -74.0721 },
-  'Australia/Sydney': { name: 'Sydney, Australia', lat: -33.8688, lon: 151.2093 },
-  'Australia/Melbourne': { name: 'Melbourne, Australia', lat: -37.8136, lon: 144.9631 },
-  'Pacific/Auckland': { name: 'Auckland, New Zealand', lat: -36.8485, lon: 174.7633 },
+  'Australia/Sydney': {
+    name: 'Sydney, Australia',
+    lat: -33.8688,
+    lon: 151.2093
+  },
+  'Australia/Melbourne': {
+    name: 'Melbourne, Australia',
+    lat: -37.8136,
+    lon: 144.9631
+  },
+  'Pacific/Auckland': {
+    name: 'Auckland, New Zealand',
+    lat: -36.8485,
+    lon: 174.7633
+  },
   'Africa/Cairo': { name: 'Cairo, Egypt', lat: 30.0444, lon: 31.2357 },
-  'Africa/Johannesburg': { name: 'Johannesburg, South Africa', lat: -26.2041, lon: 28.0473 }
+  'Africa/Johannesburg': {
+    name: 'Johannesburg, South Africa',
+    lat: -26.2041,
+    lon: 28.0473
+  }
 }
 
 /**
@@ -187,7 +255,9 @@ const TIMEZONE_TO_COORDINATES_MAP: Record<string, WeatherLocationPreset> = {
  * @param customTz - Optional timezone identifier. Defaults to system timezone.
  * @returns Resolved anchor location.
  */
-export function resolveLocationFromTimezone(customTz?: string): WeatherLocationPreset {
+export function resolveLocationFromTimezone(
+  customTz?: string
+): WeatherLocationPreset {
   let tz = customTz
   if (!tz && typeof Intl !== 'undefined' && Intl.DateTimeFormat) {
     try {
@@ -232,7 +302,11 @@ export async function detectAutoWeatherLocation(): Promise<WeatherLocationPreset
     clearTimeout(timeoutId)
     if (res.ok) {
       const data = await res.json()
-      if (data.cityName && typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+      if (
+        data.cityName &&
+        typeof data.latitude === 'number' &&
+        typeof data.longitude === 'number'
+      ) {
         const country = data.countryName || ''
         const name = country ? `${data.cityName}, ${country}` : data.cityName
         return { name, lat: data.latitude, lon: data.longitude }
@@ -265,4 +339,3 @@ export async function detectAutoWeatherLocation(): Promise<WeatherLocationPreset
   // Tertiary fallback: Instant zero-latency system timezone anchor
   return resolveLocationFromTimezone()
 }
-

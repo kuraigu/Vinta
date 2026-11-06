@@ -50,4 +50,3 @@ func (a *App) GetCustomLocales() (map[string]string, error) {
 
 	return result, nil
 }
-

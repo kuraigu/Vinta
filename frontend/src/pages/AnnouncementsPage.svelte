@@ -93,10 +93,9 @@
       {:else if announcements.length === 0}
         <div class="announcements-empty-state">
           <Megaphone size={28} class="empty-icon" />
-          <span class="empty-title">{$tStore('announcements.empty_title')}</span>
-          <span class="empty-sub"
-            >{$tStore('announcements.empty_desc')}</span
+          <span class="empty-title">{$tStore('announcements.empty_title')}</span
           >
+          <span class="empty-sub">{$tStore('announcements.empty_desc')}</span>
         </div>
       {:else}
         <div class="announcements-list">

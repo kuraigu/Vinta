@@ -41,7 +41,9 @@ const embeddedCatalogs: Record<string, TranslationCatalog> = {
 }
 
 /** Reactive store for custom drop-in translations loaded from disk */
-export const customCatalogsStore = writable<Record<string, TranslationCatalog>>({})
+export const customCatalogsStore = writable<Record<string, TranslationCatalog>>(
+  {}
+)
 
 /**
  * Derived list of all available languages (built-in + local community drop-ins).
@@ -73,7 +75,10 @@ export const availableLocalesStore = derived(
  * @param path - Dot-delimited path (e.g. 'home.good_morning').
  * @returns Resolved string value or undefined.
  */
-function resolvePath(catalog: TranslationCatalog | undefined, path: string): string | undefined {
+function resolvePath(
+  catalog: TranslationCatalog | undefined,
+  path: string
+): string | undefined {
   if (!catalog) return undefined
   const parts = path.split('.')
   let current: any = catalog
@@ -121,7 +126,8 @@ export function t(
   const customCatalogs = get(customCatalogsStore)
 
   // 1. Try active locale (custom drop-in takes precedence, then embedded)
-  const activeCatalog = customCatalogs[currentLocale] || embeddedCatalogs[currentLocale]
+  const activeCatalog =
+    customCatalogs[currentLocale] || embeddedCatalogs[currentLocale]
   let result = resolvePath(activeCatalog, key)
 
   // 2. Fall back to embedded English
@@ -225,4 +231,3 @@ if (typeof window !== 'undefined') {
     void loadCustomLocales()
   }, 100)
 }
-

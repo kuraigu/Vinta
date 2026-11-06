@@ -130,9 +130,7 @@
     <div class="about-hero-details">
       <div class="about-brand-header-row">
         <span class="about-brand-title">{appInfo.name}</span>
-        <span class="about-brand-studio"
-          >{$tStore('about.by_freematrix')}</span
-        >
+        <span class="about-brand-studio">{$tStore('about.by_freematrix')}</span>
       </div>
 
       <div class="about-release-capsule">

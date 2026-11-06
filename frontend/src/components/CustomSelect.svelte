@@ -142,9 +142,7 @@
   }
 
   let selectedOption = $derived(options.find((o) => o.value === value))
-  let selectedLabel = $derived(
-    selectedOption?.label || value || placeholder
-  )
+  let selectedLabel = $derived(selectedOption?.label || value || placeholder)
 
   function portal(node: HTMLElement) {
     document.body.appendChild(node)
