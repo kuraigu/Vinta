@@ -368,11 +368,32 @@ export async function fetchWeatherData(
   }
 }
 
+/**
+ * Formats a geocoding result into a human-readable display string with country and administrative division.
+ *
+ * @param item - Geocoding result.
+ * @returns Disambiguated location string (e.g. "Cambridge, England, United Kingdom").
+ */
+export function formatLocationName(item: {
+  name: string
+  country?: string
+  admin1?: string
+}): string {
+  const parts = [item.name]
+  if (item.admin1 && item.admin1 !== item.name) {
+    parts.push(item.admin1)
+  }
+  if (item.country && item.country !== item.name) {
+    parts.push(item.country)
+  }
+  return parts.join(', ')
+}
+
 export async function searchCities(query: string): Promise<GeocodingResult[]> {
   if (!query || query.trim().length < 2) return []
 
   try {
-    const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query.trim())}&count=5&language=en&format=json`
+    const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query.trim())}&count=10&language=en&format=json`
     const res = await fetch(url)
     if (!res.ok) return []
     const data = await res.json()
