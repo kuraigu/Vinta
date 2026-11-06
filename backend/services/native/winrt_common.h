@@ -1,3 +1,12 @@
+/**
+ * @file winrt_common.h
+ * @brief Common Windows Runtime, COM, and string conversion utilities.
+ *
+ * Provides RAII helpers for WinRT thread apartment initialization (ApartmentScope),
+ * safe COM wrappers, UTF-8 to UTF-16 conversions, JSON string escaping, and
+ * base64 encoding for album art thumbnail streams.
+ */
+
 #ifndef WINRT_COMMON_H
 #define WINRT_COMMON_H
 

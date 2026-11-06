@@ -1,3 +1,12 @@
+/**
+ * @file media_service.h
+ * @brief Windows System Media Transport Controls (SMTC) integration.
+ *
+ * Utilizes Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager
+ * to track active playback sessions across Spotify, web browsers, and media players.
+ * Captures timeline progress, metadata changes, and extracts album artwork.
+ */
+
 #ifndef MEDIA_SERVICE_H
 #define MEDIA_SERVICE_H
 

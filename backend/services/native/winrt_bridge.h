@@ -1,3 +1,12 @@
+/**
+ * @file winrt_bridge.h
+ * @brief Exported C-ABI interfaces for the native WinRT companion DLL.
+ *
+ * Defines the exported C functions called dynamically by the Go backend via
+ * syscall.LazyProc. Manages the lifecycle of the media, notification, audio,
+ * icon, and radio background services.
+ */
+
 #ifndef WINRT_BRIDGE_H
 #define WINRT_BRIDGE_H
 

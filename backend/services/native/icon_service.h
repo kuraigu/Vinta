@@ -1,3 +1,12 @@
+/**
+ * @file icon_service.h
+ * @brief Native Windows application icon extraction service.
+ *
+ * Extracts high-resolution icons from Win32 executable files and Windows Store (UWP)
+ * application packages using IShellItemImageFactory and SHGetFileInfoW, saving
+ * them to the local application cache as PNG images.
+ */
+
 #ifndef ICON_SERVICE_H
 #define ICON_SERVICE_H
 

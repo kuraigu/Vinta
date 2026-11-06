@@ -1,3 +1,8 @@
+/**
+ * @file icon_service.cpp
+ * @brief Shell item icon extraction and PNG encoding implementation.
+ */
+
 #include "icon_service.h"
 #include "winrt_common.h"
 

@@ -1,3 +1,8 @@
+/**
+ * @file notification_service.cpp
+ * @brief UserNotificationListener toast notification interception implementation.
+ */
+
 #include "notification_service.h"
 #include "winrt_common.h"
 #include <shlobj.h>

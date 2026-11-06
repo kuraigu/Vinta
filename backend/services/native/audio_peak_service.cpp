@@ -1,3 +1,8 @@
+/**
+ * @file audio_peak_service.cpp
+ * @brief WASAPI audio peak polling and volume endpoint implementation.
+ */
+
 #include "audio_peak_service.h"
 #include "winrt_common.h"
 #include "media_service.h"
