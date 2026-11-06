@@ -1,8 +1,9 @@
+<!--
+  @component SettingBanner
+  @description Informational banner card placed at the top of settings tabs to highlight
+  tips, restart requirements, or active system states.
+-->
 <script lang="ts">
-  /**
-   * Reusable notification and safety banner for settings tabs.
-   * Displays an atmospheric pill with an icon, title, and description.
-   */
   import type { Snippet, ComponentType } from 'svelte'
   import BentoCard from '../BentoCard.svelte'
   import CirclePattern from '../patterns/CirclePattern.svelte'

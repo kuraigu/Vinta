@@ -1,3 +1,8 @@
+<!--
+  @component StopwatchTab
+  @description Precision stopwatch with millisecond readout, start/pause/reset controls,
+  and a scrollable split lap table.
+-->
 <script lang="ts">
   import { Play, Pause, RotateCcw, Flag } from 'lucide-svelte'
   import ScrollView from '../ScrollView.svelte'

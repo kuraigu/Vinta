@@ -1,3 +1,8 @@
+<!--
+  @component BehaviorTab
+  @description Island interaction settings. Controls auto-hide timeout delays, cursor hover
+  expand sensitivity, click-to-hide triggers, and drag runway options.
+-->
 <script lang="ts">
   import {
     Layout,

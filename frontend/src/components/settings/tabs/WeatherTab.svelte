@@ -1,3 +1,8 @@
+<!--
+  @component WeatherTab
+  @description Weather configuration tab. Manages location presets, coordinates custom city
+  searches, toggles Celsius vs. Fahrenheit, and provides offline testing mock data.
+-->
 <script lang="ts">
   import { onMount } from 'svelte'
   import { SvelteSet } from 'svelte/reactivity'

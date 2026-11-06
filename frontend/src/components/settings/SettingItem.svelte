@@ -1,3 +1,9 @@
+<!--
+  @component SettingItem
+  @description Standard settings row layout. Displays an icon badge, title label,
+  and description subtitle alongside a right-aligned control slot (toggle switch,
+  select dropdown, or action button).
+-->
 <script lang="ts">
   import type { Snippet, ComponentType } from 'svelte'
   import BentoCard from '../BentoCard.svelte'

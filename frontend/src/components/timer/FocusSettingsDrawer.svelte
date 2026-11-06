@@ -1,3 +1,8 @@
+<!--
+  @component FocusSettingsDrawer
+  @description Slide-over drawer for customizing Pomodoro focus session intervals
+  (focus duration, short break duration, long break duration, and target cycles).
+-->
 <script lang="ts">
   import DrawerPanel from '../DrawerPanel.svelte'
   import { islandTooltip } from '../../services/islandTooltip'

@@ -1,3 +1,8 @@
+<!--
+  @component AboutTab
+  @description About Vinta information page. Displays current app version, links to the
+  GitHub repository and issue tracker, and exports system diagnostics for bug reports.
+-->
 <script lang="ts">
   import { onMount } from 'svelte'
   import { ArrowUpRight, ShieldCheck, GitBranch, Bug } from 'lucide-svelte'

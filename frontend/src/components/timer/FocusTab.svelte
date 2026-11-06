@@ -1,3 +1,8 @@
+<!--
+  @component FocusTab
+  @description Pomodoro focus session manager. Tracks work and break intervals, displays
+  cycle counts, and integrates with the procedural soundscape generator for background white noise.
+-->
 <script lang="ts">
   import {
     Play,

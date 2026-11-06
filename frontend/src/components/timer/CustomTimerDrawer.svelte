@@ -1,3 +1,8 @@
+<!--
+  @component CustomTimerDrawer
+  @description Slide-over drawer for setting a custom countdown duration with hours,
+  minutes, and seconds pickers.
+-->
 <script lang="ts">
   import { X, Check } from 'lucide-svelte'
   import { islandTooltip } from '../../services/islandTooltip'
