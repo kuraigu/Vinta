@@ -1,3 +1,8 @@
+<!--
+  @component AppsModulesTab
+  @description Application and widget visibility toggles. Configures which apps appear
+  in the dock, which glance cards show on the collapsed island, and what page opens on wake.
+-->
 <script lang="ts">
   import {
     FileText,

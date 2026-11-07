@@ -1,4 +1,10 @@
+/**
+ * @file notification_service.cpp
+ * @brief UserNotificationListener toast notification interception implementation.
+ */
+
 #include "notification_service.h"
+#include "icon_service.h"
 #include "winrt_common.h"
 #include <shlobj.h>
 #include <propkey.h>
@@ -10,6 +16,8 @@
 #include <winrt/Windows.Data.Xml.Dom.h>
 
 #include <atomic>
+#include <condition_variable>
+#include <mutex>
 #include <regex>
 #include <sstream>
 #include <thread>
@@ -21,6 +29,9 @@ namespace winrt_notif_mgmt = winrt::Windows::UI::Notifications::Management;
 static NativeNotificationCallback g_notifCb = nullptr;
 static std::atomic<bool> g_notifRunning{false};
 static std::thread g_notifThread;
+static std::mutex g_notifWakeMutex;
+static std::condition_variable g_notifWakeCv;
+static std::atomic<bool> g_notifWakePending{false};
 
 typedef struct sqlite3 sqlite3;
 typedef struct sqlite3_stmt sqlite3_stmt;
@@ -32,6 +43,7 @@ typedef int (*fn_sqlite3_step)(sqlite3_stmt *pStmt);
 typedef const unsigned char *(*fn_sqlite3_column_text)(sqlite3_stmt *pStmt, int iCol);
 typedef const void *(*fn_sqlite3_column_blob)(sqlite3_stmt *pStmt, int iCol);
 typedef int (*fn_sqlite3_column_bytes)(sqlite3_stmt *pStmt, int iCol);
+typedef int64_t (*fn_sqlite3_column_int64)(sqlite3_stmt *pStmt, int iCol);
 typedef int (*fn_sqlite3_finalize)(sqlite3_stmt *pStmt);
 typedef int (*fn_sqlite3_close)(sqlite3 *db);
 
@@ -74,6 +86,43 @@ static void ParseToastXmlPayload(const std::string& payload, DbToastInfo& outInf
             outInfo.heroImage = src;
         } else {
             outInfo.inlineImages.push_back(src);
+        }
+    }
+}
+
+static std::string DecodeXmlEntities(const std::string& in) {
+    std::string out = in;
+    size_t pos = 0;
+    while ((pos = out.find("&amp;", pos)) != std::string::npos) { out.replace(pos, 5, "&"); pos += 1; }
+    pos = 0;
+    while ((pos = out.find("&lt;", pos)) != std::string::npos) { out.replace(pos, 4, "<"); pos += 1; }
+    pos = 0;
+    while ((pos = out.find("&gt;", pos)) != std::string::npos) { out.replace(pos, 4, ">"); pos += 1; }
+    pos = 0;
+    while ((pos = out.find("&quot;", pos)) != std::string::npos) { out.replace(pos, 6, "\""); pos += 1; }
+    pos = 0;
+    while ((pos = out.find("&apos;", pos)) != std::string::npos) { out.replace(pos, 6, "'"); pos += 1; }
+    return out;
+}
+
+static void ParseToastXmlText(const std::string& payload, std::string& outTitle, std::string& outMessage) {
+    if (payload.empty()) return;
+    std::regex textRegex("<text[^>]*>([\\s\\S]*?)</text>", std::regex::icase);
+    auto textBegin = std::sregex_iterator(payload.begin(), payload.end(), textRegex);
+    auto textEnd = std::sregex_iterator();
+    int idx = 0;
+    for (auto it = textBegin; it != textEnd; ++it, ++idx) {
+        std::string raw = (*it)[1].str();
+        if (raw.rfind("<![CDATA[", 0) == 0 && raw.size() >= 12 && raw.substr(raw.size() - 3) == "]]>") {
+            raw = raw.substr(9, raw.size() - 12);
+        } else {
+            raw = DecodeXmlEntities(raw);
+        }
+        if (idx == 0) {
+            outTitle = raw;
+        } else {
+            if (!outMessage.empty()) outMessage += "\n";
+            outMessage += raw;
         }
     }
 }
@@ -289,25 +338,140 @@ static DbToastInfo ExtractToastFromDb(uint32_t notifId, const std::string& targe
 }
 
 /**
- * Extracts toast payload information with retry polling.
- * When Windows broadcasts UserNotificationListener notifications,
- * the Action Center service is concurrently committing the toast XML record
- * to wpndatabase.db and its write-ahead log.
- * Retrying across short intervals captures the committed payload records.
+ * Extracts toast payload information directly from wpndatabase.db
+ * without artificial sleep delays to ensure instant notification dispatch.
  */
-static DbToastInfo ExtractToastWithRetry(uint32_t notifId, const std::string& targetTitle, const std::string& aumid) {
-    DbToastInfo dbInfo;
-    const int delaysMs[] = { 0, 40, 80, 140 };
-    for (int attempt = 0; attempt < 4; ++attempt) {
-        if (delaysMs[attempt] > 0) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(delaysMs[attempt]));
+static DbToastInfo ExtractToastFast(uint32_t notifId, const std::string& targetTitle, const std::string& aumid) {
+    return ExtractToastFromDb(notifId, targetTitle, aumid);
+}
+
+static std::mutex g_appNameMutex;
+static std::unordered_map<std::string, std::string> g_appNameCache;
+
+static std::string FormatPascalCase(const std::string& in) {
+    if (in.empty()) return in;
+    std::string out;
+    for (size_t i = 0; i < in.size(); ++i) {
+        char c = in[i];
+        if (i > 0 && isupper(static_cast<unsigned char>(c)) &&
+            (islower(static_cast<unsigned char>(in[i - 1])) ||
+             (i + 1 < in.size() && islower(static_cast<unsigned char>(in[i + 1])) && isupper(static_cast<unsigned char>(in[i - 1]))))) {
+            out += ' ';
         }
-        dbInfo = ExtractToastFromDb(notifId, targetTitle, aumid);
-        if (!dbInfo.appLogoOverride.empty() || !dbInfo.heroImage.empty() || !dbInfo.inlineImages.empty()) {
-            return dbInfo;
+        out += c;
+    }
+    return out;
+}
+
+static std::string ParseAumidFallback(const std::string& aumid) {
+    if (aumid.empty()) return "Notification";
+
+    if (aumid == "Windows.SystemToast.StartupApp") return "Startup Apps";
+    if (aumid == "Windows.SystemToast.Bthprops" || aumid == "Windows.SystemToast.BthQuickPair") return "Bluetooth";
+    if (aumid == "Windows.SystemToast.AudioTroubleshooter") return "Audio Troubleshooter";
+    if (aumid == "Windows.SystemToast.AutoPlay") return "AutoPlay";
+    if (aumid == "Windows.SystemToast.BackgroundAccess") return "Background Apps";
+    if (aumid == "Windows.SystemToast.BdeUnlock") return "BitLocker";
+    if (aumid == "Windows.SystemToast.Calling" || aumid == "Windows.SystemToast.Calling.SystemAlertNotification") return "Phone Link";
+    if (aumid == "Windows.Defender") return "Windows Security";
+
+    std::string s = aumid;
+
+    size_t dColon = s.find("::");
+    if (dColon != std::string::npos) s = s.substr(0, dColon);
+
+    size_t bangIdx = s.rfind('!');
+    if (bangIdx != std::string::npos) {
+        std::string appId = s.substr(bangIdx + 1);
+        std::string lowerAppId = appId;
+        for (auto& c : lowerAppId) c = tolower(static_cast<unsigned char>(c));
+
+        if (lowerAppId == "app" || lowerAppId == "application" || lowerAppId == "default" || lowerAppId == "views") {
+            std::string pkg = s.substr(0, bangIdx);
+            size_t uscore = pkg.find('_');
+            if (uscore != std::string::npos) pkg = pkg.substr(0, uscore);
+            size_t dot = pkg.rfind('.');
+            if (dot != std::string::npos) pkg = pkg.substr(dot + 1);
+            s = pkg;
+        } else {
+            s = appId;
         }
     }
-    return dbInfo;
+
+    if (s.size() > 4) {
+        std::string ext = s.substr(s.size() - 4);
+        for (auto& c : ext) c = tolower(static_cast<unsigned char>(c));
+        if (ext == ".exe" || ext == ".app") {
+            s = s.substr(0, s.size() - 4);
+        }
+    }
+
+    size_t dot = s.rfind('.');
+    if (dot != std::string::npos && dot + 1 < s.size()) {
+        s = s.substr(dot + 1);
+    }
+
+    size_t uscore = s.find('_');
+    if (uscore != std::string::npos && uscore > 0) {
+        s = s.substr(0, uscore);
+    }
+
+    s = FormatPascalCase(s);
+
+    if (s.empty()) return "Notification";
+    s[0] = toupper(static_cast<unsigned char>(s[0]));
+    return s;
+}
+
+static std::string ResolveAppDisplayName(const std::string& aumid, const std::string& handlerDisplayName) {
+    if (!handlerDisplayName.empty()) {
+        return handlerDisplayName;
+    }
+    if (aumid.empty()) return "Notification";
+
+    {
+        std::lock_guard<std::mutex> lock(g_appNameMutex);
+        auto it = g_appNameCache.find(aumid);
+        if (it != g_appNameCache.end()) {
+            return it->second;
+        }
+    }
+
+    std::string resolved;
+
+    try {
+        std::wstring wAumid = Utf8ToUtf16(aumid);
+        std::wstring parsingName = L"shell:AppsFolder\\" + wAumid;
+        winrt::com_ptr<IShellItem> pItem;
+        HRESULT hr = SHCreateItemFromParsingName(parsingName.c_str(), NULL, IID_PPV_ARGS(pItem.put()));
+        if (SUCCEEDED(hr) && pItem) {
+            PWSTR pszName = nullptr;
+            hr = pItem->GetDisplayName(SIGDN_NORMALDISPLAY, &pszName);
+            if (SUCCEEDED(hr) && pszName) {
+                resolved = Utf16ToUtf8(pszName);
+                CoTaskMemFree(pszName);
+            }
+        }
+    } catch (...) {}
+
+    // Check Windows Registry AppUserModelId
+    if (resolved.empty()) {
+        std::string regName, regIcon;
+        if (QueryAppUserModelIdRegistry(aumid, regName, regIcon) && !regName.empty()) {
+            resolved = regName;
+        }
+    }
+
+    if (resolved.empty()) {
+        resolved = ParseAumidFallback(aumid);
+    }
+
+    if (!resolved.empty()) {
+        std::lock_guard<std::mutex> lock(g_appNameMutex);
+        g_appNameCache[aumid] = resolved;
+    }
+
+    return resolved;
 }
 
 static void NotificationWorker() {
@@ -330,231 +494,306 @@ static void NotificationWorker() {
             }
         } catch (...) {}
 
-        while (g_notifRunning) {
-            try {
-                auto notifs = listener.GetNotificationsAsync(winrt_notif::NotificationKinds::Toast).get();
+        std::mutex seenMutex;
 
-                // Prune records that are no longer active in Action Center
-                std::unordered_set<uint32_t> activeIds;
-                for (auto const& notif : notifs) {
-                    activeIds.insert(notif.Id());
-                }
-                for (auto it = seenRecords.begin(); it != seenRecords.end(); ) {
-                    if (activeIds.find(it->first) == activeIds.end()) {
-                        it = seenRecords.erase(it);
-                    } else {
-                        ++it;
+        auto dispatchNotification = [&](uint32_t id, const std::string& aumid, const std::string& appName, const std::string& title, const std::string& message, int64_t arrivalTime, const std::string& payloadXml) {
+            if (id == 0) return;
+            std::string currentSig = title + "\x1F" + message + "\x1F" + std::to_string(arrivalTime);
+            {
+                std::lock_guard<std::mutex> lock(seenMutex);
+                auto it = seenRecords.find(id);
+                if (it != seenRecords.end()) {
+                    if (it->second.signature == "__INITIAL__" || it->second.signature == currentSig) {
+                        return;
                     }
                 }
+                seenRecords[id] = { currentSig };
+            }
 
-                for (auto const& notif : notifs) {
-                    uint32_t id = notif.Id();
+            std::wstring packageFamilyName;
+            size_t bangPos = aumid.find('!');
+            if (bangPos != std::string::npos) {
+                packageFamilyName = Utf8ToUtf16(aumid.substr(0, bangPos));
+            }
+
+            DbToastInfo dbInfo;
+            if (!payloadXml.empty()) {
+                ParseToastXmlPayload(payloadXml, dbInfo);
+            } else {
+                dbInfo = ExtractToastFast(id, title, aumid);
+            }
+
+            std::string icon;
+            std::string appLogo;
+            std::string heroImage;
+
+            if (!dbInfo.appLogoOverride.empty()) {
+                ProcessedImage appLogoImg = ProcessImageSource(Utf8ToUtf16(dbInfo.appLogoOverride), packageFamilyName);
+                if (!appLogoImg.dataUri.empty()) {
+                    bool isAvatarHint = dbInfo.appLogoOverride.find("avatar") != std::string::npos ||
+                                        dbInfo.appLogoOverride.find("avatars") != std::string::npos ||
+                                        dbInfo.appLogoOverride.find("profile") != std::string::npos ||
+                                        dbInfo.appLogoOverride.find("user") != std::string::npos;
+                    if (isAvatarHint) {
+                        icon = appLogoImg.dataUri;
+                    } else {
+                        icon = appLogoImg.dataUri;
+                        appLogo = appLogoImg.dataUri;
+                    }
+                    icon = appLogoImg.dataUri;
+                }
+            }
+
+            if (!dbInfo.heroImage.empty()) {
+                ProcessedImage heroImg = ProcessImageSource(Utf8ToUtf16(dbInfo.heroImage), packageFamilyName);
+                if (!heroImg.dataUri.empty()) {
+                    bool isAvatarHint = dbInfo.heroImage.find("avatar") != std::string::npos ||
+                                        dbInfo.heroImage.find("avatars") != std::string::npos ||
+                                        dbInfo.heroImage.find("profile") != std::string::npos ||
+                                        dbInfo.heroImage.find("user") != std::string::npos;
+                    if ((heroImg.isAvatarSize() || isAvatarHint) && icon.empty()) {
+                        icon = heroImg.dataUri;
+                    } else {
+                        heroImage = heroImg.dataUri;
+                    }
+                }
+            }
+
+            for (const auto& inlineSrc : dbInfo.inlineImages) {
+                ProcessedImage inImg = ProcessImageSource(Utf8ToUtf16(inlineSrc), packageFamilyName);
+                if (!inImg.dataUri.empty()) {
+                    bool isAvatarHint = inlineSrc.find("avatar") != std::string::npos ||
+                                        inlineSrc.find("avatars") != std::string::npos ||
+                                        inlineSrc.find("profile") != std::string::npos ||
+                                        inlineSrc.find("user") != std::string::npos;
+                    if ((inImg.isAvatarSize() || isAvatarHint) && icon.empty()) {
+                        icon = inImg.dataUri;
+                    } else if (heroImage.empty()) {
+                        heroImage = inImg.dataUri;
+                    }
+                }
+            }
+
+            // Resolve authentic parent application icon directly via Win32 Shell / Registry
+            std::string nativeAppLogo = ExtractAppIconAsDataUri(appName.c_str(), aumid.c_str(), 48);
+            if (!nativeAppLogo.empty()) {
+                appLogo = nativeAppLogo;
+            }
+            if (icon.empty()) {
+                icon = appLogo;
+            }
+
+            // Immediately emit toast with 0ms delay without blocking on WinRT RPC
+            if (g_notifCb) {
+                std::ostringstream json;
+                json << "{\"type\":\"notification\","
+                     << "\"id\":" << id << ","
+                     << "\"appName\":\"" << EscapeJsonString(appName) << "\","
+                     << "\"aumid\":\"" << EscapeJsonString(aumid) << "\","
+                     << "\"icon\":\"" << EscapeJsonString(icon) << "\","
+                     << "\"appLogo\":\"" << EscapeJsonString(appLogo) << "\","
+                     << "\"title\":\"" << EscapeJsonString(title) << "\","
+                     << "\"message\":\"" << EscapeJsonString(message) << "\","
+                     << "\"heroImage\":\"" << EscapeJsonString(heroImage) << "\"}";
+                g_notifCb(json.str().c_str());
+            }
+
+            // Asynchronously resolve WinRT display name, app logo, and late avatar in background
+            std::thread([id, aumid, appName, title, message, packageFamilyName, icon, appLogo, heroImage]() {
+                ApartmentScope apt;
+                std::string resolvedName = appName;
+                std::string finalAppLogo = appLogo;
+                std::wstring pfn = packageFamilyName;
+
+                for (int attempt = 0; attempt < 3; ++attempt) {
+                    std::this_thread::sleep_for(std::chrono::milliseconds(250 * (attempt + 1)));
+                    if (!g_notifRunning) return;
+
+                    try {
+                        auto l = winrt_notif_mgmt::UserNotificationListener::Current();
+                        auto notif = l.GetNotification(id);
+                        if (notif && notif.AppInfo()) {
+                            if (notif.AppInfo().DisplayInfo()) {
+                                std::string winrtName = Utf16ToUtf8(notif.AppInfo().DisplayInfo().DisplayName().c_str());
+                                if (!winrtName.empty()) {
+                                    resolvedName = winrtName;
+                                }
+                                if (finalAppLogo.empty()) {
+                                    auto logoRef = notif.AppInfo().DisplayInfo().GetLogo(winrt::Windows::Foundation::Size{48.0f, 48.0f});
+                                    if (logoRef) {
+                                        auto s = logoRef.OpenReadAsync().get();
+                                        finalAppLogo = StreamToBase64(s);
+                                    }
+                                }
+                            }
+                            if (notif.AppInfo().PackageFamilyName() != L"") {
+                                pfn = notif.AppInfo().PackageFamilyName().c_str();
+                            }
+                            break;
+                        }
+                    } catch (...) {}
+                }
+
+                if (finalAppLogo.empty()) {
+                    finalAppLogo = ExtractAppIconAsDataUri(resolvedName.c_str(), aumid.c_str(), 48);
+                }
+
+                std::string finalIcon = icon;
+                std::string finalHero = heroImage;
+
+                if (finalIcon.empty()) {
+                    DbToastInfo retryDb = ExtractToastFromDb(id, title, aumid);
+                    if (!retryDb.appLogoOverride.empty()) {
+                        ProcessedImage img = ProcessImageSource(Utf8ToUtf16(retryDb.appLogoOverride), pfn);
+                        if (!img.dataUri.empty()) finalIcon = img.dataUri;
+                    }
+                }
+                if (finalIcon.empty()) {
+                    finalIcon = finalAppLogo;
+                }
+
+                if (g_notifCb && (!finalAppLogo.empty() || resolvedName != appName || finalIcon != icon)) {
+                    std::ostringstream json;
+                    json << "{\"type\":\"notification_update\","
+                         << "\"id\":" << id << ","
+                         << "\"appName\":\"" << EscapeJsonString(resolvedName) << "\","
+                         << "\"aumid\":\"" << EscapeJsonString(aumid) << "\","
+                         << "\"icon\":\"" << EscapeJsonString(finalIcon) << "\","
+                         << "\"appLogo\":\"" << EscapeJsonString(finalAppLogo) << "\","
+                         << "\"title\":\"" << EscapeJsonString(title) << "\","
+                         << "\"message\":\"" << EscapeJsonString(message) << "\","
+                         << "\"heroImage\":\"" << EscapeJsonString(finalHero) << "\"}";
+                    g_notifCb(json.str().c_str());
+                }
+            }).detach();
+        };
+
+        uint32_t lastProcessedId = 0;
+
+        auto pollWpnDatabase = [&](bool isInitial) {
+            HMODULE hSqlite = LoadLibraryW(L"winsqlite3.dll");
+            if (!hSqlite) return;
+
+            auto p_open_v2 = (fn_sqlite3_open_v2)GetProcAddress(hSqlite, "sqlite3_open_v2");
+            auto p_prepare = (fn_sqlite3_prepare_v2)GetProcAddress(hSqlite, "sqlite3_prepare_v2");
+            auto p_bind_int64 = (fn_sqlite3_bind_int64)GetProcAddress(hSqlite, "sqlite3_bind_int64");
+            auto p_step = (fn_sqlite3_step)GetProcAddress(hSqlite, "sqlite3_step");
+            auto p_text = (fn_sqlite3_column_text)GetProcAddress(hSqlite, "sqlite3_column_text");
+            auto p_blob = (fn_sqlite3_column_blob)GetProcAddress(hSqlite, "sqlite3_column_blob");
+            auto p_bytes = (fn_sqlite3_column_bytes)GetProcAddress(hSqlite, "sqlite3_column_bytes");
+            auto p_int64 = (fn_sqlite3_column_int64)GetProcAddress(hSqlite, "sqlite3_column_int64");
+            auto p_finalize = (fn_sqlite3_finalize)GetProcAddress(hSqlite, "sqlite3_finalize");
+            auto p_close = (fn_sqlite3_close)GetProcAddress(hSqlite, "sqlite3_close");
+
+            if (!p_open_v2 || !p_prepare || !p_step || !p_finalize || !p_close) return;
+
+            char localAppData[MAX_PATH];
+            if (GetEnvironmentVariableA("LOCALAPPDATA", localAppData, MAX_PATH) == 0) return;
+            std::string dbPath = std::string(localAppData) + "\\Microsoft\\Windows\\Notifications\\wpndatabase.db";
+            std::string uri = "file:" + dbPath + "?mode=ro";
+
+            sqlite3* db = nullptr;
+            int rc = p_open_v2(uri.c_str(), &db, 0x00000001 | 0x00000040, nullptr);
+            if (rc != 0 || !db) {
+                rc = p_open_v2(dbPath.c_str(), &db, 0x00000001, nullptr);
+            }
+            if (rc != 0 || !db) return;
+
+            if (isInitial) {
+                const char* maxSql = "SELECT MAX(Id) FROM Notification WHERE (Type = 'toast' OR Type = 'toastCondensed');";
+                sqlite3_stmt* maxStmt = nullptr;
+                if (p_prepare(db, maxSql, -1, &maxStmt, nullptr) == 0) {
+                    if (p_step(maxStmt) == 100 && p_int64) {
+                        lastProcessedId = static_cast<uint32_t>(p_int64(maxStmt, 0));
+                    }
+                    p_finalize(maxStmt);
+                }
+                const char* seedSql =
+                    "SELECT n.Id "
+                    "FROM Notification n "
+                    "WHERE (n.Type = 'toast' OR n.Type = 'toastCondensed') "
+                    "ORDER BY n.Id DESC LIMIT 50;";
+                sqlite3_stmt* seedStmt = nullptr;
+                if (p_prepare(db, seedSql, -1, &seedStmt, nullptr) == 0) {
+                    std::lock_guard<std::mutex> lock(seenMutex);
+                    while (p_step(seedStmt) == 100) {
+                        uint32_t seedId = static_cast<uint32_t>(p_int64 ? p_int64(seedStmt, 0) : 0);
+                        seenRecords[seedId] = { "__INITIAL__" };
+                    }
+                    p_finalize(seedStmt);
+                }
+                p_close(db);
+                return;
+            }
+
+            const char* sql =
+                "SELECT n.Id, h.PrimaryId, n.ArrivalTime, n.Payload, ha.AssetValue "
+                "FROM Notification n "
+                "LEFT JOIN NotificationHandler h ON n.HandlerId = h.RecordId "
+                "LEFT JOIN HandlerAssets ha ON n.HandlerId = ha.HandlerId AND ha.AssetKey = 'DisplayName' "
+                "WHERE (n.Type = 'toast' OR n.Type = 'toastCondensed') AND n.Id > ? "
+                "ORDER BY n.Id ASC;";
+
+            sqlite3_stmt* stmt = nullptr;
+            if (p_prepare(db, sql, -1, &stmt, nullptr) == 0) {
+                if (p_bind_int64) {
+                    p_bind_int64(stmt, 1, static_cast<int64_t>(lastProcessedId));
+                }
+                while (p_step(stmt) == 100) {
+                    uint32_t id = static_cast<uint32_t>(p_int64 ? p_int64(stmt, 0) : 0);
+                    if (id > lastProcessedId) {
+                        lastProcessedId = id;
+                    }
+                    const char* aumidPtr = (const char*)p_text(stmt, 1);
+                    std::string aumid = aumidPtr ? aumidPtr : "";
+                    int64_t arrivalTime = p_int64 ? p_int64(stmt, 2) : 0;
+                    const void* blob = p_blob(stmt, 3);
+                    int blobBytes = p_bytes(stmt, 3);
+                    std::string payload = (blob && blobBytes > 0) ? std::string((const char*)blob, blobBytes) : "";
+                    const char* assetValPtr = (const char*)p_text(stmt, 4);
+                    std::string handlerDisplayName = assetValPtr ? assetValPtr : "";
 
                     std::string title;
                     std::string message;
-                    try {
-                        if (notif.Notification() && notif.Notification().Visual()) {
-                            auto bindings = notif.Notification().Visual().Bindings();
-                            for (auto const& binding : bindings) {
-                                auto texts = binding.GetTextElements();
-                                uint32_t textCount = texts.Size();
-                                if (textCount > 0) {
-                                    title = Utf16ToUtf8(texts.GetAt(0).Text().c_str());
-                                    for (uint32_t t = 1; t < textCount; t++) {
-                                        if (!message.empty()) message += "\n";
-                                        message += Utf16ToUtf8(texts.GetAt(t).Text().c_str());
-                                    }
-                                }
-                            }
-                        }
-                    } catch (...) {}
-
-                    int64_t creationTicks = 0;
-                    try {
-                        creationTicks = notif.CreationTime().time_since_epoch().count();
-                    } catch (...) {}
-
-                    std::string currentSig = title + "\x1F" + message + "\x1F" + std::to_string(creationTicks);
-                    auto it = seenRecords.find(id);
-                    if (it != seenRecords.end()) {
-                        if (it->second.signature == "__INITIAL__" || it->second.signature == currentSig) {
-                            continue;
-                        }
-                    }
-
-                    seenRecords[id] = { currentSig };
-
-                    std::string appName;
-                    std::string aumid;
-                    try {
-                        if (notif.AppInfo() && notif.AppInfo().DisplayInfo()) {
-                            appName = Utf16ToUtf8(notif.AppInfo().DisplayInfo().DisplayName().c_str());
-                        }
-                    } catch (...) {}
-
-                    try {
-                        if (notif.AppInfo()) {
-                            aumid = Utf16ToUtf8(notif.AppInfo().AppUserModelId().c_str());
-                            if (appName.empty()) appName = aumid;
-                        }
-                    } catch (...) {}
-
-                    std::string icon;
-                    std::string heroImage;
-                    std::wstring packageFamilyName;
-
-                    try {
-                        if (notif.AppInfo() && notif.AppInfo().PackageFamilyName() != L"") {
-                            packageFamilyName = notif.AppInfo().PackageFamilyName().c_str();
-                        }
-                    } catch (...) {}
-
-                    try {
-                        DbToastInfo dbInfo = ExtractToastWithRetry(id, title, aumid);
-                        if (!dbInfo.appLogoOverride.empty()) {
-                            ProcessedImage appLogoImg = ProcessImageSource(Utf8ToUtf16(dbInfo.appLogoOverride), packageFamilyName);
-                            if (!appLogoImg.dataUri.empty()) {
-                                icon = appLogoImg.dataUri;
-                            }
-                        }
-
-                        if (!dbInfo.heroImage.empty()) {
-                            ProcessedImage heroImg = ProcessImageSource(Utf8ToUtf16(dbInfo.heroImage), packageFamilyName);
-                            if (!heroImg.dataUri.empty()) {
-                                bool isAvatarHint = dbInfo.heroImage.find("avatar") != std::string::npos ||
-                                                    dbInfo.heroImage.find("avatars") != std::string::npos ||
-                                                    dbInfo.heroImage.find("profile") != std::string::npos ||
-                                                    dbInfo.heroImage.find("user") != std::string::npos;
-                                if ((heroImg.isAvatarSize() || isAvatarHint) && icon.empty()) {
-                                    icon = heroImg.dataUri;
-                                } else {
-                                    heroImage = heroImg.dataUri;
-                                }
-                            }
-                        }
-
-                        for (const auto& inlineSrc : dbInfo.inlineImages) {
-                            ProcessedImage inImg = ProcessImageSource(Utf8ToUtf16(inlineSrc), packageFamilyName);
-                            if (!inImg.dataUri.empty()) {
-                                bool isAvatarHint = inlineSrc.find("avatar") != std::string::npos ||
-                                                    inlineSrc.find("avatars") != std::string::npos ||
-                                                    inlineSrc.find("profile") != std::string::npos ||
-                                                    inlineSrc.find("user") != std::string::npos;
-                                if ((inImg.isAvatarSize() || isAvatarHint) && icon.empty()) {
-                                    icon = inImg.dataUri;
-                                } else if (heroImage.empty()) {
-                                    heroImage = inImg.dataUri;
-                                }
-                            }
-                        }
-                    } catch (...) {}
-
-                        std::string appLogo;
-                        try {
-                            if (notif.AppInfo() && notif.AppInfo().DisplayInfo()) {
-                                auto logoStreamRef = notif.AppInfo().DisplayInfo().GetLogo(winrt::Windows::Foundation::Size{48.0f, 48.0f});
-                                if (logoStreamRef) {
-                                    auto stream = logoStreamRef.OpenReadAsync().get();
-                                    appLogo = StreamToBase64(stream);
-                                }
-                            }
-                        } catch (...) {}
-
-                        if (icon.empty()) {
-                            icon = appLogo;
-                        }
-
-                        if (g_notifCb) {
-                            std::ostringstream json;
-                            json << "{\"type\":\"notification\","
-                                 << "\"id\":" << id << ","
-                                 << "\"appName\":\"" << EscapeJsonString(appName) << "\","
-                                 << "\"aumid\":\"" << EscapeJsonString(aumid) << "\","
-                                 << "\"icon\":\"" << EscapeJsonString(icon) << "\","
-                                 << "\"appLogo\":\"" << EscapeJsonString(appLogo) << "\","
-                                 << "\"title\":\"" << EscapeJsonString(title) << "\","
-                                 << "\"message\":\"" << EscapeJsonString(message) << "\","
-                                 << "\"heroImage\":\"" << EscapeJsonString(heroImage) << "\"}";
-                            g_notifCb(json.str().c_str());
-                        }
-
-                        /**
-                         * Delayed SQLite transaction polling:
-                         * Windows Action Center writes toast records to wpndatabase.db asynchronously.
-                         * When an initial notification read catches only the generic app logo, polling
-                         * across short intervals captures the committed avatar or hero image and
-                         * emits an in-place update to the frontend.
-                         */
-                        if (icon == appLogo && heroImage.empty() && g_notifCb) {
-                            std::thread([id, title, aumid, appName, message, packageFamilyName, appLogo]() {
-                                ApartmentScope apt;
-                                const int retryDelays[] = { 300, 700, 1300 };
-                                for (int delay : retryDelays) {
-                                    std::this_thread::sleep_for(std::chrono::milliseconds(delay));
-                                    if (!g_notifRunning) return;
-
-                                    DbToastInfo retryDb = ExtractToastFromDb(id, title, aumid);
-                                    std::string lateIcon;
-                                    std::string lateHero;
-
-                                    if (!retryDb.appLogoOverride.empty()) {
-                                        ProcessedImage img = ProcessImageSource(Utf8ToUtf16(retryDb.appLogoOverride), packageFamilyName);
-                                        if (!img.dataUri.empty()) lateIcon = img.dataUri;
-                                    }
-
-                                    if (!retryDb.heroImage.empty()) {
-                                        ProcessedImage heroImg = ProcessImageSource(Utf8ToUtf16(retryDb.heroImage), packageFamilyName);
-                                        if (!heroImg.dataUri.empty()) {
-                                            bool isAvatarHint = retryDb.heroImage.find("avatar") != std::string::npos ||
-                                                                retryDb.heroImage.find("avatars") != std::string::npos ||
-                                                                retryDb.heroImage.find("profile") != std::string::npos ||
-                                                                retryDb.heroImage.find("user") != std::string::npos;
-                                            if ((heroImg.isAvatarSize() || isAvatarHint) && lateIcon.empty()) {
-                                                lateIcon = heroImg.dataUri;
-                                            } else {
-                                                lateHero = heroImg.dataUri;
-                                            }
-                                        }
-                                    }
-
-                                    for (const auto& inlineSrc : retryDb.inlineImages) {
-                                        ProcessedImage inImg = ProcessImageSource(Utf8ToUtf16(inlineSrc), packageFamilyName);
-                                        if (!inImg.dataUri.empty()) {
-                                            bool isAvatarHint = inlineSrc.find("avatar") != std::string::npos ||
-                                                                inlineSrc.find("avatars") != std::string::npos ||
-                                                                inlineSrc.find("profile") != std::string::npos ||
-                                                                inlineSrc.find("user") != std::string::npos;
-                                            if ((inImg.isAvatarSize() || isAvatarHint) && lateIcon.empty()) {
-                                                lateIcon = inImg.dataUri;
-                                            } else if (lateHero.empty()) {
-                                                lateHero = inImg.dataUri;
-                                            }
-                                        }
-                                    }
-
-                                    if (!lateIcon.empty() || !lateHero.empty()) {
-                                        if (g_notifCb) {
-                                            std::ostringstream json;
-                                            json << "{\"type\":\"notification_update\","
-                                                 << "\"id\":" << id << ","
-                                                 << "\"appName\":\"" << EscapeJsonString(appName) << "\","
-                                                 << "\"aumid\":\"" << EscapeJsonString(aumid) << "\","
-                                                 << "\"icon\":\"" << EscapeJsonString(lateIcon.empty() ? appLogo : lateIcon) << "\","
-                                                 << "\"appLogo\":\"" << EscapeJsonString(appLogo) << "\","
-                                                 << "\"title\":\"" << EscapeJsonString(title) << "\","
-                                                 << "\"message\":\"" << EscapeJsonString(message) << "\","
-                                                 << "\"heroImage\":\"" << EscapeJsonString(lateHero) << "\"}";
-                                            g_notifCb(json.str().c_str());
-                                        }
-                                        break;
-                                    }
-                                }
-                            }).detach();
-                        }
+                    ParseToastXmlText(payload, title, message);
+                    std::string resolvedAppName = ResolveAppDisplayName(aumid, handlerDisplayName);
+                    dispatchNotification(id, aumid, resolvedAppName, title, message, arrivalTime, payload);
                 }
-            } catch (...) {}
+                p_finalize(stmt);
+            }
+            p_close(db);
+        };
 
-            std::this_thread::sleep_for(std::chrono::milliseconds(120));
+        // Seed initial notifications to prevent re-firing history on startup
+        pollWpnDatabase(true);
+
+        char localAppData[MAX_PATH];
+        GetEnvironmentVariableA("LOCALAPPDATA", localAppData, MAX_PATH);
+        std::string notifDir = std::string(localAppData) + "\\Microsoft\\Windows\\Notifications";
+
+        HANDLE hChange = FindFirstChangeNotificationA(
+            notifDir.c_str(),
+            FALSE,
+            FILE_NOTIFY_CHANGE_LAST_WRITE | FILE_NOTIFY_CHANGE_SIZE | FILE_NOTIFY_CHANGE_FILE_NAME
+        );
+
+        while (g_notifRunning) {
+            DWORD waitRes = (hChange != INVALID_HANDLE_VALUE)
+                ? WaitForSingleObject(hChange, 80)
+                : (std::this_thread::sleep_for(std::chrono::milliseconds(80)), WAIT_TIMEOUT);
+
+            if (waitRes == WAIT_OBJECT_0 && hChange != INVALID_HANDLE_VALUE) {
+                FindNextChangeNotification(hChange);
+            }
+
+            // Real-time instant notification check from SQLite (fires < 80ms)
+            try {
+                pollWpnDatabase(false);
+            } catch (...) {}
+        }
+
+        if (hChange != INVALID_HANDLE_VALUE) {
+            FindCloseChangeNotification(hChange);
         }
     } catch (...) {}
 }
@@ -569,6 +808,8 @@ void StartNotificationService(NativeNotificationCallback cb) {
 void StopNotificationService() {
     if (!g_notifRunning) return;
     g_notifRunning = false;
+    g_notifWakePending = true;
+    g_notifWakeCv.notify_all();
     if (g_notifThread.joinable()) {
         g_notifThread.join();
     }

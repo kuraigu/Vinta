@@ -1,3 +1,8 @@
+<!--
+  @component AlarmsTab
+  @description Scheduled alarms manager. Lists active and inactive alarms with toggle switches,
+  repeat day indicators, and buttons to create or edit alarms.
+-->
 <script lang="ts">
   import { Bell, Pencil, Trash2 } from 'lucide-svelte'
   import ScrollView from '../ScrollView.svelte'

@@ -1,21 +1,17 @@
+/**
+ * @fileoverview Expands the native window hit-test area to fit floating tooltips.
+ *
+ * Sends tooltip coordinates to the native backend so Windows doesn't clip tooltips
+ * that stick out past the rounded island capsule.
+ */
+
 import {
   SetTooltipBounds,
   ClearTooltipBounds
 } from '../../bindings/Vinta/backend/app.js'
 
 /**
- * Tooltip bounds synchronization service.
- * Dispatches active tooltip bounding boxes to the native layer so Win32 SetWindowRgn
- * includes the tooltip area, preventing OS-level window clipping when tooltips extend
- * beyond the main island pill.
- */
-
-/**
- * Dispatches an active tooltip's viewport bounding box.
- *
- * @param id - Unique identifier for the tooltip.
- * @param rect - Viewport bounding box of the tooltip element.
- * @param radius - Corner radius in pixels.
+ * Tells the native window manager to expand the window shape around a visible tooltip.
  */
 export function dispatchTooltipBounds(
   id: string,

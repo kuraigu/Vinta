@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Application entry point.
+ *
+ * Mounts the main Vinta island or the developer test window depending on
+ * whether the '?window=devtest' query parameter is present in the URL.
+ */
+
 import { mount } from 'svelte'
 import './style.css'
 import App from './App.svelte'

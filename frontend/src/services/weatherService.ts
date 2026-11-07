@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Weather data fetching and Open-Meteo integration.
+ *
+ * Downloads forecasts, humidity, wind, and UV data, caches responses for 15 minutes,
+ * translates weather codes to condition titles and icons, and handles city search.
+ */
+
 import {
   Sun,
   Moon,
@@ -111,6 +118,9 @@ export function getWmoConditionKey(
     : 'weather.conditions.partly_cloudy'
 }
 
+/**
+ * Maps a WMO weather code to a condition name, Lucide icon, and color theme.
+ */
 export function parseWmoCode(
   code: number,
   isNight: boolean = false
@@ -212,6 +222,9 @@ export function parseWmoCode(
 
 const CACHE_DURATION_MS = 15 * 60 * 1000 // 15 minutes
 
+/**
+ * Fetches current weather and 7-day forecast from Open-Meteo, using cache when fresh.
+ */
 export async function fetchWeatherData(
   locationName: string,
   lat: number,
@@ -389,6 +402,9 @@ export function formatLocationName(item: {
   return parts.join(', ')
 }
 
+/**
+ * Searches global cities by name using Open-Meteo geocoding.
+ */
 export async function searchCities(query: string): Promise<GeocodingResult[]> {
   if (!query || query.trim().length < 2) return []
 
@@ -427,6 +443,9 @@ export type TempFormatted = {
   str: string
 }
 
+/**
+ * Converts Celsius temperatures to Fahrenheit or Kelvin.
+ */
 export function convertTemp(
   celsius: number,
   unit: 'celsius' | 'fahrenheit' | 'kelvin'

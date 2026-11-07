@@ -1,3 +1,7 @@
+<!--
+  @component FlagIcon
+  @description Renders SVG country flags based on ISO 3166-1 alpha-2 codes for language selection menus.
+-->
 <script lang="ts">
   import { Globe } from 'lucide-svelte'
 

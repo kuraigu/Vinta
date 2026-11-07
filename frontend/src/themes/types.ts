@@ -1,4 +1,10 @@
 /**
+ * @fileoverview Type definitions for theme packages.
+ *
+ * Defines the JSON schema for `.vintatheme` manifest files (name, author, entry CSS).
+ */
+
+/**
  * VintaThemeManifest represents the schema definition of a .vintatheme manifest.json.
  */
 export interface VintaThemeManifest {

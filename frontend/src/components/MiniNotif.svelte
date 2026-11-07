@@ -1,3 +1,7 @@
+<!--
+  @component MiniNotif
+  @description Compact badge pill showing unread notification counts or temporary status badges.
+-->
 <script lang="ts">
   import { getContext } from 'svelte'
   import { Bell } from 'lucide-svelte'

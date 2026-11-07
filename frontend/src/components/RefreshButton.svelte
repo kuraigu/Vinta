@@ -1,3 +1,7 @@
+<!--
+  @component RefreshButton
+  @description Icon button that spins during network refresh operations (weather, calendars, feeds).
+-->
 <script lang="ts">
   import { RefreshCw } from 'lucide-svelte'
   import { islandTooltip } from '../services/islandTooltip'

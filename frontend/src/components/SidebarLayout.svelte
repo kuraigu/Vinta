@@ -1,3 +1,8 @@
+<!--
+  @component SidebarLayout
+  @description Responsive two-column split layout for pages like Settings, featuring a
+  fixed-width navigation sidebar and a flexible content scroll area.
+-->
 <script lang="ts">
   import type { Snippet } from 'svelte'
   import BackButton from './BackButton.svelte'

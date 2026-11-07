@@ -1,3 +1,8 @@
+<!--
+  @component ContextMenu
+  @description Floating context menu positioned at cursor coordinates. Automatically flips
+  orientation near viewport edges and closes on outside clicks or Escape key.
+-->
 <script lang="ts">
   import { slide } from 'svelte/transition'
 

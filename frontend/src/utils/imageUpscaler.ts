@@ -1,12 +1,9 @@
 /**
- * Multi-stage pyramid upsampler for low-resolution media artwork.
+ * @fileoverview Offscreen canvas image enhancer for album art.
  *
- * Uses fetch + blob URL to bypass cross-origin restrictions that block canvas
- * operations on remote thumbnail URLs (e.g. YouTube's i.ytimg.com CDN).
- *
- * Only processes images that are genuinely smaller than the display card.
- * High-res sources (e.g. Spotify 640×640) are passed through untouched and
- * left to CSS bilinear downscaling, which looks clean at sub-display-size ratios.
+ * Low-resolution thumbnails from services like YouTube Music can look blurry on
+ * high-DPI screens. This loads the thumbnail via a blob URL to avoid CORS blocks
+ * and scales it cleanly on an offscreen canvas.
  */
 
 interface UpscaleResult {
@@ -72,14 +69,7 @@ function bilinearUpscaleStage(
 }
 
 /**
- * Upscales low-resolution media artwork using a 2-stage bilinear pyramid.
- *
- * Only images whose width is below `minDisplayWidth × 1.4` are processed.
- * Anything larger is passed through as-is; CSS handles the rest via object-fit.
- *
- * @param src Source image URI or base64 data URL
- * @param minDisplayWidth Width of the display card in CSS pixels (default 400)
- * @returns Promise resolving to the enhanced URL and metadata
+ * Enhances low-resolution album art so it renders cleanly in the media player.
  */
 export async function enhanceArtwork(
   src: string,

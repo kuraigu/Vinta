@@ -1,3 +1,7 @@
+<!--
+  @component Divider
+  @description Subtle separator line supporting horizontal or vertical orientation.
+-->
 <script lang="ts">
   interface Props {
     width?: string

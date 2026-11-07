@@ -1,3 +1,8 @@
+<!--
+  @component AppearanceTab
+  @description Theme customization panel. Lets users select color presets (Dark, Light,
+  Tokyo Night, Sunset, OLED), toggle acrylic backdrop blur, and adjust capsule opacity.
+-->
 <script lang="ts">
   import { onMount } from 'svelte'
   import {

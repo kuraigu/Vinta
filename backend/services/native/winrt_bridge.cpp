@@ -1,3 +1,8 @@
+/**
+ * @file winrt_bridge.cpp
+ * @brief Implementation of exported C-ABI interfaces for native WinRT services.
+ */
+
 #include "winrt_bridge.h"
 #include "notification_service.h"
 #include "media_service.h"

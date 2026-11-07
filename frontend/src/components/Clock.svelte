@@ -1,3 +1,8 @@
+<!--
+  @component Clock
+  @description Live digital clock supporting 12h/24h display, optional blinking separator,
+  and date subtitles.
+-->
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte'
   import {

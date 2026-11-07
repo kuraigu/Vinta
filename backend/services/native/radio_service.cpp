@@ -1,3 +1,8 @@
+/**
+ * @file radio_service.cpp
+ * @brief Windows Runtime Radio control implementation for Wi-Fi, Bluetooth, and Airplane Mode.
+ */
+
 #include "radio_service.h"
 #include <winrt/Windows.Devices.Radios.h>
 #include <winrt/Windows.Networking.Connectivity.h>

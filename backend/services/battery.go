@@ -1,3 +1,4 @@
+// Package services provides Windows power status monitoring and battery telemetry.
 package services
 
 import (

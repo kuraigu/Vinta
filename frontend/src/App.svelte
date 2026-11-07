@@ -1,3 +1,9 @@
+<!--
+  @component App
+  @description Root application container. Initializes theme variables, loads user
+  settings, binds global keyboard shortcuts (Esc to collapse, hotkeys to toggle pages),
+  and coordinates layout between the main island capsule and floating satellite widgets.
+-->
 <script lang="ts">
   import { onMount, setContext, type Component } from 'svelte'
   import {
@@ -289,7 +295,7 @@
 
   let extraDropdownW = $state(0)
   let extraDropdownH = $state(0)
-  let islandAnim = $state('0.32s cubic-bezier(0.2, 0.8, 0.2, 1)')
+  let islandAnim = $state('0.34s cubic-bezier(0.16, 1, 0.3, 1)')
 
   let islandContainerNode = $state<HTMLDivElement | null>(null)
   let islandWrapperNode = $state<HTMLDivElement | null>(null)
@@ -678,10 +684,17 @@
   let wasExpandedBeforeHide = $state(false)
   let wasHiddenBeforeNotif = $state(false)
 
+  interface NavHistoryItem {
+    page: Component
+    config: IslandConfig
+  }
+  let navHistory: NavHistoryItem[] = []
+
   function navigateTo(
     page: Component,
     pageConfig: IslandConfig,
-    expand: boolean = false
+    expand: boolean = false,
+    isBackNav: boolean = false
   ) {
     if (page === HomePage && activePage === OnboardingPage) {
       hasCompletedOnboardingStore.set(true)
@@ -698,6 +711,13 @@
       page !== HomePage
     ) {
       return
+    }
+
+    if (!isBackNav && activePage && activePage !== page && expanded) {
+      navHistory.push({ page: activePage as Component, config: islandConfig })
+      if (navHistory.length > 20) {
+        navHistory.shift()
+      }
     }
 
     gestures.finishSettling()
@@ -724,7 +744,7 @@
       triggerBlink()
     }
     islandAnim = expand
-      ? '0.32s cubic-bezier(0.2, 0.8, 0.2, 1)'
+      ? '0.34s cubic-bezier(0.16, 1, 0.3, 1)'
       : '0.22s cubic-bezier(0.2, 0.8, 0.2, 1)'
     activePage = page
     islandConfig = pageConfig
@@ -764,7 +784,19 @@
     triggerGlow()
   }
 
+  function goBack(): void {
+    while (navHistory.length > 0) {
+      const prev = navHistory.pop()
+      if (prev && prev.page !== activePage) {
+        navigateTo(prev.page, prev.config, true, true)
+        return
+      }
+    }
+    navigateTo(AppsPage as Component, appsConfig, true, true)
+  }
+
   setContext('navigate', navigateTo)
+  setContext('goBack', goBack)
 
   function showWidget() {
     clearHoverGrace()
@@ -790,7 +822,7 @@
       $activePageIdStore = fallback.page === HomePage ? 'home' : 'media'
     }
 
-    islandAnim = '0.32s cubic-bezier(0.2, 0.8, 0.2, 1)'
+    islandAnim = '0.34s cubic-bezier(0.16, 1, 0.3, 1)'
     isHidden = false
     bounds.notifyHidden(false)
     const nextBounds = getBoundsForState(islandConfig, false, false)
@@ -853,7 +885,7 @@
     wasExpandedBeforeHide = expanded
     const duration = wasExpandedBeforeHide ? 300 : 220
     islandAnim = wasExpandedBeforeHide
-      ? '0.30s cubic-bezier(0.2, 0.8, 0.2, 1)'
+      ? '0.30s cubic-bezier(0.16, 1, 0.3, 1)'
       : '0.22s cubic-bezier(0.2, 0.8, 0.2, 1)'
 
     isHidden = true
@@ -990,7 +1022,7 @@
       currentLiveOffsetX = targetOffset
       $hiddenPillOffsetXStore = targetOffset
     }
-    islandAnim = '0.32s cubic-bezier(0.2, 0.8, 0.2, 1)'
+    islandAnim = '0.34s cubic-bezier(0.16, 1, 0.3, 1)'
     expanded = true
     bounds.startTrackingTransition(islandNode, 350, false)
   }

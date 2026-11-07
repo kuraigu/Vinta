@@ -1,4 +1,11 @@
 <script lang="ts">
+  /**
+   * @fileoverview Interactive calendar grid and agenda scheduling component.
+   *
+   * Supports monthly, yearly, and decade views, date selection, agenda event management,
+   * and expired past event pruning.
+   */
+
   import { onMount, onDestroy, getContext } from 'svelte'
   import {
     ChevronLeft,
@@ -113,16 +120,31 @@
     clearInterval(timer)
   })
 
+  /**
+   * Derives the active display year currently viewed in the calendar grid.
+   *
+   * @returns Full four-digit year number.
+   */
   function computeViewYear(): number {
     return viewDate.getFullYear()
   }
   let viewYear = $derived.by(computeViewYear)
 
+  /**
+   * Derives zero-indexed month number (0-11) currently viewed in the calendar grid.
+   *
+   * @returns Month index.
+   */
   function computeViewMonth(): number {
     return viewDate.getMonth()
   }
   let viewMonth = $derived.by(computeViewMonth)
 
+  /**
+   * Checks whether the calendar view currently displays the present real-world month and year.
+   *
+   * @returns True if view matches current system date.
+   */
   function computeIsCurrentMonth(): boolean {
     return (
       viewYear === realToday.getFullYear() &&
@@ -149,6 +171,11 @@
 
   const weekDays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
 
+  /**
+   * Computes localized month and year header label (e.g. "November 2026").
+   *
+   * @returns Formatted month-year title string.
+   */
   function computeHeaderTitle(): string {
     if (viewMode === 'month') {
       return viewDate.toLocaleDateString(undefined, {
@@ -164,32 +191,62 @@
   }
   let headerTitle = $derived.by(computeHeaderTitle)
 
+  /**
+   * Computes zero-based day-of-week index for the first day of the viewed month.
+   *
+   * @returns Integer from 0 (Sunday) to 6 (Saturday).
+   */
   function computeFirstDayOfWeek(): number {
     return new Date(viewYear, viewMonth, 1).getDay()
   }
   let firstDayOfWeek = $derived.by(computeFirstDayOfWeek)
 
+  /**
+   * Calculates total number of days in the currently viewed month.
+   *
+   * @returns Day count (28, 29, 30, or 31).
+   */
   function computeTotalDaysInMonth(): number {
     return new Date(viewYear, viewMonth + 1, 0).getDate()
   }
   let totalDaysInMonth = $derived.by(computeTotalDaysInMonth)
 
+  /**
+   * Generates padding blank slots preceding the first day of the month for grid alignment.
+   *
+   * @returns Array of dummy indices.
+   */
   function computeBlanks(): null[] {
     return Array(firstDayOfWeek).fill(null)
   }
   let blanks = $derived.by(computeBlanks)
 
+  /**
+   * Generates an array of day numbers (1..N) representing each day of the active month.
+   *
+   * @returns Array of consecutive day integers.
+   */
   function computeDaysArray(): number[] {
     return Array.from({ length: totalDaysInMonth }, (_, i) => i + 1)
   }
   let daysArray = $derived.by(computeDaysArray)
 
+  /**
+   * Generates a 10-year span array centered on current view for decade-mode navigation.
+   *
+   * @returns Array of year numbers.
+   */
   function computeDecadeYears(): number[] {
     const startYear = Math.floor(viewYear / 10) * 10 - 1
     return Array.from({ length: 12 }, (_, i) => startYear + i)
   }
   let decadeYears = $derived.by(computeDecadeYears)
 
+  /**
+   * Filters calendar events scheduled on the user's actively selected date.
+   *
+   * @returns Array of events matching selected date.
+   */
   function computeSelectedDateEvents(): CalendarEvent[] {
     return $calendarStore.events.filter(
       (e) => e.date === $calendarStore.selectedDate
@@ -197,6 +254,11 @@
   }
   let selectedDateEvents = $derived.by(computeSelectedDateEvents)
 
+  /**
+   * Formats a user-friendly label for the selected date (e.g. "Thursday, Nov 6").
+   *
+   * @returns Formatted date string.
+   */
   function computeSelectedDateLabel(): string {
     return formatUserDate($calendarStore.selectedDate, $dateFormatStore)
   }
@@ -253,16 +315,9 @@
   }
   let nextUpcomingEvent = $derived.by(computeNextUpcomingEvent)
 
-  function handlePrev() {
-    if (viewMode === 'month') {
-      viewDate = new Date(viewYear, viewMonth - 1, 1)
-    } else if (viewMode === 'year') {
-      viewDate = new Date(viewYear - 1, viewMonth, 1)
-    } else {
-      viewDate = new Date(viewYear - 10, viewMonth, 1)
-    }
-  }
-
+  /**
+   * Advances calendar view forward by one month, year, or decade depending on active mode.
+   */
   function handleNext() {
     if (viewMode === 'month') {
       viewDate = new Date(viewYear, viewMonth + 1, 1)
@@ -273,22 +328,51 @@
     }
   }
 
+  /**
+   * Retreats calendar view backward by one month, year, or decade depending on active mode.
+   */
+  function handlePrev() {
+    if (viewMode === 'month') {
+      viewDate = new Date(viewYear, viewMonth - 1, 1)
+    } else if (viewMode === 'year') {
+      viewDate = new Date(viewYear - 1, viewMonth, 1)
+    } else {
+      viewDate = new Date(viewYear - 10, viewMonth, 1)
+    }
+  }
+
+  /**
+   * Cycles between month view, year selector, and decade picker modes.
+   */
   function cycleViewMode() {
     if (viewMode === 'month') viewMode = 'year'
     else if (viewMode === 'year') viewMode = 'decade'
     else viewMode = 'month'
   }
 
+  /**
+   * Sets the viewed month by index and switches back to day grid view.
+   *
+   * @param idx - Month index (0-11).
+   */
   function selectMonth(idx: number) {
     viewDate = new Date(viewYear, idx, 1)
     viewMode = 'month'
   }
 
+  /**
+   * Sets the viewed year and switches view mode to month selector.
+   *
+   * @param yr - Four-digit year number.
+   */
   function selectYear(yr: number) {
     viewDate = new Date(yr, viewMonth, 1)
     viewMode = 'year'
   }
 
+  /**
+   * Immediately returns the calendar view and selection to today's system date.
+   */
   function jumpToToday() {
     const now = new Date()
     viewDate = now
@@ -296,6 +380,11 @@
     setSelectedCalendarDate(formatDateKey(now))
   }
 
+  /**
+   * Updates active selection to the specified day of the current month.
+   *
+   * @param day - Day of month number.
+   */
   function selectDate(day: number) {
     const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
     setSelectedCalendarDate(dateStr)
@@ -309,6 +398,11 @@
     }
   }
 
+  /**
+   * Opens the event creation modal pre-populated with the specified date.
+   *
+   * @param targetDate - Optional ISO date string default.
+   */
   function handleOpenAddModal(targetDate?: string) {
     editingEventId = null
     modalMode = 'create'
@@ -334,6 +428,11 @@
   }
   $effect(handlePendingCalendarAction)
 
+  /**
+   * Opens the event editing modal with the chosen event's existing properties.
+   *
+   * @param event - Event item to modify.
+   */
   function handleOpenEditModal(event: CalendarEvent) {
     editingEventId = event.id
     modalMode = 'edit'
@@ -348,6 +447,9 @@
     isModalOpen = true
   }
 
+  /**
+   * Validates and commits newly created or edited event properties to calendar store.
+   */
   function handleSaveEvent() {
     const cleanTitle = formTitle.trim().slice(0, 60)
     if (!cleanTitle) return
@@ -383,6 +485,9 @@
     editingEventId = null
   }
 
+  /**
+   * Removes the currently edited event from storage and closes modal.
+   */
   function handleDeleteEditingEvent() {
     if (editingEventId) {
       deleteCalendarEvent(editingEventId)

@@ -1,5 +1,8 @@
 /**
- * Comprehensive global weather presets and timezone anchor coordinates.
+ * @fileoverview List of world cities and coordinates for the weather settings dropdown.
+ *
+ * Pre-defines latitude and longitude coordinates for major cities across all continents
+ * so users can pick a location without needing a search query.
  */
 
 export interface WeatherLocationPreset {
@@ -9,7 +12,7 @@ export interface WeatherLocationPreset {
 }
 
 /**
- * Curated list of major world cities and metropolitan hubs across all continents.
+ * World cities and coordinates for weather location selection.
  */
 export const GLOBAL_WEATHER_PRESETS: WeatherLocationPreset[] = [
   { name: 'Auto-detect (System Local)', lat: 14.5995, lon: 120.9842 },

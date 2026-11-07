@@ -1,3 +1,9 @@
+<!--
+  @fileoverview Developer announcements and community news feed.
+
+  Displays official announcements, roadmap milestones, and release alerts fetched from
+  GitHub, supporting read/unread state tracking.
+-->
 <script module lang="ts">
   import type { IslandConfig } from '../store'
 
@@ -33,12 +39,18 @@
       (page: unknown, pageConfig: IslandConfig, expand?: boolean) => void
     >('navigate')
 
+  /**
+   * Navigates island viewport back to the previous page or Home feed.
+   */
   function handleBack() {
     if (typeof navigate === 'function') {
       navigate(HomePage, homeConfig, true)
     }
   }
 
+  /**
+   * Loads announcement records from local cache and checks GitHub for updates.
+   */
   async function loadAnnouncements() {
     isLoading = true
     const payload = await getDeveloperAnnouncements()
@@ -49,6 +61,9 @@
     isLoading = false
   }
 
+  /**
+   * Marks all pending announcements as read and clears notification glance badges.
+   */
   async function handleMarkRead() {
     hasUnread = false
     announcements = announcements.map((it) => ({ ...it, isUnread: false }))

@@ -1,3 +1,9 @@
+<!--
+  @fileoverview Multi-function time management suite.
+
+  Combines an interval countdown timer, millisecond-precision stopwatch with lap logging,
+  Pomodoro focus sprint cycles, and scheduled audio reminder alarms.
+-->
 <svelte:options />
 
 <script module lang="ts">
@@ -66,6 +72,11 @@
   let isNewAlarmOpen = $state(false)
   let editingAlarmId = $state<string | null>(null)
 
+  /**
+   * Checks whether user settings or locale use 24-hour time formatting.
+   *
+   * @returns True if 24-hour clock is active.
+   */
   function computeIs24H(): boolean {
     return $timeFormatStore === '24h'
   }
@@ -73,6 +84,12 @@
 
   const DAY_SHORT = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
 
+  /**
+   * Formats total seconds into standard digital timer format (MM:SS or HH:MM:SS).
+   *
+   * @param totalSecs - Total elapsed or remaining seconds.
+   * @returns Digital clock formatted string.
+   */
   function formatDigitalTime(totalSecs: number): string {
     const s = Math.max(0, totalSecs)
     const hrs = Math.floor(s / 3600)
@@ -85,6 +102,12 @@
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
   }
 
+  /**
+   * Formats millisecond duration into stopwatch precision digits (MM:SS.ms).
+   *
+   * @param totalMs - Total stopwatch duration in milliseconds.
+   * @returns Stopwatch display string object with main and fractional components.
+   */
   function formatStopwatchDigits(totalMs: number): {
     main: string
     frac: string
@@ -101,6 +124,13 @@
     }
   }
 
+  /**
+   * Formats alarm trigger time string into user-configured 12h or 24h clock format.
+   *
+   * @param timeStr - Raw time string (HH:MM).
+   * @param use24H - Whether 24-hour mode is enabled.
+   * @returns Formatted alarm time string.
+   */
   function formatAlarmDisplayTime(timeStr: string, use24H: boolean): string {
     if (!timeStr) return ''
     const [hStr, mStr] = timeStr.split(':')
@@ -116,6 +146,13 @@
     return `${h12}:${m} ${ampm}`
   }
 
+  /**
+   * Formats the trigger timestamp of a ringing alarm.
+   *
+   * @param timestamp - Epoch timestamp in milliseconds.
+   * @param use24H - Whether 24-hour format is active.
+   * @returns Formatted time string.
+   */
   function formatTriggeredTime(timestamp: number, use24H: boolean): string {
     const d = new Date(timestamp)
     const h24 = d.getHours()
@@ -128,6 +165,12 @@
     return `${h12}:${m} ${ampm}`
   }
 
+  /**
+   * Generates localized summary text for alarm recurrence schedules.
+   *
+   * @param alarm - Alarm record.
+   * @returns Formatted recurrence description.
+   */
   function formatAlarmRepeatBadge(alarm: AlarmItem): string {
     if (alarm.repeat === 'once') return $tStore('timer.once')
     if (alarm.repeat === 'daily') return $tStore('timer.every_day')
@@ -178,6 +221,9 @@
   }
   let isMinimalActiveRunning = $derived.by(computeIsMinimalActiveRunning)
 
+  /**
+   * Toggles active countdown, stopwatch, or focus timer depending on active mode in minimal pill.
+   */
   function handleMinimalToggle(): void {
     if (activeMinimalMode === 'timer') {
       toggleCountdown()
@@ -188,6 +234,9 @@
     }
   }
 
+  /**
+   * Resets active countdown, stopwatch, or focus timer depending on active mode in minimal pill.
+   */
   function handleMinimalReset(): void {
     if (activeMinimalMode === 'timer') {
       resetCountdown()
@@ -198,6 +247,11 @@
     }
   }
 
+  /**
+   * Switches the active timer tab (countdown, stopwatch, focus, alarms).
+   *
+   * @param tab - Target tab identifier.
+   */
   function handleTabSelect(tab: TimerAppTab): void {
     setActiveTimerTab(tab)
   }
@@ -235,21 +289,37 @@
       : null
   )
 
+  /**
+   * Opens the new alarm creation modal drawer.
+   */
   function openCreateAlarm(): void {
     editingAlarmId = null
     isNewAlarmOpen = true
   }
 
+  /**
+   * Opens the alarm editor modal populated with existing alarm properties.
+   *
+   * @param alarm - Alarm item record to edit.
+   */
   function startEditAlarm(alarm: AlarmItem): void {
     editingAlarmId = alarm.id
     isNewAlarmOpen = true
   }
 
+  /**
+   * Closes active alarm modal drawer without saving changes.
+   */
   function cancelAlarmForm(): void {
     editingAlarmId = null
     isNewAlarmOpen = false
   }
 
+  /**
+   * Commits created or modified alarm properties to the alarms store.
+   *
+   * @param payload - Alarm time, label, repeat schedule, and days array.
+   */
   function handleSaveAlarm(payload: {
     time: string
     label: string
@@ -265,6 +335,11 @@
     isNewAlarmOpen = false
   }
 
+  /**
+   * Applies a custom countdown duration from the custom timer drawer.
+   *
+   * @param totalSecs - Chosen duration in seconds.
+   */
   function handleApplyCustomDuration(totalSecs: number): void {
     setCountdownDuration(totalSecs)
     isCustomDrawerOpen = false

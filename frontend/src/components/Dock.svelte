@@ -1,3 +1,9 @@
+<!--
+  @component Dock
+  @description Bottom or top launcher bar. Displays pinned application icons with
+  smooth hover magnification, active dot indicators for running background tasks,
+  and quick navigation clicks to switch island pages.
+-->
 <script lang="ts">
   import { getContext, onMount } from 'svelte'
   import {
@@ -466,14 +472,21 @@
 <style>
   .dock-container {
     position: absolute;
-    top: 12px;
+    top: 0;
     left: 0;
     right: 0;
+    padding-top: 10px;
+    padding-bottom: 14px;
     display: flex;
     justify-content: center;
     align-items: center;
     z-index: 100;
     pointer-events: none;
+    background: linear-gradient(
+      to bottom,
+      var(--vinta-bg) 0%,
+      transparent 100%
+    );
   }
 
   .dock {

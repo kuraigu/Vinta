@@ -1,3 +1,8 @@
+<!--
+  @component AboutTab
+  @description About Vinta information page. Displays current app version, links to the
+  GitHub repository and issue tracker, and exports system diagnostics for bug reports.
+-->
 <script lang="ts">
   import { onMount } from 'svelte'
   import { ArrowUpRight, ShieldCheck, GitBranch, Bug } from 'lucide-svelte'
@@ -125,7 +130,7 @@
   <!-- Brand Hero with Consolidated Version and Build Specs -->
   <BentoCard variant="announcement" class="about-hero-card">
     <div class="about-logo-wrapper">
-      <img src={appIcon} alt="Vinta" class="about-logo-img" />
+      <img src={appIcon} alt="Vinta" class="about-logo-img" draggable="false" />
     </div>
     <div class="about-hero-details">
       <div class="about-brand-header-row">
@@ -244,6 +249,9 @@
     width: 100%;
     height: 100%;
     object-fit: contain;
+    user-select: none;
+    -webkit-user-drag: none;
+    pointer-events: none;
   }
 
   .about-hero-details {

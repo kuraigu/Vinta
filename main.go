@@ -1,4 +1,7 @@
-// Package main provides the entry point and window configuration for Vinta.
+// Package main is the entrypoint for the Vinta application.
+// It initializes single-instance locking, configures the Wails runtime
+// with frameless transparent window flags, sets up system tray integration, and
+// starts background hardware monitoring services.
 package main
 
 import (

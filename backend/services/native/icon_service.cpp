@@ -1,3 +1,8 @@
+/**
+ * @file icon_service.cpp
+ * @brief Shell item icon extraction and PNG encoding implementation.
+ */
+
 #include "icon_service.h"
 #include "winrt_common.h"
 
@@ -146,8 +151,120 @@ bool SaveBitmapToPngFile(HBITMAP hBitmap, const wchar_t* destFilePath) {
     return SaveWicSourceToPngFile(pWicBitmap.get(), pWicFactory.get(), destFilePath);
 }
 
-bool SaveIconToPngFile(HICON hIcon, const wchar_t* destFilePath) {
+bool SaveIconToPngFile(HICON hIcon, int targetSize, const wchar_t* destFilePath) {
     if (!hIcon || !destFilePath) return false;
+    if (targetSize <= 0) targetSize = 128;
+
+    winrt::com_ptr<IWICImagingFactory> pWicFactory;
+    HRESULT hr = CoCreateInstance(
+        CLSID_WICImagingFactory,
+        NULL,
+        CLSCTX_INPROC_SERVER,
+        IID_PPV_ARGS(pWicFactory.put())
+    );
+    if (SUCCEEDED(hr) && pWicFactory) {
+        winrt::com_ptr<IWICBitmap> pWicBitmap;
+        hr = pWicFactory->CreateBitmapFromHICON(hIcon, pWicBitmap.put());
+        if (SUCCEEDED(hr) && pWicBitmap) {
+            if (SaveWicSourceToPngFile(pWicBitmap.get(), pWicFactory.get(), destFilePath)) {
+                return true;
+            }
+        }
+    }
+
+    HBITMAP hBmp = HIconToHBitmap(hIcon, targetSize, targetSize);
+    if (hBmp) {
+        ScopedGdiObject gdi(hBmp);
+        return SaveBitmapToPngFile(hBmp, destFilePath);
+    }
+    return false;
+}
+
+static std::wstring CleanIconPath(const std::wstring& raw) {
+    if (raw.empty()) return L"";
+    std::wstring s = raw;
+    if (s.front() == L'@') s = s.substr(1);
+    if (s.front() == L'"') {
+        size_t quoteEnd = s.find(L'"', 1);
+        if (quoteEnd != std::wstring::npos) {
+            s = s.substr(1, quoteEnd - 1);
+        } else {
+            s = s.substr(1);
+        }
+    } else {
+        size_t comma = s.find(L',');
+        if (comma != std::wstring::npos) {
+            s = s.substr(0, comma);
+        }
+    }
+    return s;
+}
+
+static std::string ReadFileAsPngDataUri(const std::wstring& filePath) {
+    HANDLE hFile = CreateFileW(filePath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hFile == INVALID_HANDLE_VALUE) return "";
+    LARGE_INTEGER fsize;
+    if (!GetFileSizeEx(hFile, &fsize) || fsize.QuadPart <= 0 || fsize.QuadPart > 10 * 1024 * 1024) {
+        CloseHandle(hFile);
+        return "";
+    }
+    std::vector<unsigned char> buf(static_cast<size_t>(fsize.QuadPart));
+    DWORD bytesRead = 0;
+    if (ReadFile(hFile, buf.data(), static_cast<DWORD>(buf.size()), &bytesRead, NULL) && bytesRead > 0) {
+        CloseHandle(hFile);
+        return "data:image/png;base64," + Base64Encode(buf.data(), bytesRead);
+    }
+    CloseHandle(hFile);
+    return "";
+}
+
+static bool SaveWicSourceToPngMemory(IWICBitmapSource* pSource, IWICImagingFactory* pWicFactory, std::string& outDataUri) {
+    if (!pSource || !pWicFactory) return false;
+
+    winrt::com_ptr<IStream> pStream;
+    HRESULT hr = CreateStreamOnHGlobal(NULL, TRUE, pStream.put());
+    if (FAILED(hr) || !pStream) return false;
+
+    winrt::com_ptr<IWICBitmapEncoder> pEncoder;
+    hr = pWicFactory->CreateEncoder(GUID_ContainerFormatPng, NULL, pEncoder.put());
+    if (FAILED(hr) || !pEncoder) return false;
+
+    hr = pEncoder->Initialize(pStream.get(), WICBitmapEncoderNoCache);
+    if (FAILED(hr)) return false;
+
+    winrt::com_ptr<IWICBitmapFrameEncode> pFrame;
+    hr = pEncoder->CreateNewFrame(pFrame.put(), NULL);
+    if (FAILED(hr) || !pFrame) return false;
+
+    hr = pFrame->Initialize(NULL);
+    if (FAILED(hr)) return false;
+
+    hr = pFrame->WriteSource(pSource, NULL);
+    if (FAILED(hr)) return false;
+
+    hr = pFrame->Commit();
+    if (FAILED(hr)) return false;
+
+    hr = pEncoder->Commit();
+    if (FAILED(hr)) return false;
+
+    HGLOBAL hGlobal = NULL;
+    hr = GetHGlobalFromStream(pStream.get(), &hGlobal);
+    if (FAILED(hr) || !hGlobal) return false;
+
+    void* pData = GlobalLock(hGlobal);
+    if (!pData) return false;
+
+    size_t dataLen = GlobalSize(hGlobal);
+    std::string b64 = Base64Encode(reinterpret_cast<const unsigned char*>(pData), dataLen);
+    GlobalUnlock(hGlobal);
+
+    outDataUri = "data:image/png;base64," + b64;
+    return true;
+}
+
+static bool SaveBitmapToPngMemory(HBITMAP hBitmap, std::string& outDataUri) {
+    if (!hBitmap) return false;
 
     winrt::com_ptr<IWICImagingFactory> pWicFactory;
     HRESULT hr = CoCreateInstance(
@@ -159,10 +276,42 @@ bool SaveIconToPngFile(HICON hIcon, const wchar_t* destFilePath) {
     if (FAILED(hr) || !pWicFactory) return false;
 
     winrt::com_ptr<IWICBitmap> pWicBitmap;
-    hr = pWicFactory->CreateBitmapFromHICON(hIcon, pWicBitmap.put());
-    if (FAILED(hr) || !pWicBitmap) return false;
+    hr = pWicFactory->CreateBitmapFromHBITMAP(hBitmap, NULL, WICBitmapUseAlpha, pWicBitmap.put());
+    if (FAILED(hr) || !pWicBitmap) {
+        hr = pWicFactory->CreateBitmapFromHBITMAP(hBitmap, NULL, WICBitmapIgnoreAlpha, pWicBitmap.put());
+        if (FAILED(hr) || !pWicBitmap) return false;
+    }
 
-    return SaveWicSourceToPngFile(pWicBitmap.get(), pWicFactory.get(), destFilePath);
+    return SaveWicSourceToPngMemory(pWicBitmap.get(), pWicFactory.get(), outDataUri);
+}
+
+static bool SaveIconToPngMemory(HICON hIcon, int targetSize, std::string& outDataUri) {
+    if (!hIcon) return false;
+    if (targetSize <= 0) targetSize = 48;
+
+    winrt::com_ptr<IWICImagingFactory> pWicFactory;
+    HRESULT hr = CoCreateInstance(
+        CLSID_WICImagingFactory,
+        NULL,
+        CLSCTX_INPROC_SERVER,
+        IID_PPV_ARGS(pWicFactory.put())
+    );
+    if (SUCCEEDED(hr) && pWicFactory) {
+        winrt::com_ptr<IWICBitmap> pWicBitmap;
+        hr = pWicFactory->CreateBitmapFromHICON(hIcon, pWicBitmap.put());
+        if (SUCCEEDED(hr) && pWicBitmap) {
+            if (SaveWicSourceToPngMemory(pWicBitmap.get(), pWicFactory.get(), outDataUri)) {
+                return true;
+            }
+        }
+    }
+
+    HBITMAP hBmp = HIconToHBitmap(hIcon, targetSize, targetSize);
+    if (hBmp) {
+        ScopedGdiObject gdi(hBmp);
+        return SaveBitmapToPngMemory(hBmp, outDataUri);
+    }
+    return false;
 }
 
 static bool MatchProcessName(const std::wstring& runningExe, const std::wstring& target) {
@@ -301,6 +450,24 @@ std::wstring FindProcessExecutablePath(const std::wstring& targetExe) {
             candidates.push_back(parsedExe);
         }
 
+        // Space, hyphen, and underscore stripping (e.g. "windows memory cleaner" -> "windowsmemorycleaner")
+        std::wstring stripped = parsedBase;
+        stripped.erase(std::remove_if(stripped.begin(), stripped.end(), ::iswspace), stripped.end());
+        stripped.erase(std::remove(stripped.begin(), stripped.end(), L'-'), stripped.end());
+        stripped.erase(std::remove(stripped.begin(), stripped.end(), L'_'), stripped.end());
+        if (!stripped.empty() && stripped != parsedBase) {
+            candidates.push_back(stripped + L".exe");
+        }
+
+        // Prefix swaps: "windows" <-> "win" (e.g. windowsmemorycleaner <-> winmemorycleaner)
+        for (const auto& base : { parsedBase, stripped }) {
+            if (base.rfind(L"windows", 0) == 0) {
+                candidates.push_back(L"win" + base.substr(7) + L".exe");
+            } else if (base.rfind(L"win", 0) == 0) {
+                candidates.push_back(L"windows" + base.substr(3) + L".exe");
+            }
+        }
+
         // If target has spaces (e.g. "Google Chrome"), also extract last word ("chrome.exe")
         size_t lastSpace = parsedBase.find_last_of(L" ");
         if (lastSpace != std::wstring::npos && lastSpace + 1 < parsedBase.size()) {
@@ -402,6 +569,35 @@ std::wstring FindProcessExecutablePath(const std::wstring& targetExe) {
 
 } // namespace
 
+bool QueryAppUserModelIdRegistry(const std::string& aumid, std::string& outDisplayName, std::string& outIconUri) {
+    if (aumid.empty()) return false;
+    std::wstring subKey = L"Software\\Classes\\AppUserModelId\\" + Utf8ToUtf16(aumid);
+    HKEY hKey = nullptr;
+    if (RegOpenKeyExW(HKEY_CURRENT_USER, subKey.c_str(), 0, KEY_READ, &hKey) != ERROR_SUCCESS) {
+        if (RegOpenKeyExW(HKEY_LOCAL_MACHINE, subKey.c_str(), 0, KEY_READ, &hKey) != ERROR_SUCCESS) {
+            return false;
+        }
+    }
+
+    WCHAR valBuf[MAX_PATH * 2] = {0};
+    DWORD valSize = sizeof(valBuf);
+    DWORD type = REG_SZ;
+
+    if (outDisplayName.empty()) {
+        if (RegQueryValueExW(hKey, L"DisplayName", NULL, &type, reinterpret_cast<LPBYTE>(valBuf), &valSize) == ERROR_SUCCESS && valBuf[0]) {
+            outDisplayName = Utf16ToUtf8(valBuf);
+        }
+    }
+
+    valSize = sizeof(valBuf);
+    if (RegQueryValueExW(hKey, L"IconUri", NULL, &type, reinterpret_cast<LPBYTE>(valBuf), &valSize) == ERROR_SUCCESS && valBuf[0]) {
+        outIconUri = Utf16ToUtf8(valBuf);
+    }
+
+    RegCloseKey(hKey);
+    return !outDisplayName.empty() || !outIconUri.empty();
+}
+
 extern "C" int ExtractAppIconNativeToFile(
     const char* sourceApp,
     const char* aumid,
@@ -430,123 +626,210 @@ extern "C" int ExtractAppIconNativeToFile(
             sAumid = sApp;
         }
 
-        HBITMAP hBitmap = nullptr;
-        ScopedGdiObject gdiScope(nullptr);
-
-        // Method 1: Try AUMID via Shell Namespace (shell:AppsFolder\<aumid>)
+        std::string regName, regIcon;
         if (!sAumid.empty()) {
-            std::wstring wAumid = Utf8ToUtf16(sAumid);
-            std::wstring parsingName = L"shell:AppsFolder\\" + wAumid;
+            QueryAppUserModelIdRegistry(sAumid, regName, regIcon);
+        }
+        if (regName.empty() && !sApp.empty()) {
+            QueryAppUserModelIdRegistry(sApp, regName, regIcon);
+        }
 
+        // 1. Try Store / UWP AUMID (exclude dynamic NotifyIcon generated tray IDs)
+        if (!sAumid.empty() && sAumid.find("NotifyIconGeneratedAumid") == std::string::npos) {
+            std::wstring parsingName = L"shell:AppsFolder\\" + Utf8ToUtf16(sAumid);
             winrt::com_ptr<IShellItem> pItem;
-            HRESULT hr = SHCreateItemFromParsingName(parsingName.c_str(), NULL, IID_PPV_ARGS(pItem.put()));
-            if (SUCCEEDED(hr) && pItem) {
+            if (SUCCEEDED(SHCreateItemFromParsingName(parsingName.c_str(), NULL, IID_PPV_ARGS(pItem.put()))) && pItem) {
                 winrt::com_ptr<IShellItemImageFactory> pImageFactory;
-                hr = pItem->QueryInterface(IID_PPV_ARGS(pImageFactory.put()));
-                if (SUCCEEDED(hr) && pImageFactory) {
+                if (SUCCEEDED(pItem->QueryInterface(IID_PPV_ARGS(pImageFactory.put()))) && pImageFactory) {
+                    HBITMAP hBmp = nullptr;
                     SIZE sz = { targetSize, targetSize };
-                    hr = pImageFactory->GetImage(sz, SIIGBF_ICONONLY | SIIGBF_BIGGERSIZEOK, &hBitmap);
-                    if (SUCCEEDED(hr) && hBitmap) {
-                        gdiScope.handle = hBitmap;
+                    if (SUCCEEDED(pImageFactory->GetImage(sz, SIIGBF_ICONONLY | SIIGBF_BIGGERSIZEOK, &hBmp)) && hBmp) {
+                        ScopedGdiObject gdi(hBmp);
+                        if (SaveBitmapToPngFile(hBmp, destFilePath)) return 1;
                     }
                 }
             }
         }
 
-        // Try sourceApp in shell:AppsFolder if AUMID did not resolve
-        if (!gdiScope.handle && !sApp.empty()) {
-            std::wstring wApp = Utf8ToUtf16(sApp);
-            std::wstring parsingName = L"shell:AppsFolder\\" + wApp;
+        // 2. Win32 Executable Resolution (Target application's actual executable)
+        std::vector<std::string> searchTargets;
+        if (!regName.empty()) searchTargets.push_back(regName);
+        if (!sApp.empty() && sApp != regName) searchTargets.push_back(sApp);
+        if (!sAumid.empty() && sAumid != regName && sAumid != sApp && sAumid.find("NotifyIconGeneratedAumid") == std::string::npos) {
+            searchTargets.push_back(sAumid);
+        }
 
-            winrt::com_ptr<IShellItem> pItem;
-            HRESULT hr = SHCreateItemFromParsingName(parsingName.c_str(), NULL, IID_PPV_ARGS(pItem.put()));
-            if (SUCCEEDED(hr) && pItem) {
-                winrt::com_ptr<IShellItemImageFactory> pImageFactory;
-                hr = pItem->QueryInterface(IID_PPV_ARGS(pImageFactory.put()));
-                if (SUCCEEDED(hr) && pImageFactory) {
-                    SIZE sz = { targetSize, targetSize };
-                    hr = pImageFactory->GetImage(sz, SIIGBF_ICONONLY | SIIGBF_BIGGERSIZEOK, &hBitmap);
-                    if (SUCCEEDED(hr) && hBitmap) {
-                        gdiScope.handle = hBitmap;
+        for (const auto& target : searchTargets) {
+            std::wstring resolvedExe = FindProcessExecutablePath(Utf8ToUtf16(target));
+            if (!resolvedExe.empty()) {
+                // Priority 2A: Direct resource icon extraction from PE file
+                HICON hIcon = nullptr;
+                if (PrivateExtractIconsW(resolvedExe.c_str(), 0, targetSize, targetSize, &hIcon, nullptr, 1, 0) > 0 && hIcon) {
+                    ScopedIcon iconScope(hIcon);
+                    if (SaveIconToPngFile(hIcon, targetSize, destFilePath)) return 1;
+                }
+
+                // Priority 2B: Shell Item Image Factory
+                winrt::com_ptr<IShellItem> pItem;
+                if (SUCCEEDED(SHCreateItemFromParsingName(resolvedExe.c_str(), NULL, IID_PPV_ARGS(pItem.put()))) && pItem) {
+                    winrt::com_ptr<IShellItemImageFactory> pImageFactory;
+                    if (SUCCEEDED(pItem->QueryInterface(IID_PPV_ARGS(pImageFactory.put()))) && pImageFactory) {
+                        HBITMAP hBmp = nullptr;
+                        SIZE sz = { targetSize, targetSize };
+                        if (SUCCEEDED(pImageFactory->GetImage(sz, SIIGBF_ICONONLY | SIIGBF_BIGGERSIZEOK, &hBmp)) && hBmp) {
+                            ScopedGdiObject gdi(hBmp);
+                            if (SaveBitmapToPngFile(hBmp, destFilePath)) return 1;
+                        }
                     }
+                }
+
+                // Priority 2C: SHGetFileInfoW
+                SHFILEINFOW sfi = {0};
+                if (SHGetFileInfoW(resolvedExe.c_str(), 0, &sfi, sizeof(sfi), SHGFI_ICON | SHGFI_LARGEICON) != 0 && sfi.hIcon) {
+                    ScopedIcon iconScope(sfi.hIcon);
+                    if (SaveIconToPngFile(sfi.hIcon, targetSize, destFilePath)) return 1;
                 }
             }
         }
 
-        // Method 2: Win32 Executable / Shortcut Path Resolution
-        if (!gdiScope.handle) {
-            std::string targetSearch = !sApp.empty() ? sApp : sAumid;
-            if (!targetSearch.empty()) {
-                std::wstring wSource = Utf8ToUtf16(targetSearch);
-                std::wstring resolvedExe = FindProcessExecutablePath(wSource);
-
-                if (!resolvedExe.empty()) {
-                    // Method 2A: Shell Item Image Factory on resolved executable or shortcut
-                    winrt::com_ptr<IShellItem> pItem;
-                    HRESULT hr = SHCreateItemFromParsingName(resolvedExe.c_str(), NULL, IID_PPV_ARGS(pItem.put()));
-                    if (SUCCEEDED(hr) && pItem) {
-                        winrt::com_ptr<IShellItemImageFactory> pImageFactory;
-                        hr = pItem->QueryInterface(IID_PPV_ARGS(pImageFactory.put()));
-                        if (SUCCEEDED(hr) && pImageFactory) {
-                            SIZE sz = { targetSize, targetSize };
-                            hr = pImageFactory->GetImage(sz, SIIGBF_ICONONLY | SIIGBF_BIGGERSIZEOK, &hBitmap);
-                            if (SUCCEEDED(hr) && hBitmap) {
-                                gdiScope.handle = hBitmap;
-                            }
+        // 3. Fallback to regIcon ONLY if it is NOT a dynamic notify-icon tray snapshot
+        if (!regIcon.empty() && regIcon.find("NotifyIconGeneratedAumid") == std::string::npos) {
+            std::wstring clean = CleanIconPath(Utf8ToUtf16(regIcon));
+            if (!clean.empty()) {
+                DWORD attr = GetFileAttributesW(clean.c_str());
+                if (attr != INVALID_FILE_ATTRIBUTES && !(attr & FILE_ATTRIBUTE_DIRECTORY)) {
+                    std::wstring lowerClean = clean;
+                    std::transform(lowerClean.begin(), lowerClean.end(), lowerClean.begin(), ::towlower);
+                    if (lowerClean.size() > 4 && lowerClean.substr(lowerClean.size() - 4) == L".png") {
+                        if (CopyFileW(clean.c_str(), destFilePath, FALSE)) {
+                            return 1;
                         }
                     }
-
-                    // Method 2B: Direct resource icon extraction via PrivateExtractIconsW
-                    if (!gdiScope.handle) {
-                        HICON hIcon = nullptr;
-                        UINT extracted = PrivateExtractIconsW(
-                            resolvedExe.c_str(),
-                            0,
-                            targetSize,
-                            targetSize,
-                            &hIcon,
-                            nullptr,
-                            1,
-                            0
-                        );
-                        if (extracted > 0 && hIcon) {
-                            ScopedIcon iconScope(hIcon);
-                            if (SaveIconToPngFile(hIcon, destFilePath)) {
-                                return 1;
-                            }
-                        }
-                    }
-
-                    // Method 2C: Fallback via SHGetFileInfoW
-                    if (!gdiScope.handle) {
-                        SHFILEINFOW sfi = {0};
-                        DWORD_PTR res = SHGetFileInfoW(
-                            resolvedExe.c_str(),
-                            0,
-                            &sfi,
-                            sizeof(sfi),
-                            SHGFI_ICON | SHGFI_LARGEICON
-                        );
-                        if (res != 0 && sfi.hIcon) {
-                            ScopedIcon iconScope(sfi.hIcon);
-                            if (SaveIconToPngFile(sfi.hIcon, destFilePath)) {
-                                return 1;
-                            }
-                        }
+                    HICON hIcon = nullptr;
+                    if (PrivateExtractIconsW(clean.c_str(), 0, targetSize, targetSize, &hIcon, nullptr, 1, 0) > 0 && hIcon) {
+                        ScopedIcon iconScope(hIcon);
+                        if (SaveIconToPngFile(hIcon, targetSize, destFilePath)) return 1;
                     }
                 }
             }
         }
-
-        // Encode HBITMAP to PNG via WIC
-        if (gdiScope.handle) {
-            bool saved = SaveBitmapToPngFile(reinterpret_cast<HBITMAP>(gdiScope.handle), destFilePath);
-            return saved ? 1 : 0;
-        }
-
-    } catch (...) {
-        return 0;
-    }
+    } catch (...) {}
 
     return 0;
+}
+
+std::string ExtractAppIconAsDataUri(const char* sourceApp, const char* aumid, int targetSize) {
+    if (targetSize <= 0) targetSize = 48;
+    ComInitScope comScope;
+
+    try {
+        std::string sApp = sourceApp ? sourceApp : "";
+        std::string sAumid = aumid ? aumid : "";
+
+        std::string lowerApp = sApp;
+        std::transform(lowerApp.begin(), lowerApp.end(), lowerApp.begin(), ::tolower);
+        std::string lowerAumid = sAumid;
+        std::transform(lowerAumid.begin(), lowerAumid.end(), lowerAumid.begin(), ::tolower);
+        if (lowerApp.find("vinta") != std::string::npos || lowerAumid.find("vinta") != std::string::npos) {
+            return "";
+        }
+
+        if (sAumid.empty() && sApp.find('!') != std::string::npos) {
+            sAumid = sApp;
+        }
+
+        std::string regName, regIcon;
+        if (!sAumid.empty()) {
+            QueryAppUserModelIdRegistry(sAumid, regName, regIcon);
+        }
+        if (regName.empty() && !sApp.empty()) {
+            QueryAppUserModelIdRegistry(sApp, regName, regIcon);
+        }
+
+        // 1. Try Store / UWP AUMID (exclude dynamic NotifyIcon generated tray IDs)
+        if (!sAumid.empty() && sAumid.find("NotifyIconGeneratedAumid") == std::string::npos) {
+            std::wstring parsingName = L"shell:AppsFolder\\" + Utf8ToUtf16(sAumid);
+            winrt::com_ptr<IShellItem> pItem;
+            if (SUCCEEDED(SHCreateItemFromParsingName(parsingName.c_str(), NULL, IID_PPV_ARGS(pItem.put()))) && pItem) {
+                winrt::com_ptr<IShellItemImageFactory> pImageFactory;
+                if (SUCCEEDED(pItem->QueryInterface(IID_PPV_ARGS(pImageFactory.put()))) && pImageFactory) {
+                    HBITMAP hBmp = nullptr;
+                    SIZE sz = { targetSize, targetSize };
+                    if (SUCCEEDED(pImageFactory->GetImage(sz, SIIGBF_ICONONLY | SIIGBF_BIGGERSIZEOK, &hBmp)) && hBmp) {
+                        ScopedGdiObject gdi(hBmp);
+                        std::string outUri;
+                        if (SaveBitmapToPngMemory(hBmp, outUri)) return outUri;
+                    }
+                }
+            }
+        }
+
+        // 2. Win32 Executable Resolution (Target application's actual executable)
+        std::vector<std::string> searchTargets;
+        if (!regName.empty()) searchTargets.push_back(regName);
+        if (!sApp.empty() && sApp != regName) searchTargets.push_back(sApp);
+        if (!sAumid.empty() && sAumid != regName && sAumid != sApp && sAumid.find("NotifyIconGeneratedAumid") == std::string::npos) {
+            searchTargets.push_back(sAumid);
+        }
+
+        for (const auto& target : searchTargets) {
+            std::wstring resolvedExe = FindProcessExecutablePath(Utf8ToUtf16(target));
+            if (!resolvedExe.empty()) {
+                // Priority 2A: Direct resource icon extraction from PE file
+                HICON hIcon = nullptr;
+                if (PrivateExtractIconsW(resolvedExe.c_str(), 0, targetSize, targetSize, &hIcon, nullptr, 1, 0) > 0 && hIcon) {
+                    ScopedIcon iconScope(hIcon);
+                    std::string outUri;
+                    if (SaveIconToPngMemory(hIcon, targetSize, outUri)) return outUri;
+                }
+
+                // Priority 2B: Shell Item Image Factory
+                winrt::com_ptr<IShellItem> pItem;
+                if (SUCCEEDED(SHCreateItemFromParsingName(resolvedExe.c_str(), NULL, IID_PPV_ARGS(pItem.put()))) && pItem) {
+                    winrt::com_ptr<IShellItemImageFactory> pImageFactory;
+                    if (SUCCEEDED(pItem->QueryInterface(IID_PPV_ARGS(pImageFactory.put()))) && pImageFactory) {
+                        HBITMAP hBmp = nullptr;
+                        SIZE sz = { targetSize, targetSize };
+                        if (SUCCEEDED(pImageFactory->GetImage(sz, SIIGBF_ICONONLY | SIIGBF_BIGGERSIZEOK, &hBmp)) && hBmp) {
+                            ScopedGdiObject gdi(hBmp);
+                            std::string outUri;
+                            if (SaveBitmapToPngMemory(hBmp, outUri)) return outUri;
+                        }
+                    }
+                }
+
+                // Priority 2C: SHGetFileInfoW
+                SHFILEINFOW sfi = {0};
+                if (SHGetFileInfoW(resolvedExe.c_str(), 0, &sfi, sizeof(sfi), SHGFI_ICON | SHGFI_LARGEICON) != 0 && sfi.hIcon) {
+                    ScopedIcon iconScope(sfi.hIcon);
+                    std::string outUri;
+                    if (SaveIconToPngMemory(sfi.hIcon, targetSize, outUri)) return outUri;
+                }
+            }
+        }
+
+        // 3. Fallback to regIcon ONLY if it is NOT a dynamic notify-icon tray snapshot
+        if (!regIcon.empty() && regIcon.find("NotifyIconGeneratedAumid") == std::string::npos) {
+            std::wstring clean = CleanIconPath(Utf8ToUtf16(regIcon));
+            if (!clean.empty()) {
+                DWORD attr = GetFileAttributesW(clean.c_str());
+                if (attr != INVALID_FILE_ATTRIBUTES && !(attr & FILE_ATTRIBUTE_DIRECTORY)) {
+                    std::wstring lowerClean = clean;
+                    std::transform(lowerClean.begin(), lowerClean.end(), lowerClean.begin(), ::towlower);
+                    if (lowerClean.size() > 4 && lowerClean.substr(lowerClean.size() - 4) == L".png") {
+                        std::string dataUri = ReadFileAsPngDataUri(clean);
+                        if (!dataUri.empty()) return dataUri;
+                    }
+                    HICON hIcon = nullptr;
+                    if (PrivateExtractIconsW(clean.c_str(), 0, targetSize, targetSize, &hIcon, nullptr, 1, 0) > 0 && hIcon) {
+                        ScopedIcon iconScope(hIcon);
+                        std::string outUri;
+                        if (SaveIconToPngMemory(hIcon, targetSize, outUri)) return outUri;
+                    }
+                }
+            }
+        }
+    } catch (...) {}
+
+    return "";
 }

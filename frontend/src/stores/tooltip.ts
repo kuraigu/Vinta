@@ -1,3 +1,9 @@
+/**
+ * @fileoverview Global tooltip state store.
+ *
+ * Controls which tooltip text is currently visible, its screen position, and alignment.
+ */
+
 import { writable } from 'svelte/store'
 import { dismissAllTooltips } from '../services/tooltipBounds'
 

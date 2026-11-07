@@ -1,3 +1,8 @@
+<!--
+  @component NotificationsTab
+  @description Toast notification preferences. Toggles the floating satellite notification
+  pill, configures auto-dismiss durations, and allows testing notification chimes.
+-->
 <script lang="ts">
   import {
     Bell,

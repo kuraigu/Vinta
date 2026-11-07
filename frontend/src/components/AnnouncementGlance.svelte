@@ -1,3 +1,8 @@
+<!--
+  @component AnnouncementGlance
+  @description Minimized glance strip that alerts the user when a new system announcement
+  or release update is available.
+-->
 <script lang="ts">
   import { onMount, getContext } from 'svelte'
   import { Megaphone, ChevronRight } from 'lucide-svelte'

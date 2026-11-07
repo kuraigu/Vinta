@@ -1,3 +1,8 @@
+<!--
+  @component ClockTab
+  @description Clock display preferences. Switches between 12-hour and 24-hour modes,
+  configures date formatting (US, EU, ISO), time zone offsets, and blinking separators.
+-->
 <script lang="ts">
   import { onMount } from 'svelte'
   import {

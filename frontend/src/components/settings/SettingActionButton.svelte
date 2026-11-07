@@ -1,3 +1,8 @@
+<!--
+  @component SettingActionButton
+  @description Clickable settings action button used for secondary actions like
+  opening folders in Windows Explorer, testing audio chimes, or resetting data.
+-->
 <script lang="ts">
   import type { Snippet } from 'svelte'
 

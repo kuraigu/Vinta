@@ -134,7 +134,9 @@
     "github_title": "Stern auf GitHub vergeben",
     "github_desc": "Unterstützen Sie Open Source und gestalten Sie die Roadmap mit",
     "appearance_title": "Personalisieren Sie Ihre Island",
-    "appearance_desc": "Designs, Widget-Feeds und Positionierung anpassen"
+    "appearance_desc": "Designs, Widget-Feeds und Positionierung anpassen",
+    "feedback_title": "Feedback senden",
+    "feedback_desc": "Ideen teilen, Fehler melden und Vinta verbessern"
   },
   "settings": {
     "page_title": "Einstellungen",

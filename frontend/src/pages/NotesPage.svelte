@@ -1,3 +1,9 @@
+<!--
+  @fileoverview Desktop scratchpad and quick notes manager.
+
+  Provides a color-coded sticky note board and rich text editor with auto-save,
+  markdown shortcuts, and inline image pasting.
+-->
 <script lang="ts" module>
   import type { IslandConfig } from '../store'
 

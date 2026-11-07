@@ -8,6 +8,14 @@
 </script>
 
 <script lang="ts">
+  /**
+   * @fileoverview Main feed view for the expanded dynamic island.
+   *
+   * Displays the current time with localized greetings, mounts glance cards for
+   * weather, calendar, and system alerts, and manages the downward scroll cue when
+   * widget content overflows the viewport.
+   */
+
   import { onMount, onDestroy, getContext } from 'svelte'
   import { ChevronDown } from 'lucide-svelte'
   import Calendar from '../components/Calendar.svelte'
@@ -52,7 +60,9 @@
   let isUpdateSnoozed = $state(false)
 
   /**
-   * Formats the application version for display in the footer.
+   * Resolves the user-facing application version string for the footer pill.
+   *
+   * @returns Clean version string (e.g. "1.0.0").
    */
   function computeDisplayVersion() {
     const ver = $appInfoStore?.version
@@ -63,7 +73,9 @@
   let displayVersion = $derived.by(computeDisplayVersion)
 
   /**
-   * Evaluates if there are active non-update notifications to display in the glance slot.
+   * Checks whether unread non-glance notifications exist in the backlog.
+   *
+   * @returns True if dismissible notifications are queued.
    */
   function computeHasStandardNotifications() {
     return ($notifData || []).some(
@@ -80,7 +92,7 @@
   let hasStandardNotifications = $derived.by(computeHasStandardNotifications)
 
   /**
-   * Navigates directly to the dedicated Calendar application page.
+   * Navigates the island viewport to the full Calendar agenda view.
    */
   function openCalendar() {
     if (navigate) {
@@ -89,7 +101,7 @@
   }
 
   /**
-   * Navigates directly to the Updates tab in Settings.
+   * Navigates the island viewport to the Updates tab within Settings.
    */
   function openUpdatesTab() {
     if (navigate) {
@@ -99,7 +111,7 @@
   }
 
   /**
-   * Navigates directly to the dedicated Announcements & Release Notes page.
+   * Navigates the island viewport to the Developer Announcements feed.
    */
   function openAnnouncementsPage() {
     if (navigate) {
@@ -119,7 +131,8 @@
   let canScrollMore = $state(false)
 
   /**
-   * Dynamically synchronizes the measured height of the home social feed with the island frame.
+   * Synchronizes the measured height of the scrollable feed container
+   * to update scroll cues and avoid layout clipping.
    */
   function syncHomeFeedMeasuredHeight() {
     const el = feedContainerEl
@@ -143,7 +156,8 @@
   $effect(syncHomeFeedMeasuredHeight)
 
   /**
-   * Evaluates whether the home feed has vertical overflow below the current scroll position.
+   * Checks container scroll offset against client height to toggle the
+   * visibility of the bottom scroll cue indicator.
    */
   function updateScrollCueVisibility() {
     if (!scrollContainer) {
@@ -157,7 +171,9 @@
   }
 
   /**
-   * Updates scroll indicator state based on current scroll position.
+   * Handles feed scroll events, updating scroll indicators and preventing bubbling.
+   *
+   * @param e - DOM scroll event from the feed container.
    */
   function handleFeedScroll(e: Event) {
     const target = e.currentTarget as HTMLElement
@@ -193,7 +209,7 @@
   $effect(syncScrollCueObserverEffect)
 
   /**
-   * Smoothly scrolls the social feed downward when the scroll cue is clicked.
+   * Smoothly scrolls the primary home feed container downward by one viewport view.
    */
   function scrollFeedDown() {
     if (scrollContainer) {
@@ -218,7 +234,9 @@
   })
 
   /**
-   * Resolves the user configured timezone identifier or defaults to Asia/Manila.
+   * Computes the active timezone identifier, falling back to system local.
+   *
+   * @returns IANA timezone string (e.g. "Asia/Tokyo").
    */
   function computeCurrentTimezone() {
     return $timezoneStore || 'Asia/Manila'
@@ -226,7 +244,9 @@
   let currentTimezone = $derived.by(computeCurrentTimezone)
 
   /**
-   * Extracts localized date and time components formatted according to active timezone and date settings.
+   * Derives decomposed 24-hour, 12-hour, minute, and second values adjusted for timezone.
+   *
+   * @returns Object containing h24, h12, min, and sec numbers.
    */
   function computeTimeParts() {
     try {
@@ -278,7 +298,10 @@
   let timeParts = $derived.by(computeTimeParts)
 
   /**
-   * Calculates dynamic time-of-day salutation.
+   * Computes a localized greeting phrase (Good morning, afternoon, evening, night)
+   * corresponding to the current local hour.
+   *
+   * @returns Localized greeting from the active language catalog.
    */
   function computeSalutationText() {
     const hour = timeParts.h24
@@ -290,7 +313,9 @@
   let salutationText = $derived.by(computeSalutationText)
 
   /**
-   * Resolves the user display name defaulting to User.
+   * Resolves the display name to append to the salutation header.
+   *
+   * @returns User-configured name or empty string if unset.
    */
   function computeDisplayName() {
     return $userNameStore?.trim() || 'User'
@@ -298,7 +323,9 @@
   let displayName = $derived.by(computeDisplayName)
 
   /**
-   * Formats display hours honoring 12-hour or 24-hour preference.
+   * Formats numeric hour value according to 12-hour or 24-hour presentation setting.
+   *
+   * @returns Formatted hour string.
    */
   function computeFormattedHours() {
     const h24 = timeParts.h24
@@ -311,7 +338,9 @@
   let formattedHours = $derived.by(computeFormattedHours)
 
   /**
-   * Formats AM/PM indicator for 12-hour clock mode.
+   * Derives uppercase AM/PM designation for 12-hour clock modes.
+   *
+   * @returns "AM", "PM", or empty string when in 24-hour mode.
    */
   function computeAmPm() {
     if ($timeFormatStore === '24h') return ''

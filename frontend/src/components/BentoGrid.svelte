@@ -1,3 +1,8 @@
+<!--
+  @component BentoGrid
+  @description Responsive grid container that arranges dashboard cards into a bento-style
+  layout with consistent spacing and auto-fill column sizing.
+-->
 <script lang="ts">
   interface Props {
     columns?: string

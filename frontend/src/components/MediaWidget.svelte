@@ -1,3 +1,9 @@
+<!--
+  @fileoverview Media player and ambient soundscapes controller.
+
+  Connects to Windows Media Transport Controls to display track artwork, playback progress,
+  and transport buttons, while hosting the procedural ambient audio mixer drawer.
+-->
 <script module lang="ts">
   import type { IslandConfig } from '../store'
 
@@ -55,12 +61,25 @@
 
   let nativeIcons = $derived($nativeIconsStore)
 
+  /**
+   * Resolves source application branding icon and name for active media session.
+   *
+   * @returns Application brand metadata object.
+   */
   function computeAppBrand() {
     void nativeIcons
     return resolveAppBrand(media.sourceApp)
   }
   let appBrand = $derived(computeAppBrand())
 
+  /**
+   * Generates an SVG texture background pattern based on track title and artist string hashes.
+   *
+   * @param title - Track title.
+   * @param artist - Artist name.
+   * @param sourceApp - Originating application.
+   * @returns CSS inline background style string.
+   */
   function getTrackTextureStyle(
     title?: string,
     artist?: string,
@@ -91,6 +110,9 @@
     }
   }
 
+  /**
+   * Computes reactive track gradient texture styles based on current media metadata.
+   */
   function computeTrackTexture() {
     return getTrackTextureStyle(media.title, media.artist, media.sourceApp)
   }
@@ -107,6 +129,11 @@
   let isAudioMixerOpen = $state(false)
   let lastNonZeroVol = $state(50)
 
+  /**
+   * Dispatches a native Win32 window focus request to bring the active media player to foreground.
+   *
+   * @param e - Click event.
+   */
   function handleFocusApp(e: MouseEvent) {
     e.stopPropagation()
     const process = appBrand.processName || media.sourceApp || ''
@@ -119,6 +146,11 @@
     }
   }
 
+  /**
+   * Toggles the session source selection drawer to switch between running media apps.
+   *
+   * @param e - Click event.
+   */
   function toggleSessionMenu(e: MouseEvent) {
     e.stopPropagation()
     isSessionMenuOpen = !isSessionMenuOpen
@@ -127,6 +159,11 @@
     }
   }
 
+  /**
+   * Toggles the ambient soundscape and audio mixer drawer.
+   *
+   * @param e - Click event.
+   */
   function toggleAudioMixer(e: MouseEvent) {
     e.stopPropagation()
     isAudioMixerOpen = !isAudioMixerOpen
@@ -187,6 +224,9 @@
   }
   $effect(handleSessionDismissEffect)
 
+  /**
+   * Temporarily locks the volume slider during user interaction to avoid race conditions.
+   */
   function lockVolumeWithGracePeriod() {
     isVolLocked = true
     if (volLockTimer) clearTimeout(volLockTimer)
@@ -405,6 +445,9 @@
   }
   $effect(handleCardTintEffect)
 
+  /**
+   * Fallback handler for broken or unloadable album art images.
+   */
   function handleImgError() {
     imgLoadFailed = true
   }
@@ -462,6 +505,12 @@
   }
   $effect(handleTimelineProgressEffect)
 
+  /**
+   * Dispatches transport control command (play, pause, next, previous) to backend SMTC.
+   *
+   * @param action - Action command identifier string.
+   * @param e - Optional click event to stop propagation.
+   */
   function handleControl(action: string, e?: MouseEvent) {
     if (e) e.stopPropagation()
     if (action === 'play_pause' || action === 'play' || action === 'pause') {
@@ -537,6 +586,9 @@
     SendMediaControl(action)
   }
 
+  /**
+   * Initiates timeline scrubbing, suspending live progress updates during drag.
+   */
   function handleSeekStart() {
     if (seekLockTimer) {
       clearTimeout(seekLockTimer)
@@ -547,6 +599,11 @@
     driftError = 0
   }
 
+  /**
+   * Updates scrub preview position while dragging timeline slider.
+   *
+   * @param e - Slider input event.
+   */
   function handleSeekInput(e: Event) {
     isDraggingSeek = true
     isSeekingLocked = true
@@ -564,6 +621,11 @@
   let lastCommittedSeek = -1
   let lastCommittedTime = 0
 
+  /**
+   * Commits final seek position to backend media transport session.
+   *
+   * @param e - Slider change event.
+   */
   function handleSeekCommit(e: Event) {
     const now = Date.now()
     const val = Number((e.target as HTMLInputElement).value)
@@ -593,6 +655,12 @@
   }
 
   let volThrottleTimer: ReturnType<typeof setTimeout> | null = null
+
+  /**
+   * Adjusts master volume level in real time during slider interaction.
+   *
+   * @param e - Slider input event.
+   */
   function handleVolInput(e: Event) {
     const val = Number((e.target as HTMLInputElement).value)
     volVal = val
@@ -606,6 +674,11 @@
     }
   }
 
+  /**
+   * Commits the volume change to backend and media store when interaction ends.
+   *
+   * @param e - Slider change event.
+   */
   function handleVolChange(e: Event) {
     const val = Number((e.target as HTMLInputElement).value)
     if (volThrottleTimer) clearTimeout(volThrottleTimer)
@@ -617,11 +690,17 @@
     isDraggingVol = false
   }
 
+  /**
+   * Handles pointer down event on volume slider, setting dragging and lock state.
+   */
   function handleVolPointerDown() {
     isDraggingVol = true
     lockVolumeWithGracePeriod()
   }
 
+  /**
+   * Handles pointer up event on volume slider, releasing dragging state.
+   */
   function handleVolPointerUp() {
     isDraggingVol = false
     lockVolumeWithGracePeriod()
@@ -654,6 +733,12 @@
     isScrubHovering = false
   }
 
+  /**
+   * Converts millisecond playback duration into standard "M:SS" or "H:MM:SS" format.
+   *
+   * @param ms - Duration in milliseconds.
+   * @returns Formatted time string.
+   */
   function formatTime(ms: number): string {
     if (!ms || isNaN(ms) || ms <= 0) return '0:00'
     const totalSecs = Math.floor(ms / 1000)

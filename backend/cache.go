@@ -1,3 +1,4 @@
+// Package backend provides caching utilities for remote images and application icons.
 package backend
 
 import (

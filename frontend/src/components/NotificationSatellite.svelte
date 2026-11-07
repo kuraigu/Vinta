@@ -1,3 +1,9 @@
+<!--
+  @component NotificationSatellite
+  @description Floating toast notification pill. Slides in beside the island when a
+  system notification arrives, shows app icon and preview text, pauses dismiss countdown
+  on mouse hover, and opens the notification on click.
+-->
 <script lang="ts">
   import { getContext } from 'svelte'
   import { Bell, X } from 'lucide-svelte'

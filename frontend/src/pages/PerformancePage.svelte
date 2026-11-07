@@ -1,3 +1,9 @@
+<!--
+  @fileoverview System hardware telemetry dashboard.
+
+  Displays live CPU, RAM, and GPU load percentages, renders real-time SVG sparkline
+  history graphs, and shows 3D graphics engine activity.
+-->
 <script module lang="ts">
   import type { IslandConfig } from '../store'
 

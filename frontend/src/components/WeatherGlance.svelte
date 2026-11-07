@@ -1,3 +1,7 @@
+<!--
+  @component WeatherGlance
+  @description Minimized weather preview showing current temperature, condition icon, and city name.
+-->
 <script lang="ts">
   import { onMount, getContext } from 'svelte'
   import { MapPin } from 'lucide-svelte'

@@ -1,3 +1,9 @@
+<!--
+  @component SatelliteHost
+  @description Hit-test wrapper for floating satellite widgets. Observes the bounding
+  rectangle of child elements with a ResizeObserver and sends hit rects to the Go backend
+  so Windows treats the floating pills as clickable without making the empty space between them intercept clicks.
+-->
 <script lang="ts">
   import { onDestroy, type Snippet } from 'svelte'
   import { fly, scale } from 'svelte/transition'
@@ -10,6 +16,7 @@
     type FourPartRadii,
     type FourPartGaps
   } from '../stores/satellites'
+  import { SetForceInteractive } from '../../bindings/Vinta/backend/app.js'
 
   /**
    * Configuration properties for a declarative floating satellite host.
@@ -299,6 +306,20 @@
       easing: cubicOut
     })
   }
+
+  function handleMouseEnter(e: MouseEvent) {
+    if (typeof SetForceInteractive === 'function') {
+      SetForceInteractive(true).catch(() => {})
+    }
+    onmouseenter?.(e)
+  }
+
+  function handleMouseLeave(e: MouseEvent) {
+    if (typeof SetForceInteractive === 'function') {
+      SetForceInteractive(false).catch(() => {})
+    }
+    onmouseleave?.(e)
+  }
 </script>
 
 {#if active}
@@ -324,8 +345,8 @@
       --sat-offset-x: {offsetX}px;
       --sat-offset-y: {offsetY}px;
     "
-    {onmouseenter}
-    {onmouseleave}
+    onmouseenter={handleMouseEnter}
+    onmouseleave={handleMouseLeave}
     in:satelliteIn={{
       enabled: animateIn,
       x: flyParams.inX,

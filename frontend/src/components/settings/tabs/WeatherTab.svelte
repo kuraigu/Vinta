@@ -1,3 +1,8 @@
+<!--
+  @component WeatherTab
+  @description Weather configuration tab. Manages location presets, coordinates custom city
+  searches, toggles Celsius vs. Fahrenheit, and provides offline testing mock data.
+-->
 <script lang="ts">
   import { onMount } from 'svelte'
   import { SvelteSet } from 'svelte/reactivity'
@@ -5,7 +10,10 @@
   import SettingItem from '../SettingItem.svelte'
   import CustomSelect from '../../CustomSelect.svelte'
   import { weatherLocationStore, weatherUnitStore } from '../../../store'
-  import { searchCities, formatLocationName } from '../../../services/weatherService'
+  import {
+    searchCities,
+    formatLocationName
+  } from '../../../services/weatherService'
   import {
     GLOBAL_WEATHER_PRESETS,
     detectAutoWeatherLocation,
@@ -39,8 +47,16 @@
     }
   }
 
-  function buildPresetOptions(): { label: string; value: string; payload: WeatherLocationPreset }[] {
-    const list: { label: string; value: string; payload: WeatherLocationPreset }[] = []
+  function buildPresetOptions(): {
+    label: string
+    value: string
+    payload: WeatherLocationPreset
+  }[] {
+    const list: {
+      label: string
+      value: string
+      payload: WeatherLocationPreset
+    }[] = []
     const seen = new SvelteSet<string>()
 
     // 1. Auto-detect first
@@ -62,7 +78,11 @@
 
     // 3. Current active location if not already in presets
     const currentName = $weatherLocationStore.name
-    if (currentName && !seen.has(currentName) && !currentName.startsWith('Auto-detect')) {
+    if (
+      currentName &&
+      !seen.has(currentName) &&
+      !currentName.startsWith('Auto-detect')
+    ) {
       list.push({
         label: currentName,
         value: currentName,
@@ -118,13 +138,13 @@
       })
 
       const existingValues = new SvelteSet(searchedOpts.map((o) => o.value))
-      const extraPresets = GLOBAL_WEATHER_PRESETS
-        .filter((p) => !existingValues.has(p.name))
-        .map((p) => ({
-          label: p.name,
-          value: p.name,
-          payload: p
-        }))
+      const extraPresets = GLOBAL_WEATHER_PRESETS.filter(
+        (p) => !existingValues.has(p.name)
+      ).map((p) => ({
+        label: p.name,
+        value: p.name,
+        payload: p
+      }))
 
       weatherOptions = [...searchedOpts, ...extraPresets]
     }

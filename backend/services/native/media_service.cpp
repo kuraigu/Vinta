@@ -1,3 +1,8 @@
+/**
+ * @file media_service.cpp
+ * @brief System Media Transport Controls (SMTC) and Windows audio session implementation.
+ */
+
 #include "media_service.h"
 #include "winrt_common.h"
 

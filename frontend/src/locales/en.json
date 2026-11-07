@@ -134,7 +134,9 @@
     "github_title": "Star on GitHub",
     "github_desc": "Support open source and help shape Vinta roadmap",
     "appearance_title": "Personalize Your Island",
-    "appearance_desc": "Customize themes, widget feeds, and screen positioning"
+    "appearance_desc": "Customize themes, widget feeds, and screen positioning",
+    "feedback_title": "Send Feedback",
+    "feedback_desc": "Share ideas, report bugs, and help improve Vinta"
   },
   "settings": {
     "page_title": "Settings",

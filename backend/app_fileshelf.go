@@ -1,3 +1,4 @@
+// Package backend provides file shelf staging, native OLE drag-and-drop, and media utilities.
 package backend
 
 import (

@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Synchronizes clickable screen areas with the Go backend.
+ *
+ * Measures the island capsule, satellites, and menus in screen pixels and forwards
+ * the rectangles to the native backend so transparent desktop areas remain clickable.
+ */
+
 import {
   SetHitRects,
   TrimMemory,
@@ -107,12 +114,19 @@ export class WindowBoundsManager {
       for (const sat of satellites) {
         const rect = sat.getBoundingClientRect()
         if (rect.width > 0 && rect.height > 0) {
+          // Add a 4px perimeter margin and bridge the 12px gap to the main island
+          // so clicks and fast cursor entry do not pass through to background apps.
+          const pad = 4
+          const l = Math.max(0, Math.round((rect.left - 12 - pad) * dpr))
+          const t = Math.max(0, Math.round((rect.top - pad) * dpr))
+          const r = Math.round((rect.right + pad) * dpr)
+          const b = Math.round((rect.bottom + pad) * dpr)
           hitRects.push(
             new HitRect({
-              left: Math.round(rect.left * dpr),
-              top: Math.round(rect.top * dpr),
-              width: Math.round(rect.width * dpr),
-              height: Math.round(rect.height * dpr)
+              left: l,
+              top: t,
+              width: r - l,
+              height: b - t
             })
           )
         }

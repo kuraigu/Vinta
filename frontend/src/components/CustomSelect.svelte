@@ -1,3 +1,9 @@
+<!--
+  @component CustomSelect
+  @description Custom dropdown picker that replaces native HTML <select>. Uses Vinta's
+  token styling, keyboard navigation (Arrow Up/Down, Enter, Esc), click-outside dismissal,
+  and notifies the native backend when opened so the dropdown menu isn't clipped by the window frame.
+-->
 <script lang="ts">
   import { slide } from 'svelte/transition'
   import { ChevronDown, Search } from 'lucide-svelte'

@@ -1,3 +1,9 @@
+<!--
+  @component ControlsSatellite
+  @description Floating control capsule anchored alongside the island. Provides quick
+  sliders for display brightness and system volume, plus media playback buttons without
+  needing to open the full media or action center pages.
+-->
 <script lang="ts">
   import { onDestroy } from 'svelte'
   import SatelliteHost from './SatelliteHost.svelte'

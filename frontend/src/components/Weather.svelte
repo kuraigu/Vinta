@@ -1,3 +1,9 @@
+<!--
+  @fileoverview Weather forecast and environmental metrics display component.
+
+  Fetches real-time temperature, humidity, UV index, wind speed, air pressure, and
+  7-day outlooks from Open-Meteo with offline caching and condition artwork.
+-->
 <script lang="ts">
   import { onMount, getContext } from 'svelte'
   import { slide } from 'svelte/transition'
@@ -64,7 +70,12 @@
   let lastFetchKey = ''
 
   /**
-   * Fetches weather metrics for the active location.
+   * Queries Open-Meteo for meteorological data matching target coordinates.
+   *
+   * @param name - Location display name.
+   * @param lat - Latitude coordinate.
+   * @param lon - Longitude coordinate.
+   * @param offline - Whether to read directly from local cache.
    */
   async function loadWeather(
     name: string,
@@ -154,6 +165,8 @@
 
   /**
    * Navigates directly to the dedicated WeatherPage.
+   *
+   * @param e - Optional click event.
    */
   function openWeatherPage(e?: MouseEvent) {
     if (e) e.stopPropagation()
@@ -162,12 +175,18 @@
     }
   }
 
+  /**
+   * Derives parsed condition code metadata for current weather state.
+   */
   function computeWeatherInfo() {
     if (!weather) return parseWmoCode(2, isNight)
     return parseWmoCode(weather.weatherCode, isNight)
   }
   let weatherInfo = $derived.by(computeWeatherInfo)
 
+  /**
+   * Evaluates whether current conditions reflect daytime or nighttime.
+   */
   function computeIsNight() {
     if (typeof weather?.isNight === 'boolean') {
       return weather.isNight
@@ -177,6 +196,11 @@
   }
   let isNight = $derived.by(computeIsNight)
 
+  /**
+   * Resolves the primary artwork illustration variant matching active conditions.
+   *
+   * @returns Condition identifier string for illustration component.
+   */
   function computeIllustrationType(): WeatherConditionType {
     if (!weather) return isNight ? 'cloudy-night' : 'cloudy'
     const code = weather.weatherCode
@@ -190,6 +214,12 @@
   }
   let illustrationType = $derived.by(computeIllustrationType)
 
+  /**
+   * Resolves the secondary illustration icon variant for daily forecast tiles.
+   *
+   * @param code - WMO weather interpretation code.
+   * @returns Condition identifier string for forecast artwork.
+   */
   function getForecastIllustrationType(code: number): WeatherConditionType {
     if (code >= 95) return 'thunder'
     if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return 'rain'
@@ -200,6 +230,11 @@
     return 'cloudy'
   }
 
+  /**
+   * Derives localized condition title string corresponding to current WMO code.
+   *
+   * @returns Translated weather condition phrase.
+   */
   function computeBannerConditionTitle() {
     if (!weather) {
       return isNight
@@ -215,12 +250,20 @@
   }
   let bannerConditionTitle = $derived.by(computeBannerConditionTitle)
 
+  /**
+   * Extracts a concise city name from longer location strings for compact headers.
+   *
+   * @returns Short city name string.
+   */
   function computeShortCityName() {
     const raw = $weatherLocationStore.name || 'Auto'
     return raw.split(',')[0].trim()
   }
   let shortCityName = $derived.by(computeShortCityName)
 
+  /**
+   * Formats sunrise time into local clock format string.
+   */
   function computeFormattedSunrise() {
     if (!weather?.sunrise) return '--:--'
     try {
@@ -232,6 +275,9 @@
   }
   let formattedSunrise = $derived.by(computeFormattedSunrise)
 
+  /**
+   * Formats sunset time into local clock format string.
+   */
   function computeFormattedSunset() {
     if (!weather?.sunset) return '--:--'
     try {
@@ -243,6 +289,12 @@
   }
   let formattedSunset = $derived.by(computeFormattedSunset)
 
+  /**
+   * Evaluates numerical UV index value to determine qualitative safety rating.
+   *
+   * @param uvStr - Numeric UV index as string.
+   * @returns Localized UV rating (Low, Moderate, High, Very High, Extreme).
+   */
   function getUvRating(uvStr: string): string {
     const n = parseFloat(uvStr) || 0
     if (n >= 8) return 'Very High'

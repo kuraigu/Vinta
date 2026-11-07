@@ -1,3 +1,8 @@
+<!--
+  @component SettingsSidebar
+  @description Left-hand navigation list of settings categories. Displays tab icons,
+  localized labels, and an active pill highlight for the currently selected tab.
+-->
 <script lang="ts">
   import {
     Palette,

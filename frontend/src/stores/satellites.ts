@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Registry for floating satellite widgets.
+ *
+ * Tracks floating desktop satellites (control dock, notification pill), calculates
+ * screen margins, and updates the native Win32 window shape so satellites stay clickable.
+ */
+
 import { writable, get } from 'svelte/store'
 import {
   SetSatelliteBounds,

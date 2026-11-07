@@ -1,3 +1,8 @@
+<!--
+  @component DrawerPanel
+  @description Slide-over drawer for secondary detail views (audio mixer, alarm editors,
+  media sources). Slides in from the edge with a backdrop scrim and auto-focuses on open.
+-->
 <script lang="ts">
   import type { Snippet } from 'svelte'
   import { X } from 'lucide-svelte'

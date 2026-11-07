@@ -1,3 +1,8 @@
+<!--
+  @component ActionCenterGlance
+  @description Minimized glance preview showing active quick-toggle states (Wi-Fi, Bluetooth,
+  battery, volume) when the island is collapsed.
+-->
 <script lang="ts">
   import { getContext } from 'svelte'
   import {

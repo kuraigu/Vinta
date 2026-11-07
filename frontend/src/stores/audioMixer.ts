@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Per-app volume control and audio device switching.
+ *
+ * Tracks individual volume levels and mute states for running Windows apps,
+ * and provides controls to switch default audio output devices.
+ */
+
 import { writable } from 'svelte/store'
 import {
   GetAppAudioSessions,

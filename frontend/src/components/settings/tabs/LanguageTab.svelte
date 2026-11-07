@@ -1,3 +1,8 @@
+<!--
+  @component LanguageTab
+  @description Internationalization settings. Lets users switch languages with flag
+  icons, infer regional defaults, and open the custom translations folder in Explorer.
+-->
 <script lang="ts">
   import { Languages, FolderOpen, RefreshCw, Check } from 'lucide-svelte'
   import SettingItem from '../SettingItem.svelte'

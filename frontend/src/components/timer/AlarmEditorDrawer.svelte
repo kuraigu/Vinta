@@ -1,3 +1,8 @@
+<!--
+  @component AlarmEditorDrawer
+  @description Slide-over drawer for creating or editing an alarm. Provides time picker,
+  label input, repeat weekday check-boxes, and chime sound preview selector.
+-->
 <script lang="ts">
   import { Check } from 'lucide-svelte'
   import CustomTimePicker from '../CustomTimePicker.svelte'

@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Coordinates backend system events with the frontend UI.
+ *
+ * Listens for OS events from the Go backend (media updates, toast notifications,
+ * display changes, battery/wireless status, hotkeys) and triggers UI updates.
+ */
+
 import type { Component } from 'svelte'
 import { get } from 'svelte/store'
 import { Events } from '@wailsio/runtime'
@@ -400,6 +407,13 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
 
       let isDuplicate = false
       notifData.update((items) => {
+        if (payload.id) {
+          const idx = items.findIndex((item) => item.nativeId === payload.id)
+          if (idx !== -1) {
+            isDuplicate = true
+            return items
+          }
+        }
         if (isVintaSelf) {
           const idx = items.findIndex(
             (item) =>
@@ -481,11 +495,13 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
           const matchesContent =
             !it.nativeId &&
             it.title === payload.title &&
-            it.appName === payload.appName
+            (it.appName === payload.appName || it.aumid === payload.aumid)
           if (matchesId || matchesContent) {
             updated = true
             return {
               ...it,
+              appName: payload.appName || it.appName,
+              aumid: payload.aumid || it.aumid,
               icon: payload.icon || it.icon,
               appLogo: payload.appLogo || it.appLogo,
               heroImage:

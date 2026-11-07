@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Dispatches internal Vinta notifications.
+ *
+ * Pushes alerts into the in-app notification center, shows a Windows desktop toast,
+ * and plays a chime while respecting Do Not Disturb mode.
+ */
+
 import { get } from 'svelte/store'
 import { Events } from '@wailsio/runtime'
 import appIcon from '@appicon'
@@ -19,10 +26,7 @@ export interface VintaNotificationOptions {
 }
 
 /**
- * Dispatches an official Vinta notification to the in-app notification center and OS desktop toast.
- * Guarantees that internal notifications always attach the official Vinta application icon.
- *
- * @param options - Notification parameters including title, message body, and optional sub-app name.
+ * Sends a notification through the in-app list and native desktop toast.
  */
 export function sendVintaNotification(options: VintaNotificationOptions): void {
   const { title, message, subApp, playSound = true } = options

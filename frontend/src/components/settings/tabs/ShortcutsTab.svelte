@@ -1,3 +1,8 @@
+<!--
+  @component ShortcutsTab
+  @description Global hotkey manager. Allows users to record and bind keyboard shortcuts
+  for toggling the island, opening action center, switching media, and navigating pages.
+-->
 <script lang="ts">
   import {
     Keyboard,

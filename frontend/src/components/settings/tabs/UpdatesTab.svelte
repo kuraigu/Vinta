@@ -1,3 +1,8 @@
+<!--
+  @component UpdatesTab
+  @description App update manager. Checks for new releases, displays download progress,
+  shows release changelogs, and triggers restart to apply pending updates.
+-->
 <script lang="ts">
   import { onMount } from 'svelte'
   import {

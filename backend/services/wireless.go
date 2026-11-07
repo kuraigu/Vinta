@@ -1,3 +1,4 @@
+// Package services provides Wi-Fi and Bluetooth wireless network status monitoring.
 package services
 
 import (

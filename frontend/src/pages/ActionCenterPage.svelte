@@ -10,6 +10,13 @@
 </script>
 
 <script lang="ts">
+  /**
+   * @fileoverview Quick settings and system hardware controls view.
+   *
+   * Provides quick toggles for Windows Wi-Fi flyouts, Bluetooth settings, battery saver,
+   * and airplane mode, while monitoring live battery percentages and charge status.
+   */
+
   import {
     Wifi,
     WifiOff,
@@ -45,6 +52,9 @@
   let wireless = $derived($wirelessDataStore)
   let battery = $derived($batteryDataStore)
 
+  /**
+   * Queries the backend for latest wireless adapter states (Wi-Fi, Bluetooth, Airplane Mode).
+   */
   async function refreshWireless() {
     if (typeof GetWirelessStatus === 'function') {
       try {
@@ -58,6 +68,9 @@
     }
   }
 
+  /**
+   * Queries the backend for real-time battery charge percentage and AC power connectivity.
+   */
   async function refreshBattery() {
     if (typeof GetBatteryStatus === 'function') {
       try {
@@ -71,6 +84,11 @@
     }
   }
 
+  /**
+   * Dispatches a request to open the native Windows Quick Settings network flyout.
+   *
+   * @param e - Click or key event triggering the action.
+   */
   async function toggleWifi(e: Event) {
     e.stopPropagation()
     const next = !wireless.wifiEnabled
@@ -86,6 +104,11 @@
     }
   }
 
+  /**
+   * Dispatches a request to open the native Windows Bluetooth settings panel.
+   *
+   * @param e - Click or key event triggering the action.
+   */
   async function toggleBluetooth(e: Event) {
     e.stopPropagation()
     if (!wireless.hasBluetooth) return
@@ -102,6 +125,11 @@
     }
   }
 
+  /**
+   * Toggles Windows Airplane Mode state via the backend radio manager.
+   *
+   * @param e - Click or key event triggering the action.
+   */
   async function toggleAirplaneMode(e: Event) {
     e.stopPropagation()
     const next = !wireless.airplaneMode
@@ -118,6 +146,11 @@
     }
   }
 
+  /**
+   * Toggles Windows Battery Saver power scheme mode.
+   *
+   * @param e - Click or key event triggering the action.
+   */
   async function toggleBatterySaver(e: Event) {
     e.stopPropagation()
     const next = !battery.batterySaver
@@ -131,6 +164,12 @@
     }
   }
 
+  /**
+   * Launches an external Windows settings URI (e.g. ms-settings:network, ms-settings:powersleep).
+   *
+   * @param target - Target URI scheme string.
+   * @param e - Optional DOM event to stop propagation.
+   */
   function openSystemDialog(target: string, e?: Event) {
     if (e) e.stopPropagation()
     if (typeof OpenWindowsSettings === 'function') {
@@ -150,6 +189,12 @@
     return $tStore('action_center.on_battery', { percent: battery.percentage })
   })
 
+  /**
+   * Converts remaining battery discharge seconds into hours and minutes display.
+   *
+   * @param secs - Estimated remaining battery lifetime in seconds.
+   * @returns Localized time remaining string.
+   */
   function formatLifeTime(secs: number): string {
     if (secs <= 0 || secs >= 86400) return ''
     const hrs = Math.floor(secs / 3600)

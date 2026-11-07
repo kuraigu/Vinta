@@ -1,3 +1,7 @@
+<!--
+  @component DiamondPattern
+  @description Decorative background SVG grid of rotated diamond shapes.
+-->
 <script lang="ts">
   interface Props {
     align?: 'center' | 'right' | 'full'

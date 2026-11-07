@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Gathers system info for bug reports and opens GitHub issues.
+ *
+ * Collects Windows build, architecture, and display scale details so users can
+ * file pre-filled bug reports on GitHub without having to copy system info manually.
+ */
+
 import { Call } from '@wailsio/runtime'
 
 /**

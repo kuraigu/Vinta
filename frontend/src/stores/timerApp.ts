@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Countdown timer, stopwatch, focus timer, and alarm engine.
+ *
+ * Manages timer countdowns, stopwatch lap splits, Pomodoro sprint cycles, and scheduled
+ * alarms, saving state to disk and playing chimes on completion.
+ */
+
 import { writable, get } from 'svelte/store'
 import {
   GetTimerData,

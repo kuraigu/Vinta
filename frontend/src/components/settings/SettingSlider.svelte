@@ -1,3 +1,8 @@
+<!--
+  @component SettingSlider
+  @description Custom range slider for numeric preferences (volume, delay timeouts,
+  opacity). Renders an active fill track, draggable thumb, and live value readout with unit labels.
+-->
 <script lang="ts">
   interface Props {
     value: number

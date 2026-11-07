@@ -1,3 +1,8 @@
+<!--
+  @component SystemTab
+  @description System performance settings. Configures hardware telemetry polling rates,
+  run-at-startup preferences, hardware acceleration, and factory reset options.
+-->
 <script lang="ts">
   import {
     Power,

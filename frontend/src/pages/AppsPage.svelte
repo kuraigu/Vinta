@@ -10,6 +10,13 @@
 </script>
 
 <script lang="ts">
+  /**
+   * @fileoverview Application launcher and search grid.
+   *
+   * Lists all integrated Vinta tools and utilities in a searchable grid, letting users
+   * filter tools by name or description and jump directly to any view.
+   */
+
   import { getContext } from 'svelte'
   import {
     House,
@@ -76,10 +83,10 @@
     >('navigate')
 
   /**
-   * Opens the targeted page in expanded mode.
+   * Activates the selected application and reconfigures island dimensions according to its manifest.
    *
-   * @param page - Component to navigate to.
-   * @param pageConfig - Island geometry config for the target page.
+   * @param page - Target application identifier or page component.
+   * @param pageConfig - Minimal and expanded dimensions registered for the application.
    */
   function openApp(page: unknown, pageConfig: IslandConfig) {
     navigate(page, pageConfig, true)
@@ -240,7 +247,7 @@
   ]
 
   /**
-   * Computes the list of apps sorted alphabetically and filtered by the active search query.
+   * Filters registered applications against user search input, matching localized names and descriptions.
    *
    * @returns Filtered and alphabetically sorted array of applications.
    */

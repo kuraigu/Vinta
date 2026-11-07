@@ -8,6 +8,13 @@
 </script>
 
 <script lang="ts">
+  /**
+   * @fileoverview Floating desktop calculator with scientific operations.
+   *
+   * Handles standard arithmetic, powers, roots, and parenthetical expressions with
+   * physical keyboard and numpad support.
+   */
+
   import { Delete } from 'lucide-svelte'
   import BackButton from '../components/BackButton.svelte'
   import { islandTooltip } from '../services/islandTooltip'
@@ -31,6 +38,9 @@
     return ''
   })
 
+  /**
+   * Resets accumulator, current expression buffer, and calculation history to zero.
+   */
   function handleClear() {
     expression = '0'
     historyFormula = ''
@@ -51,6 +61,12 @@
     '9': '⁹'
   }
 
+  /**
+   * Converts standard numeric characters into unicode superscript characters for exponent display.
+   *
+   * @param numStr - Numeric string to convert (e.g. "2" -> "²").
+   * @returns Superscript formatted string.
+   */
   function toSuperscript(numStr: string): string {
     return numStr
       .split('')
@@ -58,6 +74,9 @@
       .join('')
   }
 
+  /**
+   * Deletes the trailing character or operator token from the current expression buffer.
+   */
   function handleBackspace() {
     errorMessage = ''
     if (expression.endsWith('ʸ')) {
@@ -82,6 +101,11 @@
     }
   }
 
+  /**
+   * Appends a numeric digit (0-9) to the active operand buffer.
+   *
+   * @param d - Single digit character.
+   */
   function handleDigit(d: string) {
     errorMessage = ''
     if (expression === '0') {
@@ -111,6 +135,9 @@
     expression += d
   }
 
+  /**
+   * Appends a decimal separator to the active operand if one is not already present.
+   */
   function handleDecimal() {
     errorMessage = ''
     // Check if current active number chunk already contains decimal
@@ -121,6 +148,11 @@
     }
   }
 
+  /**
+   * Appends a binary arithmetic operator (+, -, *, /) to the expression buffer.
+   *
+   * @param op - Operator symbol character.
+   */
   function handleOperator(op: string) {
     errorMessage = ''
     isExponentMode = false
@@ -143,6 +175,9 @@
     }
   }
 
+  /**
+   * Applies immediate square root calculation to the active operand.
+   */
   function handleSquareRoot() {
     errorMessage = ''
     if (expression === '0') {
@@ -158,6 +193,9 @@
     }
   }
 
+  /**
+   * Inserts an nth-root radical operator into the expression.
+   */
   function handleRoot() {
     errorMessage = ''
     if (expression === '0') {
@@ -187,6 +225,9 @@
     }
   }
 
+  /**
+   * Inserts an exponentiation operator (xʸ) for power calculations.
+   */
   function handlePower() {
     errorMessage = ''
     if (expression === '0') return
@@ -202,6 +243,11 @@
     }
   }
 
+  /**
+   * Inserts a balanced opening or closing parenthesis into the expression buffer.
+   *
+   * @param p - Parenthesis character '(' or ')'.
+   */
   function handleParenthesis(p: '(' | ')') {
     errorMessage = ''
     if (p === '(') {
@@ -225,6 +271,9 @@
     }
   }
 
+  /**
+   * Toggles the algebraic sign (positive/negative) of the current active operand.
+   */
   function handleToggleSign() {
     errorMessage = ''
     if (expression === '0') return
@@ -235,6 +284,9 @@
     }
   }
 
+  /**
+   * Evaluates the full mathematical expression using operator precedence rules and displays result.
+   */
   function handleEvaluate() {
     errorMessage = ''
     isExponentMode = false
@@ -250,7 +302,15 @@
     }
   }
 
+  /**
+   * Registers global keyboard listeners for numpad digits, operators, Enter, and Backspace.
+   */
   function setupKeyboardListener() {
+    /**
+     * Processes intercepted keyboard events, routing keys to their corresponding calculator actions.
+     *
+     * @param e - Keyboard event from the window listener.
+     */
     function onKeyDown(e: KeyboardEvent) {
       if (e.defaultPrevented) return
 

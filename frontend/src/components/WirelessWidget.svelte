@@ -1,3 +1,7 @@
+<!--
+  @component WirelessWidget
+  @description Network indicator icon showing Wi-Fi signal strength or Ethernet connection status.
+-->
 <script lang="ts">
   import { islandTooltip } from '../services/islandTooltip'
   import { wirelessDataStore } from '../store'

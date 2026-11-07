@@ -1,3 +1,8 @@
+<!--
+  @component MediaSourcesDrawer
+  @description Drawer list of currently active media sessions (Spotify, Chrome, Firefox)
+  allowing the user to switch the primary media player source.
+-->
 <script lang="ts">
   import { Music2, Check, Pin } from 'lucide-svelte'
   import { islandTooltip } from '../services/islandTooltip'

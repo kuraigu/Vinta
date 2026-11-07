@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Floating notification capsule display and timer.
+ *
+ * Manages the floating notification pill that appears outside the island,
+ * pauses the auto-dismiss timer on hover, and dismisses on click.
+ */
+
 import { writable, get } from 'svelte/store'
 import type { AppNotification } from './system'
 import { autoHideDelayStore, notifSatelliteEnabledStore } from './settings'

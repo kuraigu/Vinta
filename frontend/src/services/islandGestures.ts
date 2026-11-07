@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Dragging and display snapping logic for the island pill.
+ *
+ * Keeps the island inside screen boundaries, snaps to display centers on multi-monitor
+ * setups, and handles smooth deceleration when dragged and released.
+ */
+
 import type { MonitorInfo } from '../../bindings/Vinta/backend/models.js'
 
 /**

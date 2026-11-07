@@ -1,3 +1,11 @@
+/**
+ * @file radio_service.h
+ * @brief Windows Runtime Radio control service for Wi-Fi and Bluetooth.
+ *
+ * Enumerates system radio adapters using Windows.Devices.Radios.Radio and
+ * toggles their power state asynchronously.
+ */
+
 #ifndef RADIO_SERVICE_H
 #define RADIO_SERVICE_H
 

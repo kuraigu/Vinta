@@ -1,3 +1,7 @@
+<!--
+  @component ActionCapsule
+  @description Compact clickable pill button used for inline quick actions and filter tags.
+-->
 <script lang="ts">
   import type { Component } from 'svelte'
   import { ChevronRight } from 'lucide-svelte'

@@ -1,3 +1,8 @@
+<!--
+  @fileoverview Page container hosting the comprehensive Weather and Forecast view.
+
+  Sets up island sizing and mounts the detailed Weather component.
+-->
 <script module lang="ts">
   import type { IslandConfig } from '../store'
 

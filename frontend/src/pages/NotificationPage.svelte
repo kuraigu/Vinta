@@ -1,3 +1,8 @@
+<!--
+  @fileoverview Page container hosting the Notification history and management view.
+
+  Configures the expanded island viewport dimensions and mounts the interactive Notification component.
+-->
 <script module lang="ts">
   export const config = {
     minimal: { w: 360, h: 65, r: 18 },

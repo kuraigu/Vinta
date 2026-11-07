@@ -1,3 +1,7 @@
+<!--
+  @component BatteryWidget
+  @description Battery status pill with dynamic icon (charging, low, full) and percentage label.
+-->
 <script lang="ts">
   import { Zap, Plug, Leaf } from 'lucide-svelte'
   import { batteryDataStore } from '../store'

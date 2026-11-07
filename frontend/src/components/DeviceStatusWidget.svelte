@@ -1,3 +1,7 @@
+<!--
+  @component DeviceStatusWidget
+  @description Combined status chip showing battery charge, audio volume, and network connectivity.
+-->
 <script lang="ts">
   import WirelessWidget from './WirelessWidget.svelte'
   import BatteryWidget from './BatteryWidget.svelte'

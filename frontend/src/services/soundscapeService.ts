@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Ambient background noise player with auto-ducking.
+ *
+ * Generates brown noise, rain sounds, or static in the browser, loops them
+ * smoothly, and lowers the volume automatically whenever external music starts playing.
+ */
+
 import { writable, get } from 'svelte/store'
 import { globalMediaStore } from '../store'
 

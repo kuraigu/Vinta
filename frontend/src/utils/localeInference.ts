@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Regional default inference.
+ *
+ * Inspects system language settings on first run to pick sensible defaults for
+ * Celsius vs. Fahrenheit, 12-hour vs. 24-hour time, and date order.
+ */
+
 import type { TemperatureUnit, TimeFormatOption } from '../stores/settings'
 import type { DateFormatOption } from './dateFormatter'
 

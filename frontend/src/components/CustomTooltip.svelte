@@ -1,3 +1,9 @@
+<!--
+  @component CustomTooltip
+  @description Floating tooltip container. Positions itself relative to its trigger
+  element and calls dispatchTooltipBounds() so Windows expands the window hit-test
+  region, preventing the tooltip from getting clipped by OS window borders.
+-->
 <script lang="ts">
   import { onDestroy, type Snippet } from 'svelte'
   import { fade } from 'svelte/transition'

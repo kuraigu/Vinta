@@ -1,3 +1,8 @@
+<!--
+  @component SearchInput
+  @description Filter text input with search icon, clear button, and debounced input
+  events for real-time list filtering.
+-->
 <script lang="ts">
   import { Search, X } from 'lucide-svelte'
 

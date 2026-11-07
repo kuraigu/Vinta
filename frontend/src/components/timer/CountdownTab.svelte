@@ -1,3 +1,8 @@
+<!--
+  @component CountdownTab
+  @description Interactive countdown timer. Features quick preset chips (1m, 5m, 15m, 25m),
+  circular progress ring, play/pause controls, and an audible chime on completion.
+-->
 <script lang="ts">
   import { Play, Pause, RotateCcw, Plus } from 'lucide-svelte'
   import { islandTooltip } from '../../services/islandTooltip'

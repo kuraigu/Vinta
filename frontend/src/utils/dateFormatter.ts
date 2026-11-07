@@ -1,4 +1,11 @@
 /**
+ * @fileoverview Date formatting utilities.
+ *
+ * Formats dates into short, full, US, EU, or ISO styles based on the user's
+ * clock settings, with optional weekday prefixes.
+ */
+
+/**
  * Date formatting options supported across Vinta widgets and pages.
  */
 export type DateFormatOption =
