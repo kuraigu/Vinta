@@ -116,17 +116,16 @@ func (a *App) GetReleaseNotes(version string) (string, error) {
 }
 
 func (a *App) bundledReleaseNotes(version string) string {
-	return fmt.Sprintf(`## Vinta v%s
+	return fmt.Sprintf(`## What's New in v%s
 
-Welcome to Vinta! The modern interactive dynamic island utility designed for Windows.
+Thanks for trying out Vinta! Here are a few things included in this build:
 
-### Built-in Highlights
-- **Interactive Island**: Top-docked expanding widget surface with smooth window animation.
-- **Home Glance Suite**: Live Weather, Calendar glance, Action Center quick settings, and System Telemetry.
-- **Developer Announcements**: Live updates and release notes synchronized directly from GitHub.
-- **Audio & Media Island**: Real-time volume mixer, media visualizers, and playback controls.
+- **Top Island Bar**: Expands on click or hover and tucks away cleanly when finished.
+- **Home Dashboard**: Quick glance at current weather, calendar events, and system settings.
+- **Media Controls**: Adjust audio volume and control active music or video playback.
+- **Notes & Timers**: Lightweight scratchpad, stopwatch, and timers ready from the dock.
 
-*Official online release notes and changelogs will automatically synchronize when connected to GitHub.*`, version)
+*Release notes update automatically whenever a new version is published.*`, version)
 }
 
 // Atom XML structures for GitHub Discussions Announcements feed.
@@ -371,10 +370,10 @@ func (a *App) loadCachedAnnouncements(cacheFile, hashFile string) AnnouncementsP
 	starterItem := AnnouncementItem{
 		ID:           "welcome-announcement",
 		Title:        "Welcome to Vinta!",
-		Body:         "Developer announcements, project roadmap updates, and release highlights will be delivered directly here.\n\nConnect to the internet to automatically sync the latest news from GitHub.",
+		Body:         "Thanks for installing Vinta. Project news, release notes, and update highlights will show up here.\n\nConnect to the internet to see the latest updates from GitHub.",
 		URL:          "https://github.com/kuraigu/Vinta",
 		PublishedAt:  time.Now().Format("Jan 02, 2006"),
-		AuthorName:   "Vinta Team",
+		AuthorName:   "kuraigu",
 		AuthorAvatar: "https://github.com/kuraigu.png?size=64",
 		IsUnread:     false,
 	}

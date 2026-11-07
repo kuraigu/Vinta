@@ -472,14 +472,21 @@
 <style>
   .dock-container {
     position: absolute;
-    top: 12px;
+    top: 0;
     left: 0;
     right: 0;
+    padding-top: 10px;
+    padding-bottom: 14px;
     display: flex;
     justify-content: center;
     align-items: center;
     z-index: 100;
     pointer-events: none;
+    background: linear-gradient(
+      to bottom,
+      var(--vinta-bg) 0%,
+      transparent 100%
+    );
   }
 
   .dock {

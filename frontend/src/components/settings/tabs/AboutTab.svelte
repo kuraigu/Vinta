@@ -130,7 +130,7 @@
   <!-- Brand Hero with Consolidated Version and Build Specs -->
   <BentoCard variant="announcement" class="about-hero-card">
     <div class="about-logo-wrapper">
-      <img src={appIcon} alt="Vinta" class="about-logo-img" />
+      <img src={appIcon} alt="Vinta" class="about-logo-img" draggable="false" />
     </div>
     <div class="about-hero-details">
       <div class="about-brand-header-row">
@@ -249,6 +249,9 @@
     width: 100%;
     height: 100%;
     object-fit: contain;
+    user-select: none;
+    -webkit-user-drag: none;
+    pointer-events: none;
   }
 
   .about-hero-details {

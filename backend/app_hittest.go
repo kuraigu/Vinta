@@ -163,6 +163,8 @@ func (a *App) startHitTestingLoop(hwnd uintptr) {
 		ticker := time.NewTicker(16 * time.Millisecond)
 		defer ticker.Stop()
 
+		missCount := 0
+
 		for range ticker.C {
 			if hwnd == 0 {
 				continue
@@ -206,19 +208,31 @@ func (a *App) startHitTestingLoop(hwnd uintptr) {
 			hasTransparent := (style & WS_EX_TRANSPARENT) != 0
 
 			needsUpdate := false
-			if isHit && hasTransparent {
-				style &^= WS_EX_TRANSPARENT
-				needsUpdate = true
-			} else if !isHit && !hasTransparent {
-				// Never switch to WS_EX_TRANSPARENT while the left mouse button is held down during an inbound drag,
-				// because changing window styles mid-drag causes OLE to lose DragLeave/Drop synchronization and lock up File Explorer.
-				if !outbound {
-					if lmbState, _, _ := procGetAsyncKeyState.Call(0x01); (lmbState & 0x8000) != 0 {
-						continue
-					}
+			if isHit {
+				missCount = 0
+				if hasTransparent {
+					style &^= WS_EX_TRANSPARENT
+					needsUpdate = true
 				}
-				style |= WS_EX_TRANSPARENT
-				needsUpdate = true
+			} else {
+				missCount++
+				// Hold interactive state for an ~120ms grace window (8 frames at 60Hz)
+				// to allow swift cursor motion across satellite gaps without dropping clicks.
+				if missCount < 8 {
+					continue
+				}
+
+				if !hasTransparent {
+					// Never switch to WS_EX_TRANSPARENT while the left mouse button is held down during an inbound drag,
+					// because changing window styles mid-drag causes OLE to lose DragLeave/Drop synchronization and lock up File Explorer.
+					if !outbound {
+						if lmbState, _, _ := procGetAsyncKeyState.Call(0x01); (lmbState & 0x8000) != 0 {
+							continue
+						}
+					}
+					style |= WS_EX_TRANSPARENT
+					needsUpdate = true
+				}
 			}
 
 			if needsUpdate {
