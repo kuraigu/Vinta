@@ -96,7 +96,7 @@
     hiddenBounds,
     activeOpacity = 1,
     glowOpacity = 0.6,
-    islandAnim = '0.32s cubic-bezier(0.2, 0.8, 0.2, 1)',
+    islandAnim = '0.34s cubic-bezier(0.16, 1, 0.3, 1)',
     activeMonitorWidth = 1920,
     gestures,
     virtualMinOffset = -960,
@@ -449,7 +449,7 @@
       : '0.22s cubic-bezier(0.2, 0.8, 0.2, 1)'};"
   >
     {#if !isPageDormant}
-      {#key [activePage, expanded]}
+      {#key activePage}
         {@const ActivePage = activePage}
         <div
           class="view"

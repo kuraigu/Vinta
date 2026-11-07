@@ -53,6 +53,9 @@
     position: relative;
     overscroll-behavior-y: contain;
     touch-action: pan-y;
+    will-change: scroll-position;
+    transform: translateZ(0);
+    -webkit-overflow-scrolling: touch;
   }
 
   .scroll-view::-webkit-scrollbar {

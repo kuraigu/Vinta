@@ -34,12 +34,15 @@ function findScrollableContainer(
   target: HTMLElement | null
 ): HTMLElement {
   // If the node itself is configured for scrolling, always use it
-  const nodeStyle = window.getComputedStyle(node)
   if (
-    nodeStyle.overflowY === 'auto' ||
-    nodeStyle.overflowY === 'scroll' ||
-    node.classList.contains('scroll-view')
+    node.classList.contains('scroll-view') ||
+    node.scrollHeight > node.clientHeight
   ) {
+    return node
+  }
+
+  const nodeStyle = window.getComputedStyle(node)
+  if (nodeStyle.overflowY === 'auto' || nodeStyle.overflowY === 'scroll') {
     return node
   }
 

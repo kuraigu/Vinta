@@ -407,6 +407,13 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
 
       let isDuplicate = false
       notifData.update((items) => {
+        if (payload.id) {
+          const idx = items.findIndex((item) => item.nativeId === payload.id)
+          if (idx !== -1) {
+            isDuplicate = true
+            return items
+          }
+        }
         if (isVintaSelf) {
           const idx = items.findIndex(
             (item) =>
@@ -488,11 +495,13 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
           const matchesContent =
             !it.nativeId &&
             it.title === payload.title &&
-            it.appName === payload.appName
+            (it.appName === payload.appName || it.aumid === payload.aumid)
           if (matchesId || matchesContent) {
             updated = true
             return {
               ...it,
+              appName: payload.appName || it.appName,
+              aumid: payload.aumid || it.aumid,
               icon: payload.icon || it.icon,
               appLogo: payload.appLogo || it.appLogo,
               heroImage:
