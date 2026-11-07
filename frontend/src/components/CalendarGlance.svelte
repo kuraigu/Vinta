@@ -17,6 +17,7 @@
   import ScrollView from './ScrollView.svelte'
   import BentoCard from './BentoCard.svelte'
   import AgendaEventCard from './AgendaEventCard.svelte'
+  import { islandTooltip } from '../services/islandTooltip'
   import {
     dateFormatStore,
     formatUserDate,
@@ -100,6 +101,7 @@
         class="glance-add-btn"
         onclick={handleAddEvent}
         aria-label={$tStore('calendar.add_event')}
+        use:islandTooltip={$tStore('calendar.add_event')}
       >
         <Plus size={12} />
         <span>{$tStore('calendar.add_event')}</span>
@@ -109,9 +111,9 @@
         class="glance-nav-btn"
         onclick={handleOpenCalendarPage}
         aria-label={$tStore('calendar.open_calendar')}
+        use:islandTooltip={$tStore('calendar.open_calendar')}
       >
-        <span>{$tStore('calendar.title')}</span>
-        <ChevronRight size={12} class="glance-nav-chevron" />
+        <ChevronRight size={14} class="glance-nav-chevron" />
       </button>
     </div>
   </div>

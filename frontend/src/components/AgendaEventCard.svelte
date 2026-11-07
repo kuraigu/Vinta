@@ -49,7 +49,7 @@
       <span class="tray-time-chip">{emptyChip}</span>
       <span class="tray-card-title">{emptyTitle}</span>
     </div>
-    <DiamondPattern align="center" size="compact" />
+    <DiamondPattern align="right" size="compact" />
   </div>
 {:else if variant === 'detailed'}
   <div class="agenda-card card-color-{event.color}">
@@ -152,7 +152,7 @@
       {/if}
     </div>
 
-    <DiamondPattern align="center" size="compact" />
+    <DiamondPattern align="right" size="compact" />
 
     {#if onEdit || onDelete}
       <div class="tray-card-actions">

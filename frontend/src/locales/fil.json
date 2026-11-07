@@ -134,7 +134,9 @@
     "github_title": "Mag-star sa GitHub",
     "github_desc": "Suportahan ang open source at tulungang hubugin ang Vinta roadmap",
     "appearance_title": "I-personalize ang Iyong Island",
-    "appearance_desc": "I-customize ang themes, widget feeds, at posisyon sa screen"
+    "appearance_desc": "I-customize ang themes, widget feeds, at posisyon sa screen",
+    "feedback_title": "Magpadala ng Feedback",
+    "feedback_desc": "Magbahagi ng ideya, mag-ulat ng bug, at tulungang pagandahin ang Vinta"
   },
   "settings": {
     "page_title": "Settings",

@@ -1,6 +1,6 @@
 <!--
   @component NotificationGlance
-  @description Compact notification ticker in the collapsed island showing the latest toast snippet.
+  @description Compact notification ticker in the collapsed island showing the latest toast snippet with sender avatar support.
 -->
 <script lang="ts">
   import { getContext } from 'svelte'
@@ -22,6 +22,23 @@
     getContext<
       (page: unknown, pageConfig: IslandConfig, expand?: boolean) => void
     >('navigate')
+
+  const SENDER_AVATAR_STORAGE_KEY = 'vinta_sender_avatars'
+
+  /**
+   * Retrieves persistent contact/sender profile pictures from local storage.
+   */
+  function loadSenderAvatars(): Record<string, string> {
+    try {
+      const raw = localStorage.getItem(SENDER_AVATAR_STORAGE_KEY)
+      if (raw) return JSON.parse(raw)
+    } catch {
+      // Storage unavailable or unparseable
+    }
+    return {}
+  }
+
+  const persistentSenderAvatars = loadSenderAvatars()
 
   let notifications = $derived(
     $notifData.filter(
@@ -53,7 +70,19 @@
     notifData.update((items) => items.filter((n) => n.id !== idToDismiss))
   }
 
-  function resolveIconUrl(notif: typeof latestNotif): string | null {
+  function getSenderKey(notif: typeof latestNotif): string {
+    if (!notif) return ''
+    const app = (notif.appName || notif.aumid || '').trim().toLowerCase()
+    if (app.includes('vinta')) return ''
+    const sender = (notif.title || '').trim().toLowerCase()
+    if (!sender) return ''
+    return `${app}::${sender}`
+  }
+
+  /**
+   * Resolves the parent application icon for the top brand header.
+   */
+  function resolveAppIcon(notif: typeof latestNotif): string | null {
     if (!notif) return null
 
     const rawInput = notif.appName || notif.aumid || ''
@@ -62,7 +91,7 @@
       (notif.title || '').toLowerCase().includes('vinta')
 
     if (isVinta) {
-      return notif.icon || notif.appLogo || appIcon
+      return appIcon
     }
 
     if (notif.appLogo && notif.appLogo.length > 0) {
@@ -84,22 +113,65 @@
       return nativeIcons[notif.appName]
     }
 
-    // Trigger asynchronous extraction if not in cache yet
     if (searchApp || searchAumid) {
       const extracted = requestNativeAppIcon(searchApp, searchAumid)
       if (extracted) return extracted
     }
 
-    // 3. Fall back to notif.icon if it doesn't match a wide hero image
-    if (notif.icon && notif.icon.length > 0 && notif.icon !== notif.heroImage) {
-      return notif.icon
-    }
-
-    // 4. Default to standard app icon if available
-    return notif.icon || null
+    return null
   }
 
-  let resolvedIcon = $derived(resolveIconUrl(latestNotif))
+  /**
+   * Resolves custom sender/contact avatar image when distinct from the app logo.
+   */
+  function resolveAvatarIcon(
+    notif: typeof latestNotif,
+    appLogo: string | null
+  ): string | null {
+    if (!notif) return null
+
+    const rawInput = notif.appName || notif.aumid || ''
+    if (
+      rawInput.toLowerCase().includes('vinta') ||
+      (notif.title || '').toLowerCase().includes('vinta')
+    ) {
+      return null
+    }
+
+    if (notif.icon && notif.icon.length > 0 && notif.icon !== notif.heroImage) {
+      if (!appLogo || notif.icon !== appLogo) {
+        return notif.icon
+      }
+    }
+
+    if (notif.heroImage && notif.heroImage.length > 0) {
+      const isAvatar =
+        notif.heroImage.includes('/avatars/') ||
+        notif.heroImage.includes('/avatar/') ||
+        notif.heroImage.includes('avatar') ||
+        notif.heroImage.includes('profile') ||
+        notif.heroImage.includes('user')
+      if (isAvatar) {
+        return notif.heroImage
+      }
+    }
+
+    const sKey = getSenderKey(notif)
+    if (sKey && persistentSenderAvatars[sKey]) {
+      return persistentSenderAvatars[sKey]
+    }
+
+    return null
+  }
+
+  let resolvedAppLogo = $derived(resolveAppIcon(latestNotif))
+  let resolvedAvatar = $derived(resolveAvatarIcon(latestNotif, resolvedAppLogo))
+
+  let topRowIcon = $derived(resolvedAppLogo || resolvedAvatar)
+  let bodyAvatar = $derived(
+    resolvedAvatar && resolvedAvatar !== resolvedAppLogo ? resolvedAvatar : null
+  )
+
   let appDisplayName = $derived(
     latestNotif?.appName ||
       (latestNotif?.aumid
@@ -118,9 +190,9 @@
       <div class="glance-brand-group">
         <div class="glance-avatar-container">
           {#key latestNotif?.id}
-            {#if resolvedIcon}
+            {#if topRowIcon}
               <img
-                src={resolvedIcon}
+                src={topRowIcon}
                 alt=""
                 class="glance-app-icon"
                 onerror={(e) => {
@@ -161,13 +233,28 @@
       </div>
     </div>
 
-    <div class="glance-content-preview">
-      {#if latestNotif.title}
-        <h4 class="glance-title">{latestNotif.title}</h4>
+    <div class="glance-content-preview" class:has-avatar={!!bodyAvatar}>
+      {#if bodyAvatar}
+        <div class="glance-avatar-bubble">
+          <img
+            src={bodyAvatar}
+            alt=""
+            class="glance-avatar-img"
+            onerror={(e) => {
+              const target = e.currentTarget as HTMLImageElement
+              if (target.parentElement) target.parentElement.style.display = 'none'
+            }}
+          />
+        </div>
       {/if}
-      {#if latestNotif.message}
-        <p class="glance-message">{latestNotif.message}</p>
-      {/if}
+      <div class="glance-text-col">
+        {#if latestNotif.title}
+          <h4 class="glance-title">{latestNotif.title}</h4>
+        {/if}
+        {#if latestNotif.message}
+          <p class="glance-message">{latestNotif.message}</p>
+        {/if}
+      </div>
     </div>
   </BentoCard>
 {/if}
@@ -289,9 +376,39 @@
 
   .glance-content-preview {
     display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .glance-avatar-bubble {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    overflow: hidden;
+    background: var(--vinta-icon-badge-bg);
+    border: 1px solid var(--vinta-icon-badge-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  }
+
+  .glance-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+  }
+
+  .glance-text-col {
+    display: flex;
     flex-direction: column;
     gap: 2px;
-    width: 100%;
+    min-width: 0;
+    flex: 1;
   }
 
   .glance-title {

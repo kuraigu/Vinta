@@ -25,6 +25,10 @@
   box-shadow: var(--vinta-agenda-free-shadow) !important;
 }
 
+.tray-empty-card :global(.vinta-diamond-pattern) {
+  opacity: 0.45;
+}
+
 .tray-card-main {
   position: relative;
   z-index: 1;

@@ -16,33 +16,24 @@
 }
 
 .spotlight-scroll-track {
+  position: relative;
   display: flex;
   width: 100%;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  scroll-behavior: smooth;
   gap: 10px;
   padding: 2px 20px 0;
   box-sizing: border-box;
   cursor: grab;
   touch-action: pan-y;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
+  will-change: transform;
 }
 
 .spotlight-scroll-track:active {
   cursor: grabbing;
 }
 
-.spotlight-scroll-track::-webkit-scrollbar {
-  display: none;
-}
-
 .spotlight-card {
   flex: 0 0 calc(100% - 28px);
   max-width: calc(100% - 28px);
-  scroll-snap-align: center;
-  scroll-snap-stop: always;
   display: flex;
   align-items: center;
   justify-content: space-between;
