@@ -11,6 +11,7 @@
 #define ICON_SERVICE_H
 
 #include <stdint.h>
+#include <string>
 
 #ifdef __cplusplus
 extern "C" {
@@ -23,6 +24,10 @@ int ExtractAppIconNativeToFile(const char* sourceApp, const char* aumid, const w
 
 #ifdef __cplusplus
 }
+
+std::string ExtractAppIconAsDataUri(const char* sourceApp, const char* aumid, int targetSize);
+bool QueryAppUserModelIdRegistry(const std::string& aumid, std::string& outDisplayName, std::string& outIconUri);
+
 #endif
 
 #endif // ICON_SERVICE_H

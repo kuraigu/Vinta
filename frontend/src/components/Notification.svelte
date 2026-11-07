@@ -516,11 +516,7 @@
 
     const parsed = parseAumid(rawInput)
     let defaultIcon = notif.icon || null
-
-    let displayName = parsed.displayName
-    if (displayName.toLowerCase() === (notif.title || '').toLowerCase()) {
-      displayName = 'Notification'
-    }
+    let displayName = parsed.displayName || 'Notification'
 
     // Request native extracted icon from Windows (.exe / AUMID)
     const searchApp = (parsed.processName || notif.appName || '').trim()

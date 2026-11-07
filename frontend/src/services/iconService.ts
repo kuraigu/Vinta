@@ -121,42 +121,116 @@ export function parseAumid(raw?: string): {
     s = s.substring(0, doubleColonIdx)
   }
 
+  // If already contains spaces and no path/bang, treat as formatted display name
+  const isFormatted =
+    s.includes(' ') && !s.includes('\\') && !s.includes('/') && !s.includes('!')
+
   // 1. Drop filesystem path if present
   const lastSlash = Math.max(s.lastIndexOf('/'), s.lastIndexOf('\\'))
   if (lastSlash >= 0) s = s.substring(lastSlash + 1)
 
   // 2. Chromium browsers: <AppName>.UserData.<Profile>
-  // Split on case-insensitive ".userdata." and keep first segment
+  // Split on case-insensitive ".userdata" and keep first segment
   const userDataIdx = s.toLowerCase().indexOf('.userdata')
   if (userDataIdx > 0) {
     s = s.substring(0, userDataIdx)
   }
 
-  // 3. UWP / Store apps: <PackageFamilyName>!<AppId>
-  // Isolate app identifier after '!'
-  const bangIdx = s.lastIndexOf('!')
-  if (bangIdx >= 0 && bangIdx + 1 < s.length) {
-    s = s.substring(bangIdx + 1)
+  // 3. Known Windows system toast IDs
+  const lowerRaw = s.toLowerCase()
+  if (lowerRaw === 'windows.systemtoast.startupapp') {
+    return { displayName: 'Startup Apps', processName: 'startupapp' }
+  }
+  if (
+    lowerRaw === 'windows.systemtoast.bthprops' ||
+    lowerRaw === 'windows.systemtoast.bthquickpair'
+  ) {
+    return { displayName: 'Bluetooth', processName: 'bthprops' }
+  }
+  if (lowerRaw === 'windows.systemtoast.audiotroubleshooter') {
+    return {
+      displayName: 'Audio Troubleshooter',
+      processName: 'audiotroubleshooter'
+    }
+  }
+  if (lowerRaw === 'windows.systemtoast.autoplay') {
+    return { displayName: 'AutoPlay', processName: 'autoplay' }
+  }
+  if (lowerRaw === 'windows.systemtoast.backgroundaccess') {
+    return {
+      displayName: 'Background Apps',
+      processName: 'backgroundaccess'
+    }
+  }
+  if (
+    lowerRaw === 'windows.systemtoast.calling' ||
+    lowerRaw === 'windows.systemtoast.calling.systemalertnotification'
+  ) {
+    return { displayName: 'Phone Link', processName: 'calling' }
+  }
+  if (lowerRaw === 'windows.defender') {
+    return { displayName: 'Windows Security', processName: 'defender' }
+  }
+  if (lowerRaw.includes('immersivecontrolpanel')) {
+    return {
+      displayName: 'Settings',
+      processName: 'systemsettings'
+    }
   }
 
-  // 4. Strip .exe if present
+  // 4. UWP / Store apps: <PackageFamilyName>!<AppId>
+  const bangIdx = s.lastIndexOf('!')
+  if (bangIdx >= 0 && bangIdx + 1 < s.length) {
+    const appId = s.substring(bangIdx + 1)
+    const lowerAppId = appId.toLowerCase()
+    // If generic application identifier (App, Application, etc.), extract brand from package prefix
+    if (
+      lowerAppId === 'app' ||
+      lowerAppId === 'application' ||
+      lowerAppId === 'default' ||
+      lowerAppId === 'views'
+    ) {
+      let pkg = s.substring(0, bangIdx)
+      const underscoreIdx = pkg.indexOf('_')
+      if (underscoreIdx > 0) pkg = pkg.substring(0, underscoreIdx)
+      const dotIdx = pkg.lastIndexOf('.')
+      if (dotIdx >= 0) pkg = pkg.substring(dotIdx + 1)
+      s = pkg
+    } else {
+      s = appId
+    }
+  }
+
+  // 5. Strip .exe or .app extensions
   if (s.toLowerCase().endsWith('.exe')) {
+    s = s.substring(0, s.length - 4)
+  } else if (s.toLowerCase().endsWith('.app')) {
     s = s.substring(0, s.length - 4)
   }
 
-  // 5. Reverse-domain / vendor prefix strings: take last dot-separated token
-  const dotIdx = s.lastIndexOf('.')
-  if (dotIdx >= 0 && dotIdx + 1 < s.length) {
-    s = s.substring(dotIdx + 1)
+  // 6. Reverse-domain / vendor prefix strings: take last dot-separated token
+  if (!isFormatted) {
+    const dotIdx = s.lastIndexOf('.')
+    if (dotIdx >= 0 && dotIdx + 1 < s.length) {
+      s = s.substring(dotIdx + 1)
+    }
   }
 
-  // 6. Strip package suffix after underscore
+  // 7. Strip package suffix after underscore
   const underscoreIdx = s.indexOf('_')
   if (underscoreIdx > 0) {
     s = s.substring(0, underscoreIdx)
   }
 
-  const processName = s.toLowerCase()
+  // 8. Split PascalCase / CamelCase words into spaced words (e.g. VisualStudioCode -> Visual Studio Code)
+  if (!s.includes(' ')) {
+    s = s
+      .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+      .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+      .trim()
+  }
+
+  const processName = s.toLowerCase().replace(/\s+/g, '')
   const displayName =
     s.length > 0 ? s.charAt(0).toUpperCase() + s.slice(1) : 'Notification'
 
