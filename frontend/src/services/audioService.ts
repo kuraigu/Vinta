@@ -58,9 +58,27 @@ export function playNotifChime(volume = 0.8): void {
 
     // 2. Signature Ascending Crystal Triad: F#5 (739.99Hz) -> B5 (987.77Hz) -> E6 (1318.51Hz)
     const triad = [
-      { freq: 739.99, overtone: 2042.37, start: 0.015, duration: 0.32, gain: 0.28 },
-      { freq: 987.77, overtone: 2726.24, start: 0.075, duration: 0.36, gain: 0.25 },
-      { freq: 1318.51, overtone: 2637.02, start: 0.145, duration: 0.44, gain: 0.32 }
+      {
+        freq: 739.99,
+        overtone: 2042.37,
+        start: 0.015,
+        duration: 0.32,
+        gain: 0.28
+      },
+      {
+        freq: 987.77,
+        overtone: 2726.24,
+        start: 0.075,
+        duration: 0.36,
+        gain: 0.25
+      },
+      {
+        freq: 1318.51,
+        overtone: 2637.02,
+        start: 0.145,
+        duration: 0.44,
+        gain: 0.32
+      }
     ]
 
     for (const note of triad) {
@@ -88,13 +106,19 @@ export function playNotifChime(volume = 0.8): void {
       overtoneOsc.frequency.setValueAtTime(note.overtone, startTime)
 
       overtoneGain.gain.setValueAtTime(0.0001, startTime)
-      overtoneGain.gain.linearRampToValueAtTime(note.gain * 0.22, startTime + 0.006)
-      overtoneGain.gain.exponentialRampToValueAtTime(0.0001, startTime + (note.duration * 0.65))
+      overtoneGain.gain.linearRampToValueAtTime(
+        note.gain * 0.22,
+        startTime + 0.006
+      )
+      overtoneGain.gain.exponentialRampToValueAtTime(
+        0.0001,
+        startTime + note.duration * 0.65
+      )
 
       overtoneOsc.connect(overtoneGain)
       overtoneGain.connect(masterGain)
       overtoneOsc.start(startTime)
-      overtoneOsc.stop(startTime + (note.duration * 0.65))
+      overtoneOsc.stop(startTime + note.duration * 0.65)
     }
   } catch {
     // Ignore audio playback errors if audio context is blocked
@@ -184,11 +208,41 @@ export function playAlarmPreset(
     if (preset === 'radar') {
       // Tactical Sonar Radar: Dual swept pings with acoustic reverberation and alert climax
       const pings = [
-        { freqStart: 1650, freqEnd: 1220, start: 0.00, duration: 0.26, gain: 0.32 },
-        { freqStart: 1220, freqEnd: 1220, start: 0.13, duration: 0.16, gain: 0.14 }, // Echo 1
-        { freqStart: 1960, freqEnd: 1440, start: 0.34, duration: 0.30, gain: 0.38 }, // Accented ping
-        { freqStart: 1440, freqEnd: 1440, start: 0.48, duration: 0.18, gain: 0.16 }, // Echo 2
-        { freqStart: 2180, freqEnd: 1650, start: 0.72, duration: 0.36, gain: 0.42 }  // Alert climax
+        {
+          freqStart: 1650,
+          freqEnd: 1220,
+          start: 0.0,
+          duration: 0.26,
+          gain: 0.32
+        },
+        {
+          freqStart: 1220,
+          freqEnd: 1220,
+          start: 0.13,
+          duration: 0.16,
+          gain: 0.14
+        }, // Echo 1
+        {
+          freqStart: 1960,
+          freqEnd: 1440,
+          start: 0.34,
+          duration: 0.3,
+          gain: 0.38
+        }, // Accented ping
+        {
+          freqStart: 1440,
+          freqEnd: 1440,
+          start: 0.48,
+          duration: 0.18,
+          gain: 0.16
+        }, // Echo 2
+        {
+          freqStart: 2180,
+          freqEnd: 1650,
+          start: 0.72,
+          duration: 0.36,
+          gain: 0.42
+        } // Alert climax
       ]
 
       for (const p of pings) {
@@ -198,12 +252,18 @@ export function playAlarmPreset(
 
         osc.type = 'sine'
         filter.type = 'bandpass'
-        filter.frequency.setValueAtTime((p.freqStart + p.freqEnd) / 2, now + p.start)
+        filter.frequency.setValueAtTime(
+          (p.freqStart + p.freqEnd) / 2,
+          now + p.start
+        )
         filter.Q.setValueAtTime(4.0, now + p.start)
 
         const st = now + p.start
         osc.frequency.setValueAtTime(p.freqStart, st)
-        osc.frequency.exponentialRampToValueAtTime(Math.max(20, p.freqEnd), st + p.duration)
+        osc.frequency.exponentialRampToValueAtTime(
+          Math.max(20, p.freqEnd),
+          st + p.duration
+        )
 
         gain.gain.setValueAtTime(0.0001, st)
         gain.gain.linearRampToValueAtTime(p.gain, st + 0.008)
@@ -220,10 +280,10 @@ export function playAlarmPreset(
       // Classic Digital Chronograph Alarm: High-energy two-phrase 4-burst cadence
       const bursts = [
         // Phrase 1 (1150Hz)
-        { freq: 1150, start: 0.00, duration: 0.065 },
-        { freq: 1150, start: 0.10, duration: 0.065 },
-        { freq: 1150, start: 0.20, duration: 0.065 },
-        { freq: 1150, start: 0.30, duration: 0.065 },
+        { freq: 1150, start: 0.0, duration: 0.065 },
+        { freq: 1150, start: 0.1, duration: 0.065 },
+        { freq: 1150, start: 0.2, duration: 0.065 },
+        { freq: 1150, start: 0.3, duration: 0.065 },
         // Phrase 2 (1380Hz)
         { freq: 1380, start: 0.48, duration: 0.065 },
         { freq: 1380, start: 0.58, duration: 0.065 },
@@ -246,7 +306,7 @@ export function playAlarmPreset(
 
         gain.gain.setValueAtTime(0.0001, st)
         gain.gain.linearRampToValueAtTime(0.22, st + 0.006)
-        gain.gain.linearRampToValueAtTime(0.20, st + b.duration - 0.006)
+        gain.gain.linearRampToValueAtTime(0.2, st + b.duration - 0.006)
         gain.gain.exponentialRampToValueAtTime(0.0001, st + b.duration)
 
         osc.connect(gain)
@@ -258,14 +318,14 @@ export function playAlarmPreset(
     } else if (preset === 'marimba') {
       // Resonant Wooden Marimba: Upbeat syncopated 8-note melody
       const notes = [
-        { freq: 523.25, start: 0.00, duration: 0.26 }, // C5
+        { freq: 523.25, start: 0.0, duration: 0.26 }, // C5
         { freq: 783.99, start: 0.12, duration: 0.24 }, // G5
-        { freq: 1046.50, start: 0.23, duration: 0.24 }, // C6
+        { freq: 1046.5, start: 0.23, duration: 0.24 }, // C6
         { freq: 1318.51, start: 0.35, duration: 0.28 }, // E6
         { freq: 1174.66, start: 0.48, duration: 0.24 }, // D6
-        { freq: 783.99, start: 0.60, duration: 0.24 }, // G5
+        { freq: 783.99, start: 0.6, duration: 0.24 }, // G5
         { freq: 987.77, start: 0.72, duration: 0.26 }, // B5
-        { freq: 1046.50, start: 0.85, duration: 0.38 }  // C6 (held)
+        { freq: 1046.5, start: 0.85, duration: 0.38 } // C6 (held)
       ]
 
       for (const n of notes) {
@@ -304,12 +364,12 @@ export function playAlarmPreset(
     } else {
       // Radiant Campanile Chimes: Cascading 6-note bell arpeggio sequence
       const chimeMelody = [
-        { freq: 659.25, start: 0.00, duration: 0.45 }, // E5
+        { freq: 659.25, start: 0.0, duration: 0.45 }, // E5
         { freq: 830.61, start: 0.14, duration: 0.42 }, // G#5
         { freq: 987.77, start: 0.28, duration: 0.42 }, // B5
-        { freq: 1318.51, start: 0.42, duration: 0.50 }, // E6
-        { freq: 987.77, start: 0.60, duration: 0.42 }, // B5
-        { freq: 1318.51, start: 0.76, duration: 0.60 }  // E6 (resonant tail)
+        { freq: 1318.51, start: 0.42, duration: 0.5 }, // E6
+        { freq: 987.77, start: 0.6, duration: 0.42 }, // B5
+        { freq: 1318.51, start: 0.76, duration: 0.6 } // E6 (resonant tail)
       ]
 
       for (const bell of chimeMelody) {
@@ -337,12 +397,15 @@ export function playAlarmPreset(
 
         otGain.gain.setValueAtTime(0.0001, st)
         otGain.gain.linearRampToValueAtTime(0.08, st + 0.006)
-        otGain.gain.exponentialRampToValueAtTime(0.0001, st + (bell.duration * 0.55))
+        otGain.gain.exponentialRampToValueAtTime(
+          0.0001,
+          st + bell.duration * 0.55
+        )
 
         overtone.connect(otGain)
         otGain.connect(masterGain)
         overtone.start(st)
-        overtone.stop(st + (bell.duration * 0.55))
+        overtone.stop(st + bell.duration * 0.55)
       }
     }
   } catch {

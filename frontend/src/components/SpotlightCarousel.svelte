@@ -317,8 +317,8 @@
     style="
       transform: translateX({currentTranslateX + dragOffset}px);
       transition: {isDragging || isInstant
-        ? 'none'
-        : 'transform 0.48s cubic-bezier(0.2, 1.15, 0.35, 1)'};
+      ? 'none'
+      : 'transform 0.48s cubic-bezier(0.2, 1.15, 0.35, 1)'};
     "
     use:swipe={{
       axis: 'x',

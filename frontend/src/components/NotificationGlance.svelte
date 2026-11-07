@@ -242,7 +242,8 @@
             class="glance-avatar-img"
             onerror={(e) => {
               const target = e.currentTarget as HTMLImageElement
-              if (target.parentElement) target.parentElement.style.display = 'none'
+              if (target.parentElement)
+                target.parentElement.style.display = 'none'
             }}
           />
         </div>

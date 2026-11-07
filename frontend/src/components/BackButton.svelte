@@ -37,7 +37,11 @@
   }
 </script>
 
-<button class="back-btn" onclick={handleClick} use:islandTooltip={resolvedTitle}>
+<button
+  class="back-btn"
+  onclick={handleClick}
+  use:islandTooltip={resolvedTitle}
+>
   <ArrowLeft size={14} />
 </button>
 
