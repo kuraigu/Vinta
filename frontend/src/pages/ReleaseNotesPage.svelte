@@ -44,6 +44,15 @@
   }
 
   /**
+   * Normalizes version string to ensure a single consistent leading 'v' prefix.
+   */
+  function formatVersion(ver: string | undefined): string {
+    if (!ver) return 'v0.1.0'
+    const clean = ver.trim().replace(/^v+/i, '')
+    return `v${clean}`
+  }
+
+  /**
    * Fetches latest release notes from the GitHub API and extracts markdown changelog text.
    */
   async function loadNotes() {
@@ -70,7 +79,7 @@
 
     <div class="version-tag-pill">
       <ScrollText size={12} />
-      <span>v{$appInfoStore?.version || '0.1.0'}</span>
+      <span>{formatVersion($appInfoStore?.version)}</span>
     </div>
   </header>
 

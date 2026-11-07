@@ -17,71 +17,120 @@
   function renderMarkdown(raw: string): string {
     if (!raw) return ''
 
-    let text = raw
+    // 1. Normalize line endings
+    let text = raw.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+
+    // 2. Escape basic HTML entities while preserving markdown
+    text = text
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
 
-    // Allow and decode safe inline images: <img src="..." alt="..." />
-    text = text.replace(
-      /&lt;img\s+([^&]*?src=["'](https?:\/\/[^"']+)["'][^&]*?)&gt;/gi,
-      '<img $1 loading="lazy" />'
-    )
+    // 3. Restore and sanitize safe HTML elements (details, summary, b, i, img, br)
+    text = text
+      .replace(/&lt;details&gt;/gi, '<details class="md-details">')
+      .replace(/&lt;\/details&gt;/gi, '</details>')
+      .replace(/&lt;summary&gt;/gi, '<summary class="md-summary">')
+      .replace(/&lt;\/summary&gt;/gi, '</summary>')
+      .replace(/&lt;b&gt;/gi, '<strong>')
+      .replace(/&lt;\/b&gt;/gi, '</strong>')
+      .replace(/&lt;i&gt;/gi, '<em>')
+      .replace(/&lt;\/i&gt;/gi, '</em>')
+      .replace(/&lt;br\s*\/?&gt;/gi, '<br/>')
+      .replace(
+        /&lt;img\s+([^&]*?src=["'](https?:\/\/[^"']+)["'][^&]*?)&gt;/gi,
+        '<img $1 loading="lazy" />'
+      )
 
-    // Markdown Images: ![alt](url)
-    text = text.replace(
-      /!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g,
-      '<img src="$2" alt="$1" class="md-image" loading="lazy" />'
-    )
-
-    // Code Blocks: ```code```
+    // 4. Code Blocks (```code```)
     text = text.replace(
       /```([\s\S]*?)```/g,
       '<pre class="md-code-block"><code>$1</code></pre>'
     )
 
-    // Inline Code: `code`
-    text = text.replace(/`([^`]+)`/g, '<code class="md-inline-code">$1</code>')
-
-    // Headings: ### H3, ## H2, # H1
-    text = text.replace(/^### (.*$)/gim, '<h3 class="md-h3">$1</h3>')
-    text = text.replace(/^## (.*$)/gim, '<h2 class="md-h2">$1</h2>')
-    text = text.replace(/^# (.*$)/gim, '<h1 class="md-h1">$1</h1>')
-
-    // Bold: **text**
-    text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-
-    // Italic: *text*
-    text = text.replace(/\*([^*]+)\*/g, '<em>$1</em>')
-
-    // Markdown Links: [text](url)
+    // 5. Inline Code (`code`)
     text = text.replace(
-      /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+      /`([^`\n]+)`/g,
+      '<code class="md-inline-code">$1</code>'
+    )
+
+    // 6. Markdown Images & Badges: ![alt](url)
+    text = text.replace(
+      /!\[([^\]]*)\]\((https?:\/\/[^\s)]+)\)/g,
+      (_, alt, url) => {
+        const isBadge =
+          url.includes('img.shields.io') ||
+          url.includes('badge') ||
+          url.includes('shields')
+        if (isBadge) {
+          return `<img src="${url}" alt="${alt}" class="md-badge" loading="lazy" />`
+        }
+        return `<img src="${url}" alt="${alt}" class="md-image" loading="lazy" />`
+      }
+    )
+
+    // 7. Headings: ### H3, ## H2, # H1
+    text = text.replace(/^### (.*$)/gm, '<h3 class="md-h3">$1</h3>')
+    text = text.replace(/^## (.*$)/gm, '<h2 class="md-h2">$1</h2>')
+    text = text.replace(/^# (.*$)/gm, '<h1 class="md-h1">$1</h1>')
+
+    // 8. Horizontal Rules
+    text = text.replace(/^---+$/gm, '<hr class="md-hr" />')
+
+    // 9. Markdown Links: [text](url)
+    text = text.replace(
+      /\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g,
       '<a href="$2" target="_blank" rel="noreferrer" class="md-link">$1</a>'
     )
 
-    // Unordered Lists: - item or * item
+    // 10. Bare HTTP/HTTPS URLs (not preceded by href=" or src=" or >)
     text = text.replace(
-      /^\s*[-*]\s+(.*$)/gim,
+      /(?<!href=")(?<!src=")(?<!">)(https?:\/\/[^\s<)"']+)/g,
+      '<a href="$1" target="_blank" rel="noreferrer" class="md-link">$1</a>'
+    )
+
+    // 11. Unordered Lists: * item or - item (MUST run before italic to avoid stealing leading asterisks)
+    text = text.replace(
+      /^\s*[-*]\s+(.*$)/gm,
       '<li class="md-list-item">$1</li>'
     )
 
-    // Paragraph line breaks (double newline to paragraph gap)
-    const paragraphs = text.split(/\n{2,}/)
-    return paragraphs
-      .map((p) => {
-        const trimmed = p.trim()
+    // 12. Group consecutive <li> into <ul>
+    text = text.replace(
+      /((?:<li class="md-list-item">.*<\/li>\n*)+)/g,
+      '<ul class="md-list">$1</ul>'
+    )
+
+    // 13. Bold: **text**
+    text = text.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
+
+    // 14. Italic: *text* (word-bounded, single line only)
+    text = text.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, '<em>$1</em>')
+
+    // 15. Clean block paragraphs
+    const blocks = text.split(/\n{2,}/)
+    return blocks
+      .map((b) => {
+        const trimmed = b.trim()
+        if (!trimmed) return ''
         if (
           trimmed.startsWith('<h1') ||
           trimmed.startsWith('<h2') ||
           trimmed.startsWith('<h3') ||
           trimmed.startsWith('<pre') ||
-          trimmed.startsWith('<li')
+          trimmed.startsWith('<ul') ||
+          trimmed.startsWith('<ol') ||
+          trimmed.startsWith('<details') ||
+          trimmed.startsWith('<hr')
         ) {
           return trimmed
         }
+        if (trimmed.startsWith('<img') && !trimmed.includes('\n')) {
+          return `<div class="md-badge-row">${trimmed}</div>`
+        }
         return `<p class="md-paragraph">${trimmed.replace(/\n/g, '<br/>')}</p>`
       })
+      .filter(Boolean)
       .join('\n')
   }
 
@@ -188,9 +237,55 @@
     margin: 6px 0;
   }
 
+  :global(.markdown-viewer-container .md-list) {
+    margin: 4px 0 8px 0;
+    padding-left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
   :global(.markdown-viewer-container .md-list-item) {
-    margin-left: 18px;
     list-style-type: disc;
+    line-height: 1.45;
     text-align: left;
+  }
+
+  :global(.markdown-viewer-container .md-badge-row) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    margin: 2px 0 6px;
+  }
+
+  :global(.markdown-viewer-container .md-badge) {
+    height: 20px;
+    object-fit: contain;
+    border: none;
+    background: transparent;
+    border-radius: 3px;
+  }
+
+  :global(.markdown-viewer-container .md-details) {
+    margin: 8px 0;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: var(--vinta-surface-elevated, rgba(255, 255, 255, 0.04));
+    border: 1px solid var(--vinta-border);
+  }
+
+  :global(.markdown-viewer-container .md-summary) {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--vinta-text-primary);
+    user-select: none;
+    margin-bottom: 6px;
+  }
+
+  :global(.markdown-viewer-container .md-hr) {
+    border: none;
+    border-top: 1px solid var(--vinta-border);
+    margin: 12px 0;
   }
 </style>

@@ -26,6 +26,12 @@
 
   let notesSnippet = $state('')
 
+  function formatVersion(ver: string | undefined): string {
+    if (!ver) return 'v0.1.0'
+    const clean = ver.trim().replace(/^v+/i, '')
+    return `v${clean}`
+  }
+
   onMount(async () => {
     try {
       const ver = $appInfoStore?.version || '0.1.0'
@@ -67,7 +73,7 @@
         </div>
         <span class="glance-brand-name">Release Notes</span>
         <span class="glance-version-pill"
-          >v{$appInfoStore?.version || '0.1.0'}</span
+          >{formatVersion($appInfoStore?.version)}</span
         >
       </div>
 
@@ -80,7 +86,7 @@
 
     <div class="glance-content-preview">
       <h4 class="glance-title">
-        What's New in Vinta v{$appInfoStore?.version || '0.1.0'}
+        What's New in Vinta {formatVersion($appInfoStore?.version)}
       </h4>
       <p class="glance-message">
         {notesSnippet ||
