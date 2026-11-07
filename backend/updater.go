@@ -291,7 +291,15 @@ func (a *App) CheckForUpdates(force bool) (*UpdateCheckResult, error) {
 			var cached cachedUpdateData
 			if err := json.Unmarshal(data, &cached); err == nil {
 				if time.Now().Unix()-cached.Timestamp < 3600 {
-					return &cached.Result, nil
+					cleanCur := cleanVersion(currentVersion)
+					cleanCachedCur := cleanVersion(cached.Result.CurrentVersion)
+					cleanCachedLatest := cleanVersion(cached.Result.LatestVersion)
+
+					// Only return cached result if it was checked for the current running version,
+					// and it does not falsely claim the current version is an update.
+					if cleanCur == cleanCachedCur && (!cached.Result.UpdateAvailable || (cleanCur != cleanCachedLatest && isNewerVersion(cleanCur, cleanCachedLatest))) {
+						return &cached.Result, nil
+					}
 				}
 			}
 		}
@@ -435,9 +443,9 @@ func (a *App) CheckForUpdates(force bool) (*UpdateCheckResult, error) {
 		}
 	}
 
-	cleanCurrent := strings.TrimPrefix(currentVersion, "v")
-	cleanLatest := strings.TrimPrefix(ghRelease.TagName, "v")
-	hasUpdate := isNewerVersion(cleanCurrent, cleanLatest)
+	cleanCurrent := cleanVersion(currentVersion)
+	cleanLatest := cleanVersion(ghRelease.TagName)
+	hasUpdate := cleanCurrent != cleanLatest && isNewerVersion(cleanCurrent, cleanLatest)
 
 	status := "up-to-date"
 	msg := "Vinta is currently up to date."
@@ -945,10 +953,23 @@ func calcPercent(downloaded, total int64) float64 {
 	return p
 }
 
+// cleanVersion trims any leading 'v' or 'V' and whitespace.
+func cleanVersion(v string) string {
+	v = strings.TrimSpace(v)
+	v = strings.TrimLeft(v, "vV")
+	return v
+}
+
 // isNewerVersion returns true if candidate is newer than current.
 func isNewerVersion(current, candidate string) bool {
-	currMajor, currMinor, currPatch, currPre := parseSemVer(current)
-	candMajor, candMinor, candPatch, candPre := parseSemVer(candidate)
+	c1 := cleanVersion(current)
+	c2 := cleanVersion(candidate)
+	if c1 == c2 || c2 == "" {
+		return false
+	}
+
+	currMajor, currMinor, currPatch, currPre := parseSemVer(c1)
+	candMajor, candMinor, candPatch, candPre := parseSemVer(c2)
 
 	if candMajor != currMajor {
 		return candMajor > currMajor
@@ -977,6 +998,9 @@ func isNewerVersion(current, candidate string) bool {
 
 // comparePreRelease compares two pre-release strings. Returns negative if a < b, positive if a > b, 0 if equal.
 func comparePreRelease(a, b string) int {
+	if a == b {
+		return 0
+	}
 	if strings.HasPrefix(a, "dev") && !strings.HasPrefix(b, "dev") {
 		return -1
 	}
@@ -1010,7 +1034,7 @@ func comparePreRelease(a, b string) int {
 }
 
 func parseSemVer(v string) (int, int, int, string) {
-	v = strings.TrimPrefix(v, "v")
+	v = cleanVersion(v)
 	parts := strings.SplitN(v, "-", 2)
 	base := parts[0]
 	pre := ""

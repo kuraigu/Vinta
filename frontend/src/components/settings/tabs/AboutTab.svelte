@@ -9,7 +9,6 @@
   import BentoCard from '../../BentoCard.svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
-  import ReleaseNotesGlance from '../../ReleaseNotesGlance.svelte'
   import appIcon from '@appicon'
   import { reportFeedback } from '../../../services/feedbackService'
   import { tStore } from '../../../store'
@@ -180,9 +179,6 @@
       </SettingActionButton>
     </div>
   </SettingItem>
-
-  <!-- Release Notes Glance -->
-  <ReleaseNotesGlance />
 
   <!-- Maintainers and Contributors -->
   {#if maintainers.length > 0 || generalContributors.length > 0}

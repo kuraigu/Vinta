@@ -24,19 +24,90 @@
       (page: unknown, pageConfig: IslandConfig, expand?: boolean) => void
     >('navigate')
 
-  let notesSnippet = $state('')
+  let rawNotes = $state('')
+
+  function formatVersion(ver: string | undefined): string {
+    if (!ver) return 'v0.1.0'
+    const clean = ver.trim().replace(/^v+/i, '')
+    return `v${clean}`
+  }
+
+  /**
+   * Scans release notes markdown for the first valid non-badge preview image.
+   */
+  function extractFirstImage(text: string | undefined): string | null {
+    if (!text) return null
+    const mdRegex = /!\[.*?\]\((https?:\/\/[^\s)"]+)(?:\s+["'][^"']*["'])?\)/g
+    let match: RegExpExecArray | null
+    while ((match = mdRegex.exec(text)) !== null) {
+      const url = match[1]
+      if (!url.includes('shields.io') && !url.includes('badge')) {
+        return url
+      }
+    }
+    const htmlRegex = /<img[^>]+src=["'](https?:\/\/[^"']+)["']/gi
+    while ((match = htmlRegex.exec(text)) !== null) {
+      const url = match[1]
+      if (!url.includes('shields.io') && !url.includes('badge')) {
+        return url
+      }
+    }
+    return null
+  }
+
+  /**
+   * Cleans and renders inline markdown formatting into safe HTML for the glance card preview.
+   */
+  function renderGlanceSnippet(raw: string | undefined, maxLen = 110): string {
+    if (!raw) return ''
+
+    let text = raw
+      .replace(/!\[.*?\]\((https?:\/\/[^\s)"]+)(?:\s+["'][^"']*["'])?\)/g, '')
+      .replace(/<img[^>]*>/gi, '')
+      .replace(/<details[\s\S]*?<\/details>/gi, '')
+      .replace(/^#+\s+/gm, '')
+      .replace(/^---+$/gm, '')
+      .replace(/\r?\n+/g, ' ')
+      .trim()
+
+    text = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+
+    const isTruncated = text.length > maxLen
+    if (isTruncated) {
+      text = text.slice(0, maxLen).trim()
+    }
+
+    text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    text = text.replace(/(?<!\*)\*([^*\s][^*]*[^*\s]|\S)\*(?!\*)/g, '<em>$1</em>')
+    text = text.replace(/`([^`]+)`/g, '<code class="glance-inline-code">$1</code>')
+    text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<span class="glance-inline-link">$1</span>')
+
+    return isTruncated ? text + '...' : text
+  }
+
+  function getPreviewImage(): string | null {
+    return extractFirstImage(rawNotes)
+  }
+
+  function getSnippetHtml(): string {
+    if (!rawNotes) {
+      return 'Discover the latest features, improvements, and fixes in this build.'
+    }
+    return renderGlanceSnippet(rawNotes, previewImage ? 85 : 120)
+  }
+
+  let previewImage = $derived(getPreviewImage())
+  let snippetHtml = $derived(getSnippetHtml())
 
   onMount(async () => {
     try {
       const ver = $appInfoStore?.version || '0.1.0'
       const raw = await getReleaseNotes(ver)
       if (raw) {
-        notesSnippet =
-          raw
-            .replace(/[#*`>-]+/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim()
-            .slice(0, 110) + '...'
+        rawNotes = raw
       }
     } catch {
       // Ignore background fetch error
@@ -67,7 +138,7 @@
         </div>
         <span class="glance-brand-name">Release Notes</span>
         <span class="glance-version-pill"
-          >v{$appInfoStore?.version || '0.1.0'}</span
+          >{formatVersion($appInfoStore?.version)}</span
         >
       </div>
 
@@ -78,14 +149,31 @@
       />
     </div>
 
-    <div class="glance-content-preview">
-      <h4 class="glance-title">
-        What's New in Vinta v{$appInfoStore?.version || '0.1.0'}
-      </h4>
-      <p class="glance-message">
-        {notesSnippet ||
-          'Discover the latest features, improvements, and fixes in this build.'}
-      </p>
+    <div class="glance-content-preview" class:has-image={!!previewImage}>
+      <div class="glance-text-col">
+        <h4 class="glance-title">
+          What's New in Vinta {formatVersion($appInfoStore?.version)}
+        </h4>
+        <p class="glance-message">
+          <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+          {@html snippetHtml}
+        </p>
+      </div>
+
+      {#if previewImage}
+        <div class="glance-thumb-wrapper">
+          <img
+            src={previewImage}
+            alt=""
+            class="glance-thumb-image"
+            onerror={(e) => {
+              const target = e.currentTarget as HTMLImageElement
+              if (target.parentElement)
+                target.parentElement.style.display = 'none'
+            }}
+          />
+        </div>
+      {/if}
     </div>
   </BentoCard>
 </div>

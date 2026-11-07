@@ -53,7 +53,7 @@ func (a *App) GetReleaseNotes(version string) (string, error) {
 	if cleanVersion == "" {
 		cleanVersion = AppVersion
 	}
-	cleanVersion = strings.TrimPrefix(cleanVersion, "v")
+	cleanVersion = strings.TrimLeft(cleanVersion, "vV")
 	if cleanVersion == "" {
 		cleanVersion = "0.1.0"
 	}
@@ -163,7 +163,7 @@ func (a *App) GetDeveloperAnnouncements() (AnnouncementsPayload, error) {
 
 	client := &http.Client{Timeout: 5 * time.Second}
 
-	// 1. Primary Source: GitHub Discussions Announcements Atom Feed
+	// Primary Source: GitHub Discussions Announcements Atom Feed
 	discussionsURL := "https://github.com/kuraigu/Vinta/discussions/categories/announcements.atom"
 	reqDisc, err := http.NewRequest("GET", discussionsURL, nil)
 	if err == nil {
@@ -187,71 +187,12 @@ func (a *App) GetDeveloperAnnouncements() (AnnouncementsPayload, error) {
 		}
 	}
 
-	// 2. Secondary Source: GitHub Releases Feed
-	releasesURL := "https://api.github.com/repos/kuraigu/Vinta/releases?per_page=5"
-	reqRel, err := http.NewRequest("GET", releasesURL, nil)
-	if err == nil {
-		reqRel.Header.Set("User-Agent", "Vinta-App")
-		reqRel.Header.Set("Accept", "application/vnd.github.v3+json")
-		if token := resolveUpdaterToken(); token != "" {
-			reqRel.Header.Set("Authorization", "Bearer "+token)
-		}
-		if respRel, err := client.Do(reqRel); err == nil {
-			defer func() { _ = respRel.Body.Close() }()
-			if respRel.StatusCode == http.StatusOK {
-				if bodyBytes, err := io.ReadAll(respRel.Body); err == nil && len(bodyBytes) > 0 {
-					var rawReleases []struct {
-						ID          int64  `json:"id"`
-						Name        string `json:"name"`
-						Body        string `json:"body"`
-						HTMLURL     string `json:"html_url"`
-						TagName     string `json:"tag_name"`
-						PublishedAt string `json:"published_at"`
-						Author      struct {
-							Login     string `json:"login"`
-							AvatarURL string `json:"avatar_url"`
-						} `json:"author"`
-					}
-					if err := json.Unmarshal(bodyBytes, &rawReleases); err == nil && len(rawReleases) > 0 {
-						var items []AnnouncementItem
-						for _, r := range rawReleases {
-							title := r.Name
-							if title == "" {
-								title = r.TagName
-							}
-							authorName := r.Author.Login
-							if authorName == "" {
-								authorName = "kuraigu"
-							}
-							avatar := r.Author.AvatarURL
-							if avatar == "" {
-								avatar = fmt.Sprintf("https://github.com/%s.png?size=64", authorName)
-							}
-							items = append(items, AnnouncementItem{
-								ID:           fmt.Sprintf("%d", r.ID),
-								Title:        title,
-								Body:         r.Body,
-								URL:          r.HTMLURL,
-								PublishedAt:  formatPublishedDate(r.PublishedAt),
-								AuthorName:   authorName,
-								AuthorAvatar: avatar,
-								IsUnread:     false,
-							})
-						}
-						return a.finalizeAnnouncements(items, cacheFile, hashFile), nil
-					}
-				}
-			}
-		}
-	}
-
-	// 3. Fallback: Load from offline disk cache or bundled starter announcement
+	// Fallback: Load from offline disk cache or starter welcome announcement
 	return a.loadCachedAnnouncements(cacheFile, hashFile), nil
 }
 
 func (a *App) parseAtomEntries(entries []atomEntry) []AnnouncementItem {
 	var items []AnnouncementItem
-	htmlTagRegex := regexp.MustCompile(`<[^>]*>`)
 	for _, e := range entries {
 		title := strings.TrimSpace(e.Title)
 		if title == "" {
@@ -262,8 +203,7 @@ func (a *App) parseAtomEntries(entries []atomEntry) []AnnouncementItem {
 			author = "kuraigu"
 		}
 		avatar := fmt.Sprintf("https://github.com/%s.png?size=64", author)
-		cleanBody := htmlTagRegex.ReplaceAllString(e.Content, "")
-		cleanBody = strings.TrimSpace(cleanBody)
+		cleanBody := cleanDiscussionContent(e.Content)
 
 		items = append(items, AnnouncementItem{
 			ID:           e.ID,
@@ -277,6 +217,55 @@ func (a *App) parseAtomEntries(entries []atomEntry) []AnnouncementItem {
 		})
 	}
 	return items
+}
+
+// cleanDiscussionContent normalizes HTML from the Atom feed into clean Markdown, preserving images and links.
+func cleanDiscussionContent(content string) string {
+	if content == "" {
+		return ""
+	}
+
+	// 1. Convert <img> tags to markdown image syntax: ![alt](src)
+	imgRegex := regexp.MustCompile(`(?i)<img[^>]*src=["']([^"']+)["'][^>]*alt=["']([^"']*)["'][^>]*>`)
+	content = imgRegex.ReplaceAllString(content, "![$2]($1)")
+
+	imgFallbackRegex := regexp.MustCompile(`(?i)<img[^>]*src=["']([^"']+)["'][^>]*>`)
+	content = imgFallbackRegex.ReplaceAllString(content, "![]($1)")
+
+	// 2. Convert <a> tags to markdown link syntax: [text](href)
+	linkRegex := regexp.MustCompile(`(?i)<a[^>]*href=["']([^"']+)["'][^>]*>(.*?)</a>`)
+	content = linkRegex.ReplaceAllString(content, "[$2]($1)")
+
+	// 3. Convert paragraphs & breaks to newlines
+	brRegex := regexp.MustCompile(`(?i)<br\s*/?>`)
+	content = brRegex.ReplaceAllString(content, "\n")
+
+	pCloseRegex := regexp.MustCompile(`(?i)</p>`)
+	content = pCloseRegex.ReplaceAllString(content, "\n\n")
+
+	// 4. Convert basic styling tags
+	bRegex := regexp.MustCompile(`(?i)<(?:strong|b)>(.*?)</(?:strong|b)>`)
+	content = bRegex.ReplaceAllString(content, "**$1**")
+
+	iRegex := regexp.MustCompile(`(?i)<(?:em|i)>(.*?)</(?:em|i)>`)
+	content = iRegex.ReplaceAllString(content, "*$1*")
+
+	liRegex := regexp.MustCompile(`(?i)<li[^>]*>(.*?)</li>`)
+	content = liRegex.ReplaceAllString(content, "* $1\n")
+
+	// 5. Strip any remaining unsupported/dangerous HTML tags
+	otherTagsRegex := regexp.MustCompile(`</?[a-zA-Z][^>]*>`)
+	content = otherTagsRegex.ReplaceAllString(content, "")
+
+	// 6. Decode common HTML entities
+	content = strings.ReplaceAll(content, "&amp;", "&")
+	content = strings.ReplaceAll(content, "&lt;", "<")
+	content = strings.ReplaceAll(content, "&gt;", ">")
+	content = strings.ReplaceAll(content, "&quot;", "\"")
+	content = strings.ReplaceAll(content, "&#39;", "'")
+	content = strings.ReplaceAll(content, "&nbsp;", " ")
+
+	return strings.TrimSpace(content)
 }
 
 func (a *App) finalizeAnnouncements(items []AnnouncementItem, cacheFile, hashFile string) AnnouncementsPayload {
@@ -344,6 +333,15 @@ func (a *App) loadCachedAnnouncements(cacheFile, hashFile string) AnnouncementsP
 		if err == nil {
 			var items []AnnouncementItem
 			if err := json.Unmarshal(data, &items); err == nil && len(items) > 0 {
+				// Purge legacy cache if it was populated from GitHub Releases rather than Discussions
+				if strings.Contains(items[0].URL, "/releases/") || strings.HasPrefix(items[0].Title, "Release ") {
+					_ = os.Remove(cacheFile)
+					if hashFile != "" {
+						_ = os.Remove(hashFile)
+					}
+					return a.starterAnnouncement()
+				}
+
 				var storedHash string
 				if hashFile != "" {
 					if d, err := os.ReadFile(hashFile); err == nil {
@@ -366,12 +364,15 @@ func (a *App) loadCachedAnnouncements(cacheFile, hashFile string) AnnouncementsP
 		}
 	}
 
-	// First-run offline fallback when no cache exists yet.
+	return a.starterAnnouncement()
+}
+
+func (a *App) starterAnnouncement() AnnouncementsPayload {
 	starterItem := AnnouncementItem{
 		ID:           "welcome-announcement",
 		Title:        "Welcome to Vinta!",
-		Body:         "Thanks for installing Vinta. Project news, release notes, and update highlights will show up here.\n\nConnect to the internet to see the latest updates from GitHub.",
-		URL:          "https://github.com/kuraigu/Vinta",
+		Body:         "Thanks for installing Vinta. Official announcements, roadmap milestones, and community news will appear here once published.\n\nCheck out the documentation or join our GitHub Discussions to connect with the team.",
+		URL:          "https://github.com/kuraigu/Vinta/discussions",
 		PublishedAt:  time.Now().Format("Jan 02, 2006"),
 		AuthorName:   "kuraigu",
 		AuthorAvatar: "https://github.com/kuraigu.png?size=64",

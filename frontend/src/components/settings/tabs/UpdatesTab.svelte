@@ -25,6 +25,7 @@
   import BentoCard from '../../BentoCard.svelte'
   import CirclePattern from '../../patterns/CirclePattern.svelte'
   import CustomSelect from '../../CustomSelect.svelte'
+  import ReleaseNotesGlance from '../../ReleaseNotesGlance.svelte'
   import {
     updateInfoStore,
     updateCheckingStore,
@@ -363,6 +364,9 @@
         {/if}
       </BentoCard>
     {/if}
+
+    <!-- Current Installed Version Release Notes -->
+    <ReleaseNotesGlance />
 
     <SettingItem
       label="Release Channel"
