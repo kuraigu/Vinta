@@ -89,13 +89,6 @@
   background: var(--vinta-accent-primary, #38bdf8);
 }
 
-.pane-subtitle {
-  margin: 0;
-  font-size: 0.76rem;
-  color: var(--vinta-text-secondary);
-  line-height: 1.38;
-}
-
 .pane-body {
   flex: 1;
   min-height: 0;

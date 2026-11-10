@@ -292,7 +292,6 @@
             {/each}
           </div>
         </div>
-        <p class="pane-subtitle">{$tStore(stepData.subtitleKey)}</p>
       </header>
 
       <div class="pane-body">
