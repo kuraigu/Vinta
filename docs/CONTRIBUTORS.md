@@ -19,11 +19,11 @@ All contributors are recognized here and credited directly inside the Vinta desk
 <table>
   <tbody>
     <tr>
-      <td align="center" valign="top" width="20%"><a href="https://github.com/kuraigu"><img src="https://github.com/kuraigu.png?size=48" width="48px;" alt="Innoh Reloza (DippedInSoju)"/><br /><sub><b>Innoh Reloza (DippedInSoju)</b></sub></a><br />founder,contributor</td>
-      <td align="center" valign="top" width="20%"><a href="https://github.com/KnightCrawl"><img src="https://github.com/KnightCrawl.png?size=48" width="48px;" alt="Rico Salvador"/><br /><sub><b>Rico Salvador</b></sub></a><br />maintainer,contributor</td>
-      <td align="center" valign="top" width="20%"><a href="https://github.com/deyanxxx"><img src="https://avatars.githubusercontent.com/u/110455846?v=4&size=48" width="48px;" alt="Deyanxxx"/><br /><sub><b>Deyanxxx</b></sub></a><br />tester</td>
-      <td align="center" valign="top" width="20%"><a href="https://github.com/shintaroo-hub"><img src="https://avatars.githubusercontent.com/u/8610745?v=4&size=48" width="48px;" alt="Rouille"/><br /><sub><b>Rouille</b></sub></a><br />tester</td>
-      <td align="center" valign="top" width="20%"><a href="https://arronparejas.dev/"><img src="https://avatars.githubusercontent.com/u/140617917?v=4&size=48" width="48px;" alt="Arron Parejas"/><br /><sub><b>Arron Parejas</b></sub></a><br />tester</td>
+      <td align="center" valign="top" width="20%"><a href="https://github.com/kuraigu"><img src="https://github.com/kuraigu.png" width="48px;" alt="Innoh Reloza (DippedInSoju)"/><br /><sub><b>Innoh Reloza (DippedInSoju)</b></sub></a><br />founder,contributor</td>
+      <td align="center" valign="top" width="20%"><a href="https://github.com/KnightCrawl"><img src="https://github.com/KnightCrawl.png" width="48px;" alt="Rico Salvador"/><br /><sub><b>Rico Salvador</b></sub></a><br />maintainer,contributor</td>
+      <td align="center" valign="top" width="20%"><a href="https://github.com/deyanxxx"><img src="https://avatars.githubusercontent.com/u/110455846?v=4" width="48px;" alt="Deyanxxx"/><br /><sub><b>Deyanxxx</b></sub></a><br />tester</td>
+      <td align="center" valign="top" width="20%"><a href="https://github.com/shintaroo-hub"><img src="https://avatars.githubusercontent.com/u/8610745?v=4" width="48px;" alt="Rouille"/><br /><sub><b>Rouille</b></sub></a><br />tester</td>
+      <td align="center" valign="top" width="20%"><a href="https://arronparejas.dev/"><img src="https://avatars.githubusercontent.com/u/140617917?v=4" width="48px;" alt="Arron Parejas"/><br /><sub><b>Arron Parejas</b></sub></a><br />tester</td>
     </tr>
   </tbody>
 </table>
