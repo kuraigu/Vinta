@@ -12,6 +12,8 @@
     | 'amber'
     | 'rose'
     | 'indigo'
+    | 'slate'
+    | 'teal'
     | 'surface'
 
   export type IconBadgeSize = 'sm' | 'md' | 'lg'

@@ -58,6 +58,7 @@
     type SidebarNavItem
   } from '../components/SidebarLayout.svelte'
   import BentoCard from '../components/BentoCard.svelte'
+  import ScrollView from '../components/ScrollView.svelte'
   import IconBadge, {
     type IconBadgeColor
   } from '../components/IconBadge.svelte'
@@ -295,6 +296,7 @@
       </header>
 
       <div class="pane-body">
+        <ScrollView class="onboarding-scroll">
         {#key currentStep}
           <div class="onboarding-step-transition">
             {#if currentStep === 0}
@@ -622,6 +624,7 @@
             {/if}
           </div>
         {/key}
+        </ScrollView>
       </div>
 
       <footer class="pane-footer">

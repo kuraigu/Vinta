@@ -68,6 +68,14 @@
   background: var(--vinta-agenda-indigo-bg, linear-gradient(135deg, #6366f1, #4338ca));
 }
 
+.vinta-icon-badge.color-slate {
+  background: var(--vinta-agenda-slate-bg, linear-gradient(135deg, #64748b, #475569));
+}
+
+.vinta-icon-badge.color-teal {
+  background: var(--vinta-agenda-teal-bg, linear-gradient(135deg, #14b8a6, #0f766e));
+}
+
 .vinta-icon-badge.color-surface {
   background: var(--vinta-surface-elevated, rgba(255, 255, 255, 0.06));
   color: var(--vinta-text-primary, #ffffff);

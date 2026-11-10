@@ -103,12 +103,19 @@
   flex-direction: column;
   justify-content: flex-start;
   gap: 10px;
-  overflow-y: auto;
-  padding-right: 2px;
+  overflow: hidden;
+}
+
+:global(.onboarding-scroll) {
+  flex: 1;
+  min-height: 0;
 }
 
 .onboarding-step-transition {
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding-right: 8px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -178,7 +185,7 @@
 /* Step 1 Input Cards */
 .onboarding-inputs-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 8px;
 }
 
