@@ -166,13 +166,16 @@
 <div class="setting-group">
   <SettingItem
     label="Weather Location"
-    description="Target location for forecasts (Default: Auto-detect)"
+    description="Target location for forecasts"
     icon={MapPin}
     flexCol={true}
+    isDefault={selectedWeatherCity === weatherLocationStore.defaultValue.name}
+    onReset={() => weatherLocationStore.reset()}
   >
     <CustomSelect
       options={weatherOptions}
       value={selectedWeatherCity}
+      defaultValue={GLOBAL_WEATHER_PRESETS[0]?.name}
       searchable={true}
       fullWidth={true}
       direction="auto"
@@ -183,9 +186,11 @@
 
   <SettingItem
     label="Temperature Unit"
-    description="Measurement unit for temperatures (Default: Celsius)"
+    description="Measurement unit for temperatures"
     icon={Thermometer}
     flexCol={true}
+    isDefault={$weatherUnitStore === weatherUnitStore.defaultValue}
+    onReset={() => weatherUnitStore.reset()}
   >
     <div class="segment-control full-width">
       <button

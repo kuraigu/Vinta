@@ -13,9 +13,12 @@
 :global(.announcement-glance-card) {
   display: flex !important;
   flex-direction: column !important;
-  gap: 8px !important;
+  gap: 6px !important;
   padding: 10px 14px !important;
-  min-height: 64px;
+  height: 76px;
+  min-height: 76px;
+  max-height: 76px;
+  overflow: hidden;
   cursor: pointer;
   text-align: left;
   align-items: flex-start;

@@ -20,7 +20,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { Events } from '@wailsio/runtime'
-  import './styles/TimerPage.css'
   import {
     Hourglass,
     Clock,
@@ -277,26 +276,22 @@
     {
       id: 'timer',
       label: $tStore('timer.countdown_tab'),
-      icon: Hourglass,
-      tooltip: $tStore('timer.countdown_tooltip')
+      icon: Hourglass
     },
     {
       id: 'stopwatch',
       label: $tStore('timer.stopwatch_tab'),
-      icon: Clock,
-      tooltip: $tStore('timer.stopwatch_tooltip')
+      icon: Clock
     },
     {
       id: 'focus',
       label: $tStore('timer.focus_tab'),
-      icon: Flame,
-      tooltip: $tStore('timer.focus_tooltip')
+      icon: Flame
     },
     {
       id: 'alarms',
       label: $tStore('timer.alarms_tab'),
-      icon: Bell,
-      tooltip: $tStore('timer.alarms_tooltip')
+      icon: Bell
     }
   ])
 
@@ -374,7 +369,42 @@
     }
   }
   $effect(handleMinimizeEffect)
+
+  /**
+   * Handles Spacebar shortcut to toggle Play/Pause on the active timer/stopwatch/focus tab.
+   *
+   * @param e - Window keyboard event.
+   */
+  function handleTimerWindowKeyDown(e: KeyboardEvent): void {
+    if (!expanded || isCustomDrawerOpen || isSettingsOpen || isNewAlarmOpen) {
+      return
+    }
+    const target = e.target as HTMLElement | null
+    if (
+      target &&
+      (target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable)
+    ) {
+      return
+    }
+    if (e.code === 'Space') {
+      const tab = $timerAppStore.activeTab
+      if (tab === 'timer') {
+        e.preventDefault()
+        toggleCountdown()
+      } else if (tab === 'stopwatch') {
+        e.preventDefault()
+        toggleStopwatch()
+      } else if (tab === 'focus') {
+        e.preventDefault()
+        toggleFocus()
+      }
+    }
+  }
 </script>
+
+<svelte:window onkeydown={handleTimerWindowKeyDown} />
 
 <div
   data-vinta="timer-page"
@@ -574,7 +604,6 @@
             <button
               class="banner-action-btn snooze"
               onclick={() => snoozeRingingAlarm()}
-              use:islandTooltip={$tStore('timer.snooze')}
             >
               <Clock size={12} />
               <span>{$tStore('timer.snooze')}</span>
@@ -582,7 +611,6 @@
             <button
               class="banner-action-btn stop"
               onclick={dismissRingingAlarm}
-              use:islandTooltip={$tStore('timer.dismiss')}
             >
               <X size={12} />
               <span>{$tStore('timer.dismiss')}</span>
@@ -630,3 +658,5 @@
     </div>
   {/if}
 </div>
+
+<style src="./styles/TimerPage.css"></style>

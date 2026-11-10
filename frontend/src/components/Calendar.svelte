@@ -712,12 +712,7 @@
           </div>
 
           <div class="month-nav-right">
-            <button
-              type="button"
-              class="today-btn"
-              onclick={jumpToToday}
-              use:islandTooltip={'Jump to current day'}
-            >
+            <button type="button" class="today-btn" onclick={jumpToToday}>
               {$tStore('calendar.today')}
             </button>
 

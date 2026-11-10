@@ -112,7 +112,7 @@
   )
 
   const uiScaleOptions = $derived([
-    { label: '100% (Standard 1.0x)', value: '1' },
+    { label: '100% (1.0x)', value: '1', isDefault: true },
     {
       label:
         monitorHeight <= 900 ? '110% (1.1x - Max for display)' : '110% (1.1x)',
@@ -151,9 +151,11 @@
 <div class="setting-group">
   <SettingItem
     label="Display Name"
-    description="Personalizes the greeting on the Home feed (Default: User)"
+    description="Personalizes the greeting on the Home feed"
     icon={User}
     flexCol={true}
+    isDefault={$userNameStore === userNameStore.defaultValue}
+    onReset={() => userNameStore.reset()}
   >
     <div class="input-wrapper">
       <input
@@ -178,11 +180,14 @@
     description={$tStore('appearance.theme_desc')}
     icon={Moon}
     flexCol={true}
+    isDefault={$themeStore === themeStore.defaultValue}
+    onReset={() => themeStore.reset()}
   >
     <div class="theme-setting-content">
       <CustomSelect
         options={themeOptions}
         bind:value={$themeStore}
+        defaultValue={themeStore.defaultValue}
         fullWidth={true}
         direction="auto"
       />
@@ -191,7 +196,6 @@
           type="button"
           class="theme-btn"
           onclick={handleImport}
-          title="Import .vintatheme package"
         >
           <Upload size={13} strokeWidth={2.2} />
           <span>{$tStore('appearance.import_theme')}</span>
@@ -200,7 +204,6 @@
           type="button"
           class="theme-btn"
           onclick={handleOpenFolder}
-          title="Open Themes Folder in Windows Explorer"
         >
           <FolderOpen size={13} strokeWidth={2.2} />
           <span>{$tStore('appearance.open_folder')}</span>
@@ -209,7 +212,6 @@
           type="button"
           class="theme-btn"
           onclick={refreshThemes}
-          title="Refresh Themes"
           disabled={isLoadingThemes}
         >
           <RefreshCw
@@ -285,13 +287,16 @@
 
   <SettingItem
     label="Ambient Glow Intensity"
-    description="Edge glow accents around the dynamic island (Default: Subtle)"
+    description="Edge glow accents around the dynamic island"
     icon={Sparkles}
     flexCol={true}
+    isDefault={$glowIntensityStore === glowIntensityStore.defaultValue}
+    onReset={() => glowIntensityStore.reset()}
   >
     <CustomSelect
       options={glowIntensityOptions}
       bind:value={$glowIntensityStore}
+      defaultValue={glowIntensityStore.defaultValue}
       fullWidth={true}
       direction="auto"
     />
@@ -302,10 +307,16 @@
     description="Proportionally scales the island interface (Display: {monitorWidth}×{monitorHeight})"
     icon={Scale}
     flexCol={true}
+    isDefault={$uiScaleStore === uiScaleStore.defaultValue}
+    onReset={() => {
+      selectedScale = '1'
+      uiScaleStore.reset()
+    }}
   >
     <CustomSelect
       options={uiScaleOptions}
       bind:value={selectedScale}
+      defaultValue="1"
       fullWidth={true}
       direction="auto"
     />
@@ -313,28 +324,34 @@
 
   <SettingItem
     label="Compact Opacity"
-    description="Background opacity when collapsed (Default: 100%)"
+    description="Background opacity when collapsed"
     icon={Eye}
     flexCol={true}
+    isDefault={$opacityMinimalStore === opacityMinimalStore.defaultValue}
+    onReset={() => opacityMinimalStore.reset()}
   >
     <SettingSlider
       min={0.2}
       max={1.0}
       step={0.05}
+      defaultValue={opacityMinimalStore.defaultValue}
       bind:value={$opacityMinimalStore}
     />
   </SettingItem>
 
   <SettingItem
     label="Expanded Opacity"
-    description="Background opacity when expanded (Default: 100%)"
+    description="Background opacity when expanded"
     icon={Maximize2}
     flexCol={true}
+    isDefault={$opacityExpandedStore === opacityExpandedStore.defaultValue}
+    onReset={() => opacityExpandedStore.reset()}
   >
     <SettingSlider
       min={0.2}
       max={1.0}
       step={0.05}
+      defaultValue={opacityExpandedStore.defaultValue}
       bind:value={$opacityExpandedStore}
     />
   </SettingItem>

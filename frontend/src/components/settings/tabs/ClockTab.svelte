@@ -110,13 +110,16 @@
 <div class="setting-group">
   <SettingItem
     label="Time Format"
-    description="Clock presentation style (Default: 12-Hour)"
+    description="Clock presentation style"
     icon={Clock}
     flexCol={true}
+    isDefault={$timeFormatStore === timeFormatStore.defaultValue}
+    onReset={() => timeFormatStore.reset()}
   >
     <CustomSelect
       options={timeFormatOptions}
       bind:value={$timeFormatStore}
+      defaultValue={timeFormatStore.defaultValue}
       fullWidth={true}
       direction="auto"
     />
@@ -124,13 +127,16 @@
 
   <SettingItem
     label="Timezone"
-    description="Active timezone for clock and agenda calculations (Default: Auto-detect)"
+    description="Active timezone for clock and agenda calculations"
     icon={Globe}
     flexCol={true}
+    isDefault={selectedTz === 'auto'}
+    onReset={() => (selectedTz = 'auto')}
   >
     <CustomSelect
       options={timezoneOptions}
       bind:value={selectedTz}
+      defaultValue="auto"
       searchable={true}
       fullWidth={true}
       direction="auto"
@@ -139,13 +145,16 @@
 
   <SettingItem
     label="Date Display Format"
-    description="Format used across date widgets (Default: Short)"
+    description="Format used across date widgets"
     icon={Calendar}
     flexCol={true}
+    isDefault={$dateFormatStore === 'short'}
+    onReset={() => dateFormatStore.set('short')}
   >
     <CustomSelect
       options={dateFormatOptions}
       bind:value={$dateFormatStore}
+      defaultValue="short"
       fullWidth={true}
       direction="auto"
     />

@@ -40,7 +40,7 @@
     Italic,
     Underline,
     Strikethrough,
-    ListOrdered,
+    Pin,
     Image as ImageIcon
   } from 'lucide-svelte'
   import BackButton from '../components/BackButton.svelte'
@@ -85,12 +85,19 @@
   )
 
   let filteredDrawerNotes = $derived(
-    notes.filter((n) => {
-      const q = drawerSearchQuery.toLowerCase().trim()
-      if (!q) return true
-      const snippet = n.content.replace(/<[^>]*>/g, '').toLowerCase()
-      return n.title.toLowerCase().includes(q) || snippet.includes(q)
-    })
+    notes
+      .filter((n) => {
+        const q = drawerSearchQuery.toLowerCase().trim()
+        if (!q) return true
+        const snippet = n.content.replace(/<[^>]*>/g, '').toLowerCase()
+        return n.title.toLowerCase().includes(q) || snippet.includes(q)
+      })
+      .sort((a, b) => {
+        if (Boolean(a.pinned) !== Boolean(b.pinned)) {
+          return a.pinned ? -1 : 1
+        }
+        return (b.modTime || b.createdAt) - (a.modTime || a.createdAt)
+      })
   )
 
   /**
@@ -145,9 +152,12 @@
           loaded.push(noteObj)
         }
 
-        loaded.sort(
-          (a, b) => (b.modTime || b.createdAt) - (a.modTime || a.createdAt)
-        )
+        loaded.sort((a, b) => {
+          if (Boolean(a.pinned) !== Boolean(b.pinned)) {
+            return a.pinned ? -1 : 1
+          }
+          return (b.modTime || b.createdAt) - (a.modTime || a.createdAt)
+        })
         notes = loaded
         activeIndex = 0
         syncEditorContent()
@@ -483,6 +493,20 @@
   }
 
   /**
+   * Toggles the pinned status of a note directly from the card board.
+   *
+   * @param e - Mouse event.
+   * @param idx - Index of note to pin or unpin.
+   */
+  function togglePinByIndex(e: MouseEvent, idx: number) {
+    e.stopPropagation()
+    const target = notes[idx]
+    if (!target) return
+    target.pinned = !target.pinned
+    persistNote(target)
+  }
+
+  /**
    * Deletes a note directly from the card board.
    *
    * @param e - Mouse event.
@@ -614,6 +638,15 @@
                 >
                   <div class="note-card-band">
                     <button
+                      class="note-card-pin-btn"
+                      class:is-pinned={n.pinned}
+                      use:islandTooltip={n.pinned ? 'Unpin note' : 'Pin note'}
+                      onclick={(e) =>
+                        togglePinByIndex(e, realIndex >= 0 ? realIndex : idx)}
+                    >
+                      <Pin size={11} />
+                    </button>
+                    <button
                       class="note-card-delete-btn"
                       use:islandTooltip={'Delete note'}
                       onclick={(e) =>
@@ -741,7 +774,7 @@
           use:islandTooltip={{ text: 'Bullet List', position: 'top' }}
           onclick={() => applyFormat('insertUnorderedList')}
         >
-          <ListOrdered size={13} />
+          <List size={13} />
         </button>
 
         <button

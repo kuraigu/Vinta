@@ -5,7 +5,6 @@
 -->
 <script lang="ts">
   import type { Snippet } from 'svelte'
-  import './styles/BentoCard.css'
 
   export type BentoVariant = 'bento' | 'setting' | 'announcement'
   export type BentoColor =
@@ -49,3 +48,5 @@
     {@render children()}
   {/if}
 </div>
+
+<style src="./styles/BentoCard.css"></style>

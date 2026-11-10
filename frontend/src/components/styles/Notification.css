@@ -2,9 +2,11 @@
   width: 100%;
   height: 100%;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
+  overflow: hidden;
   color: var(--vinta-text-primary);
 }
 
@@ -223,17 +225,22 @@ h3 {
   background: var(--vinta-contrast-bg);
   box-shadow: var(--vinta-contrast-border);
   color: var(--vinta-text-secondary);
-  font-size: 11px;
-  font-weight: 600;
+  width: 28px;
   height: 28px;
-  padding: 0 10px;
-  border-radius: 12px;
+  padding: 0;
+  border-radius: 9px;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  justify-content: center;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   line-height: 1;
+}
+
+.clear-btn.is-confirming {
+  background: var(--vinta-accent-danger-hover-bg, rgba(239, 68, 68, 0.2));
+  color: var(--vinta-accent-danger, #ef4444);
+  box-shadow: inset 0 0 0 1px var(--vinta-accent-danger, #ef4444);
 }
 
 .dnd-btn:hover {
@@ -580,15 +587,6 @@ h3 {
   max-width: 140px;
 }
 
-.notif-item-time {
-  font-size: 0.65rem;
-  font-weight: 600;
-  color: var(--vinta-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  opacity: 0.8;
-}
-
 .notif-item-body {
   display: flex;
   flex-direction: column;
@@ -653,22 +651,6 @@ h3 {
 .notif-item:focus-visible {
   outline: 2px solid var(--vinta-accent-primary);
   outline-offset: 2px;
-}
-
-.hero-image-wrapper {
-  margin-top: 8px;
-  width: 100%;
-  border-radius: 6px;
-  overflow: hidden;
-}
-
-.hero-image {
-  width: 100%;
-  height: auto;
-  max-height: 250px;
-  display: block;
-  object-fit: scale-down;
-  background-color: var(--vinta-contrast-bg);
 }
 
 /* Expanded notification bottom action row — aligned to the right with the time */
@@ -771,13 +753,6 @@ h3 {
   border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.15));
   margin-left: 6px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-}
-
-.notification-container {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
 }
 
 .permission-banner {

@@ -72,9 +72,20 @@ var (
 
 	winmm               = syscall.NewLazyDLL("winmm.dll")
 	procTimeBeginPeriod = winmm.NewProc("timeBeginPeriod")
+
+	dwmapi                    = syscall.NewLazyDLL("dwmapi.dll")
+	procDwmSetWindowAttribute = dwmapi.NewProc("DwmSetWindowAttribute")
 )
 
 const (
+	//nolint:revive // Windows API constants
+	DWMWA_NCRENDERING_POLICY = 2
+	//nolint:revive // Windows API constants
+	DWMNCRP_DISABLED = 1
+	//nolint:revive // Windows API constants
+	DWMWA_TRANSITIONS_FORCEDISABLED = 3
+	//nolint:revive // Windows API constants
+	WS_SYSMENU = 0x00080000
 	//nolint:revive // Windows API constants
 	GWL_EXSTYLE = -20
 	//nolint:revive // Windows API constants

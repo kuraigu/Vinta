@@ -226,6 +226,20 @@
       } else if (selectedPaths.length > 0) {
         rawSelectedPaths = []
       }
+      return
+    }
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')) {
+      if ($fileShelfStore.items.length > 0) {
+        e.preventDefault()
+        rawSelectedPaths = $fileShelfStore.items.map((item) => item.path)
+      }
+      return
+    }
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      if (selectedPaths.length > 0) {
+        e.preventDefault()
+        removeSelectedItems()
+      }
     }
   }
 
@@ -373,10 +387,6 @@
           class="select-toggle-pill no-swipe no-drag"
           data-action="select-all"
           class:has-selection={selectedPaths.length > 0}
-          use:islandTooltip={selectedPaths.length ===
-          $fileShelfStore.items.length
-            ? 'Click to clear selection'
-            : 'Click to select all'}
           onclick={toggleSelectAll}
         >
           <span class="select-check-dot">
@@ -397,7 +407,6 @@
               type="button"
               class="inline-pill-btn"
               disabled={$fileShelfStore.busyAction !== null}
-              use:islandTooltip={'Copy chosen files to clipboard'}
               onclick={() => void copyShelfPaths([...selectedPaths])}
             >
               <Copy size={11} />
@@ -409,7 +418,7 @@
                 type="button"
                 class="inline-icon-btn"
                 disabled={$fileShelfStore.busyAction !== null}
-                use:islandTooltip={'Reveal chosen file in File Explorer'}
+                use:islandTooltip={'Reveal in Explorer'}
                 onclick={() => {
                   if (targetPaths.length > 0) {
                     void revealShelfFileInExplorer(targetPaths[0])
@@ -424,7 +433,7 @@
               type="button"
               class="inline-icon-btn"
               disabled={$fileShelfStore.busyAction !== null}
-              use:islandTooltip={'Bundle chosen files into a .zip'}
+              use:islandTooltip={'Bundle to ZIP'}
               onclick={() => void bundleShelfToZip(targetPaths)}
             >
               <FileArchive size={12} />
@@ -435,7 +444,7 @@
                 type="button"
                 class="inline-icon-btn"
                 disabled={$fileShelfStore.busyAction !== null}
-                use:islandTooltip={'Strip EXIF metadata from JPEG/PNG images'}
+                use:islandTooltip={'Strip EXIF metadata'}
                 onclick={() => void stripShelfExif(targetPaths)}
               >
                 <ShieldCheck size={12} />
@@ -445,7 +454,7 @@
             <button
               type="button"
               class="inline-icon-btn danger-pill"
-              use:islandTooltip={'Remove chosen files from shelf'}
+              use:islandTooltip={'Remove selected'}
               onclick={removeSelectedItems}
             >
               <X size={12} />
@@ -455,7 +464,6 @@
               type="button"
               class="inline-pill-btn"
               disabled={$fileShelfStore.busyAction !== null}
-              use:islandTooltip={'Bundle all files into a .zip'}
               onclick={() => void bundleShelfToZip(targetPaths)}
             >
               <FileArchive size={11} />

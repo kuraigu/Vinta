@@ -51,6 +51,21 @@ func main() {
 	cache := backend.NewCache()
 	themeService := backend.NewThemeService()
 
+	hwAccel := backend.GetHardwareAccelerationConfig()
+	browserArgs := []string{
+		"--disable-renderer-backgrounding",
+	}
+	if hwAccel {
+		browserArgs = append(browserArgs,
+			"--ignore-gpu-blocklist",
+			"--enable-gpu-rasterization",
+			"--enable-zero-copy",
+			"--enable-features=CanvasOopRasterization",
+		)
+	} else {
+		browserArgs = append(browserArgs, "--disable-gpu")
+	}
+
 	wailsApp := application.New(application.Options{
 		Name:        "Vinta",
 		Description: "Dynamic Island for Windows PC",
@@ -85,11 +100,7 @@ func main() {
 			WebviewUserDataPath:           filepath.Join(backend.GetAppDataDir(), "webview2"),
 			DisableQuitOnLastWindowClosed: false,
 			DisabledFeatures:              []string{"CalculateNativeWinOcclusion"},
-			AdditionalBrowserArgs: []string{
-				"--enable-gpu-rasterization",
-				"--enable-zero-copy",
-				"--ignore-gpu-blocklist",
-			},
+			AdditionalBrowserArgs:         browserArgs,
 		},
 	})
 

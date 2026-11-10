@@ -83,28 +83,34 @@
 
   <SettingItem
     label="Auto-Hide Delay"
-    description="Inactivity duration before collapsing (Default: 10s)"
+    description="Inactivity duration before collapsing"
     icon={Timer}
     flexCol={true}
+    isDefault={$autoHideDelayStore === autoHideDelayStore.defaultValue}
+    onReset={() => autoHideDelayStore.reset()}
   >
     <SettingSlider
       min={5}
       max={30}
       step={1}
       unit="s"
+      defaultValue={autoHideDelayStore.defaultValue}
       bind:value={$autoHideDelayStore}
     />
   </SettingItem>
 
   <SettingItem
     label="Collapsed Pill Content"
-    description="Widget display when collapsed (Default: Compact Dashboard)"
+    description="Widget display when collapsed"
     icon={Layout}
     flexCol={true}
+    isDefault={$autoHideDisplayStore === autoHideDisplayStore.defaultValue}
+    onReset={() => autoHideDisplayStore.reset()}
   >
     <CustomSelect
       options={widgetContentOptions}
       bind:value={$autoHideDisplayStore}
+      defaultValue={autoHideDisplayStore.defaultValue}
       fullWidth={true}
       direction="auto"
     />
@@ -112,9 +118,11 @@
 
   <SettingItem
     label="Wake Trigger Method"
-    description="Interaction used to expand the island (Default: Click)"
+    description="Interaction used to expand the island"
     icon={MousePointer}
     flexCol={true}
+    isDefault={$wakeMethodStore === wakeMethodStore.defaultValue}
+    onReset={() => wakeMethodStore.reset()}
   >
     <div class="segment-control full-width">
       <button

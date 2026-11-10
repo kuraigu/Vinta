@@ -5,13 +5,19 @@
 -->
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { ArrowUpRight, ShieldCheck, GitBranch, Bug } from 'lucide-svelte'
+  import {
+    ArrowUpRight,
+    ShieldCheck,
+    GitBranch,
+    Bug,
+    Sparkles
+  } from 'lucide-svelte'
   import BentoCard from '../../BentoCard.svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
   import appIcon from '@appicon'
   import { reportFeedback } from '../../../services/feedbackService'
-  import { tStore } from '../../../store'
+  import { hasCompletedOnboardingStore, tStore } from '../../../store'
   import {
     GetAppInfo,
     GetContributors
@@ -109,6 +115,10 @@
     reportFeedback().catch(() => {})
   }
 
+  function handleReplayOnboarding() {
+    hasCompletedOnboardingStore.set(false)
+  }
+
   onMount(() => {
     GetAppInfo()
       .then((info) => {
@@ -176,6 +186,10 @@
       <SettingActionButton onclick={handleReportFeedback} fullWidth={true}>
         <Bug size={13} strokeWidth={2} />
         <span>{$tStore('about.report_issue')}</span>
+      </SettingActionButton>
+      <SettingActionButton onclick={handleReplayOnboarding} fullWidth={true}>
+        <Sparkles size={13} strokeWidth={2} />
+        <span>{$tStore('about.run_onboarding')}</span>
       </SettingActionButton>
     </div>
   </SettingItem>

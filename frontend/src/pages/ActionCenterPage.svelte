@@ -218,7 +218,13 @@
   <!-- Bento Action Cards Grid -->
   <div class="action-grid">
     <!-- Wi-Fi Card -->
-    <BentoCard variant="bento" class="bento-action-card">
+    <BentoCard
+      variant="bento"
+      class="bento-action-card"
+      onclick={(e) => {
+        if (!wireless.airplaneMode) toggleWifi(e)
+      }}
+    >
       <div class="card-left">
         <div
           class="card-icon-circle"
@@ -245,6 +251,8 @@
           </span>
         </div>
       </div>
+      <!-- svelte-ignore a11y_click_events_have_key_events -->
+      <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
       <div class="card-controls-right">
         <button
           type="button"
@@ -258,6 +266,7 @@
         <label
           class="toggle-switch"
           class:disabled-switch={wireless.airplaneMode}
+          onclick={(e) => e.stopPropagation()}
         >
           <input
             type="checkbox"
@@ -271,7 +280,13 @@
     </BentoCard>
 
     <!-- Bluetooth Card -->
-    <BentoCard variant="bento" class="bento-action-card">
+    <BentoCard
+      variant="bento"
+      class="bento-action-card"
+      onclick={(e) => {
+        if (wireless.hasBluetooth && !wireless.airplaneMode) toggleBluetooth(e)
+      }}
+    >
       <div class="card-left">
         <div
           class="card-icon-circle"
@@ -312,6 +327,8 @@
           </span>
         </div>
       </div>
+      <!-- svelte-ignore a11y_click_events_have_key_events -->
+      <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
       <div class="card-controls-right">
         <button
           type="button"
@@ -326,6 +343,7 @@
           class="toggle-switch"
           class:disabled-switch={!wireless.hasBluetooth ||
             wireless.airplaneMode}
+          onclick={(e) => e.stopPropagation()}
         >
           <input
             type="checkbox"
@@ -341,7 +359,13 @@
     </BentoCard>
 
     <!-- Battery & Power Card -->
-    <BentoCard variant="bento" class="bento-action-card">
+    <BentoCard
+      variant="bento"
+      class="bento-action-card"
+      onclick={(e) => {
+        if (battery.hasBattery) toggleBatterySaver(e)
+      }}
+    >
       <div class="card-left">
         <div class="card-icon-circle">
           {#if !battery.hasBattery}
@@ -363,6 +387,8 @@
           </span>
         </div>
       </div>
+      <!-- svelte-ignore a11y_click_events_have_key_events -->
+      <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
       <div class="card-controls-right">
         <button
           type="button"
@@ -374,10 +400,7 @@
           <ExternalLink size={13} />
         </button>
         {#if battery.hasBattery}
-          <label
-            class="toggle-switch"
-            use:islandTooltip={$tStore('action_center.toggle_battery_saver')}
-          >
+          <label class="toggle-switch" onclick={(e) => e.stopPropagation()}>
             <input
               type="checkbox"
               checked={battery.batterySaver}
@@ -390,7 +413,11 @@
     </BentoCard>
 
     <!-- Airplane Mode Card -->
-    <BentoCard variant="bento" class="bento-action-card">
+    <BentoCard
+      variant="bento"
+      class="bento-action-card"
+      onclick={toggleAirplaneMode}
+    >
       <div class="card-left">
         <div class="card-icon-circle" class:is-off={!wireless.airplaneMode}>
           <Plane size={18} />
@@ -406,6 +433,8 @@
           </span>
         </div>
       </div>
+      <!-- svelte-ignore a11y_click_events_have_key_events -->
+      <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
       <div class="card-controls-right">
         <button
           type="button"
@@ -416,7 +445,7 @@
         >
           <ExternalLink size={13} />
         </button>
-        <label class="toggle-switch">
+        <label class="toggle-switch" onclick={(e) => e.stopPropagation()}>
           <input
             type="checkbox"
             checked={wireless.airplaneMode}

@@ -62,6 +62,7 @@ import {
 import type { MonitorInfo } from '../../bindings/Vinta/backend/models.js'
 import { sendVintaNotification } from './vintaNotification.js'
 import { showSatelliteNotification } from '../stores/notificationSatellite'
+import { getDeveloperAnnouncements } from './announcementsService'
 
 /**
  * Callbacks provided by the island orchestrator to handle system and runtime events.
@@ -125,6 +126,14 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
   onEvent('show-pill', () => {
     callbacks.showWidget()
   })
+
+  onEvent('open-onboarding', () => {
+    hasCompletedOnboardingStore.set(false)
+    callbacks.showWidget()
+  })
+
+  // Pre-warm developer announcements cache so HomePage renders at stable height
+  void getDeveloperAnnouncements()
 
   onEvent('hotkey-toggle-island', () => {
     if (callbacks.onHotkeyToggle) {

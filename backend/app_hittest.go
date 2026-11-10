@@ -74,6 +74,9 @@ func (a *App) SetHitRects(rects []HitRect) {
 
 	if len(rects) > 0 {
 		a.initialShowOnce.Do(func() {
+			if h := a.getHwnd(); h != 0 {
+				_, _, _ = procSetLayeredWindowAttrs.Call(h, 0, 255, 2)
+			}
 			if a.window != nil {
 				a.window.Show()
 			}

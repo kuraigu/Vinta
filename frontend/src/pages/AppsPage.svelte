@@ -267,7 +267,26 @@
   }
 
   let filteredApps = $derived.by(getFilteredApps)
+
+  /**
+   * Launches the first matching enabled app when pressing Enter during search.
+   *
+   * @param e - Window keyboard event.
+   */
+  function handleAppsKeyDown(e: KeyboardEvent) {
+    if (e.key === 'Enter' && searchQuery.trim() && filteredApps.length > 0) {
+      const first = filteredApps.find(
+        (app) => !app.visibilityKey || $pageVisibilityStore[app.visibilityKey]
+      )
+      if (first) {
+        e.preventDefault()
+        first.action()
+      }
+    }
+  }
 </script>
+
+<svelte:window onkeydown={handleAppsKeyDown} />
 
 <div data-vinta="apps-page" class="apps-page">
   <ScrollView class="apps-scroll-area">
@@ -289,7 +308,7 @@
             class:is-disabled={!isEnabled}
             use:islandTooltip={{
               text: isEnabled
-                ? app.desc
+                ? ''
                 : `${app.desc} (${$tStore('common.disabled')})`,
               position: 'bottom'
             }}

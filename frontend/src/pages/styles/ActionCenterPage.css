@@ -59,6 +59,7 @@
   justify-content: space-between !important;
   padding: 12px 14px !important;
   gap: 12px;
+  cursor: pointer;
 }
 
 .card-left {
@@ -119,14 +120,14 @@
   justify-content: center;
   width: 24px;
   height: 24px;
-  border-radius: var(--vinta-radius-button, 8px);
+  border-radius: var(--vinta-radius-button, 10px);
   background: var(--vinta-surface-elevated, rgba(255, 255, 255, 0.06));
   border: 1px solid var(--vinta-border);
   color: var(--vinta-text-secondary);
   cursor: pointer;
-  opacity: 0;
-  transform: translateX(3px);
-  pointer-events: none;
+  opacity: 0.45;
+  transform: none;
+  pointer-events: auto;
   transition:
     opacity 0.18s cubic-bezier(0.2, 0.8, 0.2, 1),
     transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1),

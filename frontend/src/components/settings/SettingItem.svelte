@@ -6,7 +6,10 @@
 -->
 <script lang="ts">
   import type { Snippet, ComponentType } from 'svelte'
+  import { RotateCcw } from 'lucide-svelte'
   import BentoCard from '../BentoCard.svelte'
+  import { islandTooltip } from '../../services/islandTooltip'
+  import { tStore } from '../../store'
 
   interface Props {
     label: string
@@ -16,6 +19,8 @@
     flexCol?: boolean
     badge?: string
     disabled?: boolean
+    isDefault?: boolean
+    onReset?: () => void
     children?: Snippet
   }
 
@@ -26,6 +31,8 @@
     flexCol = false,
     badge,
     disabled = false,
+    isDefault = true,
+    onReset,
     children
   }: Props = $props()
 </script>
@@ -42,6 +49,20 @@
         <span>{label}</span>
         {#if badge}
           <span class="setting-badge">{badge}</span>
+        {/if}
+        {#if onReset && !isDefault && !disabled}
+          <button
+            type="button"
+            class="setting-reset-btn"
+            onclick={(e) => {
+              e.stopPropagation()
+              onReset()
+            }}
+            use:islandTooltip={$tStore('common.reset')}
+            aria-label={$tStore('common.reset')}
+          >
+            <RotateCcw size={11} strokeWidth={2.2} />
+          </button>
         {/if}
       </div>
       {#if description}
@@ -123,6 +144,28 @@
     background: var(--vinta-accent-muted);
     color: var(--vinta-accent-primary);
     border: 1px solid var(--vinta-border-accent);
+  }
+
+  .setting-reset-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border-radius: 5px;
+    border: none;
+    background: transparent;
+    color: var(--vinta-text-muted);
+    cursor: pointer;
+    opacity: 0.72;
+    transition: all 0.15s ease;
+  }
+
+  .setting-reset-btn:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--vinta-accent-primary);
   }
 
   .setting-icon-col :global(.item-icon) {

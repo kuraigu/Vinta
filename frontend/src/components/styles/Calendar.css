@@ -180,14 +180,14 @@
   color: var(--vinta-text-primary, #ffffff);
   background: var(--vinta-surface-card, rgba(28, 28, 30, 0.75));
   border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.08));
-  border-radius: 28px;
+  border-radius: var(--vinta-radius-card, 14px);
   box-shadow:
     0 24px 48px rgba(0, 0, 0, 0.65),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .calendar-card.home-agenda-only {
-  border-radius: 20px;
+  border-radius: var(--vinta-radius-card, 14px);
   gap: 10px;
   padding: 12px 14px;
   height: auto;
@@ -204,7 +204,9 @@
   border-radius: 0;
   box-shadow: none;
   width: 100%;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
+  height: auto;
   overflow: hidden;
 }
 
@@ -495,7 +497,7 @@
 .calendar-agenda-tray {
   margin-top: 6px;
   padding: 12px 14px;
-  border-radius: 16px;
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.035);
   border: 1px solid rgba(255, 255, 255, 0.05);
   box-shadow: none;
@@ -638,6 +640,9 @@
   flex-direction: column;
   gap: 12px;
   width: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .agenda-toolbar-row {

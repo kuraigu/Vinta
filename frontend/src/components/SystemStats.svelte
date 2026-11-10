@@ -75,7 +75,6 @@
             e.stopPropagation()
             handleCardClick()
           }}
-          tooltip="Open System Stats"
         />
       </div>
     </div>

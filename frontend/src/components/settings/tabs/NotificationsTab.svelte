@@ -82,15 +82,18 @@
 
   <SettingItem
     label="Notification Sound Volume"
-    description="Audio feedback level for incoming notifications (Default: 50%)"
+    description="Audio feedback level for incoming notifications"
     icon={Volume2}
     flexCol={true}
+    isDefault={Math.round($notifVolumeStore * 100) === Math.round(notifVolumeStore.defaultValue * 100)}
+    onReset={() => notifVolumeStore.reset()}
   >
     <SettingSlider
       min={0}
       max={100}
       step={5}
       unit="%"
+      defaultValue={Math.round(notifVolumeStore.defaultValue * 100)}
       value={Math.round($notifVolumeStore * 100)}
       onchange={(val) => ($notifVolumeStore = val / 100)}
     />

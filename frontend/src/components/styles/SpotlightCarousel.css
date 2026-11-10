@@ -40,12 +40,10 @@
   padding: 10px 14px;
   min-height: 56px;
   box-sizing: border-box;
-  border-radius: var(--vinta-radius-card, 16px);
+  border-radius: var(--vinta-radius-card, 14px);
   background: var(--vinta-surface-card);
   border: 1px solid var(--vinta-border);
   box-shadow: var(--vinta-contrast-border), var(--vinta-dock-popover-shadow);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   cursor: pointer;
   outline: none;
   text-align: left;

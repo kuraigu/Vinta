@@ -228,7 +228,7 @@
   onMount(() => {
     timer = setInterval(() => {
       internalTime = new Date()
-    }, 1000)
+    }, 10000)
   })
 
   onDestroy(() => {
@@ -422,25 +422,28 @@
               amPmText={$homeWidgetsVisibilityStore.clock ? amPm : ''}
             />
           {:else}
-            <!-- Hero Greeting (Fallback when weather widget is disabled) -->
-            <header class="home-hero-greeting">
-              <span class="hero-salutation">{salutationText},</span>
-              <h1 class="hero-username">{displayName}</h1>
-            </header>
+            <!-- Social Feed Header Bar (Fallback when weather hero is disabled) -->
+            <header class="home-feed-status-header">
+              <div class="home-hero-greeting">
+                <span class="hero-salutation">{salutationText},</span>
+                <h1 class="hero-username">{displayName}</h1>
+              </div>
 
-            {#if $homeWidgetsVisibilityStore.clock}
-              <section class="time-subtle-bar">
-                <span class="meta-date-text">{timeParts.friendlyDateText}</span>
-                <span class="meta-bullet">•</span>
-                <span class="time-subtle-digits">
-                  {formattedHours}<span class="colon-blink">:</span
-                  >{timeParts.m}
-                </span>
-                {#if amPm}
-                  <span class="time-subtle-ampm">{amPm}</span>
-                {/if}
-              </section>
-            {/if}
+              {#if $homeWidgetsVisibilityStore.clock}
+                <div class="time-subtle-bar">
+                  <span class="meta-date-text"
+                    >{timeParts.friendlyDateText}</span
+                  >
+                  <span class="meta-bullet">•</span>
+                  <span class="time-subtle-digits">
+                    {formattedHours}:{timeParts.m}
+                  </span>
+                  {#if amPm}
+                    <span class="time-subtle-ampm">{amPm}</span>
+                  {/if}
+                </div>
+              {/if}
+            </header>
           {/if}
 
           <!-- Update Glance Banner (Issue #161) -->

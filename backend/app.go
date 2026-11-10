@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unsafe"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
@@ -155,11 +156,28 @@ func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 			cachedWindowHwnd = hwnd
 			cachedHwndMu.Unlock()
 
+			gwlStyle := int32(GWL_STYLE)
+			baseStyle, _, _ := procGetWindowLong.Call(hwnd, uintptr(gwlStyle))
+			baseStyle = (baseStyle | WS_POPUP) &^ (WS_CAPTION | WS_THICKFRAME | WS_SYSMENU)
+			_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwlStyle), baseStyle)
+
 			gwl := int32(GWL_EXSTYLE)
 			style, _, _ := procGetWindowLong.Call(hwnd, uintptr(gwl))
 			style = (style | WS_EX_TOOLWINDOW | WS_EX_TOPMOST | WS_EX_NOACTIVATE | WS_EX_LAYERED | WS_EX_TRANSPARENT) &^ WS_EX_APPWINDOW
 			_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwl), style)
-			_, _, _ = procSetLayeredWindowAttrs.Call(hwnd, 0, 255, 2)
+
+			if procDwmSetWindowAttribute.Find() == nil {
+				ncPolicy := uint32(DWMNCRP_DISABLED)
+				transitionsDisabled := uint32(1)
+				_, _, _ = procDwmSetWindowAttribute.Call(hwnd, DWMWA_NCRENDERING_POLICY, uintptr(unsafe.Pointer(&ncPolicy)), 4)
+				_, _, _ = procDwmSetWindowAttribute.Call(hwnd, DWMWA_TRANSITIONS_FORCEDISABLED, uintptr(unsafe.Pointer(&transitionsDisabled)), 4)
+			}
+
+			initAlpha := uintptr(0)
+			if a.IsTestMode() {
+				initAlpha = 255
+			}
+			_, _, _ = procSetLayeredWindowAttrs.Call(hwnd, 0, initAlpha, 2)
 
 			_, _, _ = procSetWindowRgn.Call(hwnd, 0, 0)
 
@@ -182,7 +200,7 @@ func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 					uintptr(^uintptr(0)),
 					uintptr(int32(vLeft)), uintptr(int32(vTop)),
 					uintptr(vWidth), uintptr(overlayHeight),
-					0x0010|0x0200,
+					SWP_NOACTIVATE|SWP_NOOWNERZORDER|SWP_FRAMECHANGED,
 				)
 			}
 
@@ -230,11 +248,6 @@ func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 				applyInit(h)
 			}
 			services.SetFrontendReady(true)
-			a.initialShowOnce.Do(func() {
-				if a.window != nil {
-					a.window.Show()
-				}
-			})
 		})
 		win.OnWindowEvent(events.Common.WindowClosing, func(_ *application.WindowEvent) {
 			services.SetFrontendReady(false)
@@ -257,6 +270,9 @@ func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 				time.Sleep(3000 * time.Millisecond)
 			}
 			a.initialShowOnce.Do(func() {
+				if h := a.getHwnd(); h != 0 {
+					_, _, _ = procSetLayeredWindowAttrs.Call(h, 0, 255, 2)
+				}
 				if a.window != nil {
 					a.window.Show()
 				}
@@ -316,6 +332,11 @@ func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 		menu.Add("Show Vinta").OnClick(func(_ *application.Context) {
 			if app := application.Get(); app != nil {
 				app.Event.Emit("show-pill")
+			}
+		})
+		menu.Add("Run Onboarding").OnClick(func(_ *application.Context) {
+			if app := application.Get(); app != nil {
+				app.Event.Emit("open-onboarding")
 			}
 		})
 		menu.AddSeparator()

@@ -151,38 +151,36 @@
   let isSaverActive = $derived(battery.hasBattery && battery.batterySaver)
 
   function computeWifiTooltip(): string {
-    if (wireless.airplaneMode) return 'Wi-Fi: Disabled by Airplane mode'
-    if (!wireless.wifiEnabled) return 'Wi-Fi: Off (click to enable)'
+    if (wireless.airplaneMode) return 'Airplane mode'
+    if (!wireless.wifiEnabled) return 'Wi-Fi: Off'
     if (wireless.wifiConnected && wireless.wifiSsid) {
-      return `Wi-Fi: Connected to ${wireless.wifiSsid}${wireless.wifiSignal > 0 ? ` (${wireless.wifiSignal}%)` : ''}`
+      return wireless.wifiSsid
     }
-    return 'Wi-Fi: On (click to disable)'
+    return 'Wi-Fi: On'
   }
   let wifiTooltip = $derived.by(computeWifiTooltip)
 
   function computeBtTooltip(): string {
-    if (!wireless.hasBluetooth) return 'Bluetooth: Not supported'
-    if (wireless.airplaneMode) return 'Bluetooth: Disabled by Airplane mode'
-    if (!wireless.bluetoothEnabled) return 'Bluetooth: Off (click to enable)'
+    if (!wireless.hasBluetooth) return 'Unavailable'
+    if (wireless.airplaneMode) return 'Airplane mode'
+    if (!wireless.bluetoothEnabled) return 'Bluetooth: Off'
     if (wireless.bluetoothConnected && wireless.bluetoothDeviceName) {
-      return `Bluetooth: Connected to ${wireless.bluetoothDeviceName}`
+      return wireless.bluetoothDeviceName
     }
-    return 'Bluetooth: On (click to disable)'
+    return 'Bluetooth: On'
   }
   let btTooltip = $derived.by(computeBtTooltip)
 
   function computeAirplaneTooltip(): string {
-    return isAirplaneActive
-      ? 'Airplane Mode: On (click to disable)'
-      : 'Airplane Mode: Off (click to enable)'
+    return isAirplaneActive ? 'Airplane Mode: On' : 'Airplane Mode: Off'
   }
   let airplaneTooltip = $derived.by(computeAirplaneTooltip)
 
   function computeSaverTooltip(): string {
-    if (!battery.hasBattery) return 'Power: Desktop AC Connected'
+    if (!battery.hasBattery) return 'AC Power'
     return isSaverActive
-      ? `Battery Saver: On (${battery.percentage}%)`
-      : `Battery Saver: Off (${battery.percentage}%)`
+      ? `Saver On (${battery.percentage}%)`
+      : `Battery ${battery.percentage}%`
   }
   let saverTooltip = $derived.by(computeSaverTooltip)
 </script>

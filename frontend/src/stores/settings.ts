@@ -267,7 +267,11 @@ function persistentWritable<T>(key: string, initialValue: T) {
       }
     }
   })
-  return store
+  return {
+    ...store,
+    defaultValue: initialValue,
+    reset: () => store.set(initialValue)
+  }
 }
 
 export const CURRENT_SETTINGS_SCHEMA_VERSION = 1
@@ -653,10 +657,10 @@ export function calculateHomeExpandedHeight(
   minH: number = 260,
   maxH: number = 640
 ): number {
-  const GAP = 12
+  const GAP = 10
 
   // 1. Header segment (Weather hero full-bleed or salutation greeting)
-  let totalHeight = visibility.weather ? 158 : (visibility.clock ? 98 : 74)
+  let totalHeight = visibility.weather ? 158 : (visibility.clock ? 94 : 72)
 
   // 2. Update notice banner
   if (hasUpdate) {
@@ -668,9 +672,9 @@ export function calculateHomeExpandedHeight(
     totalHeight += GAP + 72
   }
 
-  // 4. Announcements & Release Notes glance card
+  // 4. Announcements & Release Notes glance card (fixed 76px height)
   if (visibility.announcements !== false) {
-    totalHeight += GAP + 68
+    totalHeight += GAP + 76
   }
 
   // 5. Notification glance card (only renders if unread notifications exist)
@@ -696,7 +700,7 @@ export function calculateHomeExpandedHeight(
   // 9. Studio Branding Footer ("Vinta by FreeMatrix Studios & Contributors")
   totalHeight += GAP + 24
 
-  // 7. Bottom clearance for feed padding & island corner curvature
+  // 10. Bottom clearance for feed padding & island corner curvature
   const BOTTOM_CLEARANCE = 10
 
   const computedHeight = totalHeight + BOTTOM_CLEARANCE

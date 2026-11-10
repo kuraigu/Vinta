@@ -10,6 +10,7 @@
     max: number
     step?: number
     unit?: string
+    defaultValue?: number
     onchange?: (val: number) => void
   }
 
@@ -19,8 +20,15 @@
     max,
     step = 1,
     unit = '',
+    defaultValue,
     onchange
   }: Props = $props()
+
+  let defaultTickPercent = $derived(
+    defaultValue !== undefined && max > min
+      ? Math.max(0, Math.min(100, ((defaultValue - min) / (max - min)) * 100))
+      : null
+  )
 
   function clamp(val: number): number {
     if (isNaN(val)) return min
@@ -62,15 +70,24 @@
 </script>
 
 <div class="setting-slider-container">
-  <input
-    type="range"
-    {min}
-    {max}
-    {step}
-    {value}
-    oninput={handleSliderChange}
-    class="range-slider no-swipe"
-  />
+  <div class="slider-track-wrapper">
+    {#if defaultTickPercent !== null}
+      <span
+        class="slider-default-tick"
+        style="left: calc(7px + (100% - 14px) * {defaultTickPercent / 100});"
+        aria-hidden="true"
+      ></span>
+    {/if}
+    <input
+      type="range"
+      {min}
+      {max}
+      {step}
+      {value}
+      oninput={handleSliderChange}
+      class="range-slider no-swipe"
+    />
+  </div>
 
   <div class="number-input-wrapper">
     <input
@@ -97,8 +114,31 @@
     width: 100%;
   }
 
-  .range-slider {
+  .slider-track-wrapper {
+    position: relative;
     flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+  }
+
+  .slider-default-tick {
+    position: absolute;
+    top: 50%;
+    width: 2px;
+    height: 10px;
+    border-radius: 1px;
+    background: var(--vinta-text-muted, rgba(255, 255, 255, 0.35));
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.65;
+  }
+
+  .range-slider {
+    position: relative;
+    z-index: 1;
+    width: 100%;
     min-width: 0;
     accent-color: var(--vinta-accent-primary, var(--vinta-primary, #38bdf8));
     height: 4px;

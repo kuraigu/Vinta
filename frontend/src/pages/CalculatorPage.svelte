@@ -28,6 +28,21 @@
   let historyFormula = $state('')
   let errorMessage = $state('')
   let isExponentMode = $state(false)
+  let copiedIndicator = $state(false)
+  let copiedTimer: ReturnType<typeof setTimeout> | null = null
+
+  /**
+   * Copies the current calculator expression or result to the system clipboard.
+   */
+  function handleCopyResult() {
+    if (errorMessage) return
+    void navigator.clipboard?.writeText(expression).catch(() => {})
+    copiedIndicator = true
+    if (copiedTimer) clearTimeout(copiedTimer)
+    copiedTimer = setTimeout(() => {
+      copiedIndicator = false
+    }, 1200)
+  }
 
   let livePreview = $derived.by(() => {
     if (!expression || expression === '0' || errorMessage) return ''
@@ -368,12 +383,20 @@
   </div>
 
   <!-- Display Panel -->
-  <div class="calc-display-card">
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div
+    class="calc-display-card"
+    onclick={handleCopyResult}
+    use:islandTooltip={copiedIndicator ? 'Copied!' : 'Click to copy'}
+  >
     <div class="display-history-row">
-      <span class="history-text" title={historyFormula || ''}>
+      <span class="history-text">
         {historyFormula}
       </span>
-      {#if livePreview}
+      {#if copiedIndicator}
+        <span class="live-preview-text">Copied</span>
+      {:else if livePreview}
         <span class="live-preview-text">{livePreview}</span>
       {/if}
     </div>
@@ -384,7 +407,6 @@
         <span
           class="main-expression"
           class:scaled-down={expression.length > 12}
-          title={expression}
         >
           {expression}
         </span>
@@ -402,18 +424,10 @@
     >
       C
     </button>
-    <button
-      class="calc-btn action-btn"
-      onclick={() => handleParenthesis('(')}
-      use:islandTooltip={$tStore('calculator.open_parenthesis')}
-    >
+    <button class="calc-btn action-btn" onclick={() => handleParenthesis('(')}>
       (
     </button>
-    <button
-      class="calc-btn action-btn"
-      onclick={() => handleParenthesis(')')}
-      use:islandTooltip={$tStore('calculator.close_parenthesis')}
-    >
+    <button class="calc-btn action-btn" onclick={() => handleParenthesis(')')}>
       )
     </button>
     <button
@@ -446,11 +460,7 @@
     >
       xʸ
     </button>
-    <button
-      class="calc-btn op-btn"
-      onclick={() => handleOperator('÷')}
-      use:islandTooltip={$tStore('calculator.divide')}
-    >
+    <button class="calc-btn op-btn" onclick={() => handleOperator('÷')}>
       ÷
     </button>
 
@@ -458,11 +468,7 @@
     <button class="calc-btn num-btn" onclick={() => handleDigit('7')}>7</button>
     <button class="calc-btn num-btn" onclick={() => handleDigit('8')}>8</button>
     <button class="calc-btn num-btn" onclick={() => handleDigit('9')}>9</button>
-    <button
-      class="calc-btn op-btn"
-      onclick={() => handleOperator('×')}
-      use:islandTooltip={$tStore('calculator.multiply')}
-    >
+    <button class="calc-btn op-btn" onclick={() => handleOperator('×')}>
       ×
     </button>
 
@@ -470,11 +476,7 @@
     <button class="calc-btn num-btn" onclick={() => handleDigit('4')}>4</button>
     <button class="calc-btn num-btn" onclick={() => handleDigit('5')}>5</button>
     <button class="calc-btn num-btn" onclick={() => handleDigit('6')}>6</button>
-    <button
-      class="calc-btn op-btn"
-      onclick={() => handleOperator('−')}
-      use:islandTooltip={$tStore('calculator.subtract')}
-    >
+    <button class="calc-btn op-btn" onclick={() => handleOperator('−')}>
       −
     </button>
 
@@ -482,31 +484,15 @@
     <button class="calc-btn num-btn" onclick={() => handleDigit('1')}>1</button>
     <button class="calc-btn num-btn" onclick={() => handleDigit('2')}>2</button>
     <button class="calc-btn num-btn" onclick={() => handleDigit('3')}>3</button>
-    <button
-      class="calc-btn op-btn"
-      onclick={() => handleOperator('+')}
-      use:islandTooltip={$tStore('calculator.add')}
-    >
+    <button class="calc-btn op-btn" onclick={() => handleOperator('+')}>
       +
     </button>
 
     <!-- Row 6: ±, 0, ., Equals -->
-    <button
-      class="calc-btn num-btn"
-      onclick={handleToggleSign}
-      use:islandTooltip={$tStore('calculator.toggle_sign')}
-    >
-      ±
-    </button>
+    <button class="calc-btn num-btn" onclick={handleToggleSign}> ± </button>
     <button class="calc-btn num-btn" onclick={() => handleDigit('0')}>0</button>
     <button class="calc-btn num-btn" onclick={handleDecimal}>.</button>
-    <button
-      class="calc-btn equals-btn"
-      onclick={handleEvaluate}
-      use:islandTooltip={$tStore('calculator.calculate')}
-    >
-      =
-    </button>
+    <button class="calc-btn equals-btn" onclick={handleEvaluate}> = </button>
   </div>
 </div>
 

@@ -14,7 +14,7 @@
   content: '';
   position: absolute;
   inset: 6px;
-  border-radius: 22px;
+  border-radius: 14px;
   border: 1.5px dashed var(--vinta-accent-primary);
   pointer-events: none;
   z-index: 20;
@@ -243,7 +243,7 @@
   align-items: center;
   gap: 6px;
   padding: 14px 22px;
-  border-radius: 16px;
+  border-radius: var(--vinta-radius-card, 14px);
   background: var(--vinta-surface-elevated);
   border: 1.5px dashed var(--vinta-accent-warning);
   box-shadow: var(--vinta-dock-popover-shadow);
@@ -400,7 +400,7 @@
   position: relative;
   width: 56px;
   height: 56px;
-  border-radius: 16px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
