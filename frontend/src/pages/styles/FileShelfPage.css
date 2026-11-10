@@ -3,7 +3,7 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding: var(--vinta-dock-clearance) 16px 12px 16px;
+  padding: var(--vinta-dock-clearance, 56px) 16px 12px 16px;
   box-sizing: border-box;
   overflow: hidden;
   user-select: none;
@@ -424,9 +424,20 @@
   border-color: var(--vinta-border);
 }
 
+.shelf-tile.is-selected {
+  background: var(--vinta-active-bg, rgba(255, 255, 255, 0.08));
+  border-radius: 12px;
+}
+
 .shelf-tile.is-selected .tile-stage {
-  border: 1.5px solid var(--vinta-accent-primary);
-  background: var(--vinta-icon-badge-bg);
+  border: 2px solid var(--vinta-accent-primary);
+  background: var(--vinta-active-bg, rgba(255, 255, 255, 0.1));
+  box-shadow: 0 0 0 2px var(--vinta-contrast-border, rgba(255, 255, 255, 0.15));
+}
+
+.shelf-tile.is-selected .tile-name {
+  color: var(--vinta-accent-primary);
+  font-weight: 600;
 }
 
 .shelf-tile.is-dragging .tile-stage {

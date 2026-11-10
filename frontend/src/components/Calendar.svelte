@@ -447,42 +447,53 @@
     isModalOpen = true
   }
 
+  let isSavingEvent = $state(false)
+
   /**
    * Validates and commits newly created or edited event properties to calendar store.
    */
   function handleSaveEvent() {
+    if (isSavingEvent) return
     const cleanTitle = formTitle.trim().slice(0, 60)
     if (!cleanTitle) return
 
-    const cleanDesc = formDescription.trim().slice(0, 200) || undefined
-    const cleanLoc = formLocation.trim().slice(0, 80) || undefined
+    isSavingEvent = true
+    try {
+      const cleanDesc = formDescription.trim().slice(0, 200) || undefined
+      const cleanLoc = formLocation.trim().slice(0, 80) || undefined
 
-    if (modalMode === 'edit' && editingEventId) {
-      updateCalendarEvent(editingEventId, {
-        title: cleanTitle,
-        description: cleanDesc,
-        date: formDate,
-        startTime: formIsAllDay ? '' : formStartTime,
-        endTime: formIsAllDay ? '' : formEndTime,
-        isAllDay: formIsAllDay,
-        color: formColor,
-        location: cleanLoc
-      })
-    } else {
-      addCalendarEvent({
-        title: cleanTitle,
-        description: cleanDesc,
-        date: formDate,
-        startTime: formIsAllDay ? '' : formStartTime,
-        endTime: formIsAllDay ? '' : formEndTime,
-        isAllDay: formIsAllDay,
-        color: formColor,
-        location: cleanLoc,
-        source: 'local'
-      })
+      if (modalMode === 'edit' && editingEventId) {
+        updateCalendarEvent(editingEventId, {
+          title: cleanTitle,
+          description: cleanDesc,
+          date: formDate,
+          startTime: formIsAllDay ? '' : formStartTime,
+          endTime: formIsAllDay ? '' : formEndTime,
+          isAllDay: formIsAllDay,
+          color: formColor,
+          location: cleanLoc
+        })
+      } else {
+        addCalendarEvent({
+          title: cleanTitle,
+          description: cleanDesc,
+          date: formDate,
+          startTime: formIsAllDay ? '' : formStartTime,
+          endTime: formIsAllDay ? '' : formEndTime,
+          isAllDay: formIsAllDay,
+          color: formColor,
+          location: cleanLoc,
+          source: 'local'
+        })
+      }
+      formTitle = ''
+      isModalOpen = false
+      editingEventId = null
+    } finally {
+      setTimeout(() => {
+        isSavingEvent = false
+      }, 300)
     }
-    isModalOpen = false
-    editingEventId = null
   }
 
   /**

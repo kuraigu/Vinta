@@ -10,7 +10,8 @@
     timezoneStore,
     dateFormatStore,
     formatUserDate,
-    getCachedDateTimeFormat
+    getCachedDateTimeFormat,
+    simulatedClockStore
   } from '../store'
 
   interface Props {
@@ -19,12 +20,12 @@
 
   let { expanded = false }: Props = $props()
 
-  let time = $state(new Date())
+  let internalTime = $state(new Date())
   let timer: ReturnType<typeof setInterval>
 
   onMount(() => {
     timer = setInterval(() => {
-      time = new Date()
+      internalTime = new Date()
     }, 1000)
   })
 
@@ -32,12 +33,32 @@
     clearInterval(timer)
   })
 
+  let time = $derived($simulatedClockStore ?? internalTime)
+
   // Selected timezone from store (defaulting to Asia/Manila)
   let currentTimezone = $derived($timezoneStore || 'Asia/Manila')
 
   // Format parts according to selected timezone and date format
   let timeParts = $derived.by(() => {
     try {
+      if ($simulatedClockStore) {
+        const h24 = $simulatedClockStore.getHours()
+        const m = $simulatedClockStore.getMinutes().toString().padStart(2, '0')
+        const s = $simulatedClockStore.getSeconds()
+        const dateBadgeText = formatUserDate(
+          $simulatedClockStore,
+          $dateFormatStore,
+          {
+            includeWeekday: true
+          }
+        )
+        return {
+          h24,
+          m,
+          s,
+          fullDateStr: dateBadgeText
+        }
+      }
       const formatter = getCachedDateTimeFormat('en-US', {
         timeZone: currentTimezone,
         hour: 'numeric',

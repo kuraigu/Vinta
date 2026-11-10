@@ -149,6 +149,24 @@ export class WindowBoundsManager {
           )
         }
       }
+
+      // Include simulated showcase desktop folder windows if present and visible
+      const folderWindows = document.querySelectorAll<HTMLElement>(
+        '.desktop-folder-window'
+      )
+      for (const win of folderWindows) {
+        const rect = win.getBoundingClientRect()
+        if (rect.width > 0 && rect.height > 0) {
+          hitRects.push(
+            new HitRect({
+              left: Math.round(rect.left * dpr),
+              top: Math.round(rect.top * dpr),
+              width: Math.round(rect.width * dpr),
+              height: Math.round(rect.height * dpr)
+            })
+          )
+        }
+      }
     }
 
     const sig = hitRects

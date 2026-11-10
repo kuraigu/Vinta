@@ -35,6 +35,7 @@ import {
   notifData,
   MAX_NOTIFICATIONS,
   notificationPermissionDenied,
+  suppressExternalNotifications,
   notifSoundStore,
   notifVolumeStore,
   dndStore,
@@ -97,12 +98,24 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
     eventName: string,
     callback: (data: T) => void
   ): () => void {
-    const unsub = Events.On(eventName, (ev: { data: T }) => {
-      callback(ev?.data)
+    const unsub = Events.On(eventName, (ev: any) => {
+      const data =
+        ev?.data !== undefined
+          ? Array.isArray(ev.data)
+            ? ev.data[0]
+            : ev.data
+          : ev
+      callback(data)
     })
     unsubs.push(unsub)
     return unsub
   }
+
+  // Cross-window suppression of external notifications during showcase
+  onEvent('devtest-suppress-notifications', (data: any) => {
+    const suppress = typeof data?.suppress === 'boolean' ? data.suppress : true
+    suppressExternalNotifications.set(suppress)
+  })
 
   // System Tray & Theme toggles
   onEvent('toggle-theme', () => {
@@ -382,22 +395,28 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
       title?: string
       message?: string
       heroImage?: string
+      isShowcase?: boolean
     }) => {
-      const appName = payload.appName || ''
-      const aumid = payload.aumid || ''
-      const title = payload.title || ''
-      const message = payload.message || ''
+      const p = (Array.isArray(payload) ? payload[0] : payload) || {}
+      if (get(suppressExternalNotifications) && !p.isShowcase) {
+        return
+      }
+
+      const appName = p.appName || ''
+      const aumid = p.aumid || ''
+      const title = p.title || ''
+      const message = p.message || ''
 
       const newNotif = {
         id: Date.now() + Math.floor(Math.random() * 1000),
-        nativeId: payload.id,
+        nativeId: p.id,
         appName,
         aumid,
-        icon: payload.icon,
-        appLogo: payload.appLogo || '',
+        icon: p.icon,
+        appLogo: p.appLogo || '',
         title,
         message,
-        heroImage: payload.heroImage,
+        heroImage: p.heroImage,
         timestamp: Date.now()
       }
 

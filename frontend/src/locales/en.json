@@ -115,7 +115,9 @@
     "no_matching_events": "No events match this filter",
     "save_changes": "Save Changes",
     "create_event": "Create Event",
-    "delete_event": "Delete Event"
+    "delete_event": "Delete Event",
+    "delete": "Delete",
+    "cancel": "Cancel"
   },
   "quick_controls": {
     "title": "Quick Controls",

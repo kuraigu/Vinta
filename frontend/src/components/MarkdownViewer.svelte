@@ -78,7 +78,10 @@
     text = text.replace(/^---+$/gm, '<hr class="md-hr" />')
 
     // 8b. Blockquotes: > quote
-    text = text.replace(/^&gt;\s?(.*$)/gm, '<blockquote class="md-blockquote">$1</blockquote>')
+    text = text.replace(
+      /^&gt;\s?(.*$)/gm,
+      '<blockquote class="md-blockquote">$1</blockquote>'
+    )
     text = text.replace(
       /((?:<blockquote class="md-blockquote">.*?<\/blockquote>\n*)+)/g,
       '<div class="md-blockquote-group">$1</div>'

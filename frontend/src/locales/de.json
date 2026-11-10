@@ -115,7 +115,9 @@
     "no_matching_events": "Keine passenden Termine gefunden",
     "save_changes": "Änderungen speichern",
     "create_event": "Termin erstellen",
-    "delete_event": "Termin löschen"
+    "delete_event": "Termin löschen",
+    "delete": "Löschen",
+    "cancel": "Abbrechen"
   },
   "quick_controls": {
     "title": "Schnellsteuerungen",

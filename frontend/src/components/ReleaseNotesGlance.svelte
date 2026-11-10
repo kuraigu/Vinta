@@ -81,9 +81,18 @@
     }
 
     text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    text = text.replace(/(?<!\*)\*([^*\s][^*]*[^*\s]|\S)\*(?!\*)/g, '<em>$1</em>')
-    text = text.replace(/`([^`]+)`/g, '<code class="glance-inline-code">$1</code>')
-    text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<span class="glance-inline-link">$1</span>')
+    text = text.replace(
+      /(?<!\*)\*([^*\s][^*]*[^*\s]|\S)\*(?!\*)/g,
+      '<em>$1</em>'
+    )
+    text = text.replace(
+      /`([^`]+)`/g,
+      '<code class="glance-inline-code">$1</code>'
+    )
+    text = text.replace(
+      /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+      '<span class="glance-inline-link">$1</span>'
+    )
 
     return isTruncated ? text + '...' : text
   }

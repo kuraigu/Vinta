@@ -288,7 +288,8 @@
       <div class="weather-art-wrap">
         <div
           class="weather-art-link"
-          role="link"
+          data-weather-mascot
+          role="button"
           tabindex="0"
           aria-label="Open weather page"
           onclick={(e) => {

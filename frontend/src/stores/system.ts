@@ -34,6 +34,13 @@ export const MAX_NOTIFICATIONS = 999
 
 export const notifData = writable<AppNotification[]>([])
 export const notificationPermissionDenied = writable<boolean>(false)
+export const suppressExternalNotifications = writable<boolean>(false)
+
+/**
+ * Optional simulated clock override for promotional showcases and automated scenes.
+ * When null, digital clocks use live system time.
+ */
+export const simulatedClockStore = writable<Date | null>(null)
 
 let saveNotificationsTimeout: ReturnType<typeof setTimeout> | null = null
 

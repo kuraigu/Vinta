@@ -32,6 +32,7 @@
   import AboutTab from '../components/settings/tabs/AboutTab.svelte'
   import { activeSettingsTabStore } from '../store'
 
+  let { expanded: _expanded = true }: { expanded?: boolean } = $props()
   let activeTab = $derived($activeSettingsTabStore)
 </script>
 

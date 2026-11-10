@@ -6,10 +6,12 @@
 -->
 <script lang="ts">
   import { onMount, setContext, type Component } from 'svelte'
+  import { get } from 'svelte/store'
   import {
     FocusWindow,
     Quit,
-    GetDisplayLayout
+    GetDisplayLayout,
+    SendMediaControl
   } from '../bindings/Vinta/backend/app.js'
   import { Events } from '@wailsio/runtime'
 
@@ -33,7 +35,17 @@
   import WeatherPage, {
     config as weatherConfig
   } from './pages/WeatherPage.svelte'
-  import FileShelfPage from './pages/FileShelfPage.svelte'
+  import FileShelfPage, {
+    config as fileShelfConfig
+  } from './pages/FileShelfPage.svelte'
+  import { fileShelfStore, clearFileShelf } from './stores/fileShelf'
+  import {
+    addAlarm,
+    cleanShowcaseAlarms,
+    dismissRingingAlarm
+  } from './stores/timerApp'
+  import { calendarStore } from './stores/calendarStore'
+  import { SaveNotifications } from '../bindings/Vinta/backend/app.js'
   import OnboardingPage, {
     config as onboardingConfig
   } from './pages/OnboardingPage.svelte'
@@ -103,8 +115,15 @@
     type WirelessData,
     type WeatherLocation,
     type TemperatureUnit,
-    displayLayoutStore
+    displayLayoutStore,
+    alarmVolumeStore,
+    alarmSoundPresetStore,
+    simulatedClockStore
   } from './store'
+  import {
+    startAlarmRingingChime,
+    stopAlarmRingingChime
+  } from './services/audioService'
   import { hideTooltip } from './stores/tooltip'
   import {
     debugBoundsOverlay,
@@ -112,6 +131,7 @@
     debugClassInspector
   } from './devtest/debugConfig'
   import ClassInspectorOverlay from './devtest/ClassInspectorOverlay.svelte'
+  import VirtualCursor from './devtest/VirtualCursor.svelte'
 
   function syncDebugBoundsOverlay(enabled: boolean) {
     if (typeof document !== 'undefined') {
@@ -729,12 +749,13 @@
       wasHiddenBeforeNotif = false
     }
 
+    clearTimeout(dormantUnmountTimeout)
+    dormantUnmountTimeout = undefined
+    clearTimeout(memoryTrimTimeout)
+    memoryTrimTimeout = undefined
+    isPageDormant = false
+
     if (isHidden) {
-      clearTimeout(dormantUnmountTimeout)
-      dormantUnmountTimeout = undefined
-      clearTimeout(memoryTrimTimeout)
-      memoryTrimTimeout = undefined
-      isPageDormant = false
       wasExpandedBeforeHide = false
       finishDragGesture()
       isHidden = false
@@ -1394,7 +1415,8 @@
       calculator: { page: CalculatorPage, config: calcConfig },
       timer: { page: TimerPage, config: timerConfig },
       calendar: { page: CalendarPage, config: calendarConfig },
-      weather: { page: WeatherPage, config: weatherConfig }
+      weather: { page: WeatherPage, config: weatherConfig },
+      fileshelf: { page: FileShelfPage, config: fileShelfConfig }
     }
 
     try {
@@ -1423,13 +1445,35 @@
     const unsubDevTestNavigate = Events.On(
       'devtest-navigate',
       (ev: { data: unknown }) => {
-        const data = ev?.data as { mode?: string; expand?: boolean }
+        const raw =
+          ev?.data !== undefined
+            ? Array.isArray(ev.data)
+              ? ev.data[0]
+              : ev.data
+            : ev
+        const data = raw as { mode?: string; expand?: boolean }
         if (!data?.mode) return
+
+        const expand = Boolean(data.expand)
+        if (
+          !expand &&
+          (data.mode === 'fileshelf' ||
+            data.mode === 'notes' ||
+            data.mode === 'apps' ||
+            data.mode === 'settings')
+        ) {
+          const fallback = getFallbackPage()
+          $devPinnedStore = false
+          navigateTo(fallback.page as Component, fallback.config, false)
+          return
+        }
 
         const match = pageMappings[data.mode]
         if (match) {
+          $hasCompletedOnboardingStore = true
+          hasCompletedOnboardingStore.set(true)
           $devPinnedStore = true
-          navigateTo(match.page, match.config, Boolean(data.expand))
+          navigateTo(match.page, match.config, expand)
         }
       }
     )
@@ -1437,7 +1481,13 @@
     const unsubDevTestPin = Events.On(
       'devtest-pin',
       (ev: { data: unknown }) => {
-        const data = ev?.data as { pinned?: boolean }
+        const raw =
+          ev?.data !== undefined
+            ? Array.isArray(ev.data)
+              ? ev.data[0]
+              : ev.data
+            : ev
+        const data = raw as { pinned?: boolean }
         if (typeof data?.pinned === 'boolean') {
           $devPinnedStore = data.pinned
         }
@@ -1571,6 +1621,218 @@
       }
     )
 
+    const unsubDevTestAlarm = Events.On(
+      'devtest-trigger-ringing-alarm',
+      (ev: { data: unknown }) => {
+        const raw = ev?.data as any
+        const data = Array.isArray(raw) ? raw[0] : (raw?.data ?? raw)
+        // Immediately pause media playback on Main Island and native OS audio when alarm triggers
+        try {
+          SendMediaControl('pause')
+        } catch {}
+        globalMediaStore.update((m) => ({
+          ...m,
+          isPlaying: false
+        }))
+        timerAppStore.update((s) => ({
+          ...s,
+          ringingAlarm: {
+            id: 'showcase-alarm',
+            alarmId: 'mock_alarm_1',
+            label: data?.label || '16:00 Launch Review',
+            time: data?.time || '16:00',
+            days: [],
+            repeat: 'once',
+            triggeredAt: Date.now()
+          }
+        }))
+        startAlarmRingingChime(
+          get(alarmVolumeStore),
+          get(alarmSoundPresetStore)
+        )
+      }
+    )
+
+    const unsubDevTestTimerState = Events.On(
+      'devtest-timer-state',
+      (ev: { data: unknown }) => {
+        const raw = ev?.data as any
+        const data = (Array.isArray(raw) ? raw[0] : (raw?.data ?? raw)) || {}
+        if (data.activeTab) {
+          timerAppStore.update((s) => ({
+            ...s,
+            activeTab: data.activeTab
+          }))
+        }
+        if (data.newAlarm) {
+          addAlarm(
+            data.newAlarm.time,
+            data.newAlarm.label,
+            data.newAlarm.repeat || 'once',
+            data.newAlarm.days || []
+          )
+        }
+      }
+    )
+
+    const unsubDevTestMediaState = Events.On(
+      'devtest-media-state',
+      (ev: { data: unknown }) => {
+        const raw = ev?.data as any
+        const data = (Array.isArray(raw) ? raw[0] : (raw?.data ?? raw)) || {}
+        globalMediaStore.update((m) => ({
+          ...m,
+          ...data
+        }))
+      }
+    )
+
+    const unsubDevTestFileShelf = Events.On(
+      'devtest-mock-fileshelf',
+      (ev: { data: unknown }) => {
+        const raw = ev?.data as any
+        const data = (Array.isArray(raw) ? raw[0] : (raw?.data ?? raw)) || {}
+        if (data.singleFile) {
+          fileShelfStore.update((s) => ({
+            ...s,
+            items: [
+              {
+                path: 'C:\\Projects\\proposal_final.pdf',
+                name: 'proposal_final.pdf',
+                size: 2450000,
+                extension: 'pdf',
+                isDir: false,
+                category: 'document',
+                addedAt: Date.now()
+              }
+            ]
+          }))
+          return
+        }
+        fileShelfStore.update((s) => ({
+          ...s,
+          items: [
+            {
+              path: 'C:\\Projects\\proposal_final.pdf',
+              name: 'proposal_final.pdf',
+              size: 2450000,
+              extension: 'pdf',
+              isDir: false,
+              category: 'document',
+              addedAt: Date.now()
+            },
+            {
+              path: 'C:\\Projects\\hero_render_4k.png',
+              name: 'hero_render_4k.png',
+              size: 8900000,
+              extension: 'png',
+              isDir: false,
+              category: 'image',
+              addedAt: Date.now()
+            }
+          ]
+        }))
+      }
+    )
+
+    const unsubDevTestClearFileshelf = Events.On(
+      'devtest-clear-fileshelf',
+      () => {
+        clearFileShelf()
+      }
+    )
+
+    const unsubDevTestFileHold = Events.On(
+      'devtest-file-drop-hold',
+      (ev: { data: unknown }) => {
+        const data = ev?.data as { active?: boolean; progress?: number }
+        window.dispatchEvent(
+          new CustomEvent('vinta-devtest-file-hold', { detail: data })
+        )
+      }
+    )
+
+    const unsubDevTestClearNotifs = Events.On(
+      'devtest-clear-notifications',
+      () => {
+        notifData.set([])
+        try {
+          localStorage.removeItem('vinta_notifications')
+        } catch {}
+        if (typeof SaveNotifications === 'function') {
+          SaveNotifications('[]').catch(() => {})
+        }
+      }
+    )
+
+    const unsubDevTestDismissAlarm = Events.On('devtest-dismiss-alarm', () => {
+      stopAlarmRingingChime()
+      dismissRingingAlarm()
+    })
+
+    const unsubDevTestClock = Events.On(
+      'devtest-clock',
+      (ev: { data: unknown }) => {
+        const raw =
+          ev?.data !== undefined
+            ? Array.isArray(ev.data)
+              ? ev.data[0]
+              : ev.data
+            : ev
+        const data = (Array.isArray(raw) ? raw[0] : (raw?.data ?? raw)) || {}
+        if (data?.time) {
+          const d =
+            typeof data.time === 'number'
+              ? new Date(data.time)
+              : new Date(data.time)
+          if (!isNaN(d.getTime())) {
+            simulatedClockStore.set(d)
+            return
+          }
+        }
+        simulatedClockStore.set(null)
+      }
+    )
+
+    const unsubDevTestCleanup = Events.On('devtest-cleanup', () => {
+      simulatedClockStore.set(null)
+      cleanShowcaseAlarms()
+      calendarStore.update((s) => ({
+        ...s,
+        events: s.events.filter(
+          (e) =>
+            !e.title.toLowerCase().includes('showcase') &&
+            !e.title.toLowerCase().includes('launch') &&
+            !e.title.toLowerCase().includes('vinta') &&
+            !e.title.toLowerCase().includes('demo')
+        )
+      }))
+      timerAppStore.update((s) => ({
+        ...s,
+        ringingAlarm: null,
+        focus: {
+          ...s.focus,
+          isRunning: false,
+          timeRemaining: 0
+        }
+      }))
+      fileShelfStore.update((s) => ({
+        ...s,
+        items: []
+      }))
+      try {
+        localStorage.removeItem('vinta_file_shelf_paths')
+      } catch {}
+      notifData.set([])
+      try {
+        localStorage.removeItem('vinta_notifications')
+      } catch {}
+      if (typeof SaveNotifications === 'function') {
+        SaveNotifications('[]').catch(() => {})
+      }
+      stopAlarmRingingChime()
+    })
+
     return () => {
       window.clearInterval(idleMemoryWatchdog)
       stopIdleReconciler()
@@ -1589,6 +1851,17 @@
       unsubDevTestWireless()
       unsubDevTestWeather()
       unsubDevTestWeatherMock()
+      unsubDevTestAlarm()
+      unsubDevTestDismissAlarm()
+      unsubDevTestClock()
+      simulatedClockStore.set(null)
+      unsubDevTestTimerState()
+      unsubDevTestMediaState()
+      unsubDevTestFileShelf()
+      unsubDevTestClearFileshelf()
+      unsubDevTestFileHold()
+      unsubDevTestClearNotifs()
+      unsubDevTestCleanup()
       clearHoverGrace()
       clearTimeout(dormantUnmountTimeout)
       clearTimeout(memoryTrimTimeout)
@@ -1804,5 +2077,11 @@
 
 <CustomTooltip />
 <ClassInspectorOverlay />
+<VirtualCursor
+  primaryCenter={displayLayout.primaryCenter}
+  {clampedOffsetX}
+  monitorTop={Math.max(0, activeMonitor.top - displayLayout.virtualTop)}
+  monitorWidth={activeMonitor.width}
+/>
 
 <style src="./App.css"></style>

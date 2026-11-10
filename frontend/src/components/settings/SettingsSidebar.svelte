@@ -36,12 +36,13 @@
 
 <div class="sidebar-nav">
   {#each categories as cat (cat.id)}
+    {@const Icon = cat.icon}
     <button
       class="nav-item"
       class:active={$activeSettingsTabStore === cat.id}
       onclick={() => ($activeSettingsTabStore = cat.id)}
     >
-      <cat.icon size={14} class="nav-icon" />
+      <Icon size={14} class="nav-icon" />
       <span>{$tStore('settings.tabs.' + cat.id)}</span>
     </button>
   {/each}

@@ -328,11 +328,18 @@
       }
     }
 
+    const handleDevFileHold = (e: Event) => {
+      const custom = e as CustomEvent<{ active?: boolean; progress?: number }>
+      isHoldingFilesOverIsland = !!custom.detail?.active
+      fileHoldProgress = custom.detail?.progress ?? 0
+    }
+
     document.documentElement.addEventListener(
       'pointerleave',
       handleDocumentPointerLeave
     )
     window.addEventListener('blur', handleWindowBlur)
+    window.addEventListener('vinta-devtest-file-hold', handleDevFileHold)
 
     return () => {
       stopFileHoldTimer()
@@ -341,6 +348,7 @@
         handleDocumentPointerLeave
       )
       window.removeEventListener('blur', handleWindowBlur)
+      window.removeEventListener('vinta-devtest-file-hold', handleDevFileHold)
     }
   })
 </script>

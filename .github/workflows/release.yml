@@ -4,21 +4,21 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version tag (e.g. v0.1.0-alpha, v0.2.0 - Leave blank to auto-detect and increment)'
+        description: "Release version tag (e.g. v0.1.0-alpha, v0.2.0 - Leave blank to auto-detect and increment)"
         required: false
-        default: ''
+        default: ""
       release_notes:
-        description: 'Release highlights / changelog (Optional: leave blank to auto-generate from PRs/commits)'
+        description: "Release highlights / changelog (Optional: leave blank to auto-generate from PRs/commits)"
         required: false
         type: string
-        default: ''
+        default: ""
       draft:
-        description: 'Create as a Private Draft Release'
+        description: "Create as a Private Draft Release"
         required: true
         type: boolean
         default: true
       prerelease:
-        description: 'Mark as a Pre-release'
+        description: "Mark as a Pre-release"
         required: true
         type: boolean
         default: false
@@ -34,7 +34,7 @@ jobs:
     runs-on: windows-latest
     if: github.repository == 'kuraigu/Vinta'
     env:
-      RELEASE_VERSION: ''
+      RELEASE_VERSION: ""
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -87,7 +87,7 @@ jobs:
       - name: Set up CMake and Ninja
         uses: ashutoshvarma/setup-ninja@master
         with:
-          version: '1.11.1'
+          version: "1.11.1"
 
       - name: Install NSIS
         run: |
@@ -341,7 +341,7 @@ jobs:
         continue-on-error: true
         uses: actions/attest-build-provenance@v4
         with:
-          subject-path: 'release-dist/*'
+          subject-path: "release-dist/*"
 
       - name: Create Release
         uses: softprops/action-gh-release@v3
@@ -354,3 +354,11 @@ jobs:
           files: release-dist/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish to WinGet (Package Manager)
+        if: ${{ github.event.inputs.draft != 'true' && github.event.inputs.prerelease != 'true' && secrets.WINGET_TOKEN != '' }}
+        continue-on-error: true
+        uses: vedantmgoyal2009/winget-releaser@v2
+        with:
+          identifier: FreeMatrixStudios.Vinta
+          token: ${{ secrets.WINGET_TOKEN }}

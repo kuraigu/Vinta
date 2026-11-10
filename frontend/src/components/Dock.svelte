@@ -354,7 +354,7 @@
   })
 </script>
 
-<div class="dock-container">
+<div class="dock-container" class:is-media={activePage === MediaPage}>
   <div class="dock" role="toolbar" aria-label={$tStore('dock.dock_aria')}>
     <!-- Core Anchors -->
     <div class="dock-group core-group">
@@ -485,6 +485,15 @@
     background: linear-gradient(
       to bottom,
       var(--vinta-bg) 0%,
+      transparent 100%
+    );
+  }
+
+  .dock-container.is-media {
+    background: linear-gradient(
+      to bottom,
+      rgba(10, 11, 16, 0.52) 0%,
+      rgba(10, 11, 16, 0.28) 45%,
       transparent 100%
     );
   }
