@@ -5,8 +5,8 @@
 -->
 <script lang="ts">
   import { onMount, onDestroy, type Snippet } from 'svelte'
-  import { ChevronDown } from 'lucide-svelte'
   import { swipe } from '../utils/useSwipe'
+  import ScrollIndicator from './ScrollIndicator.svelte'
 
   interface Props {
     children?: Snippet
@@ -14,6 +14,8 @@
     enableSwipe?: boolean
     hideScrollbar?: boolean
     showScrollIndicators?: boolean
+    scrollIndicatorLabel?: string
+    scrollIndicatorCompact?: boolean
     ignoreSelector?: string
     onscroll?: (e: Event) => void
     element?: HTMLElement
@@ -25,6 +27,8 @@
     enableSwipe = true,
     hideScrollbar = false,
     showScrollIndicators = false,
+    scrollIndicatorLabel,
+    scrollIndicatorCompact = false,
     ignoreSelector = 'input, select, textarea, range, .custom-select, .no-swipe, .no-drag',
     onscroll,
     element = $bindable()
@@ -100,14 +104,11 @@
       {/if}
     </div>
     {#if canScrollDown}
-      <button
-        type="button"
-        class="scroll-more-pill"
+      <ScrollIndicator
         onclick={scrollDownStep}
-        aria-label="Scroll down for more"
-      >
-        <ChevronDown size={12} strokeWidth={2.5} />
-      </button>
+        label={scrollIndicatorLabel}
+        compact={scrollIndicatorCompact}
+      />
     {/if}
   </div>
 {:else}

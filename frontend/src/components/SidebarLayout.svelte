@@ -22,6 +22,7 @@
   import BentoCard from './BentoCard.svelte'
   import ScrollView from './ScrollView.svelte'
   import IconBadge from './IconBadge.svelte'
+  import { tStore } from '../store'
 
   interface Props {
     title?: string
@@ -81,7 +82,11 @@
       class="sidebar-pane"
       style="width: {sidebarWidth}"
     >
-      <ScrollView showScrollIndicators={true} hideScrollbar={true}>
+      <ScrollView
+        showScrollIndicators={true}
+        hideScrollbar={true}
+        scrollIndicatorLabel={$tStore('home.scroll_cue_more')}
+      >
         {#if items && items.length > 0}
           <div class="sidebar-nav-list" role="tablist">
             {#each items as item (item.id)}

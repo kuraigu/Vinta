@@ -17,7 +17,7 @@
    */
 
   import { onMount, onDestroy, getContext } from 'svelte'
-  import { ChevronDown } from 'lucide-svelte'
+  import ScrollIndicator from '../components/ScrollIndicator.svelte'
   import Calendar from '../components/Calendar.svelte'
   import CalendarGlance from '../components/CalendarGlance.svelte'
   import Weather from '../components/Weather.svelte'
@@ -490,17 +490,13 @@
         </div>
       </ScrollView>
 
-      <!-- Scroll cue indicator: hides when feed has no overflow or is scrolled down -->
-      <button
-        type="button"
-        class="home-scroll-cue-pill"
-        class:hidden={!canScrollMore || isScrolledDown}
+      <!-- Scroll indicator cue: hides when feed has no overflow or is scrolled down -->
+      <ScrollIndicator
+        visible={canScrollMore && !isScrolledDown}
         onclick={scrollFeedDown}
-        aria-label={$tStore('home.scroll_cue_aria')}
-      >
-        <span class="scroll-cue-text">{$tStore('home.scroll_cue_more')}</span>
-        <ChevronDown size={13} class="scroll-cue-icon" />
-      </button>
+        label={$tStore('home.scroll_cue_more')}
+        ariaLabel={$tStore('home.scroll_cue_aria')}
+      />
     </div>
   {/if}
 </div>

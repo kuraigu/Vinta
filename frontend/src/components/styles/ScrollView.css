@@ -52,34 +52,3 @@
 .scroll-view:not(.hide-scrollbar):hover::-webkit-scrollbar-thumb {
   background: var(--vinta-scrollbar-thumb-hover, rgba(255, 255, 255, 0.45));
 }
-
-/* Interactive Scroll Cue */
-.scroll-more-pill {
-  position: absolute;
-  bottom: 2px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 4;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 16px;
-  padding: 0;
-  border-radius: 999px;
-  background: var(--vinta-surface-elevated, rgba(30, 41, 59, 0.92));
-  border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.14));
-  color: var(--vinta-text-secondary);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-  cursor: pointer;
-  transition:
-    color 0.15s ease,
-    background 0.15s ease,
-    transform 0.15s ease;
-}
-
-.scroll-more-pill:hover {
-  color: var(--vinta-text-primary);
-  background: var(--vinta-accent-muted, rgba(255, 255, 255, 0.18));
-  transform: translateX(-50%) translateY(1px);
-}
