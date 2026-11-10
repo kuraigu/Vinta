@@ -184,7 +184,9 @@
     "appearance_title": "Personalise Your Island",
     "appearance_desc": "Customise themes, widget feeds, and screen positioning",
     "feedback_title": "Send Feedback",
-    "feedback_desc": "Share ideas, report bugs, and help improve Vinta"
+    "feedback_desc": "Share ideas, report bugs, and help improve Vinta",
+    "enohotel_title": "Enohotel Daniel Belda",
+    "enohotel_desc": "Sleep among the vines at this boutique wine hotel in Valencia, Spain"
   },
   "settings": {
     "page_title": "Settings",
