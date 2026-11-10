@@ -54,6 +54,13 @@ tasks:
       - cmd.exe /c "taskkill /IM Vinta.exe /F /T >nul 2>&1 || exit 0"
       - wails3 dev -config ./build/config.yml -port 9245
 
+  showcase:
+    desc: Start live development server with in-app Showcase Studio enabled
+    deps: [build:native]
+    cmds:
+      - cmd.exe /c "taskkill /IM Vinta.exe /F /T >nul 2>&1 || exit 0"
+      - cmd.exe /c "set VINTA_SHOWCASE=1 && wails3 dev -config ./build/config.yml -port 9245"
+
   dev:frontend:
     desc: Start Vite dev server for Wails v3 dev mode
     deps: [generate:bindings]

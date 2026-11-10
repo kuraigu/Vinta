@@ -49,6 +49,7 @@
     notifData,
     activeSettingsTabStore,
     tStore,
+    simulatedClockStore,
     type IslandConfig
   } from '../store'
 
@@ -220,12 +221,13 @@
     }
   }
 
-  let time = $state(new Date())
+  let internalTime = $state(new Date())
+  let time = $derived($simulatedClockStore ?? internalTime)
   let timer: ReturnType<typeof setInterval>
 
   onMount(() => {
     timer = setInterval(() => {
-      time = new Date()
+      internalTime = new Date()
     }, 1000)
   })
 
@@ -250,6 +252,29 @@
    */
   function computeTimeParts() {
     try {
+      if ($simulatedClockStore) {
+        const h24 = $simulatedClockStore.getHours()
+        const m = $simulatedClockStore.getMinutes().toString().padStart(2, '0')
+        const s = $simulatedClockStore.getSeconds().toString().padStart(2, '0')
+        const dateBadgeText = formatUserDate(
+          $simulatedClockStore,
+          $dateFormatStore
+        )
+        const friendlyDateText = formatUserDate(
+          $simulatedClockStore,
+          $dateFormatStore,
+          {
+            includeWeekday: true
+          }
+        )
+        return {
+          h24,
+          m,
+          s,
+          friendlyDateText,
+          fullDateStr: dateBadgeText
+        }
+      }
       const formatter = getCachedDateTimeFormat('en-US', {
         timeZone: currentTimezone,
         hour: 'numeric',

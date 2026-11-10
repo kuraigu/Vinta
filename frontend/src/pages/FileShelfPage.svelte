@@ -2,8 +2,10 @@
   import type { IslandConfig } from '../store'
 
   export const config: IslandConfig = {
-    minimal: { w: 220, h: 36, r: 16 },
-    expanded: { w: 460, h: 360, r: 28 }
+    minimal: { w: 10, h: 10, r: 5 },
+    expanded: { w: 460, h: 360, r: 28 },
+    borderColor: 'var(--vinta-border)',
+    glowColor: 'transparent'
   }
 </script>
 
@@ -15,8 +17,8 @@
    * Windows Explorer or other apps, supporting batch removal and opening files in shell.
    */
 
-  import { SvelteSet } from 'svelte/reactivity'
-  import { Call } from '@wailsio/runtime'
+  import { onMount } from 'svelte'
+  import { Call, Events } from '@wailsio/runtime'
   import {
     FolderDown,
     Plus,
@@ -55,23 +57,36 @@
     type ShelfFileItem
   } from '../stores/fileShelf'
 
+  let { expanded: _expanded = false }: { expanded?: boolean } = $props()
+
   let isDropActive = $state(false)
   let dragDepth = 0
-  let selectedPaths = new SvelteSet<string>()
+  let rawSelectedPaths = $state<string[]>([])
 
   /**
-   * Synchronizes selected file paths set with the active shelf item list.
+   * Derives active selected file paths by filtering against current shelf items.
    */
-  function syncSelectedPaths(): void {
-    const valid = new Set($fileShelfStore.items.map((i) => i.path))
-    for (const p of selectedPaths) {
-      if (!valid.has(p)) {
-        selectedPaths.delete(p)
-      }
-    }
+  function computeSelectedPaths(): string[] {
+    const items = $fileShelfStore?.items ?? []
+    const valid = new Set(items.map((i) => i.path))
+    return rawSelectedPaths.filter((p) => valid.has(p))
   }
 
-  $effect(syncSelectedPaths)
+  let selectedPaths = $derived.by(computeSelectedPaths)
+
+  onMount(() => {
+    let unsubSelectAll: (() => void) | undefined
+    try {
+      unsubSelectAll = Events.On('devtest-fileshelf-select-all', () => {
+        const items = $fileShelfStore?.items ?? []
+        rawSelectedPaths = items.map((i) => i.path)
+      })
+    } catch {}
+
+    return () => {
+      unsubSelectAll?.()
+    }
+  })
 
   /**
    * Extracts target filesystem paths from currently selected shelf tiles.
@@ -79,12 +94,14 @@
    * @returns Array of absolute file path strings.
    */
   function computeTargetPaths(): string[] {
-    if (selectedPaths.size > 0) {
-      return $fileShelfStore.items
-        .filter((i) => selectedPaths.has(i.path))
-        .map((i) => i.path)
+    const items = $fileShelfStore?.items ?? []
+    if (selectedPaths.length > 0) {
+      const selected = items.filter((i) => selectedPaths.includes(i.path))
+      if (selected.length > 0) {
+        return selected.map((i) => i.path)
+      }
     }
-    return $fileShelfStore.items.map((i) => i.path)
+    return items.map((i) => i.path)
   }
 
   let targetPaths = $derived.by(computeTargetPaths)
@@ -96,12 +113,13 @@
    */
   function computeHasStrippableImages(): boolean {
     const targetSet = new Set(targetPaths)
-    return $fileShelfStore.items.some(
+    const items = $fileShelfStore?.items ?? []
+    return items.some(
       (item) =>
         targetSet.has(item.path) &&
-        (item.extension === '.jpg' ||
-          item.extension === '.jpeg' ||
-          item.extension === '.png')
+        (item.extension?.toLowerCase().replace(/^\./, '') === 'jpg' ||
+          item.extension?.toLowerCase().replace(/^\./, '') === 'jpeg' ||
+          item.extension?.toLowerCase().replace(/^\./, '') === 'png')
     )
   }
 
@@ -113,10 +131,10 @@
    * @param path - Filesystem path of the item.
    */
   function toggleItemSelection(path: string): void {
-    if (selectedPaths.has(path)) {
-      selectedPaths.delete(path)
+    if (selectedPaths.includes(path)) {
+      rawSelectedPaths = selectedPaths.filter((p) => p !== path)
     } else {
-      selectedPaths.add(path)
+      rawSelectedPaths = [...selectedPaths, path]
     }
   }
 
@@ -124,12 +142,10 @@
    * Selects all files currently on the shelf, or deselects all if already fully selected.
    */
   function toggleSelectAll(): void {
-    if (selectedPaths.size === $fileShelfStore.items.length) {
-      selectedPaths.clear()
+    if (selectedPaths.length === $fileShelfStore.items.length) {
+      rawSelectedPaths = []
     } else {
-      for (const item of $fileShelfStore.items) {
-        selectedPaths.add(item.path)
-      }
+      rawSelectedPaths = $fileShelfStore.items.map((item) => item.path)
     }
   }
 
@@ -137,9 +153,9 @@
    * Removes all currently selected items from the shelf.
    */
   function removeSelectedItems(): void {
-    if (selectedPaths.size === 0) return
-    const toRemove = Array.from(selectedPaths)
-    selectedPaths.clear()
+    if (selectedPaths.length === 0) return
+    const toRemove = [...selectedPaths]
+    rawSelectedPaths = []
     removeFilesFromShelf(toRemove)
   }
 
@@ -207,8 +223,8 @@
     if (e.key === 'Escape') {
       if ($fileShelfStore.isDraggingOut) {
         cancelActiveDrag()
-      } else if (selectedPaths.size > 0) {
-        selectedPaths.clear()
+      } else if (selectedPaths.length > 0) {
+        rawSelectedPaths = []
       }
     }
   }
@@ -225,7 +241,7 @@
     e.preventDefault()
 
     const dragPaths =
-      selectedPaths.has(item.path) && selectedPaths.size > 0
+      selectedPaths.includes(item.path) && selectedPaths.length > 0
         ? targetPaths
         : [item.path]
 
@@ -355,32 +371,34 @@
         <button
           type="button"
           class="select-toggle-pill no-swipe no-drag"
-          class:has-selection={selectedPaths.size > 0}
-          use:islandTooltip={selectedPaths.size === $fileShelfStore.items.length
+          data-action="select-all"
+          class:has-selection={selectedPaths.length > 0}
+          use:islandTooltip={selectedPaths.length ===
+          $fileShelfStore.items.length
             ? 'Click to clear selection'
             : 'Click to select all'}
           onclick={toggleSelectAll}
         >
           <span class="select-check-dot">
-            {#if selectedPaths.size > 0}
+            {#if selectedPaths.length > 0}
               <Check size={10} strokeWidth={3} />
             {/if}
           </span>
           <span>
-            {selectedPaths.size > 0
-              ? `${selectedPaths.size} chosen`
+            {selectedPaths.length > 0
+              ? `${selectedPaths.length} chosen`
               : 'Select All'}
           </span>
         </button>
 
         <div class="inline-actions-row">
-          {#if selectedPaths.size > 0}
+          {#if selectedPaths.length > 0}
             <button
               type="button"
               class="inline-pill-btn"
               disabled={$fileShelfStore.busyAction !== null}
               use:islandTooltip={'Copy chosen files to clipboard'}
-              onclick={() => void copyShelfPaths(Array.from(selectedPaths))}
+              onclick={() => void copyShelfPaths([...selectedPaths])}
             >
               <Copy size={11} />
               <span>Copy</span>
@@ -497,7 +515,7 @@
       <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
       <div class="shelf-grid no-swipe no-drag" role="list">
         {#each $fileShelfStore.items as item (item.path)}
-          {@const isSelected = selectedPaths.has(item.path)}
+          {@const isSelected = selectedPaths.includes(item.path)}
           {@const isBeingDragged =
             $fileShelfStore.isDraggingOut &&
             $fileShelfStore.draggingPaths.includes(item.path)}
@@ -561,7 +579,9 @@
                 onpointerdown={(e) => e.stopPropagation()}
                 onclick={(e) => {
                   e.stopPropagation()
-                  selectedPaths.delete(item.path)
+                  rawSelectedPaths = selectedPaths.filter(
+                    (p) => p !== item.path
+                  )
                   removeFileFromShelf(item.path)
                 }}
               >
@@ -606,7 +626,7 @@
           class="header-icon-btn clear-btn"
           use:islandTooltip={'Clear all staged files'}
           onclick={() => {
-            selectedPaths.clear()
+            rawSelectedPaths = []
             clearFileShelf()
           }}
         >

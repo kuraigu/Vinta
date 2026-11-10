@@ -13,6 +13,7 @@ import {
   dndStore,
   notifSoundStore,
   notifVolumeStore,
+  suppressExternalNotifications,
   MAX_NOTIFICATIONS
 } from '../store'
 import { playNotifChime } from './audioService'
@@ -29,6 +30,9 @@ export interface VintaNotificationOptions {
  * Sends a notification through the in-app list and native desktop toast.
  */
 export function sendVintaNotification(options: VintaNotificationOptions): void {
+  if (get(suppressExternalNotifications)) {
+    return
+  }
   const { title, message, subApp, playSound = true } = options
   const icon = options.icon || appIcon
   const appName = subApp ? `Vinta ${subApp}` : 'Vinta'

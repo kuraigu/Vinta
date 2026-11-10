@@ -115,7 +115,9 @@
     "no_matching_events": "Walang event na tumutugma sa filter na ito",
     "save_changes": "I-save ang Pagbabago",
     "create_event": "Gumawa ng Event",
-    "delete_event": "I-delete ang Event"
+    "delete_event": "I-delete ang Event",
+    "delete": "I-delete",
+    "cancel": "Kanselahin"
   },
   "quick_controls": {
     "title": "Quick Controls",

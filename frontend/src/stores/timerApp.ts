@@ -918,6 +918,28 @@ export function deleteAlarm(id: string): void {
 }
 
 /**
+ * Removes alarms generated specifically during the promotional showcase sequence.
+ */
+export function cleanShowcaseAlarms(): void {
+  timerAppStore.update((s) => {
+    const updated = s.alarms.filter(
+      (a) =>
+        !a.label.toLowerCase().includes('review') &&
+        !a.label.toLowerCase().includes('showcase') &&
+        !a.label.toLowerCase().includes('launch') &&
+        a.id !== 'showcase-alarm' &&
+        a.id !== 'mock_alarm_1'
+    )
+    persistAlarms(updated)
+    return {
+      ...s,
+      alarms: updated,
+      ringingAlarm: null
+    }
+  })
+}
+
+/**
  * Updates an alarm's details.
  *
  * @param id Alarm identifier.

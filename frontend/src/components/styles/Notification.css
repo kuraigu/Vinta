@@ -24,6 +24,14 @@
   padding: 0 24px;
   box-sizing: border-box;
   gap: 16px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.banner-view img {
+  -webkit-user-drag: none;
+  user-select: none;
+  pointer-events: none;
 }
 
 .icon-wrapper {

@@ -21,6 +21,7 @@
   import NotificationDevControls from './NotificationDevControls.svelte'
   import HomeDevControls from './HomeDevControls.svelte'
   import WeatherDevControls from './WeatherDevControls.svelte'
+  import ShowcaseDevControls from './ShowcaseDevControls.svelte'
   import {
     themeStore,
     devPinnedStore,
@@ -40,6 +41,15 @@
   let inspectedElement = $state<InspectorHoverPayload | null>(null)
   let copiedSelector = $state(false)
 
+  const urlParams =
+    typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search)
+      : null
+  const isShowcaseParam = urlParams?.get('showcase') === 'true'
+  let activeTab = $state<'controls' | 'showcase'>(
+    isShowcaseParam ? 'showcase' : 'controls'
+  )
+
   const pageOptions = [
     { value: 'home', label: 'Home Page' },
     { value: 'weather', label: 'Weather' },
@@ -48,7 +58,10 @@
     { value: 'notifications', label: 'Notifications' },
     { value: 'notes', label: 'Scratchpad' },
     { value: 'apps', label: 'App Launcher' },
-    { value: 'settings', label: 'Settings' }
+    { value: 'settings', label: 'Settings' },
+    { value: 'fileshelf', label: 'File Shelf' },
+    { value: 'calculator', label: 'Calculator' },
+    { value: 'timer', label: 'Timer & Alarm' }
   ]
 
   function emitNavigate(mode: string, expand: boolean) {
@@ -62,6 +75,14 @@
 
   function handlePageSelect(newMode: string) {
     $devPinnedStore = true
+    if (
+      newMode === 'fileshelf' ||
+      newMode === 'notes' ||
+      newMode === 'apps' ||
+      newMode === 'settings'
+    ) {
+      isExpandedMode = true
+    }
     emitNavigate(newMode, isExpandedMode)
   }
 
@@ -327,122 +348,147 @@
     </div>
   </header>
 
-  <div class="window-body">
-    <section class="control-section">
-      <span class="section-label">Active Island View</span>
-      <div class="select-container">
-        <CustomSelect
-          options={pageOptions}
-          bind:value={targetMode}
-          onChange={handlePageSelect}
-        />
-      </div>
-    </section>
+  <div class="window-nav-tabs">
+    <button
+      class="nav-tab-btn"
+      class:active={activeTab === 'controls'}
+      onclick={() => (activeTab = 'controls')}
+    >
+      Dev Controls
+    </button>
+    <button
+      class="nav-tab-btn"
+      class:active={activeTab === 'showcase'}
+      onclick={() => (activeTab = 'showcase')}
+    >
+      Showcase Studio
+    </button>
+  </div>
 
-    {#if $debugClassInspector}
-      <section class="control-section inspector-section">
-        <div class="inspector-header-row">
-          <span class="section-label inspector-label">
-            Class Name Inspector
-          </span>
+  <div class="window-body">
+    {#if activeTab === 'showcase'}
+      <section class="control-section showcase-section">
+        <ShowcaseDevControls />
+      </section>
+    {:else}
+      <section class="control-section">
+        <span class="section-label">Active Island View</span>
+        <div class="select-container">
+          <CustomSelect
+            options={pageOptions}
+            bind:value={targetMode}
+            onChange={handlePageSelect}
+          />
+        </div>
+      </section>
+
+      {#if $debugClassInspector}
+        <section class="control-section inspector-section">
+          <div class="inspector-header-row">
+            <span class="section-label inspector-label">
+              Class Name Inspector
+            </span>
+            {#if inspectedElement}
+              <button
+                class="copy-selector-btn"
+                onclick={copySelector}
+                use:islandTooltip={'Copy CSS selector'}
+              >
+                {#if copiedSelector}
+                  <Check size={12} />
+                  <span>Copied</span>
+                {:else}
+                  <Copy size={12} />
+                  <span>Copy Selector</span>
+                {/if}
+              </button>
+            {/if}
+          </div>
+
           {#if inspectedElement}
-            <button
-              class="copy-selector-btn"
-              onclick={copySelector}
-              use:islandTooltip={'Copy CSS selector'}
-            >
-              {#if copiedSelector}
-                <Check size={12} />
-                <span>Copied</span>
-              {:else}
-                <Copy size={12} />
-                <span>Copy Selector</span>
-              {/if}
-            </button>
+            <div class="inspector-readout-card">
+              <div class="inspector-meta-row">
+                <span class="meta-badge tag"
+                  >&lt;{inspectedElement.tag}&gt;</span
+                >
+                {#if inspectedElement.dataVinta}
+                  <span class="meta-badge vinta"
+                    >data-vinta="{inspectedElement.dataVinta}"</span
+                  >
+                {/if}
+                <span class="meta-dims"
+                  >{inspectedElement.width} × {inspectedElement.height}px</span
+                >
+              </div>
+              <div class="inspector-classes-row">
+                {#if inspectedElement.classes.length > 0}
+                  {#each inspectedElement.classes as cls (cls)}
+                    <span class="class-chip">.{cls}</span>
+                  {/each}
+                {:else}
+                  <span class="no-classes-text">No semantic classes</span>
+                {/if}
+              </div>
+              <code class="inspector-selector-code"
+                >{inspectedElement.selector}</code
+              >
+            </div>
+          {:else}
+            <div class="inspector-empty">
+              Hover over any element in the main Vinta island to inspect its
+              classes and theme selector.
+            </div>
+          {/if}
+        </section>
+      {/if}
+
+      <section class="control-section simulation-section">
+        <span class="section-label">Simulated Hardware & Feeds</span>
+        <div class="simulation-content">
+          {#if targetMode === 'notifications'}
+            <NotificationDevControls />
+          {:else if targetMode === 'home'}
+            <HomeDevControls />
+          {:else if targetMode === 'weather'}
+            <WeatherDevControls />
+          {:else if targetMode === 'calendar'}
+            <div class="mock-card">
+              <span class="mock-title">Calendar & Event Feeds</span>
+              <div class="mock-btn-row">
+                <button
+                  class="mock-btn primary"
+                  onclick={() =>
+                    addCalendarEvent({
+                      title: 'Live Product Demo',
+                      description: 'Simulated dev calendar event',
+                      date: new Date().toISOString().split('T')[0],
+                      startTime: '16:00',
+                      endTime: '17:00',
+                      location: 'Virtual Room',
+                      color: 'indigo'
+                    })}
+                >
+                  Add Today's Event
+                </button>
+                <button class="mock-btn" onclick={syncAllCalendarFeeds}>
+                  Sync Remote Feeds
+                </button>
+              </div>
+            </div>
+          {:else}
+            <div class="empty-state">
+              <span class="empty-title">
+                {pageOptions.find((p) => p.value === targetMode)?.label ||
+                  'Active Page'}
+              </span>
+              <p class="empty-description">
+                No specialized mock event controls are configured for this view.
+              </p>
+            </div>
           {/if}
         </div>
-
-        {#if inspectedElement}
-          <div class="inspector-readout-card">
-            <div class="inspector-meta-row">
-              <span class="meta-badge tag">&lt;{inspectedElement.tag}&gt;</span>
-              {#if inspectedElement.dataVinta}
-                <span class="meta-badge vinta"
-                  >data-vinta="{inspectedElement.dataVinta}"</span
-                >
-              {/if}
-              <span class="meta-dims"
-                >{inspectedElement.width} × {inspectedElement.height}px</span
-              >
-            </div>
-            <div class="inspector-classes-row">
-              {#if inspectedElement.classes.length > 0}
-                {#each inspectedElement.classes as cls (cls)}
-                  <span class="class-chip">.{cls}</span>
-                {/each}
-              {:else}
-                <span class="no-classes-text">No semantic classes</span>
-              {/if}
-            </div>
-            <code class="inspector-selector-code"
-              >{inspectedElement.selector}</code
-            >
-          </div>
-        {:else}
-          <div class="inspector-empty">
-            Hover over any element in the main Vinta island to inspect its
-            classes and theme selector.
-          </div>
-        {/if}
       </section>
     {/if}
-
-    <section class="control-section simulation-section">
-      <span class="section-label">Simulated Hardware & Feeds</span>
-      <div class="simulation-content">
-        {#if targetMode === 'notifications'}
-          <NotificationDevControls />
-        {:else if targetMode === 'home'}
-          <HomeDevControls />
-        {:else if targetMode === 'weather'}
-          <WeatherDevControls />
-        {:else if targetMode === 'calendar'}
-          <div class="mock-card">
-            <span class="mock-title">Calendar & Event Feeds</span>
-            <div class="mock-btn-row">
-              <button
-                class="mock-btn primary"
-                onclick={() =>
-                  addCalendarEvent({
-                    title: 'Live Product Demo',
-                    description: 'Simulated dev calendar event',
-                    date: new Date().toISOString().split('T')[0],
-                    startTime: '16:00',
-                    endTime: '17:00',
-                    location: 'Virtual Room',
-                    color: 'indigo'
-                  })}
-              >
-                Add Today's Event
-              </button>
-              <button class="mock-btn" onclick={syncAllCalendarFeeds}>
-                Sync Remote Feeds
-              </button>
-            </div>
-          </div>
-        {:else}
-          <div class="empty-state">
-            <span class="empty-title">
-              {pageOptions.find((p) => p.value === targetMode)?.label ||
-                'Active Page'}
-            </span>
-            <p class="empty-description">
-              No specialized mock event controls are configured for this view.
-            </p>
-          </div>
-        {/if}
-      </div>
-    </section>
   </div>
 </div>
 
@@ -534,6 +580,36 @@
     background: #3b82f6;
     color: #ffffff;
     border-color: #60a5fa;
+  }
+
+  .window-nav-tabs {
+    display: flex;
+    background: #18181b;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 6px 16px;
+    gap: 8px;
+  }
+
+  .nav-tab-btn {
+    background: transparent;
+    border: none;
+    color: #a1a1aa;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .nav-tab-btn:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .nav-tab-btn.active {
+    color: #e2a03f;
+    background: rgba(226, 160, 63, 0.12);
   }
 
   .window-body {

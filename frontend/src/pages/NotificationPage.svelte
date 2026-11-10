@@ -13,20 +13,10 @@
 </script>
 
 <script lang="ts">
-  import { getContext } from 'svelte'
-  import { ChevronUp } from 'lucide-svelte'
   import Notification from '../components/Notification.svelte'
-  import { islandTooltip } from '../services/islandTooltip'
-  import { notifData, tStore } from '../store'
-  import type { IslandConfig } from '../store'
-  import HomePage, { config as homeConfig } from './HomePage.svelte'
+  import { notifData } from '../store'
 
   let { expanded = false }: { expanded?: boolean } = $props()
-
-  const navigate =
-    getContext<
-      (page: unknown, pageConfig: IslandConfig, expand?: boolean) => void
-    >('navigate')
 </script>
 
 <div
@@ -37,21 +27,6 @@
   <div class="notif-content">
     <Notification {expanded} notifications={$notifData} />
   </div>
-
-  {#if !expanded}
-    <div class="shrink-action">
-      <button
-        class="collapse-btn"
-        use:islandTooltip={$tStore('notification.dismiss_tooltip')}
-        onclick={(e: MouseEvent) => {
-          if (e) e.stopPropagation()
-          navigate(HomePage, homeConfig, false)
-        }}
-      >
-        <ChevronUp size={14} />
-      </button>
-    </div>
-  {/if}
 </div>
 
 <style src="./styles/NotificationPage.css"></style>

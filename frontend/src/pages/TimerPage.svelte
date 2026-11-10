@@ -18,6 +18,8 @@
 </script>
 
 <script lang="ts">
+  import { onMount } from 'svelte'
+  import { Events } from '@wailsio/runtime'
   import './styles/TimerPage.css'
   import {
     Hourglass,
@@ -71,6 +73,21 @@
   let isCustomDrawerOpen = $state(false)
   let isNewAlarmOpen = $state(false)
   let editingAlarmId = $state<string | null>(null)
+  let defaultCreateTime = $state('16:00')
+
+  onMount(() => {
+    let unsubOpenNewAlarm: (() => void) | undefined
+    try {
+      unsubOpenNewAlarm = Events.On('devtest-open-new-alarm', (ev: any) => {
+        const payload = ev?.data?.[0] ?? ev?.data ?? ev
+        openCreateAlarm(payload?.time || '16:00')
+      })
+    } catch {}
+
+    return () => {
+      unsubOpenNewAlarm?.()
+    }
+  })
 
   /**
    * Checks whether user settings or locale use 24-hour time formatting.
@@ -292,8 +309,11 @@
   /**
    * Opens the new alarm creation modal drawer.
    */
-  function openCreateAlarm(): void {
+  function openCreateAlarm(initialTime?: string): void {
     editingAlarmId = null
+    if (initialTime) {
+      defaultCreateTime = initialTime
+    }
     isNewAlarmOpen = true
   }
 
@@ -499,6 +519,7 @@
         {:else if $timerAppStore.activeTab === 'alarms'}
           <button
             class="header-tool-btn"
+            data-action="create-alarm"
             class:active={isNewAlarmOpen}
             onclick={() => {
               if (isNewAlarmOpen) {
@@ -599,7 +620,7 @@
       <AlarmEditorDrawer
         isOpen={isNewAlarmOpen}
         isEditing={Boolean(editingAlarmId)}
-        initialTime={editingAlarm?.time || '09:00'}
+        initialTime={editingAlarm?.time || defaultCreateTime || '16:00'}
         initialLabel={editingAlarm?.label || ''}
         initialRepeat={editingAlarm?.repeat || 'once'}
         initialDays={editingAlarm?.days || [1, 2, 3, 4, 5]}

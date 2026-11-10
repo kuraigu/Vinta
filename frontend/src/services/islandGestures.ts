@@ -136,13 +136,24 @@ export class IslandGestureController {
 
     if (expanded && !isDragHandle && !isAltDrag) return false
 
-    if (
-      !isDragHandle &&
-      target.closest(
-        'button, input, select, textarea, a, .custom-select, .no-drag, [role="button"]'
-      )
-    ) {
-      return false
+    if (!isDragHandle) {
+      if (
+        target.closest(
+          'button, input, select, textarea, a, .custom-select, .no-drag'
+        )
+      ) {
+        return false
+      }
+      const roleBtn = target.closest('[role="button"]')
+      if (
+        roleBtn &&
+        !roleBtn.classList.contains('notification-layout') &&
+        !roleBtn.classList.contains('minimal-slot') &&
+        !roleBtn.classList.contains('clickable-slot') &&
+        !roleBtn.closest('.notification-layout, .banner-view-container')
+      ) {
+        return false
+      }
     }
 
     return true

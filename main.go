@@ -134,15 +134,19 @@ func main() {
 
 	if app.IsTestMode() {
 		win.Show()
+		devURL := "/?window=devtest"
+		if os.Getenv("VINTA_SHOWCASE") == "1" {
+			devURL = "/?window=devtest&showcase=true"
+		}
 		devWin := wailsApp.Window.NewWithOptions(application.WebviewWindowOptions{
 			Title:            "Vinta Dev Tools",
 			Width:            500,
-			Height:           600,
+			Height:           650,
 			InitialPosition:  application.WindowCenter,
 			Frameless:        false,
 			AlwaysOnTop:      true,
 			DisableResize:    false,
-			URL:              "/?window=devtest",
+			URL:              devURL,
 			BackgroundType:   application.BackgroundTypeSolid,
 			BackgroundColour: application.NewRGBA(24, 24, 27, 255),
 		})
