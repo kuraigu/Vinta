@@ -159,6 +159,11 @@ if "%~1"=="installer" (
     exit /b %ERRORLEVEL%
 )
 
+if "%~1"=="contributor" (
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\add_contributor.ps1" %2 %3 %4
+    exit /b %ERRORLEVEL%
+)
+
 echo Error: Unknown command '%~1'.
 :usage
 echo Usage: scripts.bat ^<command^> [options]

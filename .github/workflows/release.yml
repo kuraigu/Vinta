@@ -33,8 +33,6 @@ jobs:
     name: Build & Release Windows App
     runs-on: windows-latest
     if: github.event_name == 'workflow_dispatch' && github.repository == 'kuraigu/Vinta'
-    env:
-      RELEASE_VERSION: ""
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -46,8 +44,9 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_VERSION: ${{ github.event.inputs.version }}
         run: |
-          $inputVersion = "${{ github.event.inputs.version }}".Trim()
+          $inputVersion = "$env:INPUT_VERSION".Trim()
           if (-not $inputVersion -or $inputVersion -eq "auto") {
               $latestTag = (gh release list --limit 1 --json tagName --jq '.[0].tagName' 2>$null)
               if ($latestTag) {
@@ -113,7 +112,54 @@ jobs:
         shell: pwsh
         run: ./scripts/generate_icon.ps1
 
-      - name: Build Official Application & NSIS Installer
+      # ---------------------------------------------------------------
+      # Code signing setup. Imports the certificate once; later steps
+      # sign through scripts/sign.ps1 using SIGNING_THUMBPRINT.
+      # If the secrets are absent the build simply ships unsigned.
+      # If they are present but broken, the build fails loudly.
+      # ---------------------------------------------------------------
+      - name: Import Code Signing Certificate
+        id: signing
+        shell: pwsh
+        env:
+          SIGNING_CERT_BASE64: ${{ secrets.SIGNING_CERT_BASE64 }}
+          SIGNING_CERT_PASSWORD: ${{ secrets.SIGNING_CERT_PASSWORD }}
+        run: |
+          $rawCert = "$env:SIGNING_CERT_BASE64".Trim()
+          $rawPass = "$env:SIGNING_CERT_PASSWORD".Trim()
+
+          if (-not $rawCert -or -not $rawPass) {
+              Write-Host "::notice::No code signing certificate secrets configured. This build will be UNSIGNED."
+              "enabled=false" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+              exit 0
+          }
+
+          $pfxPath = Join-Path $env:RUNNER_TEMP "signing_cert.pfx"
+          try {
+              [System.IO.File]::WriteAllBytes($pfxPath, [System.Convert]::FromBase64String($rawCert))
+              $secPassword = ConvertTo-SecureString -String $rawPass -AsPlainText -Force
+              $cert = Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation "Cert:\CurrentUser\My" -Password $secPassword -ErrorAction Stop |
+                  Where-Object { $_.HasPrivateKey } |
+                  Select-Object -First 1
+
+              if (-not $cert) { throw "The PFX does not contain a certificate with a private key." }
+              if ($cert.NotAfter -lt (Get-Date)) { throw "The signing certificate expired on $($cert.NotAfter)." }
+
+              Write-Host "Loaded code signing certificate:"
+              Write-Host "  Subject:    $($cert.Subject)"
+              Write-Host "  Expires:    $($cert.NotAfter)"
+              Write-Host "  Thumbprint: $($cert.Thumbprint)"
+
+              "SIGNING_THUMBPRINT=$($cert.Thumbprint)" | Out-File -FilePath $env:GITHUB_ENV -Append
+              "enabled=true" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          } catch {
+              Write-Error "Could not load the code signing certificate from secrets: $($_.Exception.Message)"
+              exit 1
+          } finally {
+              if (Test-Path $pfxPath) { Remove-Item $pfxPath -Force -ErrorAction SilentlyContinue }
+          }
+
+      - name: Build Application Binary
         shell: pwsh
         env:
           UPDATER_TOKEN: ${{ secrets.UPDATER_TOKEN }}
@@ -125,55 +171,45 @@ jobs:
 
           # 1. Build Frontend
           cmd.exe /c "cd frontend && npm run build"
+          if ($LASTEXITCODE -ne 0) { throw "Frontend build failed." }
 
           # 2. Generate syso resource
           wails3 generate syso -arch amd64 -icon build/windows/icon.ico -manifest build/windows/wails.exe.manifest -info build/windows/info.json -out wails_windows_amd64.syso
+          if ($LASTEXITCODE -ne 0) { throw "syso generation failed." }
 
           # 3. Build production binary
           New-Item -ItemType Directory -Path "build/bin" -Force | Out-Null
           go build -trimpath -ldflags="$ldflags" -o "build/bin/Vinta.exe" .
+          if ($LASTEXITCODE -ne 0) { throw "Go build failed." }
 
           if (Test-Path wails_windows_amd64.syso) {
               Remove-Item -Force wails_windows_amd64.syso
           }
 
-          # 4. Compile NSIS Installer
-          ./scripts/package_installer.ps1 -Version $version
-
-      - name: Sign Executables and Installer
+      # Sign BEFORE packaging so the exe bundled inside the installer is signed too.
+      - name: Sign Application Binaries
+        if: steps.signing.outputs.enabled == 'true'
         shell: pwsh
-        env:
-          SIGNING_CERT_BASE64: ${{ secrets.SIGNING_CERT_BASE64 }}
-          SIGNING_CERT_PASSWORD: ${{ secrets.SIGNING_CERT_PASSWORD }}
         run: |
-          $pfxPath = "$env:TEMP\signing_cert.pfx"
-          $rawCert = if ($env:SIGNING_CERT_BASE64) { $env:SIGNING_CERT_BASE64.Trim() } else { "" }
-          $rawPass = if ($env:SIGNING_CERT_PASSWORD) { $env:SIGNING_CERT_PASSWORD.Trim() } else { "" }
+          ./scripts/sign.ps1 "build/bin/Vinta.exe"
+          # Our own native bridge DLL (skipped if not present at these locations)
+          ./scripts/sign.ps1 "build/bin/vintaservices.dll", "backend/services/vintaservices.dll", "build/native/vintaservices.dll" -Optional
 
-          if ($rawCert -and $rawPass) {
-              try {
-                  $certBytes = [System.Convert]::FromBase64String($rawCert)
-                  if ($certBytes.Length -gt 0) {
-                      [System.IO.File]::WriteAllBytes($pfxPath, $certBytes)
-                      $secPassword = ConvertTo-SecureString -String $rawPass -AsPlainText -Force
-                      $cert = Import-PfxCertificate -FilePath $pfxPath -CertStoreLocation "Cert:\CurrentUser\My" -Password $secPassword -ErrorAction Stop
-                      Write-Host "Successfully loaded production Code Signing Certificate."
+      - name: Build NSIS Installer
+        shell: pwsh
+        run: ./scripts/package_installer.ps1 -Version "$env:RELEASE_VERSION"
 
-                      $targets = Get-Item "build/bin/Vinta.exe", "build/bin/Vinta-Setup-x64.exe" -ErrorAction SilentlyContinue
-                      foreach ($file in $targets) {
-                          Write-Host "Signing $($file.FullName)..."
-                          Set-AuthenticodeSignature -FilePath $file.FullName -Certificate $cert -HashAlgorithm SHA256 -TimestampServer "http://timestamp.digicert.com"
-                      }
-                  }
-              } catch {
-                  Write-Warning "Failed to load production certificate from secrets: $($_.Exception.Message)"
-              } finally {
-                  if (Test-Path $pfxPath) {
-                      Remove-Item $pfxPath -Force -ErrorAction SilentlyContinue
-                  }
-              }
-          } else {
-              Write-Host "No production code signing certificate secret provided. Skipping Authenticode signing."
+      - name: Sign Installer
+        if: steps.signing.outputs.enabled == 'true'
+        shell: pwsh
+        run: ./scripts/sign.ps1 "build/bin/Vinta-Setup-x64.exe", "build/bin/Vinta-*-installer.exe" -Optional
+
+      - name: Remove Signing Certificate
+        if: always() && steps.signing.outputs.enabled == 'true'
+        shell: pwsh
+        run: |
+          if ($env:SIGNING_THUMBPRINT) {
+              Remove-Item "Cert:\CurrentUser\My\$($env:SIGNING_THUMBPRINT)" -DeleteKey -Force -ErrorAction SilentlyContinue
           }
 
       - name: Prepare Release Artifacts
@@ -183,11 +219,18 @@ jobs:
 
           # 1. Copy NSIS Installer with stable filename for reputation and direct download links
           $installerSrc = Get-Item "build/bin/Vinta-Setup-x64.exe", "build/bin/Vinta-*-installer.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
-          if ($installerSrc) {
-              Copy-Item $installerSrc.FullName "release-dist/Vinta-Setup-x64.exe"
+          if (-not $installerSrc) { throw "Installer not found in build/bin." }
+          Copy-Item $installerSrc.FullName "release-dist/Vinta-Setup-x64.exe"
+
+          # 2. Show the signature state of what we are about to ship
+          $sig = Get-AuthenticodeSignature "release-dist/Vinta-Setup-x64.exe"
+          if ($sig.SignerCertificate) {
+              Write-Host "Installer signed by: $($sig.SignerCertificate.Subject)"
+          } else {
+              Write-Host "Installer is UNSIGNED."
           }
 
-          # 2. Generate SHA256 Checksums
+          # 3. Generate SHA256 Checksums
           Set-Location release-dist
           Get-ChildItem -File | Where-Object { $_.Name -ne "SHA256SUMS.txt" } | ForEach-Object {
               $hash = (Get-FileHash $_.Name -Algorithm SHA256).Hash.ToLower()
@@ -199,8 +242,9 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          INPUT_RELEASE_NOTES: ${{ github.event.inputs.release_notes }}
         run: |
-          $customNotes = "${{ github.event.inputs.release_notes }}".Trim()
+          $customNotes = "$env:INPUT_RELEASE_NOTES".Trim()
           $version = "$env:RELEASE_VERSION"
 
           # Version badge encoding (escape dashes as -- for shields.io)
@@ -346,8 +390,8 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ steps.version.outputs.version || env.RELEASE_VERSION }}
-          name: Release ${{ steps.version.outputs.version || env.RELEASE_VERSION }}
+          tag_name: ${{ steps.version.outputs.version }}
+          name: Release ${{ steps.version.outputs.version }}
           draft: ${{ github.event.inputs.draft }}
           prerelease: ${{ github.event.inputs.prerelease }}
           body_path: release-notes.md
@@ -356,8 +400,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish to WinGet (Package Manager)
-        if: ${{ github.event.inputs.draft != 'true' && github.event.inputs.prerelease != 'true' && secrets.WINGET_TOKEN != '' }}
+        # `secrets` is not available in step-level `if:`, so expose it via env and test that.
+        if: ${{ github.event.inputs.draft != 'true' && github.event.inputs.prerelease != 'true' && env.WINGET_TOKEN != '' }}
         continue-on-error: true
+        env:
+          WINGET_TOKEN: ${{ secrets.WINGET_TOKEN }}
         uses: vedantmgoyal2009/winget-releaser@v2
         with:
           identifier: FreeMatrixStudios.Vinta

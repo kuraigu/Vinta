@@ -1,9 +1,9 @@
 # https://taskfile.dev
-version: '3'
+version: "3"
 
 vars:
   APP_NAME: Vinta
-  BUILD_DIR: 'build/bin'
+  BUILD_DIR: "build/bin"
 
 tasks:
   default:
@@ -39,11 +39,11 @@ tasks:
     desc: Build native C++/WinRT bridge DLL using CMake and MSVC
     deps: [kill]
     sources:
-      - 'backend/services/native/**/*.{cpp,h}'
-      - 'backend/services/native/CMakeLists.txt'
+      - "backend/services/native/**/*.{cpp,h}"
+      - "backend/services/native/CMakeLists.txt"
     generates:
-      - 'backend/services/vintaservices.dll'
-      - 'build/bin/vintaservices.dll'
+      - "backend/services/vintaservices.dll"
+      - "build/bin/vintaservices.dll"
     cmds:
       - powershell.exe -NoProfile -Command "if (-not (Test-Path build/native)) { cmake -B build/native -S backend/services/native -G 'Visual Studio 18 2026' -A x64 }; cmake --build build/native --config Release"
 
@@ -76,20 +76,20 @@ tasks:
   icon:
     desc: Generate multi-resolution build/windows/icon.ico from build/appicon.png
     sources:
-      - 'build/appicon.png'
+      - "build/appicon.png"
     generates:
-      - 'build/windows/icon.ico'
+      - "build/windows/icon.ico"
     cmds:
       - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/generate_icon.ps1
 
   generate:bindings:
     desc: Generate TypeScript bindings for frontend from Go backend
     sources:
-      - 'main.go'
-      - 'backend/**/*.go'
+      - "main.go"
+      - "backend/**/*.go"
     generates:
-      - 'frontend/bindings/Vinta/backend/app.ts'
-      - 'frontend/bindings/**/*'
+      - "frontend/bindings/Vinta/backend/app.ts"
+      - "frontend/bindings/**/*"
     cmds:
       - wails3 generate bindings -ts
 
@@ -102,11 +102,11 @@ tasks:
   generate:syso:
     desc: Generate Windows syso resource file
     sources:
-      - 'build/windows/icon.ico'
-      - 'build/windows/info.json'
-      - 'build/windows/wails.exe.manifest'
+      - "build/windows/icon.ico"
+      - "build/windows/info.json"
+      - "build/windows/wails.exe.manifest"
     generates:
-      - 'wails_windows_amd64.syso'
+      - "wails_windows_amd64.syso"
     cmds:
       - wails3 generate syso -arch amd64 -icon build/windows/icon.ico -manifest build/windows/wails.exe.manifest -info build/windows/info.json -out wails_windows_amd64.syso
 
@@ -197,3 +197,8 @@ tasks:
     aliases: [check-locals, locales:check]
     cmds:
       - node scripts/check-locales.js
+
+  contributor:
+    desc: "Add a contributor with a custom name (usage: task contributor -- <username> <roles> <name>)"
+    cmds:
+      - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/add_contributor.ps1 {{.CLI_ARGS}}
