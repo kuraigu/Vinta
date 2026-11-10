@@ -19,7 +19,7 @@
 .glance-title-group {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -28,16 +28,8 @@
   flex: 1;
 }
 
-.glance-icon-badge {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.08);
-  border: none;
-  color: var(--vinta-text-secondary);
+:global(.glance-title-icon) {
+  color: var(--vinta-text-muted);
   flex-shrink: 0;
 }
 
@@ -69,20 +61,20 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   background: none;
   border: none;
   padding: 0;
   cursor: pointer;
   color: var(--vinta-text-muted);
-  border-radius: 6px;
+  border-radius: 50%;
   transition: all 0.15s ease;
 }
 
 .glance-nav-btn:hover {
   color: var(--vinta-text-primary);
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--vinta-contrast-hover, rgba(255, 255, 255, 0.08));
 }
 
 :global(.glance-nav-chevron) {
@@ -106,9 +98,9 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  height: 22px;
-  padding: 0 8px;
-  border-radius: var(--vinta-radius-button, 8px);
+  height: 24px;
+  padding: 0 10px;
+  border-radius: var(--vinta-radius-pill, 9999px);
   background: var(--vinta-accent-muted, rgba(56, 189, 248, 0.14));
   border: none;
   color: var(--vinta-accent-primary, #38bdf8);

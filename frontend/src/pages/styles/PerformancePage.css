@@ -101,7 +101,7 @@
 }
 
 .sparkline-grid-line {
-  stroke: rgba(255, 255, 255, 0.05);
+  stroke: var(--vinta-border-light);
   stroke-dasharray: 2 3;
   stroke-width: 1;
 }

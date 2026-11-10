@@ -198,7 +198,7 @@ h3 {
 
 .dismiss-item-btn {
   background: var(--vinta-contrast-bg);
-  border: 1px solid var(--vinta-contrast-bg);
+  border: 1px solid var(--vinta-border);
   color: var(--vinta-text-secondary);
   width: 26px;
   height: 26px;
@@ -220,7 +220,7 @@ h3 {
 
 .clear-btn,
 .dnd-btn {
-  border: none;
+  border: 1px solid var(--vinta-border);
   outline: none;
   background: var(--vinta-contrast-bg);
   box-shadow: var(--vinta-contrast-border);
@@ -228,7 +228,7 @@ h3 {
   width: 28px;
   height: 28px;
   padding: 0;
-  border-radius: 9px;
+  border-radius: 50%;
   display: inline-flex;
   align-items: center;
   justify-content: center;

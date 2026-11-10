@@ -129,7 +129,7 @@ func main() {
 		Frameless:         true,
 		AlwaysOnTop:       true,
 		DisableResize:     true,
-		Hidden:            !app.IsTestMode(),
+		Hidden:            false,
 		BackgroundType:    application.BackgroundTypeTransparent,
 		BackgroundColour:  application.NewRGBA(0, 0, 0, 0),
 		IgnoreMouseEvents: false,

@@ -17,6 +17,7 @@
   import ScrollView from './ScrollView.svelte'
   import BentoCard from './BentoCard.svelte'
   import AgendaEventCard from './AgendaEventCard.svelte'
+  import IconBadge from './IconBadge.svelte'
   import {
     dateFormatStore,
     formatUserDate,
@@ -82,9 +83,7 @@
       onclick={handleOpenCalendarPage}
       onkeydown={(e) => e.key === 'Enter' && handleOpenCalendarPage()}
     >
-      <div class="glance-icon-badge">
-        <CalendarDays size={12} />
-      </div>
+      <IconBadge icon={CalendarDays} color="surface" size="sm" />
       <span class="glance-title-text">{todayDateLabel}</span>
       {#if todayEvents.length > 0}
         <span class="glance-event-count">

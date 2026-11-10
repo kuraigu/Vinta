@@ -1672,3 +1672,23 @@ button.alarm-item-info:hover .alarm-item-time {
 .mini-switch input:checked + .switch-slider:before {
   transform: translateX(14px);
 }
+
+.timer-tab-transition {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  animation: vintaTimerTabFadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes vintaTimerTabFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

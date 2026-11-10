@@ -203,12 +203,10 @@
                 }}
               />
               <div class="glance-fallback-icon" style="display: none;">
-                <Bell size={13} />
+                <Bell size={14} class="notif-brand-icon" />
               </div>
             {:else}
-              <div class="glance-fallback-icon">
-                <Bell size={13} />
-              </div>
+              <Bell size={14} class="notif-brand-icon" />
             {/if}
           {/key}
         </div>

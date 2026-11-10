@@ -126,6 +126,9 @@ Do not write custom card background formulas or box shadows from scratch. Use `B
 Never use native HTML `title` attributes on interactive buttons or icon triggers. Native tooltips lag and ignore theme styling.
 - Use the `use:islandTooltip` action from `frontend/src/services/islandTooltip.ts`.
 - Alternatively, use `<CustomTooltip>` from `frontend/src/components/CustomTooltip.svelte`.
+- **No Redundant Tooltips:** Never attach a tooltip to a button, tab, or control that already displays a visible text label (such as `"Start"`, `"Pause"`, `"Add Event"`, `"Focus"`, or `"Short Break"`) or an unambiguous symbol (`0` through `9`, `+`, `-`, `=`).
+- **Icon-Only & Truncated Content Only:** Reserve tooltips strictly for icon-only actions or truncated text where extra context is genuinely helpful.
+- **Keep Tooltips Concise:** Tooltip strings must be brief action labels (1 to 3 words, such as `"Clear all"`, `"Do Not Disturb"`, or `"Back"`), never full sentences.
 
 ### Custom Form Controls
 Native HTML select menus and date pickers break window transparency and clash with theme tokens. Never use native form popups.

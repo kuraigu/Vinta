@@ -7,6 +7,7 @@
   import { onMount, getContext } from 'svelte'
   import { Megaphone, ChevronRight } from 'lucide-svelte'
   import BentoCard from './BentoCard.svelte'
+  import IconBadge from './IconBadge.svelte'
   import {
     getCachedAnnouncements,
     getDeveloperAnnouncements,
@@ -142,9 +143,7 @@
   <BentoCard variant="bento" class="announcement-glance-card">
     <div class="glance-top-row">
       <div class="glance-brand-group">
-        <div class="glance-icon-badge">
-          <Megaphone size={12} />
-        </div>
+        <IconBadge icon={Megaphone} color="surface" size="sm" />
         <span class="glance-brand-name">{$tStore('announcements.title')}</span>
         {#if hasUnread}
           <span class="glance-unread-pill"

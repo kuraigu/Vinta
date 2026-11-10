@@ -619,19 +619,23 @@
         </div>
       {/if}
 
-      {#if $timerAppStore.activeTab === 'timer'}
-        <CountdownTab onOpenCustom={() => (isCustomDrawerOpen = true)} />
-      {:else if $timerAppStore.activeTab === 'stopwatch'}
-        <StopwatchTab />
-      {:else if $timerAppStore.activeTab === 'focus'}
-        <FocusTab />
-      {:else if $timerAppStore.activeTab === 'alarms'}
-        <AlarmsTab
-          {is24H}
-          onStartEdit={startEditAlarm}
-          onOpenCreate={openCreateAlarm}
-        />
-      {/if}
+      {#key $timerAppStore.activeTab}
+        <div class="timer-tab-transition">
+          {#if $timerAppStore.activeTab === 'timer'}
+            <CountdownTab onOpenCustom={() => (isCustomDrawerOpen = true)} />
+          {:else if $timerAppStore.activeTab === 'stopwatch'}
+            <StopwatchTab />
+          {:else if $timerAppStore.activeTab === 'focus'}
+            <FocusTab />
+          {:else if $timerAppStore.activeTab === 'alarms'}
+            <AlarmsTab
+              {is24H}
+              onStartEdit={startEditAlarm}
+              onOpenCreate={openCreateAlarm}
+            />
+          {/if}
+        </div>
+      {/key}
 
       <CustomTimerDrawer
         isOpen={isCustomDrawerOpen}

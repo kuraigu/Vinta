@@ -96,14 +96,6 @@
   const CURSOR_VISIBLE_STORAGE_KEY = 'vinta_showcase_cursor_visible'
   const CURSOR_TRAIL_STORAGE_KEY = 'vinta_showcase_cursor_trail'
 
-  function loadInitialCursorVisible(): boolean {
-    try {
-      const saved = localStorage.getItem(CURSOR_VISIBLE_STORAGE_KEY)
-      if (saved !== null) return JSON.parse(saved)
-    } catch {}
-    return true
-  }
-
   function loadInitialCursorTrail(): boolean {
     try {
       const saved = localStorage.getItem(CURSOR_TRAIL_STORAGE_KEY)
@@ -112,7 +104,7 @@
     return true
   }
 
-  let visible = $state(loadInitialCursorVisible())
+  let visible = $state(false)
   let motionTrailEnabled = $state(loadInitialCursorTrail())
   let carriedBadge = $state<{
     name: string

@@ -31,6 +31,8 @@
   } from 'lucide-svelte'
   import BentoCard from '../components/BentoCard.svelte'
   import BackButton from '../components/BackButton.svelte'
+  import IconBadge from '../components/IconBadge.svelte'
+  import ToggleSwitch from '../components/ToggleSwitch.svelte'
   import { islandTooltip } from '../services/islandTooltip'
   import {
     wirelessDataStore,
@@ -226,16 +228,11 @@
       }}
     >
       <div class="card-left">
-        <div
-          class="card-icon-circle"
-          class:is-off={!wireless.wifiEnabled || wireless.airplaneMode}
-        >
-          {#if wireless.wifiEnabled && !wireless.airplaneMode}
-            <Wifi size={18} />
-          {:else}
-            <WifiOff size={18} />
-          {/if}
-        </div>
+        <IconBadge
+          icon={wireless.wifiEnabled && !wireless.airplaneMode ? Wifi : WifiOff}
+          color={wireless.wifiEnabled && !wireless.airplaneMode ? 'blue' : 'slate'}
+          size="lg"
+        />
         <div class="card-info">
           <span class="card-primary-text">{$tStore('action_center.wifi')}</span>
           <span class="card-secondary-text">
@@ -263,19 +260,15 @@
         >
           <ExternalLink size={13} />
         </button>
-        <label
-          class="toggle-switch"
-          class:disabled-switch={wireless.airplaneMode}
-          onclick={(e) => e.stopPropagation()}
-        >
-          <input
-            type="checkbox"
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div onclick={(e) => e.stopPropagation()}>
+          <ToggleSwitch
             checked={wireless.wifiEnabled && !wireless.airplaneMode}
             disabled={wireless.airplaneMode}
-            onchange={toggleWifi}
+            onchange={(_, e) => toggleWifi(e)}
+            ariaLabel={$tStore('action_center.wifi')}
           />
-          <span class="slider"></span>
-        </label>
+        </div>
       </div>
     </BentoCard>
 
@@ -288,16 +281,15 @@
       }}
     >
       <div class="card-left">
-        <div
-          class="card-icon-circle"
-          class:is-off={!wireless.bluetoothEnabled || wireless.airplaneMode}
-        >
-          {#if wireless.bluetoothEnabled && !wireless.airplaneMode}
-            <Bluetooth size={18} />
-          {:else}
-            <BluetoothOff size={18} />
-          {/if}
-        </div>
+        <IconBadge
+          icon={wireless.bluetoothEnabled && !wireless.airplaneMode
+            ? Bluetooth
+            : BluetoothOff}
+          color={wireless.bluetoothEnabled && !wireless.airplaneMode
+            ? 'indigo'
+            : 'slate'}
+          size="lg"
+        />
         <div class="card-info">
           <span class="card-primary-text"
             >{$tStore('action_center.bluetooth')}</span
@@ -339,22 +331,17 @@
         >
           <ExternalLink size={13} />
         </button>
-        <label
-          class="toggle-switch"
-          class:disabled-switch={!wireless.hasBluetooth ||
-            wireless.airplaneMode}
-          onclick={(e) => e.stopPropagation()}
-        >
-          <input
-            type="checkbox"
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div onclick={(e) => e.stopPropagation()}>
+          <ToggleSwitch
             checked={wireless.hasBluetooth &&
               wireless.bluetoothEnabled &&
               !wireless.airplaneMode}
             disabled={!wireless.hasBluetooth || wireless.airplaneMode}
-            onchange={toggleBluetooth}
+            onchange={(_, e) => toggleBluetooth(e)}
+            ariaLabel={$tStore('action_center.bluetooth')}
           />
-          <span class="slider"></span>
-        </label>
+        </div>
       </div>
     </BentoCard>
 
@@ -367,17 +354,17 @@
       }}
     >
       <div class="card-left">
-        <div class="card-icon-circle">
-          {#if !battery.hasBattery}
-            <Plug size={18} />
-          {:else if battery.isCharging}
-            <Zap size={18} />
-          {:else if battery.batterySaver}
-            <Leaf size={18} />
-          {:else}
-            <Battery size={18} />
-          {/if}
-        </div>
+        <IconBadge
+          icon={!battery.hasBattery
+            ? Plug
+            : battery.isCharging
+              ? Zap
+              : battery.batterySaver
+                ? Leaf
+                : Battery}
+          color={battery.batterySaver || battery.isCharging ? 'emerald' : 'teal'}
+          size="lg"
+        />
         <div class="card-info">
           <span class="card-primary-text"
             >{$tStore('action_center.battery_power')}</span
@@ -400,14 +387,14 @@
           <ExternalLink size={13} />
         </button>
         {#if battery.hasBattery}
-          <label class="toggle-switch" onclick={(e) => e.stopPropagation()}>
-            <input
-              type="checkbox"
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div onclick={(e) => e.stopPropagation()}>
+            <ToggleSwitch
               checked={battery.batterySaver}
-              onchange={toggleBatterySaver}
+              onchange={(_, e) => toggleBatterySaver(e)}
+              ariaLabel={$tStore('action_center.battery_power')}
             />
-            <span class="slider"></span>
-          </label>
+          </div>
         {/if}
       </div>
     </BentoCard>
@@ -419,9 +406,11 @@
       onclick={toggleAirplaneMode}
     >
       <div class="card-left">
-        <div class="card-icon-circle" class:is-off={!wireless.airplaneMode}>
-          <Plane size={18} />
-        </div>
+        <IconBadge
+          icon={Plane}
+          color={wireless.airplaneMode ? 'amber' : 'slate'}
+          size="lg"
+        />
         <div class="card-info">
           <span class="card-primary-text"
             >{$tStore('action_center.airplane_mode')}</span
@@ -445,14 +434,14 @@
         >
           <ExternalLink size={13} />
         </button>
-        <label class="toggle-switch" onclick={(e) => e.stopPropagation()}>
-          <input
-            type="checkbox"
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div onclick={(e) => e.stopPropagation()}>
+          <ToggleSwitch
             checked={wireless.airplaneMode}
-            onchange={toggleAirplaneMode}
+            onchange={(_, e) => toggleAirplaneMode(e)}
+            ariaLabel={$tStore('action_center.airplane_mode')}
           />
-          <span class="slider"></span>
-        </label>
+        </div>
       </div>
     </BentoCard>
   </div>

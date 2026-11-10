@@ -10,51 +10,6 @@
   gap: 8px;
 }
 
-/* Standard Toggle Switch */
-.toggle-switch {
-  position: relative;
-  display: inline-block;
-  width: 34px;
-  height: 18px;
-  flex-shrink: 0;
-}
-
-.toggle-switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.slider {
-  position: absolute;
-  cursor: pointer;
-  inset: 0;
-  background-color: var(--vinta-surface-2, rgba(255, 255, 255, 0.1));
-  transition: 0.3s;
-  border-radius: 20px;
-  border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.1));
-}
-
-.slider:before {
-  position: absolute;
-  content: '';
-  height: 14px;
-  width: 14px;
-  left: 1px;
-  bottom: 1px;
-  background-color: var(--vinta-text-primary, #ffffff);
-  transition: 0.3s;
-  border-radius: 50%;
-}
-
-.toggle-switch input:checked + .slider {
-  background-color: var(--vinta-primary);
-}
-
-.toggle-switch input:checked + .slider:before {
-  transform: translateX(16px);
-}
-
 /* Update Available Master Card (BentoCard announcement) */
 :global(.update-card) {
   position: relative;

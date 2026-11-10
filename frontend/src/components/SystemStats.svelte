@@ -12,6 +12,7 @@
   import { islandTooltip } from '../services/islandTooltip'
   import BentoCard from './BentoCard.svelte'
   import ActionCapsule from './ActionCapsule.svelte'
+  import IconBadge from './IconBadge.svelte'
   import PerformancePage, {
     config as performanceConfig
   } from '../pages/PerformancePage.svelte'
@@ -65,7 +66,7 @@
   >
     <div class="glance-header">
       <div class="glance-title-group">
-        <Activity size={12} />
+        <IconBadge icon={Activity} color="surface" size="sm" />
         <span>System Stats</span>
       </div>
       <div class="glance-actions-group">

@@ -192,7 +192,6 @@
         class:phase-focus={$timerAppStore.focus.phase === 'focus'}
         class:phase-break={$timerAppStore.focus.phase !== 'focus'}
         onclick={toggleFocus}
-        use:islandTooltip={$timerAppStore.focus.isRunning ? 'Pause' : 'Start'}
       >
         {#if $timerAppStore.focus.isRunning}
           <Pause size={16} />
@@ -206,10 +205,12 @@
       <button
         class="ctrl-btn"
         onclick={skipFocusSession}
-        use:islandTooltip={'Advance to next cycle'}
+        use:islandTooltip={'Next cycle'}
       >
         <SkipForward size={15} />
       </button>
     </div>
   </div>
 </div>
+
+<style src="../../pages/styles/TimerPage.css"></style>

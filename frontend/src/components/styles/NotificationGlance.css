@@ -31,15 +31,17 @@
 }
 
 .glance-avatar-container {
-  width: 20px;
-  height: 20px;
-  border-radius: 6px;
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   flex-shrink: 0;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--vinta-surface-elevated, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--vinta-border-light, rgba(255, 255, 255, 0.08));
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .glance-app-icon {
@@ -95,7 +97,7 @@
   border: none;
   background: transparent;
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: 50%;
   color: var(--vinta-text-muted, rgba(255, 255, 255, 0.45));
   transition: all 0.15s ease;
   padding: 3px 6px;
@@ -105,14 +107,14 @@
 }
 
 .glance-action-btn.dismiss {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   padding: 0;
   border-radius: 50%;
 }
 
 .glance-action-btn.dismiss:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--vinta-contrast-hover, rgba(255, 255, 255, 0.12));
   color: var(--vinta-text-primary, #fff);
 }
 

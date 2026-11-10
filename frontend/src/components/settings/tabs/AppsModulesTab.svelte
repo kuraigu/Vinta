@@ -8,20 +8,22 @@
     FileText,
     Music,
     Bell,
-    Layers,
     AlertCircle,
     SlidersHorizontal,
     Calculator,
     Timer,
-    LayoutGrid,
     Calendar,
-    Pin,
     CloudSun,
     FolderDown,
     Activity,
     Sparkles,
-    Megaphone
+    Megaphone,
+    Clock,
+    Battery,
+    Wifi
   } from 'lucide-svelte'
+  import BentoCard from '../../BentoCard.svelte'
+  import ToggleSwitch from '../../ToggleSwitch.svelte'
   import SettingItem from '../SettingItem.svelte'
   import {
     pageVisibilityStore,
@@ -104,443 +106,340 @@
   <!-- Section 1: Apps -->
   <div class="section-header">
     <div class="section-title">
-      <Layers size={13} />
       <span>Apps & Features</span>
     </div>
   </div>
 
-  <div class="setting-group">
+  <BentoCard variant="group">
     <SettingItem label="Action Center" icon={SlidersHorizontal}>
-      <label class="toggle-switch">
-        <input
-          type="checkbox"
-          checked={$pageVisibilityStore.actioncenter}
-          onchange={() => togglePage('actioncenter')}
-        />
-        <span class="slider"></span>
-      </label>
+      <ToggleSwitch
+        checked={$pageVisibilityStore.actioncenter}
+        onchange={() => togglePage('actioncenter')}
+        ariaLabel="Action Center"
+      />
     </SettingItem>
 
     <SettingItem label="Calendar" icon={Calendar}>
-      <label class="toggle-switch">
-        <input
-          type="checkbox"
-          checked={$pageVisibilityStore.calendar !== false}
-          onchange={() => togglePage('calendar')}
-        />
-        <span class="slider"></span>
-      </label>
+      <ToggleSwitch
+        checked={$pageVisibilityStore.calendar !== false}
+        onchange={() => togglePage('calendar')}
+        ariaLabel="Calendar"
+      />
     </SettingItem>
 
     <SettingItem label="Calculator" icon={Calculator}>
-      <label class="toggle-switch">
-        <input
-          type="checkbox"
-          checked={$pageVisibilityStore.calculator}
-          onchange={() => togglePage('calculator')}
-        />
-        <span class="slider"></span>
-      </label>
+      <ToggleSwitch
+        checked={$pageVisibilityStore.calculator}
+        onchange={() => togglePage('calculator')}
+        ariaLabel="Calculator"
+      />
     </SettingItem>
 
     <SettingItem label="File Shelf" icon={FolderDown}>
-      <label class="toggle-switch">
-        <input
-          type="checkbox"
-          checked={$pageVisibilityStore.fileshelf !== false}
-          onchange={() => togglePage('fileshelf')}
-        />
-        <span class="slider"></span>
-      </label>
+      <ToggleSwitch
+        checked={$pageVisibilityStore.fileshelf !== false}
+        onchange={() => togglePage('fileshelf')}
+        ariaLabel="File Shelf"
+      />
     </SettingItem>
 
     <SettingItem label="Weather" icon={CloudSun}>
-      <label class="toggle-switch">
-        <input
-          type="checkbox"
-          checked={$pageVisibilityStore.weather !== false}
-          onchange={() => togglePage('weather')}
-        />
-        <span class="slider"></span>
-      </label>
+      <ToggleSwitch
+        checked={$pageVisibilityStore.weather !== false}
+        onchange={() => togglePage('weather')}
+        ariaLabel="Weather"
+      />
     </SettingItem>
 
     <SettingItem label="Timer & Focus" icon={Timer}>
-      <label class="toggle-switch">
-        <input
-          type="checkbox"
-          checked={$pageVisibilityStore.timer !== false}
-          onchange={() => {
-            const next = !($pageVisibilityStore.timer !== false)
-            $pageVisibilityStore = {
-              ...$pageVisibilityStore,
-              timer: next,
-              focus: next
-            }
-          }}
-        />
-        <span class="slider"></span>
-      </label>
+      <ToggleSwitch
+        checked={$pageVisibilityStore.timer !== false}
+        onchange={() => {
+          const next = !($pageVisibilityStore.timer !== false)
+          $pageVisibilityStore = {
+            ...$pageVisibilityStore,
+            timer: next,
+            focus: next
+          }
+        }}
+        ariaLabel="Timer & Focus"
+      />
     </SettingItem>
 
     <SettingItem label="Now Playing / Media" icon={Music}>
-      <label class="toggle-switch">
-        <input
-          type="checkbox"
-          checked={$pageVisibilityStore.media}
-          onchange={() => togglePage('media')}
-        />
-        <span class="slider"></span>
-      </label>
+      <ToggleSwitch
+        checked={$pageVisibilityStore.media}
+        onchange={() => togglePage('media')}
+        ariaLabel="Now Playing / Media"
+      />
     </SettingItem>
 
     <SettingItem label="Quick Notes" icon={FileText}>
-      <label class="toggle-switch">
-        <input
-          type="checkbox"
-          checked={$pageVisibilityStore.notes}
-          onchange={() => togglePage('notes')}
-        />
-        <span class="slider"></span>
-      </label>
+      <ToggleSwitch
+        checked={$pageVisibilityStore.notes}
+        onchange={() => togglePage('notes')}
+        ariaLabel="Quick Notes"
+      />
     </SettingItem>
 
     <SettingItem label="Notifications" icon={Bell}>
-      <label class="toggle-switch">
-        <input
-          type="checkbox"
-          checked={$pageVisibilityStore.notifications}
-          onchange={() => togglePage('notifications')}
-        />
-        <span class="slider"></span>
-      </label>
+      <ToggleSwitch
+        checked={$pageVisibilityStore.notifications}
+        onchange={() => togglePage('notifications')}
+        ariaLabel="Notifications"
+      />
     </SettingItem>
 
     <SettingItem label="System Stats" icon={Activity}>
-      <label class="toggle-switch">
-        <input
-          type="checkbox"
-          checked={$pageVisibilityStore.performance !== false}
-          onchange={() => togglePage('performance')}
-        />
-        <span class="slider"></span>
-      </label>
+      <ToggleSwitch
+        checked={$pageVisibilityStore.performance !== false}
+        onchange={() => togglePage('performance')}
+        ariaLabel="System Stats"
+      />
     </SettingItem>
-  </div>
+  </BentoCard>
 
   <div class="divider"></div>
 
   <!-- Section 2: Home Widgets -->
   <div class="section-header">
     <div class="section-title">
-      <LayoutGrid size={13} />
       <span>Home Widgets</span>
     </div>
   </div>
 
-  <div class="setting-group">
+  <BentoCard variant="group">
     <!-- Clock Widget -->
     <div class="item-wrapper" class:shake={shakeKey === 'clock'}>
-      <SettingItem label="Clock & Time">
+      <SettingItem label="Clock & Time" icon={Clock}>
         <div
           class="toggle-container"
           class:locked={isClockLocked}
-          title={isClockLocked
-            ? 'At least one widget must remain visible on the home island'
-            : ''}
           role="button"
           tabindex="0"
           onclick={() => isClockLocked && triggerShake('clock')}
           onkeydown={(e) =>
             e.key === 'Enter' && isClockLocked && triggerShake('clock')}
         >
-          <label class="toggle-switch" class:disabled-switch={isClockLocked}>
-            <input
-              type="checkbox"
-              checked={$homeWidgetsVisibilityStore.clock}
-              disabled={isClockLocked}
-              onchange={() => toggleHomeWidget('clock')}
-            />
-            <span class="slider"></span>
-          </label>
+          <ToggleSwitch
+            checked={$homeWidgetsVisibilityStore.clock}
+            disabled={isClockLocked}
+            onchange={() => toggleHomeWidget('clock')}
+            ariaLabel="Clock & Time"
+          />
         </div>
       </SettingItem>
       {#if isClockLocked && shakeKey === 'clock'}
         <div class="locked-warning">
           <AlertCircle size={12} />
-          <span>At least one widget must remain visible on the home island</span
-          >
+          <span>At least one widget must remain visible on the home island</span>
         </div>
       {/if}
     </div>
 
     <!-- Calendar Widget -->
     <div class="item-wrapper" class:shake={shakeKey === 'calendar'}>
-      <SettingItem label="Calendar & Date">
+      <SettingItem label="Calendar & Date" icon={Calendar}>
         <div
           class="toggle-container"
           class:locked={isCalLocked}
-          title={isCalLocked
-            ? 'At least one widget must remain visible on the home island'
-            : ''}
           role="button"
           tabindex="0"
           onclick={() => isCalLocked && triggerShake('calendar')}
           onkeydown={(e) =>
             e.key === 'Enter' && isCalLocked && triggerShake('calendar')}
         >
-          <label class="toggle-switch" class:disabled-switch={isCalLocked}>
-            <input
-              type="checkbox"
-              checked={$homeWidgetsVisibilityStore.calendar}
-              disabled={isCalLocked}
-              onchange={() => toggleHomeWidget('calendar')}
-            />
-            <span class="slider"></span>
-          </label>
+          <ToggleSwitch
+            checked={$homeWidgetsVisibilityStore.calendar}
+            disabled={isCalLocked}
+            onchange={() => toggleHomeWidget('calendar')}
+            ariaLabel="Calendar & Date"
+          />
         </div>
       </SettingItem>
       {#if isCalLocked && shakeKey === 'calendar'}
         <div class="locked-warning">
           <AlertCircle size={12} />
-          <span>At least one widget must remain visible on the home island</span
-          >
+          <span>At least one widget must remain visible on the home island</span>
         </div>
       {/if}
     </div>
 
     <!-- Weather Widget -->
     <div class="item-wrapper" class:shake={shakeKey === 'weather'}>
-      <SettingItem label="Weather & Forecast">
+      <SettingItem label="Weather & Forecast" icon={CloudSun}>
         <div
           class="toggle-container"
           class:locked={isWeatherLocked}
-          title={isWeatherLocked
-            ? 'At least one widget must remain visible on the home island'
-            : ''}
           role="button"
           tabindex="0"
           onclick={() => isWeatherLocked && triggerShake('weather')}
           onkeydown={(e) =>
             e.key === 'Enter' && isWeatherLocked && triggerShake('weather')}
         >
-          <label class="toggle-switch" class:disabled-switch={isWeatherLocked}>
-            <input
-              type="checkbox"
-              checked={$homeWidgetsVisibilityStore.weather}
-              disabled={isWeatherLocked}
-              onchange={() => toggleHomeWidget('weather')}
-            />
-            <span class="slider"></span>
-          </label>
+          <ToggleSwitch
+            checked={$homeWidgetsVisibilityStore.weather}
+            disabled={isWeatherLocked}
+            onchange={() => toggleHomeWidget('weather')}
+            ariaLabel="Weather & Forecast"
+          />
         </div>
       </SettingItem>
       {#if isWeatherLocked && shakeKey === 'weather'}
         <div class="locked-warning">
           <AlertCircle size={12} />
-          <span>At least one widget must remain visible on the home island</span
-          >
+          <span>At least one widget must remain visible on the home island</span>
         </div>
       {/if}
     </div>
 
     <!-- Battery Widget -->
     <div class="item-wrapper" class:shake={shakeKey === 'battery'}>
-      <SettingItem label="Battery & Power" disabled={!hasBattery}>
+      <SettingItem label="Battery & Power" icon={Battery} disabled={!hasBattery}>
         <div
           class="toggle-container"
           class:locked={isBatteryLocked || !hasBattery}
-          title={!hasBattery
-            ? 'Battery hardware is not available on this device'
-            : isBatteryLocked
-              ? 'At least one widget must remain visible on the home island'
-              : ''}
           role="button"
           tabindex="0"
           onclick={() => isBatteryLocked && triggerShake('battery')}
           onkeydown={(e) =>
             e.key === 'Enter' && isBatteryLocked && triggerShake('battery')}
         >
-          <label
-            class="toggle-switch"
-            class:disabled-switch={isBatteryLocked || !hasBattery}
-          >
-            <input
-              type="checkbox"
-              checked={hasBattery && $homeWidgetsVisibilityStore.battery}
-              disabled={isBatteryLocked || !hasBattery}
-              onchange={() => toggleHomeWidget('battery')}
-            />
-            <span class="slider"></span>
-          </label>
+          <ToggleSwitch
+            checked={hasBattery && $homeWidgetsVisibilityStore.battery}
+            disabled={isBatteryLocked || !hasBattery}
+            onchange={() => toggleHomeWidget('battery')}
+            ariaLabel="Battery & Power"
+          />
         </div>
       </SettingItem>
       {#if isBatteryLocked && shakeKey === 'battery'}
         <div class="locked-warning">
           <AlertCircle size={12} />
-          <span>At least one widget must remain visible on the home island</span
-          >
+          <span>At least one widget must remain visible on the home island</span>
         </div>
       {/if}
     </div>
 
     <!-- Wireless & Connectivity Widget -->
     <div class="item-wrapper" class:shake={shakeKey === 'wireless'}>
-      <SettingItem label="Wireless & Connectivity">
+      <SettingItem label="Wireless & Connectivity" icon={Wifi}>
         <div
           class="toggle-container"
           class:locked={isWirelessLocked}
-          title={isWirelessLocked
-            ? 'At least one widget must remain visible on the home island'
-            : ''}
           role="button"
           tabindex="0"
           onclick={() => isWirelessLocked && triggerShake('wireless')}
           onkeydown={(e) =>
             e.key === 'Enter' && isWirelessLocked && triggerShake('wireless')}
         >
-          <label class="toggle-switch" class:disabled-switch={isWirelessLocked}>
-            <input
-              type="checkbox"
-              checked={$homeWidgetsVisibilityStore.wireless}
-              disabled={isWirelessLocked}
-              onchange={() => toggleHomeWidget('wireless')}
-            />
-            <span class="slider"></span>
-          </label>
+          <ToggleSwitch
+            checked={$homeWidgetsVisibilityStore.wireless}
+            disabled={isWirelessLocked}
+            onchange={() => toggleHomeWidget('wireless')}
+            ariaLabel="Wireless & Connectivity"
+          />
         </div>
       </SettingItem>
       {#if isWirelessLocked && shakeKey === 'wireless'}
         <div class="locked-warning">
           <AlertCircle size={12} />
-          <span>At least one widget must remain visible on the home island</span
-          >
+          <span>At least one widget must remain visible on the home island</span>
         </div>
       {/if}
-
-      <SettingItem label="Action Center Glance" icon={SlidersHorizontal}>
-        <label class="toggle-switch">
-          <input
-            type="checkbox"
-            checked={$homeWidgetsVisibilityStore.actionCenter}
-            onchange={() => toggleHomeWidget('actionCenter')}
-          />
-          <span class="slider"></span>
-        </label>
-      </SettingItem>
-
-      <SettingItem label="System Stats Glance" icon={Activity}>
-        <label class="toggle-switch">
-          <input
-            type="checkbox"
-            checked={Boolean($homeWidgetsVisibilityStore.systemStats)}
-            onchange={() => toggleHomeWidget('systemStats')}
-          />
-          <span class="slider"></span>
-        </label>
-      </SettingItem>
-
-      <SettingItem label="Spotlight Carousel" icon={Sparkles}>
-        <label class="toggle-switch">
-          <input
-            type="checkbox"
-            checked={$homeWidgetsVisibilityStore.spotlight !== false}
-            onchange={() => toggleHomeWidget('spotlight')}
-          />
-          <span class="slider"></span>
-        </label>
-      </SettingItem>
-
-      <SettingItem label="Announcements Feed" icon={Megaphone}>
-        <label class="toggle-switch">
-          <input
-            type="checkbox"
-            checked={$homeWidgetsVisibilityStore.announcements !== false}
-            onchange={() => toggleHomeWidget('announcements')}
-          />
-          <span class="slider"></span>
-        </label>
-      </SettingItem>
     </div>
-  </div>
+
+    <SettingItem label="Action Center Glance" icon={SlidersHorizontal}>
+      <ToggleSwitch
+        checked={$homeWidgetsVisibilityStore.actionCenter}
+        onchange={() => toggleHomeWidget('actionCenter')}
+        ariaLabel="Action Center Glance"
+      />
+    </SettingItem>
+
+    <SettingItem label="System Stats Glance" icon={Activity}>
+      <ToggleSwitch
+        checked={Boolean($homeWidgetsVisibilityStore.systemStats)}
+        onchange={() => toggleHomeWidget('systemStats')}
+        ariaLabel="System Stats Glance"
+      />
+    </SettingItem>
+
+    <SettingItem label="Spotlight Carousel" icon={Sparkles}>
+      <ToggleSwitch
+        checked={$homeWidgetsVisibilityStore.spotlight !== false}
+        onchange={() => toggleHomeWidget('spotlight')}
+        ariaLabel="Spotlight Carousel"
+      />
+    </SettingItem>
+
+    <SettingItem label="Announcements Feed" icon={Megaphone}>
+      <ToggleSwitch
+        checked={$homeWidgetsVisibilityStore.announcements !== false}
+        onchange={() => toggleHomeWidget('announcements')}
+        ariaLabel="Announcements Feed"
+      />
+    </SettingItem>
+  </BentoCard>
 
   <div class="divider"></div>
 
   <!-- Section 3: Dock Pinned Favorites -->
   <div class="section-header">
     <div class="section-title">
-      <Pin size={13} />
       <span>Dock Pinned Favorites</span>
     </div>
   </div>
 
-  <div class="setting-group">
+  <BentoCard variant="group">
     <SettingItem label="Pin Calendar" icon={Calendar}>
-      <label class="toggle-switch">
-        <input
-          type="checkbox"
-          checked={$dockPinnedAppsStore.calendar}
-          onchange={() => toggleDockPinned('calendar')}
-        />
-        <span class="slider"></span>
-      </label>
+      <ToggleSwitch
+        checked={$dockPinnedAppsStore.calendar}
+        onchange={() => toggleDockPinned('calendar')}
+        ariaLabel="Pin Calendar"
+      />
     </SettingItem>
 
     <SettingItem label="Pin Quick Notes" icon={FileText}>
-      <label class="toggle-switch">
-        <input
-          type="checkbox"
-          checked={$dockPinnedAppsStore.notes}
-          onchange={() => toggleDockPinned('notes')}
-        />
-        <span class="slider"></span>
-      </label>
+      <ToggleSwitch
+        checked={$dockPinnedAppsStore.notes}
+        onchange={() => toggleDockPinned('notes')}
+        ariaLabel="Pin Quick Notes"
+      />
     </SettingItem>
 
     <SettingItem label="Pin Calculator" icon={Calculator}>
-      <label class="toggle-switch">
-        <input
-          type="checkbox"
-          checked={$dockPinnedAppsStore.calculator}
-          onchange={() => toggleDockPinned('calculator')}
-        />
-        <span class="slider"></span>
-      </label>
+      <ToggleSwitch
+        checked={$dockPinnedAppsStore.calculator}
+        onchange={() => toggleDockPinned('calculator')}
+        ariaLabel="Pin Calculator"
+      />
     </SettingItem>
 
     <SettingItem label="Pin Timer" icon={Timer}>
-      <label class="toggle-switch">
-        <input
-          type="checkbox"
-          checked={$dockPinnedAppsStore.timer}
-          onchange={() => toggleDockPinned('timer')}
-        />
-        <span class="slider"></span>
-      </label>
+      <ToggleSwitch
+        checked={$dockPinnedAppsStore.timer}
+        onchange={() => toggleDockPinned('timer')}
+        ariaLabel="Pin Timer"
+      />
     </SettingItem>
 
     <SettingItem label="Pin Weather" icon={CloudSun}>
-      <label class="toggle-switch">
-        <input
-          type="checkbox"
-          checked={$dockPinnedAppsStore.weather}
-          onchange={() => toggleDockPinned('weather')}
-        />
-        <span class="slider"></span>
-      </label>
+      <ToggleSwitch
+        checked={$dockPinnedAppsStore.weather}
+        onchange={() => toggleDockPinned('weather')}
+        ariaLabel="Pin Weather"
+      />
     </SettingItem>
 
     <SettingItem label="Pin File Shelf" icon={FolderDown}>
-      <label class="toggle-switch">
-        <input
-          type="checkbox"
-          checked={$dockPinnedAppsStore.fileshelf}
-          onchange={() => toggleDockPinned('fileshelf')}
-        />
-        <span class="slider"></span>
-      </label>
+      <ToggleSwitch
+        checked={$dockPinnedAppsStore.fileshelf}
+        onchange={() => toggleDockPinned('fileshelf')}
+        ariaLabel="Pin File Shelf"
+      />
     </SettingItem>
-  </div>
+  </BentoCard>
 </div>
 
 <style src="../../styles/settings/AppsModulesTab.css"></style>

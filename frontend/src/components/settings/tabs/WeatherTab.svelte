@@ -7,6 +7,8 @@
   import { onMount } from 'svelte'
   import { SvelteSet } from 'svelte/reactivity'
   import { MapPin, Thermometer } from 'lucide-svelte'
+  import BentoCard from '../../BentoCard.svelte'
+  import SegmentedControl from '../../SegmentedControl.svelte'
   import SettingItem from '../SettingItem.svelte'
   import CustomSelect from '../../CustomSelect.svelte'
   import { weatherLocationStore, weatherUnitStore } from '../../../store'
@@ -164,92 +166,45 @@
 </script>
 
 <div class="setting-group">
-  <SettingItem
-    label="Weather Location"
-    description="Target location for forecasts"
-    icon={MapPin}
-    flexCol={true}
-    isDefault={selectedWeatherCity === weatherLocationStore.defaultValue.name}
-    onReset={() => weatherLocationStore.reset()}
-  >
-    <CustomSelect
-      options={weatherOptions}
-      value={selectedWeatherCity}
-      defaultValue={GLOBAL_WEATHER_PRESETS[0]?.name}
-      searchable={true}
-      fullWidth={true}
-      direction="auto"
-      onSearch={handleWeatherSearch}
-      onSelectPayload={handleSelectWeatherPayload}
-    />
-  </SettingItem>
+  <BentoCard variant="group">
+    <SettingItem
+      label="Weather Location"
+      description="Target location for forecasts"
+      icon={MapPin}
+      flexCol={true}
+      isDefault={selectedWeatherCity === weatherLocationStore.defaultValue.name}
+      onReset={() => weatherLocationStore.reset()}
+    >
+      <CustomSelect
+        options={weatherOptions}
+        value={selectedWeatherCity}
+        defaultValue={GLOBAL_WEATHER_PRESETS[0]?.name}
+        searchable={true}
+        fullWidth={true}
+        direction="auto"
+        onSearch={handleWeatherSearch}
+        onSelectPayload={handleSelectWeatherPayload}
+      />
+    </SettingItem>
 
-  <SettingItem
-    label="Temperature Unit"
-    description="Measurement unit for temperatures"
-    icon={Thermometer}
-    flexCol={true}
-    isDefault={$weatherUnitStore === weatherUnitStore.defaultValue}
-    onReset={() => weatherUnitStore.reset()}
-  >
-    <div class="segment-control full-width">
-      <button
-        class:active={$weatherUnitStore === 'celsius'}
-        onclick={() => ($weatherUnitStore = 'celsius')}>°C (Celsius)</button
-      >
-      <button
-        class:active={$weatherUnitStore === 'fahrenheit'}
-        onclick={() => ($weatherUnitStore = 'fahrenheit')}
-        >°F (Fahrenheit)</button
-      >
-    </div>
-  </SettingItem>
+    <SettingItem
+      label="Temperature Unit"
+      description="Measurement unit for temperatures"
+      icon={Thermometer}
+      flexCol={true}
+      isDefault={$weatherUnitStore === weatherUnitStore.defaultValue}
+      onReset={() => weatherUnitStore.reset()}
+    >
+      <SegmentedControl
+        fullWidth={true}
+        options={[
+          { value: 'celsius', label: '°C (Celsius)' },
+          { value: 'fahrenheit', label: '°F (Fahrenheit)' }
+        ]}
+        bind:value={$weatherUnitStore}
+      />
+    </SettingItem>
+  </BentoCard>
 </div>
 
-<style>
-  .setting-group {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .segment-control {
-    display: flex;
-    background: rgba(255, 255, 255, 0.06);
-    padding: 2px;
-    border-radius: 8px;
-    border: 1px solid var(--vinta-border);
-  }
-
-  .segment-control.full-width {
-    width: 100%;
-    box-sizing: border-box;
-    height: 32px;
-    align-items: center;
-  }
-
-  .segment-control button {
-    background: transparent;
-    border: none;
-    color: var(--vinta-text-secondary);
-    padding: 4px 10px;
-    font-size: 11px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-
-  .segment-control.full-width button {
-    flex: 1;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .segment-control button.active {
-    background: rgba(255, 255, 255, 0.12);
-    color: var(--vinta-text-primary);
-    font-weight: 600;
-  }
-</style>
+<style src="../../styles/settings/WeatherTab.css"></style>

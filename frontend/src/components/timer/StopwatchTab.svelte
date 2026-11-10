@@ -74,7 +74,6 @@
     <button
       class="primary-pill-btn phase-stopwatch"
       onclick={toggleStopwatch}
-      use:islandTooltip={$timerAppStore.stopwatch.isRunning ? 'Pause' : 'Start'}
     >
       {#if $timerAppStore.stopwatch.isRunning}
         <Pause size={16} />
@@ -89,9 +88,11 @@
       class="ctrl-btn"
       onclick={recordLap}
       disabled={!$timerAppStore.stopwatch.isRunning}
-      use:islandTooltip={'Record lap split'}
+      use:islandTooltip={'Record lap'}
     >
       <Flag size={15} />
     </button>
   </div>
 </div>
+
+<style src="../../pages/styles/TimerPage.css"></style>

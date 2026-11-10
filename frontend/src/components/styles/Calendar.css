@@ -210,6 +210,25 @@
   overflow: hidden;
 }
 
+.calendar-tab-transition {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  animation: vintaCalendarTabFadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes vintaCalendarTabFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .grid-section {
   flex: 1;
   width: 100%;
@@ -288,7 +307,7 @@
   font-size: 11px;
   font-weight: 600;
   padding: 3px 10px;
-  border-radius: 8px;
+  border-radius: 9999px;
   background: var(--vinta-accent-muted, rgba(56, 189, 248, 0.14));
   color: var(--vinta-accent-primary, #38bdf8);
   border: none;
@@ -306,15 +325,15 @@
   display: inline-flex;
   align-items: center;
   background: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
+  border-radius: 9999px;
   padding: 2px;
-  gap: 1px;
+  gap: 2px;
 }
 
 .icon-nav-btn {
   width: 24px;
-  height: 22px;
-  border-radius: 6px;
+  height: 24px;
+  border-radius: 50%;
   background: transparent;
   border: none;
   color: var(--vinta-text-muted, #9ca3af);
@@ -566,7 +585,7 @@
   gap: 4px;
   height: 26px;
   padding: 0 11px;
-  border-radius: 10px;
+  border-radius: 9999px;
   background: var(--vinta-accent-muted, rgba(56, 189, 248, 0.14));
   border: none;
   color: var(--vinta-accent-primary, #38bdf8);

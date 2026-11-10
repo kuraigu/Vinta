@@ -54,7 +54,7 @@
   /* CONTRAST SURFACES */
   --vinta-contrast-bg: #434c5e;
   --vinta-contrast-border: inset 0 0 0 1px rgba(216, 222, 233, 0.15);
-  --vinta-contrast-hover: #4c566a;
+  --vinta-contrast-hover: rgba(216, 222, 233, 0.09);
 
   /* GEOMETRY & LAYOUT */
   --vinta-dock-clearance: 56px;

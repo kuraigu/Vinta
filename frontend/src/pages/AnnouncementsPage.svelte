@@ -162,7 +162,9 @@
 
   <div class="announcements-body-wrap">
     <ScrollView class="announcements-scroll-view">
-      {#if activeTab === 'announcements'}
+      {#key activeTab}
+        <div class="announcements-tab-transition">
+          {#if activeTab === 'announcements'}
         {#if isLoadingAnnouncements}
           <div class="announcements-empty-state">
             <span>{$tStore('common.loading')}</span>
@@ -268,7 +270,9 @@
           </BentoCard>
         </div>
       {/if}
-    </ScrollView>
+    </div>
+  {/key}
+</ScrollView>
   </div>
 </div>
 

@@ -2,7 +2,9 @@
 
 package backend
 
-// isTestModeSync returns true when compiled with -tags devtest.
+import "os"
+
+// isTestModeSync returns true when compiled with -tags devtest unless suppressed via VINTA_NO_DEVTEST=1.
 func isTestModeSync() bool {
-	return true
+	return os.Getenv("VINTA_NO_DEVTEST") != "1"
 }

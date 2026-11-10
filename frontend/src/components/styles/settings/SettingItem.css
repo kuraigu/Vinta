@@ -1,0 +1,107 @@
+/* ============================================================================
+   SettingItem Row Stylesheet
+   ============================================================================ */
+
+:global(.vinta-bento-card.variant-setting.flex-col) .setting-control {
+  width: 100%;
+}
+
+:global(.vinta-bento-card.variant-setting.flex-col)
+  .setting-control
+  > :global(*) {
+  width: 100%;
+}
+
+:global(.vinta-bento-card.variant-setting.card-disabled) .setting-icon-wrap {
+  opacity: 0.6;
+}
+
+.setting-label-group {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.setting-icon-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+:global(.vinta-bento-card.variant-setting:hover) :global(.vinta-icon-badge.color-surface) {
+  border-color: var(--vinta-border);
+  background: var(--vinta-hover, rgba(255, 255, 255, 0.1));
+}
+
+.setting-text-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.setting-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--vinta-text-primary);
+  text-align: left;
+  line-height: 1.25;
+}
+
+.setting-badge {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  background: var(--vinta-accent-muted);
+  color: var(--vinta-accent-primary);
+  border: 1px solid var(--vinta-border-accent);
+}
+
+.setting-reset-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--vinta-text-muted);
+  cursor: pointer;
+  opacity: 0.72;
+  transition: all 0.15s ease;
+}
+
+.setting-reset-btn:hover {
+  opacity: 1;
+  background: var(--vinta-contrast-hover, rgba(255, 255, 255, 0.08));
+  color: var(--vinta-accent-primary);
+}
+
+.setting-description {
+  font-size: 10.5px;
+  line-height: 1.4;
+  color: var(--vinta-text-muted);
+  text-align: left;
+}
+
+.setting-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+

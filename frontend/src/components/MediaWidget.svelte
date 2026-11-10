@@ -410,18 +410,45 @@
         }
         ctx.drawImage(img, 0, 0, 16, 16)
         const data = ctx.getImageData(0, 0, 16, 16).data
-        let r = 0
-        let g = 0
-        let b = 0
-        let count = 0
+        let bestR = 0
+        let bestG = 0
+        let bestB = 0
+        let maxScore = -1
+        let avgR = 0
+        let avgG = 0
+        let avgB = 0
+        let total = 0
+
         for (let i = 0; i < data.length; i += 4) {
-          r += data[i]
-          g += data[i + 1]
-          b += data[i + 2]
-          count++
+          const pr = data[i]
+          const pg = data[i + 1]
+          const pb = data[i + 2]
+          avgR += pr
+          avgG += pg
+          avgB += pb
+          total++
+
+          const maxVal = Math.max(pr, pg, pb)
+          const minVal = Math.min(pr, pg, pb)
+          const delta = maxVal - minVal
+          const brightness = (pr + pg + pb) / 3
+
+          // Prioritize saturated pixels over pure black/white
+          if (brightness > 25 && brightness < 235 && delta > 15) {
+            const score = delta * (1 - Math.abs(brightness - 128) / 128)
+            if (score > maxScore) {
+              maxScore = score
+              bestR = pr
+              bestG = pg
+              bestB = pb
+            }
+          }
         }
-        if (count > 0) {
-          cardTintColor = `rgba(${Math.round(r / count)}, ${Math.round(g / count)}, ${Math.round(b / count)}, 0.45)`
+
+        if (maxScore > 0) {
+          cardTintColor = `rgba(${bestR}, ${bestG}, ${bestB}, 0.55)`
+        } else if (total > 0) {
+          cardTintColor = `rgba(${Math.round(avgR / total)}, ${Math.round(avgG / total)}, ${Math.round(avgB / total)}, 0.45)`
         }
       } catch {
         cardTintColor = trackTexture.accentColor
@@ -965,6 +992,7 @@
           decoding="async"
           onerror={handleImgError}
         />
+        <div class="card-bg-tint"></div>
       {:else}
         <div
           class="card-bg-texture"

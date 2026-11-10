@@ -113,7 +113,7 @@
   justify-content: center;
   width: 22px;
   height: 22px;
-  border-radius: var(--vinta-radius-button);
+  border-radius: 50%;
   border: 1px solid var(--vinta-border-light);
   background: var(--vinta-item-bg);
   color: var(--vinta-text-secondary);
@@ -127,7 +127,7 @@
 }
 
 .vinta-drawer-close-btn:hover {
-  background: var(--vinta-hover);
+  background: var(--vinta-contrast-hover);
   color: var(--vinta-text-primary);
   border-color: var(--vinta-border);
 }

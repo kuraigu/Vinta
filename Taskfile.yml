@@ -52,14 +52,14 @@ tasks:
     deps: [build:native]
     cmds:
       - cmd.exe /c "taskkill /IM Vinta.exe /F /T >nul 2>&1 || exit 0"
-      - wails3 dev -config ./build/config.yml -port 9245
+      - cmd.exe /c "set \"VINTA_SHOWCASE=\" && set \"VINTA_NO_DEVTEST=\" && wails3 dev -config ./build/config.yml -port 9245"
 
   showcase:
     desc: Start live development server with in-app Showcase Studio enabled
     deps: [build:native]
     cmds:
       - cmd.exe /c "taskkill /IM Vinta.exe /F /T >nul 2>&1 || exit 0"
-      - cmd.exe /c "set VINTA_SHOWCASE=1 && wails3 dev -config ./build/config.yml -port 9245"
+      - cmd.exe /c "set VINTA_SHOWCASE=1 && set \"VINTA_NO_DEVTEST=\" && wails3 dev -config ./build/config.yml -port 9245"
 
   dev:frontend:
     desc: Start Vite dev server for Wails v3 dev mode
@@ -71,7 +71,7 @@ tasks:
     desc: Start live development server without rebuilding native C++ DLL
     cmds:
       - cmd.exe /c "taskkill /IM Vinta.exe /F /T >nul 2>&1 || exit 0"
-      - wails3 dev -config ./build/config.yml -port 9245
+      - cmd.exe /c "set \"VINTA_SHOWCASE=\" && set \"VINTA_NO_DEVTEST=\" && wails3 dev -config ./build/config.yml -port 9245"
 
   icon:
     desc: Generate multi-resolution build/windows/icon.ico from build/appicon.png
@@ -153,13 +153,13 @@ tasks:
     desc: Launch pre-built binary directly without rebuilding
     cmds:
       - cmd.exe /c "taskkill /IM Vinta.exe /F /T >nul 2>&1 || exit 0"
-      - powershell.exe -NoProfile -Command "if (Test-Path env:FRONTEND_DEVSERVER_URL) { & build/bin/Vinta.exe } else { Start-Process build/bin/Vinta.exe }"
+      - powershell.exe -NoProfile -Command "if (Test-Path env:FRONTEND_DEVSERVER_URL) { & build/bin/Vinta.exe } else { $env:VINTA_NO_DEVTEST = '1'; Remove-Item env:VINTA_SHOWCASE -ErrorAction SilentlyContinue; Start-Process build/bin/Vinta.exe }"
 
   run:nobuild:debug:
     desc: Launch pre-built binary directly with debug flags
     cmds:
       - cmd.exe /c "taskkill /IM Vinta.exe /F /T >nul 2>&1 || exit 0"
-      - powershell.exe -NoProfile -Command "Start-Process 'build/bin/Vinta.exe' -ArgumentList '-debug'"
+      - powershell.exe -NoProfile -Command "$env:VINTA_NO_DEVTEST = '1'; Remove-Item env:VINTA_SHOWCASE -ErrorAction SilentlyContinue; Start-Process 'build/bin/Vinta.exe' -ArgumentList '-debug'"
 
   test:
     desc: Build and launch test suite binary with DevTest panel

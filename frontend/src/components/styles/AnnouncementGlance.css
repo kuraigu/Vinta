@@ -14,10 +14,9 @@
   display: flex !important;
   flex-direction: column !important;
   gap: 6px !important;
-  padding: 10px 14px !important;
-  height: 76px;
-  min-height: 76px;
-  max-height: 76px;
+  padding: 12px 14px !important;
+  min-height: 88px;
+  height: auto;
   overflow: hidden;
   cursor: pointer;
   text-align: left;
@@ -40,21 +39,13 @@
 .glance-brand-group {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   min-width: 0;
   flex: 1;
 }
 
-.glance-icon-badge {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.08);
-  border: none;
-  color: var(--vinta-text-secondary);
+:global(.glance-brand-icon) {
+  color: var(--vinta-text-muted);
   flex-shrink: 0;
 }
 
@@ -68,10 +59,10 @@
 .glance-unread-pill {
   font-size: 0.62rem;
   font-weight: 700;
-  padding: 1px 5px;
-  border-radius: 4px;
+  padding: 2px 6px;
+  border-radius: 9999px;
   background: var(--vinta-accent-primary);
-  color: var(--vinta-text-on-accent);
+  color: var(--vinta-accent-contrast-text, var(--vinta-text-on-accent));
   flex-shrink: 0;
 }
 

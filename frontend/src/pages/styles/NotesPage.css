@@ -43,7 +43,7 @@
   justify-content: center;
   width: 28px;
   height: 28px;
-  border-radius: 6px;
+  border-radius: 50%;
   background: transparent;
   border: none;
   color: var(--vinta-text-secondary, rgba(255, 255, 255, 0.7));
@@ -173,8 +173,8 @@
   align-items: center;
   justify-content: center;
   width: 26px;
-  height: 24px;
-  border-radius: 4px;
+  height: 26px;
+  border-radius: 50%;
   background: transparent;
   border: none;
   color: var(--vinta-text-secondary, rgba(255, 255, 255, 0.65));
@@ -464,7 +464,7 @@
   right: 34px;
   width: 22px;
   height: 22px;
-  border-radius: 6px;
+  border-radius: 50%;
   background: rgba(0, 0, 0, 0.5);
   border: none;
   color: rgba(255, 255, 255, 0.6);
@@ -501,7 +501,7 @@
   right: 8px;
   width: 22px;
   height: 22px;
-  border-radius: 6px;
+  border-radius: 50%;
   background: rgba(0, 0, 0, 0.5);
   border: none;
   color: rgba(255, 255, 255, 0.6);

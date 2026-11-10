@@ -152,3 +152,5 @@
     </div>
   </div>
 </div>
+
+<style src="../../pages/styles/TimerPage.css"></style>

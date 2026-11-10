@@ -562,7 +562,9 @@
 
     {#if variant === 'page'}
       <div class="calendar-card variant-page">
-        {#if activeTab === 'agenda'}
+        {#key activeTab}
+          <div class="calendar-tab-transition">
+            {#if activeTab === 'agenda'}
           <!-- FULL AGENDA STREAM TAB -->
           <div class="agenda-tab-view">
             <div class="agenda-toolbar-row">
@@ -633,6 +635,8 @@
           {@render monthGridView()}
         {/if}
       </div>
+    {/key}
+  </div>
     {:else}
       <div class="calendar-card widget-mode home-agenda-only">
         <div class="agenda-tray-header home-agenda-header">

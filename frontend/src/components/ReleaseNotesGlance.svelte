@@ -6,6 +6,7 @@
   import { onMount, getContext } from 'svelte'
   import { ScrollText, ChevronRight } from 'lucide-svelte'
   import BentoCard from './BentoCard.svelte'
+  import IconBadge from './IconBadge.svelte'
   import { getReleaseNotes } from '../services/announcementsService'
   import ReleaseNotesPage, {
     config as releaseNotesConfig
@@ -125,9 +126,7 @@
   <BentoCard variant="bento" class="release-notes-glance-card">
     <div class="glance-top-row">
       <div class="glance-brand-group">
-        <div class="glance-icon-badge">
-          <ScrollText size={13} />
-        </div>
+        <IconBadge icon={ScrollText} color="surface" size="sm" />
         <div class="glance-heading-col">
           <div class="glance-title-line">
             <span class="glance-brand-name">What's New in Vinta</span>

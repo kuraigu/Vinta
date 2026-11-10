@@ -23,6 +23,7 @@
   import SettingBanner from '../SettingBanner.svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
   import BentoCard from '../../BentoCard.svelte'
+  import ToggleSwitch from '../../ToggleSwitch.svelte'
   import CirclePattern from '../../patterns/CirclePattern.svelte'
   import CustomSelect from '../../CustomSelect.svelte'
   import ReleaseNotesGlance from '../../ReleaseNotesGlance.svelte'
@@ -368,37 +369,36 @@
     <!-- Current Installed Version Release Notes -->
     <ReleaseNotesGlance />
 
-    <SettingItem
-      label="Release Channel"
-      description="Choose the update release stability stream"
-      icon={GitBranch}
-      flexCol={true}
-    >
-      <CustomSelect
-        options={channelOptions}
-        value={$updateChannelStore}
-        fullWidth={true}
-        onChange={handleChannelChange}
-      />
-    </SettingItem>
+    <BentoCard variant="group">
+      <SettingItem
+        label="Release Channel"
+        description="Choose the update release stability stream"
+        icon={GitBranch}
+        flexCol={true}
+      >
+        <CustomSelect
+          options={channelOptions}
+          value={$updateChannelStore}
+          fullWidth={true}
+          onChange={handleChannelChange}
+        />
+      </SettingItem>
 
-    <SettingItem
-      label="Automatically Check for Updates"
-      description={!isOfficialBuild
-        ? 'Disabled for non-official releases'
-        : 'Periodically query GitHub releases in the background'}
-      icon={Download}
-      disabled={!isOfficialBuild}
-    >
-      <label class="toggle-switch">
-        <input
-          type="checkbox"
+      <SettingItem
+        label="Automatically Check for Updates"
+        description={!isOfficialBuild
+          ? 'Disabled for non-official releases'
+          : 'Periodically query GitHub releases in the background'}
+        icon={Download}
+        disabled={!isOfficialBuild}
+      >
+        <ToggleSwitch
           disabled={!isOfficialBuild}
           bind:checked={$autoCheckUpdatesStore}
+          ariaLabel="Automatically Check for Updates"
         />
-        <span class="slider"></span>
-      </label>
-    </SettingItem>
+      </SettingItem>
+    </BentoCard>
   </div>
 
   <!-- Local Dev Simulation Controls (Strictly visible only during dev builds) -->

@@ -20,6 +20,7 @@
   import { Cpu, Activity, Zap } from 'lucide-svelte'
   import BackButton from '../components/BackButton.svelte'
   import BentoCard from '../components/BentoCard.svelte'
+  import IconBadge from '../components/IconBadge.svelte'
   import ScrollView from '../components/ScrollView.svelte'
   import { tStore } from '../store'
   import {
@@ -107,7 +108,7 @@
       <BentoCard variant="bento" color="danger" class="perf-metric-card">
         <div class="perf-card-header">
           <div class="perf-card-label">
-            <Cpu size={14} class="perf-card-icon cpu" />
+            <IconBadge icon={Cpu} color="rose" size="sm" />
             <span class="perf-card-name"
               >{$tStore('performance.processor')}</span
             >
@@ -161,7 +162,7 @@
       <BentoCard variant="bento" color="primary" class="perf-metric-card">
         <div class="perf-card-header">
           <div class="perf-card-label">
-            <Activity size={14} class="perf-card-icon ram" />
+            <IconBadge icon={Activity} color="blue" size="sm" />
             <span class="perf-card-name">{$tStore('performance.memory')}</span>
           </div>
           <span class="perf-card-percent ram">{telemetry.ramPercent}%</span>
@@ -215,7 +216,7 @@
       <BentoCard variant="bento" color="purple" class="perf-metric-card">
         <div class="perf-card-header">
           <div class="perf-card-label">
-            <Zap size={14} class="perf-card-icon gpu" />
+            <IconBadge icon={Zap} color="purple" size="sm" />
             <span class="perf-card-name">{$tStore('performance.graphics')}</span
             >
           </div>

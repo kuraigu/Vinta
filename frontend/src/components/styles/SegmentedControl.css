@@ -1,0 +1,66 @@
+.vinta-segmented-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--vinta-input-bg);
+  border: 1px solid var(--vinta-border);
+  border-radius: var(--vinta-radius-sm, 8px);
+  padding: 2px;
+  box-sizing: border-box;
+}
+
+.vinta-segmented-control.full-width {
+  display: flex;
+  width: 100%;
+}
+
+.vinta-segmented-control.size-md {
+  min-height: 32px;
+}
+
+.vinta-segmented-control.size-sm {
+  min-height: 28px;
+}
+
+.vinta-segment-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--vinta-text-secondary);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 5px 12px;
+  border-radius: calc(var(--vinta-radius-sm, 8px) - 2px);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color 0.16s ease,
+    color 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.vinta-segmented-control.size-sm .vinta-segment-btn {
+  font-size: 11px;
+  padding: 3px 10px;
+}
+
+.vinta-segment-btn:hover:not(:disabled):not(.active) {
+  color: var(--vinta-text-primary);
+  background: var(--vinta-contrast-hover, rgba(255, 255, 255, 0.05));
+}
+
+.vinta-segment-btn.active {
+  background: var(--vinta-accent-primary);
+  color: var(--vinta-accent-contrast-text, #09090b);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+}
+
+.vinta-segment-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+

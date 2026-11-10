@@ -169,6 +169,15 @@
   border-radius: var(--vinta-radius-card, 14px);
 }
 
+/* Seamless Inner Cards inside Grouped Home Feed Containers */
+:global(.home-feed-group) :global(.vinta-bento-card),
+:global(.home-feed-group) :global(.calendar-card.home-agenda-only) {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+}
+
 /* Studio Branding Footer */
 .home-brand-footer {
   display: flex;

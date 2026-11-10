@@ -13,6 +13,8 @@
     Download,
     Upload
   } from 'lucide-svelte'
+  import BentoCard from '../../BentoCard.svelte'
+  import ToggleSwitch from '../../ToggleSwitch.svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
   import {
@@ -231,83 +233,87 @@
 </script>
 
 <div class="setting-group">
-  <SettingItem label={$tStore('settings.startup_label')} icon={Power}>
-    <label class="toggle-switch">
-      <input type="checkbox" bind:checked={$autostartStore} />
-      <span class="slider"></span>
-    </label>
-  </SettingItem>
+  <BentoCard variant="group">
+    <SettingItem label={$tStore('settings.startup_label')} icon={Power}>
+      <ToggleSwitch
+        bind:checked={$autostartStore}
+        ariaLabel={$tStore('settings.startup_label')}
+      />
+    </SettingItem>
 
-  <SettingItem label={$tStore('settings.hardware_accel_label')} icon={Cpu}>
-    <label class="toggle-switch">
-      <input type="checkbox" bind:checked={$hardwareAccelStore} />
-      <span class="slider"></span>
-    </label>
-  </SettingItem>
+    <SettingItem label={$tStore('settings.hardware_accel_label')} icon={Cpu}>
+      <ToggleSwitch
+        bind:checked={$hardwareAccelStore}
+        ariaLabel={$tStore('settings.hardware_accel_label')}
+      />
+    </SettingItem>
+  </BentoCard>
 
-  <SettingItem
-    label={$tStore('settings.cache_label')}
-    description={$tStore('settings.cache_desc', { size: cacheSizeStr })}
-    icon={Database}
-    flexCol={true}
-  >
-    <SettingActionButton
-      variant={cacheCleared ? 'success' : 'default'}
-      fullWidth={true}
-      onclick={handleClearCache}
+  <BentoCard variant="group">
+    <SettingItem
+      label={$tStore('settings.cache_label')}
+      description={$tStore('settings.cache_desc', { size: cacheSizeStr })}
+      icon={Database}
+      flexCol={true}
     >
-      {#if cacheCleared}
-        <Check size={13} />
-        {$tStore('settings.cache_cleared')}
-      {:else}
-        {$tStore('settings.cache_clear_btn')}
-      {/if}
-    </SettingActionButton>
-  </SettingItem>
+      <SettingActionButton
+        variant={cacheCleared ? 'success' : 'default'}
+        fullWidth={true}
+        onclick={handleClearCache}
+      >
+        {#if cacheCleared}
+          <Check size={13} />
+          {$tStore('settings.cache_cleared')}
+        {:else}
+          {$tStore('settings.cache_clear_btn')}
+        {/if}
+      </SettingActionButton>
+    </SettingItem>
 
-  <SettingItem
-    label={$tStore('settings.export_label')}
-    description={$tStore('settings.export_desc')}
-    icon={Download}
-    flexCol={true}
-  >
-    <SettingActionButton
-      variant={exportSuccess ? 'success' : 'default'}
-      fullWidth={true}
-      disabled={isExporting}
-      onclick={handleExportSettings}
+    <SettingItem
+      label={$tStore('settings.export_label')}
+      description={$tStore('settings.export_desc')}
+      icon={Download}
+      flexCol={true}
     >
-      {#if exportSuccess}
-        <Check size={13} />
-        {$tStore('settings.export_success')}
-      {:else}
-        <Download size={13} />
-        {$tStore('settings.export_btn')}
-      {/if}
-    </SettingActionButton>
-  </SettingItem>
+      <SettingActionButton
+        variant={exportSuccess ? 'success' : 'default'}
+        fullWidth={true}
+        disabled={isExporting}
+        onclick={handleExportSettings}
+      >
+        {#if exportSuccess}
+          <Check size={13} />
+          {$tStore('settings.export_success')}
+        {:else}
+          <Download size={13} />
+          {$tStore('settings.export_btn')}
+        {/if}
+      </SettingActionButton>
+    </SettingItem>
 
-  <SettingItem
-    label={$tStore('settings.import_label')}
-    description={importStatusMsg || $tStore('settings.import_desc')}
-    icon={Upload}
-    flexCol={true}
-  >
-    <SettingActionButton
-      variant={importSuccess ? 'success' : 'default'}
-      fullWidth={true}
-      disabled={isImporting}
-      onclick={handleImportSettings}
+    <SettingItem
+      label={$tStore('settings.import_label')}
+      description={importStatusMsg || $tStore('settings.import_desc')}
+      icon={Upload}
+      flexCol={true}
     >
-      {#if importSuccess}
-        <Check size={13} />
-        {$tStore('settings.import_success')}
-      {:else}
-        <Upload size={13} />
-        {$tStore('settings.import_btn')}
-      {/if}
-    </SettingActionButton>
-  </SettingItem>
+      <SettingActionButton
+        variant={importSuccess ? 'success' : 'default'}
+        fullWidth={true}
+        disabled={isImporting}
+        onclick={handleImportSettings}
+      >
+        {#if importSuccess}
+          <Check size={13} />
+          {$tStore('settings.import_success')}
+        {:else}
+          <Upload size={13} />
+          {$tStore('settings.import_btn')}
+        {/if}
+      </SettingActionButton>
+    </SettingItem>
+  </BentoCard>
 
   <SettingItem
     label={$tStore('settings.reset_label')}
@@ -325,56 +331,4 @@
   </SettingItem>
 </div>
 
-<style>
-  .setting-group {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .toggle-switch {
-    position: relative;
-    display: inline-block;
-    width: 34px;
-    height: 18px;
-  }
-
-  .toggle-switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-  }
-
-  .slider {
-    position: absolute;
-    cursor: pointer;
-    inset: 0;
-    background-color: rgba(255, 255, 255, 0.2);
-    transition: 0.3s;
-    border-radius: 20px;
-    border: 1px solid var(--vinta-border);
-  }
-
-  .slider:before {
-    position: absolute;
-    content: '';
-    height: 14px;
-    width: 14px;
-    left: 2px;
-    bottom: 1px;
-    background-color: white;
-    transition: 0.3s;
-    border-radius: 50%;
-  }
-
-  input:checked + .slider {
-    background-color: var(
-      --vinta-accent-primary,
-      var(--vinta-primary, #38bdf8)
-    );
-  }
-
-  input:checked + .slider:before {
-    transform: translateX(14px);
-  }
-</style>
+<style src="../../styles/settings/SystemTab.css"></style>

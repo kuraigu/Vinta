@@ -37,6 +37,7 @@
   } from '../../bindings/Vinta/backend/app.js'
   import { islandTooltip } from '../services/islandTooltip'
   import BentoCard from './BentoCard.svelte'
+  import IconBadge from './IconBadge.svelte'
 
   const navigate =
     getContext<
@@ -194,9 +195,7 @@
     onkeydown={(e) => e.key === 'Enter' && handleOpenActionCenter()}
   >
     <div class="glance-title-group">
-      <div class="glance-icon-badge">
-        <SlidersHorizontal size={12} />
-      </div>
+      <IconBadge icon={SlidersHorizontal} color="surface" size="sm" />
       <span class="glance-title-text">{$tStore('quick_controls.title')}</span>
     </div>
     <ChevronRight size={14} class="glance-nav-chevron" />

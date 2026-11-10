@@ -20,14 +20,19 @@
 .glance-title-group {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.76rem;
-  font-weight: 700;
-  color: var(--vinta-text-primary);
+  gap: 7px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--vinta-text-secondary);
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+:global(.stats-header-icon) {
+  color: var(--vinta-text-muted);
+  flex-shrink: 0;
 }
 
 .glance-actions-group {

@@ -88,7 +88,8 @@
   padding: 0 9px;
   border-radius: var(--vinta-radius-pill);
   background: var(--vinta-contrast-bg);
-  border: 1px solid var(--vinta-contrast-border);
+  border: none;
+  box-shadow: var(--vinta-contrast-border);
   color: var(--vinta-text-secondary);
   font-family: var(--vinta-font-family);
   font-size: 11px;
@@ -139,7 +140,8 @@
   padding: 0 8px;
   border-radius: var(--vinta-radius-pill);
   background: var(--vinta-contrast-bg);
-  border: 1px solid var(--vinta-contrast-border);
+  border: none;
+  box-shadow: var(--vinta-contrast-border);
   color: var(--vinta-text-primary);
   font-family: var(--vinta-font-family);
   font-size: 10.5px;
@@ -155,7 +157,7 @@
 
 .inline-pill-btn:hover:not(:disabled) {
   background: var(--vinta-contrast-hover);
-  border-color: var(--vinta-border);
+  box-shadow: var(--vinta-contrast-border);
 }
 
 .inline-pill-btn:active:not(:disabled) {
@@ -170,19 +172,20 @@
 .inline-pill-btn.danger-pill:hover:not(:disabled) {
   background: var(--vinta-accent-danger-hover-bg);
   color: var(--vinta-accent-danger-hover-text);
-  border-color: var(--vinta-accent-danger);
+  box-shadow: 0 0 0 1px var(--vinta-accent-danger);
 }
 
 .inline-icon-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
+  width: 24px;
   height: 24px;
   padding: 0;
-  border-radius: var(--vinta-radius-pill);
+  border-radius: 50%;
   background: var(--vinta-contrast-bg);
-  border: 1px solid var(--vinta-contrast-border);
+  border: none;
+  box-shadow: var(--vinta-contrast-border);
   color: var(--vinta-text-secondary);
   cursor: pointer;
   flex-shrink: 0;
@@ -196,7 +199,7 @@
 .inline-icon-btn:hover:not(:disabled) {
   background: var(--vinta-contrast-hover);
   color: var(--vinta-text-primary);
-  border-color: var(--vinta-border);
+  box-shadow: var(--vinta-contrast-border);
 }
 
 .inline-icon-btn:active:not(:disabled) {
@@ -211,7 +214,7 @@
 .inline-icon-btn.danger-pill:hover:not(:disabled) {
   background: var(--vinta-accent-danger-hover-bg);
   color: var(--vinta-accent-danger-hover-text);
-  border-color: var(--vinta-accent-danger);
+  box-shadow: 0 0 0 1px var(--vinta-accent-danger);
 }
 
 /* Scroll Area & Open 4-Column Tile Grid (No card-inside-a-card) */
@@ -332,7 +335,8 @@
   padding: 0 12px;
   border-radius: var(--vinta-radius-pill);
   background: var(--vinta-contrast-bg);
-  border: 1px solid var(--vinta-contrast-border);
+  border: none;
+  box-shadow: var(--vinta-contrast-border);
   color: var(--vinta-text-primary);
   font-family: var(--vinta-font-family);
   font-size: 11.5px;
@@ -648,7 +652,8 @@
   font-weight: 600;
   color: var(--vinta-text-secondary);
   background: var(--vinta-contrast-bg);
-  border: 1px solid var(--vinta-contrast-border);
+  border: none;
+  box-shadow: var(--vinta-contrast-border);
   border-radius: var(--vinta-radius-pill);
   padding: 1px 7px;
   white-space: nowrap;
@@ -683,9 +688,10 @@
   justify-content: center;
   width: 28px;
   height: 28px;
-  border-radius: 8px;
+  border-radius: 50%;
   background: var(--vinta-contrast-bg);
-  border: 1px solid var(--vinta-contrast-border);
+  border: none;
+  box-shadow: var(--vinta-contrast-border);
   color: var(--vinta-text-secondary);
   cursor: pointer;
   padding: 0;
@@ -699,7 +705,7 @@
 .header-icon-btn:hover {
   background: var(--vinta-contrast-hover);
   color: var(--vinta-text-primary);
-  border-color: var(--vinta-border);
+  box-shadow: var(--vinta-contrast-border);
 }
 
 .header-icon-btn.clear-btn:hover {
