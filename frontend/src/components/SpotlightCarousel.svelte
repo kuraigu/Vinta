@@ -22,9 +22,10 @@
   import { swipe } from '../utils/useSwipe'
   import { reportFeedback } from '../services/feedbackService'
 
-  /**
-   * Data representation for a spotlight promotion banner.
-   */
+  // Correct asset imports matching your folder structure
+  import enohotelLogoSvg from '../illustrations/enohotel-daniel-belda/simple_logo.svg'
+  import enohotelBgSvg from '../illustrations/enohotel-daniel-belda/enohotel-card-bg.svg'
+
   export interface SpotlightItem {
     id: string
     title: string
@@ -73,6 +74,17 @@
       url: 'https://github.com/kuraigu/Vinta'
     },
     {
+      id: 'enohotel',
+      title: $tStore('spotlight.enohotel_title'),
+      description: $tStore('spotlight.enohotel_desc'),
+      iconType: 'image',
+      iconSrc: enohotelLogoSvg,
+      badgeColorName: 'amber',
+      badgeBg: `url("${enohotelBgSvg}")`,
+      badgeColor: '#936B19',
+      url: 'https://enohoteldanielbelda.com/'
+    },
+    {
       id: 'appearance',
       title: $tStore('spotlight.appearance_title'),
       description: $tStore('spotlight.appearance_desc'),
@@ -110,12 +122,6 @@
   let resizeRafId: number | undefined
   let swipedThisGesture = false
 
-  /**
-   * Calculates and applies the horizontal translation to center the active card.
-   *
-   * @param index - Target card index to align.
-   * @param smooth - Whether to animate using the elastic spring curve.
-   */
   function goToIndex(index: number, smooth = true) {
     if (!trackEl || !wrapEl) return
     const cards = trackEl.querySelectorAll<HTMLElement>('.spotlight-card')
@@ -143,18 +149,12 @@
     }
   }
 
-  /**
-   * Scrolls to the previous spotlight card without wrapping.
-   */
   function handlePrev(e?: MouseEvent) {
     if (e) e.stopPropagation()
     if (currentIndex <= 0) return
     goToIndex(currentIndex - 1, true)
   }
 
-  /**
-   * Scrolls to the next spotlight card without wrapping.
-   */
   function handleNext(e?: MouseEvent) {
     if (e) e.stopPropagation()
     if (currentIndex >= computedItems.length - 1) return
@@ -163,9 +163,6 @@
 
   let lastMeasuredWidth = 0
 
-  /**
-   * Re-aligns carousel card position when track container geometry changes.
-   */
   function handleTrackResize(entries: ResizeObserverEntry[]) {
     const entry = entries[0]
     if (!entry || !wrapEl || isDragging) return
@@ -182,9 +179,6 @@
     })
   }
 
-  /**
-   * Initializes active card with a random index and registers resize monitoring.
-   */
   function initializeCarousel() {
     if (computedItems.length > 1) {
       currentIndex = Math.floor(Math.random() * computedItems.length)
@@ -212,9 +206,6 @@
     }
   })
 
-  /**
-   * Re-aligns carousel card index when computed item entries change.
-   */
   let lastItemsLength = 0
   function handleItemsChangedEffect() {
     const len = computedItems.length
@@ -232,9 +223,6 @@
   }
   $effect(handleItemsChangedEffect)
 
-  /**
-   * Handles user click on a spotlight card.
-   */
   async function handleCardClick(item: SpotlightItem) {
     if (item.action) {
       await item.action()
@@ -246,7 +234,7 @@
         await Browser.OpenURL(item.url)
         return
       } catch {
-        // Fallback to binding or window.open
+        // Fallback
       }
 
       try {
@@ -255,7 +243,7 @@
           return
         }
       } catch {
-        // Fallback to window.open
+        // Fallback
       }
 
       window.open(item.url, '_blank')
@@ -295,7 +283,6 @@
   function handleDragMove(offset: { x: number; y: number }) {
     if (!isDragging) return
     let dx = offset.x
-    // Elastic rubber-band resistance at boundary edges
     if (
       (currentIndex === 0 && dx > 0) ||
       (currentIndex === computedItems.length - 1 && dx < 0)
@@ -341,6 +328,9 @@
       <button
         type="button"
         class="spotlight-card"
+        style={item.badgeBg && item.badgeBg.startsWith('url(')
+          ? `background: ${item.badgeBg}; background-size: cover;`
+          : ''}
         onclick={() => void handleCardClick(item)}
         aria-label="{item.title}: {item.description}"
       >
