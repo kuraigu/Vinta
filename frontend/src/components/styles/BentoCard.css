@@ -6,7 +6,7 @@
   position: relative;
   width: 100%;
   box-sizing: border-box;
-  border-radius: var(--vinta-radius-card, 16px);
+  border-radius: var(--vinta-radius-card, 14px);
   transition:
     opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1),
     border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
@@ -22,17 +22,13 @@
   display: flex;
   flex-direction: column;
   padding: 12px 14px;
-  background: var(--vinta-surface-card);
+  background: var(--vinta-item-bg, rgba(255, 255, 255, 0.03));
   border: 1px solid var(--vinta-border);
-  box-shadow: var(--vinta-contrast-border), var(--vinta-dock-popover-shadow);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
 }
 
 .vinta-bento-card.variant-bento:hover {
-  background: var(--vinta-surface-elevated);
-  border-color: var(--vinta-contrast-hover);
-  box-shadow: var(--vinta-contrast-border), var(--vinta-dock-popover-shadow);
+  background: var(--vinta-contrast-hover, rgba(255, 255, 255, 0.055));
+  border-color: rgba(255, 255, 255, 0.14);
 }
 
 /* Setting Item Variant */
@@ -41,16 +37,53 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 13px 15px;
-  background: var(--vinta-surface-card);
+  padding: 12px 14px;
+  background: var(--vinta-item-bg, rgba(255, 255, 255, 0.03));
   border: 1px solid var(--vinta-border);
-  box-shadow: var(--vinta-contrast-border), var(--vinta-dock-popover-shadow);
 }
 
 .vinta-bento-card.variant-setting:hover {
-  border-color: var(--vinta-contrast-hover);
-  background: var(--vinta-surface-elevated);
-  box-shadow: var(--vinta-contrast-border), var(--vinta-dock-popover-shadow);
+  border-color: rgba(255, 255, 255, 0.14);
+  background: var(--vinta-contrast-hover, rgba(255, 255, 255, 0.055));
+}
+
+/* Sidebar Navigation Card Variant */
+.vinta-bento-card.variant-sidebar {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 8px;
+  background: var(--vinta-item-bg, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--vinta-border);
+  overflow: hidden;
+}
+
+/* Grouped Card Variant (Bento Card with internal row dividers) */
+.vinta-bento-card.variant-group {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  background: var(--vinta-item-bg, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--vinta-border);
+  overflow: hidden;
+}
+
+.vinta-bento-card.variant-group > :global(*),
+.vinta-bento-card.variant-group > :global(*) > :global(.vinta-bento-card) {
+  border-radius: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  margin: 0 !important;
+}
+
+.vinta-bento-card.variant-group > :global(* + *) {
+  border-top: 1px solid var(--vinta-border-light, rgba(255, 255, 255, 0.06)) !important;
+}
+
+.vinta-bento-card.variant-group > :global(.vinta-bento-card.variant-setting:hover),
+.vinta-bento-card.variant-group > :global(*) > :global(.vinta-bento-card.variant-setting:hover) {
+  background: rgba(255, 255, 255, 0.025) !important;
 }
 
 /* Announcement / Hero Variant */
@@ -61,8 +94,6 @@
   background: var(--vinta-surface-card, rgba(255, 255, 255, 0.04));
   border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.08));
   box-shadow: var(--vinta-contrast-border), var(--vinta-dock-popover-shadow);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
 }
 
 .vinta-bento-card.variant-announcement:hover {

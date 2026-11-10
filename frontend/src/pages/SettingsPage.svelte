@@ -9,7 +9,7 @@
 
   export const config: IslandConfig = {
     minimal: { w: 10, h: 10, r: 5 },
-    expanded: { w: 580, h: 480, r: 32 },
+    expanded: { w: 590, h: 495, r: 30 },
     borderColor: 'var(--vinta-border)',
     glowColor: 'transparent'
   }
@@ -44,29 +44,33 @@
   {#snippet content()}
     <ScrollView class="settings-content-scroll">
       <div class="tab-content">
-        {#if activeTab === 'appearance'}
-          <AppearanceTab />
-        {:else if activeTab === 'modules'}
-          <AppsModulesTab />
-        {:else if activeTab === 'behavior'}
-          <BehaviorTab />
-        {:else if activeTab === 'shortcuts'}
-          <ShortcutsTab />
-        {:else if activeTab === 'notifications'}
-          <NotificationsTab />
-        {:else if activeTab === 'clock'}
-          <ClockTab />
-        {:else if activeTab === 'weather'}
-          <WeatherTab />
-        {:else if activeTab === 'language'}
-          <LanguageTab />
-        {:else if activeTab === 'system'}
-          <SystemTab />
-        {:else if activeTab === 'updates'}
-          <UpdatesTab />
-        {:else if activeTab === 'about'}
-          <AboutTab />
-        {/if}
+        {#key activeTab}
+          <div class="tab-pane-transition">
+            {#if activeTab === 'appearance'}
+              <AppearanceTab />
+            {:else if activeTab === 'modules'}
+              <AppsModulesTab />
+            {:else if activeTab === 'behavior'}
+              <BehaviorTab />
+            {:else if activeTab === 'shortcuts'}
+              <ShortcutsTab />
+            {:else if activeTab === 'notifications'}
+              <NotificationsTab />
+            {:else if activeTab === 'clock'}
+              <ClockTab />
+            {:else if activeTab === 'weather'}
+              <WeatherTab />
+            {:else if activeTab === 'language'}
+              <LanguageTab />
+            {:else if activeTab === 'system'}
+              <SystemTab />
+            {:else if activeTab === 'updates'}
+              <UpdatesTab />
+            {:else if activeTab === 'about'}
+              <AboutTab />
+            {/if}
+          </div>
+        {/key}
       </div>
     </ScrollView>
   {/snippet}

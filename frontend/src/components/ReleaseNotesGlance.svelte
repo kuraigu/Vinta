@@ -4,14 +4,14 @@
 -->
 <script lang="ts">
   import { onMount, getContext } from 'svelte'
-  import { ScrollText } from 'lucide-svelte'
+  import { ScrollText, ChevronRight } from 'lucide-svelte'
   import BentoCard from './BentoCard.svelte'
-  import ActionCapsule from './ActionCapsule.svelte'
+  import IconBadge from './IconBadge.svelte'
   import { getReleaseNotes } from '../services/announcementsService'
   import ReleaseNotesPage, {
     config as releaseNotesConfig
   } from '../pages/ReleaseNotesPage.svelte'
-  import { appInfoStore, type IslandConfig } from '../store'
+  import { appInfoStore, tStore, type IslandConfig } from '../store'
 
   let {
     onClick
@@ -33,83 +33,67 @@
   }
 
   /**
-   * Scans release notes markdown for the first valid non-badge preview image.
+   * Extracts up to 3 clean bullet highlights from raw release notes markdown.
    */
-  function extractFirstImage(text: string | undefined): string | null {
-    if (!text) return null
-    const mdRegex = /!\[.*?\]\((https?:\/\/[^\s)"]+)(?:\s+["'][^"']*["'])?\)/g
-    let match: RegExpExecArray | null
-    while ((match = mdRegex.exec(text)) !== null) {
-      const url = match[1]
-      if (!url.includes('shields.io') && !url.includes('badge')) {
-        return url
-      }
+  function extractHighlights(raw: string): string[] {
+    if (!raw) {
+      return [
+        'Performance improvements and smoother island transitions',
+        'Refined bento card surfaces and theme styling',
+        'General stability and bug fixes'
+      ]
     }
-    const htmlRegex = /<img[^>]+src=["'](https?:\/\/[^"']+)["']/gi
-    while ((match = htmlRegex.exec(text)) !== null) {
-      const url = match[1]
-      if (!url.includes('shields.io') && !url.includes('badge')) {
-        return url
-      }
-    }
-    return null
-  }
 
-  /**
-   * Cleans and renders inline markdown formatting into safe HTML for the glance card preview.
-   */
-  function renderGlanceSnippet(raw: string | undefined, maxLen = 110): string {
-    if (!raw) return ''
-
-    let text = raw
-      .replace(/!\[.*?\]\((https?:\/\/[^\s)"]+)(?:\s+["'][^"']*["'])?\)/g, '')
-      .replace(/<img[^>]*>/gi, '')
+    const lines = raw
       .replace(/<details[\s\S]*?<\/details>/gi, '')
-      .replace(/^#+\s+/gm, '')
-      .replace(/^---+$/gm, '')
-      .replace(/\r?\n+/g, ' ')
-      .trim()
+      .replace(/!\[.*?\]\([^)]+\)/g, '')
+      .replace(/<img[^>]*>/gi, '')
+      .split(/\r?\n/)
 
-    text = text
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-
-    const isTruncated = text.length > maxLen
-    if (isTruncated) {
-      text = text.slice(0, maxLen).trim()
+    const bullets: string[] = []
+    for (const rawLine of lines) {
+      const line = rawLine.trim()
+      if (!line) continue
+      const match = line.match(/^[-*•]\s+(.+)/)
+      if (match) {
+        const cleaned = match[1]
+          .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+          .replace(/\*\*([^*]+)\*\*/g, '$1')
+          .replace(/`([^`]+)`/g, '$1')
+          .replace(/\s*\(#\d+\)/g, '')
+          .replace(/\s+by\s+@\S+.*/i, '')
+          .trim()
+        if (cleaned.length > 6 && !cleaned.toLowerCase().startsWith('full changelog')) {
+          bullets.push(cleaned)
+        }
+      }
+      if (bullets.length >= 3) break
     }
 
-    text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    text = text.replace(
-      /(?<!\*)\*([^*\s][^*]*[^*\s]|\S)\*(?!\*)/g,
-      '<em>$1</em>'
-    )
-    text = text.replace(
-      /`([^`]+)`/g,
-      '<code class="glance-inline-code">$1</code>'
-    )
-    text = text.replace(
-      /\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
-      '<span class="glance-inline-link">$1</span>'
-    )
+    if (bullets.length > 0) return bullets
 
-    return isTruncated ? text + '...' : text
+    const plainParagraphs = lines
+      .filter(
+        (l) =>
+          l.trim().length > 12 &&
+          !l.trim().startsWith('#') &&
+          !l.trim().startsWith('---')
+      )
+      .slice(0, 2)
+      .map((l) =>
+        l
+          .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+          .replace(/\*\*([^*]+)\*\*/g, '$1')
+          .replace(/`([^`]+)`/g, '$1')
+          .trim()
+      )
+
+    return plainParagraphs.length > 0
+      ? plainParagraphs
+      : ['Discover the latest features, improvements, and fixes in this build.']
   }
 
-  function getPreviewImage(): string | null {
-    return extractFirstImage(rawNotes)
-  }
-
-  function getSnippetHtml(): string {
-    if (!rawNotes) {
-      return 'Discover the latest features, improvements, and fixes in this build.'
-    }
-    return renderGlanceSnippet(rawNotes, previewImage ? 85 : 120)
-  }
-
-  let previewImage = $derived(getPreviewImage())
-  let snippetHtml = $derived(getSnippetHtml())
+  let highlights = $derived(extractHighlights(rawNotes))
 
   onMount(async () => {
     try {
@@ -142,48 +126,32 @@
   <BentoCard variant="bento" class="release-notes-glance-card">
     <div class="glance-top-row">
       <div class="glance-brand-group">
-        <div class="glance-icon-badge">
-          <ScrollText size={12} />
+        <IconBadge icon={ScrollText} color="surface" size="sm" />
+        <div class="glance-heading-col">
+          <div class="glance-title-line">
+            <span class="glance-brand-name">What's New in Vinta</span>
+            <span class="glance-version-pill"
+              >{formatVersion($appInfoStore?.version)}</span
+            >
+          </div>
+          <span class="glance-subtitle">{$tStore('release_notes.title')}</span>
         </div>
-        <span class="glance-brand-name">Release Notes</span>
-        <span class="glance-version-pill"
-          >{formatVersion($appInfoStore?.version)}</span
-        >
       </div>
 
-      <ActionCapsule
-        label="View"
-        onclick={handleOpen}
-        tooltip="View full release notes"
-      />
+      <span class="glance-open-cta">
+        <span>{$tStore('common.view')}</span>
+        <ChevronRight size={13} />
+      </span>
     </div>
 
-    <div class="glance-content-preview" class:has-image={!!previewImage}>
-      <div class="glance-text-col">
-        <h4 class="glance-title">
-          What's New in Vinta {formatVersion($appInfoStore?.version)}
-        </h4>
-        <p class="glance-message">
-          <!-- eslint-disable-next-line svelte/no-at-html-tags -->
-          {@html snippetHtml}
-        </p>
-      </div>
-
-      {#if previewImage}
-        <div class="glance-thumb-wrapper">
-          <img
-            src={previewImage}
-            alt=""
-            class="glance-thumb-image"
-            onerror={(e) => {
-              const target = e.currentTarget as HTMLImageElement
-              if (target.parentElement)
-                target.parentElement.style.display = 'none'
-            }}
-          />
-        </div>
-      {/if}
-    </div>
+    <ul class="glance-highlights-list">
+      {#each highlights as bullet, idx (idx)}
+        <li class="glance-highlight-item">
+          <span class="highlight-dot"></span>
+          <span class="highlight-text">{bullet}</span>
+        </li>
+      {/each}
+    </ul>
   </BentoCard>
 </div>
 

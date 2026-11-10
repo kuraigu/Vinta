@@ -1,11 +1,16 @@
 /**
  * @fileoverview Fetches developer announcements and GitHub release notes.
  *
- * Pulls update changelogs and announcements through the backend, caches the results,
- * and tracks whether the user has unread announcements to show a badge on the home feed.
+ * Pulls update changelogs and announcements through the backend, caches the results
+ * in memory and localStorage for instant synchronous hydration on startup, and tracks
+ * whether the user has unread announcements to show a badge on the home feed.
  */
 
-import { Call } from '@wailsio/runtime'
+import {
+  GetDeveloperAnnouncements,
+  GetReleaseNotes,
+  MarkAnnouncementsRead
+} from '../../bindings/Vinta/backend/app'
 
 /**
  * Announcement item representation.
@@ -29,12 +34,46 @@ export interface AnnouncementsPayload {
   hasUnread: boolean
 }
 
+const ANNOUNCEMENTS_CACHE_KEY = 'vinta_announcements_cache_v1'
+let inMemoryAnnouncements: AnnouncementsPayload | null = null
+
+/**
+ * Synchronously returns the cached announcements payload from memory or localStorage
+ * so Home feed glance cards render at their exact height on frame 0 without layout shift.
+ */
+export function getCachedAnnouncements(): AnnouncementsPayload | null {
+  if (inMemoryAnnouncements) return inMemoryAnnouncements
+  if (typeof localStorage === 'undefined') return null
+  try {
+    const raw = localStorage.getItem(ANNOUNCEMENTS_CACHE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as AnnouncementsPayload
+    if (parsed && Array.isArray(parsed.items)) {
+      inMemoryAnnouncements = parsed
+      return parsed
+    }
+  } catch {
+    // Ignore storage read errors
+  }
+  return null
+}
+
+function saveCachedAnnouncements(payload: AnnouncementsPayload): void {
+  inMemoryAnnouncements = payload
+  if (typeof localStorage === 'undefined') return
+  try {
+    localStorage.setItem(ANNOUNCEMENTS_CACHE_KEY, JSON.stringify(payload))
+  } catch {
+    // Ignore storage write errors
+  }
+}
+
 /**
  * Fetches release notes markdown for a specific version tag.
  */
 export async function getReleaseNotes(version: string): Promise<string> {
   try {
-    const res = await Call.ByName('Vinta/backend.App.GetReleaseNotes', version)
+    const res = await GetReleaseNotes(version)
     return String(res || '')
   } catch (err) {
     console.error('Failed to retrieve release notes:', err)
@@ -43,15 +82,22 @@ export async function getReleaseNotes(version: string): Promise<string> {
 }
 
 /**
- * Fetches announcements from the release feed.
+ * Fetches announcements from the release feed and updates the persistent cache.
  */
 export async function getDeveloperAnnouncements(): Promise<AnnouncementsPayload> {
   try {
-    const res = await Call.ByName('Vinta/backend.App.GetDeveloperAnnouncements')
-    return (res as AnnouncementsPayload) || { items: [], hasUnread: false }
+    const res = await GetDeveloperAnnouncements()
+    const payload = (res as AnnouncementsPayload) || {
+      items: [],
+      hasUnread: false
+    }
+    if (Array.isArray(payload.items) && payload.items.length > 0) {
+      saveCachedAnnouncements(payload)
+    }
+    return payload
   } catch (err) {
     console.error('Failed to retrieve developer announcements:', err)
-    return { items: [], hasUnread: false }
+    return getCachedAnnouncements() || { items: [], hasUnread: false }
   }
 }
 
@@ -60,7 +106,17 @@ export async function getDeveloperAnnouncements(): Promise<AnnouncementsPayload>
  */
 export async function markAnnouncementsRead(): Promise<void> {
   try {
-    await Call.ByName('Vinta/backend.App.MarkAnnouncementsRead')
+    await MarkAnnouncementsRead()
+    if (inMemoryAnnouncements) {
+      saveCachedAnnouncements({
+        ...inMemoryAnnouncements,
+        hasUnread: false,
+        items: inMemoryAnnouncements.items.map((item) => ({
+          ...item,
+          isUnread: false
+        }))
+      })
+    }
   } catch (err) {
     console.error('Failed to mark announcements as read:', err)
   }

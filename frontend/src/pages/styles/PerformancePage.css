@@ -100,6 +100,12 @@
   display: block;
 }
 
+.sparkline-grid-line {
+  stroke: var(--vinta-border-light);
+  stroke-dasharray: 2 3;
+  stroke-width: 1;
+}
+
 .sparkline-trace {
   fill: none;
   stroke-width: 1.8;

@@ -158,7 +158,9 @@
 
   <ScrollView class="mixer-drawer-scroll">
     <div class="mixer-content-area">
-      {#if activeTab === 'apps'}
+      {#key activeTab}
+        <div class="mixer-tab-transition">
+          {#if activeTab === 'apps'}
         <!-- Master Audio Card -->
         <div class="master-volume-card">
           <div class="master-label-group">
@@ -392,6 +394,8 @@
         </div>
       {/if}
     </div>
+  {/key}
+</div>
   </ScrollView>
 </DrawerPanel>
 

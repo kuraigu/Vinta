@@ -17,6 +17,7 @@
   import SettingsPage, {
     config as settingsConfig
   } from '../pages/SettingsPage.svelte'
+  import IconBadge, { type IconBadgeColor } from './IconBadge.svelte'
   import { OpenURL } from '../../bindings/Vinta/backend/app.js'
   import { swipe } from '../utils/useSwipe'
   import { reportFeedback } from '../services/feedbackService'
@@ -31,6 +32,7 @@
     iconType: 'component' | 'image'
     iconComponent?: ComponentType<any>
     iconSrc?: string
+    badgeColorName?: IconBadgeColor
     badgeBg: string
     badgeColor: string
     url?: string
@@ -54,6 +56,7 @@
       description: $tStore('spotlight.support_desc'),
       iconType: 'component',
       iconComponent: Heart,
+      badgeColorName: 'rose',
       badgeBg: 'var(--vinta-danger, #ef4444)',
       badgeColor: '#ffffff',
       url: 'https://ko-fi.com/dippedinsoju'
@@ -64,6 +67,7 @@
       description: $tStore('spotlight.github_desc'),
       iconType: 'component',
       iconComponent: Star,
+      badgeColorName: 'amber',
       badgeBg: 'var(--vinta-warning, #f59e0b)',
       badgeColor: '#ffffff',
       url: 'https://github.com/kuraigu/Vinta'
@@ -74,8 +78,9 @@
       description: $tStore('spotlight.appearance_desc'),
       iconType: 'component',
       iconComponent: Palette,
+      badgeColorName: 'cyan',
       badgeBg: 'var(--vinta-accent-primary, #38bdf8)',
-      badgeColor: '#0b1120',
+      badgeColor: '#ffffff',
       internalTab: 'appearance'
     },
     {
@@ -84,6 +89,7 @@
       description: $tStore('spotlight.feedback_desc'),
       iconType: 'component',
       iconComponent: MessageSquareHeart,
+      badgeColorName: 'emerald',
       badgeBg: 'var(--vinta-success, #10b981)',
       badgeColor: '#ffffff',
       action: () => void reportFeedback()
@@ -339,17 +345,24 @@
         aria-label="{item.title}: {item.description}"
       >
         <div class="spotlight-card-body">
-          <div
-            class="spotlight-icon-badge"
-            style="background: {item.badgeBg}; color: {item.badgeColor};"
-          >
-            {#if item.iconType === 'image' && item.iconSrc}
+          {#if item.iconType === 'image' && item.iconSrc}
+            <IconBadge
+              size="lg"
+              color={item.badgeColorName ?? 'blue'}
+              customBg={item.badgeColorName ? undefined : item.badgeBg}
+              customColor={item.badgeColorName ? undefined : item.badgeColor}
+            >
               <img src={item.iconSrc} alt="" loading="lazy" />
-            {:else if item.iconComponent}
-              {@const Icon = item.iconComponent}
-              <Icon size={13} strokeWidth={2.2} />
-            {/if}
-          </div>
+            </IconBadge>
+          {:else}
+            <IconBadge
+              size="lg"
+              color={item.badgeColorName ?? 'blue'}
+              icon={item.iconComponent}
+              customBg={item.badgeColorName ? undefined : item.badgeBg}
+              customColor={item.badgeColorName ? undefined : item.badgeColor}
+            />
+          {/if}
 
           <div class="spotlight-text-block">
             <span class="spotlight-title">{item.title}</span>

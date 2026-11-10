@@ -13,6 +13,8 @@
     Trash2,
     Check
   } from 'lucide-svelte'
+  import BentoCard from '../../BentoCard.svelte'
+  import ToggleSwitch from '../../ToggleSwitch.svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
   import CustomSelect from '../../CustomSelect.svelte'
@@ -108,136 +110,96 @@
 </script>
 
 <div class="setting-group">
-  <SettingItem
-    label="Time Format"
-    description="Clock presentation style (Default: 12-Hour)"
-    icon={Clock}
-    flexCol={true}
-  >
-    <CustomSelect
-      options={timeFormatOptions}
-      bind:value={$timeFormatStore}
-      fullWidth={true}
-      direction="auto"
-    />
-  </SettingItem>
-
-  <SettingItem
-    label="Timezone"
-    description="Active timezone for clock and agenda calculations (Default: Auto-detect)"
-    icon={Globe}
-    flexCol={true}
-  >
-    <CustomSelect
-      options={timezoneOptions}
-      bind:value={selectedTz}
-      searchable={true}
-      fullWidth={true}
-      direction="auto"
-    />
-  </SettingItem>
-
-  <SettingItem
-    label="Date Display Format"
-    description="Format used across date widgets (Default: Short)"
-    icon={Calendar}
-    flexCol={true}
-  >
-    <CustomSelect
-      options={dateFormatOptions}
-      bind:value={$dateFormatStore}
-      fullWidth={true}
-      direction="auto"
-    />
-  </SettingItem>
-
-  <SettingItem
-    label="Auto-Discard Past Events"
-    description="Automatically purges agenda events after their scheduled date has passed"
-    icon={CalendarX}
-  >
-    <label class="toggle-switch">
-      <input type="checkbox" bind:checked={$autoDiscardPastEventsStore} />
-      <span class="slider"></span>
-    </label>
-  </SettingItem>
-
-  <SettingItem
-    label="Clear Past Events"
-    description="Manually removes all expired agenda items preceding today"
-    icon={Trash2}
-    flexCol={true}
-  >
-    <SettingActionButton
-      variant={clearedCount !== null ? 'success' : 'default'}
-      fullWidth={true}
-      onclick={handleClearPast}
+  <BentoCard variant="group">
+    <SettingItem
+      label="Time Format"
+      description="Clock presentation style"
+      icon={Clock}
+      flexCol={true}
+      isDefault={$timeFormatStore === timeFormatStore.defaultValue}
+      onReset={() => timeFormatStore.reset()}
     >
-      {#if clearedCount !== null}
-        <Check size={13} />
-        <span
-          >Removed {clearedCount}
-          {clearedCount === 1 ? 'event' : 'events'}</span
-        >
-      {:else}
-        <Trash2 size={13} />
-        <span>Clear Past Events</span>
-      {/if}
-    </SettingActionButton>
-  </SettingItem>
+      <CustomSelect
+        options={timeFormatOptions}
+        bind:value={$timeFormatStore}
+        defaultValue={timeFormatStore.defaultValue}
+        fullWidth={true}
+        direction="auto"
+      />
+    </SettingItem>
+
+    <SettingItem
+      label="Timezone"
+      description="Active timezone for clock and agenda calculations"
+      icon={Globe}
+      flexCol={true}
+      isDefault={selectedTz === 'auto'}
+      onReset={() => (selectedTz = 'auto')}
+    >
+      <CustomSelect
+        options={timezoneOptions}
+        bind:value={selectedTz}
+        defaultValue="auto"
+        searchable={true}
+        fullWidth={true}
+        direction="auto"
+      />
+    </SettingItem>
+
+    <SettingItem
+      label="Date Display Format"
+      description="Format used across date widgets"
+      icon={Calendar}
+      flexCol={true}
+      isDefault={$dateFormatStore === 'short'}
+      onReset={() => dateFormatStore.set('short')}
+    >
+      <CustomSelect
+        options={dateFormatOptions}
+        bind:value={$dateFormatStore}
+        defaultValue="short"
+        fullWidth={true}
+        direction="auto"
+      />
+    </SettingItem>
+  </BentoCard>
+
+  <BentoCard variant="group">
+    <SettingItem
+      label="Auto-Discard Past Events"
+      description="Automatically purges agenda events after their scheduled date has passed"
+      icon={CalendarX}
+    >
+      <ToggleSwitch
+        bind:checked={$autoDiscardPastEventsStore}
+        ariaLabel="Auto-Discard Past Events"
+      />
+    </SettingItem>
+
+    <SettingItem
+      label="Clear Past Events"
+      description="Manually removes all expired agenda items preceding today"
+      icon={Trash2}
+      flexCol={true}
+    >
+      <SettingActionButton
+        variant={clearedCount !== null ? 'success' : 'default'}
+        fullWidth={true}
+        onclick={handleClearPast}
+      >
+        {#if clearedCount !== null}
+          <Check size={13} />
+          <span
+            >Removed {clearedCount}
+            {clearedCount === 1 ? 'event' : 'events'}</span
+          >
+        {:else}
+          <Trash2 size={13} />
+          <span>Clear Past Events</span>
+        {/if}
+      </SettingActionButton>
+    </SettingItem>
+  </BentoCard>
 </div>
 
-<style>
-  .setting-group {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .toggle-switch {
-    position: relative;
-    display: inline-block;
-    width: 32px;
-    height: 18px;
-    flex-shrink: 0;
-  }
-
-  .toggle-switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-  }
-
-  .slider {
-    position: absolute;
-    cursor: pointer;
-    inset: 0;
-    background-color: rgba(255, 255, 255, 0.2);
-    transition: 0.3s;
-    border-radius: 20px;
-    border: 1px solid var(--vinta-border);
-  }
-
-  .slider:before {
-    position: absolute;
-    content: '';
-    height: 14px;
-    width: 14px;
-    left: 2px;
-    bottom: 1px;
-    background-color: white;
-    transition: 0.3s;
-    border-radius: 50%;
-  }
-
-  input:checked + .slider {
-    background-color: var(
-      --vinta-accent-primary,
-      var(--vinta-primary, #38bdf8)
-    );
-  }
-
-  input:checked + .slider:before {
-    transform: translateX(14px);
-  }
-</style>
+<style src="../../styles/settings/ClockTab.css"></style>

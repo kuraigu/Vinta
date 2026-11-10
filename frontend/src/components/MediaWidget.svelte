@@ -410,18 +410,45 @@
         }
         ctx.drawImage(img, 0, 0, 16, 16)
         const data = ctx.getImageData(0, 0, 16, 16).data
-        let r = 0
-        let g = 0
-        let b = 0
-        let count = 0
+        let bestR = 0
+        let bestG = 0
+        let bestB = 0
+        let maxScore = -1
+        let avgR = 0
+        let avgG = 0
+        let avgB = 0
+        let total = 0
+
         for (let i = 0; i < data.length; i += 4) {
-          r += data[i]
-          g += data[i + 1]
-          b += data[i + 2]
-          count++
+          const pr = data[i]
+          const pg = data[i + 1]
+          const pb = data[i + 2]
+          avgR += pr
+          avgG += pg
+          avgB += pb
+          total++
+
+          const maxVal = Math.max(pr, pg, pb)
+          const minVal = Math.min(pr, pg, pb)
+          const delta = maxVal - minVal
+          const brightness = (pr + pg + pb) / 3
+
+          // Prioritize saturated pixels over pure black/white
+          if (brightness > 25 && brightness < 235 && delta > 15) {
+            const score = delta * (1 - Math.abs(brightness - 128) / 128)
+            if (score > maxScore) {
+              maxScore = score
+              bestR = pr
+              bestG = pg
+              bestB = pb
+            }
+          }
         }
-        if (count > 0) {
-          cardTintColor = `rgba(${Math.round(r / count)}, ${Math.round(g / count)}, ${Math.round(b / count)}, 0.45)`
+
+        if (maxScore > 0) {
+          cardTintColor = `rgb(${bestR}, ${bestG}, ${bestB})`
+        } else if (total > 0) {
+          cardTintColor = `rgb(${Math.round(avgR / total)}, ${Math.round(avgG / total)}, ${Math.round(avgB / total)})`
         }
       } catch {
         cardTintColor = trackTexture.accentColor
@@ -453,54 +480,30 @@
   }
 
   // Smooth local timeline progression between backend SMTC updates.
-  // Reactive ONLY to isPlayingState and isDraggingSeek to prevent routine
-  // media-update events (Discord, volume, audio peaks) from cancelling the rAF loop.
+  // Uses a 250ms cadence with CSS transitions for zero-overhead timeline interpolation.
   function handleTimelineProgressEffect() {
-    if (!isPlayingState || isDraggingSeek) return
+    if (!isPlayingState || isDraggingSeek || $isIslandHiddenStore) return
 
     let lastTick = performance.now()
-    let rafId: number
-
-    const tick = () => {
+    const timer = setInterval(() => {
       const now = performance.now()
       const elapsed = now - lastTick
       lastTick = now
 
       const totalDur = untrack(() => durationMsState)
-
       if (!isDraggingSeek && totalDur > 0) {
-        // Smooth proportional drift damping: bleed off ~10% of remaining error per frame
-        const err = driftError
-        let correction = 0
-        if (Math.abs(err) > 5) {
-          correction = err * 0.1
-          driftError -= correction
-        } else if (err !== 0) {
-          driftError = 0
-        }
-
         const nextPos = Math.min(
           totalDur,
-          Math.max(0, localPosMs + elapsed + correction)
+          Math.max(0, localPosMs + elapsed + driftError)
         )
+        driftError = 0
         localPosMs = nextPos
         seekVal = nextPos
       }
+    }, 250)
 
-      if (
-        untrack(() => isPlayingState) &&
-        !isDraggingSeek &&
-        !$isIslandHiddenStore
-      ) {
-        rafId = requestAnimationFrame(tick)
-      }
-    }
-
-    if (!$isIslandHiddenStore && isPlayingState) {
-      rafId = requestAnimationFrame(tick)
-    }
     return () => {
-      if (rafId) cancelAnimationFrame(rafId)
+      clearInterval(timer)
     }
   }
   $effect(handleTimelineProgressEffect)
@@ -965,6 +968,7 @@
           decoding="async"
           onerror={handleImgError}
         />
+        <div class="card-bg-tint"></div>
       {:else}
         <div
           class="card-bg-texture"

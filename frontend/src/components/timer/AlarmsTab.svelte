@@ -108,7 +108,7 @@
               <button
                 class="alarm-delete-btn"
                 onclick={() => deleteAlarm(alarm.id)}
-                use:islandTooltip={'Delete alarm'}
+                use:islandTooltip={'Delete'}
               >
                 <Trash2 size={13} />
               </button>
@@ -119,3 +119,5 @@
     {/if}
   </div>
 </div>
+
+<style src="../../pages/styles/TimerPage.css"></style>

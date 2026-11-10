@@ -96,7 +96,7 @@
     hiddenBounds,
     activeOpacity = 1,
     glowOpacity = 0.6,
-    islandAnim = '0.34s cubic-bezier(0.16, 1, 0.3, 1)',
+    islandAnim = '0.32s cubic-bezier(0.22, 1, 0.36, 1)',
     activeMonitorWidth = 1920,
     gestures,
     virtualMinOffset = -960,
@@ -119,6 +119,24 @@
     onAnimationDone
   }: Props = $props()
 
+  let isMorphing = $state(false)
+  let morphTimer: ReturnType<typeof setTimeout> | null = null
+  let prevExpandedState = $state(false)
+  let prevHiddenState = $state(false)
+
+  $effect(function trackIslandMorphState() {
+    if (expanded !== prevExpandedState || isHidden !== prevHiddenState) {
+      prevExpandedState = expanded
+      prevHiddenState = isHidden
+      isMorphing = true
+      if (morphTimer) clearTimeout(morphTimer)
+      morphTimer = setTimeout(() => {
+        isMorphing = false
+        morphTimer = null
+      }, 340)
+    }
+  })
+
   function handleTransitionEnd(e: TransitionEvent): void {
     if (e.target !== islandNode) return
     if (
@@ -129,6 +147,11 @@
       e.propertyName === 'border-bottom-right-radius' ||
       e.propertyName === 'transform'
     ) {
+      if (morphTimer) {
+        clearTimeout(morphTimer)
+        morphTimer = null
+      }
+      isMorphing = false
       onAnimationDone?.()
       onRecoverBounds?.()
     }
@@ -361,7 +384,9 @@
   data-file-drop-target
   class="island {expanded ? 'expanded' : ''} {isTransitionGlow
     ? 'is-transition-glow'
-    : ''} {isHidden ? 'is-hidden' : ''} {isQuitting ? 'is-quitting' : ''}"
+    : ''} {isMorphing ? 'is-transitioning' : ''} {isHidden
+    ? 'is-hidden'
+    : ''} {isQuitting ? 'is-quitting' : ''}"
   onmouseenter={onMouseEnter}
   onmouseleave={onMouseLeave}
   onpointerdown={handlePointerDown}

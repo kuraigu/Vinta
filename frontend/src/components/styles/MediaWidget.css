@@ -233,15 +233,21 @@
   bottom: 0;
   left: 0;
   height: 100%;
-  background: linear-gradient(90deg, #00f0ff 0%, #818cf8 55%, #c084fc 100%);
+  background: var(
+    --vinta-media-seek-gradient,
+    linear-gradient(
+      90deg,
+      var(--vinta-accent-primary) 0%,
+      var(--vinta-accent-purple) 100%
+    )
+  );
   border-radius: 9999px;
   border: none;
   outline: none;
   box-shadow:
-    0 0 8px rgba(0, 240, 255, 0.5),
-    0 0 14px rgba(192, 132, 252, 0.35);
-  transition: width 0.1s linear;
-  will-change: width;
+    0 0 8px var(--vinta-accent-muted, rgba(255, 107, 0, 0.4)),
+    0 0 14px var(--vinta-accent-purple, rgba(192, 132, 252, 0.35));
+  transition: width 0.25s linear;
 }
 
 .card-bg-wrapper {
@@ -254,6 +260,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  transition: background 0.4s ease;
 }
 
 .card-bg-image {
@@ -264,8 +271,8 @@
   object-position: center 30%;
   image-rendering: -webkit-optimize-contrast;
   image-rendering: high-quality;
-  opacity: 0.7;
-  filter: none;
+  opacity: 0.72;
+  filter: contrast(1.04) saturate(1.08);
   position: relative;
   transition:
     opacity 0.3s ease,
@@ -290,16 +297,23 @@
   );
 }
 
-.card-bg-overlay {
+.card-bg-tint {
   position: absolute;
   inset: 0;
   background: radial-gradient(
-    ellipse at 65% 45%,
-    transparent 55%,
-    rgba(0, 0, 0, 0.1) 100%
+    circle at 75% 35%,
+    var(--card-tint, transparent) 0%,
+    transparent 65%
   );
-  opacity: 0.15;
+  mix-blend-mode: color;
+  opacity: 0.28;
   pointer-events: none;
+  transition: background 0.4s ease, opacity 0.4s ease;
+  z-index: 1;
+}
+
+.card-bg-overlay {
+  display: none;
 }
 
 .card-bg-scrim {
@@ -308,18 +322,18 @@
   background:
     linear-gradient(
       to right,
-      rgba(10, 11, 16, 0.46) 0%,
-      rgba(10, 11, 16, 0.36) 24%,
-      rgba(10, 11, 16, 0.2) 46%,
-      rgba(10, 11, 16, 0.06) 68%,
-      transparent 86%
+      rgba(10, 11, 16, 0.65) 0%,
+      rgba(10, 11, 16, 0.5) 30%,
+      rgba(10, 11, 16, 0.25) 55%,
+      rgba(10, 11, 16, 0.08) 75%,
+      transparent 90%
     ),
     linear-gradient(
       to bottom,
-      rgba(10, 11, 16, 0.22) 0%,
+      rgba(10, 11, 16, 0.25) 0%,
       transparent 18%,
-      transparent 82%,
-      rgba(10, 11, 16, 0.22) 100%
+      transparent 80%,
+      rgba(10, 11, 16, 0.28) 100%
     );
   pointer-events: none;
   transition: background 0.4s ease;
@@ -420,21 +434,23 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 7px;
-  border-radius: 10px;
-  background-color: rgba(255, 255, 255, 0.14);
+  gap: 5px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.12);
   -webkit-backdrop-filter: blur(8px) !important;
   backdrop-filter: blur(8px) !important;
-  font-size: 0.62rem;
+  font-size: 0.64rem;
   font-weight: 600;
   line-height: 1;
-  max-width: 125px;
+  max-width: 135px;
   white-space: nowrap;
   overflow: visible;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   color: inherit;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-sizing: border-box;
 }
 
 .device-badge span {
@@ -715,16 +731,17 @@
 .action-btn {
   position: relative;
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   color: var(--vinta-text-secondary);
   width: 28px;
   height: 28px;
-  border-radius: 50%;
+  border-radius: 9px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.15s ease;
+  box-sizing: border-box;
 }
 
 .action-btn svg {
@@ -733,9 +750,10 @@
 }
 
 .action-btn:hover {
-  background: var(--vinta-hover);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.14);
   color: var(--vinta-text-primary);
-  transform: scale(1.1);
+  transform: translateY(-1px);
   box-shadow: none;
 }
 

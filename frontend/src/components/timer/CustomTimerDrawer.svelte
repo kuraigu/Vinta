@@ -222,3 +222,5 @@
     </div>
   </div>
 {/if}
+
+<style src="../../pages/styles/TimerPage.css"></style>

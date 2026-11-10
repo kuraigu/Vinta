@@ -487,42 +487,6 @@
   flex-shrink: 0;
 }
 
-.tabs-nav {
-  display: flex;
-  align-items: center;
-  background: var(--vinta-item-bg, rgba(255, 255, 255, 0.04));
-  border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.08));
-  padding: 3px;
-  border-radius: 12px;
-  gap: 2px;
-}
-
-.tab-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 4px 9px;
-  border-radius: 9px;
-  border: none;
-  background: transparent;
-  color: var(--vinta-text-secondary, #b0b0b0);
-  font-size: 11px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
-  outline: none;
-}
-
-.tab-btn:hover {
-  color: var(--vinta-text-primary, #ffffff);
-}
-
-.tab-btn.active {
-  background: var(--vinta-hover, rgba(255, 255, 255, 0.12));
-  color: var(--vinta-text-primary, #ffffff);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
-}
-
 .header-tool-btn {
   display: inline-flex;
   align-items: center;
@@ -1707,4 +1671,24 @@ button.alarm-item-info:hover .alarm-item-time {
 
 .mini-switch input:checked + .switch-slider:before {
   transform: translateX(14px);
+}
+
+.timer-tab-transition {
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  animation: vintaTimerTabFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes vintaTimerTabFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

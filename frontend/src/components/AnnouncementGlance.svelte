@@ -7,7 +7,9 @@
   import { onMount, getContext } from 'svelte'
   import { Megaphone, ChevronRight } from 'lucide-svelte'
   import BentoCard from './BentoCard.svelte'
+  import IconBadge from './IconBadge.svelte'
   import {
+    getCachedAnnouncements,
     getDeveloperAnnouncements,
     type AnnouncementItem
   } from '../services/announcementsService'
@@ -27,8 +29,11 @@
       (page: unknown, pageConfig: IslandConfig, expand?: boolean) => void
     >('navigate')
 
-  let latestItem = $state<AnnouncementItem | null>(null)
-  let hasUnread = $state(false)
+  const initialCached = getCachedAnnouncements()
+  let latestItem = $state<AnnouncementItem | null>(
+    initialCached?.items?.[0] ?? null
+  )
+  let hasUnread = $state<boolean>(initialCached?.hasUnread ?? false)
 
   /**
    * Scans markdown text to find the first valid non-badge preview image.
@@ -138,9 +143,7 @@
   <BentoCard variant="bento" class="announcement-glance-card">
     <div class="glance-top-row">
       <div class="glance-brand-group">
-        <div class="glance-icon-badge">
-          <Megaphone size={12} />
-        </div>
+        <IconBadge icon={Megaphone} color="surface" size="sm" />
         <span class="glance-brand-name">{$tStore('announcements.title')}</span>
         {#if hasUnread}
           <span class="glance-unread-pill"

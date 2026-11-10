@@ -18,7 +18,8 @@
    */
 
   import { onMount } from 'svelte'
-  import { Call, Events } from '@wailsio/runtime'
+  import { Events } from '@wailsio/runtime'
+  import { CancelNativeFileDrag } from '../../bindings/Vinta/backend/app'
   import {
     FolderDown,
     Plus,
@@ -38,6 +39,8 @@
     File
   } from 'lucide-svelte'
   import BackButton from '../components/BackButton.svelte'
+  import PageHeader from '../components/PageHeader.svelte'
+  import EmptyState from '../components/EmptyState.svelte'
   import ScrollView from '../components/ScrollView.svelte'
   import { islandTooltip } from '../services/islandTooltip'
   import { hideTooltip } from '../stores/tooltip'
@@ -166,6 +169,7 @@
    */
   function handleDragEnter(e: DragEvent): void {
     if (!e.dataTransfer?.types?.includes('Files')) return
+    e.preventDefault()
     dragDepth += 1
     isDropActive = true
   }
@@ -177,6 +181,10 @@
    */
   function handleDragOver(e: DragEvent): void {
     if (!e.dataTransfer?.types?.includes('Files')) return
+    e.preventDefault()
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'copy'
+    }
     isDropActive = true
   }
 
@@ -187,6 +195,7 @@
    */
   function handleDragLeave(e: DragEvent): void {
     if (!e.dataTransfer?.types?.includes('Files')) return
+    e.preventDefault()
     dragDepth = Math.max(0, dragDepth - 1)
     if (dragDepth === 0) {
       isDropActive = false
@@ -194,7 +203,8 @@
   }
 
   /**
-   * Processes dropped filesystem files, adding new unique paths to the shelf store.
+   * Resets drop highlight state when files are dropped onto the shelf.
+   * Wails native WindowFilesDropped handles the actual filesystem paths via `vinta-files-dropped`.
    */
   function handleDrop(): void {
     dragDepth = 0
@@ -211,7 +221,7 @@
       isOverShelf: false,
       draggingPaths: []
     }))
-    void Call.ByName('Vinta/backend.App.CancelNativeFileDrag')
+    void CancelNativeFileDrag()
   }
 
   /**
@@ -225,6 +235,20 @@
         cancelActiveDrag()
       } else if (selectedPaths.length > 0) {
         rawSelectedPaths = []
+      }
+      return
+    }
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')) {
+      if ($fileShelfStore.items.length > 0) {
+        e.preventDefault()
+        rawSelectedPaths = $fileShelfStore.items.map((item) => item.path)
+      }
+      return
+    }
+    if (e.key === 'Delete' || e.key === 'Backspace') {
+      if (selectedPaths.length > 0) {
+        e.preventDefault()
+        removeSelectedItems()
       }
     }
   }
@@ -373,10 +397,6 @@
           class="select-toggle-pill no-swipe no-drag"
           data-action="select-all"
           class:has-selection={selectedPaths.length > 0}
-          use:islandTooltip={selectedPaths.length ===
-          $fileShelfStore.items.length
-            ? 'Click to clear selection'
-            : 'Click to select all'}
           onclick={toggleSelectAll}
         >
           <span class="select-check-dot">
@@ -397,7 +417,6 @@
               type="button"
               class="inline-pill-btn"
               disabled={$fileShelfStore.busyAction !== null}
-              use:islandTooltip={'Copy chosen files to clipboard'}
               onclick={() => void copyShelfPaths([...selectedPaths])}
             >
               <Copy size={11} />
@@ -409,7 +428,7 @@
                 type="button"
                 class="inline-icon-btn"
                 disabled={$fileShelfStore.busyAction !== null}
-                use:islandTooltip={'Reveal chosen file in File Explorer'}
+                use:islandTooltip={'Reveal in Explorer'}
                 onclick={() => {
                   if (targetPaths.length > 0) {
                     void revealShelfFileInExplorer(targetPaths[0])
@@ -424,7 +443,7 @@
               type="button"
               class="inline-icon-btn"
               disabled={$fileShelfStore.busyAction !== null}
-              use:islandTooltip={'Bundle chosen files into a .zip'}
+              use:islandTooltip={'Bundle to ZIP'}
               onclick={() => void bundleShelfToZip(targetPaths)}
             >
               <FileArchive size={12} />
@@ -435,7 +454,7 @@
                 type="button"
                 class="inline-icon-btn"
                 disabled={$fileShelfStore.busyAction !== null}
-                use:islandTooltip={'Strip EXIF metadata from JPEG/PNG images'}
+                use:islandTooltip={'Strip EXIF metadata'}
                 onclick={() => void stripShelfExif(targetPaths)}
               >
                 <ShieldCheck size={12} />
@@ -445,7 +464,7 @@
             <button
               type="button"
               class="inline-icon-btn danger-pill"
-              use:islandTooltip={'Remove chosen files from shelf'}
+              use:islandTooltip={'Remove selected'}
               onclick={removeSelectedItems}
             >
               <X size={12} />
@@ -455,7 +474,6 @@
               type="button"
               class="inline-pill-btn"
               disabled={$fileShelfStore.busyAction !== null}
-              use:islandTooltip={'Bundle all files into a .zip'}
               onclick={() => void bundleShelfToZip(targetPaths)}
             >
               <FileArchive size={11} />
@@ -493,24 +511,14 @@
     {/if}
 
     {#if $fileShelfStore.items.length === 0}
-      <div class="shelf-empty-state">
-        <div class="empty-icon-wrap">
-          <FolderDown size={22} />
-        </div>
-        <p class="empty-title">{$tStore('fileshelf.drop_prompt')}</p>
-        <p class="empty-subtitle">
-          Stage files from File Explorer, Desktop, or apps, then drag them out
-          whenever you need them.
-        </p>
-        <button
-          type="button"
-          class="empty-choose-btn"
-          onclick={() => void promptChooseShelfFiles()}
-        >
-          <Plus size={13} />
-          <span>Choose Files</span>
-        </button>
-      </div>
+      <EmptyState
+        seamless={true}
+        icon={FolderDown}
+        title={$tStore('fileshelf.drop_prompt')}
+        description={$tStore('fileshelf.empty_subtitle')}
+        actionLabel={$tStore('fileshelf.choose_files')}
+        onAction={() => void promptChooseShelfFiles()}
+      />
     {:else}
       <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
       <div class="shelf-grid no-swipe no-drag" role="list">
@@ -599,23 +607,22 @@
     {/if}
   </ScrollView>
 
-  <div class="header">
-    <div class="header-left">
-      <BackButton />
-      <span class="title">File Shelf</span>
+  <PageHeader position="bottom" title={$tStore('fileshelf.title')}>
+    {#snippet center()}
       {#if $fileShelfStore.statusMessage}
         <span class="shelf-status-pill">{$fileShelfStore.statusMessage}</span>
       {:else if $fileShelfStore.items.length > 0}
         <span class="shelf-count-pill">{$fileShelfStore.items.length}</span>
       {/if}
-    </div>
+    {/snippet}
 
-    <div class="header-right">
+    {#snippet actions()}
       <button
         type="button"
         class="header-icon-btn"
-        use:islandTooltip={'Choose files or folders to add'}
+        use:islandTooltip={$tStore('fileshelf.add_tooltip')}
         onclick={() => void promptChooseShelfFiles()}
+        aria-label={$tStore('fileshelf.add_tooltip')}
       >
         <Plus size={14} />
       </button>
@@ -624,17 +631,18 @@
         <button
           type="button"
           class="header-icon-btn clear-btn"
-          use:islandTooltip={'Clear all staged files'}
+          use:islandTooltip={$tStore('fileshelf.clear_tooltip')}
           onclick={() => {
             rawSelectedPaths = []
             clearFileShelf()
           }}
+          aria-label={$tStore('fileshelf.clear_tooltip')}
         >
           <Trash2 size={13} />
         </button>
       {/if}
-    </div>
-  </div>
+    {/snippet}
+  </PageHeader>
 </div>
 
 <style src="./styles/FileShelfPage.css"></style>

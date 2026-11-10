@@ -83,10 +83,21 @@
 .social-feed-container {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 8px 18px 10px 18px;
+  gap: 10px;
+  padding: 6px 18px 10px 18px;
   box-sizing: border-box;
   width: 100%;
+}
+
+.home-feed-status-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 0 10px 0;
+  border-bottom: 1px solid var(--vinta-border-light, rgba(255, 255, 255, 0.06));
+  margin-bottom: 2px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .home-hero-greeting {
@@ -108,7 +119,7 @@
 }
 
 .hero-salutation {
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   font-weight: 500;
   letter-spacing: -0.015em;
   color: var(--vinta-text-secondary);
@@ -117,7 +128,7 @@
 
 .hero-username {
   margin: 0;
-  font-size: 2.1rem;
+  font-size: 1.95rem;
   font-weight: 800;
   letter-spacing: -0.035em;
   color: var(--vinta-text-primary);
@@ -132,14 +143,18 @@
   padding: 0;
   width: 100%;
   box-sizing: border-box;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 500;
   color: var(--vinta-text-muted);
+  font-variant-numeric: tabular-nums;
 }
 
-/* Notification Glance Card Feed */
+/* Social Feed Stream Sections */
+.spotlight-card-feed,
 .notification-card-feed,
-.announcements-card-feed {
+.announcements-card-feed,
+.glance-card-feed,
+.calendar-card-feed {
   width: 100%;
   box-sizing: border-box;
 }
@@ -149,18 +164,18 @@
   display: none;
 }
 
-/* Glance & Action Center Card Feed */
-.glance-card-feed {
-  width: 100%;
-  box-sizing: border-box;
+.calendar-card-feed {
+  height: auto;
+  border-radius: var(--vinta-radius-card, 14px);
 }
 
-/* Calendar Overview Card - Feed Widget */
-.calendar-card-feed {
-  width: 100%;
-  height: auto;
-  border-radius: 20px;
-  box-sizing: border-box;
+/* Seamless Inner Cards inside Grouped Home Feed Containers */
+:global(.home-feed-group) :global(.vinta-bento-card),
+:global(.home-feed-group) :global(.calendar-card.home-agenda-only) {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
 }
 
 /* Studio Branding Footer */
@@ -193,83 +208,4 @@
   color: var(--vinta-text-muted, rgba(255, 255, 255, 0.5));
 }
 
-/* Bottom Floating Scroll Cue Pill */
-.home-scroll-cue-pill {
-  position: absolute;
-  bottom: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  /* I made it like this because I want the lighter color for the default pill
-  before hovering -Innoh Reloza (DippedInSoju) */
-  background: var(--vinta-surface-elevated, #1c273a);
-  border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.12));
-  color: var(--vinta-text-primary, #ffffff);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  cursor: pointer;
-  z-index: 10;
-  box-shadow:
-    0 4px 16px rgba(0, 0, 0, 0.45),
-    var(--vinta-contrast-border);
-  transition:
-    opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-    background 0.2s ease,
-    border-color 0.2s ease,
-    color 0.2s ease;
-  user-select: none;
-  -webkit-user-select: none;
-  animation: scrollCueFloat 2.4s ease-in-out infinite;
-}
 
-.home-scroll-cue-pill:hover {
-  background: var(--vinta-accent-primary, #38bdf8);
-  border-color: var(--vinta-accent-primary, #38bdf8);
-  color: var(--vinta-text-on-accent, #ffffff);
-  box-shadow:
-    0 6px 20px rgba(0, 0, 0, 0.55),
-    0 0 12px var(--vinta-accent-muted, rgba(56, 189, 248, 0.4));
-}
-
-.home-scroll-cue-pill:active {
-  transform: translateX(-50%) scale(0.96);
-}
-
-.home-scroll-cue-pill.hidden {
-  opacity: 0;
-  pointer-events: none;
-  transform: translateX(-50%) translateY(8px);
-}
-
-:global(.scroll-cue-icon) {
-  opacity: 0.8;
-  animation: scrollCueBounce 1.8s ease-in-out infinite;
-}
-
-@keyframes scrollCueFloat {
-  0%,
-  100% {
-    transform: translateX(-50%) translateY(0);
-  }
-  50% {
-    transform: translateX(-50%) translateY(3px);
-  }
-}
-
-@keyframes scrollCueBounce {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(2px);
-  }
-}

@@ -15,20 +15,12 @@
 .glance-title-group {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   min-width: 0;
 }
 
-.glance-icon-badge {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.08);
-  border: none;
-  color: var(--vinta-text-secondary);
+:global(.glance-title-icon) {
+  color: var(--vinta-text-muted);
   flex-shrink: 0;
 }
 
@@ -166,8 +158,8 @@
 .quick-toggle-btn.active .toggle-icon-wrap {
   background: var(--vinta-accent-primary);
   border-color: transparent;
-  color: var(--vinta-text-on-accent);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.16);
+  color: var(--vinta-text-on-accent, #ffffff);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
 }
 
 .quick-toggle-btn.active .toggle-label {

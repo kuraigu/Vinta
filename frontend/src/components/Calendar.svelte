@@ -34,6 +34,8 @@
     config as calendarConfig
   } from '../pages/CalendarPage.svelte'
   import BackButton from './BackButton.svelte'
+  import BentoCard from './BentoCard.svelte'
+  import PageHeader from './PageHeader.svelte'
   import ScrollView from './ScrollView.svelte'
   import ActionCapsule from './ActionCapsule.svelte'
   import EditorModal from './EditorModal.svelte'
@@ -544,25 +546,21 @@
   {:else}
     <!-- EXPANDED VIEWS -->
     {#if variant === 'page'}
-      <!-- Page View Header: BackButton + View Tabs (Calendar vs Agenda) -->
-      <div class="calendar-page-header">
-        <div class="page-header-left">
-          <BackButton />
-        </div>
-        <div class="page-header-tabs">
+      <!-- Standardized Page Header with Centered View Tabs -->
+      <PageHeader>
+        {#snippet center()}
           <HorizontalTabSelection
             tabs={CALENDAR_TABS}
             bind:value={activeTab}
             ariaLabel="Calendar views"
           />
-        </div>
-        <div class="page-header-spacer"></div>
-      </div>
-    {/if}
+        {/snippet}
+      </PageHeader>
 
-    {#if variant === 'page'}
-      <div class="calendar-card variant-page">
-        {#if activeTab === 'agenda'}
+      <BentoCard variant="bento" class="calendar-card variant-page">
+        {#key activeTab}
+          <div class="calendar-tab-transition">
+            {#if activeTab === 'agenda'}
           <!-- FULL AGENDA STREAM TAB -->
           <div class="agenda-tab-view">
             <div class="agenda-toolbar-row">
@@ -633,8 +631,10 @@
           {@render monthGridView()}
         {/if}
       </div>
+    {/key}
+  </BentoCard>
     {:else}
-      <div class="calendar-card widget-mode home-agenda-only">
+      <BentoCard variant="bento" class="calendar-card widget-mode home-agenda-only">
         <div class="agenda-tray-header home-agenda-header">
           <div class="agenda-tray-title">
             <CalendarDays size={13} />
@@ -683,7 +683,7 @@
             </ScrollView>
           {/if}
         </div>
-      </div>
+      </BentoCard>
     {/if}
 
     {#snippet monthGridView()}
@@ -712,12 +712,7 @@
           </div>
 
           <div class="month-nav-right">
-            <button
-              type="button"
-              class="today-btn"
-              onclick={jumpToToday}
-              use:islandTooltip={'Jump to current day'}
-            >
+            <button type="button" class="today-btn" onclick={jumpToToday}>
               {$tStore('calendar.today')}
             </button>
 

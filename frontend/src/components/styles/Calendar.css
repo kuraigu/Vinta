@@ -120,32 +120,10 @@
   overflow: visible;
 }
 
-.calendar-page-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--vinta-dock-clearance, 56px) 14px 4px 14px;
+:global(.calendar-page-layout .vinta-page-header) {
   flex-shrink: 0;
   width: 100%;
   box-sizing: border-box;
-  gap: 12px;
-}
-
-.page-header-left {
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.page-header-tabs {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-}
-
-.page-header-spacer {
-  width: 28px;
-  flex-shrink: 0;
 }
 
 :global(.calendar-agenda-scroll-view) {
@@ -170,24 +148,17 @@
   min-height: 0;
 }
 
-.calendar-card {
+:global(.calendar-card) {
   display: flex;
   flex-direction: column;
   width: 100%;
   height: 100%;
   padding: 12px 14px;
   box-sizing: border-box;
-  color: var(--vinta-text-primary, #ffffff);
-  background: var(--vinta-surface-card, rgba(28, 28, 30, 0.75));
-  border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.08));
-  border-radius: 28px;
-  box-shadow:
-    0 24px 48px rgba(0, 0, 0, 0.65),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  color: var(--vinta-text-primary);
 }
 
-.calendar-card.home-agenda-only {
-  border-radius: 20px;
+:global(.calendar-card.home-agenda-only) {
   gap: 10px;
   padding: 12px 14px;
   height: auto;
@@ -197,15 +168,36 @@
   min-height: 36px;
 }
 
-.calendar-card.variant-page {
-  padding: 4px 14px 12px 14px;
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  box-shadow: none;
+:global(.calendar-card.variant-page) {
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  height: auto;
+  overflow: hidden;
+}
+
+.calendar-tab-transition {
   width: 100%;
   height: 100%;
-  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: vintaCalendarTabFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes vintaCalendarTabFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .grid-section {
@@ -286,7 +278,7 @@
   font-size: 11px;
   font-weight: 600;
   padding: 3px 10px;
-  border-radius: 8px;
+  border-radius: 9999px;
   background: var(--vinta-accent-muted, rgba(56, 189, 248, 0.14));
   color: var(--vinta-accent-primary, #38bdf8);
   border: none;
@@ -304,15 +296,15 @@
   display: inline-flex;
   align-items: center;
   background: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
+  border-radius: 9999px;
   padding: 2px;
-  gap: 1px;
+  gap: 2px;
 }
 
 .icon-nav-btn {
   width: 24px;
-  height: 22px;
-  border-radius: 6px;
+  height: 24px;
+  border-radius: 50%;
   background: transparent;
   border: none;
   color: var(--vinta-text-muted, #9ca3af);
@@ -495,7 +487,7 @@
 .calendar-agenda-tray {
   margin-top: 6px;
   padding: 12px 14px;
-  border-radius: 16px;
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.035);
   border: 1px solid rgba(255, 255, 255, 0.05);
   box-shadow: none;
@@ -564,7 +556,7 @@
   gap: 4px;
   height: 26px;
   padding: 0 11px;
-  border-radius: 10px;
+  border-radius: 9999px;
   background: var(--vinta-accent-muted, rgba(56, 189, 248, 0.14));
   border: none;
   color: var(--vinta-accent-primary, #38bdf8);
@@ -638,6 +630,9 @@
   flex-direction: column;
   gap: 12px;
   width: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .agenda-toolbar-row {
@@ -647,6 +642,7 @@
   gap: 8px;
   width: 100%;
   margin-bottom: 2px;
+  flex-shrink: 0;
 }
 
 .agenda-filter-row {
@@ -657,6 +653,8 @@
   border: none;
   border-radius: 99px;
   padding: 3px;
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 .agenda-filter-pill {
@@ -685,6 +683,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 .agenda-clear-past-btn {

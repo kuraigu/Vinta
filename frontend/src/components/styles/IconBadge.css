@@ -1,0 +1,77 @@
+/* ============================================================================
+   IconBadge Unified Squircle Badge Stylesheet
+   ============================================================================ */
+
+.vinta-icon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #ffffff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 2px 6px rgba(0, 0, 0, 0.22);
+  overflow: hidden;
+  user-select: none;
+}
+
+.vinta-icon-badge.size-sm {
+  width: 24px;
+  height: 24px;
+  border-radius: 7px;
+}
+
+.vinta-icon-badge.size-md {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+}
+
+.vinta-icon-badge.size-lg {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+}
+
+.vinta-icon-badge img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Color Variants */
+.vinta-icon-badge.color-blue {
+  background: var(--vinta-agenda-sky-bg, linear-gradient(135deg, #3b82f6, #2563eb));
+}
+
+.vinta-icon-badge.color-cyan {
+  background: linear-gradient(135deg, #06b6d4, #0284c7);
+}
+
+.vinta-icon-badge.color-purple {
+  background: var(--vinta-agenda-purple-bg, linear-gradient(135deg, #8b5cf6, #6d28d9));
+}
+
+.vinta-icon-badge.color-emerald {
+  background: var(--vinta-agenda-emerald-bg, linear-gradient(135deg, #10b981, #059669));
+}
+
+.vinta-icon-badge.color-amber {
+  background: var(--vinta-agenda-amber-bg, linear-gradient(135deg, #f59e0b, #d97706));
+}
+
+.vinta-icon-badge.color-rose {
+  background: var(--vinta-agenda-rose-bg, linear-gradient(135deg, #f43f5e, #e11d48));
+}
+
+.vinta-icon-badge.color-indigo {
+  background: var(--vinta-agenda-indigo-bg, linear-gradient(135deg, #6366f1, #4338ca));
+}
+
+.vinta-icon-badge.color-surface {
+  background: var(--vinta-surface-elevated, rgba(255, 255, 255, 0.06));
+  color: var(--vinta-text-primary, #ffffff);
+  border: 1px solid var(--vinta-border-light, rgba(255, 255, 255, 0.08));
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+

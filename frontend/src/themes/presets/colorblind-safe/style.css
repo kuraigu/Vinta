@@ -54,12 +54,12 @@
   /* CONTRAST SURFACES */
   --vinta-contrast-bg: #161b22;
   --vinta-contrast-border: inset 0 0 0 1px rgba(240, 246, 252, 0.2);
-  --vinta-contrast-hover: #21262d;
+  --vinta-contrast-hover: rgba(240, 246, 252, 0.09);
 
   /* GEOMETRY & LAYOUT */
   --vinta-dock-clearance: 56px;
   --vinta-radius-island: 18px;
-  --vinta-radius-card: 16px;
+  --vinta-radius-card: 14px;
   --vinta-radius-button: 10px;
   --vinta-radius-pill: 9999px;
 

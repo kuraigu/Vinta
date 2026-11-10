@@ -10,6 +10,7 @@
     max: number
     step?: number
     unit?: string
+    defaultValue?: number
     onchange?: (val: number) => void
   }
 
@@ -19,8 +20,15 @@
     max,
     step = 1,
     unit = '',
+    defaultValue,
     onchange
   }: Props = $props()
+
+  let defaultTickPercent = $derived(
+    defaultValue !== undefined && max > min
+      ? Math.max(0, Math.min(100, ((defaultValue - min) / (max - min)) * 100))
+      : null
+  )
 
   function clamp(val: number): number {
     if (isNaN(val)) return min
@@ -62,15 +70,24 @@
 </script>
 
 <div class="setting-slider-container">
-  <input
-    type="range"
-    {min}
-    {max}
-    {step}
-    {value}
-    oninput={handleSliderChange}
-    class="range-slider no-swipe"
-  />
+  <div class="slider-track-wrapper">
+    {#if defaultTickPercent !== null}
+      <span
+        class="slider-default-tick"
+        style="left: calc(7px + (100% - 14px) * {defaultTickPercent / 100});"
+        aria-hidden="true"
+      ></span>
+    {/if}
+    <input
+      type="range"
+      {min}
+      {max}
+      {step}
+      {value}
+      oninput={handleSliderChange}
+      class="range-slider no-swipe"
+    />
+  </div>
 
   <div class="number-input-wrapper">
     <input
@@ -89,56 +106,4 @@
   </div>
 </div>
 
-<style>
-  .setting-slider-container {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-  }
-
-  .range-slider {
-    flex: 1;
-    min-width: 0;
-    accent-color: var(--vinta-accent-primary, var(--vinta-primary, #38bdf8));
-    height: 4px;
-    border-radius: 2px;
-    cursor: pointer;
-  }
-
-  .number-input-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 3px;
-    background: rgba(0, 0, 0, 0.25);
-    border: 1px solid var(--vinta-border);
-    border-radius: 6px;
-    padding: 2px 6px;
-    flex-shrink: 0;
-  }
-
-  .number-input {
-    width: 42px;
-    background: transparent;
-    border: none;
-    color: var(--vinta-text-primary);
-    font-size: 11px;
-    font-weight: 600;
-    text-align: right;
-    outline: none;
-    appearance: textfield;
-    -moz-appearance: textfield;
-  }
-
-  .number-input::-webkit-outer-spin-button,
-  .number-input::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-  }
-
-  .unit-label {
-    font-size: 10px;
-    font-weight: 500;
-    color: var(--vinta-text-secondary);
-  }
-</style>
+<style src="../styles/settings/SettingSlider.css"></style>

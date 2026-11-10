@@ -17,7 +17,7 @@
   import ScrollView from './ScrollView.svelte'
   import BentoCard from './BentoCard.svelte'
   import AgendaEventCard from './AgendaEventCard.svelte'
-  import { islandTooltip } from '../services/islandTooltip'
+  import IconBadge from './IconBadge.svelte'
   import {
     dateFormatStore,
     formatUserDate,
@@ -83,9 +83,7 @@
       onclick={handleOpenCalendarPage}
       onkeydown={(e) => e.key === 'Enter' && handleOpenCalendarPage()}
     >
-      <div class="glance-icon-badge">
-        <CalendarDays size={12} />
-      </div>
+      <IconBadge icon={CalendarDays} color="surface" size="sm" />
       <span class="glance-title-text">{todayDateLabel}</span>
       {#if todayEvents.length > 0}
         <span class="glance-event-count">
@@ -101,7 +99,6 @@
         class="glance-add-btn"
         onclick={handleAddEvent}
         aria-label={$tStore('calendar.add_event')}
-        use:islandTooltip={$tStore('calendar.add_event')}
       >
         <Plus size={12} />
         <span>{$tStore('calendar.add_event')}</span>
@@ -111,7 +108,6 @@
         class="glance-nav-btn"
         onclick={handleOpenCalendarPage}
         aria-label={$tStore('calendar.open_calendar')}
-        use:islandTooltip={$tStore('calendar.open_calendar')}
       >
         <ChevronRight size={14} class="glance-nav-chevron" />
       </button>

@@ -227,21 +227,56 @@ export class WindowBoundsManager {
   }
 
   /**
-   * Tracks the island element's visual bounding box across a CSS transition or motion.
+   * Pre-commits a union bounding rectangle covering both current and target dimensions
+   * at transition start, then schedules a single DOM measurement when the transition settles.
+   * Eliminates 30Hz synchronous layout reflows during expand/collapse morphs.
    */
   public startTrackingTransition(
     islandNode?: HTMLElement | null,
-    durationMs: number = 360,
+    durationMs: number = 340,
     isHidden: boolean = false
   ): void {
     if (islandNode) this.activeIslandNode = islandNode
     this.stopTrackingTransition()
 
-    this.startLiveTracking(this.activeIslandNode, durationMs, () => {
-      this.syncPillBounds(this.activeIslandNode, isHidden)
+    const node = this.activeIslandNode
+    if (node && !isHidden) {
+      const dpr = window.devicePixelRatio || 1
+      const rect = node.getBoundingClientRect()
+      if (rect.width > 0 && rect.height > 0) {
+        const centerX = rect.left + rect.width / 2
+        const unionW = Math.max(
+          rect.width,
+          this.currentOSBounds.w || rect.width
+        )
+        const unionH = Math.max(
+          rect.bottom + 4,
+          (this.currentOSBounds.h || rect.height) + 4
+        )
+        const l = Math.max(0, Math.round((centerX - unionW / 2) * dpr))
+        const w = Math.round(unionW * dpr)
+        const h = Math.round(unionH * dpr)
+        const sig = `transition:${l},0,${w},${h}`
+        if (sig !== this.lastHitRectsSignature) {
+          this.lastHitRectsSignature = sig
+          SetHitRects([
+            new HitRect({
+              left: l,
+              top: 0,
+              width: w,
+              height: h
+            })
+          ]).catch(() => {})
+        }
+      }
+    }
+
+    this.transitionTimer = window.setTimeout(() => {
+      this.transitionTimer = undefined
+      this.syncPillBounds(this.activeIslandNode, isHidden, true)
       resyncAllSatellites()
       dismissAllTooltips()
-    })
+    }, durationMs)
   }
 
   /**
@@ -447,14 +482,17 @@ export class WindowBoundsManager {
   ): () => void {
     if (typeof window === 'undefined') return () => {}
 
+    let cycle = 0
     const runIdleCheck = () => {
+      cycle++
       if (!this.getIsDragging() && !getIsHidden()) {
         const node = getIslandNode()
         if (node) {
           this.activeIslandNode = node
           const target = getTargetBounds()
           this.currentOSBounds = { ...target }
-          this.syncPillBounds(node, false)
+          // Force reconciliation every 4 cycles (2s) to prevent any stale signature drift
+          this.syncPillBounds(node, false, cycle % 4 === 0)
         }
       }
       this.idleWatchdogTimer = window.setTimeout(runIdleCheck, 500)

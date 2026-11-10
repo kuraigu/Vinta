@@ -350,7 +350,7 @@
         }
       }
       groups[groupKey].items.push(notif)
-      const ts = notif.timestamp || now
+      const ts = notif.timestamp || 0
       if (ts > groups[groupKey].latestTimestamp) {
         groups[groupKey].latestTimestamp = ts
       }
@@ -642,8 +642,8 @@
             class:dnd-active={$dndStore}
             onclick={() => dndStore.update((v) => !v)}
             use:islandTooltip={$dndStore
-              ? 'Do Not Disturb: ON'
-              : 'Do Not Disturb: OFF'}
+              ? 'Do Not Disturb: On'
+              : 'Do Not Disturb'}
             aria-label="Toggle Do Not Disturb"
           >
             {#if $dndStore}
@@ -654,21 +654,18 @@
             {:else}
               <Bell size={14} />
             {/if}
-            <span>DND</span>
           </button>
           {#if notifications.length > 0}
             <button
               class="clear-btn"
               class:is-confirming={isConfirmingClear}
               onclick={handleClearAll}
+              use:islandTooltip={isConfirmingClear
+                ? 'Click again to clear'
+                : $tStore('notification.clear_all')}
               aria-label="Clear all notifications"
             >
               <Trash2 size={14} />
-              <span
-                >{isConfirmingClear
-                  ? 'Confirm?'
-                  : $tStore('notification.clear_all')}</span
-              >
             </button>
           {/if}
         </div>

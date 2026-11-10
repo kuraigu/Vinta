@@ -1,0 +1,62 @@
+.vinta-toggle-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 36px;
+  height: 20px;
+  flex-shrink: 0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.vinta-toggle-switch.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.vinta-toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+  margin: 0;
+}
+
+.vinta-toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: var(--vinta-border);
+  border-radius: var(--vinta-radius-pill, 9999px);
+  transition: background-color 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.22);
+}
+
+.vinta-toggle-slider::before {
+  content: '';
+  position: absolute;
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background-color: var(--vinta-text-muted);
+  border-radius: 50%;
+  transition:
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
+}
+
+.vinta-toggle-switch input:checked + .vinta-toggle-slider {
+  background: var(--vinta-accent-primary);
+}
+
+.vinta-toggle-switch input:checked + .vinta-toggle-slider::before {
+  transform: translateX(16px);
+  background-color: #ffffff;
+}
+
+.vinta-toggle-switch input:focus-visible + .vinta-toggle-slider {
+  outline: 2px solid var(--vinta-accent-primary);
+  outline-offset: 2px;
+}
+

@@ -20,6 +20,7 @@
   import { Cpu, Activity, Zap } from 'lucide-svelte'
   import BackButton from '../components/BackButton.svelte'
   import BentoCard from '../components/BentoCard.svelte'
+  import IconBadge from '../components/IconBadge.svelte'
   import ScrollView from '../components/ScrollView.svelte'
   import { tStore } from '../store'
   import {
@@ -107,7 +108,7 @@
       <BentoCard variant="bento" color="danger" class="perf-metric-card">
         <div class="perf-card-header">
           <div class="perf-card-label">
-            <Cpu size={14} class="perf-card-icon cpu" />
+            <IconBadge icon={Cpu} color="rose" size="sm" />
             <span class="perf-card-name"
               >{$tStore('performance.processor')}</span
             >
@@ -137,6 +138,9 @@
                 />
               </linearGradient>
             </defs>
+            <line x1="0" y1="9.5" x2="340" y2="9.5" class="sparkline-grid-line" />
+            <line x1="0" y1="16" x2="340" y2="16" class="sparkline-grid-line" />
+            <line x1="0" y1="22.5" x2="340" y2="22.5" class="sparkline-grid-line" />
             <polygon points={cpuArea} fill="url(#grad-cpu)" />
             <polyline points={cpuLine} class="sparkline-trace cpu" />
           </svg>
@@ -158,7 +162,7 @@
       <BentoCard variant="bento" color="primary" class="perf-metric-card">
         <div class="perf-card-header">
           <div class="perf-card-label">
-            <Activity size={14} class="perf-card-icon ram" />
+            <IconBadge icon={Activity} color="blue" size="sm" />
             <span class="perf-card-name">{$tStore('performance.memory')}</span>
           </div>
           <span class="perf-card-percent ram">{telemetry.ramPercent}%</span>
@@ -186,6 +190,9 @@
                 />
               </linearGradient>
             </defs>
+            <line x1="0" y1="9.5" x2="340" y2="9.5" class="sparkline-grid-line" />
+            <line x1="0" y1="16" x2="340" y2="16" class="sparkline-grid-line" />
+            <line x1="0" y1="22.5" x2="340" y2="22.5" class="sparkline-grid-line" />
             <polygon points={ramArea} fill="url(#grad-ram)" />
             <polyline points={ramLine} class="sparkline-trace ram" />
           </svg>
@@ -206,10 +213,10 @@
       </BentoCard>
 
       <!-- GPU Metric Card -->
-      <BentoCard variant="bento" color="blue" class="perf-metric-card">
+      <BentoCard variant="bento" color="purple" class="perf-metric-card">
         <div class="perf-card-header">
           <div class="perf-card-label">
-            <Zap size={14} class="perf-card-icon gpu" />
+            <IconBadge icon={Zap} color="purple" size="sm" />
             <span class="perf-card-name">{$tStore('performance.graphics')}</span
             >
           </div>
@@ -238,6 +245,9 @@
                 />
               </linearGradient>
             </defs>
+            <line x1="0" y1="9.5" x2="340" y2="9.5" class="sparkline-grid-line" />
+            <line x1="0" y1="16" x2="340" y2="16" class="sparkline-grid-line" />
+            <line x1="0" y1="22.5" x2="340" y2="22.5" class="sparkline-grid-line" />
             <polygon points={gpuArea} fill="url(#grad-gpu)" />
             <polyline points={gpuLine} class="sparkline-trace gpu" />
           </svg>

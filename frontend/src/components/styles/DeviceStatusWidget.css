@@ -1,0 +1,26 @@
+/* ============================================================================
+   Device Status Widget Stylesheet
+   ============================================================================ */
+
+.device-status-widget {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  user-select: none;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.connectivity-power-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2.5px;
+  flex-shrink: 0;
+}
+
+.clock-group {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+

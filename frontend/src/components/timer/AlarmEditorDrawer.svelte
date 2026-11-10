@@ -178,3 +178,5 @@
     </div>
   </DrawerPanel>
 {/if}
+
+<style src="../../pages/styles/TimerPage.css"></style>

@@ -3,7 +3,7 @@
 
   export const config: IslandConfig = {
     minimal: { w: 10, h: 10, r: 5 },
-    expanded: { w: 440, h: 380, r: 30 },
+    expanded: { w: 440, h: 380, r: 28 },
     borderColor: 'var(--vinta-border)',
     glowColor: 'transparent'
   }
@@ -26,11 +26,12 @@
     Zap,
     Leaf,
     Plug,
-    Plane,
-    ExternalLink
+    Plane
   } from 'lucide-svelte'
   import BentoCard from '../components/BentoCard.svelte'
-  import BackButton from '../components/BackButton.svelte'
+  import PageHeader from '../components/PageHeader.svelte'
+  import IconBadge from '../components/IconBadge.svelte'
+  import ToggleSwitch from '../components/ToggleSwitch.svelte'
   import { islandTooltip } from '../services/islandTooltip'
   import {
     wirelessDataStore,
@@ -209,27 +210,24 @@
 
 <div data-vinta="action-center-page" class="action-center-page">
   <!-- Header -->
-  <div class="action-header">
-    <BackButton />
-    <span class="header-title">{$tStore('action_center.title')}</span>
-    <div class="header-spacer"></div>
-  </div>
+  <PageHeader title={$tStore('action_center.title')} />
 
   <!-- Bento Action Cards Grid -->
   <div class="action-grid">
     <!-- Wi-Fi Card -->
-    <BentoCard variant="bento" class="bento-action-card">
+    <BentoCard
+      variant="bento"
+      class="bento-action-card"
+      onclick={(e) => {
+        if (!wireless.airplaneMode) toggleWifi(e)
+      }}
+    >
       <div class="card-left">
-        <div
-          class="card-icon-circle"
-          class:is-off={!wireless.wifiEnabled || wireless.airplaneMode}
-        >
-          {#if wireless.wifiEnabled && !wireless.airplaneMode}
-            <Wifi size={18} />
-          {:else}
-            <WifiOff size={18} />
-          {/if}
-        </div>
+        <IconBadge
+          icon={wireless.wifiEnabled && !wireless.airplaneMode ? Wifi : WifiOff}
+          color={wireless.wifiEnabled && !wireless.airplaneMode ? 'blue' : 'slate'}
+          size="lg"
+        />
         <div class="card-info">
           <span class="card-primary-text">{$tStore('action_center.wifi')}</span>
           <span class="card-secondary-text">
@@ -246,43 +244,36 @@
         </div>
       </div>
       <div class="card-controls-right">
-        <button
-          type="button"
-          class="quick-open-btn"
-          use:islandTooltip={$tStore('action_center.open_network')}
-          onclick={(e) => openSystemDialog('network', e)}
-          aria-label={$tStore('action_center.open_network')}
-        >
-          <ExternalLink size={13} />
-        </button>
-        <label
-          class="toggle-switch"
-          class:disabled-switch={wireless.airplaneMode}
-        >
-          <input
-            type="checkbox"
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div onclick={(e) => e.stopPropagation()}>
+          <ToggleSwitch
             checked={wireless.wifiEnabled && !wireless.airplaneMode}
             disabled={wireless.airplaneMode}
-            onchange={toggleWifi}
+            onchange={(_, e) => toggleWifi(e)}
+            ariaLabel={$tStore('action_center.wifi')}
           />
-          <span class="slider"></span>
-        </label>
+        </div>
       </div>
     </BentoCard>
 
     <!-- Bluetooth Card -->
-    <BentoCard variant="bento" class="bento-action-card">
+    <BentoCard
+      variant="bento"
+      class="bento-action-card"
+      onclick={(e) => {
+        if (wireless.hasBluetooth && !wireless.airplaneMode) toggleBluetooth(e)
+      }}
+    >
       <div class="card-left">
-        <div
-          class="card-icon-circle"
-          class:is-off={!wireless.bluetoothEnabled || wireless.airplaneMode}
-        >
-          {#if wireless.bluetoothEnabled && !wireless.airplaneMode}
-            <Bluetooth size={18} />
-          {:else}
-            <BluetoothOff size={18} />
-          {/if}
-        </div>
+        <IconBadge
+          icon={wireless.bluetoothEnabled && !wireless.airplaneMode
+            ? Bluetooth
+            : BluetoothOff}
+          color={wireless.bluetoothEnabled && !wireless.airplaneMode
+            ? 'indigo'
+            : 'slate'}
+          size="lg"
+        />
         <div class="card-info">
           <span class="card-primary-text"
             >{$tStore('action_center.bluetooth')}</span
@@ -313,47 +304,40 @@
         </div>
       </div>
       <div class="card-controls-right">
-        <button
-          type="button"
-          class="quick-open-btn"
-          use:islandTooltip={$tStore('action_center.open_bluetooth')}
-          onclick={(e) => openSystemDialog('bluetooth', e)}
-          aria-label={$tStore('action_center.open_bluetooth')}
-        >
-          <ExternalLink size={13} />
-        </button>
-        <label
-          class="toggle-switch"
-          class:disabled-switch={!wireless.hasBluetooth ||
-            wireless.airplaneMode}
-        >
-          <input
-            type="checkbox"
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div onclick={(e) => e.stopPropagation()}>
+          <ToggleSwitch
             checked={wireless.hasBluetooth &&
               wireless.bluetoothEnabled &&
               !wireless.airplaneMode}
             disabled={!wireless.hasBluetooth || wireless.airplaneMode}
-            onchange={toggleBluetooth}
+            onchange={(_, e) => toggleBluetooth(e)}
+            ariaLabel={$tStore('action_center.bluetooth')}
           />
-          <span class="slider"></span>
-        </label>
+        </div>
       </div>
     </BentoCard>
 
     <!-- Battery & Power Card -->
-    <BentoCard variant="bento" class="bento-action-card">
+    <BentoCard
+      variant="bento"
+      class="bento-action-card"
+      onclick={(e) => {
+        if (battery.hasBattery) toggleBatterySaver(e)
+      }}
+    >
       <div class="card-left">
-        <div class="card-icon-circle">
-          {#if !battery.hasBattery}
-            <Plug size={18} />
-          {:else if battery.isCharging}
-            <Zap size={18} />
-          {:else if battery.batterySaver}
-            <Leaf size={18} />
-          {:else}
-            <Battery size={18} />
-          {/if}
-        </div>
+        <IconBadge
+          icon={!battery.hasBattery
+            ? Plug
+            : battery.isCharging
+              ? Zap
+              : battery.batterySaver
+                ? Leaf
+                : Battery}
+          color={battery.batterySaver || battery.isCharging ? 'emerald' : 'teal'}
+          size="lg"
+        />
         <div class="card-info">
           <span class="card-primary-text"
             >{$tStore('action_center.battery_power')}</span
@@ -364,37 +348,31 @@
         </div>
       </div>
       <div class="card-controls-right">
-        <button
-          type="button"
-          class="quick-open-btn"
-          use:islandTooltip={$tStore('action_center.open_power')}
-          onclick={(e) => openSystemDialog('battery', e)}
-          aria-label={$tStore('action_center.open_power')}
-        >
-          <ExternalLink size={13} />
-        </button>
         {#if battery.hasBattery}
-          <label
-            class="toggle-switch"
-            use:islandTooltip={$tStore('action_center.toggle_battery_saver')}
-          >
-            <input
-              type="checkbox"
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div onclick={(e) => e.stopPropagation()}>
+            <ToggleSwitch
               checked={battery.batterySaver}
-              onchange={toggleBatterySaver}
+              onchange={(_, e) => toggleBatterySaver(e)}
+              ariaLabel={$tStore('action_center.battery_power')}
             />
-            <span class="slider"></span>
-          </label>
+          </div>
         {/if}
       </div>
     </BentoCard>
 
     <!-- Airplane Mode Card -->
-    <BentoCard variant="bento" class="bento-action-card">
+    <BentoCard
+      variant="bento"
+      class="bento-action-card"
+      onclick={toggleAirplaneMode}
+    >
       <div class="card-left">
-        <div class="card-icon-circle" class:is-off={!wireless.airplaneMode}>
-          <Plane size={18} />
-        </div>
+        <IconBadge
+          icon={Plane}
+          color={wireless.airplaneMode ? 'amber' : 'slate'}
+          size="lg"
+        />
         <div class="card-info">
           <span class="card-primary-text"
             >{$tStore('action_center.airplane_mode')}</span
@@ -407,23 +385,14 @@
         </div>
       </div>
       <div class="card-controls-right">
-        <button
-          type="button"
-          class="quick-open-btn"
-          use:islandTooltip={$tStore('action_center.open_airplane')}
-          onclick={(e) => openSystemDialog('airplane', e)}
-          aria-label={$tStore('action_center.open_airplane')}
-        >
-          <ExternalLink size={13} />
-        </button>
-        <label class="toggle-switch">
-          <input
-            type="checkbox"
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div onclick={(e) => e.stopPropagation()}>
+          <ToggleSwitch
             checked={wireless.airplaneMode}
-            onchange={toggleAirplaneMode}
+            onchange={(_, e) => toggleAirplaneMode(e)}
+            ariaLabel={$tStore('action_center.airplane_mode')}
           />
-          <span class="slider"></span>
-        </label>
+        </div>
       </div>
     </BentoCard>
   </div>

@@ -14,6 +14,9 @@
     MonitorSmartphone,
     Maximize2
   } from 'lucide-svelte'
+  import BentoCard from '../../BentoCard.svelte'
+  import ToggleSwitch from '../../ToggleSwitch.svelte'
+  import SegmentedControl from '../../SegmentedControl.svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingSlider from '../SettingSlider.svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
@@ -67,223 +70,147 @@
 </script>
 
 <div class="setting-group">
-  <SettingItem label="Auto-Hide Home Page" icon={EyeOff}>
-    <label class="toggle-switch">
-      <input type="checkbox" bind:checked={$homeAutoHideStore} />
-      <span class="slider"></span>
-    </label>
-  </SettingItem>
+  <BentoCard variant="group">
+    <SettingItem label="Auto-Hide Home Page" icon={EyeOff}>
+      <ToggleSwitch
+        bind:checked={$homeAutoHideStore}
+        ariaLabel="Auto-Hide Home Page"
+      />
+    </SettingItem>
 
-  <SettingItem label="Auto-Hide Media Widget" icon={EyeOff}>
-    <label class="toggle-switch">
-      <input type="checkbox" bind:checked={$mediaAutoHideStore} />
-      <span class="slider"></span>
-    </label>
-  </SettingItem>
-
-  <SettingItem
-    label="Auto-Hide Delay"
-    description="Inactivity duration before collapsing (Default: 10s)"
-    icon={Timer}
-    flexCol={true}
-  >
-    <SettingSlider
-      min={5}
-      max={30}
-      step={1}
-      unit="s"
-      bind:value={$autoHideDelayStore}
-    />
-  </SettingItem>
-
-  <SettingItem
-    label="Collapsed Pill Content"
-    description="Widget display when collapsed (Default: Compact Dashboard)"
-    icon={Layout}
-    flexCol={true}
-  >
-    <CustomSelect
-      options={widgetContentOptions}
-      bind:value={$autoHideDisplayStore}
-      fullWidth={true}
-      direction="auto"
-    />
-  </SettingItem>
-
-  <SettingItem
-    label="Wake Trigger Method"
-    description="Interaction used to expand the island (Default: Click)"
-    icon={MousePointer}
-    flexCol={true}
-  >
-    <div class="segment-control full-width">
-      <button
-        class:active={$wakeMethodStore === 'hover'}
-        onclick={() => ($wakeMethodStore = 'hover')}>Hover</button
-      >
-      <button
-        class:active={$wakeMethodStore === 'click'}
-        onclick={() => ($wakeMethodStore = 'click')}>Click</button
-      >
-    </div>
-  </SettingItem>
-
-  <SettingItem label="Allow Dragging Position" icon={MousePointer}>
-    <label class="toggle-switch">
-      <input type="checkbox" bind:checked={$allowDragPositionStore} />
-      <span class="slider"></span>
-    </label>
-  </SettingItem>
-
-  {#if $displayLayoutStore.monitors && $displayLayoutStore.monitors.length > 1}
-    <SettingItem
-      label="Follow Active Display"
-      description="Automatically move Vinta to the display containing the active window"
-      icon={MonitorSmartphone}
-    >
-      <label class="toggle-switch">
-        <input type="checkbox" bind:checked={$followActiveDisplayStore} />
-        <span class="slider"></span>
-      </label>
+    <SettingItem label="Auto-Hide Media Widget" icon={EyeOff}>
+      <ToggleSwitch
+        bind:checked={$mediaAutoHideStore}
+        ariaLabel="Auto-Hide Media Widget"
+      />
     </SettingItem>
 
     <SettingItem
-      label="Active Display"
-      description="Select which connected monitor Vinta is positioned on"
-      icon={Monitor}
+      label="Auto-Hide Delay"
+      description="Inactivity duration before collapsing"
+      icon={Timer}
+      flexCol={true}
+      isDefault={$autoHideDelayStore === autoHideDelayStore.defaultValue}
+      onReset={() => autoHideDelayStore.reset()}
+    >
+      <SettingSlider
+        min={5}
+        max={30}
+        step={1}
+        unit="s"
+        defaultValue={autoHideDelayStore.defaultValue}
+        bind:value={$autoHideDelayStore}
+      />
+    </SettingItem>
+
+    <SettingItem
+      label="Collapsed Pill Content"
+      description="Widget display when collapsed"
+      icon={Layout}
+      flexCol={true}
+      isDefault={$autoHideDisplayStore === autoHideDisplayStore.defaultValue}
+      onReset={() => autoHideDisplayStore.reset()}
+    >
+      <CustomSelect
+        options={widgetContentOptions}
+        bind:value={$autoHideDisplayStore}
+        defaultValue={autoHideDisplayStore.defaultValue}
+        fullWidth={true}
+        direction="auto"
+      />
+    </SettingItem>
+  </BentoCard>
+
+  <BentoCard variant="group">
+    <SettingItem
+      label="Wake Trigger Method"
+      description="Interaction used to expand the island"
+      icon={MousePointer}
+      flexCol={true}
+      isDefault={$wakeMethodStore === wakeMethodStore.defaultValue}
+      onReset={() => wakeMethodStore.reset()}
+    >
+      <SegmentedControl
+        fullWidth={true}
+        options={[
+          { value: 'hover', label: 'Hover' },
+          { value: 'click', label: 'Click' }
+        ]}
+        bind:value={$wakeMethodStore}
+      />
+    </SettingItem>
+
+    <SettingItem label="Allow Dragging Position" icon={MousePointer}>
+      <ToggleSwitch
+        bind:checked={$allowDragPositionStore}
+        ariaLabel="Allow Dragging Position"
+      />
+    </SettingItem>
+
+    <SettingItem
+      label="Center Island Position"
+      description="Resets the horizontal offset of the Dynamic Island to monitor center"
+      icon={RotateCcw}
       flexCol={true}
     >
-      <div class="segment-control full-width">
-        {#each $displayLayoutStore.monitors as mon (mon.id)}
-          <button
-            class:active={$displayLayoutStore.currentMonitor?.id === mon.id}
-            onclick={() => handleSwitchMonitor(mon)}
-          >
-            {mon.name || `Display ${mon.id}`}
-          </button>
-        {/each}
-      </div>
+      <SettingActionButton
+        variant="default"
+        fullWidth={true}
+        onclick={handleResetOffset}
+      >
+        <RotateCcw size={13} />
+        <span>{isResettingOffset ? 'Centered' : 'Reset Offset to Center'}</span>
+      </SettingActionButton>
     </SettingItem>
-  {/if}
+  </BentoCard>
 
-  <SettingItem
-    label="Auto-Hide for Borderless Fullscreen"
-    description="Automatically hide the island when borderless full-screen games or apps are active"
-    icon={Maximize2}
-  >
-    <label class="toggle-switch">
-      <input type="checkbox" bind:checked={$autoHideBorderlessStore} />
-      <span class="slider"></span>
-    </label>
-  </SettingItem>
+  <BentoCard variant="group">
+    {#if $displayLayoutStore.monitors && $displayLayoutStore.monitors.length > 1}
+      <SettingItem
+        label="Follow Active Display"
+        description="Automatically move Vinta to the display containing the active window"
+        icon={MonitorSmartphone}
+      >
+        <ToggleSwitch
+          bind:checked={$followActiveDisplayStore}
+          ariaLabel="Follow Active Display"
+        />
+      </SettingItem>
 
-  <SettingItem
-    label="Center Island Position"
-    description="Resets the horizontal offset of the Dynamic Island to monitor center"
-    icon={RotateCcw}
-    flexCol={true}
-  >
-    <SettingActionButton
-      variant="default"
-      fullWidth={true}
-      onclick={handleResetOffset}
+      <SettingItem
+        label="Active Display"
+        description="Select which connected monitor Vinta is positioned on"
+        icon={Monitor}
+        flexCol={true}
+      >
+        <SegmentedControl
+          fullWidth={true}
+          options={$displayLayoutStore.monitors.map((mon) => ({
+            value: String(mon.id),
+            label: mon.name || `Display ${mon.id}`
+          }))}
+          value={String($displayLayoutStore.currentMonitor?.id ?? '')}
+          onchange={(val) => {
+            const found = $displayLayoutStore.monitors.find(
+              (m) => String(m.id) === val
+            )
+            if (found) handleSwitchMonitor(found)
+          }}
+        />
+      </SettingItem>
+    {/if}
+
+    <SettingItem
+      label="Auto-Hide for Borderless Fullscreen"
+      description="Automatically hide the island when borderless full-screen games or apps are active"
+      icon={Maximize2}
     >
-      <RotateCcw size={13} />
-      <span>{isResettingOffset ? 'Centered' : 'Reset Offset to Center'}</span>
-    </SettingActionButton>
-  </SettingItem>
+      <ToggleSwitch
+        bind:checked={$autoHideBorderlessStore}
+        ariaLabel="Auto-Hide for Borderless Fullscreen"
+      />
+    </SettingItem>
+  </BentoCard>
 </div>
 
-<style>
-  .setting-group {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .toggle-switch {
-    position: relative;
-    display: inline-block;
-    width: 34px;
-    height: 18px;
-  }
-
-  .toggle-switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-  }
-
-  .slider {
-    position: absolute;
-    cursor: pointer;
-    inset: 0;
-    background-color: rgba(255, 255, 255, 0.2);
-    transition: 0.3s;
-    border-radius: 20px;
-    border: 1px solid var(--vinta-border);
-  }
-
-  .slider:before {
-    position: absolute;
-    content: '';
-    height: 14px;
-    width: 14px;
-    left: 2px;
-    bottom: 1px;
-    background-color: white;
-    transition: 0.3s;
-    border-radius: 50%;
-  }
-
-  input:checked + .slider {
-    background-color: var(
-      --vinta-accent-primary,
-      var(--vinta-primary, #38bdf8)
-    );
-  }
-
-  input:checked + .slider:before {
-    transform: translateX(14px);
-  }
-
-  .segment-control {
-    display: flex;
-    background: rgba(255, 255, 255, 0.06);
-    padding: 2px;
-    border-radius: 8px;
-    border: 1px solid var(--vinta-border);
-  }
-
-  .segment-control.full-width {
-    width: 100%;
-    box-sizing: border-box;
-    height: 32px;
-    align-items: center;
-  }
-
-  .segment-control button {
-    background: transparent;
-    border: none;
-    color: var(--vinta-text-secondary);
-    padding: 4px 10px;
-    font-size: 11px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.15s ease;
-  }
-
-  .segment-control.full-width button {
-    flex: 1;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .segment-control button.active {
-    background: rgba(255, 255, 255, 0.12);
-    color: var(--vinta-text-primary);
-    font-weight: 600;
-  }
-</style>
+<style src="../../styles/settings/BehaviorTab.css"></style>

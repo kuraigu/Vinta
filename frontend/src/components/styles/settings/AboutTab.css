@@ -1,0 +1,213 @@
+/* ============================================================================
+   AboutTab Stylesheet
+   ============================================================================ */
+
+.setting-group.about-page {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+:global(.vinta-bento-card.about-hero-card) {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 14px;
+  padding: 14px 16px;
+  text-align: left;
+}
+
+.about-logo-wrapper {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: var(--vinta-item-bg, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--vinta-border);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 2px 6px rgba(0, 0, 0, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  box-sizing: border-box;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.about-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+  -webkit-user-drag: none;
+  pointer-events: none;
+}
+
+.about-hero-details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+
+.about-brand-header-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.about-brand-title {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--vinta-text-primary);
+  line-height: 1.15;
+}
+
+.about-brand-studio {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--vinta-text-muted);
+  letter-spacing: -0.01em;
+}
+
+.about-release-badges {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  gap: 6px;
+  user-select: text;
+}
+
+.about-pill-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 10.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+  background: var(--vinta-item-bg, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--vinta-border);
+  color: var(--vinta-text-secondary);
+}
+
+.about-pill-badge.version {
+  background: var(--vinta-accent-muted);
+  color: var(--vinta-accent-primary);
+  border-color: var(--vinta-border-accent, rgba(255, 255, 255, 0.14));
+  font-weight: 700;
+}
+
+.about-pill-badge.channel.official {
+  color: var(--vinta-status-success, #4ade80);
+}
+
+.about-pill-badge.channel.dev {
+  color: var(--vinta-text-secondary);
+}
+
+.about-pill-badge.build {
+  color: var(--vinta-text-muted);
+}
+
+.about-links-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.about-links-row > :global(*) {
+  flex: 1;
+}
+
+.about-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 2px 0 2px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--vinta-text-secondary);
+  letter-spacing: -0.01em;
+}
+
+.contributor-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  text-decoration: none;
+  color: var(--vinta-text-primary);
+  transition: background 0.15s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.contributor-row:hover {
+  background: var(--vinta-contrast-hover, rgba(255, 255, 255, 0.05));
+}
+
+.contributor-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+.contributor-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--vinta-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.contributor-handle {
+  font-size: 10.5px;
+  color: var(--vinta-text-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.role-badge {
+  font-size: 9.5px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  background: var(--vinta-item-bg, rgba(255, 255, 255, 0.06));
+  color: var(--vinta-text-secondary);
+  border: 1px solid var(--vinta-border);
+  flex-shrink: 0;
+}
+
+.role-badge.maintainer {
+  background: var(--vinta-accent-muted);
+  color: var(--vinta-accent-primary);
+  border-color: var(--vinta-border-accent, rgba(255, 255, 255, 0.14));
+}
+
+.contributor-full-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--vinta-accent-primary);
+  text-decoration: none;
+  transition: opacity 0.15s ease;
+}
+
+.contributor-full-link:hover {
+  opacity: 0.8;
+}

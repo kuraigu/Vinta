@@ -14,7 +14,7 @@
   content: '';
   position: absolute;
   inset: 6px;
-  border-radius: 22px;
+  border-radius: 14px;
   border: 1.5px dashed var(--vinta-accent-primary);
   pointer-events: none;
   z-index: 20;
@@ -88,7 +88,8 @@
   padding: 0 9px;
   border-radius: var(--vinta-radius-pill);
   background: var(--vinta-contrast-bg);
-  border: 1px solid var(--vinta-contrast-border);
+  border: none;
+  box-shadow: var(--vinta-contrast-border);
   color: var(--vinta-text-secondary);
   font-family: var(--vinta-font-family);
   font-size: 11px;
@@ -139,7 +140,8 @@
   padding: 0 8px;
   border-radius: var(--vinta-radius-pill);
   background: var(--vinta-contrast-bg);
-  border: 1px solid var(--vinta-contrast-border);
+  border: none;
+  box-shadow: var(--vinta-contrast-border);
   color: var(--vinta-text-primary);
   font-family: var(--vinta-font-family);
   font-size: 10.5px;
@@ -155,7 +157,7 @@
 
 .inline-pill-btn:hover:not(:disabled) {
   background: var(--vinta-contrast-hover);
-  border-color: var(--vinta-border);
+  box-shadow: var(--vinta-contrast-border);
 }
 
 .inline-pill-btn:active:not(:disabled) {
@@ -170,19 +172,20 @@
 .inline-pill-btn.danger-pill:hover:not(:disabled) {
   background: var(--vinta-accent-danger-hover-bg);
   color: var(--vinta-accent-danger-hover-text);
-  border-color: var(--vinta-accent-danger);
+  box-shadow: 0 0 0 1px var(--vinta-accent-danger);
 }
 
 .inline-icon-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
+  width: 24px;
   height: 24px;
   padding: 0;
-  border-radius: var(--vinta-radius-pill);
+  border-radius: 50%;
   background: var(--vinta-contrast-bg);
-  border: 1px solid var(--vinta-contrast-border);
+  border: none;
+  box-shadow: var(--vinta-contrast-border);
   color: var(--vinta-text-secondary);
   cursor: pointer;
   flex-shrink: 0;
@@ -196,7 +199,7 @@
 .inline-icon-btn:hover:not(:disabled) {
   background: var(--vinta-contrast-hover);
   color: var(--vinta-text-primary);
-  border-color: var(--vinta-border);
+  box-shadow: var(--vinta-contrast-border);
 }
 
 .inline-icon-btn:active:not(:disabled) {
@@ -211,7 +214,7 @@
 .inline-icon-btn.danger-pill:hover:not(:disabled) {
   background: var(--vinta-accent-danger-hover-bg);
   color: var(--vinta-accent-danger-hover-text);
-  border-color: var(--vinta-accent-danger);
+  box-shadow: 0 0 0 1px var(--vinta-accent-danger);
 }
 
 /* Scroll Area & Open 4-Column Tile Grid (No card-inside-a-card) */
@@ -243,7 +246,7 @@
   align-items: center;
   gap: 6px;
   padding: 14px 22px;
-  border-radius: 16px;
+  border-radius: var(--vinta-radius-card, 14px);
   background: var(--vinta-surface-elevated);
   border: 1.5px dashed var(--vinta-accent-warning);
   box-shadow: var(--vinta-dock-popover-shadow);
@@ -276,81 +279,6 @@
     opacity: 1;
     transform: scale(1);
   }
-}
-
-.shelf-empty-state {
-  height: 100%;
-  min-height: 210px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 20px;
-  box-sizing: border-box;
-  border-radius: var(--vinta-radius-card);
-  border: 1px dashed var(--vinta-border);
-  background: var(--vinta-surface-card);
-  gap: 8px;
-}
-
-.empty-icon-wrap {
-  width: 44px;
-  height: 44px;
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--vinta-icon-badge-bg);
-  border: 1px solid var(--vinta-icon-badge-border);
-  color: var(--vinta-accent-primary);
-}
-
-.empty-title {
-  margin: 0;
-  font-family: var(--vinta-font-family);
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--vinta-text-primary);
-}
-
-.empty-subtitle {
-  margin: 0;
-  max-width: 280px;
-  font-family: var(--vinta-font-family);
-  font-size: 11.5px;
-  line-height: 1.4;
-  color: var(--vinta-text-secondary);
-}
-
-.empty-choose-btn {
-  margin-top: 4px;
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 28px;
-  padding: 0 12px;
-  border-radius: var(--vinta-radius-pill);
-  background: var(--vinta-contrast-bg);
-  border: 1px solid var(--vinta-contrast-border);
-  color: var(--vinta-text-primary);
-  font-family: var(--vinta-font-family);
-  font-size: 11.5px;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    background-color 0.15s ease,
-    border-color 0.15s ease,
-    transform 0.15s ease;
-}
-
-.empty-choose-btn:hover {
-  background: var(--vinta-contrast-hover);
-  border-color: var(--vinta-accent-primary);
-}
-
-.empty-choose-btn:active {
-  transform: scale(0.96);
 }
 
 .shelf-grid {
@@ -400,7 +328,7 @@
   position: relative;
   width: 56px;
   height: 56px;
-  border-radius: 16px;
+  border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -612,35 +540,7 @@
   line-height: 1;
 }
 
-/* Bottom Page Header */
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-top: 6px;
-  padding-top: 8px;
-  border-top: 1px solid var(--vinta-border-light);
-  flex-shrink: 0;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-.title {
-  margin: 0;
-  font-family: var(--vinta-font-family);
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  color: var(--vinta-text-primary);
-  white-space: nowrap;
-  flex-shrink: 0;
-}
+/* Header Pills & Action Buttons */
 
 .shelf-count-pill {
   font-family: var(--vinta-font-family);
@@ -648,7 +548,8 @@
   font-weight: 600;
   color: var(--vinta-text-secondary);
   background: var(--vinta-contrast-bg);
-  border: 1px solid var(--vinta-contrast-border);
+  border: none;
+  box-shadow: var(--vinta-contrast-border);
   border-radius: var(--vinta-radius-pill);
   padding: 1px 7px;
   white-space: nowrap;
@@ -683,9 +584,10 @@
   justify-content: center;
   width: 28px;
   height: 28px;
-  border-radius: 8px;
+  border-radius: 50%;
   background: var(--vinta-contrast-bg);
-  border: 1px solid var(--vinta-contrast-border);
+  border: none;
+  box-shadow: var(--vinta-contrast-border);
   color: var(--vinta-text-secondary);
   cursor: pointer;
   padding: 0;
@@ -699,7 +601,7 @@
 .header-icon-btn:hover {
   background: var(--vinta-contrast-hover);
   color: var(--vinta-text-primary);
-  border-color: var(--vinta-border);
+  box-shadow: var(--vinta-contrast-border);
 }
 
 .header-icon-btn.clear-btn:hover {

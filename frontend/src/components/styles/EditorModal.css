@@ -74,7 +74,7 @@
   justify-content: center;
   width: 24px;
   height: 24px;
-  border-radius: 6px;
+  border-radius: 50%;
   background: transparent;
   border: none;
   color: var(--vinta-text-secondary, #cbd5e1);
@@ -83,7 +83,7 @@
 }
 
 .vinta-modal-close-btn:hover {
-  background: var(--vinta-hover, rgba(255, 255, 255, 0.1));
+  background: var(--vinta-contrast-hover, rgba(255, 255, 255, 0.1));
   color: var(--vinta-text-primary, #ffffff);
 }
 

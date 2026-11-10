@@ -1,0 +1,57 @@
+.setting-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.setting-section-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 2px 2px 2px;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--vinta-text-secondary);
+}
+
+.sound-select-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.sound-select-box {
+  flex: 1;
+  min-width: 0;
+}
+
+.sound-preview-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 9px;
+  background: var(--vinta-item-bg, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.14));
+  color: var(--vinta-text-primary, #ffffff);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.sound-preview-btn:hover {
+  background: var(--vinta-contrast-hover, rgba(255, 255, 255, 0.14));
+  border-color: var(--vinta-border-hover, rgba(255, 255, 255, 0.25));
+}
+
+.snooze-select-box {
+  width: 130px;
+  flex-shrink: 0;
+}
+

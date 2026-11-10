@@ -20,7 +20,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { Events } from '@wailsio/runtime'
-  import './styles/TimerPage.css'
   import {
     Hourglass,
     Clock,
@@ -34,6 +33,7 @@
     X
   } from 'lucide-svelte'
   import BackButton from '../components/BackButton.svelte'
+  import PageHeader from '../components/PageHeader.svelte'
   import DotPattern from '../components/patterns/DotPattern.svelte'
   import HorizontalTabSelection, {
     type TabItem
@@ -277,26 +277,22 @@
     {
       id: 'timer',
       label: $tStore('timer.countdown_tab'),
-      icon: Hourglass,
-      tooltip: $tStore('timer.countdown_tooltip')
+      icon: Hourglass
     },
     {
       id: 'stopwatch',
       label: $tStore('timer.stopwatch_tab'),
-      icon: Clock,
-      tooltip: $tStore('timer.stopwatch_tooltip')
+      icon: Clock
     },
     {
       id: 'focus',
       label: $tStore('timer.focus_tab'),
-      icon: Flame,
-      tooltip: $tStore('timer.focus_tooltip')
+      icon: Flame
     },
     {
       id: 'alarms',
       label: $tStore('timer.alarms_tab'),
-      icon: Bell,
-      tooltip: $tStore('timer.alarms_tooltip')
+      icon: Bell
     }
   ])
 
@@ -374,7 +370,42 @@
     }
   }
   $effect(handleMinimizeEffect)
+
+  /**
+   * Handles Spacebar shortcut to toggle Play/Pause on the active timer/stopwatch/focus tab.
+   *
+   * @param e - Window keyboard event.
+   */
+  function handleTimerWindowKeyDown(e: KeyboardEvent): void {
+    if (!expanded || isCustomDrawerOpen || isSettingsOpen || isNewAlarmOpen) {
+      return
+    }
+    const target = e.target as HTMLElement | null
+    if (
+      target &&
+      (target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable)
+    ) {
+      return
+    }
+    if (e.code === 'Space') {
+      const tab = $timerAppStore.activeTab
+      if (tab === 'timer') {
+        e.preventDefault()
+        toggleCountdown()
+      } else if (tab === 'stopwatch') {
+        e.preventDefault()
+        toggleStopwatch()
+      } else if (tab === 'focus') {
+        e.preventDefault()
+        toggleFocus()
+      }
+    }
+  }
 </script>
+
+<svelte:window onkeydown={handleTimerWindowKeyDown} />
 
 <div
   data-vinta="timer-page"
@@ -495,47 +526,51 @@
                 : ''}"
       />
 
-      <div class="app-header">
-        <BackButton />
+      <PageHeader>
+        {#snippet center()}
+          <HorizontalTabSelection
+            tabs={timerTabs}
+            value={$timerAppStore.activeTab}
+            onchange={handleTabSelect}
+            ariaLabel={$tStore('timer.title')}
+          />
+        {/snippet}
 
-        <HorizontalTabSelection
-          tabs={timerTabs}
-          value={$timerAppStore.activeTab}
-          onchange={handleTabSelect}
-          ariaLabel={$tStore('timer.title')}
-        />
-
-        {#if $timerAppStore.activeTab === 'focus'}
-          <button
-            class="header-tool-btn"
-            class:active={isSettingsOpen}
-            onclick={() => {
-              isSettingsOpen = !isSettingsOpen
-            }}
-            use:islandTooltip={'Focus settings'}
-          >
-            <SlidersHorizontal size={14} />
-          </button>
-        {:else if $timerAppStore.activeTab === 'alarms'}
-          <button
-            class="header-tool-btn"
-            data-action="create-alarm"
-            class:active={isNewAlarmOpen}
-            onclick={() => {
-              if (isNewAlarmOpen) {
-                cancelAlarmForm()
-              } else {
-                openCreateAlarm()
-              }
-            }}
-            use:islandTooltip={$tStore('timer.new_alarm')}
-          >
-            <Plus size={15} />
-          </button>
-        {:else}
-          <div style="width: 30px;"></div>
-        {/if}
-      </div>
+        {#snippet actions()}
+          {#if $timerAppStore.activeTab === 'focus'}
+            <button
+              class="header-tool-btn"
+              class:active={isSettingsOpen}
+              onclick={() => {
+                isSettingsOpen = !isSettingsOpen
+              }}
+              use:islandTooltip={'Focus settings'}
+              aria-label="Focus settings"
+            >
+              <SlidersHorizontal size={14} />
+            </button>
+          {:else if $timerAppStore.activeTab === 'alarms'}
+            <button
+              class="header-tool-btn"
+              data-action="create-alarm"
+              class:active={isNewAlarmOpen}
+              onclick={() => {
+                if (isNewAlarmOpen) {
+                  cancelAlarmForm()
+                } else {
+                  openCreateAlarm()
+                }
+              }}
+              use:islandTooltip={$tStore('timer.new_alarm')}
+              aria-label={$tStore('timer.new_alarm')}
+            >
+              <Plus size={15} />
+            </button>
+          {:else}
+            <div class="header-spacer" aria-hidden="true"></div>
+          {/if}
+        {/snippet}
+      </PageHeader>
 
       {#if $timerAppStore.ringingAlarm}
         <div class="expanded-ringing-banner">
@@ -574,7 +609,6 @@
             <button
               class="banner-action-btn snooze"
               onclick={() => snoozeRingingAlarm()}
-              use:islandTooltip={$tStore('timer.snooze')}
             >
               <Clock size={12} />
               <span>{$tStore('timer.snooze')}</span>
@@ -582,7 +616,6 @@
             <button
               class="banner-action-btn stop"
               onclick={dismissRingingAlarm}
-              use:islandTooltip={$tStore('timer.dismiss')}
             >
               <X size={12} />
               <span>{$tStore('timer.dismiss')}</span>
@@ -591,19 +624,23 @@
         </div>
       {/if}
 
-      {#if $timerAppStore.activeTab === 'timer'}
-        <CountdownTab onOpenCustom={() => (isCustomDrawerOpen = true)} />
-      {:else if $timerAppStore.activeTab === 'stopwatch'}
-        <StopwatchTab />
-      {:else if $timerAppStore.activeTab === 'focus'}
-        <FocusTab />
-      {:else if $timerAppStore.activeTab === 'alarms'}
-        <AlarmsTab
-          {is24H}
-          onStartEdit={startEditAlarm}
-          onOpenCreate={openCreateAlarm}
-        />
-      {/if}
+      {#key $timerAppStore.activeTab}
+        <div class="timer-tab-transition">
+          {#if $timerAppStore.activeTab === 'timer'}
+            <CountdownTab onOpenCustom={() => (isCustomDrawerOpen = true)} />
+          {:else if $timerAppStore.activeTab === 'stopwatch'}
+            <StopwatchTab />
+          {:else if $timerAppStore.activeTab === 'focus'}
+            <FocusTab />
+          {:else if $timerAppStore.activeTab === 'alarms'}
+            <AlarmsTab
+              {is24H}
+              onStartEdit={startEditAlarm}
+              onOpenCreate={openCreateAlarm}
+            />
+          {/if}
+        </div>
+      {/key}
 
       <CustomTimerDrawer
         isOpen={isCustomDrawerOpen}
@@ -630,3 +667,5 @@
     </div>
   {/if}
 </div>
+
+<style src="./styles/TimerPage.css"></style>

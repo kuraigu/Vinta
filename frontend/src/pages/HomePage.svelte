@@ -17,7 +17,7 @@
    */
 
   import { onMount, onDestroy, getContext } from 'svelte'
-  import { ChevronDown } from 'lucide-svelte'
+  import ScrollIndicator from '../components/ScrollIndicator.svelte'
   import Calendar from '../components/Calendar.svelte'
   import CalendarGlance from '../components/CalendarGlance.svelte'
   import Weather from '../components/Weather.svelte'
@@ -29,6 +29,7 @@
   import UpdateGlanceCard from '../components/UpdateGlanceCard.svelte'
   import SpotlightCarousel from '../components/SpotlightCarousel.svelte'
   import AnnouncementGlance from '../components/AnnouncementGlance.svelte'
+  import BentoCard from '../components/BentoCard.svelte'
   import ScrollView from '../components/ScrollView.svelte'
   import CalendarPage, { config as calendarConfig } from './CalendarPage.svelte'
   import SettingsPage, { config as settingsConfig } from './SettingsPage.svelte'
@@ -133,23 +134,32 @@
 
   /**
    * Synchronizes the measured height of the scrollable feed container
-   * to update scroll cues and avoid layout clipping.
+   * and updates the scroll cue pill in a single ResizeObserver pass.
    */
   function syncHomeFeedMeasuredHeight() {
     const el = feedContainerEl
-    if (!el || typeof ResizeObserver === 'undefined') return
+    const scrollEl = scrollContainer
+    if ((!el && !scrollEl) || typeof ResizeObserver === 'undefined') {
+      canScrollMore = false
+      return
+    }
+    updateScrollCueVisibility()
     const ro = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        const height = Math.ceil(entry.contentRect.height)
-        if (height > 0) {
-          const totalContentHeight = $homeWidgetsVisibilityStore.weather
-            ? height
-            : height + 48
-          homeMeasuredHeightStore.set(totalContentHeight)
+        if (entry.target === el) {
+          const height = Math.ceil(entry.contentRect.height)
+          if (height > 0) {
+            const totalContentHeight = $homeWidgetsVisibilityStore.weather
+              ? height
+              : height + 48
+            homeMeasuredHeightStore.set(totalContentHeight)
+          }
         }
       }
+      updateScrollCueVisibility()
     })
-    ro.observe(el)
+    if (el) ro.observe(el)
+    if (scrollEl) ro.observe(scrollEl)
     return () => {
       ro.disconnect()
     }
@@ -184,32 +194,6 @@
   }
 
   /**
-   * Observes the home feed scroll container and content height to keep the scroll cue pill in sync.
-   */
-  function syncScrollCueObserverEffect() {
-    const el = scrollContainer
-    if (!el || typeof ResizeObserver === 'undefined') {
-      canScrollMore = false
-      return
-    }
-
-    updateScrollCueVisibility()
-    const ro = new ResizeObserver(() => {
-      updateScrollCueVisibility()
-    })
-    ro.observe(el)
-    const inner = el.firstElementChild
-    if (inner) {
-      ro.observe(inner)
-    }
-
-    return () => {
-      ro.disconnect()
-    }
-  }
-  $effect(syncScrollCueObserverEffect)
-
-  /**
    * Smoothly scrolls the primary home feed container downward by one viewport view.
    */
   function scrollFeedDown() {
@@ -228,7 +212,7 @@
   onMount(() => {
     timer = setInterval(() => {
       internalTime = new Date()
-    }, 1000)
+    }, 10000)
   })
 
   onDestroy(() => {
@@ -422,25 +406,28 @@
               amPmText={$homeWidgetsVisibilityStore.clock ? amPm : ''}
             />
           {:else}
-            <!-- Hero Greeting (Fallback when weather widget is disabled) -->
-            <header class="home-hero-greeting">
-              <span class="hero-salutation">{salutationText},</span>
-              <h1 class="hero-username">{displayName}</h1>
-            </header>
+            <!-- Social Feed Header Bar (Fallback when weather hero is disabled) -->
+            <header class="home-feed-status-header">
+              <div class="home-hero-greeting">
+                <span class="hero-salutation">{salutationText},</span>
+                <h1 class="hero-username">{displayName}</h1>
+              </div>
 
-            {#if $homeWidgetsVisibilityStore.clock}
-              <section class="time-subtle-bar">
-                <span class="meta-date-text">{timeParts.friendlyDateText}</span>
-                <span class="meta-bullet">•</span>
-                <span class="time-subtle-digits">
-                  {formattedHours}<span class="colon-blink">:</span
-                  >{timeParts.m}
-                </span>
-                {#if amPm}
-                  <span class="time-subtle-ampm">{amPm}</span>
-                {/if}
-              </section>
-            {/if}
+              {#if $homeWidgetsVisibilityStore.clock}
+                <div class="time-subtle-bar">
+                  <span class="meta-date-text"
+                    >{timeParts.friendlyDateText}</span
+                  >
+                  <span class="meta-bullet">•</span>
+                  <span class="time-subtle-digits">
+                    {formattedHours}:{timeParts.m}
+                  </span>
+                  {#if amPm}
+                    <span class="time-subtle-ampm">{amPm}</span>
+                  {/if}
+                </div>
+              {/if}
+            </header>
           {/if}
 
           <!-- Update Glance Banner (Issue #161) -->
@@ -455,42 +442,47 @@
             </section>
           {/if}
 
-          <!-- Developer Announcements & Release Notes Glance (Issue #159) -->
-          {#if $homeWidgetsVisibilityStore.announcements !== false}
-            <section class="announcements-card-feed">
-              <AnnouncementGlance onClick={openAnnouncementsPage} />
-            </section>
+          <!-- Grouped Brief Card: Announcements, Notifications & Calendar Agenda -->
+          {#if $homeWidgetsVisibilityStore.announcements !== false || hasStandardNotifications || $homeWidgetsVisibilityStore.calendar}
+            <BentoCard variant="group" class="home-feed-group">
+              {#if $homeWidgetsVisibilityStore.announcements !== false}
+                <section class="announcements-card-feed">
+                  <AnnouncementGlance onClick={openAnnouncementsPage} />
+                </section>
+              {/if}
+
+              {#if hasStandardNotifications}
+                <section class="notification-card-feed">
+                  <NotificationGlance />
+                </section>
+              {/if}
+
+              {#if $homeWidgetsVisibilityStore.calendar}
+                <section class="calendar-card-feed">
+                  <CalendarGlance onOpenCalendar={openCalendar} />
+                </section>
+              {/if}
+            </BentoCard>
           {/if}
 
-          <!-- Notification Glance Card (High priority alerts right after updates) -->
-          {#if hasStandardNotifications}
-            <section class="notification-card-feed">
-              <NotificationGlance />
-            </section>
+          <!-- Grouped System Controls Card: Quick Controls & Hardware Stats -->
+          {#if $homeWidgetsVisibilityStore.actionCenter || $homeWidgetsVisibilityStore.systemStats}
+            <BentoCard variant="group" class="home-feed-group">
+              {#if $homeWidgetsVisibilityStore.actionCenter}
+                <section class="glance-card-feed">
+                  <ActionCenterGlance />
+                </section>
+              {/if}
+
+              {#if $homeWidgetsVisibilityStore.systemStats}
+                <section class="glance-card-feed">
+                  <SystemStats expanded={true} />
+                </section>
+              {/if}
+            </BentoCard>
           {/if}
 
-          <!-- Calendar Agenda Glance Card -->
-          {#if $homeWidgetsVisibilityStore.calendar}
-            <section class="calendar-card-feed">
-              <CalendarGlance onOpenCalendar={openCalendar} />
-            </section>
-          {/if}
-
-          <!-- Quick Controls from Action Center (Modular Bento Card) -->
-          {#if $homeWidgetsVisibilityStore.actionCenter}
-            <section class="glance-card-feed">
-              <ActionCenterGlance />
-            </section>
-          {/if}
-
-          <!-- System Hardware Stats Glance (Modular Bento Card) -->
-          {#if $homeWidgetsVisibilityStore.systemStats}
-            <section class="glance-card-feed">
-              <SystemStats expanded={true} />
-            </section>
-          {/if}
-
-          <!-- Studio Branding Footer (Issue #185 / Category 7) -->
+          <!-- Studio Branding Footer -->
           <footer class="home-brand-footer">
             <span class="home-brand-text">{$tStore('home.brand_footer')}</span>
             <span class="home-version-pill">v{displayVersion}</span>
@@ -498,17 +490,13 @@
         </div>
       </ScrollView>
 
-      <!-- Scroll cue indicator: hides when feed has no overflow or is scrolled down -->
-      <button
-        type="button"
-        class="home-scroll-cue-pill"
-        class:hidden={!canScrollMore || isScrolledDown}
+      <!-- Scroll indicator cue -->
+      <ScrollIndicator
+        visible={canScrollMore && !isScrolledDown}
         onclick={scrollFeedDown}
-        aria-label={$tStore('home.scroll_cue_aria')}
-      >
-        <span class="scroll-cue-text">{$tStore('home.scroll_cue_more')}</span>
-        <ChevronDown size={13} class="scroll-cue-icon" />
-      </button>
+        label={$tStore('home.scroll_cue_more')}
+        ariaLabel={$tStore('home.scroll_cue_aria')}
+      />
     </div>
   {/if}
 </div>

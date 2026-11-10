@@ -1,131 +1,217 @@
 /* ============================================================================
    Onboarding Page Stylesheet
-   Token-driven layout matching Vinta Design System
+   Uses shared SidebarLayout, BentoCard, IconBadge, ToggleSwitch, and SegmentedControl primitives
    ============================================================================ */
 
-.onboarding-page-layout {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-  padding: 16px 16px 12px 16px;
-  box-sizing: border-box;
-  text-align: left;
-  user-select: none;
-}
-
-.onboarding-header {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 6px 12px 6px;
-  border-bottom: 1px solid var(--vinta-border-light);
-  flex-shrink: 0;
-  text-align: left;
-}
-
-.onboarding-mascot-wrap {
-  width: 54px;
-  height: 48px;
+.sidebar-mascot-dock {
   display: flex;
   align-items: center;
   justify-content: center;
+  padding-top: 4px;
+}
+
+.sidebar-mascot-frame {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ============================================================================
+   Right Main Content Pane (Top-Aligned)
+   ============================================================================ */
+.onboarding-main-pane {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 4px 2px 2px 0;
+  box-sizing: border-box;
+}
+
+.pane-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
   flex-shrink: 0;
 }
 
-.onboarding-header-titles {
+.pane-header-top {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  text-align: left;
-  flex: 1;
-  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
-.onboarding-title {
+.pane-title {
   margin: 0;
-  font-size: 1.05rem;
-  font-weight: 700;
+  font-size: 1.08rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
   color: var(--vinta-text-primary);
-  text-align: left;
-  letter-spacing: -0.015em;
+  line-height: 1.2;
 }
 
-.onboarding-subtitle {
+.pane-step-pills {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: var(--vinta-item-bg, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--vinta-border);
+  flex-shrink: 0;
+}
+
+.step-progress-pill {
+  width: 6px;
+  height: 6px;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  cursor: pointer;
+  transition:
+    width 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    background 0.2s ease;
+}
+
+.step-progress-pill.completed {
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.step-progress-pill.active {
+  width: 18px;
+  background: var(--vinta-accent-primary, #38bdf8);
+}
+
+.pane-subtitle {
   margin: 0;
-  font-size: 0.74rem;
+  font-size: 0.76rem;
   color: var(--vinta-text-secondary);
-  text-align: left;
-  line-height: 1.35;
+  line-height: 1.38;
 }
 
-.onboarding-body {
+.pane-body {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  padding: 12px 2px;
+  justify-content: flex-start;
   gap: 10px;
-  text-align: left;
+  overflow-y: auto;
+  padding-right: 2px;
 }
 
-.onboarding-feature-list {
+.onboarding-step-transition {
+  width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  width: 100%;
+  gap: 10px;
+  animation: vintaOnboardingStepFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes vintaOnboardingStepFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Grouped Feature Rows inside <BentoCard variant="group"> */
+.example-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
   text-align: left;
 }
 
-.onboarding-inputs-row {
-  display: flex;
-  gap: 8px;
-  width: 100%;
-}
-
-.onboarding-inputs-row .onboarding-input-card {
+.example-text-col {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.onboarding-input-card {
+.example-title-with-kbd {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.example-title {
+  font-size: 0.79rem;
+  font-weight: 700;
+  color: var(--vinta-text-primary);
+  line-height: 1.25;
+}
+
+.example-desc {
+  font-size: 0.7rem;
+  color: var(--vinta-text-secondary);
+  line-height: 1.35;
+}
+
+.kbd-pill {
+  font-family: var(--vinta-font-mono, monospace);
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: var(--vinta-item-bg, rgba(255, 255, 255, 0.07));
+  border: 1px solid var(--vinta-border);
+  color: var(--vinta-text-primary);
+  white-space: nowrap;
+}
+
+/* Step 1 Input Cards */
+.onboarding-inputs-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+:global(.vinta-bento-card.onboarding-field-card) {
   display: flex;
   flex-direction: column;
   gap: 6px;
   padding: 10px 12px;
-  border-radius: 10px;
-  background: var(--vinta-item-bg, rgba(255, 255, 255, 0.03));
-  border: 1px solid var(--vinta-border-light);
-  text-align: left;
 }
 
-.onboarding-input-label {
-  font-size: 0.72rem;
-  font-weight: 600;
+.field-card-label {
+  font-size: 0.68rem;
+  font-weight: 700;
   color: var(--vinta-text-secondary);
-  letter-spacing: -0.01em;
 }
 
 .onboarding-input-wrapper {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
   height: 32px;
   padding: 0 10px;
-  border-radius: 8px;
-  background: var(--vinta-contrast-bg);
+  border-radius: var(--vinta-radius-button, 10px);
+  background: var(--vinta-input-bg);
   border: 1px solid var(--vinta-border);
-  box-sizing: border-box;
-  transition: border-color 0.15s ease;
+  transition: border-color 0.16s ease;
 }
 
 .onboarding-input-wrapper:focus-within {
-  border-color: var(--vinta-accent-primary);
+  border-color: var(--vinta-accent-primary, #38bdf8);
 }
 
-.input-leading-icon {
+.onboarding-input-wrapper :global(.input-leading-icon) {
   color: var(--vinta-text-muted);
   flex-shrink: 0;
 }
@@ -133,107 +219,43 @@
 .onboarding-name-field {
   flex: 1;
   min-width: 0;
-  height: 100%;
   background: transparent;
   border: none;
   outline: none;
-  font-size: 0.76rem;
-  font-weight: 500;
   color: var(--vinta-text-primary);
+  font-size: 0.76rem;
+  font-weight: 600;
   font-family: inherit;
 }
 
-.onboarding-name-field::placeholder {
-  color: var(--vinta-text-muted);
-  opacity: 0.7;
-}
-
-.onboarding-feature-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+/* Step 2 Resting Alignment Row */
+:global(.vinta-bento-card.onboarding-setting-row) {
   padding: 10px 12px;
-  border-radius: 10px;
-  background: var(--vinta-item-bg, rgba(255, 255, 255, 0.03));
-  border: 1px solid var(--vinta-border-light);
-  text-align: left;
 }
 
-.feature-item-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 7px;
-  background: var(--vinta-contrast-bg);
-  border: 1px solid var(--vinta-border);
-  color: var(--vinta-accent-primary, #38bdf8);
-  flex-shrink: 0;
-}
-
-.feature-item-text {
+.setting-row-text {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  text-align: left;
-  flex: 1;
+  gap: 1px;
   min-width: 0;
 }
 
-.feature-item-title {
-  font-size: 0.78rem;
-  font-weight: 600;
+.setting-row-title {
+  font-size: 0.76rem;
+  font-weight: 700;
   color: var(--vinta-text-primary);
-  text-align: left;
 }
 
-.feature-item-desc {
-  font-size: 0.7rem;
+.setting-row-desc {
+  font-size: 0.67rem;
   color: var(--vinta-text-secondary);
-  line-height: 1.3;
-  text-align: left;
 }
 
-.onboarding-row-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: var(--vinta-item-bg, rgba(255, 255, 255, 0.03));
-  border: 1px solid var(--vinta-border-light);
-  gap: 12px;
-  text-align: left;
-}
-
-.onboarding-row-label {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  text-align: left;
-  flex: 1;
-  min-width: 0;
-}
-
-.row-label-title {
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: var(--vinta-text-primary);
-  text-align: left;
-}
-
-.row-label-desc {
-  font-size: 0.68rem;
-  color: var(--vinta-text-secondary);
-  text-align: left;
-}
-
+/* Step 6 Personalize Theme Grid & Toggles */
 .onboarding-theme-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
-  width: 100%;
 }
 
 .theme-preview-card {
@@ -241,35 +263,36 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 14px 10px;
-  border-radius: 10px;
-  background: var(--vinta-contrast-bg);
-  border: 1px solid var(--vinta-border-light);
+  gap: 6px;
+  padding: 10px 8px;
+  border-radius: var(--vinta-radius-card, 14px);
+  background: var(--vinta-item-bg, rgba(255, 255, 255, 0.03));
+  border: 1px solid var(--vinta-border);
+  color: var(--vinta-text-secondary);
   cursor: pointer;
-  outline: none;
-  transition: all 0.15s ease;
+  transition: all 0.16s ease;
 }
 
 .theme-preview-card:hover {
-  background: var(--vinta-hover);
-  border-color: var(--vinta-border);
+  background: var(--vinta-contrast-hover, rgba(255, 255, 255, 0.06));
+  color: var(--vinta-text-primary);
 }
 
 .theme-preview-card.active {
+  background: var(--vinta-accent-muted, rgba(255, 255, 255, 0.1));
   border-color: var(--vinta-accent-primary, #38bdf8);
-  background: rgba(56, 189, 248, 0.08);
+  color: var(--vinta-text-primary);
 }
 
 .theme-dot {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  flex-shrink: 0;
+  border: 2px solid rgba(255, 255, 255, 0.25);
 }
 
 .theme-dot.dark-gold {
-  background: #facc15;
+  background: #f59e0b;
 }
 
 .theme-dot.nord-frost {
@@ -277,77 +300,77 @@
 }
 
 .theme-dot.colorblind-safe {
-  background: #38bdf8;
+  background: #009e73;
 }
 
 .theme-name {
   font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--vinta-text-primary);
+  font-weight: 700;
 }
 
-.onboarding-footer {
+/* Footer Navigation Controls */
+.pane-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-top: 12px;
-  border-top: 1px solid var(--vinta-border-light);
+  padding-top: 10px;
+  margin-top: 8px;
+  border-top: 1px solid var(--vinta-border-light, rgba(255, 255, 255, 0.06));
   flex-shrink: 0;
 }
 
-.onboarding-steps-indicator {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.step-indicator-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--vinta-border);
-  transition: all 0.2s ease;
-}
-
-.step-indicator-dot.active {
-  width: 16px;
-  border-radius: 3px;
-  background: var(--vinta-accent-primary, #38bdf8);
-}
-
-.onboarding-action-buttons {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.onboarding-btn {
-  height: 32px;
-  padding: 0 14px;
+.onboarding-skip-link {
+  background: transparent;
+  border: none;
+  padding: 6px 8px;
   border-radius: 8px;
-  font-size: 0.76rem;
+  font-size: 0.74rem;
   font-weight: 600;
+  color: var(--vinta-text-muted);
   cursor: pointer;
+  transition: color 0.15s ease;
+}
+
+.onboarding-skip-link:hover {
+  color: var(--vinta-text-primary);
+}
+
+.pane-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.onboarding-nav-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 5px;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: var(--vinta-radius-button, 10px);
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.onboarding-nav-btn.secondary {
+  background: var(--vinta-item-bg, rgba(255, 255, 255, 0.06));
   border: 1px solid var(--vinta-border);
-  background: var(--vinta-contrast-bg);
   color: var(--vinta-text-primary);
-  transition: all 0.15s ease;
 }
 
-.onboarding-btn:hover {
-  background: var(--vinta-hover);
+.onboarding-nav-btn.secondary:hover {
+  background: var(--vinta-contrast-hover, rgba(255, 255, 255, 0.11));
 }
 
-.onboarding-btn.primary {
+.onboarding-nav-btn.primary {
   background: var(--vinta-accent-primary, #38bdf8);
-  color: var(--vinta-text-on-accent);
-  border-color: transparent;
+  border: 1px solid transparent;
+  color: var(--vinta-accent-contrast-text, #0b1120);
 }
 
-.onboarding-btn.primary:hover {
-  opacity: 0.9;
+.onboarding-nav-btn.primary:hover {
+  filter: brightness(1.08);
 }

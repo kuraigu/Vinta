@@ -1,0 +1,39 @@
+.refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--vinta-contrast-bg, rgba(255, 255, 255, 0.05));
+  border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.08));
+  color: var(--vinta-text-secondary, rgba(255, 255, 255, 0.75));
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+.refresh-btn:hover {
+  background: var(--vinta-contrast-hover, rgba(255, 255, 255, 0.1));
+  color: var(--vinta-text-primary, #ffffff);
+  transform: translateY(-1px);
+}
+
+.refresh-btn:active {
+  transform: scale(0.96);
+}
+
+.refresh-btn.spinning :global(svg) {
+  animation: vinta-spin 0.9s linear infinite;
+}
+
+@keyframes vinta-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+

@@ -8,17 +8,20 @@
   import { slide } from 'svelte/transition'
   import { ChevronDown, Search } from 'lucide-svelte'
   import FlagIcon from './FlagIcon.svelte'
+  import { tStore } from '../store'
 
   export interface SelectOption {
     value: string
     label: string
     flag?: string
     payload?: unknown
+    isDefault?: boolean
   }
 
   interface Props {
     options: SelectOption[]
     value: string
+    defaultValue?: string
     placeholder?: string
     fullWidth?: boolean
     direction?: 'auto' | 'down' | 'up'
@@ -32,6 +35,7 @@
   let {
     options,
     value = $bindable(),
+    defaultValue,
     placeholder = 'Select...',
     fullWidth = false,
     direction = 'auto',
@@ -283,6 +287,9 @@
               <FlagIcon code={opt.flag} size={14} />
             {/if}
             <span class="option-label">{opt.label}</span>
+            {#if opt.isDefault || (defaultValue !== undefined && opt.value === defaultValue)}
+              <span class="option-default-tag">{$tStore('common.default')}</span>
+            {/if}
           </button>
         {:else}
           <div class="no-options">No results found</div>
@@ -457,6 +464,18 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     flex: 1;
+  }
+
+  .option-default-tag {
+    font-size: 9px;
+    font-weight: 600;
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--vinta-border);
+    color: var(--vinta-text-muted);
+    flex-shrink: 0;
+    letter-spacing: 0.01em;
   }
 
   .option-item:hover {

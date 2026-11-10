@@ -1,0 +1,68 @@
+/* ============================================================================
+   PageHeader Unified Header Stylesheet
+   Follows docs/DESIGN.md: theme tokens, standard heights, no hardcoded colors
+   ============================================================================ */
+
+.vinta-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 32px;
+  min-height: 32px;
+  gap: 8px;
+  box-sizing: border-box;
+  user-select: none;
+  -webkit-user-select: none;
+  flex-shrink: 0;
+}
+
+.vinta-page-header.position-top {
+  margin-bottom: 4px;
+}
+
+.vinta-page-header.position-bottom {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--vinta-border-light, rgba(255, 255, 255, 0.06));
+}
+
+.header-leading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.header-title {
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--vinta-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.header-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-width: 0;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.header-spacer {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+

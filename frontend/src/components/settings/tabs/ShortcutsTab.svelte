@@ -16,6 +16,7 @@
     CornerDownLeft,
     Layers
   } from 'lucide-svelte'
+  import BentoCard from '../../BentoCard.svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingBanner from '../SettingBanner.svelte'
   import { islandTooltip } from '../../../services/islandTooltip'
@@ -359,12 +360,11 @@
   <!-- Global Shortcuts Section -->
   <div class="section-header">
     <div class="section-title">
-      <Keyboard size={13} />
       <span>Global Shortcuts</span>
     </div>
   </div>
 
-  <div class="setting-group">
+  <BentoCard variant="group">
     {#each SHORTCUT_DEFS as sc (sc.id)}
       {@const currentVal = getShortcutValue(sc.id)}
       {@const keyCaps =
@@ -472,19 +472,18 @@
         {/if}
       </SettingItem>
     {/each}
-  </div>
+  </BentoCard>
 
   <div class="divider"></div>
 
   <!-- Island Navigation Section -->
   <div class="section-header">
     <div class="section-title">
-      <Sliders size={13} />
       <span>Island Navigation</span>
     </div>
   </div>
 
-  <div class="setting-group">
+  <BentoCard variant="group">
     <SettingItem
       label="Dismiss / Minimize Island"
       description="Minimizes an expanded dashboard, closes active modal, or returns to home"
@@ -530,7 +529,7 @@
         <kbd class="key-badge">→</kbd>
       </div>
     </SettingItem>
-  </div>
+  </BentoCard>
 </div>
 
 <style src="../../styles/settings/ShortcutsTab.css"></style>
