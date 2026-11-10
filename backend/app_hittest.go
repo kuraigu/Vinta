@@ -123,6 +123,8 @@ func (a *App) SetForceInteractive(active bool) {
 		style &^= WS_EX_TRANSPARENT
 		_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwl), style)
 		_, _, _ = procSetLayeredWindowAttrs.Call(hwnd, 0, 255, 2)
+	} else {
+		a.isCurrentlyInteractive = false
 	}
 }
 
@@ -167,6 +169,7 @@ func (a *App) startHitTestingLoop(hwnd uintptr) {
 		defer ticker.Stop()
 
 		missCount := 0
+		forceOutsideCount := 0
 
 		for range ticker.C {
 			if hwnd == 0 {
@@ -186,9 +189,8 @@ func (a *App) startHitTestingLoop(hwnd uintptr) {
 
 			isHit := false
 			if !outbound {
-				if force {
-					isHit = true
-				} else if len(rects) > 0 {
+				cursorInAnyRect := false
+				if len(rects) > 0 || force {
 					var pt point32
 					ret, _, _ := procGetCursorPos.Call(uintptr(unsafe.Pointer(&pt)))
 					if ret != 0 {
@@ -197,12 +199,36 @@ func (a *App) startHitTestingLoop(hwnd uintptr) {
 							for _, rect := range rects {
 								if pt.X >= rect.left && pt.X <= rect.right &&
 									pt.Y >= rect.top && pt.Y <= rect.bottom {
-									isHit = true
+									cursorInAnyRect = true
 									break
 								}
 							}
 						}
 					}
+				}
+
+				if force {
+					if cursorInAnyRect {
+						forceOutsideCount = 0
+						isHit = true
+					} else {
+						forceOutsideCount++
+						// Auto-expire force interactive if cursor has been outside all rects for >1s and LMB is up
+						if forceOutsideCount > 60 {
+							if lmbState, _, _ := procGetAsyncKeyState.Call(0x01); (lmbState & 0x8000) == 0 {
+								a.pillHitMu.Lock()
+								a.isForceInteractive = false
+								force = false
+								a.pillHitMu.Unlock()
+								forceOutsideCount = 0
+							}
+						}
+						if force {
+							isHit = true
+						}
+					}
+				} else if cursorInAnyRect {
+					isHit = true
 				}
 			}
 

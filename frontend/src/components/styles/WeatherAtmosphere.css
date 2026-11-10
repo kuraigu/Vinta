@@ -26,19 +26,19 @@
 
 /* Screenshot 1 Atmospheric Filter & Vertical Alpha Mask for Seamless Page Blending */
 .weather-card-aura-bg.is-seamless .weather-atmosphere-canvas {
-  filter: saturate(0.75) brightness(0.84) contrast(0.96);
+  filter: saturate(0.85) brightness(0.92) contrast(0.98);
   mask-image: linear-gradient(
     180deg,
-    rgba(0, 0, 0, 0.78) 0%,
-    rgba(0, 0, 0, 0.58) 52%,
-    rgba(0, 0, 0, 0.15) 84%,
+    rgba(0, 0, 0, 0.95) 0%,
+    rgba(0, 0, 0, 0.8) 55%,
+    rgba(0, 0, 0, 0.35) 86%,
     transparent 100%
   );
   -webkit-mask-image: linear-gradient(
     180deg,
-    rgba(0, 0, 0, 0.78) 0%,
-    rgba(0, 0, 0, 0.58) 52%,
-    rgba(0, 0, 0, 0.15) 84%,
+    rgba(0, 0, 0, 0.95) 0%,
+    rgba(0, 0, 0, 0.8) 55%,
+    rgba(0, 0, 0, 0.35) 86%,
     transparent 100%
   );
 }
@@ -51,13 +51,14 @@
   background:
     radial-gradient(
       125% 95% at 18% 92%,
-      color-mix(in srgb, var(--vinta-bg) 82%, transparent) 0%,
+      color-mix(in srgb, var(--vinta-bg) 60%, transparent) 0%,
       transparent 68%
     ),
     linear-gradient(
       180deg,
-      color-mix(in srgb, var(--vinta-bg) 24%, transparent) 0%,
-      color-mix(in srgb, var(--vinta-bg) 46%, transparent) 56%,
+      transparent 0%,
+      color-mix(in srgb, var(--vinta-bg) 18%, transparent) 45%,
+      color-mix(in srgb, var(--vinta-bg) 50%, transparent) 75%,
       var(--vinta-bg) 100%
     );
 }

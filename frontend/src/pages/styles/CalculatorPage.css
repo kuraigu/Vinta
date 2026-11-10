@@ -10,27 +10,6 @@
   overflow: hidden;
 }
 
-/* Header */
-.calc-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  height: 28px;
-  flex-shrink: 0;
-}
-
-.header-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--vinta-text-primary);
-  letter-spacing: -0.01em;
-}
-
-.header-spacer {
-  width: 28px;
-}
-
 /* Display Card */
 .calc-display-card {
   display: flex;

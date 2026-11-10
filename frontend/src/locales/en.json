@@ -447,6 +447,10 @@
   "fileshelf": {
     "title": "File Shelf",
     "drop_prompt": "Drop files or folders here",
+    "empty_subtitle": "Stage files from File Explorer, Desktop, or apps, then drag them out whenever you need them.",
+    "choose_files": "Choose Files",
+    "add_tooltip": "Choose files or folders to add",
+    "clear_tooltip": "Clear all staged files",
     "clear_shelf": "Clear all files from shelf"
   },
   "performance": {

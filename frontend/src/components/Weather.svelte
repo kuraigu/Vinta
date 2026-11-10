@@ -40,6 +40,8 @@
     config as weatherPageConfig
   } from '../pages/WeatherPage.svelte'
   import BackButton from './BackButton.svelte'
+  import BentoCard from './BentoCard.svelte'
+  import PageHeader from './PageHeader.svelte'
   import RefreshButton from './RefreshButton.svelte'
   import ScrollView from './ScrollView.svelte'
   import WeatherAtmosphere from './WeatherAtmosphere.svelte'
@@ -486,6 +488,17 @@
         </button>
       </div>
     {:else if weather}
+      <!-- Standardized Page Header -->
+      <PageHeader title={$tStore('apps.weather_name')}>
+        {#snippet actions()}
+          <RefreshButton
+            {loading}
+            onclick={() => handleRetry()}
+            title={$tStore('common.retry')}
+          />
+        {/snippet}
+      </PageHeader>
+
       <ScrollView class="weather-scroll-area">
         <div class="weather-content-stream">
           <!-- Hero Illustrated Card (Identical to Home feed card) -->
@@ -494,7 +507,7 @@
           <!-- 7-Day Forecast Section: Consolidated into 1 Bento Card with Dividers -->
           {#if weather.forecast && weather.forecast.length > 0}
             <section class="forecast-section">
-              <div class="forecast-bento-card">
+              <BentoCard variant="bento" class="forecast-bento-card">
                 <div class="forecast-bento-header">
                   <CalendarDays size={13} />
                   <span>{$tStore('weather.forecast_7day')}</span>
@@ -525,14 +538,14 @@
                     {/if}
                   {/each}
                 </div>
-              </div>
+              </BentoCard>
             </section>
           {/if}
 
           <!-- Standardized Bento Metrics Grid -->
           <div class="bento-metrics-grid">
             <!-- Wind -->
-            <div class="forecast-bento-card">
+            <BentoCard variant="bento" class="forecast-bento-card">
               <div class="tile-head">
                 <Wind size={13} class="tile-head-icon" />
                 <span>Wind</span>
@@ -544,10 +557,10 @@
               <div class="tile-sub">
                 {weather.windDirectionLabel} • {weather.windDirection}°
               </div>
-            </div>
+            </BentoCard>
 
             <!-- UV Index -->
-            <div class="forecast-bento-card">
+            <BentoCard variant="bento" class="forecast-bento-card">
               <div class="tile-head">
                 <Compass size={13} class="tile-head-icon" />
                 <span>UV Index</span>
@@ -561,10 +574,10 @@
               <div class="tile-sub">
                 {getUvRating(weather.uvIndex)}
               </div>
-            </div>
+            </BentoCard>
 
             <!-- Humidity -->
-            <div class="forecast-bento-card">
+            <BentoCard variant="bento" class="forecast-bento-card">
               <div class="tile-head">
                 <Droplets size={13} class="tile-head-icon" />
                 <span>Humidity</span>
@@ -580,10 +593,10 @@
                     ? 'Dry Air'
                     : 'Comfortable'}
               </div>
-            </div>
+            </BentoCard>
 
             <!-- Pressure -->
-            <div class="forecast-bento-card">
+            <BentoCard variant="bento" class="forecast-bento-card">
               <div class="tile-head">
                 <Gauge size={13} class="tile-head-icon" />
                 <span>Pressure</span>
@@ -593,10 +606,10 @@
                 <span class="tile-val-unit">hPa</span>
               </div>
               <div class="tile-sub">Atmospheric</div>
-            </div>
+            </BentoCard>
 
             <!-- Sun Timing -->
-            <div class="forecast-bento-card">
+            <BentoCard variant="bento" class="forecast-bento-card">
               <div class="tile-head">
                 <Sun size={13} class="tile-head-icon" />
                 <span>Sun Timing</span>
@@ -608,10 +621,10 @@
               <div class="tile-sub">
                 Sunset: {formattedSunset}
               </div>
-            </div>
+            </BentoCard>
 
             <!-- Precipitation -->
-            <div class="forecast-bento-card">
+            <BentoCard variant="bento" class="forecast-bento-card">
               <div class="tile-head">
                 <CloudRain size={13} class="tile-head-icon" />
                 <span>Precipitation</span>
@@ -623,25 +636,10 @@
                 <span class="tile-val-unit">%</span>
               </div>
               <div class="tile-sub">Peak probability today</div>
-            </div>
+            </BentoCard>
           </div>
         </div>
       </ScrollView>
-
-      <!-- Header: title is centered via a 1fr / auto / 1fr grid (see CSS) -->
-      <div class="weather-header">
-        <div class="header-left">
-          <BackButton />
-        </div>
-        <span class="header-title-text">{$tStore('apps.weather_name')}</span>
-        <div class="header-right">
-          <RefreshButton
-            {loading}
-            onclick={() => handleRetry()}
-            title={$tStore('common.retry')}
-          />
-        </div>
-      </div>
     {/if}
   </div>
 {:else}

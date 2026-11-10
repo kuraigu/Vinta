@@ -625,8 +625,13 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
 
   // Native File Drop into File Holding Shelf
   void initFileShelfStore()
-  onEvent('vinta-files-dropped', (droppedPaths: string[]) => {
-    if (!Array.isArray(droppedPaths) || droppedPaths.length === 0) return
+  onEvent('vinta-files-dropped', (rawPayload: unknown) => {
+    const droppedPaths: string[] = Array.isArray(rawPayload)
+      ? rawPayload
+      : typeof rawPayload === 'string'
+        ? [rawPayload]
+        : []
+    if (droppedPaths.length === 0) return
     if (get(pageVisibilityStore).fileshelf === false) return
     void addFilesToShelf(droppedPaths).then((added) => {
       if (added.length > 0) {

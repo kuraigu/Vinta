@@ -80,11 +80,11 @@
   background: transparent;
   margin-left: -14px;
   margin-right: -14px;
-  margin-top: -6px;
+  margin-top: -2px;
   margin-bottom: -4px;
   width: calc(100% + 28px);
-  padding: 20px 18px 22px 18px;
-  min-height: 136px;
+  padding: 8px 18px 14px 18px;
+  min-height: 120px;
 }
 
 .banner-top-layout {
@@ -435,7 +435,7 @@
   flex-direction: column;
   width: 100%;
   height: 100%;
-  padding: var(--vinta-dock-clearance, 56px) 14px 12px 14px;
+  padding: 42px 14px 12px 14px;
   box-sizing: border-box;
   overflow: hidden;
   user-select: none;
@@ -443,30 +443,11 @@
   position: relative;
 }
 
-.weather-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 2px 8px 2px;
-  flex-shrink: 0;
-  width: 100%;
-  box-sizing: border-box;
-  order: -1;
+:global(.weather-page-layout .vinta-page-header) {
   position: relative;
   z-index: 5;
-}
-
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.header-title-text {
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  color: var(--vinta-text-primary, #ffffff);
+  margin-bottom: 2px;
+  flex-shrink: 0;
 }
 
 :global(.weather-scroll-area) {
@@ -479,7 +460,7 @@
 .weather-content-stream {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
   width: 100%;
   box-sizing: border-box;
 }
@@ -501,30 +482,16 @@
   padding-left: 2px;
 }
 
-.forecast-bento-card {
+:global(.forecast-bento-card) {
   display: flex;
   flex-direction: column;
   gap: 8px;
   width: 100%;
   padding: 10px 14px;
-  border-radius: var(--vinta-radius-card, 14px);
-  background: var(--vinta-surface-card, rgba(255, 255, 255, 0.04));
-  border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.08));
   box-sizing: border-box;
-  cursor: pointer;
   text-align: left;
-  transition:
-    background 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-    border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.15s ease;
   user-select: none;
   -webkit-user-select: none;
-}
-
-.forecast-bento-card:hover {
-  background: var(--vinta-surface-elevated);
-  border-color: var(--vinta-contrast-hover);
-  box-shadow: var(--vinta-contrast-border), var(--vinta-dock-popover-shadow);
 }
 
 .forecast-bento-header {

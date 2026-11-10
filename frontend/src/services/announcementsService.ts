@@ -6,7 +6,11 @@
  * whether the user has unread announcements to show a badge on the home feed.
  */
 
-import { Call } from '@wailsio/runtime'
+import {
+  GetDeveloperAnnouncements,
+  GetReleaseNotes,
+  MarkAnnouncementsRead
+} from '../../bindings/Vinta/backend/app'
 
 /**
  * Announcement item representation.
@@ -69,7 +73,7 @@ function saveCachedAnnouncements(payload: AnnouncementsPayload): void {
  */
 export async function getReleaseNotes(version: string): Promise<string> {
   try {
-    const res = await Call.ByName('Vinta/backend.App.GetReleaseNotes', version)
+    const res = await GetReleaseNotes(version)
     return String(res || '')
   } catch (err) {
     console.error('Failed to retrieve release notes:', err)
@@ -82,7 +86,7 @@ export async function getReleaseNotes(version: string): Promise<string> {
  */
 export async function getDeveloperAnnouncements(): Promise<AnnouncementsPayload> {
   try {
-    const res = await Call.ByName('Vinta/backend.App.GetDeveloperAnnouncements')
+    const res = await GetDeveloperAnnouncements()
     const payload = (res as AnnouncementsPayload) || {
       items: [],
       hasUnread: false
@@ -102,7 +106,7 @@ export async function getDeveloperAnnouncements(): Promise<AnnouncementsPayload>
  */
 export async function markAnnouncementsRead(): Promise<void> {
   try {
-    await Call.ByName('Vinta/backend.App.MarkAnnouncementsRead')
+    await MarkAnnouncementsRead()
     if (inMemoryAnnouncements) {
       saveCachedAnnouncements({
         ...inMemoryAnnouncements,

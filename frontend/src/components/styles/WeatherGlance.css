@@ -98,16 +98,19 @@
   white-space: nowrap;
 }
 
-.hero-weather-loc {
+.hero-banner-loc-row {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  opacity: 0.88;
+  font-size: 0.74rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.82);
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
   white-space: nowrap;
 }
 
-:global(.hero-weather-loc .loc-pin) {
-  opacity: 0.9;
+:global(.hero-banner-loc-row .loc-pin) {
+  opacity: 0.85;
 }
 
 .hero-banner-time-row {

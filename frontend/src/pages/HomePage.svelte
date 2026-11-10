@@ -482,7 +482,7 @@
             </BentoCard>
           {/if}
 
-          <!-- Studio Branding Footer (Issue #185 / Category 7) -->
+          <!-- Studio Branding Footer -->
           <footer class="home-brand-footer">
             <span class="home-brand-text">{$tStore('home.brand_footer')}</span>
             <span class="home-version-pill">v{displayVersion}</span>
@@ -490,7 +490,7 @@
         </div>
       </ScrollView>
 
-      <!-- Scroll indicator cue: hides when feed has no overflow or is scrolled down -->
+      <!-- Scroll indicator cue -->
       <ScrollIndicator
         visible={canScrollMore && !isScrolledDown}
         onclick={scrollFeedDown}

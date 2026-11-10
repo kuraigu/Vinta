@@ -6,7 +6,16 @@
  */
 
 import { writable, get } from 'svelte/store'
-import { Call, Events } from '@wailsio/runtime'
+import { Events } from '@wailsio/runtime'
+import {
+  BundleShelfZip,
+  CopyShelfPathsToClipboard,
+  InspectShelfFiles,
+  PromptChooseShelfFiles,
+  RevealShelfFileInExplorer,
+  StartNativeFileDrag,
+  StripShelfImageMetadata
+} from '../../bindings/Vinta/backend/app'
 
 const STORAGE_KEY = 'vinta_file_shelf_paths'
 
@@ -120,7 +129,7 @@ export async function inspectShelfFiles(
 ): Promise<ShelfFileItem[]> {
   if (!paths || paths.length === 0) return []
   try {
-    const res = await Call.ByName('Vinta/backend.App.InspectShelfFiles', paths)
+    const res = await InspectShelfFiles(paths)
     return Array.isArray(res) ? (res as ShelfFileItem[]) : []
   } catch {
     return []
@@ -212,7 +221,7 @@ export function removeFilesFromShelf(paths: string[]): void {
  */
 export async function promptChooseShelfFiles(): Promise<ShelfFileItem[]> {
   try {
-    const res = await Call.ByName('Vinta/backend.App.PromptChooseShelfFiles')
+    const res = await PromptChooseShelfFiles()
     const picked = Array.isArray(res) ? (res as ShelfFileItem[]) : []
     if (picked.length === 0) return []
     return await addFilesToShelf(picked.map((p) => p.path))
@@ -249,7 +258,7 @@ export async function dragFilesOut(paths: string[]): Promise<void> {
     draggingPaths: paths
   }))
   try {
-    await Call.ByName('Vinta/backend.App.StartNativeFileDrag', paths)
+    await StartNativeFileDrag(paths)
   } catch {
     fileShelfStore.update((s) => ({
       ...s,
@@ -271,7 +280,7 @@ export async function copyShelfPaths(paths?: string[]): Promise<boolean> {
 
   fileShelfStore.update((s) => ({ ...s, busyAction: 'copy' }))
   try {
-    await Call.ByName('Vinta/backend.App.CopyShelfPathsToClipboard', targetPaths)
+    await CopyShelfPathsToClipboard(targetPaths)
     setShelfStatus(
       targetPaths.length === 1
         ? 'Copied 1 path'
@@ -300,8 +309,7 @@ export async function bundleShelfToZip(
 
   fileShelfStore.update((s) => ({ ...s, busyAction: 'zip' }))
   try {
-    const created = (await Call.ByName(
-      'Vinta/backend.App.BundleShelfZip',
+    const created = (await BundleShelfZip(
       targetPaths
     )) as ShelfFileItem | null
     if (created && created.path) {
@@ -343,8 +351,7 @@ export async function stripShelfExif(
 
   fileShelfStore.update((s) => ({ ...s, busyAction: 'exif' }))
   try {
-    const cleaned = (await Call.ByName(
-      'Vinta/backend.App.StripShelfImageMetadata',
+    const cleaned = (await StripShelfImageMetadata(
       targetPaths
     )) as ShelfFileItem[] | null
     if (Array.isArray(cleaned) && cleaned.length > 0) {
@@ -386,7 +393,7 @@ export function formatFileSize(bytes: number, isDir = false): string {
  */
 export async function revealShelfFileInExplorer(path: string): Promise<void> {
   try {
-    await Call.ByName('Vinta/backend.App.RevealShelfFileInExplorer', path)
+    await RevealShelfFileInExplorer(path)
   } catch {
     setShelfStatus('Failed to reveal file in Explorer')
   }

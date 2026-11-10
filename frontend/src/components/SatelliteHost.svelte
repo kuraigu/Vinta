@@ -320,6 +320,18 @@
     }
     onmouseleave?.(e)
   }
+
+  onDestroy(() => {
+    if (typeof SetForceInteractive === 'function') {
+      SetForceInteractive(false).catch(() => {})
+    }
+  })
+
+  $effect(() => {
+    if (!active && typeof SetForceInteractive === 'function') {
+      SetForceInteractive(false).catch(() => {})
+    }
+  })
 </script>
 
 {#if active}

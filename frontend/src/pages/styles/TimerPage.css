@@ -1679,7 +1679,7 @@ button.alarm-item-info:hover .alarm-item-time {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  animation: vintaTimerTabFadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: vintaTimerTabFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes vintaTimerTabFadeIn {

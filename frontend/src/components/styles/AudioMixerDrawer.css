@@ -61,7 +61,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  animation: vintaMixerTabFadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: vintaMixerTabFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes vintaMixerTabFadeIn {

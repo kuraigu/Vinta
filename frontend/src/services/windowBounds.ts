@@ -482,14 +482,17 @@ export class WindowBoundsManager {
   ): () => void {
     if (typeof window === 'undefined') return () => {}
 
+    let cycle = 0
     const runIdleCheck = () => {
+      cycle++
       if (!this.getIsDragging() && !getIsHidden()) {
         const node = getIslandNode()
         if (node) {
           this.activeIslandNode = node
           const target = getTargetBounds()
           this.currentOSBounds = { ...target }
-          this.syncPillBounds(node, false)
+          // Force reconciliation every 4 cycles (2s) to prevent any stale signature drift
+          this.syncPillBounds(node, false, cycle % 4 === 0)
         }
       }
       this.idleWatchdogTimer = window.setTimeout(runIdleCheck, 500)

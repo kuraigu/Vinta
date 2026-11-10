@@ -11,6 +11,7 @@ import (
 	"sync"
 	"sync/atomic"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -572,8 +573,9 @@ func onNativeNotification(cStr *byte) uintptr {
 }
 
 var (
-	lastAudioPeak float32 = -1.0
-	peakMu        sync.Mutex
+	lastAudioPeak     float32 = -1.0
+	lastAudioPeakTime time.Time
+	peakMu            sync.Mutex
 )
 
 func onNativeAudioPeak(peakBits uintptr) uintptr {
@@ -591,6 +593,11 @@ func onNativeAudioPeak(peakBits uintptr) uintptr {
 	peak := math.Float32frombits(uint32(peakBits))
 
 	peakMu.Lock()
+	now := time.Now()
+	if peak > 0 && now.Sub(lastAudioPeakTime) < 33*time.Millisecond {
+		peakMu.Unlock()
+		return 0
+	}
 	if peak == 0 && lastAudioPeak == 0 {
 		peakMu.Unlock()
 		return 0
@@ -600,6 +607,7 @@ func onNativeAudioPeak(peakBits uintptr) uintptr {
 		return 0
 	}
 	lastAudioPeak = peak
+	lastAudioPeakTime = now
 	peakMu.Unlock()
 
 	payload := map[string]interface{}{

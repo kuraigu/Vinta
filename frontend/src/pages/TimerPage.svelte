@@ -33,6 +33,7 @@
     X
   } from 'lucide-svelte'
   import BackButton from '../components/BackButton.svelte'
+  import PageHeader from '../components/PageHeader.svelte'
   import DotPattern from '../components/patterns/DotPattern.svelte'
   import HorizontalTabSelection, {
     type TabItem
@@ -525,47 +526,51 @@
                 : ''}"
       />
 
-      <div class="app-header">
-        <BackButton />
+      <PageHeader>
+        {#snippet center()}
+          <HorizontalTabSelection
+            tabs={timerTabs}
+            value={$timerAppStore.activeTab}
+            onchange={handleTabSelect}
+            ariaLabel={$tStore('timer.title')}
+          />
+        {/snippet}
 
-        <HorizontalTabSelection
-          tabs={timerTabs}
-          value={$timerAppStore.activeTab}
-          onchange={handleTabSelect}
-          ariaLabel={$tStore('timer.title')}
-        />
-
-        {#if $timerAppStore.activeTab === 'focus'}
-          <button
-            class="header-tool-btn"
-            class:active={isSettingsOpen}
-            onclick={() => {
-              isSettingsOpen = !isSettingsOpen
-            }}
-            use:islandTooltip={'Focus settings'}
-          >
-            <SlidersHorizontal size={14} />
-          </button>
-        {:else if $timerAppStore.activeTab === 'alarms'}
-          <button
-            class="header-tool-btn"
-            data-action="create-alarm"
-            class:active={isNewAlarmOpen}
-            onclick={() => {
-              if (isNewAlarmOpen) {
-                cancelAlarmForm()
-              } else {
-                openCreateAlarm()
-              }
-            }}
-            use:islandTooltip={$tStore('timer.new_alarm')}
-          >
-            <Plus size={15} />
-          </button>
-        {:else}
-          <div style="width: 30px;"></div>
-        {/if}
-      </div>
+        {#snippet actions()}
+          {#if $timerAppStore.activeTab === 'focus'}
+            <button
+              class="header-tool-btn"
+              class:active={isSettingsOpen}
+              onclick={() => {
+                isSettingsOpen = !isSettingsOpen
+              }}
+              use:islandTooltip={'Focus settings'}
+              aria-label="Focus settings"
+            >
+              <SlidersHorizontal size={14} />
+            </button>
+          {:else if $timerAppStore.activeTab === 'alarms'}
+            <button
+              class="header-tool-btn"
+              data-action="create-alarm"
+              class:active={isNewAlarmOpen}
+              onclick={() => {
+                if (isNewAlarmOpen) {
+                  cancelAlarmForm()
+                } else {
+                  openCreateAlarm()
+                }
+              }}
+              use:islandTooltip={$tStore('timer.new_alarm')}
+              aria-label={$tStore('timer.new_alarm')}
+            >
+              <Plus size={15} />
+            </button>
+          {:else}
+            <div class="header-spacer" aria-hidden="true"></div>
+          {/if}
+        {/snippet}
+      </PageHeader>
 
       {#if $timerAppStore.ringingAlarm}
         <div class="expanded-ringing-banner">

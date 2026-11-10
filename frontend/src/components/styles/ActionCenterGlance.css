@@ -158,8 +158,8 @@
 .quick-toggle-btn.active .toggle-icon-wrap {
   background: var(--vinta-accent-primary);
   border-color: transparent;
-  color: var(--vinta-text-on-accent);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.16);
+  color: var(--vinta-text-on-accent, #ffffff);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
 }
 
 .quick-toggle-btn.active .toggle-label {

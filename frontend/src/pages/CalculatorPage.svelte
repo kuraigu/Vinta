@@ -3,7 +3,7 @@
 
   export const config: IslandConfig = {
     minimal: { w: 220, h: 36, r: 16 },
-    expanded: { w: 340, h: 470, r: 28 }
+    expanded: { w: 340, h: 434, r: 28 }
   }
 </script>
 
@@ -16,7 +16,6 @@
    */
 
   import { Delete } from 'lucide-svelte'
-  import BackButton from '../components/BackButton.svelte'
   import { islandTooltip } from '../services/islandTooltip'
   import { tStore } from '../store'
   import {
@@ -375,13 +374,6 @@
 </script>
 
 <div data-vinta="calculator-page" class="calculator-page">
-  <!-- Uniform Reusable Header -->
-  <div class="calc-header">
-    <BackButton />
-    <span class="header-title">{$tStore('calculator.title')}</span>
-    <div class="header-spacer"></div>
-  </div>
-
   <!-- Display Panel -->
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->

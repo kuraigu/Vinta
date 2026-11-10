@@ -447,6 +447,10 @@
   "fileshelf": {
     "title": "Dateiablage",
     "drop_prompt": "Dateien oder Ordner hier ablegen",
+    "empty_subtitle": "Dateien aus Explorer, Desktop oder Apps zwischenspeichern und bei Bedarf herausziehen.",
+    "choose_files": "Dateien auswählen",
+    "add_tooltip": "Dateien oder Ordner zum Hinzufügen auswählen",
+    "clear_tooltip": "Alle abgelegten Dateien leeren",
     "clear_shelf": "Alle Dateien aus Ablage entfernen"
   },
   "performance": {

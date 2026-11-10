@@ -5,7 +5,10 @@
  * file pre-filled bug reports on GitHub without having to copy system info manually.
  */
 
-import { Call } from '@wailsio/runtime'
+import {
+  GetSystemDiagnostics,
+  OpenFeedbackIssue
+} from '../../bindings/Vinta/backend/app'
 
 /**
  * System diagnostics information gathered from host environment.
@@ -30,8 +33,8 @@ export interface SystemDiagnostics {
  */
 export async function getSystemDiagnostics(): Promise<SystemDiagnostics | null> {
   try {
-    const res = await Call.ByName('Vinta/backend.App.GetSystemDiagnostics')
-    return res as SystemDiagnostics
+    const res = await GetSystemDiagnostics()
+    return res as unknown as SystemDiagnostics
   } catch (err) {
     console.error('Failed to get system diagnostics:', err)
     return null
@@ -44,7 +47,7 @@ export async function getSystemDiagnostics(): Promise<SystemDiagnostics | null> 
  */
 export async function reportFeedback(): Promise<void> {
   try {
-    await Call.ByName('Vinta/backend.App.OpenFeedbackIssue')
+    await OpenFeedbackIssue()
   } catch (err) {
     console.error('Failed to open feedback issue:', err)
   }

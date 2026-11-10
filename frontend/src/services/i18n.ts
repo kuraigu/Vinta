@@ -8,6 +8,7 @@
 import { writable, derived, get } from 'svelte/store'
 import { localeStore } from '../stores/settings'
 import enCatalog from '../locales/en.json'
+import enGbCatalog from '../locales/en-GB.json'
 import deCatalog from '../locales/de.json'
 import filCatalog from '../locales/fil.json'
 import {
@@ -34,7 +35,8 @@ type TranslationCatalog = Record<string, any>
 
 const embeddedCatalogs: Record<string, TranslationCatalog> = {
   en: enCatalog,
-  'en-gb': enCatalog,
+  'en-gb': enGbCatalog,
+  'en-GB': enGbCatalog,
   fil: filCatalog,
   tl: filCatalog,
   de: deCatalog
@@ -124,10 +126,14 @@ export function t(
 ): string {
   const currentLocale = get(localeStore) || 'en'
   const customCatalogs = get(customCatalogsStore)
+  const normalizedKey = currentLocale.toLowerCase()
 
   // 1. Try active locale (custom drop-in takes precedence, then embedded)
   const activeCatalog =
-    customCatalogs[currentLocale] || embeddedCatalogs[currentLocale]
+    customCatalogs[currentLocale] ||
+    customCatalogs[normalizedKey] ||
+    embeddedCatalogs[currentLocale] ||
+    embeddedCatalogs[normalizedKey]
   let result = resolvePath(activeCatalog, key)
 
   // 2. Fall back to embedded English
@@ -151,11 +157,16 @@ export const tStore = derived(
   [localeStore, customCatalogsStore],
   ([$locale, $customCatalogs]) => {
     return (key: string, params?: Record<string, string | number>): string => {
+      const activeLocale = $locale || 'en'
+      const normalizedKey = activeLocale.toLowerCase()
       const activeCatalog =
-        $customCatalogs[$locale] || embeddedCatalogs[$locale]
+        $customCatalogs[activeLocale] ||
+        $customCatalogs[normalizedKey] ||
+        embeddedCatalogs[activeLocale] ||
+        embeddedCatalogs[normalizedKey]
       let res = resolvePath(activeCatalog, key)
 
-      if (!res && $locale !== 'en') {
+      if (!res && activeLocale !== 'en') {
         res = resolvePath(embeddedCatalogs.en, key)
       }
       if (!res) {

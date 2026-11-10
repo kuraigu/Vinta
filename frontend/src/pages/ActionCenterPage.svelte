@@ -3,7 +3,7 @@
 
   export const config: IslandConfig = {
     minimal: { w: 10, h: 10, r: 5 },
-    expanded: { w: 440, h: 380, r: 30 },
+    expanded: { w: 440, h: 380, r: 28 },
     borderColor: 'var(--vinta-border)',
     glowColor: 'transparent'
   }
@@ -26,11 +26,10 @@
     Zap,
     Leaf,
     Plug,
-    Plane,
-    ExternalLink
+    Plane
   } from 'lucide-svelte'
   import BentoCard from '../components/BentoCard.svelte'
-  import BackButton from '../components/BackButton.svelte'
+  import PageHeader from '../components/PageHeader.svelte'
   import IconBadge from '../components/IconBadge.svelte'
   import ToggleSwitch from '../components/ToggleSwitch.svelte'
   import { islandTooltip } from '../services/islandTooltip'
@@ -211,11 +210,7 @@
 
 <div data-vinta="action-center-page" class="action-center-page">
   <!-- Header -->
-  <div class="action-header">
-    <BackButton />
-    <span class="header-title">{$tStore('action_center.title')}</span>
-    <div class="header-spacer"></div>
-  </div>
+  <PageHeader title={$tStore('action_center.title')} />
 
   <!-- Bento Action Cards Grid -->
   <div class="action-grid">
@@ -248,18 +243,7 @@
           </span>
         </div>
       </div>
-      <!-- svelte-ignore a11y_click_events_have_key_events -->
-      <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
       <div class="card-controls-right">
-        <button
-          type="button"
-          class="quick-open-btn"
-          use:islandTooltip={$tStore('action_center.open_network')}
-          onclick={(e) => openSystemDialog('network', e)}
-          aria-label={$tStore('action_center.open_network')}
-        >
-          <ExternalLink size={13} />
-        </button>
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div onclick={(e) => e.stopPropagation()}>
           <ToggleSwitch
@@ -319,18 +303,7 @@
           </span>
         </div>
       </div>
-      <!-- svelte-ignore a11y_click_events_have_key_events -->
-      <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
       <div class="card-controls-right">
-        <button
-          type="button"
-          class="quick-open-btn"
-          use:islandTooltip={$tStore('action_center.open_bluetooth')}
-          onclick={(e) => openSystemDialog('bluetooth', e)}
-          aria-label={$tStore('action_center.open_bluetooth')}
-        >
-          <ExternalLink size={13} />
-        </button>
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div onclick={(e) => e.stopPropagation()}>
           <ToggleSwitch
@@ -374,18 +347,7 @@
           </span>
         </div>
       </div>
-      <!-- svelte-ignore a11y_click_events_have_key_events -->
-      <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
       <div class="card-controls-right">
-        <button
-          type="button"
-          class="quick-open-btn"
-          use:islandTooltip={$tStore('action_center.open_power')}
-          onclick={(e) => openSystemDialog('battery', e)}
-          aria-label={$tStore('action_center.open_power')}
-        >
-          <ExternalLink size={13} />
-        </button>
         {#if battery.hasBattery}
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <div onclick={(e) => e.stopPropagation()}>
@@ -422,18 +384,7 @@
           </span>
         </div>
       </div>
-      <!-- svelte-ignore a11y_click_events_have_key_events -->
-      <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
       <div class="card-controls-right">
-        <button
-          type="button"
-          class="quick-open-btn"
-          use:islandTooltip={$tStore('action_center.open_airplane')}
-          onclick={(e) => openSystemDialog('airplane', e)}
-          aria-label={$tStore('action_center.open_airplane')}
-        >
-          <ExternalLink size={13} />
-        </button>
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div onclick={(e) => e.stopPropagation()}>
           <ToggleSwitch
