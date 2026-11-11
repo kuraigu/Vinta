@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime/debug"
 	"strings"
 	"syscall"
 
@@ -31,18 +32,28 @@ var appIconPNG []byte
 //go:embed docs/CONTRIBUTORS.md
 var contributorsMD string
 
+// This function is executed automatically by Go before main
+// Do not use this for callbacks and runtime initialization (DippedInSoju 11 Nov 2026)
+func init() {
+	// Set GC threshold to 50% to maintain a lean, stable RAM footprint while continuously polling hardware metrics.
+	debug.SetGCPercent(50)
+}
+
 func main() {
+	// Ensure panic recovery is always first in the defer stack
 	defer backend.SetupPanicRecovery()
 
 	backend.SetEmbeddedContributors(contributorsMD)
 
+	// Initialize AppData icon asset safely
 	appData := os.Getenv("APPDATA")
 	if appData != "" && len(appIconPNG) > 0 {
 		vintaDir := filepath.Join(appData, "FreeMatrix Studios", "Vinta")
-		_ = os.MkdirAll(vintaDir, 0755)
-		iconDest := filepath.Join(vintaDir, "appicon.png")
-		if _, err := os.Stat(iconDest); os.IsNotExist(err) {
-			_ = os.WriteFile(iconDest, appIconPNG, 0644)
+		if err := os.MkdirAll(vintaDir, 0755); err == nil {
+			iconDest := filepath.Join(vintaDir, "appicon.png")
+			if _, err := os.Stat(iconDest); os.IsNotExist(err) {
+				_ = os.WriteFile(iconDest, appIconPNG, 0644)
+			}
 		}
 	}
 
@@ -52,9 +63,18 @@ func main() {
 	themeService := backend.NewThemeService()
 
 	hwAccel := backend.GetHardwareAccelerationConfig()
+
 	browserArgs := []string{
 		"--disable-renderer-backgrounding",
+		"--disable-extensions",
+		"--disable-component-extensions-with-background-pages",
+		"--disable-background-networking",
+		"--disable-sync",
+		"--disable-translate",
+		"--metrics-recording-only",
+		"--disable-default-apps",
 	}
+	
 	if hwAccel {
 		browserArgs = append(browserArgs,
 			"--ignore-gpu-blocklist",
@@ -104,6 +124,7 @@ func main() {
 		},
 	})
 
+	// Calculate multi-monitor spanning geometry
 	vLeft, vTop, vWidth, vHeight, _, monitors := backend.GetDisplayMetrics()
 	maxTopOffset := 0
 	for _, mon := range monitors {
@@ -165,16 +186,17 @@ func main() {
 		devWin.Show()
 	}
 
+	// Clean signal shutdown handling
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-sigChan
-		services.StopServicesListener()
 		if a := application.Get(); a != nil {
 			a.Quit()
 		}
 	}()
 
+	// Single source of truth for cleanup on application exit
 	defer services.StopServicesListener()
 
 	err := wailsApp.Run()
