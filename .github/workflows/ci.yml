@@ -29,34 +29,24 @@ jobs:
       - name: Set up CMake and Ninja
         uses: ashutoshvarma/setup-ninja@master
         with:
-          version: '1.11.1'
+          version: "1.11.1"
 
-      - name: Install Wails v3 CLI & Task
-        run: |
-          go install github.com/wailsapp/wails/v3/cmd/wails3@latest
-          go install github.com/go-task/task/v3/cmd/task@latest
+      - name: Install Wails v3 CLI
+        run: go install github.com/wailsapp/wails/v3/cmd/wails3@latest
+
+      - name: Install golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: latest
+          install-only: true
 
       - name: Install Frontend Dependencies
         run: |
           cd frontend
-          npm install
+          npm ci
 
-      - name: Frontend Lint & Check
-        run: |
-          cd frontend
-          npm run format:check
-          npm run lint
-          npm run check
-
-      - name: Check AppIcon Conflicts
-        run: |
-          cd frontend
-          npx tsx scripts/checkConflicts.ts
+      - name: Run Full Lint Suite (Go, C++, Frontend, Themes, Locales)
+        run: .\scripts.bat lint ci
 
       - name: Build Application Verification
-        run: task build
-
-      - name: Go Lint
-        uses: golangci/golangci-lint-action@v9
-        with:
-          version: latest
+        run: .\scripts.bat build
