@@ -32,7 +32,12 @@ jobs:
   build-and-release:
     name: Build & Release Windows App
     runs-on: windows-latest
-    if: github.event_name == 'workflow_dispatch' && github.repository == 'kuraigu/Vinta'
+    environment: release
+    if: >
+      github.event_name == 'workflow_dispatch' &&
+      github.repository == 'kuraigu/Vinta' &&
+      github.ref == 'refs/heads/main' &&
+      github.actor == 'kuraigu'
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -125,7 +130,7 @@ jobs:
           SIGNING_CERT_BASE64: ${{ secrets.SIGNING_CERT_BASE64 }}
           SIGNING_CERT_PASSWORD: ${{ secrets.SIGNING_CERT_PASSWORD }}
         run: |
-          $rawCert = "$env:SIGNING_CERT_BASE64".Trim()
+          $rawCert = "$env:SIGNING_CERT_BASE64" -replace '\s', ''
           $rawPass = "$env:SIGNING_CERT_PASSWORD".Trim()
 
           if (-not $rawCert -or -not $rawPass) {
