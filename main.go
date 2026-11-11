@@ -74,7 +74,7 @@ func main() {
 		"--metrics-recording-only",
 		"--disable-default-apps",
 	}
-	
+
 	if hwAccel {
 		browserArgs = append(browserArgs,
 			"--ignore-gpu-blocklist",

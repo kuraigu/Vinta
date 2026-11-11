@@ -262,7 +262,7 @@ var (
 // GetDisplayMetrics returns the virtual screen boundaries and monitor list for window placement.
 func GetDisplayMetrics() (vLeft, vTop, vWidth, vHeight, pCenter int, monitors []MonitorInfo) {
 	procGetSystemMetrics := user32.NewProc("GetSystemMetrics")
-	
+
 	// Fetch screen metrics outside of locks to reduce critical section overhead
 	vx, _, _ := procGetSystemMetrics.Call(SM_XVIRTUALSCREEN)
 	vy, _, _ := procGetSystemMetrics.Call(SM_YVIRTUALSCREEN)
