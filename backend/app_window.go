@@ -262,6 +262,8 @@ var (
 // GetDisplayMetrics returns the virtual screen boundaries and monitor list for window placement.
 func GetDisplayMetrics() (vLeft, vTop, vWidth, vHeight, pCenter int, monitors []MonitorInfo) {
 	procGetSystemMetrics := user32.NewProc("GetSystemMetrics")
+
+	// Fetch screen metrics outside of locks to reduce critical section overhead
 	vx, _, _ := procGetSystemMetrics.Call(SM_XVIRTUALSCREEN)
 	vy, _, _ := procGetSystemMetrics.Call(SM_YVIRTUALSCREEN)
 	vw, _, _ := procGetSystemMetrics.Call(SM_CXVIRTUALSCREEN)
@@ -269,27 +271,34 @@ func GetDisplayMetrics() (vLeft, vTop, vWidth, vHeight, pCenter int, monitors []
 
 	currVw := int(vw)
 	currVh := int(vh)
+	currVx := int(int32(vx))
+	currVy := int(int32(vy))
 
+	// 1. Fast path: Read lock check
 	cachedDisplayMu.RLock()
 	if time.Since(lastDisplayFetch) < 1*time.Second && cachedDisplayLayout.VirtualWidth > 0 &&
-		cachedDisplayLayout.VirtualWidth == currVw && cachedDisplayLayout.VirtualHeight == currVh {
+		cachedDisplayLayout.VirtualWidth == currVw && cachedDisplayLayout.VirtualHeight == currVh &&
+		cachedDisplayLayout.VirtualLeft == currVx && cachedDisplayLayout.VirtualTop == currVy {
 		layout := cachedDisplayLayout
 		cachedDisplayMu.RUnlock()
 		return layout.VirtualLeft, layout.VirtualTop, layout.VirtualWidth, layout.VirtualHeight, layout.PrimaryCenter, layout.Monitors
 	}
 	cachedDisplayMu.RUnlock()
 
+	// 2. Slow path: Write lock acquisition
 	cachedDisplayMu.Lock()
 	defer cachedDisplayMu.Unlock()
 
+	// Double-check inside write lock
 	if time.Since(lastDisplayFetch) < 1*time.Second && cachedDisplayLayout.VirtualWidth > 0 &&
-		cachedDisplayLayout.VirtualWidth == currVw && cachedDisplayLayout.VirtualHeight == currVh {
+		cachedDisplayLayout.VirtualWidth == currVw && cachedDisplayLayout.VirtualHeight == currVh &&
+		cachedDisplayLayout.VirtualLeft == currVx && cachedDisplayLayout.VirtualTop == currVy {
 		layout := cachedDisplayLayout
 		return layout.VirtualLeft, layout.VirtualTop, layout.VirtualWidth, layout.VirtualHeight, layout.PrimaryCenter, layout.Monitors
 	}
 
-	vLeft = int(int32(vx))
-	vTop = int(int32(vy))
+	vLeft = currVx
+	vTop = currVy
 	vWidth = currVw
 	vHeight = currVh
 
@@ -1440,7 +1449,9 @@ func (a *App) TrimMemory() {
 			parentPID uint32
 			exe       string
 		}
-		var allProcs []procItem
+
+		// Pre-allocate capacity to eliminate heap reallocations during snapshot iteration
+		allProcs := make([]procItem, 0, 128)
 
 		if err = windows.Process32First(snapshot, &pe); err == nil {
 			for {
