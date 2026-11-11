@@ -103,4 +103,3 @@
 </div>
 
 <style src="./styles/WeatherAtmosphere.css"></style>
-

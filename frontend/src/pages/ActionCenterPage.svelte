@@ -225,7 +225,9 @@
       <div class="card-left">
         <IconBadge
           icon={wireless.wifiEnabled && !wireless.airplaneMode ? Wifi : WifiOff}
-          color={wireless.wifiEnabled && !wireless.airplaneMode ? 'blue' : 'slate'}
+          color={wireless.wifiEnabled && !wireless.airplaneMode
+            ? 'blue'
+            : 'slate'}
           size="lg"
         />
         <div class="card-info">
@@ -335,7 +337,9 @@
               : battery.batterySaver
                 ? Leaf
                 : Battery}
-          color={battery.batterySaver || battery.isCharging ? 'emerald' : 'teal'}
+          color={battery.batterySaver || battery.isCharging
+            ? 'emerald'
+            : 'teal'}
           size="lg"
         />
         <div class="card-info">

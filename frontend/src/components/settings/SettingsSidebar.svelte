@@ -52,8 +52,7 @@
       onclick={() => ($activeSettingsTabStore = cat.id)}
     >
       <IconBadge icon={cat.icon} color={cat.badge} size="sm" />
-      <span class="sidebar-nav-label"
-        >{$tStore('settings.tabs.' + cat.id)}</span
+      <span class="sidebar-nav-label">{$tStore('settings.tabs.' + cat.id)}</span
       >
     </button>
   {/each}

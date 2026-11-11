@@ -7,11 +7,7 @@
   import type { Snippet } from 'svelte'
 
   export type BentoVariant =
-    | 'bento'
-    | 'setting'
-    | 'announcement'
-    | 'group'
-    | 'sidebar'
+    'bento' | 'setting' | 'announcement' | 'group' | 'sidebar'
   export type BentoColor =
     'blue' | 'amber' | 'primary' | 'danger' | 'emerald' | 'purple'
 

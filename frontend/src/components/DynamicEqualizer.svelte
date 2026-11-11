@@ -153,10 +153,14 @@
     } else {
       const g = ctx.createLinearGradient(0, 0, width, 0)
       const primary = canvasRef
-        ? getComputedStyle(canvasRef).getPropertyValue('--vinta-accent-primary').trim() || '#ff6b00'
+        ? getComputedStyle(canvasRef)
+            .getPropertyValue('--vinta-accent-primary')
+            .trim() || '#ff6b00'
         : '#ff6b00'
       const purple = canvasRef
-        ? getComputedStyle(canvasRef).getPropertyValue('--vinta-accent-purple').trim() || '#c084fc'
+        ? getComputedStyle(canvasRef)
+            .getPropertyValue('--vinta-accent-purple')
+            .trim() || '#c084fc'
         : '#c084fc'
       g.addColorStop(0, primary)
       g.addColorStop(1, purple)

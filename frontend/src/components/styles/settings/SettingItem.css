@@ -32,7 +32,8 @@
   flex-shrink: 0;
 }
 
-:global(.vinta-bento-card.variant-setting:hover) :global(.vinta-icon-badge.color-surface) {
+:global(.vinta-bento-card.variant-setting:hover)
+  :global(.vinta-icon-badge.color-surface) {
   border-color: var(--vinta-border);
   background: var(--vinta-hover, rgba(255, 255, 255, 0.1));
 }
@@ -104,4 +105,3 @@
   gap: 8px;
   flex-shrink: 0;
 }
-

@@ -308,7 +308,9 @@
   mix-blend-mode: color;
   opacity: 0.28;
   pointer-events: none;
-  transition: background 0.4s ease, opacity 0.4s ease;
+  transition:
+    background 0.4s ease,
+    opacity 0.4s ease;
   z-index: 1;
 }
 

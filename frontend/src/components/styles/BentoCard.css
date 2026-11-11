@@ -81,8 +81,11 @@
   border-top: 1px solid var(--vinta-border-light, rgba(255, 255, 255, 0.06)) !important;
 }
 
-.vinta-bento-card.variant-group > :global(.vinta-bento-card.variant-setting:hover),
-.vinta-bento-card.variant-group > :global(*) > :global(.vinta-bento-card.variant-setting:hover) {
+.vinta-bento-card.variant-group
+  > :global(.vinta-bento-card.variant-setting:hover),
+.vinta-bento-card.variant-group
+  > :global(*)
+  > :global(.vinta-bento-card.variant-setting:hover) {
   background: rgba(255, 255, 255, 0.025) !important;
 }
 

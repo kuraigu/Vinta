@@ -194,19 +194,11 @@
           direction="auto"
         />
         <div class="theme-actions">
-          <button
-            type="button"
-            class="theme-btn"
-            onclick={handleImport}
-          >
+          <button type="button" class="theme-btn" onclick={handleImport}>
             <Upload size={13} strokeWidth={2.2} />
             <span>{$tStore('appearance.import_theme')}</span>
           </button>
-          <button
-            type="button"
-            class="theme-btn"
-            onclick={handleOpenFolder}
-          >
+          <button type="button" class="theme-btn" onclick={handleOpenFolder}>
             <FolderOpen size={13} strokeWidth={2.2} />
             <span>{$tStore('appearance.open_folder')}</span>
           </button>
@@ -264,7 +256,9 @@
                 </div>
 
                 {#if currentTheme.manifest.description}
-                  <p class="details-desc">{currentTheme.manifest.description}</p>
+                  <p class="details-desc">
+                    {currentTheme.manifest.description}
+                  </p>
                 {/if}
 
                 {#if currentTheme.manifest.accentColor}

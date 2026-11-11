@@ -3,18 +3,18 @@
    * Reusable segmented pill selector primitive.
    */
   export interface SegmentOption {
-    value: string;
-    label: string;
-    disabled?: boolean;
+    value: string
+    label: string
+    disabled?: boolean
   }
 
   interface Props {
-    options: SegmentOption[];
-    value?: string;
-    size?: 'sm' | 'md';
-    fullWidth?: boolean;
-    onchange?: (value: string) => void;
-    class?: string;
+    options: SegmentOption[]
+    value?: string
+    size?: 'sm' | 'md'
+    fullWidth?: boolean
+    onchange?: (value: string) => void
+    class?: string
   }
 
   let {
@@ -23,13 +23,13 @@
     size = 'md',
     fullWidth = false,
     onchange,
-    class: className = '',
-  }: Props = $props();
+    class: className = ''
+  }: Props = $props()
 
   function selectOption(optValue: string) {
-    if (value === optValue) return;
-    value = optValue;
-    onchange?.(optValue);
+    if (value === optValue) return
+    value = optValue
+    onchange?.(optValue)
   }
 </script>
 
@@ -54,4 +54,3 @@
 </div>
 
 <style src="./styles/SegmentedControl.css"></style>
-

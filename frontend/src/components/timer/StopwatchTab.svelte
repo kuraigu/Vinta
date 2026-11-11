@@ -71,10 +71,7 @@
       <RotateCcw size={15} />
     </button>
 
-    <button
-      class="primary-pill-btn phase-stopwatch"
-      onclick={toggleStopwatch}
-    >
+    <button class="primary-pill-btn phase-stopwatch" onclick={toggleStopwatch}>
       {#if $timerAppStore.stopwatch.isRunning}
         <Pause size={16} />
         <span>Pause</span>

@@ -63,7 +63,10 @@
           .replace(/\s*\(#\d+\)/g, '')
           .replace(/\s+by\s+@\S+.*/i, '')
           .trim()
-        if (cleaned.length > 6 && !cleaned.toLowerCase().startsWith('full changelog')) {
+        if (
+          cleaned.length > 6 &&
+          !cleaned.toLowerCase().startsWith('full changelog')
+        ) {
           bullets.push(cleaned)
         }
       }

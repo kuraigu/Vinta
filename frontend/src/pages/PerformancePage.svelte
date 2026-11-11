@@ -138,9 +138,21 @@
                 />
               </linearGradient>
             </defs>
-            <line x1="0" y1="9.5" x2="340" y2="9.5" class="sparkline-grid-line" />
+            <line
+              x1="0"
+              y1="9.5"
+              x2="340"
+              y2="9.5"
+              class="sparkline-grid-line"
+            />
             <line x1="0" y1="16" x2="340" y2="16" class="sparkline-grid-line" />
-            <line x1="0" y1="22.5" x2="340" y2="22.5" class="sparkline-grid-line" />
+            <line
+              x1="0"
+              y1="22.5"
+              x2="340"
+              y2="22.5"
+              class="sparkline-grid-line"
+            />
             <polygon points={cpuArea} fill="url(#grad-cpu)" />
             <polyline points={cpuLine} class="sparkline-trace cpu" />
           </svg>
@@ -190,9 +202,21 @@
                 />
               </linearGradient>
             </defs>
-            <line x1="0" y1="9.5" x2="340" y2="9.5" class="sparkline-grid-line" />
+            <line
+              x1="0"
+              y1="9.5"
+              x2="340"
+              y2="9.5"
+              class="sparkline-grid-line"
+            />
             <line x1="0" y1="16" x2="340" y2="16" class="sparkline-grid-line" />
-            <line x1="0" y1="22.5" x2="340" y2="22.5" class="sparkline-grid-line" />
+            <line
+              x1="0"
+              y1="22.5"
+              x2="340"
+              y2="22.5"
+              class="sparkline-grid-line"
+            />
             <polygon points={ramArea} fill="url(#grad-ram)" />
             <polyline points={ramLine} class="sparkline-trace ram" />
           </svg>
@@ -245,9 +269,21 @@
                 />
               </linearGradient>
             </defs>
-            <line x1="0" y1="9.5" x2="340" y2="9.5" class="sparkline-grid-line" />
+            <line
+              x1="0"
+              y1="9.5"
+              x2="340"
+              y2="9.5"
+              class="sparkline-grid-line"
+            />
             <line x1="0" y1="16" x2="340" y2="16" class="sparkline-grid-line" />
-            <line x1="0" y1="22.5" x2="340" y2="22.5" class="sparkline-grid-line" />
+            <line
+              x1="0"
+              y1="22.5"
+              x2="340"
+              y2="22.5"
+              class="sparkline-grid-line"
+            />
             <polygon points={gpuArea} fill="url(#grad-gpu)" />
             <polyline points={gpuLine} class="sparkline-trace gpu" />
           </svg>

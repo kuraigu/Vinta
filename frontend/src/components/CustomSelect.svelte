@@ -288,7 +288,8 @@
             {/if}
             <span class="option-label">{opt.label}</span>
             {#if opt.isDefault || (defaultValue !== undefined && opt.value === defaultValue)}
-              <span class="option-default-tag">{$tStore('common.default')}</span>
+              <span class="option-default-tag">{$tStore('common.default')}</span
+              >
             {/if}
           </button>
         {:else}

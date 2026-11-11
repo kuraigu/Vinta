@@ -296,333 +296,342 @@
 
       <div class="pane-body">
         <ScrollView class="onboarding-scroll">
-        {#key currentStep}
-          <div class="onboarding-step-transition">
-            {#if currentStep === 0}
-          <!-- Step 1: Welcome, Language & Name -->
-          <div class="onboarding-inputs-grid">
-            <BentoCard variant="bento" class="onboarding-field-card">
-              <span class="field-card-label">
-                {$tStore('settings.language_label')}
-              </span>
-              <CustomSelect
-                options={localeOptions}
-                bind:value={$localeStore}
-                fullWidth={true}
-              />
-            </BentoCard>
+          {#key currentStep}
+            <div class="onboarding-step-transition">
+              {#if currentStep === 0}
+                <!-- Step 1: Welcome, Language & Name -->
+                <div class="onboarding-inputs-grid">
+                  <BentoCard variant="bento" class="onboarding-field-card">
+                    <span class="field-card-label">
+                      {$tStore('settings.language_label')}
+                    </span>
+                    <CustomSelect
+                      options={localeOptions}
+                      bind:value={$localeStore}
+                      fullWidth={true}
+                    />
+                  </BentoCard>
 
-            <BentoCard variant="bento" class="onboarding-field-card">
-              <label for="onboarding-name-input" class="field-card-label">
-                {$tStore('onboarding.name_prompt')}
-              </label>
-              <div class="onboarding-input-wrapper">
-                <User size={13} class="input-leading-icon" />
-                <input
-                  id="onboarding-name-input"
-                  type="text"
-                  class="onboarding-name-field"
-                  placeholder={$tStore('onboarding.name_placeholder')}
-                  maxlength="20"
-                  bind:value={$userNameStore}
-                  onblur={() => {
-                    if (!$userNameStore || !$userNameStore.trim()) {
-                      $userNameStore = 'User'
-                    } else {
-                      $userNameStore = $userNameStore.trim()
-                    }
-                  }}
-                />
-              </div>
-            </BentoCard>
-          </div>
-
-          <BentoCard variant="group">
-            <div class="example-row">
-              <IconBadge icon={Maximize2} color="cyan" size="md" />
-              <div class="example-text-col">
-                <span class="example-title"
-                  >{$tStore('onboarding.feature_expand_title')}</span
-                >
-                <span class="example-desc"
-                  >{$tStore('onboarding.feature_expand_desc')}</span
-                >
-              </div>
-            </div>
-
-            <div class="example-row">
-              <IconBadge icon={LayoutGrid} color="emerald" size="md" />
-              <div class="example-text-col">
-                <span class="example-title"
-                  >{$tStore('onboarding.feature_glance_title')}</span
-                >
-                <span class="example-desc"
-                  >{$tStore('onboarding.feature_glance_desc')}</span
-                >
-              </div>
-            </div>
-          </BentoCard>
-        {:else if currentStep === 1}
-          <!-- Step 2: Island Basics -->
-          <BentoCard variant="group">
-            <div class="example-row">
-              <IconBadge icon={Maximize2} color="cyan" size="md" />
-              <div class="example-text-col">
-                <span class="example-title"
-                  >{$tStore('onboarding.basics_expand_title')}</span
-                >
-                <span class="example-desc"
-                  >{$tStore('onboarding.basics_expand_desc')}</span
-                >
-              </div>
-            </div>
-
-            <div class="example-row">
-              <IconBadge icon={Minimize2} color="blue" size="md" />
-              <div class="example-text-col">
-                <span class="example-title"
-                  >{$tStore('onboarding.basics_collapse_title')}</span
-                >
-                <span class="example-desc"
-                  >{$tStore('onboarding.basics_collapse_desc')}</span
-                >
-              </div>
-            </div>
-
-            <div class="example-row">
-              <IconBadge icon={Move} color="amber" size="md" />
-              <div class="example-text-col">
-                <span class="example-title"
-                  >{$tStore('onboarding.feature_move_title')}</span
-                >
-                <span class="example-desc"
-                  >{$tStore('onboarding.feature_move_desc')}</span
-                >
-              </div>
-            </div>
-          </BentoCard>
-
-          <BentoCard variant="setting" class="onboarding-setting-row">
-            <div class="setting-row-text">
-              <span class="setting-row-title"
-                >{$tStore('onboarding.resting_alignment')}</span
-              >
-              <span class="setting-row-desc"
-                >{$tStore('onboarding.resting_alignment_desc')}</span
-              >
-            </div>
-            <SegmentedControl
-              size="sm"
-              options={[
-                { value: 'top-left', label: $tStore('onboarding.align_left') },
-                { value: 'center', label: $tStore('onboarding.align_center') },
-                { value: 'top-right', label: $tStore('onboarding.align_right') }
-              ]}
-              value={$hiddenPillPositionStore}
-              onchange={(val) => ($hiddenPillPositionStore = val as any)}
-            />
-          </BentoCard>
-        {:else if currentStep === 2}
-          <!-- Step 3: Gestures & Shortcuts -->
-          <BentoCard variant="group">
-            <div class="example-row">
-              <IconBadge icon={Keyboard} color="purple" size="md" />
-              <div class="example-text-col">
-                <div class="example-title-with-kbd">
-                  <span class="example-title"
-                    >{$tStore('onboarding.shortcut_toggle_title')}</span
-                  >
-                  <kbd class="kbd-pill">Alt + Shift + V</kbd>
+                  <BentoCard variant="bento" class="onboarding-field-card">
+                    <label for="onboarding-name-input" class="field-card-label">
+                      {$tStore('onboarding.name_prompt')}
+                    </label>
+                    <div class="onboarding-input-wrapper">
+                      <User size={13} class="input-leading-icon" />
+                      <input
+                        id="onboarding-name-input"
+                        type="text"
+                        class="onboarding-name-field"
+                        placeholder={$tStore('onboarding.name_placeholder')}
+                        maxlength="20"
+                        bind:value={$userNameStore}
+                        onblur={() => {
+                          if (!$userNameStore || !$userNameStore.trim()) {
+                            $userNameStore = 'User'
+                          } else {
+                            $userNameStore = $userNameStore.trim()
+                          }
+                        }}
+                      />
+                    </div>
+                  </BentoCard>
                 </div>
-                <span class="example-desc"
-                  >{$tStore('onboarding.shortcut_toggle_desc')}</span
-                >
-              </div>
-            </div>
 
-            <div class="example-row">
-              <IconBadge icon={StickyNote} color="amber" size="md" />
-              <div class="example-text-col">
-                <div class="example-title-with-kbd">
-                  <span class="example-title"
-                    >{$tStore('onboarding.shortcut_notes_title')}</span
-                  >
-                  <kbd class="kbd-pill">Alt + Shift + N</kbd>
+                <BentoCard variant="group">
+                  <div class="example-row">
+                    <IconBadge icon={Maximize2} color="cyan" size="md" />
+                    <div class="example-text-col">
+                      <span class="example-title"
+                        >{$tStore('onboarding.feature_expand_title')}</span
+                      >
+                      <span class="example-desc"
+                        >{$tStore('onboarding.feature_expand_desc')}</span
+                      >
+                    </div>
+                  </div>
+
+                  <div class="example-row">
+                    <IconBadge icon={LayoutGrid} color="emerald" size="md" />
+                    <div class="example-text-col">
+                      <span class="example-title"
+                        >{$tStore('onboarding.feature_glance_title')}</span
+                      >
+                      <span class="example-desc"
+                        >{$tStore('onboarding.feature_glance_desc')}</span
+                      >
+                    </div>
+                  </div>
+                </BentoCard>
+              {:else if currentStep === 1}
+                <!-- Step 2: Island Basics -->
+                <BentoCard variant="group">
+                  <div class="example-row">
+                    <IconBadge icon={Maximize2} color="cyan" size="md" />
+                    <div class="example-text-col">
+                      <span class="example-title"
+                        >{$tStore('onboarding.basics_expand_title')}</span
+                      >
+                      <span class="example-desc"
+                        >{$tStore('onboarding.basics_expand_desc')}</span
+                      >
+                    </div>
+                  </div>
+
+                  <div class="example-row">
+                    <IconBadge icon={Minimize2} color="blue" size="md" />
+                    <div class="example-text-col">
+                      <span class="example-title"
+                        >{$tStore('onboarding.basics_collapse_title')}</span
+                      >
+                      <span class="example-desc"
+                        >{$tStore('onboarding.basics_collapse_desc')}</span
+                      >
+                    </div>
+                  </div>
+
+                  <div class="example-row">
+                    <IconBadge icon={Move} color="amber" size="md" />
+                    <div class="example-text-col">
+                      <span class="example-title"
+                        >{$tStore('onboarding.feature_move_title')}</span
+                      >
+                      <span class="example-desc"
+                        >{$tStore('onboarding.feature_move_desc')}</span
+                      >
+                    </div>
+                  </div>
+                </BentoCard>
+
+                <BentoCard variant="setting" class="onboarding-setting-row">
+                  <div class="setting-row-text">
+                    <span class="setting-row-title"
+                      >{$tStore('onboarding.resting_alignment')}</span
+                    >
+                    <span class="setting-row-desc"
+                      >{$tStore('onboarding.resting_alignment_desc')}</span
+                    >
+                  </div>
+                  <SegmentedControl
+                    size="sm"
+                    options={[
+                      {
+                        value: 'top-left',
+                        label: $tStore('onboarding.align_left')
+                      },
+                      {
+                        value: 'center',
+                        label: $tStore('onboarding.align_center')
+                      },
+                      {
+                        value: 'top-right',
+                        label: $tStore('onboarding.align_right')
+                      }
+                    ]}
+                    value={$hiddenPillPositionStore}
+                    onchange={(val) => ($hiddenPillPositionStore = val as any)}
+                  />
+                </BentoCard>
+              {:else if currentStep === 2}
+                <!-- Step 3: Gestures & Shortcuts -->
+                <BentoCard variant="group">
+                  <div class="example-row">
+                    <IconBadge icon={Keyboard} color="purple" size="md" />
+                    <div class="example-text-col">
+                      <div class="example-title-with-kbd">
+                        <span class="example-title"
+                          >{$tStore('onboarding.shortcut_toggle_title')}</span
+                        >
+                        <kbd class="kbd-pill">Alt + Shift + V</kbd>
+                      </div>
+                      <span class="example-desc"
+                        >{$tStore('onboarding.shortcut_toggle_desc')}</span
+                      >
+                    </div>
+                  </div>
+
+                  <div class="example-row">
+                    <IconBadge icon={StickyNote} color="amber" size="md" />
+                    <div class="example-text-col">
+                      <div class="example-title-with-kbd">
+                        <span class="example-title"
+                          >{$tStore('onboarding.shortcut_notes_title')}</span
+                        >
+                        <kbd class="kbd-pill">Alt + Shift + N</kbd>
+                      </div>
+                      <span class="example-desc"
+                        >{$tStore('onboarding.shortcut_notes_desc')}</span
+                      >
+                    </div>
+                  </div>
+
+                  <div class="example-row">
+                    <IconBadge icon={EyeOff} color="blue" size="md" />
+                    <div class="example-text-col">
+                      <span class="example-title"
+                        >{$tStore('onboarding.gesture_autohide_title')}</span
+                      >
+                      <span class="example-desc"
+                        >{$tStore('onboarding.gesture_autohide_desc')}</span
+                      >
+                    </div>
+                  </div>
+                </BentoCard>
+              {:else if currentStep === 3}
+                <!-- Step 4: Pages & Widgets (Complete Feature Grouping) -->
+                <BentoCard variant="group">
+                  <div class="example-row">
+                    <IconBadge icon={Calendar} color="blue" size="md" />
+                    <div class="example-text-col">
+                      <span class="example-title"
+                        >{$tStore('onboarding.widget_calendar_title')}</span
+                      >
+                      <span class="example-desc"
+                        >{$tStore('onboarding.widget_calendar_desc')}</span
+                      >
+                    </div>
+                  </div>
+
+                  <div class="example-row">
+                    <IconBadge icon={Timer} color="amber" size="md" />
+                    <div class="example-text-col">
+                      <span class="example-title"
+                        >{$tStore('onboarding.widget_timer_title')}</span
+                      >
+                      <span class="example-desc"
+                        >{$tStore('onboarding.widget_timer_desc')}</span
+                      >
+                    </div>
+                  </div>
+
+                  <div class="example-row">
+                    <IconBadge icon={Music} color="rose" size="md" />
+                    <div class="example-text-col">
+                      <span class="example-title"
+                        >{$tStore('onboarding.widget_media_title')}</span
+                      >
+                      <span class="example-desc"
+                        >{$tStore('onboarding.widget_media_desc')}</span
+                      >
+                    </div>
+                  </div>
+
+                  <div class="example-row">
+                    <IconBadge icon={LayoutGrid} color="emerald" size="md" />
+                    <div class="example-text-col">
+                      <span class="example-title"
+                        >{$tStore('onboarding.widget_utilities_title')}</span
+                      >
+                      <span class="example-desc"
+                        >{$tStore('onboarding.widget_utilities_desc')}</span
+                      >
+                    </div>
+                  </div>
+                </BentoCard>
+              {:else if currentStep === 4}
+                <!-- Step 5: Limitations & Overlay Compatibility -->
+                <BentoCard variant="group">
+                  <div class="example-row">
+                    <IconBadge icon={Gamepad2} color="amber" size="md" />
+                    <div class="example-text-col">
+                      <span class="example-title"
+                        >{$tStore('onboarding.limit_fullscreen_title')}</span
+                      >
+                      <span class="example-desc"
+                        >{$tStore('onboarding.limit_fullscreen_desc')}</span
+                      >
+                    </div>
+                  </div>
+
+                  <div class="example-row">
+                    <IconBadge icon={ShieldAlert} color="purple" size="md" />
+                    <div class="example-text-col">
+                      <span class="example-title"
+                        >{$tStore('onboarding.limit_admin_title')}</span
+                      >
+                      <span class="example-desc"
+                        >{$tStore('onboarding.limit_admin_desc')}</span
+                      >
+                    </div>
+                  </div>
+
+                  <div class="example-row">
+                    <IconBadge icon={Lock} color="rose" size="md" />
+                    <div class="example-text-col">
+                      <span class="example-title"
+                        >{$tStore('onboarding.limit_drm_title')}</span
+                      >
+                      <span class="example-desc"
+                        >{$tStore('onboarding.limit_drm_desc')}</span
+                      >
+                    </div>
+                  </div>
+
+                  <div class="example-row">
+                    <IconBadge icon={Monitor} color="blue" size="md" />
+                    <div class="example-text-col">
+                      <span class="example-title"
+                        >{$tStore('onboarding.limit_docking_title')}</span
+                      >
+                      <span class="example-desc"
+                        >{$tStore('onboarding.limit_docking_desc')}</span
+                      >
+                    </div>
+                  </div>
+                </BentoCard>
+              {:else if currentStep === 5}
+                <!-- Step 6: Personalize & Finish -->
+                <div class="onboarding-theme-grid">
+                  {#each themes as t (t.id)}
+                    <button
+                      type="button"
+                      class="theme-preview-card"
+                      class:active={$themeStore === t.id}
+                      onclick={() => ($themeStore = t.id)}
+                    >
+                      <span class="theme-dot {t.id}"></span>
+                      <span class="theme-name">{t.name}</span>
+                    </button>
+                  {/each}
                 </div>
-                <span class="example-desc"
-                  >{$tStore('onboarding.shortcut_notes_desc')}</span
-                >
-              </div>
-            </div>
 
-            <div class="example-row">
-              <IconBadge icon={EyeOff} color="blue" size="md" />
-              <div class="example-text-col">
-                <span class="example-title"
-                  >{$tStore('onboarding.gesture_autohide_title')}</span
-                >
-                <span class="example-desc"
-                  >{$tStore('onboarding.gesture_autohide_desc')}</span
-                >
-              </div>
-            </div>
-          </BentoCard>
-        {:else if currentStep === 3}
-          <!-- Step 4: Pages & Widgets (Complete Feature Grouping) -->
-          <BentoCard variant="group">
-            <div class="example-row">
-              <IconBadge icon={Calendar} color="blue" size="md" />
-              <div class="example-text-col">
-                <span class="example-title"
-                  >{$tStore('onboarding.widget_calendar_title')}</span
-                >
-                <span class="example-desc"
-                  >{$tStore('onboarding.widget_calendar_desc')}</span
-                >
-              </div>
-            </div>
+                <BentoCard variant="group">
+                  <div class="example-row">
+                    <IconBadge icon={Power} color="emerald" size="md" />
+                    <div class="example-text-col">
+                      <span class="example-title"
+                        >{$tStore('onboarding.start_with_windows')}</span
+                      >
+                      <span class="example-desc"
+                        >{$tStore('onboarding.start_with_windows_desc')}</span
+                      >
+                    </div>
+                    <ToggleSwitch
+                      checked={$autostartStore}
+                      onchange={() => handleToggleAutostart()}
+                      ariaLabel={$tStore('onboarding.start_with_windows')}
+                    />
+                  </div>
 
-            <div class="example-row">
-              <IconBadge icon={Timer} color="amber" size="md" />
-              <div class="example-text-col">
-                <span class="example-title"
-                  >{$tStore('onboarding.widget_timer_title')}</span
-                >
-                <span class="example-desc"
-                  >{$tStore('onboarding.widget_timer_desc')}</span
-                >
-              </div>
+                  <div class="example-row">
+                    <IconBadge icon={Activity} color="cyan" size="md" />
+                    <div class="example-text-col">
+                      <span class="example-title"
+                        >{$tStore('onboarding.system_stats')}</span
+                      >
+                      <span class="example-desc"
+                        >{$tStore('onboarding.system_stats_desc')}</span
+                      >
+                    </div>
+                    <ToggleSwitch
+                      checked={Boolean($homeWidgetsVisibilityStore.systemStats)}
+                      onchange={() => handleToggleSystemStats()}
+                      ariaLabel={$tStore('onboarding.system_stats')}
+                    />
+                  </div>
+                </BentoCard>
+              {/if}
             </div>
-
-            <div class="example-row">
-              <IconBadge icon={Music} color="rose" size="md" />
-              <div class="example-text-col">
-                <span class="example-title"
-                  >{$tStore('onboarding.widget_media_title')}</span
-                >
-                <span class="example-desc"
-                  >{$tStore('onboarding.widget_media_desc')}</span
-                >
-              </div>
-            </div>
-
-            <div class="example-row">
-              <IconBadge icon={LayoutGrid} color="emerald" size="md" />
-              <div class="example-text-col">
-                <span class="example-title"
-                  >{$tStore('onboarding.widget_utilities_title')}</span
-                >
-                <span class="example-desc"
-                  >{$tStore('onboarding.widget_utilities_desc')}</span
-                >
-              </div>
-            </div>
-          </BentoCard>
-        {:else if currentStep === 4}
-          <!-- Step 5: Limitations & Overlay Compatibility -->
-          <BentoCard variant="group">
-            <div class="example-row">
-              <IconBadge icon={Gamepad2} color="amber" size="md" />
-              <div class="example-text-col">
-                <span class="example-title"
-                  >{$tStore('onboarding.limit_fullscreen_title')}</span
-                >
-                <span class="example-desc"
-                  >{$tStore('onboarding.limit_fullscreen_desc')}</span
-                >
-              </div>
-            </div>
-
-            <div class="example-row">
-              <IconBadge icon={ShieldAlert} color="purple" size="md" />
-              <div class="example-text-col">
-                <span class="example-title"
-                  >{$tStore('onboarding.limit_admin_title')}</span
-                >
-                <span class="example-desc"
-                  >{$tStore('onboarding.limit_admin_desc')}</span
-                >
-              </div>
-            </div>
-
-            <div class="example-row">
-              <IconBadge icon={Lock} color="rose" size="md" />
-              <div class="example-text-col">
-                <span class="example-title"
-                  >{$tStore('onboarding.limit_drm_title')}</span
-                >
-                <span class="example-desc"
-                  >{$tStore('onboarding.limit_drm_desc')}</span
-                >
-              </div>
-            </div>
-
-            <div class="example-row">
-              <IconBadge icon={Monitor} color="blue" size="md" />
-              <div class="example-text-col">
-                <span class="example-title"
-                  >{$tStore('onboarding.limit_docking_title')}</span
-                >
-                <span class="example-desc"
-                  >{$tStore('onboarding.limit_docking_desc')}</span
-                >
-              </div>
-            </div>
-          </BentoCard>
-        {:else if currentStep === 5}
-          <!-- Step 6: Personalize & Finish -->
-          <div class="onboarding-theme-grid">
-            {#each themes as t (t.id)}
-              <button
-                type="button"
-                class="theme-preview-card"
-                class:active={$themeStore === t.id}
-                onclick={() => ($themeStore = t.id)}
-              >
-                <span class="theme-dot {t.id}"></span>
-                <span class="theme-name">{t.name}</span>
-              </button>
-            {/each}
-          </div>
-
-          <BentoCard variant="group">
-            <div class="example-row">
-              <IconBadge icon={Power} color="emerald" size="md" />
-              <div class="example-text-col">
-                <span class="example-title"
-                  >{$tStore('onboarding.start_with_windows')}</span
-                >
-                <span class="example-desc"
-                  >{$tStore('onboarding.start_with_windows_desc')}</span
-                >
-              </div>
-              <ToggleSwitch
-                checked={$autostartStore}
-                onchange={() => handleToggleAutostart()}
-                ariaLabel={$tStore('onboarding.start_with_windows')}
-              />
-            </div>
-
-            <div class="example-row">
-              <IconBadge icon={Activity} color="cyan" size="md" />
-              <div class="example-text-col">
-                <span class="example-title"
-                  >{$tStore('onboarding.system_stats')}</span
-                >
-                <span class="example-desc"
-                  >{$tStore('onboarding.system_stats_desc')}</span
-                >
-              </div>
-              <ToggleSwitch
-                checked={Boolean($homeWidgetsVisibilityStore.systemStats)}
-                onchange={() => handleToggleSystemStats()}
-                ariaLabel={$tStore('onboarding.system_stats')}
-              />
-            </div>
-          </BentoCard>
-            {/if}
-          </div>
-        {/key}
+          {/key}
         </ScrollView>
       </div>
 
