@@ -1,86 +1,89 @@
 name: All Contributors
 
 on:
-  push:
+  pull_request_target:
+    types: [closed]
     branches:
       - main
-  issue_comment:
-    types: [created]
 
 permissions:
   contents: write
-  pull-requests: write
-  issues: write
 
 jobs:
   contribute:
+    name: Sync New Contributor
     runs-on: ubuntu-latest
-    if: |
-      github.event_name == 'push' ||
-      (github.event_name == 'issue_comment' && (github.event.comment.author_association == 'OWNER' || github.event.comment.author_association == 'MEMBER' || github.event.comment.author_association == 'COLLABORATOR'))
+    # Only run in kuraigu/Vinta when a PR is actually MERGED into main
+    if: >
+      github.repository == 'kuraigu/Vinta' &&
+      github.event.pull_request.merged == true
     steps:
-      - name: Checkout Repository
+      - name: Checkout main branch
         uses: actions/checkout@v4
         with:
+          ref: main
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Check if Contributor Already Exists
+        id: check_user
+        env:
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          BODY_TEXT: ${{ github.event.pull_request.body }}
+        run: |
+          # 1. Skip bots (like dependabot)
+          if [[ "$PR_AUTHOR" == *"[bot]"* ]]; then
+            echo "Author is a bot. Skipping."
+            echo "should_add=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # 2. Check if author already exists in .all-contributorsrc
+          EXISTING=$(jq -r ".contributors[]? | select(.login == \"$PR_AUTHOR\") | .login" .all-contributorsrc 2>/dev/null || echo "")
+          if [ -n "$EXISTING" ]; then
+            echo "Contributor $PR_AUTHOR already exists in .all-contributorsrc. Skipping."
+            echo "should_add=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # 3. Check if contributor requested anonymity / opt-out in PR body
+          if echo "$BODY_TEXT" | grep -qi "\[x\] I prefer to remain anonymous"; then
+            echo "Contributor $PR_AUTHOR opted out of public recognition. Skipping."
+            echo "should_add=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "New contributor detected: $PR_AUTHOR"
+          echo "should_add=true" >> $GITHUB_OUTPUT
+
       - name: Setup Node.js
+        if: steps.check_user.outputs.should_add == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: "20"
 
-      - name: Parse Merged PR Details and Sync Preferred Name
+      - name: Add New Contributor and Generate Table
+        if: steps.check_user.outputs.should_add == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          BODY_TEXT: ${{ github.event.pull_request.body }}
         run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
-            # Extract latest merged PR details using GitHub CLI
-            PR_JSON=$(gh pr list --state merged --limit 1 --json number,body,author 2>/dev/null || echo "[]")
-            PR_NUM=$(echo "$PR_JSON" | jq -r '.[0].number // empty')
-            PR_AUTHOR=$(echo "$PR_JSON" | jq -r '.[0].author.login // empty')
-            BODY_TEXT=$(echo "$PR_JSON" | jq -r '.[0].body // empty')
+          PREFERRED_NAME=$(echo "$BODY_TEXT" | grep -i "Preferred Display Name:" | sed -E 's/.*Preferred Display Name:[[:space:]]*//I' | sed 's/\[Leave blank to use your GitHub display name\]//g' | tr -d '\r' | xargs)
 
-            if [ -n "$PR_NUM" ] && [ -n "$PR_AUTHOR" ]; then
-              # Check if contributor requested anonymity / opt-out
-              if echo "$BODY_TEXT" | grep -qi "\[x\] I prefer to remain anonymous"; then
-                echo "Contributor $PR_AUTHOR opted out of public recognition."
-              else
-                # Extract Preferred Display Name if specified in PR template
-                PREFERRED_NAME=$(echo "$BODY_TEXT" | grep -i "Preferred Display Name:" | sed -E 's/.*Preferred Display Name:[[:space:]]*//I' | sed 's/\[Leave blank to use your GitHub display name\]//g' | xargs)
-
-                # Dynamically look up existing roles for PR author in .all-contributorsrc
-                EXISTING_ROLES=$(jq -r ".contributors[]? | select(.login == \"$PR_AUTHOR\") | .contributions | join(\",\")" .all-contributorsrc 2>/dev/null || echo "")
-
-                if [ -n "$EXISTING_ROLES" ]; then
-                  if echo "$EXISTING_ROLES" | grep -q "contributor"; then
-                    ROLES="$EXISTING_ROLES"
-                  else
-                    ROLES="$EXISTING_ROLES,contributor"
-                  fi
-                else
-                  ROLES="contributor"
-                fi
-
-                if [ -n "$PREFERRED_NAME" ]; then
-                  echo "Syncing $PR_AUTHOR ($ROLES) with preferred display name: $PREFERRED_NAME"
-                  npx all-contributors-cli add "$PR_AUTHOR" "$ROLES" --name "$PREFERRED_NAME" || true
-                else
-                  echo "Syncing $PR_AUTHOR ($ROLES) with default GitHub profile name"
-                  npx all-contributors-cli add "$PR_AUTHOR" "$ROLES" || true
-                fi
-              fi
-            fi
+          if [ -n "$PREFERRED_NAME" ]; then
+            echo "Adding $PR_AUTHOR with preferred display name: $PREFERRED_NAME"
+            npx all-contributors-cli add "$PR_AUTHOR" "contributor" --name "$PREFERRED_NAME"
+          else
+            echo "Adding $PR_AUTHOR with default GitHub profile name"
+            npx all-contributors-cli add "$PR_AUTHOR" "contributor"
           fi
+
           npx all-contributors-cli generate
 
-      - name: Get Last Commit Info
-        id: last_commit
-        run: |
-          echo "MSG=$(git log -1 --format='%h - %s' | tr -d '"')" >> $GITHUB_OUTPUT
-
       - name: Commit and Push Changes
+        if: steps.check_user.outputs.should_add == 'true'
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "docs: update contributors hall of fame (synced: ${{ steps.last_commit.outputs.MSG }}) [skip ci]"
+          branch: main
+          commit_message: "docs: add @${{ github.event.pull_request.user.login }} to contributors hall of fame (PR #${{ github.event.pull_request.number }}) [skip ci]"
           file_pattern: "docs/CONTRIBUTORS.md .all-contributorsrc"
