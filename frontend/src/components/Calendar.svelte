@@ -561,80 +561,83 @@
         {#key activeTab}
           <div class="calendar-tab-transition">
             {#if activeTab === 'agenda'}
-          <!-- FULL AGENDA STREAM TAB -->
-          <div class="agenda-tab-view">
-            <div class="agenda-toolbar-row">
-              <HorizontalTabSelection
-                tabs={agendaFilterTabs}
-                bind:value={agendaFilter}
-                colorVariant="primary"
-                ariaLabel="Filter agenda events"
-              />
+              <!-- FULL AGENDA STREAM TAB -->
+              <div class="agenda-tab-view">
+                <div class="agenda-toolbar-row">
+                  <HorizontalTabSelection
+                    tabs={agendaFilterTabs}
+                    bind:value={agendaFilter}
+                    colorVariant="primary"
+                    ariaLabel="Filter agenda events"
+                  />
 
-              <div class="agenda-toolbar-actions">
-                {#if pastEventsCount > 0}
-                  <button
-                    type="button"
-                    class="agenda-clear-past-btn"
-                    onclick={() => discardPastCalendarEvents()}
-                    use:islandTooltip={{
-                      text: $tStore('calendar.clear_past_tooltip', {
-                        count: pastEventsCount,
-                        unit: pastEventsCount === 1 ? 'event' : 'events'
-                      })
-                    }}
-                    aria-label={$tStore('calendar.clear_past', {
-                      count: pastEventsCount
-                    })}
-                  >
-                    <Trash2 size={12} />
-                    <span
-                      >{$tStore('calendar.clear_past', {
-                        count: pastEventsCount
-                      })}</span
+                  <div class="agenda-toolbar-actions">
+                    {#if pastEventsCount > 0}
+                      <button
+                        type="button"
+                        class="agenda-clear-past-btn"
+                        onclick={() => discardPastCalendarEvents()}
+                        use:islandTooltip={{
+                          text: $tStore('calendar.clear_past_tooltip', {
+                            count: pastEventsCount,
+                            unit: pastEventsCount === 1 ? 'event' : 'events'
+                          })
+                        }}
+                        aria-label={$tStore('calendar.clear_past', {
+                          count: pastEventsCount
+                        })}
+                      >
+                        <Trash2 size={12} />
+                        <span
+                          >{$tStore('calendar.clear_past', {
+                            count: pastEventsCount
+                          })}</span
+                        >
+                      </button>
+                    {/if}
+
+                    <button
+                      type="button"
+                      class="agenda-primary-add-btn"
+                      onclick={() => handleOpenAddModal()}
                     >
-                  </button>
-                {/if}
+                      <Plus size={13} />
+                      <span>{$tStore('calendar.add_event')}</span>
+                    </button>
+                  </div>
+                </div>
 
-                <button
-                  type="button"
-                  class="agenda-primary-add-btn"
-                  onclick={() => handleOpenAddModal()}
-                >
-                  <Plus size={13} />
-                  <span>{$tStore('calendar.add_event')}</span>
-                </button>
+                <ScrollView class="calendar-agenda-scroll-view">
+                  {#if filteredAgendaEvents.length === 0}
+                    <div class="agenda-empty-state">
+                      <CalendarDays size={26} />
+                      <span>{$tStore('calendar.no_matching_events')}</span>
+                    </div>
+                  {:else}
+                    <div class="agenda-stream-list">
+                      {#each filteredAgendaEvents as event (event.id)}
+                        <AgendaEventCard
+                          {event}
+                          variant="detailed"
+                          onEdit={handleOpenEditModal}
+                          onDelete={deleteCalendarEvent}
+                        />
+                      {/each}
+                    </div>
+                  {/if}
+                </ScrollView>
               </div>
-            </div>
-
-            <ScrollView class="calendar-agenda-scroll-view">
-              {#if filteredAgendaEvents.length === 0}
-                <div class="agenda-empty-state">
-                  <CalendarDays size={26} />
-                  <span>{$tStore('calendar.no_matching_events')}</span>
-                </div>
-              {:else}
-                <div class="agenda-stream-list">
-                  {#each filteredAgendaEvents as event (event.id)}
-                    <AgendaEventCard
-                      {event}
-                      variant="detailed"
-                      onEdit={handleOpenEditModal}
-                      onDelete={deleteCalendarEvent}
-                    />
-                  {/each}
-                </div>
-              {/if}
-            </ScrollView>
+            {:else}
+              {@render monthGridView()}
+            {/if}
           </div>
-        {:else}
-          {@render monthGridView()}
-        {/if}
-      </div>
-    {/key}
-  </BentoCard>
+        {/key}
+      </BentoCard>
     {:else}
-      <BentoCard variant="bento" class="calendar-card widget-mode home-agenda-only">
+      <BentoCard
+        variant="bento"
+        class="calendar-card widget-mode home-agenda-only"
+      >
         <div class="agenda-tray-header home-agenda-header">
           <div class="agenda-tray-title">
             <CalendarDays size={13} />

@@ -143,15 +143,59 @@ func (a *App) CheckPostUpdateInstalled() string {
 // 1. UpdaterToken injected during compilation via -ldflags (from GitHub Secrets).
 // 2. VINTA_UPDATER_TOKEN, UPDATER_TOKEN, VINTA_GITHUB_TOKEN, or GITHUB_TOKEN environment variables.
 // 3. User configuration file settings.json.
+// resolveUpdaterToken resolves an authentication token for GitHub API requests.
+// Resolution order:
+// 1. UpdaterToken injected during compilation via -ldflags (from GitHub Secrets).
+// 2. VINTA_UPDATER_TOKEN, UPDATER_TOKEN, VINTA_GITHUB_TOKEN, or GITHUB_TOKEN environment variables.
+// 3. Local .env file (for local development).
+// 4. User configuration file settings.json.
 func resolveUpdaterToken() string {
-	if strings.TrimSpace(UpdaterToken) != "" {
-		return strings.TrimSpace(UpdaterToken)
+	if t := strings.TrimSpace(UpdaterToken); t != "" {
+		return t
 	}
-	for _, env := range []string{"VINTA_UPDATER_TOKEN", "UPDATER_TOKEN", "VINTA_GITHUB_TOKEN", "GITHUB_TOKEN"} {
+
+	envKeys := []string{"VINTA_UPDATER_TOKEN", "UPDATER_TOKEN", "VINTA_GITHUB_TOKEN", "GITHUB_TOKEN"}
+	for _, env := range envKeys {
 		if tok := strings.TrimSpace(os.Getenv(env)); tok != "" {
 			return tok
 		}
 	}
+
+	// Check local .env file across common working directory depths (root, build/, build/bin/)
+	candidatePaths := []string{".env", "../.env", "../../.env", "../../../.env"}
+	if exePath, err := os.Executable(); err == nil {
+		exeDir := filepath.Dir(exePath)
+		candidatePaths = append(candidatePaths,
+			filepath.Join(exeDir, ".env"),
+			filepath.Join(exeDir, "..", ".env"),
+			filepath.Join(exeDir, "..", "..", ".env"),
+		)
+	}
+
+	for _, envPath := range candidatePaths {
+		data, err := os.ReadFile(envPath)
+		if err != nil {
+			continue
+		}
+		for _, line := range strings.Split(string(data), "\n") {
+			line = strings.TrimSpace(strings.TrimSuffix(line, "\r"))
+			if line == "" || strings.HasPrefix(line, "#") {
+				continue
+			}
+			line = strings.TrimPrefix(line, "export ")
+			for _, key := range envKeys {
+				prefix := key + "="
+				if strings.HasPrefix(line, prefix) {
+					val := strings.TrimSpace(strings.TrimPrefix(line, prefix))
+					val = strings.Trim(val, `"'`)
+					if val != "" {
+						return val
+					}
+				}
+			}
+		}
+	}
+
 	settingsPath := filepath.Join(GetAppDataDir(), "settings.json")
 	if data, err := os.ReadFile(settingsPath); err == nil {
 		var s struct {
@@ -159,11 +203,11 @@ func resolveUpdaterToken() string {
 			GitHubToken  string `json:"githubToken"`
 		}
 		if json.Unmarshal(data, &s) == nil {
-			if strings.TrimSpace(s.UpdaterToken) != "" {
-				return strings.TrimSpace(s.UpdaterToken)
+			if t := strings.TrimSpace(s.UpdaterToken); t != "" {
+				return t
 			}
-			if strings.TrimSpace(s.GitHubToken) != "" {
-				return strings.TrimSpace(s.GitHubToken)
+			if t := strings.TrimSpace(s.GitHubToken); t != "" {
+				return t
 			}
 		}
 	}

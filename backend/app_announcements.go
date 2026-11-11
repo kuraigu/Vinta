@@ -2,12 +2,14 @@
 package backend
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -82,7 +84,7 @@ func (a *App) GetReleaseNotes(version string) (string, error) {
 		return a.bundledReleaseNotes(cleanVersion), nil
 	}
 	req.Header.Set("User-Agent", "Vinta-App")
-	req.Header.Set("Accept", "application/vnd.github.v3+json")
+	req.Header.Set("Accept", "application/vnd.github+json")
 	if token := resolveUpdaterToken(); token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
@@ -128,7 +130,54 @@ Thanks for trying out Vinta! Here are a few things included in this build:
 *Release notes update automatically whenever a new version is published.*`, version)
 }
 
-// Atom XML structures for GitHub Discussions Announcements feed.
+// GraphQL response structure for GitHub Discussions (official API for private/public discussions).
+type graphQLDiscussionsResponse struct {
+	Data struct {
+		Repository struct {
+			Discussions struct {
+				Nodes []struct {
+					ID        string `json:"id"`
+					Number    int    `json:"number"`
+					Title     string `json:"title"`
+					Body      string `json:"body"`
+					URL       string `json:"url"`
+					Published string `json:"publishedAt"`
+					Category  struct {
+						Name string `json:"name"`
+						Slug string `json:"slug"`
+					} `json:"category"`
+					Author struct {
+						Login     string `json:"login"`
+						AvatarURL string `json:"avatarUrl"`
+					} `json:"author"`
+				} `json:"nodes"`
+			} `json:"discussions"`
+		} `json:"repository"`
+	} `json:"data"`
+	Errors []struct {
+		Message string `json:"message"`
+	} `json:"errors"`
+}
+
+// REST API structure for GitHub Discussions.
+type ghDiscussion struct {
+	NodeID    string `json:"node_id"`
+	Number    int    `json:"number"`
+	Title     string `json:"title"`
+	Body      string `json:"body"`
+	HTMLURL   string `json:"html_url"`
+	CreatedAt string `json:"created_at"`
+	Category  struct {
+		Name string `json:"name"`
+		Slug string `json:"slug"`
+	} `json:"category"`
+	User struct {
+		Login     string `json:"login"`
+		AvatarURL string `json:"avatar_url"`
+	} `json:"user"`
+}
+
+// Atom XML structures for public GitHub Discussions Announcements feed fallback.
 type atomFeed struct {
 	XMLName xml.Name    `xml:"feed"`
 	Entries []atomEntry `xml:"entry"`
@@ -161,34 +210,230 @@ func (a *App) GetDeveloperAnnouncements() (AnnouncementsPayload, error) {
 		cacheFile = filepath.Join(cacheDir, "announcements.json")
 	}
 
-	client := &http.Client{Timeout: 5 * time.Second}
+	client := &http.Client{Timeout: 8 * time.Second}
+	token := resolveUpdaterToken()
 
-	// Primary Source: GitHub Discussions Announcements Atom Feed
-	discussionsURL := "https://github.com/kuraigu/Vinta/discussions/categories/announcements.atom"
-	reqDisc, err := http.NewRequest("GET", discussionsURL, nil)
-	if err == nil {
-		reqDisc.Header.Set("User-Agent", "Vinta-App")
-		if token := resolveUpdaterToken(); token != "" {
-			reqDisc.Header.Set("Authorization", "Bearer "+token)
+	if token == "" {
+		log.Println("[Announcements] No UPDATER_TOKEN detected (.env / env / ldflags). Private repo API calls will fail.")
+	} else {
+		log.Printf("[Announcements] Token detected (length: %d). Querying GitHub Discussions...", len(token))
+	}
+
+	// 1. Primary Source (when token exists): GitHub GraphQL API (official GitHub Discussions API)
+	if token != "" {
+		if items, err := a.fetchGraphQLDiscussions(client, token); err == nil && len(items) > 0 {
+			log.Printf("[Announcements] Loaded %d announcement(s) via GraphQL API.", len(items))
+			return a.finalizeAnnouncements(items, cacheFile, hashFile), nil
+		} else if err != nil {
+			log.Printf("[Announcements] GraphQL fetch failed: %v", err)
 		}
+	}
+
+	// 2. Secondary Source: GitHub REST API
+	apiURL := "https://api.github.com/repos/kuraigu/Vinta/discussions?per_page=20"
+	if reqAPI, err := http.NewRequest("GET", apiURL, nil); err == nil {
+		reqAPI.Header.Set("User-Agent", "Vinta-App")
+		reqAPI.Header.Set("Accept", "application/vnd.github+json")
+		reqAPI.Header.Set("X-GitHub-Api-Version", "2022-11-28")
+		if token != "" {
+			reqAPI.Header.Set("Authorization", "Bearer "+token)
+		}
+		if respAPI, err := client.Do(reqAPI); err == nil {
+			bodyBytes, _ := io.ReadAll(respAPI.Body)
+			_ = respAPI.Body.Close()
+			if respAPI.StatusCode == http.StatusOK && len(bodyBytes) > 0 {
+				var discussions []ghDiscussion
+				if err := json.Unmarshal(bodyBytes, &discussions); err == nil && len(discussions) > 0 {
+					items := a.parseAPIDiscussions(discussions)
+					if len(items) > 0 {
+						log.Printf("[Announcements] Loaded %d announcement(s) via REST API.", len(items))
+						return a.finalizeAnnouncements(items, cacheFile, hashFile), nil
+					}
+				}
+			} else {
+				log.Printf("[Announcements] REST API returned HTTP %d: %s", respAPI.StatusCode, string(bodyBytes))
+			}
+		}
+	}
+
+	// 3. Tertiary Source: Public Atom Feed (works on public repos without a token)
+	discussionsURL := "https://github.com/kuraigu/Vinta/discussions/categories/announcements.atom"
+	if reqDisc, err := http.NewRequest("GET", discussionsURL, nil); err == nil {
+		reqDisc.Header.Set("User-Agent", "Vinta-App")
 		if respDisc, err := client.Do(reqDisc); err == nil {
-			defer func() { _ = respDisc.Body.Close() }()
-			if respDisc.StatusCode == http.StatusOK {
-				if feedBytes, err := io.ReadAll(respDisc.Body); err == nil && len(feedBytes) > 0 {
-					var feed atomFeed
-					if err := xml.Unmarshal(feedBytes, &feed); err == nil && len(feed.Entries) > 0 {
-						items := a.parseAtomEntries(feed.Entries)
-						if len(items) > 0 {
-							return a.finalizeAnnouncements(items, cacheFile, hashFile), nil
-						}
+			feedBytes, _ := io.ReadAll(respDisc.Body)
+			_ = respDisc.Body.Close()
+			if respDisc.StatusCode == http.StatusOK && len(feedBytes) > 0 {
+				var feed atomFeed
+				if err := xml.Unmarshal(feedBytes, &feed); err == nil && len(feed.Entries) > 0 {
+					items := a.parseAtomEntries(feed.Entries)
+					if len(items) > 0 {
+						log.Printf("[Announcements] Loaded %d announcement(s) via Atom feed.", len(items))
+						return a.finalizeAnnouncements(items, cacheFile, hashFile), nil
 					}
 				}
 			}
 		}
 	}
 
-	// Fallback: Load from offline disk cache or starter welcome announcement
+	// 4. Fallback: Load from offline disk cache or starter welcome announcement
+	log.Println("[Announcements] All remote sources failed or returned 0 announcements. Using fallback.")
 	return a.loadCachedAnnouncements(cacheFile, hashFile), nil
+}
+
+func (a *App) fetchGraphQLDiscussions(client *http.Client, token string) ([]AnnouncementItem, error) {
+	query := `query {
+		repository(owner: "kuraigu", name: "Vinta") {
+			discussions(first: 20, orderBy: {field: CREATED_AT, direction: DESC}) {
+				nodes {
+					id
+					number
+					title
+					body
+					url
+					publishedAt
+					category {
+						name
+						slug
+					}
+					author {
+						login
+						avatarUrl
+					}
+				}
+			}
+		}
+	}`
+
+	payloadBytes, err := json.Marshal(map[string]string{"query": query})
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", "https://api.github.com/graphql", bytes.NewReader(payloadBytes))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", "Vinta-App")
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(bodyBytes))
+	}
+
+	var gqlResp graphQLDiscussionsResponse
+	if err := json.Unmarshal(bodyBytes, &gqlResp); err != nil {
+		return nil, err
+	}
+	if len(gqlResp.Errors) > 0 {
+		return nil, fmt.Errorf("GraphQL error: %s", gqlResp.Errors[0].Message)
+	}
+
+	nodes := gqlResp.Data.Repository.Discussions.Nodes
+	var allItems []AnnouncementItem
+	var announcementItems []AnnouncementItem
+
+	for _, n := range nodes {
+		title := strings.TrimSpace(n.Title)
+		if title == "" {
+			continue
+		}
+		author := strings.TrimSpace(n.Author.Login)
+		if author == "" {
+			author = "kuraigu"
+		}
+		avatar := strings.TrimSpace(n.Author.AvatarURL)
+		if avatar == "" {
+			avatar = fmt.Sprintf("https://github.com/%s.png?size=64", author)
+		}
+
+		item := AnnouncementItem{
+			ID:           n.ID,
+			Title:        title,
+			Body:         strings.TrimSpace(n.Body),
+			URL:          n.URL,
+			PublishedAt:  formatPublishedDate(n.Published),
+			AuthorName:   author,
+			AuthorAvatar: avatar,
+			IsUnread:     false,
+		}
+
+		allItems = append(allItems, item)
+
+		slug := strings.ToLower(strings.TrimSpace(n.Category.Slug))
+		catName := strings.ToLower(strings.TrimSpace(n.Category.Name))
+		if strings.Contains(slug, "announcement") || strings.Contains(catName, "announcement") {
+			announcementItems = append(announcementItems, item)
+		}
+	}
+
+	// Prefer discussions in the Announcements category; if posted in General/another category, still return them
+	if len(announcementItems) > 0 {
+		return announcementItems, nil
+	}
+	return allItems, nil
+}
+
+func (a *App) parseAPIDiscussions(discussions []ghDiscussion) []AnnouncementItem {
+	var allItems []AnnouncementItem
+	var announcementItems []AnnouncementItem
+
+	for _, d := range discussions {
+		title := strings.TrimSpace(d.Title)
+		if title == "" {
+			continue
+		}
+
+		author := strings.TrimSpace(d.User.Login)
+		if author == "" {
+			author = "kuraigu"
+		}
+		avatar := strings.TrimSpace(d.User.AvatarURL)
+		if avatar == "" {
+			avatar = fmt.Sprintf("https://github.com/%s.png?size=64", author)
+		}
+
+		id := d.NodeID
+		if id == "" {
+			id = fmt.Sprintf("discussion-%d", d.Number)
+		}
+
+		item := AnnouncementItem{
+			ID:           id,
+			Title:        title,
+			Body:         strings.TrimSpace(d.Body),
+			URL:          d.HTMLURL,
+			PublishedAt:  formatPublishedDate(d.CreatedAt),
+			AuthorName:   author,
+			AuthorAvatar: avatar,
+			IsUnread:     false,
+		}
+
+		allItems = append(allItems, item)
+
+		slug := strings.ToLower(strings.TrimSpace(d.Category.Slug))
+		catName := strings.ToLower(strings.TrimSpace(d.Category.Name))
+		if strings.Contains(slug, "announcement") || strings.Contains(catName, "announcement") {
+			announcementItems = append(announcementItems, item)
+		}
+	}
+
+	if len(announcementItems) > 0 {
+		return announcementItems
+	}
+	return allItems
 }
 
 func (a *App) parseAtomEntries(entries []atomEntry) []AnnouncementItem {
@@ -333,8 +578,7 @@ func (a *App) loadCachedAnnouncements(cacheFile, hashFile string) AnnouncementsP
 		if err == nil {
 			var items []AnnouncementItem
 			if err := json.Unmarshal(data, &items); err == nil && len(items) > 0 {
-				// Purge legacy cache if it was populated from GitHub Releases rather than Discussions
-				if strings.Contains(items[0].URL, "/releases/") || strings.HasPrefix(items[0].Title, "Release ") {
+				if strings.Contains(items[0].URL, "/releases/") || strings.HasPrefix(items[0].Title, "Release ") || items[0].ID == "welcome-announcement" {
 					_ = os.Remove(cacheFile)
 					if hashFile != "" {
 						_ = os.Remove(hashFile)

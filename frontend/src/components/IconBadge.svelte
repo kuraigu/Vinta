@@ -65,4 +65,3 @@
 </span>
 
 <style src="./styles/IconBadge.css"></style>
-

@@ -46,10 +46,7 @@
     initialTab?: 'announcements' | 'releases'
   } = $props()
 
-  let activeTab = $state<'announcements' | 'releases'>('announcements')
-  $effect(function syncInitialAnnouncementsTab() {
-    activeTab = initialTab
-  })
+  let activeTab = $derived<'announcements' | 'releases'>(initialTab)
 
   let announcements = $state<AnnouncementItem[]>([])
   let hasUnread = $state(false)
@@ -144,11 +141,7 @@
     </div>
 
     {#if activeTab === 'announcements' && hasUnread}
-      <button
-        type="button"
-        class="mark-all-read-btn"
-        onclick={handleMarkRead}
-      >
+      <button type="button" class="mark-all-read-btn" onclick={handleMarkRead}>
         <CheckCheck size={13} />
         <span>{$tStore('announcements.mark_read')}</span>
       </button>
@@ -165,114 +158,124 @@
       {#key activeTab}
         <div class="announcements-tab-transition">
           {#if activeTab === 'announcements'}
-        {#if isLoadingAnnouncements}
-          <div class="announcements-empty-state">
-            <span>{$tStore('common.loading')}</span>
-          </div>
-        {:else if announcements.length === 0}
-          <div class="announcements-empty-state">
-            <Megaphone size={28} class="empty-icon" />
-            <span class="empty-title">{$tStore('announcements.empty_title')}</span>
-            <span class="empty-sub">{$tStore('announcements.empty_desc')}</span>
-          </div>
-        {:else}
-          <div class="announcements-list">
-            {#each announcements as item (item.id)}
-              <BentoCard variant="bento" class="announcement-card-item">
-                <div class="author-meta-row">
-                  <div class="author-info-box">
-                    <div class="author-avatar-box">
-                      {#if item.authorAvatar}
-                        <img
-                          src={item.authorAvatar}
-                          alt=""
-                          class="author-avatar-img"
-                          onerror={(e) => {
-                            const target = e.currentTarget as HTMLImageElement
-                            target.style.display = 'none'
-                            const fallback =
-                              target.nextElementSibling as HTMLElement
-                            if (fallback) fallback.style.display = 'flex'
-                          }}
-                        />
-                        <div
-                          class="author-avatar-fallback"
-                          style="display: none;"
+            {#if isLoadingAnnouncements}
+              <div class="announcements-empty-state">
+                <span>{$tStore('common.loading')}</span>
+              </div>
+            {:else if announcements.length === 0}
+              <div class="announcements-empty-state">
+                <Megaphone size={28} class="empty-icon" />
+                <span class="empty-title"
+                  >{$tStore('announcements.empty_title')}</span
+                >
+                <span class="empty-sub"
+                  >{$tStore('announcements.empty_desc')}</span
+                >
+              </div>
+            {:else}
+              <div class="announcements-list">
+                {#each announcements as item (item.id)}
+                  <BentoCard variant="bento" class="announcement-card-item">
+                    <div class="author-meta-row">
+                      <div class="author-info-box">
+                        <div class="author-avatar-box">
+                          {#if item.authorAvatar}
+                            <img
+                              src={item.authorAvatar}
+                              alt=""
+                              class="author-avatar-img"
+                              onerror={(e) => {
+                                const target =
+                                  e.currentTarget as HTMLImageElement
+                                target.style.display = 'none'
+                                const fallback =
+                                  target.nextElementSibling as HTMLElement
+                                if (fallback) fallback.style.display = 'flex'
+                              }}
+                            />
+                            <div
+                              class="author-avatar-fallback"
+                              style="display: none;"
+                            >
+                              <User size={11} />
+                            </div>
+                          {:else}
+                            <div class="author-avatar-fallback">
+                              <User size={11} />
+                            </div>
+                          {/if}
+                        </div>
+                        <span class="author-name"
+                          >{item.authorName || 'Vinta Team'}</span
                         >
-                          <User size={11} />
-                        </div>
-                      {:else}
-                        <div class="author-avatar-fallback">
-                          <User size={11} />
-                        </div>
-                      {/if}
-                    </div>
-                    <span class="author-name"
-                      >{item.authorName || 'Vinta Team'}</span
-                    >
-                  </div>
+                      </div>
 
-                  <div class="post-meta-right">
-                    {#if item.publishedAt}
-                      <span class="card-item-date">{item.publishedAt}</span>
+                      <div class="post-meta-right">
+                        {#if item.publishedAt}
+                          <span class="card-item-date">{item.publishedAt}</span>
+                        {/if}
+                        {#if item.isUnread}
+                          <span class="card-unread-pill"
+                            >{$tStore('announcements.new_badge')}</span
+                          >
+                        {/if}
+                      </div>
+                    </div>
+
+                    <h3 class="card-item-title">{item.title}</h3>
+
+                    {#if item.body}
+                      <div class="card-markdown-wrap">
+                        <MarkdownViewer content={item.body} />
+                      </div>
                     {/if}
-                    {#if item.isUnread}
-                      <span class="card-unread-pill">{$tStore('announcements.new_badge')}</span>
+
+                    {#if item.url}
+                      <a
+                        href={item.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        class="card-item-link"
+                      >
+                        <span>{$tStore('announcements.view_github')}</span>
+                        <ArrowUpRight size={11} />
+                      </a>
                     {/if}
-                  </div>
+                  </BentoCard>
+                {/each}
+              </div>
+            {/if}
+          {:else if isLoadingNotes}
+            <div class="announcements-empty-state">
+              <span>{$tStore('release_notes.loading')}</span>
+            </div>
+          {:else}
+            <div class="announcements-list">
+              <BentoCard
+                variant="bento"
+                class="announcement-card-item release-notes-card"
+              >
+                <div class="card-markdown-wrap">
+                  <MarkdownViewer content={releaseNotes} />
                 </div>
 
-                <h3 class="card-item-title">{item.title}</h3>
-
-                {#if item.body}
-                  <div class="card-markdown-wrap">
-                    <MarkdownViewer content={item.body} />
-                  </div>
-                {/if}
-
-                {#if item.url}
+                {#if $appInfoStore?.repoUrl}
                   <a
-                    href={item.url}
+                    href="{$appInfoStore.repoUrl}/releases"
                     target="_blank"
                     rel="noreferrer"
                     class="card-item-link"
                   >
-                    <span>{$tStore('announcements.view_github')}</span>
-                    <ArrowUpRight size={11} />
+                    <span>{$tStore('release_notes.view_all_github')}</span>
+                    <ArrowUpRight size={12} />
                   </a>
                 {/if}
               </BentoCard>
-            {/each}
-          </div>
-        {/if}
-      {:else if isLoadingNotes}
-        <div class="announcements-empty-state">
-          <span>{$tStore('release_notes.loading')}</span>
-        </div>
-      {:else}
-        <div class="announcements-list">
-          <BentoCard variant="bento" class="announcement-card-item release-notes-card">
-            <div class="card-markdown-wrap">
-              <MarkdownViewer content={releaseNotes} />
             </div>
-
-            {#if $appInfoStore?.repoUrl}
-              <a
-                href="{$appInfoStore.repoUrl}/releases"
-                target="_blank"
-                rel="noreferrer"
-                class="card-item-link"
-              >
-                <span>{$tStore('release_notes.view_all_github')}</span>
-                <ArrowUpRight size={12} />
-              </a>
-            {/if}
-          </BentoCard>
+          {/if}
         </div>
-      {/if}
-    </div>
-  {/key}
-</ScrollView>
+      {/key}
+    </ScrollView>
   </div>
 </div>
 

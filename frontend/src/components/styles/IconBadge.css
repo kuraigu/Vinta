@@ -41,7 +41,10 @@
 
 /* Color Variants */
 .vinta-icon-badge.color-blue {
-  background: var(--vinta-agenda-sky-bg, linear-gradient(135deg, #3b82f6, #2563eb));
+  background: var(
+    --vinta-agenda-sky-bg,
+    linear-gradient(135deg, #3b82f6, #2563eb)
+  );
 }
 
 .vinta-icon-badge.color-cyan {
@@ -49,31 +52,52 @@
 }
 
 .vinta-icon-badge.color-purple {
-  background: var(--vinta-agenda-purple-bg, linear-gradient(135deg, #8b5cf6, #6d28d9));
+  background: var(
+    --vinta-agenda-purple-bg,
+    linear-gradient(135deg, #8b5cf6, #6d28d9)
+  );
 }
 
 .vinta-icon-badge.color-emerald {
-  background: var(--vinta-agenda-emerald-bg, linear-gradient(135deg, #10b981, #059669));
+  background: var(
+    --vinta-agenda-emerald-bg,
+    linear-gradient(135deg, #10b981, #059669)
+  );
 }
 
 .vinta-icon-badge.color-amber {
-  background: var(--vinta-agenda-amber-bg, linear-gradient(135deg, #f59e0b, #d97706));
+  background: var(
+    --vinta-agenda-amber-bg,
+    linear-gradient(135deg, #f59e0b, #d97706)
+  );
 }
 
 .vinta-icon-badge.color-rose {
-  background: var(--vinta-agenda-rose-bg, linear-gradient(135deg, #f43f5e, #e11d48));
+  background: var(
+    --vinta-agenda-rose-bg,
+    linear-gradient(135deg, #f43f5e, #e11d48)
+  );
 }
 
 .vinta-icon-badge.color-indigo {
-  background: var(--vinta-agenda-indigo-bg, linear-gradient(135deg, #6366f1, #4338ca));
+  background: var(
+    --vinta-agenda-indigo-bg,
+    linear-gradient(135deg, #6366f1, #4338ca)
+  );
 }
 
 .vinta-icon-badge.color-slate {
-  background: var(--vinta-agenda-slate-bg, linear-gradient(135deg, #64748b, #475569));
+  background: var(
+    --vinta-agenda-slate-bg,
+    linear-gradient(135deg, #64748b, #475569)
+  );
 }
 
 .vinta-icon-badge.color-teal {
-  background: var(--vinta-agenda-teal-bg, linear-gradient(135deg, #14b8a6, #0f766e));
+  background: var(
+    --vinta-agenda-teal-bg,
+    linear-gradient(135deg, #14b8a6, #0f766e)
+  );
 }
 
 .vinta-icon-badge.color-surface {
@@ -82,4 +106,3 @@
   border: 1px solid var(--vinta-border-light, rgba(255, 255, 255, 0.08));
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
-

@@ -185,7 +185,8 @@
       <div class="hero-banner-info-stack">
         {#if weather}
           <div class="hero-banner-weather-row">
-            <span class="hero-weather-temp">{displayTemp.val}°{unitLetter}</span>
+            <span class="hero-weather-temp">{displayTemp.val}°{unitLetter}</span
+            >
             <span class="sub-divider">•</span>
             <span class="hero-weather-cond">{bannerConditionTitle}</span>
           </div>

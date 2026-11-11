@@ -43,11 +43,7 @@
   <div class="setting-label-group">
     {#if IconComponent}
       <div class="setting-icon-wrap">
-        <IconBadge
-          icon={IconComponent}
-          color={badgeColor}
-          size="md"
-        />
+        <IconBadge icon={IconComponent} color={badgeColor} size="md" />
       </div>
     {/if}
     <div class="setting-text-col">

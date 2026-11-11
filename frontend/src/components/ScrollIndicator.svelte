@@ -49,4 +49,3 @@
 </button>
 
 <style src="./styles/ScrollIndicator.css"></style>
-

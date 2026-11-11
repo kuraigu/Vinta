@@ -3,11 +3,11 @@
    * Reusable 36x20px pill toggle switch primitive.
    */
   interface Props {
-    checked?: boolean;
-    disabled?: boolean;
-    ariaLabel?: string;
-    onchange?: (checked: boolean, event: Event) => void;
-    class?: string;
+    checked?: boolean
+    disabled?: boolean
+    ariaLabel?: string
+    onchange?: (checked: boolean, event: Event) => void
+    class?: string
   }
 
   let {
@@ -15,13 +15,13 @@
     disabled = false,
     ariaLabel,
     onchange,
-    class: className = '',
-  }: Props = $props();
+    class: className = ''
+  }: Props = $props()
 
   function handleChange(e: Event) {
-    const target = e.currentTarget as HTMLInputElement;
-    checked = target.checked;
-    onchange?.(checked, e);
+    const target = e.currentTarget as HTMLInputElement
+    checked = target.checked
+    onchange?.(checked, e)
   }
 </script>
 
@@ -43,4 +43,3 @@
 </label>
 
 <style src="./styles/ToggleSwitch.css"></style>
-
