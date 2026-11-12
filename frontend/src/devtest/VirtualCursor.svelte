@@ -7,7 +7,7 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { fade, scale } from 'svelte/transition'
-  import { Events } from '@wailsio/runtime'
+  import { Events } from '$lib/events'
   import {
     Search,
     Minus,
@@ -407,322 +407,308 @@
     return null
   }
 
-  onMount(() => {
-    const unsubTrail = Events.On('devtest-cursor-trail', (ev: any) => {
-      const payload = ev?.data?.[0] ?? ev?.data ?? ev
-      if (payload?.enabled !== undefined) {
-        motionTrailEnabled = payload.enabled
-      } else {
-        motionTrailEnabled = !motionTrailEnabled
-      }
-      try {
-        localStorage.setItem(
-          CURSOR_TRAIL_STORAGE_KEY,
-          JSON.stringify(motionTrailEnabled)
-        )
-      } catch {}
-    })
+  Events.On('devtest-cursor-trail', (ev: any) => {
+    const payload = ev?.data?.[0] ?? ev?.data ?? ev
+    if (payload?.enabled !== undefined) {
+      motionTrailEnabled = payload.enabled
+    } else {
+      motionTrailEnabled = !motionTrailEnabled
+    }
+    try {
+      localStorage.setItem(
+        CURSOR_TRAIL_STORAGE_KEY,
+        JSON.stringify(motionTrailEnabled)
+      )
+    } catch {}
+  })
 
-    const unsubAction = Events.On('devtest-cursor-action', async (ev: any) => {
-      const payload: CursorPayload = ev?.data?.[0] ?? ev?.data ?? ev
-      if (!payload) return
+  Events.On('devtest-cursor-action', async (ev: any) => {
+    const payload: CursorPayload = ev?.data?.[0] ?? ev?.data ?? ev
+    if (!payload) return
 
-      if (payload.action === 'show') {
-        visible = true
-        try {
-          localStorage.setItem(CURSOR_VISIBLE_STORAGE_KEY, JSON.stringify(true))
-        } catch {}
-        Events.Emit('devtest-cursor-done', { action: 'show' })
-        return
-      }
-
-      if (payload.action === 'hide') {
-        updateHover(null)
-        visible = false
-        try {
-          localStorage.setItem(
-            CURSOR_VISIBLE_STORAGE_KEY,
-            JSON.stringify(false)
-          )
-        } catch {}
-        Events.Emit('devtest-cursor-done', { action: 'hide' })
-        return
-      }
-
-      if (payload.action === 'reset') {
-        updateHover(null)
-        visible = true
-        try {
-          localStorage.setItem(CURSOR_VISIBLE_STORAGE_KEY, JSON.stringify(true))
-        } catch {}
-        posX = window.innerWidth / 2
-        posY = window.innerHeight * 0.35
-        Events.Emit('devtest-cursor-done', { action: 'reset' })
-        return
-      }
-
-      if (payload.action === 'scroll') {
-        const container = payload.selector
-          ? document.querySelector<HTMLElement>(payload.selector)
-          : document.querySelector<HTMLElement>('.scroll-view')
-        if (container) {
-          container.scrollBy({
-            top: payload.deltaY || 200,
-            behavior: 'smooth'
-          })
-        }
-        await sleep(700)
-        Events.Emit('devtest-cursor-done', { action: 'scroll' })
-        return
-      }
-
-      if (payload.action === 'drag-file' && payload.fileBadge) {
-        updateHover(null)
-        visible = true
-
-        let startX = window.innerWidth * (payload.fromXRatio ?? 0.15)
-        let startY = window.innerHeight * (payload.fromYRatio ?? 0.5)
-        if (payload.fromSelector) {
-          const startEl = document.querySelector<HTMLElement>(
-            payload.fromSelector
-          )
-          if (startEl) {
-            const rect = startEl.getBoundingClientRect()
-            startX = rect.left + rect.width / 2
-            startY = rect.top + rect.height / 2
-          }
-        }
-
-        let endX = window.innerWidth * (payload.toXRatio ?? 0.5)
-        let endY = window.innerHeight * (payload.toYRatio ?? 0.04)
-        if (payload.toSelector) {
-          const endEl = document.querySelector<HTMLElement>(payload.toSelector)
-          if (endEl) {
-            const rect = endEl.getBoundingClientRect()
-            endX = rect.left + rect.width / 2
-            endY = rect.top + rect.height / 2
-          }
-        }
-
-        // 1. Move cursor smoothly along natural arc to start item
-        await glideCursor(startX, startY, 350)
-
-        // 2. Press mouse down to grasp file badge
-        isClicking = true
-        spawnRipple(posX, posY)
-        carriedBadge = payload.fileBadge
-        await sleep(100)
-
-        // 3. Drag file smoothly across to destination with natural carrying curve
-        const dragDurationMs =
-          typeof payload.duration === 'number'
-            ? Math.round(payload.duration * 1000)
-            : 750
-        await glideCursor(endX, endY, dragDurationMs)
-
-        // 4. If holdProgress requested (e.g. dropping onto Island), run authentic 950ms hold sequence
-        if (payload.holdProgress) {
-          const holdTotalMs = payload.holdDurationMs || 950
-          const holdSteps = 24
-          const stepDuration = Math.max(16, Math.round(holdTotalMs / holdSteps))
-          for (let i = 1; i <= holdSteps; i++) {
-            const p = Math.min(100, Math.round((i / holdSteps) * 100))
-            Events.Emit('devtest-file-drop-hold', { active: true, progress: p })
-            await sleep(stepDuration)
-          }
-          await sleep(80)
-          Events.Emit('devtest-file-drop-hold', { active: false, progress: 0 })
-        }
-
-        // 5. Release mouse at destination
-        spawnRipple(posX, posY)
-        isClicking = false
-        carriedBadge = null
-        await sleep(60)
-        Events.Emit('devtest-cursor-done', { action: 'drag-file' })
-        return
-      }
-
-      if (payload.action === 'keypad-sequence' && payload.keys) {
-        visible = true
-        const keyDelay = payload.keyDelay || 420
-        const glideTime = Math.round(keyDelay * 0.65)
-        const pressTime = Math.round(keyDelay * 0.22)
-        const pauseTime = Math.round(keyDelay * 0.13)
-
-        for (const key of payload.keys) {
-          const btn = findCalcButton(key)
-          if (btn) {
-            const rect = btn.getBoundingClientRect()
-            const targetX =
-              rect.left + rect.width / 2 + (Math.random() - 0.5) * 4
-            const targetY =
-              rect.top + rect.height / 2 + (Math.random() - 0.5) * 3
-
-            // Fluid organic human typing glide
-            await glideCursor(targetX, targetY, glideTime)
-            updateHover(btn)
-
-            isClicking = true
-            spawnRipple(posX, posY)
-            btn.dispatchEvent(
-              new MouseEvent('mousedown', {
-                bubbles: true,
-                clientX: posX,
-                clientY: posY
-              })
-            )
-            btn.click()
-            btn.dispatchEvent(
-              new MouseEvent('mouseup', {
-                bubbles: true,
-                clientX: posX,
-                clientY: posY
-              })
-            )
-            await sleep(pressTime)
-            isClicking = false
-            await sleep(pauseTime)
-          }
-        }
-
-        updateHover(null)
-        Events.Emit('devtest-cursor-done', { action: 'keypad-sequence' })
-        return
-      }
-
-      // Standard move or click
+    if (payload.action === 'show') {
       visible = true
-      const durationMs =
+      try {
+        localStorage.setItem(CURSOR_VISIBLE_STORAGE_KEY, JSON.stringify(true))
+      } catch {}
+      Events.Emit('devtest-cursor-done', { action: 'show' })
+      return
+    }
+
+    if (payload.action === 'hide') {
+      updateHover(null)
+      visible = false
+      try {
+        localStorage.setItem(CURSOR_VISIBLE_STORAGE_KEY, JSON.stringify(false))
+      } catch {}
+      Events.Emit('devtest-cursor-done', { action: 'hide' })
+      return
+    }
+
+    if (payload.action === 'reset') {
+      updateHover(null)
+      visible = true
+      try {
+        localStorage.setItem(CURSOR_VISIBLE_STORAGE_KEY, JSON.stringify(true))
+      } catch {}
+      posX = window.innerWidth / 2
+      posY = window.innerHeight * 0.35
+      Events.Emit('devtest-cursor-done', { action: 'reset' })
+      return
+    }
+
+    if (payload.action === 'scroll') {
+      const container = payload.selector
+        ? document.querySelector<HTMLElement>(payload.selector)
+        : document.querySelector<HTMLElement>('.scroll-view')
+      if (container) {
+        container.scrollBy({
+          top: payload.deltaY || 200,
+          behavior: 'smooth'
+        })
+      }
+      await sleep(700)
+      Events.Emit('devtest-cursor-done', { action: 'scroll' })
+      return
+    }
+
+    if (payload.action === 'drag-file' && payload.fileBadge) {
+      updateHover(null)
+      visible = true
+
+      let startX = window.innerWidth * (payload.fromXRatio ?? 0.15)
+      let startY = window.innerHeight * (payload.fromYRatio ?? 0.5)
+      if (payload.fromSelector) {
+        const startEl = document.querySelector<HTMLElement>(
+          payload.fromSelector
+        )
+        if (startEl) {
+          const rect = startEl.getBoundingClientRect()
+          startX = rect.left + rect.width / 2
+          startY = rect.top + rect.height / 2
+        }
+      }
+
+      let endX = window.innerWidth * (payload.toXRatio ?? 0.5)
+      let endY = window.innerHeight * (payload.toYRatio ?? 0.04)
+      if (payload.toSelector) {
+        const endEl = document.querySelector<HTMLElement>(payload.toSelector)
+        if (endEl) {
+          const rect = endEl.getBoundingClientRect()
+          endX = rect.left + rect.width / 2
+          endY = rect.top + rect.height / 2
+        }
+      }
+
+      // 1. Move cursor smoothly along natural arc to start item
+      await glideCursor(startX, startY, 350)
+
+      // 2. Press mouse down to grasp file badge
+      isClicking = true
+      spawnRipple(posX, posY)
+      carriedBadge = payload.fileBadge
+      await sleep(100)
+
+      // 3. Drag file smoothly across to destination with natural carrying curve
+      const dragDurationMs =
         typeof payload.duration === 'number'
           ? Math.round(payload.duration * 1000)
-          : 450
+          : 750
+      await glideCursor(endX, endY, dragDurationMs)
 
-      const { x, y, el } = resolveCoordinates(payload)
-      await glideCursor(x, y, durationMs)
-      updateHover(el)
-
-      if (payload.action === 'click') {
-        let targetEl = el
-        if (payload.selector) {
-          if (payload.pickRandom && targetEl) {
-            const freshRect = targetEl.getBoundingClientRect()
-            const freshX = freshRect.left + freshRect.width / 2
-            const freshY = freshRect.top + freshRect.height / 2
-            if (Math.hypot(freshX - posX, freshY - posY) > 4) {
-              await glideCursor(freshX, freshY, 80)
-            }
-          } else {
-            const fresh = resolveCoordinates(payload)
-            targetEl = fresh.el
-            if (Math.hypot(fresh.x - posX, fresh.y - posY) > 4) {
-              await glideCursor(fresh.x, fresh.y, 80)
-            }
-          }
+      // 4. If holdProgress requested (e.g. dropping onto Island), run authentic 950ms hold sequence
+      if (payload.holdProgress) {
+        const holdTotalMs = payload.holdDurationMs || 950
+        const holdSteps = 24
+        const stepDuration = Math.max(16, Math.round(holdTotalMs / holdSteps))
+        for (let i = 1; i <= holdSteps; i++) {
+          const p = Math.min(100, Math.round((i / holdSteps) * 100))
+          Events.Emit('devtest-file-drop-hold', { active: true, progress: p })
+          await sleep(stepDuration)
         }
-
-        updateHover(targetEl)
-        // Subtle human pause before press
-        await sleep(30)
-        isClicking = true
-        spawnRipple(posX, posY)
-
-        if (targetEl) {
-          const evtInit = {
-            bubbles: true,
-            cancelable: true,
-            view: window,
-            clientX: posX,
-            clientY: posY
-          }
-          targetEl.dispatchEvent(new PointerEvent('pointerdown', evtInit))
-          targetEl.dispatchEvent(new MouseEvent('mousedown', evtInit))
-          targetEl.dispatchEvent(new PointerEvent('pointerup', evtInit))
-          targetEl.dispatchEvent(new MouseEvent('mouseup', evtInit))
-          const btn = targetEl.closest('button')
-          if (btn && !btn.closest('.select-trigger, .option-item')) {
-            btn.click()
-          } else {
-            targetEl.dispatchEvent(new MouseEvent('click', evtInit))
-          }
-        }
-
-        // Real human click contact dwell
-        await sleep(65)
-        isClicking = false
-        await sleep(35)
+        await sleep(80)
+        Events.Emit('devtest-file-drop-hold', { active: false, progress: 0 })
       }
 
-      if (payload.action === 'type' && payload.text) {
-        if (el) {
-          el.focus()
-          if (
-            el instanceof HTMLInputElement ||
-            el instanceof HTMLTextAreaElement
-          ) {
-            el.value = ''
-            el.dispatchEvent(new Event('input', { bubbles: true }))
-          } else if ((el as HTMLElement).isContentEditable) {
-            ;(el as HTMLElement).textContent = ''
-            el.dispatchEvent(new Event('input', { bubbles: true }))
-          }
-        }
-        const text = payload.text
-        const delay = payload.delay || 70
-
-        for (let i = 0; i < text.length; i++) {
-          const char = text[i]
-          if (el && (el as HTMLElement).isContentEditable) {
-            document.execCommand('insertText', false, char)
-            el.dispatchEvent(new Event('input', { bubbles: true }))
-          } else if (
-            el &&
-            (el instanceof HTMLInputElement ||
-              el instanceof HTMLTextAreaElement)
-          ) {
-            el.value += char
-            el.dispatchEvent(new Event('input', { bubbles: true }))
-          }
-          window.dispatchEvent(
-            new KeyboardEvent('keydown', { key: char, bubbles: true })
-          )
-          window.dispatchEvent(
-            new KeyboardEvent('keypress', { key: char, bubbles: true })
-          )
-          window.dispatchEvent(
-            new KeyboardEvent('keyup', { key: char, bubbles: true })
-          )
-          await sleep(delay)
-        }
-      }
-
-      Events.Emit('devtest-cursor-done', { action: payload.action })
-    })
-
-    const unsubFolders = Events.On('devtest-showcase-folders', (ev: any) => {
-      const payload = ev?.data?.[0] ?? ev?.data ?? ev
-      if (typeof payload?.visible === 'boolean') {
-        showcaseFoldersVisible = payload.visible
-      }
-      if (typeof payload?.destinationCount === 'number') {
-        destinationFileCount = payload.destinationCount
-      }
-      if (payload?.visible === false) {
-        destinationFileCount = 0
-      }
-      // Resync hit bounds so folder windows are immediately clickable by real mouse
-      setTimeout(() => {
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))
-        }
-      }, 30)
-    })
-
-    return () => {
-      unsubTrail()
-      unsubAction()
-      unsubFolders()
+      // 5. Release mouse at destination
+      spawnRipple(posX, posY)
+      isClicking = false
+      carriedBadge = null
+      await sleep(60)
+      Events.Emit('devtest-cursor-done', { action: 'drag-file' })
+      return
     }
+
+    if (payload.action === 'keypad-sequence' && payload.keys) {
+      visible = true
+      const keyDelay = payload.keyDelay || 420
+      const glideTime = Math.round(keyDelay * 0.65)
+      const pressTime = Math.round(keyDelay * 0.22)
+      const pauseTime = Math.round(keyDelay * 0.13)
+
+      for (const key of payload.keys) {
+        const btn = findCalcButton(key)
+        if (btn) {
+          const rect = btn.getBoundingClientRect()
+          const targetX = rect.left + rect.width / 2 + (Math.random() - 0.5) * 4
+          const targetY = rect.top + rect.height / 2 + (Math.random() - 0.5) * 3
+
+          // Fluid organic human typing glide
+          await glideCursor(targetX, targetY, glideTime)
+          updateHover(btn)
+
+          isClicking = true
+          spawnRipple(posX, posY)
+          btn.dispatchEvent(
+            new MouseEvent('mousedown', {
+              bubbles: true,
+              clientX: posX,
+              clientY: posY
+            })
+          )
+          btn.click()
+          btn.dispatchEvent(
+            new MouseEvent('mouseup', {
+              bubbles: true,
+              clientX: posX,
+              clientY: posY
+            })
+          )
+          await sleep(pressTime)
+          isClicking = false
+          await sleep(pauseTime)
+        }
+      }
+
+      updateHover(null)
+      Events.Emit('devtest-cursor-done', { action: 'keypad-sequence' })
+      return
+    }
+
+    // Standard move or click
+    visible = true
+    const durationMs =
+      typeof payload.duration === 'number'
+        ? Math.round(payload.duration * 1000)
+        : 450
+
+    const { x, y, el } = resolveCoordinates(payload)
+    await glideCursor(x, y, durationMs)
+    updateHover(el)
+
+    if (payload.action === 'click') {
+      let targetEl = el
+      if (payload.selector) {
+        if (payload.pickRandom && targetEl) {
+          const freshRect = targetEl.getBoundingClientRect()
+          const freshX = freshRect.left + freshRect.width / 2
+          const freshY = freshRect.top + freshRect.height / 2
+          if (Math.hypot(freshX - posX, freshY - posY) > 4) {
+            await glideCursor(freshX, freshY, 80)
+          }
+        } else {
+          const fresh = resolveCoordinates(payload)
+          targetEl = fresh.el
+          if (Math.hypot(fresh.x - posX, fresh.y - posY) > 4) {
+            await glideCursor(fresh.x, fresh.y, 80)
+          }
+        }
+      }
+
+      updateHover(targetEl)
+      // Subtle human pause before press
+      await sleep(30)
+      isClicking = true
+      spawnRipple(posX, posY)
+
+      if (targetEl) {
+        const evtInit = {
+          bubbles: true,
+          cancelable: true,
+          view: window,
+          clientX: posX,
+          clientY: posY
+        }
+        targetEl.dispatchEvent(new PointerEvent('pointerdown', evtInit))
+        targetEl.dispatchEvent(new MouseEvent('mousedown', evtInit))
+        targetEl.dispatchEvent(new PointerEvent('pointerup', evtInit))
+        targetEl.dispatchEvent(new MouseEvent('mouseup', evtInit))
+        const btn = targetEl.closest('button')
+        if (btn && !btn.closest('.select-trigger, .option-item')) {
+          btn.click()
+        } else {
+          targetEl.dispatchEvent(new MouseEvent('click', evtInit))
+        }
+      }
+
+      // Real human click contact dwell
+      await sleep(65)
+      isClicking = false
+      await sleep(35)
+    }
+
+    if (payload.action === 'type' && payload.text) {
+      if (el) {
+        el.focus()
+        if (
+          el instanceof HTMLInputElement ||
+          el instanceof HTMLTextAreaElement
+        ) {
+          el.value = ''
+          el.dispatchEvent(new Event('input', { bubbles: true }))
+        } else if ((el as HTMLElement).isContentEditable) {
+          ;(el as HTMLElement).textContent = ''
+          el.dispatchEvent(new Event('input', { bubbles: true }))
+        }
+      }
+      const text = payload.text
+      const delay = payload.delay || 70
+
+      for (let i = 0; i < text.length; i++) {
+        const char = text[i]
+        if (el && (el as HTMLElement).isContentEditable) {
+          document.execCommand('insertText', false, char)
+          el.dispatchEvent(new Event('input', { bubbles: true }))
+        } else if (
+          el &&
+          (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement)
+        ) {
+          el.value += char
+          el.dispatchEvent(new Event('input', { bubbles: true }))
+        }
+        window.dispatchEvent(
+          new KeyboardEvent('keydown', { key: char, bubbles: true })
+        )
+        window.dispatchEvent(
+          new KeyboardEvent('keypress', { key: char, bubbles: true })
+        )
+        window.dispatchEvent(
+          new KeyboardEvent('keyup', { key: char, bubbles: true })
+        )
+        await sleep(delay)
+      }
+    }
+
+    Events.Emit('devtest-cursor-done', { action: payload.action })
+  })
+
+  Events.On('devtest-showcase-folders', (ev: any) => {
+    const payload = ev?.data?.[0] ?? ev?.data ?? ev
+    if (typeof payload?.visible === 'boolean') {
+      showcaseFoldersVisible = payload.visible
+    }
+    if (typeof payload?.destinationCount === 'number') {
+      destinationFileCount = payload.destinationCount
+    }
+    if (payload?.visible === false) {
+      destinationFileCount = 0
+    }
+    // Resync hit bounds so folder windows are immediately clickable by real mouse
+    setTimeout(() => {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))
+      }
+    }, 30)
   })
 </script>
 

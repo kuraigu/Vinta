@@ -47,7 +47,7 @@
     OpenURL,
     GetAppInfo
   } from '../../../../bindings/Vinta/backend/app.js'
-  import { Events } from '@wailsio/runtime'
+  import { Events } from '$lib/events'
 
   let isDevBuild = $state(false)
   let isOfficialBuild = $state(true)
@@ -152,15 +152,10 @@
     }
   }
 
+  Events.On('update:download-progress', handleProgressUpdate)
+
   onMount(() => {
     initUpdatesTab()
-    const unsubscribeProgress = Events.On(
-      'update:download-progress',
-      handleProgressUpdate
-    )
-    return () => {
-      unsubscribeProgress()
-    }
   })
 </script>
 

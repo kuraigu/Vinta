@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { Events } from '@wailsio/runtime'
+  import { Events } from '$lib/events'
   import { parseAumid } from '../services/iconService'
   import {
     SendTestNotification,

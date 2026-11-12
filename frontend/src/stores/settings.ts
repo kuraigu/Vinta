@@ -6,7 +6,7 @@
  */
 
 import { writable, get } from 'svelte/store'
-import { Events } from '@wailsio/runtime'
+import { Events } from '$lib/events'
 import {
   GetSettings,
   SaveSettings,

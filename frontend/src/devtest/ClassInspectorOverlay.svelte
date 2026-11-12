@@ -11,7 +11,7 @@
 
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { Events } from '@wailsio/runtime'
+  import { Events } from '$lib/events'
   import { debugClassInspector } from './debugConfig'
 
   let hoveredRect = $state<{

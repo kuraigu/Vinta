@@ -19,7 +19,7 @@
 
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { Events } from '@wailsio/runtime'
+  import { Events } from '$lib/events'
   import {
     Hourglass,
     Clock,
@@ -75,18 +75,9 @@
   let editingAlarmId = $state<string | null>(null)
   let defaultCreateTime = $state('16:00')
 
-  onMount(() => {
-    let unsubOpenNewAlarm: (() => void) | undefined
-    try {
-      unsubOpenNewAlarm = Events.On('devtest-open-new-alarm', (ev: any) => {
-        const payload = ev?.data?.[0] ?? ev?.data ?? ev
-        openCreateAlarm(payload?.time || '16:00')
-      })
-    } catch {}
-
-    return () => {
-      unsubOpenNewAlarm?.()
-    }
+  Events.On('devtest-open-new-alarm', (ev: any) => {
+    const payload = ev?.data?.[0] ?? ev?.data ?? ev
+    openCreateAlarm(payload?.time || '16:00')
   })
 
   /**

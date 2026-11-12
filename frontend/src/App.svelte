@@ -5,16 +5,18 @@
   and coordinates layout between the main island capsule and floating satellite widgets.
 -->
 <script lang="ts">
-  import { onMount, setContext, type Component } from 'svelte'
+  import { onMount, setContext, untrack, type Component } from 'svelte'
   import { get } from 'svelte/store'
   import {
     FocusWindow,
     Quit,
     GetDisplayLayout,
-    SendMediaControl
+    SendMediaControl,
+    SaveNotifications
   } from '../bindings/Vinta/backend/app.js'
-  import { Events } from '@wailsio/runtime'
+  import { Events } from '$lib/events'
 
+  // Pages & Configs
   import NotificationPage, {
     config as notifConfig
   } from './pages/NotificationPage.svelte'
@@ -38,22 +40,19 @@
   import FileShelfPage, {
     config as fileShelfConfig
   } from './pages/FileShelfPage.svelte'
-  import { fileShelfStore, clearFileShelf } from './stores/fileShelf'
-  import {
-    addAlarm,
-    cleanShowcaseAlarms,
-    dismissRingingAlarm
-  } from './stores/timerApp'
-  import { calendarStore } from './stores/calendarStore'
-  import { SaveNotifications } from '../bindings/Vinta/backend/app.js'
   import OnboardingPage, {
     config as onboardingConfig
   } from './pages/OnboardingPage.svelte'
 
+  // Components & Overlays
   import MainIsland from './components/MainIsland.svelte'
   import ControlsSatellite from './components/ControlsSatellite.svelte'
   import NotificationSatellite from './components/NotificationSatellite.svelte'
   import CustomTooltip from './components/CustomTooltip.svelte'
+  import ClassInspectorOverlay from './devtest/ClassInspectorOverlay.svelte'
+  import VirtualCursor from './devtest/VirtualCursor.svelte'
+
+  // Services & Utils
   import { getFallbackPage } from './utils/navigation'
   import { initIslandEvents } from './services/islandEvents'
   import { WindowBoundsManager } from './services/windowBounds'
@@ -63,13 +62,32 @@
     computeMonitorSnapOffsets,
     getMonitorForOffset
   } from './services/islandGestures'
-  import { playNotifChime } from './services/audioService'
+  import {
+    playNotifChime,
+    startAlarmRingingChime,
+    stopAlarmRingingChime
+  } from './services/audioService'
+  import { applyThemeToDOM, refreshStylesheetsAndTheme } from './themes/engine'
+
+  // Stores
+  import { fileShelfStore, clearFileShelf } from './stores/fileShelf'
+  import {
+    addAlarm,
+    cleanShowcaseAlarms,
+    dismissRingingAlarm
+  } from './stores/timerApp'
+  import { calendarStore } from './stores/calendarStore'
   import {
     satellitesStore,
     getActiveSatelliteFootprint,
     resyncAllSatellites
   } from './stores/satellites'
-  import { applyThemeToDOM, refreshStylesheetsAndTheme } from './themes/engine'
+  import { hideTooltip } from './stores/tooltip'
+  import {
+    debugBoundsOverlay,
+    debugLogs,
+    debugClassInspector
+  } from './devtest/debugConfig'
   import {
     themeStore,
     autoHideStore,
@@ -120,144 +138,99 @@
     alarmSoundPresetStore,
     simulatedClockStore
   } from './store'
-  import {
-    startAlarmRingingChime,
-    stopAlarmRingingChime
-  } from './services/audioService'
-  import { hideTooltip } from './stores/tooltip'
-  import {
-    debugBoundsOverlay,
-    debugLogs,
-    debugClassInspector
-  } from './devtest/debugConfig'
-  import ClassInspectorOverlay from './devtest/ClassInspectorOverlay.svelte'
-  import VirtualCursor from './devtest/VirtualCursor.svelte'
 
-  function syncDebugBoundsOverlay(enabled: boolean) {
-    if (typeof document !== 'undefined') {
-      if (enabled) {
-        document.body.classList.add('debug-bounds-overlay')
-      } else {
-        document.body.classList.remove('debug-bounds-overlay')
-      }
-    }
-  }
-  function handleDebugBoundsOverlayEffect() {
-    syncDebugBoundsOverlay($debugBoundsOverlay)
-  }
-  $effect(handleDebugBoundsOverlayEffect)
-
-  // Subsystem Managers
+  // Subsystem Managers & Static Maps
   const bounds = new WindowBoundsManager()
   const gestures = new IslandGestureController()
+  const HOVER_GRACE_MS = 250
 
-  // Dynamic Routing
+  const PAGE_MAPPINGS: Record<
+    string,
+    { page: Component; config: IslandConfig }
+  > = {
+    home: { page: HomePage, config: homeConfig },
+    media: { page: MediaPage, config: mediaConfig },
+    notifications: { page: NotificationPage, config: notifConfig },
+    notes: { page: NotesPage, config: notesConfig },
+    apps: { page: AppsPage, config: appsConfig },
+    settings: { page: SettingsPage, config: settingsConfig },
+    calculator: { page: CalculatorPage, config: calcConfig },
+    timer: { page: TimerPage, config: timerConfig },
+    calendar: { page: CalendarPage, config: calendarConfig },
+    weather: { page: WeatherPage, config: weatherConfig },
+    fileshelf: { page: FileShelfPage, config: fileShelfConfig }
+  }
+
+  const PAGE_ID_BY_COMPONENT = new Map<Component, string>([
+    [HomePage, 'home'],
+    [MediaPage, 'media'],
+    [NotificationPage, 'notifications'],
+    [NotesPage, 'notes'],
+    [AppsPage, 'apps'],
+    [SettingsPage, 'settings'],
+    [CalculatorPage, 'calculator'],
+    [TimerPage, 'timer'],
+    [CalendarPage, 'calendar'],
+    [WeatherPage, 'weather'],
+    [FileShelfPage, 'fileshelf']
+  ])
+
+  // DOM References
+  let islandContainerNode = $state<HTMLDivElement | null>(null)
+  let islandWrapperNode = $state<HTMLDivElement | null>(null)
+  let islandNode = $state<HTMLDivElement | null>(null)
+
+  // Core Island State & Dynamic Routing
   let activePage = $state<Component>(
     $hasCompletedOnboardingStore ? HomePage : OnboardingPage
   )
   let islandConfig = $state<IslandConfig>(
     $hasCompletedOnboardingStore ? homeConfig : onboardingConfig
   )
-
   let expanded = $state(!$hasCompletedOnboardingStore)
   let isDockVisible = $derived(expanded && activePage !== OnboardingPage)
-  let islandTransitionTimeout: number | undefined
 
-  function handleOnboardingSync() {
-    if (!$hasCompletedOnboardingStore) {
-      if (activePage !== OnboardingPage) {
-        activePage = OnboardingPage
-        islandConfig = onboardingConfig
-        expanded = true
-        isPageDormant = false
-        isHidden = false
-      }
-    } else {
-      if (activePage === OnboardingPage) {
-        activePage = HomePage
-        islandConfig = homeConfig
-        expanded = false
-        $activePageIdStore = 'home'
-      }
-    }
-  }
-  $effect(handleOnboardingSync)
-
-  let previousExpanded: boolean | undefined = undefined
-
-  function handleExpandedTransitionEffect() {
-    const isExp = expanded
-    if (previousExpanded === undefined) {
-      previousExpanded = isExp
-      return
-    }
-    if (previousExpanded === isExp) {
-      return
-    }
-    previousExpanded = isExp
-
-    hideTooltip()
-    gestures.finishSettling()
-
-    // Immediate hit testing reset on expansion state change
-    bounds.syncPillBounds(islandNode, isHidden, true)
-    bounds.startTrackingTransition(islandNode, isExp ? 350 : 250, false)
-
-    clearTimeout(islandTransitionTimeout)
-    const transitionDuration = isExp ? 340 : 280
-
-    islandTransitionTimeout = window.setTimeout(() => {
-      if (
-        !gestures.isDragging &&
-        !gestures.isTrackRegionActive &&
-        !gestures.isSettling &&
-        !gestures.isInertia
-      ) {
-        bounds.recoverRestingBounds(
-          getBoundsForState(),
-          clampedOffsetX,
-          islandNode,
-          isHidden
-        )
-        bounds.syncPillBounds(islandNode, isHidden, true)
-      }
-      if (!isExp) {
-        bounds.trimMemory()
-      }
-    }, transitionDuration)
-  }
-  $effect(handleExpandedTransitionEffect)
-
-  // Peripheral Hover & Auto-hide State
-  let isHovering = $state(false)
-  let isSatelliteHovering = $state(false)
-  const HOVER_GRACE_MS = 250
-  let hoverGraceTimeout: number | undefined
-  let hoverShowTimeout: number | undefined
-
-  function clearHoverGrace() {
-    if (hoverGraceTimeout !== undefined) {
-      clearTimeout(hoverGraceTimeout)
-      hoverGraceTimeout = undefined
-    }
-    if (hoverShowTimeout !== undefined) {
-      clearTimeout(hoverShowTimeout)
-      hoverShowTimeout = undefined
-    }
-  }
-
-  // Island Visibility & Timing
   let isHidden = $state(false)
   let isBlinking = $state(false)
   let isPageDormant = $state(false)
   let isQuitting = $state(false)
   let isTransitionGlow = $state(false)
   let hideTrigger = $state(0)
+  let islandAnim = $state('0.34s cubic-bezier(0.16, 1, 0.3, 1)')
+
+  let wasExpandedBeforeHide = $state(false)
+  let wasHiddenBeforeNotif = $state(false)
+  let previousExpanded: boolean | undefined = undefined
+
+  // Timers
+  let islandTransitionTimeout: number | undefined
   let dormantUnmountTimeout: number | undefined
   let memoryTrimTimeout: number | undefined
   let glowTimeout: number | undefined
+  let hideTimeout: number | undefined
+  let hoverGraceTimeout: number | undefined
+  let hoverShowTimeout: number | undefined
 
-  // Multi-Monitor Geometry State
+  interface NavHistoryItem {
+    page: Component
+    config: IslandConfig
+  }
+  let navHistory: NavHistoryItem[] = []
+
+  // Memoized booleans so 1-second timer ticks don't re-trigger auto-hide or MainIsland effects
+  let isTimerActive = $derived(isAnyTimerRunning($timerAppStore))
+  let ringingAlarm = $derived($timerAppStore.ringingAlarm)
+
+  let isMediaActive = $derived.by(() => {
+    if (!$globalMediaStore.isAvailable) return false
+    if ($globalMediaStore.isPlaying) return true
+    if (Array.isArray($globalMediaStore.sessions)) {
+      return $globalMediaStore.sessions.some((s) => Boolean(s.isPlaying))
+    }
+    return false
+  })
+
+  // Multi-Monitor Geometry & Derived Bounds
   let displayLayout = $state({
     virtualLeft: 0,
     virtualTop: 0,
@@ -276,6 +249,10 @@
     },
     monitors: []
   })
+
+  let currentLiveOffsetX = $state(0)
+  let extraDropdownW = $state(0)
+  let extraDropdownH = $state(0)
 
   let activeMonitor = $derived.by(() => {
     const baseCenter = displayLayout.virtualLeft + displayLayout.primaryCenter
@@ -299,135 +276,18 @@
     )
   })
 
-  function computeMaxScaleForActiveMonitor(): number {
+  let maxScaleForActiveMonitor = $derived.by(() => {
     const h = activeMonitor?.height || 1080
     if (h <= 900) return 1.1
     if (h <= 1080) return 1.2
     return 1.25
-  }
-  let maxScaleForActiveMonitor = $derived.by(computeMaxScaleForActiveMonitor)
-
-  function computeEffectiveUiScale(): number {
-    const configured = $uiScaleStore || 1.0
-    return Math.max(1.0, Math.min(maxScaleForActiveMonitor, configured))
-  }
-  let effectiveUiScale = $derived.by(computeEffectiveUiScale)
-
-  let extraDropdownW = $state(0)
-  let extraDropdownH = $state(0)
-  let islandAnim = $state('0.34s cubic-bezier(0.16, 1, 0.3, 1)')
-
-  let islandContainerNode = $state<HTMLDivElement | null>(null)
-  let islandWrapperNode = $state<HTMLDivElement | null>(null)
-  let islandNode = $state<HTMLDivElement | null>(null)
-
-  let isTimeoutActive = $state(false)
-  let hideTimeout: number | undefined
-
-  let isMediaActive = $derived.by(() => {
-    if (!$globalMediaStore.isAvailable) return false
-    if ($globalMediaStore.isPlaying) return true
-    if (Array.isArray($globalMediaStore.sessions)) {
-      return $globalMediaStore.sessions.some((s) => Boolean(s.isPlaying))
-    }
-    return false
   })
 
-  /**
-   * Evaluates whether the current page should engage auto-hide countdown.
-   * Notifications always auto-dismiss, while Home and Media follow user settings.
-   */
-  function computeShouldCurrentPageAutoHide() {
-    if (activePage === NotificationPage) {
-      return true
-    }
-    if (activePage === HomePage) {
-      return $homeAutoHideStore
-    }
-    if (activePage === MediaPage) {
-      if (!isMediaActive) return true
-      return $mediaAutoHideStore
-    }
-    if (activePage === TimerPage) {
-      if (!isAnyTimerRunning($timerAppStore)) return true
-      return false
-    }
-    return $autoHideStore
-  }
-  let shouldCurrentPageAutoHide = $derived.by(computeShouldCurrentPageAutoHide)
+  let effectiveUiScale = $derived.by(() => {
+    const configured = $uiScaleStore || 1.0
+    return Math.max(1.0, Math.min(maxScaleForActiveMonitor, configured))
+  })
 
-  function triggerGlow() {
-    clearTimeout(glowTimeout)
-    isTransitionGlow = true
-    glowTimeout = window.setTimeout(() => {
-      isTransitionGlow = false
-    }, 3000)
-  }
-
-  function triggerBlink() {
-    isBlinking = true
-    window.setTimeout(() => {
-      isBlinking = false
-    }, 150)
-  }
-
-  function resetHideTimer() {
-    clearTimeout(hideTimeout)
-    isTimeoutActive = false
-
-    if (
-      $devPinnedStore ||
-      isHovering ||
-      isSatelliteHovering ||
-      isHidden ||
-      expanded ||
-      !shouldCurrentPageAutoHide
-    ) {
-      return
-    }
-
-    const delaySeconds = $autoHideDelayStore || 5
-    isTimeoutActive = true
-    hideTimeout = window.setTimeout(() => {
-      isTimeoutActive = false
-      if (activePage === NotificationPage) {
-        if (wasHiddenBeforeNotif) {
-          wasHiddenBeforeNotif = false
-          hideWidget()
-        } else {
-          const fallback = getFallbackPage()
-          navigateTo(fallback.page as Component, fallback.config, false)
-        }
-      } else if (
-        activePage === TimerPage &&
-        !isAnyTimerRunning($timerAppStore)
-      ) {
-        const fallback = getFallbackPage()
-        navigateTo(fallback.page as Component, fallback.config, false)
-      } else if (activePage === MediaPage && !isMediaActive) {
-        navigateTo(HomePage, homeConfig, false)
-      } else {
-        hideWidget()
-      }
-    }, delaySeconds * 1000)
-  }
-
-  function handleAutoHideSync() {
-    void activePage
-    void hideTrigger
-    void isHovering
-    void isSatelliteHovering
-    void isHidden
-    void expanded
-    void shouldCurrentPageAutoHide
-    void isMediaActive
-    void $devPinnedStore
-    void $autoHideDelayStore
-    resetHideTimer()
-  }
-  $effect(handleAutoHideSync)
-
-  // Derived Dimensions & Geometric Bounds
   let hiddenBounds = $derived(
     $autoHideDisplayStore === 'clock'
       ? { w: 128, h: 28, r: 14 }
@@ -527,7 +387,44 @@
     )
   )
 
-  let currentLiveOffsetX = $state(0)
+  let clampedOffsetX = $derived.by(() => {
+    if (Math.abs(currentLiveOffsetX) < 3) return 0
+    if (gestures.isDragging || gestures.isInertia) {
+      return currentLiveOffsetX
+    }
+    return Math.max(
+      allowedOffsets.min,
+      Math.min(allowedOffsets.max, currentLiveOffsetX)
+    )
+  })
+
+  let glowOpacity = $derived(
+    $glowIntensityStore === 'disabled'
+      ? 0
+      : $glowIntensityStore === 'vibrant'
+        ? 1.0
+        : 0.6
+  )
+
+  let activeOpacity = $derived(
+    isHidden
+      ? ($opacityHiddenStore ?? 1.0)
+      : expanded
+        ? ($opacityExpandedStore ?? 1.0)
+        : ($opacityMinimalStore ?? 1.0)
+  )
+
+  function isGestureBusy(): boolean {
+    return (
+      gestures.isDragging ||
+      gestures.isTrackRegionActive ||
+      gestures.isSettling ||
+      gestures.isInertia
+    )
+  }
+
+  bounds.getLiveOffset = () => clampedOffsetX
+  bounds.getIsDragging = isGestureBusy
 
   /**
    * Pre-calculates the target clamped horizontal offset for a specific island width,
@@ -547,80 +444,6 @@
     if (Math.abs(offset) < 3) return 0
     return Math.max(range.min, Math.min(range.max, offset))
   }
-
-  function handleSmartEdgeOffsetAdjustment() {
-    if (!gestures.isDragging && !gestures.isInertia) {
-      let adjusted = false
-      if (currentLiveOffsetX > allowedOffsets.max) {
-        currentLiveOffsetX = allowedOffsets.max
-        $hiddenPillOffsetXStore = currentLiveOffsetX
-        adjusted = true
-      } else if (currentLiveOffsetX < allowedOffsets.min) {
-        currentLiveOffsetX = allowedOffsets.min
-        $hiddenPillOffsetXStore = currentLiveOffsetX
-        adjusted = true
-      }
-      if (adjusted && !gestures.isTrackRegionActive && !gestures.isSettling) {
-        bounds.syncBounds(
-          getBoundsForState(),
-          currentLiveOffsetX,
-          islandNode,
-          false,
-          isHidden
-        )
-      }
-    }
-  }
-  $effect(handleSmartEdgeOffsetAdjustment)
-
-  function syncStoreOffsetToLive(val: number) {
-    if (!gestures.isDragging && !gestures.isInertia) {
-      currentLiveOffsetX = val
-    }
-  }
-  function handleHiddenPillOffsetSync() {
-    syncStoreOffsetToLive($hiddenPillOffsetXStore)
-  }
-  $effect(handleHiddenPillOffsetSync)
-
-  function handleIsHiddenSyncEffect() {
-    $isIslandHiddenStore = isHidden
-  }
-  $effect(handleIsHiddenSyncEffect)
-
-  let clampedOffsetX = $derived.by(() => {
-    if (Math.abs(currentLiveOffsetX) < 3) return 0
-    if (gestures.isDragging || gestures.isInertia) {
-      return currentLiveOffsetX
-    }
-    return Math.max(
-      allowedOffsets.min,
-      Math.min(allowedOffsets.max, currentLiveOffsetX)
-    )
-  })
-
-  bounds.getLiveOffset = () => clampedOffsetX
-  bounds.getIsDragging = () =>
-    gestures.isDragging ||
-    gestures.isTrackRegionActive ||
-    gestures.isSettling ||
-    gestures.isInertia
-
-  let glowOpacity = $derived(
-    $glowIntensityStore === 'disabled'
-      ? 0
-      : $glowIntensityStore === 'vibrant'
-        ? 1.0
-        : 0.6
-  )
-
-  let activeOpacity = $derived(
-    isHidden
-      ? ($opacityHiddenStore ?? 1.0)
-      : expanded
-        ? ($opacityExpandedStore ?? 1.0)
-        : ($opacityMinimalStore ?? 1.0)
-  )
 
   function getBoundsForState(
     config: IslandConfig = islandConfig,
@@ -654,18 +477,6 @@
           ? calculateHomeMinimalWidth($homeWidgetsVisibilityStore, hasBattery)
           : effectiveConfig.minimal.w
 
-    const hasActiveNotif = $notifData.some(
-      (n) =>
-        !n.isUpdate &&
-        !n.title?.toLowerCase().includes('update available') &&
-        !(
-          (n.appName?.toLowerCase() === 'vinta' ||
-            n.aumid?.toLowerCase().includes('vinta')) &&
-          n.title?.toLowerCase().includes('update')
-        )
-    )
-    const hasActiveUpdate = Boolean($updateInfoStore?.updateAvailable)
-
     const baseH = isHid
       ? hiddenBounds.h
       : isExp
@@ -680,8 +491,8 @@
               )
             : calculateHomeExpandedHeight(
                 $homeWidgetsVisibilityStore,
-                hasActiveNotif,
-                hasActiveUpdate,
+                hasActiveNotification,
+                hasActiveUpdateBanner,
                 effectiveConfig.expanded.minH ?? 260,
                 effectiveConfig.expanded.maxH ?? effectiveConfig.expanded.h
               )
@@ -701,15 +512,139 @@
     return { w, h, r }
   }
 
-  let wasExpandedBeforeHide = $state(false)
-  let wasHiddenBeforeNotif = $state(false)
+  // Hover, Auto-Hide & Visual Feedback
+  let isHovering = $state(false)
+  let isSatelliteHovering = $state(false)
+  let isTimeoutActive = $state(false)
 
-  interface NavHistoryItem {
-    page: Component
-    config: IslandConfig
+  /**
+   * Evaluates whether the current page should engage auto-hide countdown.
+   * Notifications always auto-dismiss, while Home and Media follow user settings.
+   */
+  let shouldCurrentPageAutoHide = $derived.by(() => {
+    if (activePage === NotificationPage) return true
+    if (activePage === HomePage) return $homeAutoHideStore
+    if (activePage === MediaPage) {
+      return !isMediaActive ? true : $mediaAutoHideStore
+    }
+    if (activePage === TimerPage) {
+      return !isTimerActive
+    }
+    return $autoHideStore
+  })
+
+  function clearHoverGrace() {
+    if (hoverGraceTimeout !== undefined) {
+      clearTimeout(hoverGraceTimeout)
+      hoverGraceTimeout = undefined
+    }
+    if (hoverShowTimeout !== undefined) {
+      clearTimeout(hoverShowTimeout)
+      hoverShowTimeout = undefined
+    }
   }
-  let navHistory: NavHistoryItem[] = []
 
+  function triggerGlow() {
+    clearTimeout(glowTimeout)
+    isTransitionGlow = true
+    glowTimeout = window.setTimeout(() => {
+      isTransitionGlow = false
+    }, 3000)
+  }
+
+  function triggerBlink() {
+    isBlinking = true
+    window.setTimeout(() => {
+      isBlinking = false
+    }, 150)
+  }
+
+  function resetHideTimer() {
+    clearTimeout(hideTimeout)
+    isTimeoutActive = false
+
+    if (
+      $devPinnedStore ||
+      isHovering ||
+      isSatelliteHovering ||
+      isHidden ||
+      expanded ||
+      !shouldCurrentPageAutoHide
+    ) {
+      return
+    }
+
+    const delaySeconds = $autoHideDelayStore || 5
+    isTimeoutActive = true
+    hideTimeout = window.setTimeout(() => {
+      isTimeoutActive = false
+      if (activePage === NotificationPage) {
+        if (wasHiddenBeforeNotif) {
+          wasHiddenBeforeNotif = false
+          hideWidget()
+        } else {
+          const fallback = getFallbackPage()
+          navigateTo(fallback.page as Component, fallback.config, false)
+        }
+      } else if (activePage === TimerPage && !isTimerActive) {
+        const fallback = getFallbackPage()
+        navigateTo(fallback.page as Component, fallback.config, false)
+      } else if (activePage === MediaPage && !isMediaActive) {
+        navigateTo(HomePage, homeConfig, false)
+      } else {
+        hideWidget()
+      }
+    }, delaySeconds * 1000)
+  }
+
+  function handleMouseEnter() {
+    clearHoverGrace()
+    isHovering = true
+    isSatelliteHovering = false
+    clearTimeout(hideTimeout)
+    if (!isGestureBusy()) {
+      bounds.recoverRestingBounds(
+        getBoundsForState(),
+        clampedOffsetX,
+        islandNode,
+        isHidden
+      )
+      bounds.syncPillBounds(islandNode, isHidden, true)
+    }
+    if (isHidden && $wakeMethodStore === 'hover') {
+      hoverShowTimeout = window.setTimeout(showWidget, 150)
+    } else if (!isHidden) {
+      showWidget()
+    }
+  }
+
+  function handleMouseLeave() {
+    clearHoverGrace()
+    hoverGraceTimeout = window.setTimeout(() => {
+      isHovering = false
+      isSatelliteHovering = false
+      clearTimeout(hoverShowTimeout)
+      hideTrigger++
+    }, HOVER_GRACE_MS)
+  }
+
+  function handleSatelliteMouseEnter() {
+    clearHoverGrace()
+    isSatelliteHovering = true
+    isHovering = false
+    clearTimeout(hideTimeout)
+  }
+
+  function handleSatelliteMouseLeave() {
+    clearHoverGrace()
+    hoverGraceTimeout = window.setTimeout(() => {
+      isSatelliteHovering = false
+      isHovering = false
+      hideTrigger++
+    }, HOVER_GRACE_MS)
+  }
+
+  // Navigation, Show/Hide & Drag Gestures
   function navigateTo(
     page: Component,
     pageConfig: IslandConfig,
@@ -772,19 +707,7 @@
     expanded = expand
     hideTrigger++
 
-    let pageId = 'home'
-    if (page === HomePage) pageId = 'home'
-    else if (page === MediaPage) pageId = 'media'
-    else if (page === NotificationPage) pageId = 'notifications'
-    else if (page === NotesPage) pageId = 'notes'
-    else if (page === AppsPage) pageId = 'apps'
-    else if (page === SettingsPage) pageId = 'settings'
-    else if (page === CalculatorPage) pageId = 'calculator'
-    else if (page === TimerPage) pageId = 'timer'
-    else if (page === CalendarPage) pageId = 'calendar'
-    else if (page === WeatherPage) pageId = 'weather'
-    else if (page === FileShelfPage) pageId = 'fileshelf'
-
+    const pageId = PAGE_ID_BY_COMPONENT.get(page) ?? 'home'
     $activePageIdStore = pageId
     try {
       Events.Emit('devtest-sync-page', { pageId })
@@ -815,9 +738,6 @@
     }
     navigateTo(AppsPage as Component, appsConfig, true, true)
   }
-
-  setContext('navigate', navigateTo)
-  setContext('goBack', goBack)
 
   function showWidget() {
     clearHoverGrace()
@@ -859,43 +779,14 @@
     resetHideTimer()
   }
 
-  let wasRingingAlarm = false
-
-  /**
-   * Automatically reveals the island and displays the ringing alarm when triggered,
-   * and returns the minimized island to the fallback page when dismissed or snoozed.
-   */
-  function handleRingingAlarmNavigation(): void {
-    const ringing = $timerAppStore.ringingAlarm
-    if (ringing) {
-      wasRingingAlarm = true
-      if (isHidden) {
-        showWidget()
-      }
-      if (activePage !== TimerPage) {
-        navigateTo(TimerPage, timerConfig, false)
-      }
-    } else if (wasRingingAlarm) {
-      wasRingingAlarm = false
-      if (
-        !expanded &&
-        activePage === TimerPage &&
-        !isAnyTimerRunning($timerAppStore)
-      ) {
-        const fallback = getFallbackPage()
-        navigateTo(fallback.page as Component, fallback.config, false)
-      }
-    }
-  }
-  $effect(handleRingingAlarmNavigation)
-
   function hideWidget() {
     if (
       isHidden ||
       !$hasCompletedOnboardingStore ||
       activePage === OnboardingPage
-    )
+    ) {
       return
+    }
     wasHiddenBeforeNotif = false
     clearHoverGrace()
     clearTimeout(hideTimeout)
@@ -939,36 +830,8 @@
     }, 500)
   }
 
-  setContext('hidePill', hideWidget)
-
-  function syncOSBounds() {
-    if (
-      gestures.isDragging ||
-      gestures.isTrackRegionActive ||
-      gestures.isSettling ||
-      gestures.isInertia
-    ) {
-      return
-    }
-    const target = getBoundsForState()
-    bounds.syncBounds(
-      target,
-      clampedOffsetX,
-      islandNode,
-      gestures.isDragging || gestures.isInertia,
-      isHidden
-    )
-  }
-
-  $effect(syncOSBounds)
-
-  // Drag Gesture Helpers
   function finishDragGesture() {
-    const wasInRunway =
-      gestures.isTrackRegionActive ||
-      gestures.isDragging ||
-      gestures.isSettling ||
-      gestures.isInertia
+    const wasInRunway = isGestureBusy()
     gestures.finishDrag(undefined, () => {
       const baseCenter = displayLayout.virtualLeft + displayLayout.primaryCenter
       const targetMon =
@@ -1048,58 +911,444 @@
     bounds.startTrackingTransition(islandNode, 350, false)
   }
 
-  function handleMouseEnter() {
-    clearHoverGrace()
-    isHovering = true
-    isSatelliteHovering = false
-    clearTimeout(hideTimeout)
-    if (
-      !gestures.isDragging &&
-      !gestures.isTrackRegionActive &&
-      !gestures.isSettling &&
-      !gestures.isInertia
-    ) {
+  function recoverBoundsIfIdle() {
+    if (!isGestureBusy()) {
       bounds.recoverRestingBounds(
         getBoundsForState(),
         clampedOffsetX,
         islandNode,
         isHidden
       )
-      bounds.syncPillBounds(islandNode, isHidden, true)
-    }
-    if (isHidden && $wakeMethodStore === 'hover') {
-      hoverShowTimeout = window.setTimeout(showWidget, 150)
-    } else if (!isHidden) {
-      showWidget()
     }
   }
 
-  function handleMouseLeave() {
-    clearHoverGrace()
-    hoverGraceTimeout = window.setTimeout(() => {
-      isHovering = false
-      isSatelliteHovering = false
-      clearTimeout(hoverShowTimeout)
-      hideTrigger++
-    }, HOVER_GRACE_MS)
+  setContext('navigate', navigateTo)
+  setContext('goBack', goBack)
+  setContext('hidePill', hideWidget)
+
+  // Reactive Effects
+  $effect(function handleDebugBoundsOverlayEffect() {
+    const enabled = $debugBoundsOverlay
+    if (typeof document !== 'undefined') {
+      document.body.classList.toggle('debug-bounds-overlay', enabled)
+    }
+  })
+
+  $effect(function handleOnboardingSync() {
+    if (!$hasCompletedOnboardingStore) {
+      if (activePage !== OnboardingPage) {
+        activePage = OnboardingPage
+        islandConfig = onboardingConfig
+        expanded = true
+        isPageDormant = false
+        isHidden = false
+      }
+    } else if (activePage === OnboardingPage) {
+      activePage = HomePage
+      islandConfig = homeConfig
+      expanded = false
+      $activePageIdStore = 'home'
+    }
+  })
+
+  $effect(function handleExpandedTransitionEffect() {
+    const isExp = expanded
+    if (previousExpanded === undefined) {
+      previousExpanded = isExp
+      return
+    }
+    if (previousExpanded === isExp) return
+    previousExpanded = isExp
+
+    hideTooltip()
+    gestures.finishSettling()
+
+    bounds.syncPillBounds(islandNode, isHidden, true)
+    bounds.startTrackingTransition(islandNode, isExp ? 350 : 250, false)
+
+    clearTimeout(islandTransitionTimeout)
+    const transitionDuration = isExp ? 340 : 280
+
+    islandTransitionTimeout = window.setTimeout(() => {
+      if (!isGestureBusy()) {
+        bounds.recoverRestingBounds(
+          getBoundsForState(),
+          clampedOffsetX,
+          islandNode,
+          isHidden
+        )
+        bounds.syncPillBounds(islandNode, isHidden, true)
+      }
+      if (!isExp) {
+        bounds.trimMemory()
+      }
+    }, transitionDuration)
+  })
+
+  $effect(function handleAutoHideSync() {
+    void activePage
+    void hideTrigger
+    void isHovering
+    void isSatelliteHovering
+    void isHidden
+    void expanded
+    void shouldCurrentPageAutoHide
+    void isMediaActive
+    void $devPinnedStore
+    void $autoHideDelayStore
+    untrack(() => resetHideTimer())
+  })
+
+  $effect(function handleSmartEdgeOffsetAdjustment() {
+    if (!gestures.isDragging && !gestures.isInertia) {
+      let adjusted = false
+      if (currentLiveOffsetX > allowedOffsets.max) {
+        currentLiveOffsetX = allowedOffsets.max
+        $hiddenPillOffsetXStore = currentLiveOffsetX
+        adjusted = true
+      } else if (currentLiveOffsetX < allowedOffsets.min) {
+        currentLiveOffsetX = allowedOffsets.min
+        $hiddenPillOffsetXStore = currentLiveOffsetX
+        adjusted = true
+      }
+      if (adjusted && !gestures.isTrackRegionActive && !gestures.isSettling) {
+        bounds.syncBounds(
+          getBoundsForState(),
+          currentLiveOffsetX,
+          islandNode,
+          false,
+          isHidden
+        )
+      }
+    }
+  })
+
+  $effect(function handleHiddenPillOffsetSync() {
+    const val = $hiddenPillOffsetXStore
+    if (!gestures.isDragging && !gestures.isInertia) {
+      currentLiveOffsetX = val
+    }
+  })
+
+  $effect(function handleIsHiddenSyncEffect() {
+    $isIslandHiddenStore = isHidden
+  })
+
+  let wasRingingAlarm = false
+
+  $effect(function handleRingingAlarmNavigation() {
+    if (ringingAlarm) {
+      wasRingingAlarm = true
+      if (isHidden) showWidget()
+      if (activePage !== TimerPage) {
+        navigateTo(TimerPage, timerConfig, false)
+      }
+    } else if (wasRingingAlarm) {
+      wasRingingAlarm = false
+      if (!expanded && activePage === TimerPage && !isTimerActive) {
+        const fallback = getFallbackPage()
+        navigateTo(fallback.page as Component, fallback.config, false)
+      }
+    }
+  })
+
+  $effect(function syncOSBounds() {
+    if (isGestureBusy()) return
+    const target = getBoundsForState()
+    bounds.syncBounds(target, clampedOffsetX, islandNode, false, isHidden)
+  })
+
+  $effect(function handleActiveThemeChange() {
+    const currentTheme = $themeStore || 'dark-gold'
+    applyThemeToDOM(currentTheme)
+  })
+
+  $effect(function handleUiScaleSyncEffect() {
+    void effectiveUiScale
+    bounds.syncPillBounds(islandNode, isHidden, true)
+  })
+
+  // Wails Event Subscriptions (Top-Level for Auto-Unsubscribe)
+  function unwrapEventData<T = any>(ev: { data?: unknown } | any): T {
+    const raw =
+      ev?.data !== undefined
+        ? Array.isArray(ev.data)
+          ? ev.data[0]
+          : ev.data
+        : ev
+    return (Array.isArray(raw) ? raw[0] : (raw?.data ?? raw)) as T
   }
 
-  function handleSatelliteMouseEnter() {
-    clearHoverGrace()
-    isSatelliteHovering = true
-    isHovering = false
-    clearTimeout(hideTimeout)
-  }
+  // DevTest: Navigation, Theme & Debug Overlays
+  Events.On('devtest-navigate', (ev) => {
+    const data = unwrapEventData<{ mode?: string; expand?: boolean }>(ev)
+    if (!data?.mode) return
 
-  function handleSatelliteMouseLeave() {
-    clearHoverGrace()
-    hoverGraceTimeout = window.setTimeout(() => {
-      isSatelliteHovering = false
-      isHovering = false
-      hideTrigger++
-    }, HOVER_GRACE_MS)
-  }
+    const expand = Boolean(data.expand)
+    if (
+      !expand &&
+      (data.mode === 'fileshelf' ||
+        data.mode === 'notes' ||
+        data.mode === 'apps' ||
+        data.mode === 'settings')
+    ) {
+      const fallback = getFallbackPage()
+      $devPinnedStore = false
+      navigateTo(fallback.page as Component, fallback.config, false)
+      return
+    }
 
+    const match = PAGE_MAPPINGS[data.mode]
+    if (match) {
+      $hasCompletedOnboardingStore = true
+      hasCompletedOnboardingStore.set(true)
+      $devPinnedStore = true
+      navigateTo(match.page, match.config, expand)
+    }
+  })
+
+  Events.On('devtest-pin', (ev) => {
+    const data = unwrapEventData<{ pinned?: boolean }>(ev)
+    if (typeof data?.pinned === 'boolean') {
+      $devPinnedStore = data.pinned
+    }
+  })
+
+  Events.On('devtest-theme', (ev) => {
+    const data = ev?.data as { theme?: string }
+    if (data?.theme) {
+      $themeStore = data.theme
+    }
+  })
+
+  Events.On('devtest-reload-css', async (ev) => {
+    const data = ev?.data as {
+      theme?: string
+      mode?: string
+      expand?: boolean
+      pinned?: boolean
+    }
+    const targetTheme = data?.theme || $themeStore || 'dark-gold'
+    await refreshStylesheetsAndTheme(targetTheme)
+    try {
+      sessionStorage.setItem(
+        'vinta_devtest_reload_state',
+        JSON.stringify({
+          mode: data?.mode || $activePageIdStore || 'home',
+          expand: typeof data?.expand === 'boolean' ? data.expand : expanded,
+          pinned:
+            typeof data?.pinned === 'boolean' ? data.pinned : $devPinnedStore
+        })
+      )
+    } catch {}
+    window.location.reload()
+  })
+
+  Events.On('devtest-bounds-overlay', (ev) => {
+    const data = ev?.data as { show?: boolean }
+    if (typeof data?.show === 'boolean') {
+      $debugBoundsOverlay = data.show
+      document.body.classList.toggle('debug-bounds-overlay', data.show)
+    }
+  })
+
+  Events.On('devtest-logs', (ev) => {
+    const data = ev?.data as { enabled?: boolean }
+    if (typeof data?.enabled === 'boolean') {
+      $debugLogs = data.enabled
+    }
+  })
+
+  Events.On('devtest-class-inspector', (ev) => {
+    const data = ev?.data as { enabled?: boolean }
+    if (typeof data?.enabled === 'boolean') {
+      $debugClassInspector = data.enabled
+    }
+  })
+
+  // DevTest: Hardware, Weather & Clock Simulation
+  Events.On('devtest-battery', (ev) => {
+    const data = ev?.data as { isSimulating?: boolean; data?: BatteryData }
+    if (typeof data?.isSimulating === 'boolean') {
+      isSimulatingBatteryStore.set(data.isSimulating)
+      if (data.data) batteryDataStore.set(data.data)
+    }
+  })
+
+  Events.On('devtest-wireless', (ev) => {
+    const data = ev?.data as { isSimulating?: boolean; data?: WirelessData }
+    if (typeof data?.isSimulating === 'boolean') {
+      isSimulatingWirelessStore.set(data.isSimulating)
+      if (data.data) wirelessDataStore.set(data.data)
+    }
+  })
+
+  Events.On('devtest-weather', (ev) => {
+    const data = ev?.data as {
+      location?: WeatherLocation
+      unit?: TemperatureUnit
+      timezone?: string
+      simulateOffline?: boolean
+    }
+    if (data?.location) weatherLocationStore.set(data.location)
+    if (data?.unit) weatherUnitStore.set(data.unit)
+    if (data?.timezone) timezoneStore.set(data.timezone)
+    if (typeof data?.simulateOffline === 'boolean') {
+      simulateOfflineStore.set(data.simulateOffline)
+    }
+  })
+
+  Events.On('devtest-weather-mock', (ev) => {
+    const data = ev?.data as { mock?: any }
+    simulateWeatherStore.set(data?.mock ?? null)
+  })
+
+  Events.On('devtest-clock', (ev) => {
+    const data = unwrapEventData<{ time?: number | string }>(ev)
+    if (data?.time) {
+      const d = new Date(data.time)
+      if (!isNaN(d.getTime())) {
+        simulatedClockStore.set(d)
+        return
+      }
+    }
+    simulatedClockStore.set(null)
+  })
+
+  // DevTest: Media, Timer, FileShelf & Notifications
+  Events.On('devtest-trigger-ringing-alarm', (ev) => {
+    const data = unwrapEventData<{ label?: string; time?: string }>(ev)
+    try {
+      SendMediaControl('pause')
+    } catch {}
+    globalMediaStore.update((m) => ({ ...m, isPlaying: false }))
+    timerAppStore.update((s) => ({
+      ...s,
+      ringingAlarm: {
+        id: 'showcase-alarm',
+        alarmId: 'mock_alarm_1',
+        label: data?.label || '16:00 Launch Review',
+        time: data?.time || '16:00',
+        days: [],
+        repeat: 'once',
+        triggeredAt: Date.now()
+      }
+    }))
+    startAlarmRingingChime(get(alarmVolumeStore), get(alarmSoundPresetStore))
+  })
+
+  Events.On('devtest-dismiss-alarm', () => {
+    stopAlarmRingingChime()
+    dismissRingingAlarm()
+  })
+
+  Events.On('devtest-timer-state', (ev) => {
+    const data = unwrapEventData<any>(ev) || {}
+    if (data.activeTab) {
+      timerAppStore.update((s) => ({ ...s, activeTab: data.activeTab }))
+    }
+    if (data.newAlarm) {
+      addAlarm(
+        data.newAlarm.time,
+        data.newAlarm.label,
+        data.newAlarm.repeat || 'once',
+        data.newAlarm.days || []
+      )
+    }
+  })
+
+  Events.On('devtest-media-state', (ev) => {
+    const data = unwrapEventData<any>(ev) || {}
+    globalMediaStore.update((m) => ({ ...m, ...data }))
+  })
+
+  Events.On('devtest-mock-fileshelf', (ev) => {
+    const data = unwrapEventData<{ singleFile?: boolean }>(ev) || {}
+    const now = Date.now()
+    const pdfItem = {
+      path: 'C:\\Projects\\proposal_final.pdf',
+      name: 'proposal_final.pdf',
+      size: 2450000,
+      extension: 'pdf',
+      isDir: false,
+      category: 'document' as const,
+      addedAt: now
+    }
+    const items = data.singleFile
+      ? [pdfItem]
+      : [
+          pdfItem,
+          {
+            path: 'C:\\Projects\\hero_render_4k.png',
+            name: 'hero_render_4k.png',
+            size: 8900000,
+            extension: 'png',
+            isDir: false,
+            category: 'image' as const,
+            addedAt: now
+          }
+        ]
+    fileShelfStore.update((s) => ({ ...s, items }))
+  })
+
+  Events.On('devtest-clear-fileshelf', () => {
+    clearFileShelf()
+  })
+
+  Events.On('devtest-file-drop-hold', (ev) => {
+    const data = ev?.data as { active?: boolean; progress?: number }
+    window.dispatchEvent(
+      new CustomEvent('vinta-devtest-file-hold', { detail: data })
+    )
+  })
+
+  Events.On('devtest-clear-notifications', () => {
+    notifData.set([])
+    try {
+      localStorage.removeItem('vinta_notifications')
+    } catch {}
+    if (typeof SaveNotifications === 'function') {
+      SaveNotifications('[]').catch(() => {})
+    }
+  })
+
+  Events.On('devtest-cleanup', () => {
+    simulatedClockStore.set(null)
+    cleanShowcaseAlarms()
+    calendarStore.update((s) => ({
+      ...s,
+      events: s.events.filter(
+        (e) =>
+          !e.title.toLowerCase().includes('showcase') &&
+          !e.title.toLowerCase().includes('launch') &&
+          !e.title.toLowerCase().includes('vinta') &&
+          !e.title.toLowerCase().includes('demo')
+      )
+    }))
+    timerAppStore.update((s) => ({
+      ...s,
+      ringingAlarm: null,
+      focus: {
+        ...s.focus,
+        isRunning: false,
+        timeRemaining: 0
+      }
+    }))
+    fileShelfStore.update((s) => ({ ...s, items: [] }))
+    try {
+      localStorage.removeItem('vinta_file_shelf_paths')
+    } catch {}
+    notifData.set([])
+    try {
+      localStorage.removeItem('vinta_notifications')
+    } catch {}
+    if (typeof SaveNotifications === 'function') {
+      SaveNotifications('[]').catch(() => {})
+    }
+    stopAlarmRingingChime()
+  })
+
+  // Mount & Window Lifecycle
   onMount(() => {
     const disableGlobalContextMenu = (e: MouseEvent) => e.preventDefault()
     window.addEventListener('contextmenu', disableGlobalContextMenu)
@@ -1114,12 +1363,12 @@
       })
     })
 
-    window.setTimeout(() => {
+    const initSyncTimer1 = window.setTimeout(() => {
       bounds.syncPillBounds(islandNode, isHidden, true)
       resyncAllSatellites()
     }, 120)
 
-    window.setTimeout(() => {
+    const initSyncTimer2 = window.setTimeout(() => {
       bounds.syncPillBounds(islandNode, isHidden, true)
       resyncAllSatellites()
     }, 320)
@@ -1155,10 +1404,6 @@
       resyncAllSatellites()
     }
 
-    window.addEventListener('vinta-overlay', handleOverlayChange)
-    window.addEventListener('vinta-quit', handleQuit)
-    window.addEventListener('vinta-resync-bounds', handleResyncBounds)
-
     const refreshDisplay = async () => {
       try {
         const layout = await GetDisplayLayout()
@@ -1185,23 +1430,15 @@
         ) {
           return
         }
-        if (gestures.isDragging) {
-          finishDragGesture()
-        }
+        if (gestures.isDragging) finishDragGesture()
         return
       }
       if (e?.type === 'pointercancel') {
-        if (e instanceof PointerEvent && e.buttons === 1) {
-          return
-        }
-        if (gestures.isDragging) {
-          finishDragGesture()
-        }
+        if (e instanceof PointerEvent && e.buttons === 1) return
+        if (gestures.isDragging) finishDragGesture()
         return
       }
-      if (gestures.isDragging) {
-        finishDragGesture()
-      }
+      if (gestures.isDragging) finishDragGesture()
     }
 
     const handleWindowKeydownFailsafe = (e: KeyboardEvent) => {
@@ -1243,19 +1480,7 @@
     }
 
     const handleWindowFocus = () => {
-      if (
-        !gestures.isDragging &&
-        !gestures.isTrackRegionActive &&
-        !gestures.isSettling &&
-        !gestures.isInertia
-      ) {
-        bounds.recoverRestingBounds(
-          getBoundsForState(),
-          clampedOffsetX,
-          islandNode,
-          isHidden
-        )
-      }
+      recoverBoundsIfIdle()
     }
 
     const handleRecoverBoundsEvent = () => {
@@ -1330,6 +1555,9 @@
       }
     }
 
+    window.addEventListener('vinta-overlay', handleOverlayChange)
+    window.addEventListener('vinta-quit', handleQuit)
+    window.addEventListener('vinta-resync-bounds', handleResyncBounds)
     window.addEventListener('resize', handleResize)
     window.addEventListener('blur', handleGlobalDragFailsafe)
     window.addEventListener('pointercancel', handleGlobalDragFailsafe)
@@ -1402,23 +1630,6 @@
       onModeSwitchHotkey: handleModeSwitchHotkey
     })
 
-    const pageMappings: Record<
-      string,
-      { page: Component; config: IslandConfig }
-    > = {
-      home: { page: HomePage, config: homeConfig },
-      media: { page: MediaPage, config: mediaConfig },
-      notifications: { page: NotificationPage, config: notifConfig },
-      notes: { page: NotesPage, config: notesConfig },
-      apps: { page: AppsPage, config: appsConfig },
-      settings: { page: SettingsPage, config: settingsConfig },
-      calculator: { page: CalculatorPage, config: calcConfig },
-      timer: { page: TimerPage, config: timerConfig },
-      calendar: { page: CalendarPage, config: calendarConfig },
-      weather: { page: WeatherPage, config: weatherConfig },
-      fileshelf: { page: FileShelfPage, config: fileShelfConfig }
-    }
-
     try {
       const savedDevReload = sessionStorage.getItem(
         'vinta_devtest_reload_state'
@@ -1433,435 +1644,23 @@
         if (typeof parsed.pinned === 'boolean') {
           $devPinnedStore = parsed.pinned
         }
-        if (parsed.mode && pageMappings[parsed.mode]) {
-          const match = pageMappings[parsed.mode]
+        if (parsed.mode && PAGE_MAPPINGS[parsed.mode]) {
+          const match = PAGE_MAPPINGS[parsed.mode]
           navigateTo(match.page, match.config, Boolean(parsed.expand))
         }
       }
-    } catch {
-      // Ignore storage errors
-    }
-
-    const unsubDevTestNavigate = Events.On(
-      'devtest-navigate',
-      (ev: { data: unknown }) => {
-        const raw =
-          ev?.data !== undefined
-            ? Array.isArray(ev.data)
-              ? ev.data[0]
-              : ev.data
-            : ev
-        const data = raw as { mode?: string; expand?: boolean }
-        if (!data?.mode) return
-
-        const expand = Boolean(data.expand)
-        if (
-          !expand &&
-          (data.mode === 'fileshelf' ||
-            data.mode === 'notes' ||
-            data.mode === 'apps' ||
-            data.mode === 'settings')
-        ) {
-          const fallback = getFallbackPage()
-          $devPinnedStore = false
-          navigateTo(fallback.page as Component, fallback.config, false)
-          return
-        }
-
-        const match = pageMappings[data.mode]
-        if (match) {
-          $hasCompletedOnboardingStore = true
-          hasCompletedOnboardingStore.set(true)
-          $devPinnedStore = true
-          navigateTo(match.page, match.config, expand)
-        }
-      }
-    )
-
-    const unsubDevTestPin = Events.On(
-      'devtest-pin',
-      (ev: { data: unknown }) => {
-        const raw =
-          ev?.data !== undefined
-            ? Array.isArray(ev.data)
-              ? ev.data[0]
-              : ev.data
-            : ev
-        const data = raw as { pinned?: boolean }
-        if (typeof data?.pinned === 'boolean') {
-          $devPinnedStore = data.pinned
-        }
-      }
-    )
-
-    const unsubDevTestTheme = Events.On(
-      'devtest-theme',
-      (ev: { data: unknown }) => {
-        const data = ev?.data as { theme?: string }
-        if (data?.theme) {
-          $themeStore = data.theme
-        }
-      }
-    )
-
-    const unsubDevTestReloadCss = Events.On(
-      'devtest-reload-css',
-      async (ev: { data: unknown }) => {
-        const data = ev?.data as {
-          theme?: string
-          mode?: string
-          expand?: boolean
-          pinned?: boolean
-        }
-        const targetTheme = data?.theme || $themeStore || 'dark-gold'
-        await refreshStylesheetsAndTheme(targetTheme)
-        try {
-          sessionStorage.setItem(
-            'vinta_devtest_reload_state',
-            JSON.stringify({
-              mode: data?.mode || $activePageIdStore || 'home',
-              expand:
-                typeof data?.expand === 'boolean' ? data.expand : expanded,
-              pinned:
-                typeof data?.pinned === 'boolean'
-                  ? data.pinned
-                  : $devPinnedStore
-            })
-          )
-        } catch {
-          // Ignore storage errors
-        }
-        window.location.reload()
-      }
-    )
-
-    const unsubDevTestBounds = Events.On(
-      'devtest-bounds-overlay',
-      (ev: { data: unknown }) => {
-        const data = ev?.data as { show?: boolean }
-        if (typeof data?.show === 'boolean') {
-          $debugBoundsOverlay = data.show
-          if (data.show) {
-            document.body.classList.add('debug-bounds-overlay')
-          } else {
-            document.body.classList.remove('debug-bounds-overlay')
-          }
-        }
-      }
-    )
-
-    const unsubDevTestLogs = Events.On(
-      'devtest-logs',
-      (ev: { data: unknown }) => {
-        const data = ev?.data as { enabled?: boolean }
-        if (typeof data?.enabled === 'boolean') {
-          $debugLogs = data.enabled
-        }
-      }
-    )
-
-    const unsubDevTestInspector = Events.On(
-      'devtest-class-inspector',
-      (ev: { data: unknown }) => {
-        const data = ev?.data as { enabled?: boolean }
-        if (typeof data?.enabled === 'boolean') {
-          $debugClassInspector = data.enabled
-        }
-      }
-    )
-
-    const unsubDevTestBattery = Events.On(
-      'devtest-battery',
-      (ev: { data: unknown }) => {
-        const data = ev?.data as { isSimulating?: boolean; data?: BatteryData }
-        if (typeof data?.isSimulating === 'boolean') {
-          isSimulatingBatteryStore.set(data.isSimulating)
-          if (data.data) {
-            batteryDataStore.set(data.data)
-          }
-        }
-      }
-    )
-
-    const unsubDevTestWireless = Events.On(
-      'devtest-wireless',
-      (ev: { data: unknown }) => {
-        const data = ev?.data as { isSimulating?: boolean; data?: WirelessData }
-        if (typeof data?.isSimulating === 'boolean') {
-          isSimulatingWirelessStore.set(data.isSimulating)
-          if (data.data) {
-            wirelessDataStore.set(data.data)
-          }
-        }
-      }
-    )
-
-    const unsubDevTestWeather = Events.On(
-      'devtest-weather',
-      (ev: { data: unknown }) => {
-        const data = ev?.data as {
-          location?: WeatherLocation
-          unit?: TemperatureUnit
-          timezone?: string
-          simulateOffline?: boolean
-        }
-        if (data?.location) weatherLocationStore.set(data.location)
-        if (data?.unit) weatherUnitStore.set(data.unit)
-        if (data?.timezone) timezoneStore.set(data.timezone)
-        if (typeof data?.simulateOffline === 'boolean')
-          simulateOfflineStore.set(data.simulateOffline)
-      }
-    )
-
-    const unsubDevTestWeatherMock = Events.On(
-      'devtest-weather-mock',
-      (ev: { data: unknown }) => {
-        const data = ev?.data as { mock?: any }
-        simulateWeatherStore.set(data?.mock ?? null)
-      }
-    )
-
-    const unsubDevTestAlarm = Events.On(
-      'devtest-trigger-ringing-alarm',
-      (ev: { data: unknown }) => {
-        const raw = ev?.data as any
-        const data = Array.isArray(raw) ? raw[0] : (raw?.data ?? raw)
-        // Immediately pause media playback on Main Island and native OS audio when alarm triggers
-        try {
-          SendMediaControl('pause')
-        } catch {}
-        globalMediaStore.update((m) => ({
-          ...m,
-          isPlaying: false
-        }))
-        timerAppStore.update((s) => ({
-          ...s,
-          ringingAlarm: {
-            id: 'showcase-alarm',
-            alarmId: 'mock_alarm_1',
-            label: data?.label || '16:00 Launch Review',
-            time: data?.time || '16:00',
-            days: [],
-            repeat: 'once',
-            triggeredAt: Date.now()
-          }
-        }))
-        startAlarmRingingChime(
-          get(alarmVolumeStore),
-          get(alarmSoundPresetStore)
-        )
-      }
-    )
-
-    const unsubDevTestTimerState = Events.On(
-      'devtest-timer-state',
-      (ev: { data: unknown }) => {
-        const raw = ev?.data as any
-        const data = (Array.isArray(raw) ? raw[0] : (raw?.data ?? raw)) || {}
-        if (data.activeTab) {
-          timerAppStore.update((s) => ({
-            ...s,
-            activeTab: data.activeTab
-          }))
-        }
-        if (data.newAlarm) {
-          addAlarm(
-            data.newAlarm.time,
-            data.newAlarm.label,
-            data.newAlarm.repeat || 'once',
-            data.newAlarm.days || []
-          )
-        }
-      }
-    )
-
-    const unsubDevTestMediaState = Events.On(
-      'devtest-media-state',
-      (ev: { data: unknown }) => {
-        const raw = ev?.data as any
-        const data = (Array.isArray(raw) ? raw[0] : (raw?.data ?? raw)) || {}
-        globalMediaStore.update((m) => ({
-          ...m,
-          ...data
-        }))
-      }
-    )
-
-    const unsubDevTestFileShelf = Events.On(
-      'devtest-mock-fileshelf',
-      (ev: { data: unknown }) => {
-        const raw = ev?.data as any
-        const data = (Array.isArray(raw) ? raw[0] : (raw?.data ?? raw)) || {}
-        if (data.singleFile) {
-          fileShelfStore.update((s) => ({
-            ...s,
-            items: [
-              {
-                path: 'C:\\Projects\\proposal_final.pdf',
-                name: 'proposal_final.pdf',
-                size: 2450000,
-                extension: 'pdf',
-                isDir: false,
-                category: 'document',
-                addedAt: Date.now()
-              }
-            ]
-          }))
-          return
-        }
-        fileShelfStore.update((s) => ({
-          ...s,
-          items: [
-            {
-              path: 'C:\\Projects\\proposal_final.pdf',
-              name: 'proposal_final.pdf',
-              size: 2450000,
-              extension: 'pdf',
-              isDir: false,
-              category: 'document',
-              addedAt: Date.now()
-            },
-            {
-              path: 'C:\\Projects\\hero_render_4k.png',
-              name: 'hero_render_4k.png',
-              size: 8900000,
-              extension: 'png',
-              isDir: false,
-              category: 'image',
-              addedAt: Date.now()
-            }
-          ]
-        }))
-      }
-    )
-
-    const unsubDevTestClearFileshelf = Events.On(
-      'devtest-clear-fileshelf',
-      () => {
-        clearFileShelf()
-      }
-    )
-
-    const unsubDevTestFileHold = Events.On(
-      'devtest-file-drop-hold',
-      (ev: { data: unknown }) => {
-        const data = ev?.data as { active?: boolean; progress?: number }
-        window.dispatchEvent(
-          new CustomEvent('vinta-devtest-file-hold', { detail: data })
-        )
-      }
-    )
-
-    const unsubDevTestClearNotifs = Events.On(
-      'devtest-clear-notifications',
-      () => {
-        notifData.set([])
-        try {
-          localStorage.removeItem('vinta_notifications')
-        } catch {}
-        if (typeof SaveNotifications === 'function') {
-          SaveNotifications('[]').catch(() => {})
-        }
-      }
-    )
-
-    const unsubDevTestDismissAlarm = Events.On('devtest-dismiss-alarm', () => {
-      stopAlarmRingingChime()
-      dismissRingingAlarm()
-    })
-
-    const unsubDevTestClock = Events.On(
-      'devtest-clock',
-      (ev: { data: unknown }) => {
-        const raw =
-          ev?.data !== undefined
-            ? Array.isArray(ev.data)
-              ? ev.data[0]
-              : ev.data
-            : ev
-        const data = (Array.isArray(raw) ? raw[0] : (raw?.data ?? raw)) || {}
-        if (data?.time) {
-          const d =
-            typeof data.time === 'number'
-              ? new Date(data.time)
-              : new Date(data.time)
-          if (!isNaN(d.getTime())) {
-            simulatedClockStore.set(d)
-            return
-          }
-        }
-        simulatedClockStore.set(null)
-      }
-    )
-
-    const unsubDevTestCleanup = Events.On('devtest-cleanup', () => {
-      simulatedClockStore.set(null)
-      cleanShowcaseAlarms()
-      calendarStore.update((s) => ({
-        ...s,
-        events: s.events.filter(
-          (e) =>
-            !e.title.toLowerCase().includes('showcase') &&
-            !e.title.toLowerCase().includes('launch') &&
-            !e.title.toLowerCase().includes('vinta') &&
-            !e.title.toLowerCase().includes('demo')
-        )
-      }))
-      timerAppStore.update((s) => ({
-        ...s,
-        ringingAlarm: null,
-        focus: {
-          ...s.focus,
-          isRunning: false,
-          timeRemaining: 0
-        }
-      }))
-      fileShelfStore.update((s) => ({
-        ...s,
-        items: []
-      }))
-      try {
-        localStorage.removeItem('vinta_file_shelf_paths')
-      } catch {}
-      notifData.set([])
-      try {
-        localStorage.removeItem('vinta_notifications')
-      } catch {}
-      if (typeof SaveNotifications === 'function') {
-        SaveNotifications('[]').catch(() => {})
-      }
-      stopAlarmRingingChime()
-    })
+    } catch {}
 
     return () => {
       window.clearInterval(idleMemoryWatchdog)
+      clearTimeout(initSyncTimer1)
+      clearTimeout(initSyncTimer2)
       stopIdleReconciler()
       finishDragGesture()
       cleanupEvents()
       bounds.cleanup()
       gestures.cleanup()
-      unsubDevTestNavigate()
-      unsubDevTestPin()
-      unsubDevTestTheme()
-      unsubDevTestReloadCss()
-      unsubDevTestBounds()
-      unsubDevTestLogs()
-      unsubDevTestInspector()
-      unsubDevTestBattery()
-      unsubDevTestWireless()
-      unsubDevTestWeather()
-      unsubDevTestWeatherMock()
-      unsubDevTestAlarm()
-      unsubDevTestDismissAlarm()
-      unsubDevTestClock()
       simulatedClockStore.set(null)
-      unsubDevTestTimerState()
-      unsubDevTestMediaState()
-      unsubDevTestFileShelf()
-      unsubDevTestClearFileshelf()
-      unsubDevTestFileHold()
-      unsubDevTestClearNotifs()
-      unsubDevTestCleanup()
       clearHoverGrace()
       clearTimeout(dormantUnmountTimeout)
       clearTimeout(memoryTrimTimeout)
@@ -1871,24 +1670,17 @@
       window.removeEventListener('contextmenu', disableGlobalContextMenu)
       window.removeEventListener('vinta-overlay', handleOverlayChange)
       window.removeEventListener('vinta-quit', handleQuit)
+      window.removeEventListener('vinta-resync-bounds', handleResyncBounds)
       window.removeEventListener('resize', handleResize)
       window.removeEventListener('blur', handleGlobalDragFailsafe)
       window.removeEventListener('pointercancel', handleGlobalDragFailsafe)
       window.removeEventListener('keydown', handleWindowKeydownFailsafe)
       window.removeEventListener('focus', handleWindowFocus)
-      window.removeEventListener('vinta-resync-bounds', handleResyncBounds)
+      window.removeEventListener(
+        'vinta-recover-bounds',
+        handleRecoverBoundsEvent
+      )
     }
-  })
-
-  $effect(function handleActiveThemeChange() {
-    const currentTheme = $themeStore || 'dark-gold'
-    applyThemeToDOM(currentTheme)
-  })
-
-  $effect(function handleUiScaleSyncEffect() {
-    // Read reactive effective scale and resync native hit bounds
-    const _scale = effectiveUiScale
-    bounds.syncPillBounds(islandNode, isHidden, true)
   })
 </script>
 
@@ -1918,36 +1710,12 @@
     class="island-wrapper"
     ontransitionend={(e) => {
       if (e.target === islandWrapperNode) {
-        if (
-          !gestures.isDragging &&
-          !gestures.isTrackRegionActive &&
-          !gestures.isSettling &&
-          !gestures.isInertia
-        ) {
-          bounds.recoverRestingBounds(
-            getBoundsForState(),
-            clampedOffsetX,
-            islandNode,
-            isHidden
-          )
-        }
+        recoverBoundsIfIdle()
       }
     }}
     ontransitioncancel={(e) => {
       if (e.target === islandWrapperNode) {
-        if (
-          !gestures.isDragging &&
-          !gestures.isTrackRegionActive &&
-          !gestures.isSettling &&
-          !gestures.isInertia
-        ) {
-          bounds.recoverRestingBounds(
-            getBoundsForState(),
-            clampedOffsetX,
-            islandNode,
-            isHidden
-          )
-        }
+        recoverBoundsIfIdle()
       }
     }}
     style="
@@ -1972,7 +1740,7 @@
       {isTimeoutActive}
       {shouldCurrentPageAutoHide}
       {isMediaActive}
-      isTimerActive={isAnyTimerRunning($timerAppStore)}
+      {isTimerActive}
       {hideTrigger}
       {islandConfig}
       {currentMinimalW}
@@ -2014,36 +1782,8 @@
       onHideWidget={hideWidget}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
-      onRecoverBounds={() => {
-        if (
-          !gestures.isDragging &&
-          !gestures.isTrackRegionActive &&
-          !gestures.isSettling &&
-          !gestures.isInertia
-        ) {
-          bounds.recoverRestingBounds(
-            getBoundsForState(),
-            clampedOffsetX,
-            islandNode,
-            isHidden
-          )
-        }
-      }}
-      onAnimationDone={() => {
-        if (
-          !gestures.isDragging &&
-          !gestures.isTrackRegionActive &&
-          !gestures.isSettling &&
-          !gestures.isInertia
-        ) {
-          bounds.recoverRestingBounds(
-            getBoundsForState(),
-            clampedOffsetX,
-            islandNode,
-            isHidden
-          )
-        }
-      }}
+      onRecoverBounds={recoverBoundsIfIdle}
+      onAnimationDone={recoverBoundsIfIdle}
     />
 
     {#if !isQuitting && !isHidden}
