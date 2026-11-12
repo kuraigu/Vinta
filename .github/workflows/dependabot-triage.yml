@@ -14,20 +14,23 @@ jobs:
     if: github.actor == 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
+      - name: Checkout PR Branch
         uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: "20"
+          node-version: "lts/*"
 
-      - name: Verify npm Install Peer Dependencies
+      - name: Verify npm Peer Dependencies & Lockfile
         id: npm_check
         continue-on-error: true
         run: |
           cd frontend
-          npm install --dry-run
+          npm install --dry-run --ignore-scripts
+          npm ci --dry-run --ignore-scripts
 
       - name: Close PR if Peer Dependencies Conflict
         if: steps.npm_check.outcome == 'failure'
@@ -42,7 +45,7 @@ jobs:
               owner,
               repo,
               issue_number,
-              body: '⚠️ **Dependabot Triage Notice**: This automated pull request failed dependency resolution due to a peer dependency conflict (e.g. TypeScript version incompatibility with `@typescript-eslint`). Auto-closing this PR to prevent CI pipeline failures.'
+              body: '**Dependabot Triage Notice**: This automated pull request failed dependency or lockfile resolution (`npm ci --dry-run`) due to a peer dependency conflict. Auto-closing this PR to prevent CI pipeline failures.'
             });
 
             await github.rest.pulls.update({

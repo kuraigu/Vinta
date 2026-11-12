@@ -7,7 +7,7 @@
 
 import type { Component } from 'svelte'
 import { get } from 'svelte/store'
-import { Events } from '@wailsio/runtime'
+import { Events } from '$lib/events'
 import appIcon from '@appicon'
 import {
   GetBatteryStatus,

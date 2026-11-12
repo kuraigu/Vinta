@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import { Events } from '@wailsio/runtime'
+  import { Events } from '$lib/events'
   import {
     Pin,
     Maximize2,
@@ -178,6 +178,20 @@
     } catch {}
   }
 
+  Events.On('devtest-sync-page', (ev: { data: unknown }) => {
+    const pageId = (ev?.data as { pageId?: string })?.pageId
+    if (pageId && pageId !== targetMode) {
+      targetMode = pageId
+    }
+  })
+
+  Events.On('devtest-inspector-hover', (ev: { data: unknown }) => {
+    const data = ev?.data as InspectorHoverPayload | undefined
+    if (data && data.tag) {
+      inspectedElement = data
+    }
+  })
+
   onMount(() => {
     try {
       const savedState = sessionStorage.getItem('vinta_devtest_window_state')
@@ -196,33 +210,8 @@
       // Ignore storage errors
     }
 
-    const unsubSync = Events.On(
-      'devtest-sync-page',
-      (ev: { data: unknown }) => {
-        const pageId = (ev?.data as { pageId?: string })?.pageId
-        if (pageId && pageId !== targetMode) {
-          targetMode = pageId
-        }
-      }
-    )
-
-    const unsubInspectorHover = Events.On(
-      'devtest-inspector-hover',
-      (ev: { data: unknown }) => {
-        const data = ev?.data as InspectorHoverPayload | undefined
-        if (data && data.tag) {
-          inspectedElement = data
-        }
-      }
-    )
-
     // Emit initial navigation on mount so the main island spawns and syncs with devtest window
     emitNavigate(targetMode, isExpandedMode)
-
-    return () => {
-      unsubSync()
-      unsubInspectorHover()
-    }
   })
 
   $effect(function handleDevTestThemeChange() {

@@ -6,7 +6,7 @@
  */
 
 import { writable } from 'svelte/store'
-import { Events } from '@wailsio/runtime'
+import { Events } from '$lib/events'
 import {
   GetSystemTelemetry,
   StartSystemTelemetry,

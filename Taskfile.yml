@@ -1,9 +1,12 @@
 # https://taskfile.dev
+# ============================================================================
+# NOTE: scripts.bat is the Single Source of Truth for all build, dev, and lint
+# commands so contributors do not have to install Task to work on Vinta.
+#
+# Do NOT put raw build or lint logic in this file. Always update scripts.bat
+# first and have Taskfile tasks call `scripts.bat <command>`.
+# ============================================================================
 version: "3"
-
-vars:
-  APP_NAME: Vinta
-  BUILD_DIR: "build/bin"
 
 tasks:
   default:
@@ -20,24 +23,22 @@ tasks:
   doctor:
     desc: Check development environment toolchains, SDKs, and dependencies
     cmds:
-      - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/doctor.ps1
+      - cmd.exe /c "scripts.bat doctor"
     silent: true
 
   setup:
     desc: Install dependencies, configure CMake build tree, and download Go modules
     cmds:
-      - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/setup.ps1
-    silent: false
+      - cmd.exe /c "scripts.bat setup {{.CLI_ARGS}}"
 
   kill:
     desc: Terminate any running Vinta application processes
     cmds:
-      - cmd.exe /c "taskkill /IM Vinta.exe /F /T >nul 2>&1 || exit 0"
+      - cmd.exe /c "scripts.bat kill"
     silent: true
 
   build:native:
     desc: Build native C++/WinRT bridge DLL using CMake and MSVC
-    deps: [kill]
     sources:
       - "backend/services/native/**/*.{cpp,h}"
       - "backend/services/native/CMakeLists.txt"
@@ -45,33 +46,27 @@ tasks:
       - "backend/services/vintaservices.dll"
       - "build/bin/vintaservices.dll"
     cmds:
-      - powershell.exe -NoProfile -Command "if (-not (Test-Path build/native)) { cmake -B build/native -S backend/services/native -G 'Visual Studio 18 2026' -A x64 }; cmake --build build/native --config Release"
+      - cmd.exe /c "scripts.bat build-native"
 
   dev:
     desc: Start live development server (Vite + Wails) with DevTest panel enabled
-    deps: [build:native]
     cmds:
-      - cmd.exe /c "taskkill /IM Vinta.exe /F /T >nul 2>&1 || exit 0"
-      - cmd.exe /c "set \"VINTA_SHOWCASE=\" && set \"VINTA_NO_DEVTEST=\" && wails3 dev -config ./build/config.yml -port 9245"
+      - cmd.exe /c "scripts.bat dev"
 
   showcase:
     desc: Start live development server with in-app Showcase Studio enabled
-    deps: [build:native]
     cmds:
-      - cmd.exe /c "taskkill /IM Vinta.exe /F /T >nul 2>&1 || exit 0"
-      - cmd.exe /c "set VINTA_SHOWCASE=1 && set \"VINTA_NO_DEVTEST=\" && wails3 dev -config ./build/config.yml -port 9245"
+      - cmd.exe /c "scripts.bat showcase"
 
   dev:frontend:
     desc: Start Vite dev server for Wails v3 dev mode
-    deps: [generate:bindings]
     cmds:
-      - cmd.exe /c "cd frontend && npm run dev -- --port 9245 --strictPort"
+      - cmd.exe /c "scripts.bat dev frontend"
 
   dev:nobuild:
     desc: Start live development server without rebuilding native C++ DLL
     cmds:
-      - cmd.exe /c "taskkill /IM Vinta.exe /F /T >nul 2>&1 || exit 0"
-      - cmd.exe /c "set \"VINTA_SHOWCASE=\" && set \"VINTA_NO_DEVTEST=\" && wails3 dev -config ./build/config.yml -port 9245"
+      - cmd.exe /c "scripts.bat dev no_build"
 
   icon:
     desc: Generate multi-resolution build/windows/icon.ico from build/appicon.png
@@ -80,7 +75,7 @@ tasks:
     generates:
       - "build/windows/icon.ico"
     cmds:
-      - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/generate_icon.ps1
+      - cmd.exe /c "scripts.bat icon"
 
   generate:bindings:
     desc: Generate TypeScript bindings for frontend from Go backend
@@ -91,13 +86,12 @@ tasks:
       - "frontend/bindings/Vinta/backend/app.ts"
       - "frontend/bindings/**/*"
     cmds:
-      - wails3 generate bindings -ts
+      - cmd.exe /c "scripts.bat bindings"
 
   build:frontend:
     desc: Build frontend production bundle using Vite
-    deps: [generate:bindings]
     cmds:
-      - cmd.exe /c "cd frontend && npm run build"
+      - cmd.exe /c "scripts.bat build-frontend"
 
   generate:syso:
     desc: Generate Windows syso resource file
@@ -108,97 +102,70 @@ tasks:
     generates:
       - "wails_windows_amd64.syso"
     cmds:
-      - wails3 generate syso -arch amd64 -icon build/windows/icon.ico -manifest build/windows/wails.exe.manifest -info build/windows/info.json -out wails_windows_amd64.syso
+      - cmd.exe /c "scripts.bat syso"
 
   build:
     desc: Build application binary (production by default, dev with DEV=true)
-    deps: [build:native, icon, build:frontend, generate:syso]
     cmds:
-      - cmd.exe /c "taskkill /IM Vinta.exe /F /T >nul 2>&1 || exit 0"
-      - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/increment_build.ps1
-      - '{{if eq .DEV "true"}}go build -tags devtest -o "{{.BUILD_DIR}}/{{.APP_NAME}}.exe" .{{else}}go build -trimpath -ldflags="-w -s -H windowsgui" -o "{{.BUILD_DIR}}/{{.APP_NAME}}.exe" .{{end}}'
-      - powershell.exe -NoProfile -Command "if (Test-Path wails_windows_amd64.syso) { Remove-Item -Force wails_windows_amd64.syso }"
+      - '{{if eq .DEV "true"}}cmd.exe /c "scripts.bat build dev"{{else}}cmd.exe /c "scripts.bat build"{{end}}'
 
   package:installer:
     desc: Build standalone production binary and Windows NSIS installer
-    deps: [build:native, icon]
     cmds:
-      - cmd.exe /c "taskkill /IM Vinta.exe /F /T >nul 2>&1 || exit 0"
-      - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/increment_build.ps1
-      - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/package_installer.ps1
+      - cmd.exe /c "scripts.bat installer"
 
   theme:pack:
     desc: Validate and package a theme directory into a distributable .vintatheme bundle
     cmds:
-      - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/pack-theme.ps1 {{.CLI_ARGS}}
+      - cmd.exe /c "scripts.bat pack-theme {{.CLI_ARGS}}"
 
   run:
     desc: Compile and run standalone binary
-    deps: [build]
     cmds:
-      - cmd.exe /c "taskkill /IM Vinta.exe /F /T >nul 2>&1 || exit 0"
-      - powershell.exe -NoProfile -Command "Start-Process 'build/bin/Vinta.exe'"
+      - cmd.exe /c "scripts.bat run"
 
   run:debug:
     desc: Compile and run standalone binary with debug flags
-    deps:
-      - task: build
-        vars:
-          DEV: "true"
     cmds:
-      - cmd.exe /c "taskkill /IM Vinta.exe /F /T >nul 2>&1 || exit 0"
-      - powershell.exe -NoProfile -Command "Start-Process 'build/bin/Vinta.exe' -ArgumentList '-debug'"
+      - cmd.exe /c "scripts.bat run debug"
 
   run:nobuild:
     desc: Launch pre-built binary directly without rebuilding
     cmds:
-      - cmd.exe /c "taskkill /IM Vinta.exe /F /T >nul 2>&1 || exit 0"
-      - powershell.exe -NoProfile -Command "if (Test-Path env:FRONTEND_DEVSERVER_URL) { & build/bin/Vinta.exe } else { $env:VINTA_NO_DEVTEST = '1'; Remove-Item env:VINTA_SHOWCASE -ErrorAction SilentlyContinue; Start-Process build/bin/Vinta.exe }"
+      - cmd.exe /c "scripts.bat run no_build"
 
   run:nobuild:debug:
     desc: Launch pre-built binary directly with debug flags
     cmds:
-      - cmd.exe /c "taskkill /IM Vinta.exe /F /T >nul 2>&1 || exit 0"
-      - powershell.exe -NoProfile -Command "$env:VINTA_NO_DEVTEST = '1'; Remove-Item env:VINTA_SHOWCASE -ErrorAction SilentlyContinue; Start-Process 'build/bin/Vinta.exe' -ArgumentList '-debug'"
+      - cmd.exe /c "scripts.bat run no_build debug"
 
   test:
     desc: Build and launch test suite binary with DevTest panel
-    deps:
-      - task: build
-        vars:
-          DEV: "true"
     cmds:
-      - cmd.exe /c "taskkill /IM Vinta.exe /F /T >nul 2>&1 || exit 0"
-      - powershell.exe -NoProfile -Command "Start-Process 'build/bin/Vinta.exe'"
+      - cmd.exe /c "scripts.bat test"
 
   lint:native:
     desc: Run clang-format on native C++ services
     cmds:
-      - powershell.exe -NoProfile -Command "if (Get-Command clang-format -ErrorAction SilentlyContinue) { Get-ChildItem -Path 'backend/services/native/*.cpp','backend/services/native/*.h' | ForEach-Object { clang-format -i $_.FullName } } else { Write-Host 'clang-format not found on PATH, skipping native C++ formatting.' }"
+      - cmd.exe /c "scripts.bat lint native"
 
   lint:
-    desc: Run Go formatting, golangci-lint, native C++ formatting, and frontend TypeScript/ESLint/Prettier checks
-    deps: [generate:bindings]
+    desc: Run Go, C++, Frontend (TypeScript/ESLint/Prettier/AppIcons), Theme, and Locale checks
     cmds:
-      - echo "Running Go Lint..."
-      - gofmt -w .
-      - golangci-lint run
-      - echo "Running Native C++ Lint..."
-      - task: lint:native
-      - echo "Running Frontend Lint..."
-      - cmd.exe /c "cd frontend && npm run check && npm run lint && npm run format"
-      - echo "Auditing Theme Tokens..."
-      - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/pack-theme.ps1 -CheckOnly
-      - echo "Checking Locale Catalogs..."
-      - task: check-locales
+      - cmd.exe /c "scripts.bat lint"
+
+  lint:ci:
+    desc: Run all project linters in non-mutating CI check mode
+    cmds:
+      - cmd.exe /c "scripts.bat lint ci"
 
   check-locales:
     desc: Check translation key parity and schema across all locale catalogs
     aliases: [check-locals, locales:check]
     cmds:
-      - node scripts/check-locales.js
+      - cmd.exe /c "scripts.bat check-locales"
 
   contributor:
     desc: "Add a contributor with a custom name (usage: task contributor -- <username> <roles> <name>)"
     cmds:
-      - powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./scripts/add_contributor.ps1 {{.CLI_ARGS}}
+      - cmd.exe /c "scripts.bat contributor {{.CLI_ARGS}}"

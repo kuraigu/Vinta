@@ -13,7 +13,7 @@
     isSimulatingWirelessStore,
     type WirelessData
   } from '../store'
-  import { Events } from '@wailsio/runtime'
+  import { Events } from '$lib/events'
   import { GetWirelessStatus } from '../../bindings/Vinta/backend/app.js'
   import { islandTooltip } from '../services/islandTooltip'
 

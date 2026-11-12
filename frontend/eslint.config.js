@@ -24,6 +24,30 @@ export default ts.config(
       parserOptions: {
         parser: ts.parser
       }
+    },
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@wailsio/runtime',
+              importNames: ['Events'],
+              message:
+                "Import { Events } from '$lib/utils/events' instead so listeners auto-unsubscribe on unmount."
+            }
+          ]
+        }
+      ],
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            "CallExpression[callee.name='onMount'] CallExpression[callee.object.name='Events'][callee.property.name=/^(On|OnMultiple)$/]",
+          message:
+            'Call Events.On() at the top level of <script>, not inside onMount(), so onDestroy() can register properly.'
+        }
+      ]
     }
   },
   {

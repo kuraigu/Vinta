@@ -8,7 +8,7 @@
     type WeatherLocation,
     type TemperatureUnit
   } from '../store'
-  import { Events } from '@wailsio/runtime'
+  import { Events } from '$lib/events'
   import {
     searchCities,
     type GeocodingResult

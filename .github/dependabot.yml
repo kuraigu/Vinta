@@ -5,7 +5,7 @@ updates:
     directory: "/frontend"
     schedule:
       interval: "monthly"
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 5
     versioning-strategy: "increase-if-necessary"
     allow:
       - dependency-type: "all"
@@ -15,16 +15,13 @@ updates:
           - "svelte*"
           - "@sveltejs/*"
           - "vite*"
-        update-types:
-          - "minor"
-          - "patch"
+          - "typescript"
       eslint-and-prettier:
         patterns:
           - "*eslint*"
+          - "@eslint/*"
           - "prettier*"
-        update-types:
-          - "minor"
-          - "patch"
+          - "svelte-check"
       types-and-utilities:
         patterns:
           - "@types/*"

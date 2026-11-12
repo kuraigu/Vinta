@@ -18,7 +18,7 @@
    */
 
   import { onMount } from 'svelte'
-  import { Events } from '@wailsio/runtime'
+  import { Events } from '$lib/events'
   import { CancelNativeFileDrag } from '../../bindings/Vinta/backend/app'
   import {
     FolderDown,
@@ -77,18 +77,9 @@
 
   let selectedPaths = $derived.by(computeSelectedPaths)
 
-  onMount(() => {
-    let unsubSelectAll: (() => void) | undefined
-    try {
-      unsubSelectAll = Events.On('devtest-fileshelf-select-all', () => {
-        const items = $fileShelfStore?.items ?? []
-        rawSelectedPaths = items.map((i) => i.path)
-      })
-    } catch {}
-
-    return () => {
-      unsubSelectAll?.()
-    }
+  Events.On('devtest-fileshelf-select-all', () => {
+    const items = $fileShelfStore?.items ?? []
+    rawSelectedPaths = items.map((i) => i.path)
   })
 
   /**
@@ -611,8 +602,6 @@
     {#snippet center()}
       {#if $fileShelfStore.statusMessage}
         <span class="shelf-status-pill">{$fileShelfStore.statusMessage}</span>
-      {:else if $fileShelfStore.items.length > 0}
-        <span class="shelf-count-pill">{$fileShelfStore.items.length}</span>
       {/if}
     {/snippet}
 
