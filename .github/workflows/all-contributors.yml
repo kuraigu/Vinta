@@ -19,7 +19,7 @@ jobs:
       github.event.pull_request.merged == true
     steps:
       - name: Checkout main branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: main
           fetch-depth: 0
@@ -58,7 +58,7 @@ jobs:
 
       - name: Setup Node.js
         if: steps.check_user.outputs.should_add == 'true'
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: "20"
 
@@ -82,7 +82,7 @@ jobs:
 
       - name: Commit and Push Changes
         if: steps.check_user.outputs.should_add == 'true'
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@v7
         with:
           branch: main
           commit_message: "docs: add @${{ github.event.pull_request.user.login }} to contributors hall of fame (PR #${{ github.event.pull_request.number }}) [skip ci]"
