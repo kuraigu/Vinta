@@ -13,6 +13,7 @@
   z-index: 0;
   overflow: hidden;
   border-radius: inherit;
+  contain: layout style paint;
 }
 
 .weather-atmosphere-canvas {
@@ -24,9 +25,8 @@
   overflow: hidden;
 }
 
-/* Screenshot 1 Atmospheric Filter & Vertical Alpha Mask for Seamless Page Blending */
+/* Screenshot 1 Vertical Alpha Mask for Seamless Page Blending */
 .weather-card-aura-bg.is-seamless .weather-atmosphere-canvas {
-  filter: saturate(0.85) brightness(0.92) contrast(0.98);
   mask-image: linear-gradient(
     180deg,
     rgba(0, 0, 0, 0.95) 0%,
@@ -119,6 +119,7 @@
 
 .wave-contour {
   transform-origin: center bottom;
+  will-change: transform;
   transition:
     fill 0.4s ease,
     opacity 0.4s ease;
@@ -300,6 +301,7 @@
     rgba(254, 240, 138, 0.05) 65%,
     transparent 100%
   );
+  will-change: transform, opacity;
   animation: haloPulse 5.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
 }
 
@@ -355,7 +357,8 @@
   position: absolute;
   background: #ffffff;
   border-radius: 50%;
-  filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.95));
+  box-shadow: 0 0 3px rgba(255, 255, 255, 0.9);
+  will-change: transform, opacity;
   animation: starTwinkle 2.5s ease-in-out infinite alternate;
 }
 
@@ -433,6 +436,7 @@
   background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.7));
   border-radius: 999px;
   transform: rotate(20deg);
+  will-change: transform, opacity;
   animation: continuousDownpour 0.85s linear infinite;
 }
 
@@ -523,6 +527,7 @@
   background: rgba(255, 255, 255, 0.88);
   border-radius: 50%;
   box-shadow: 0 0 6px rgba(255, 255, 255, 0.6);
+  will-change: transform, opacity;
   animation: snowDrift 3.5s ease-in-out infinite;
 }
 
@@ -616,12 +621,12 @@
   border-radius: 999px;
   background: radial-gradient(
     ellipse at center,
-    rgba(255, 255, 255, 0.42) 0%,
-    rgba(226, 232, 240, 0.28) 45%,
-    rgba(148, 163, 184, 0.12) 75%,
+    rgba(255, 255, 255, 0.36) 0%,
+    rgba(226, 232, 240, 0.22) 38%,
+    rgba(148, 163, 184, 0.08) 68%,
     transparent 100%
   );
-  filter: blur(14px);
+  will-change: transform, opacity;
   animation: cloudMistDrift 12s ease-in-out infinite alternate;
 }
 
