@@ -733,13 +733,6 @@ export function SetFloatingControlsBounds(width: number, height: number, radius:
 }
 
 /**
- * SetFollowActiveDisplay toggles whether Vinta moves to the monitor with the active foreground window.
- */
-export function SetFollowActiveDisplay(enabled: boolean): $CancellablePromise<void> {
-    return $Call.ByID(103202128, enabled);
-}
-
-/**
  * SetForceInteractive forces the window to be interactive during dragging or modal flows.
  */
 export function SetForceInteractive(active: boolean): $CancellablePromise<void> {
@@ -786,6 +779,20 @@ export function SetMasterAudioVolume(percent: number): $CancellablePromise<boole
  */
 export function SetPillBounds(left: number, top: number, width: number, height: number): $CancellablePromise<void> {
     return $Call.ByID(2473066851, left, top, width, height);
+}
+
+/**
+ * SetRelocateOnFullscreen toggles whether Vinta moves to a free monitor instead of hiding during fullscreen apps.
+ */
+export function SetRelocateOnFullscreen(enabled: boolean): $CancellablePromise<void> {
+    return $Call.ByID(3054201482, enabled);
+}
+
+/**
+ * SetReturnOnFullscreenExit toggles whether Vinta returns to its previous display after a fullscreen app exits.
+ */
+export function SetReturnOnFullscreenExit(enabled: boolean): $CancellablePromise<void> {
+    return $Call.ByID(3918888735, enabled);
 }
 
 /**

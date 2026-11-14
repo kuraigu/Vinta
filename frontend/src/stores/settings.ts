@@ -11,6 +11,8 @@ import {
   GetSettings,
   SaveSettings,
   SetAutoHideBorderless,
+  SetRelocateOnFullscreen,
+  SetReturnOnFullscreenExit,
   ExportSettingsFileDialog,
   ImportSettingsFileDialog,
   ApplyImportedSettings
@@ -497,7 +499,8 @@ export const hiddenPillPositionStore = persistentWritable<HiddenPillPosition>('v
 export const wakeMethodStore = persistentWritable<'hover' | 'click'>('vinta_wakemethod', 'click')
 export const allowDragPositionStore = persistentWritable<boolean>('vinta_allow_drag_position', true)
 export const autoHideBorderlessStore = persistentWritable<boolean>('vinta_autohide_borderless', false)
-export const followActiveDisplayStore = persistentWritable<boolean>('vinta_follow_active_display', false)
+export const fullscreenBehaviorStore = persistentWritable<'relocate' | 'hide'>('vinta_fullscreen_behavior', 'relocate')
+export const returnOnFullscreenExitStore = persistentWritable<boolean>('vinta_return_on_fullscreen_exit', false)
 
 // Synchronize borderless and active display settings to native backend hooks
 autoHideBorderlessStore.subscribe((val) => {
@@ -511,11 +514,15 @@ autoHideBorderlessStore.subscribe((val) => {
   }
 })
 
-followActiveDisplayStore.subscribe((val) => {
-  try {
-    Events.Emit('set-follow-active-display', val)
-  } catch {
-    // Ignore runtime event error
+fullscreenBehaviorStore.subscribe((val) => {
+  if (typeof SetRelocateOnFullscreen === 'function') {
+    SetRelocateOnFullscreen(val === 'relocate').catch(() => {})
+  }
+})
+
+returnOnFullscreenExitStore.subscribe((val) => {
+  if (typeof SetReturnOnFullscreenExit === 'function') {
+    SetReturnOnFullscreenExit(val).catch(() => {})
   }
 })
 

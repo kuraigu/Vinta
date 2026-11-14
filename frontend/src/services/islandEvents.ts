@@ -289,6 +289,10 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
     }
   })
 
+  onEvent('display-layout-changed', () => {
+    callbacks.onRefreshDisplay?.()
+  })
+
   // Media Playback Updates
   let prevIsPlaying = false
   onEvent('media-update', (data: Record<string, unknown>) => {
