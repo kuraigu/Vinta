@@ -761,6 +761,7 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 	var (
 		autoHiddenByFullscreen bool
 		autoHiddenMu           sync.Mutex
+		fgEvalMu               sync.Mutex
 		wasSubordinatedToSnip  bool
 	)
 
@@ -808,7 +809,12 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 			return
 		}
 		_, exStyle := winStyle(vintaHwnd)
-		if !wasSubordinatedToSnip && (exStyle&WS_EX_TOPMOST) != 0 {
+		fgTopmost := false
+		if curFg != 0 {
+			_, fgExStyle := winStyle(curFg)
+			fgTopmost = (fgExStyle & WS_EX_TOPMOST) != 0
+		}
+		if !wasSubordinatedToSnip && !fgTopmost && (exStyle&WS_EX_TOPMOST) != 0 {
 			return
 		}
 		wasSubordinatedToSnip = false
@@ -816,6 +822,8 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 	}
 
 	evaluateForegroundState := func() {
+		fgEvalMu.Lock()
+		defer fgEvalMu.Unlock()
 		if !services.IsFrontendReady() || a.IsOutboundDragging() {
 			return
 		}
@@ -945,8 +953,16 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 					for _, m := range monitors {
 						if m.Left == int(fgMi.RcMonitor.Left) && m.Top == int(fgMi.RcMonitor.Top) {
 							if m.ID != vintaMon.ID && !isMonitorCoveredByFullscreen(m, vintaHwnd) {
-								if targetOffsetX := a.monitorTargetOffset(m, vLeft, pCenter); targetOffsetX != a.offsetX {
+								targetOffsetX := a.monitorTargetOffset(m, vLeft, pCenter)
+								a.fullscreenRelocatedMu.Lock()
+								changed := targetOffsetX != a.offsetX
+								if changed {
+									relocateGraceUntil = time.Now().Add(1500 * time.Millisecond)
+									relocateTargetX = targetOffsetX
 									a.offsetX = targetOffsetX
+								}
+								a.fullscreenRelocatedMu.Unlock()
+								if changed {
 									a.updateWindowRegion()
 									if app := application.Get(); app != nil && services.IsFrontendReady() {
 										app.Event.Emit("active-monitor-follow", map[string]interface{}{
@@ -1081,7 +1097,9 @@ func (a *App) StopInertiaGlide() float64 {
 		activeGlideController.stopCh = nil
 	}
 	activeGlideController.generation++
+	a.fullscreenRelocatedMu.Lock()
 	offset := float64(a.offsetX)
+	a.fullscreenRelocatedMu.Unlock()
 	activeGlideController.mu.Unlock()
 	return offset
 }
