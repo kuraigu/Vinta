@@ -1145,9 +1145,19 @@ function checkAlarmsClock(): void {
   }
 }
 
-// Start alarms background check every 3 seconds
+// Start alarms background check only while at least one alarm is enabled or snoozed
+let alarmClockInterval: ReturnType<typeof setInterval> | null = null
 if (typeof setInterval !== 'undefined') {
-  setInterval(checkAlarmsClock, 3000)
+  timerAppStore.subscribe((state) => {
+    const needsCheck =
+      state.alarms.some((a) => a.enabled) || state.snoozedAlarms.length > 0
+    if (needsCheck && !alarmClockInterval) {
+      alarmClockInterval = setInterval(checkAlarmsClock, 3000)
+    } else if (!needsCheck && alarmClockInterval) {
+      clearInterval(alarmClockInterval)
+      alarmClockInterval = null
+    }
+  })
 }
 
 /**

@@ -27,6 +27,7 @@
     notifData,
     notificationPermissionDenied,
     dndStore,
+    isIslandHiddenStore,
     tStore
   } from '../store'
   import { swipe } from '../utils/useSwipe'
@@ -385,12 +386,20 @@
 
   let now = $state(Date.now())
 
-  onMount(() => {
+  function syncRelativeTimeTicker() {
+    if ($isIslandHiddenStore || $notifData.length === 0) return
+
+    now = Date.now()
+    const hasFreshNotif = $notifData.some(
+      (n) => typeof n.timestamp === 'number' && now - n.timestamp < 60000
+    )
+    const intervalMs = hasFreshNotif ? 1000 : 15000
     const interval = setInterval(() => {
       now = Date.now()
-    }, 1000)
+    }, intervalMs)
     return () => clearInterval(interval)
-  })
+  }
+  $effect(syncRelativeTimeTicker)
 
   /**
    * Formats notification received timestamp into a human-readable relative time (e.g. "5m ago").

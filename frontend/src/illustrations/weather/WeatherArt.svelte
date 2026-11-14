@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { onMount, onDestroy } from 'svelte'
+  import { isIslandHiddenStore } from '../../store'
+
   /**
    * WeatherArt
    *
@@ -26,13 +29,38 @@
     monochrome?: boolean
     class?: string
   } = $props()
+
+  let heroEl = $state<HTMLDivElement | null>(null)
+  let isInView = $state(true)
+  let observer: IntersectionObserver | null = null
+
+  onMount(() => {
+    if (heroEl && typeof IntersectionObserver !== 'undefined') {
+      observer = new IntersectionObserver(
+        (entries) => {
+          isInView = entries[0]?.isIntersecting ?? true
+        },
+        { threshold: 0.01 }
+      )
+      observer.observe(heroEl)
+    }
+  })
+
+  onDestroy(() => {
+    observer?.disconnect()
+    observer = null
+  })
 </script>
 
 {#if variant === 'hero'}
   <!-- =========================================================================
        HERO ANIMATED VINTA MASCOT ARTWORK (Banner Cards and Full Weather Page)
        ========================================================================= -->
-  <div class="weather-art-hero {className}">
+  <div
+    bind:this={heroEl}
+    class="weather-art-hero {className}"
+    class:is-paused={!isInView || $isIslandHiddenStore}
+  >
     <svg class="hero-svg" viewBox="0 0 120 100" aria-label="{type} weather">
       <defs>
         <!-- Vinta Mascot Clip Paths -->
@@ -818,6 +846,10 @@
     contain: layout style paint;
   }
 
+  .weather-art-hero.is-paused :global(*) {
+    animation-play-state: paused !important;
+  }
+
   .hero-svg {
     width: 100%;
     height: 100%;
@@ -831,15 +863,12 @@
 
   /* Gentle Floating Motions */
   .anim-float-calm {
-    will-change: transform;
     animation: floatCalm 4s ease-in-out infinite;
   }
   .anim-float-hot {
-    will-change: transform;
     animation: floatHot 2.6s ease-in-out infinite;
   }
   .anim-float-sleep {
-    will-change: transform;
     animation: floatSleep 5s ease-in-out infinite;
   }
 
@@ -873,20 +902,16 @@
 
   /* Sun & Heat Animations */
   .anim-spin-sun {
-    will-change: transform;
     animation: spinSun 24s linear infinite;
   }
   .anim-pulse-aura {
-    will-change: transform, opacity;
     animation: pulseAura 3s ease-in-out infinite;
     transform-origin: 60px 40px;
   }
   .anim-sweat-1 {
-    will-change: transform, opacity;
     animation: sweatDrop 2.2s ease-in infinite;
   }
   .anim-sweat-2 {
-    will-change: transform, opacity;
     animation: sweatDrop 2.2s ease-in 1.1s infinite;
   }
 
@@ -928,31 +953,24 @@
 
   /* Night & Sleep Animations */
   .anim-moon-rock {
-    will-change: transform;
     animation: moonRock 6s ease-in-out infinite;
   }
   .anim-sleep-mouth {
-    will-change: transform, opacity;
     animation: sleepBreath 5s ease-in-out infinite;
   }
   .anim-twinkle-1 {
-    will-change: transform, opacity;
     animation: twinkle 2.5s ease-in-out infinite;
   }
   .anim-twinkle-2 {
-    will-change: transform, opacity;
     animation: twinkle 3.2s ease-in-out 1.2s infinite;
   }
   .anim-zzz-1 {
-    will-change: transform, opacity;
     animation: floatZzz 3.6s ease-out infinite;
   }
   .anim-zzz-2 {
-    will-change: transform, opacity;
     animation: floatZzz 3.6s ease-out 1.2s infinite;
   }
   .anim-zzz-3 {
-    will-change: transform, opacity;
     animation: floatZzz 3.6s ease-out 2.4s infinite;
   }
 
@@ -1003,15 +1021,12 @@
 
   /* Cloud & Eye Glancing Animations */
   .anim-cloud-drift {
-    will-change: transform;
     animation: cloudDrift 5s ease-in-out infinite;
   }
   .anim-cloud-drift-slow {
-    will-change: transform;
     animation: cloudDrift 7s ease-in-out reverse infinite;
   }
   .anim-look-around {
-    will-change: transform;
     animation: lookAround 6s ease-in-out infinite;
   }
 
@@ -1039,19 +1054,15 @@
 
   /* Rain & Umbrella Animations */
   .anim-rain-1 {
-    will-change: transform, opacity;
     animation: rainFall 1.1s linear infinite;
   }
   .anim-rain-2 {
-    will-change: transform, opacity;
     animation: rainFall 1.1s linear 0.35s infinite;
   }
   .anim-rain-3 {
-    will-change: transform, opacity;
     animation: rainFall 1.1s linear 0.7s infinite;
   }
   .anim-umbrella-tilt {
-    will-change: transform;
     animation: umbrellaTilt 3.5s ease-in-out infinite;
   }
 
@@ -1080,15 +1091,12 @@
 
   /* Thunder & Shock Animations */
   .anim-lightning-1 {
-    will-change: opacity;
     animation: flashBolt 3.2s infinite;
   }
   .anim-lightning-2 {
-    will-change: opacity;
     animation: flashBolt 3.2s 1.6s infinite;
   }
   .anim-shock-shake {
-    will-change: transform;
     animation: shockShake 1.6s ease-in-out infinite;
   }
 
@@ -1128,19 +1136,15 @@
 
   /* Snow & Shivering Animations */
   .anim-snow-1 {
-    will-change: transform, opacity;
     animation: snowDrift 3.2s linear infinite;
   }
   .anim-snow-2 {
-    will-change: transform, opacity;
     animation: snowDrift 3.2s linear 1.1s infinite;
   }
   .anim-snow-3 {
-    will-change: transform, opacity;
     animation: snowDrift 3.2s linear 2.2s infinite;
   }
   .anim-shiver-cold {
-    will-change: transform;
     animation: shiverCold 0.45s ease-in-out infinite;
   }
 
@@ -1172,19 +1176,15 @@
 
   /* Fog & Scanning Animations */
   .anim-fog-back {
-    will-change: transform;
     animation: fogSlide 6s ease-in-out infinite;
   }
   .anim-fog-front-1 {
-    will-change: transform;
     animation: fogSlide 4.5s ease-in-out reverse infinite;
   }
   .anim-fog-front-2 {
-    will-change: transform;
     animation: fogSlide 5.5s ease-in-out 1s infinite;
   }
   .anim-scan-eyes {
-    will-change: transform;
     animation: scanEyes 4.5s ease-in-out infinite;
   }
 
