@@ -87,17 +87,14 @@
 
 .ring-progress.cpu {
   stroke: var(--vinta-accent-danger, #d55e00);
-  filter: drop-shadow(0 0 4px var(--vinta-accent-danger, #d55e00));
 }
 
 .ring-progress.ram {
   stroke: var(--vinta-primary, #56b4e9);
-  filter: drop-shadow(0 0 4px var(--vinta-primary, #56b4e9));
 }
 
 .ring-progress.gpu {
   stroke: var(--vinta-accent-purple, #cc79a7);
-  filter: drop-shadow(0 0 4px var(--vinta-accent-purple, #cc79a7));
 }
 
 .ring-label {
