@@ -1,70 +1,81 @@
 /**
  * @file radio_service.cpp
- * @brief Windows Runtime Radio control implementation for Wi-Fi, Bluetooth, and Airplane Mode.
+ * @brief WinRT and COM implementation for Wi-Fi, Bluetooth, and Airplane Mode.
+ *
+ * Caches radio access permissions to avoid redundant out-of-process RPC round-trips
+ * during status polling, dispatches multi-radio state changes in parallel, and formats
+ * connection status without temporary heap string concatenations.
  */
 
 #include "radio_service.h"
 #include <winrt/Windows.Devices.Radios.h>
+#include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Networking.Connectivity.h>
+
+#include <atomic>
+#include <cstdio>
+#include <vector>
 
 using namespace winrt;
 using namespace Windows::Devices::Radios;
 using namespace Windows::Networking::Connectivity;
 
-static bool g_explicitAirplaneMode = false;
+static std::atomic<bool> g_explicitAirplaneMode{false};
+static std::atomic<bool> g_radioAccessGranted{false};
 
-// Windows Radio Management COM API (for system-wide Airplane Mode)
 static const GUID CLSID_RadioManagementAPI = { 0x581333f6, 0x28db, 0x41be, { 0xbc, 0x7a, 0xff, 0x20, 0x1f, 0x12, 0xf3, 0xf6 } };
 static const GUID IID_IRadioManager = { 0xdb3afbfb, 0x08e6, 0x46c6, { 0xaa, 0x70, 0xbf, 0x9a, 0x34, 0xc3, 0x0a, 0xb7 } };
 
+/**
+ * @struct IRadioManager
+ * @brief Undocumented Windows COM interface for system-wide Airplane Mode control.
+ */
 struct IRadioManager : public IUnknown {
-    virtual HRESULT STDMETHODCALLTYPE IsRMSupported(DWORD *pdwState) = 0;
-    virtual HRESULT STDMETHODCALLTYPE GetUIRadioInstances(void **ppInstances) = 0;
-    virtual HRESULT STDMETHODCALLTYPE GetSystemRadioState(BOOL *pbEnabled, int *param_2, int *param_3) = 0;
+    virtual HRESULT STDMETHODCALLTYPE IsRMSupported(DWORD* pdwState) = 0;
+    virtual HRESULT STDMETHODCALLTYPE GetUIRadioInstances(void** ppInstances) = 0;
+    virtual HRESULT STDMETHODCALLTYPE GetSystemRadioState(BOOL* pbEnabled, int* p2, int* p3) = 0;
     virtual HRESULT STDMETHODCALLTYPE SetSystemRadioState(BOOL bEnabled) = 0;
     virtual HRESULT STDMETHODCALLTYPE Refresh(void) = 0;
-    virtual HRESULT STDMETHODCALLTYPE OnHardwareSliderChange(int param_1, int param_2) = 0;
+    virtual HRESULT STDMETHODCALLTYPE OnHardwareSliderChange(int p1, int p2) = 0;
 };
 
-static bool SetSystemAirplaneMode(bool enableAirplane) {
-    ComInitScope com;
-    IRadioManager* pRadioMgr = nullptr;
+/**
+ * @brief Queries or updates the system-wide radio master switch via COM IRadioManager.
+ * @param setMode True to apply enableAirplane, false to query current state into isAirplaneOut.
+ */
+static bool AccessSystemAirplaneMode(bool setMode, bool enableAirplane, bool& isAirplaneOut) {
+    IRadioManager* pMgr = nullptr;
     HRESULT hr = CoCreateInstance(
-        CLSID_RadioManagementAPI,
-        nullptr,
+        CLSID_RadioManagementAPI, nullptr,
         CLSCTX_INPROC_SERVER | CLSCTX_LOCAL_SERVER,
-        IID_IRadioManager,
-        reinterpret_cast<void**>(&pRadioMgr)
+        IID_IRadioManager, reinterpret_cast<void**>(&pMgr)
     );
-    if (SUCCEEDED(hr) && pRadioMgr) {
-        // bEnabled: TRUE = Radios On (Airplane Off), FALSE = Radios Off (Airplane On)
-        BOOL bSystemRadiosEnabled = enableAirplane ? FALSE : TRUE;
-        pRadioMgr->SetSystemRadioState(bSystemRadiosEnabled);
-        pRadioMgr->Release();
-        return true;
+    if (FAILED(hr) || !pMgr) return false;
+
+    if (setMode) {
+        hr = pMgr->SetSystemRadioState(enableAirplane ? FALSE : TRUE);
+    } else {
+        BOOL radiosEnabled = TRUE;
+        int p2 = 0, p3 = 0;
+        hr = pMgr->GetSystemRadioState(&radiosEnabled, &p2, &p3);
+        if (SUCCEEDED(hr)) {
+            isAirplaneOut = (radiosEnabled == FALSE);
+        }
     }
-    return false;
+    pMgr->Release();
+    return SUCCEEDED(hr);
 }
 
-static bool GetSystemAirplaneMode(bool& isAirplane) {
-    ComInitScope com;
-    IRadioManager* pRadioMgr = nullptr;
-    HRESULT hr = CoCreateInstance(
-        CLSID_RadioManagementAPI,
-        nullptr,
-        CLSCTX_INPROC_SERVER | CLSCTX_LOCAL_SERVER,
-        IID_IRadioManager,
-        reinterpret_cast<void**>(&pRadioMgr)
-    );
-    if (SUCCEEDED(hr) && pRadioMgr) {
-        BOOL bSystemRadiosEnabled = TRUE;
-        int p2 = 0, p3 = 0;
-        hr = pRadioMgr->GetSystemRadioState(&bSystemRadiosEnabled, &p2, &p3);
-        pRadioMgr->Release();
-        if (SUCCEEDED(hr)) {
-            isAirplane = (bSystemRadiosEnabled == FALSE);
-            return true;
-        }
+/**
+ * @brief Checks and caches WinRT Radio access permission so status polls skip RPC overhead.
+ */
+static bool EnsureRadioAccess() {
+    if (g_radioAccessGranted.load(std::memory_order_acquire)) {
+        return true;
+    }
+    if (Radio::RequestAccessAsync().get() == RadioAccessStatus::Allowed) {
+        g_radioAccessGranted.store(true, std::memory_order_release);
+        return true;
     }
     return false;
 }
@@ -72,60 +83,53 @@ static bool GetSystemAirplaneMode(bool& isAirplane) {
 int SetRadioState(int radioKind, int targetState) {
     try {
         ApartmentScope apt;
+        bool unused = false;
 
         if (radioKind == 255) {
-            // Airplane Mode toggle
             bool enableAirplane = (targetState == 2);
-            g_explicitAirplaneMode = enableAirplane;
-            SetSystemAirplaneMode(enableAirplane);
+            g_explicitAirplaneMode.store(enableAirplane, std::memory_order_release);
+            AccessSystemAirplaneMode(true, enableAirplane, unused);
 
-            // Also set individual radios for immediate hardware enforcement
-            auto access = Radio::RequestAccessAsync().get();
-            if (access == RadioAccessStatus::Allowed) {
+            if (EnsureRadioAccess()) {
                 auto radios = Radio::GetRadiosAsync().get();
+                std::vector<Windows::Foundation::IAsyncOperation<RadioAccessStatus>> pendingOps;
                 for (auto&& radio : radios) {
                     auto kind = radio.Kind();
-                    if (enableAirplane) {
+                    if (enableAirplane || kind == RadioKind::WiFi || kind == RadioKind::Bluetooth) {
                         try {
-                            radio.SetStateAsync(RadioState::Off).get();
+                            pendingOps.push_back(radio.SetStateAsync(enableAirplane ? RadioState::Off : RadioState::On));
                         } catch (...) {}
-                    } else {
-                        if (kind == RadioKind::WiFi || kind == RadioKind::Bluetooth) {
-                            try {
-                                radio.SetStateAsync(RadioState::On).get();
-                            } catch (...) {}
-                        }
                     }
+                }
+                for (auto& op : pendingOps) {
+                    try { op.get(); } catch (...) {}
                 }
             }
             return 1;
         }
 
-        // Individual radio toggle (WiFi = 1, Bluetooth = 3)
         if (targetState == 1) {
-            g_explicitAirplaneMode = false;
-            // If turning an individual radio on, ensure Airplane Mode is disabled in OS
-            SetSystemAirplaneMode(false);
+            g_explicitAirplaneMode.store(false, std::memory_order_release);
+            AccessSystemAirplaneMode(true, false, unused);
         }
 
-        auto access = Radio::RequestAccessAsync().get();
-        if (access != RadioAccessStatus::Allowed) {
-            return 0;
-        }
+        if (!EnsureRadioAccess()) return 0;
 
         auto radios = Radio::GetRadiosAsync().get();
-        RadioState desiredState = (targetState == 1) ? RadioState::On : RadioState::Off;
+        RadioState desired = (targetState == 1) ? RadioState::On : RadioState::Off;
+        std::vector<Windows::Foundation::IAsyncOperation<RadioAccessStatus>> pendingOps;
 
-        bool anyFound = false;
         for (auto&& radio : radios) {
             if (static_cast<int>(radio.Kind()) == radioKind) {
-                anyFound = true;
                 try {
-                    radio.SetStateAsync(desiredState).get();
+                    pendingOps.push_back(radio.SetStateAsync(desired));
                 } catch (...) {}
             }
         }
-        return anyFound ? 1 : 0;
+        for (auto& op : pendingOps) {
+            try { op.get(); } catch (...) {}
+        }
+        return !pendingOps.empty() ? 1 : 0;
     } catch (...) {
         return 0;
     }
@@ -135,91 +139,69 @@ int GetRadiosStateJson(char* outBuf, int maxBufLen) {
     if (!outBuf || maxBufLen <= 0) return 0;
     try {
         ApartmentScope apt;
-        auto access = Radio::RequestAccessAsync().get();
-        if (access != RadioAccessStatus::Allowed) {
-            return 0;
-        }
+        if (!EnsureRadioAccess()) return 0;
 
-        auto radios = Radio::GetRadiosAsync().get();
-        bool hasWifi = false;
-        bool wifiEnabled = false;
-        bool hasBt = false;
-        bool btEnabled = false;
-
-        for (auto&& radio : radios) {
+        bool hasWifi = false, wifiEnabled = false, hasBt = false, btEnabled = false;
+        for (auto&& radio : Radio::GetRadiosAsync().get()) {
             auto kind = radio.Kind();
-            auto state = radio.State();
-
+            bool isOn = (radio.State() == RadioState::On);
             if (kind == RadioKind::WiFi) {
                 hasWifi = true;
-                if (state == RadioState::On) {
-                    wifiEnabled = true;
-                }
+                wifiEnabled |= isOn;
             } else if (kind == RadioKind::Bluetooth) {
                 hasBt = true;
-                if (state == RadioState::On) {
-                    btEnabled = true;
-                }
+                btEnabled |= isOn;
             }
         }
 
-        // Query Wi-Fi connection profile in-process via WinRT NetworkInformation (0ms latency, no netsh popup)
         bool wifiConnected = false;
-        std::string wifiSsid = "";
+        std::string wifiSsid;
         int wifiSignal = 0;
 
         if (wifiEnabled) {
             try {
                 auto profile = NetworkInformation::GetInternetConnectionProfile();
-                if (profile && profile.IsWlanConnectionProfile()) {
-                    auto level = profile.GetNetworkConnectivityLevel();
-                    if (level != NetworkConnectivityLevel::None) {
-                        wifiConnected = true;
-                        auto wlanDetails = profile.WlanConnectionProfileDetails();
-                        if (wlanDetails) {
-                            wifiSsid = winrt::to_string(wlanDetails.GetConnectedSsid());
-                        }
-                        if (wifiSsid.empty()) {
-                            wifiSsid = winrt::to_string(profile.ProfileName());
-                        }
-                        auto bars = profile.GetSignalBars();
-                        if (bars) {
-                            wifiSignal = static_cast<int>(bars.Value()) * 20; // 1-5 bars -> 20-100%
-                        } else {
-                            wifiSignal = 80;
-                        }
+                if (profile && profile.IsWlanConnectionProfile() &&
+                    profile.GetNetworkConnectivityLevel() != NetworkConnectivityLevel::None) {
+                    wifiConnected = true;
+                    if (auto wlan = profile.WlanConnectionProfileDetails()) {
+                        wifiSsid = winrt::to_string(wlan.GetConnectedSsid());
                     }
+                    if (wifiSsid.empty()) {
+                        wifiSsid = winrt::to_string(profile.ProfileName());
+                    }
+                    auto bars = profile.GetSignalBars();
+                    wifiSignal = bars ? static_cast<int>(bars.Value()) * 20 : 80;
                 }
             } catch (...) {}
         }
 
-        // Query system-level Airplane Mode state
         bool isAirplane = false;
-        if (!GetSystemAirplaneMode(isAirplane)) {
-            isAirplane = g_explicitAirplaneMode;
-            if (!isAirplane && hasWifi && !wifiEnabled && (!hasBt || !btEnabled)) {
-                isAirplane = true;
-            }
+        if (!AccessSystemAirplaneMode(false, false, isAirplane)) {
+            isAirplane = g_explicitAirplaneMode.load(std::memory_order_acquire) ||
+                         (hasWifi && !wifiEnabled && (!hasBt || !btEnabled));
         }
         if (wifiEnabled || (hasBt && btEnabled)) {
             isAirplane = false;
-            g_explicitAirplaneMode = false;
+            g_explicitAirplaneMode.store(false, std::memory_order_release);
         }
 
-        std::string json = "{";
-        json += "\"hasWifi\":" + std::string(hasWifi ? "true" : "false") + ",";
-        json += "\"wifiEnabled\":" + std::string(wifiEnabled ? "true" : "false") + ",";
-        json += "\"wifiConnected\":" + std::string(wifiConnected ? "true" : "false") + ",";
-        json += "\"wifiSsid\":\"" + EscapeJsonString(wifiSsid) + "\",";
-        json += "\"wifiSignal\":" + std::to_string(wifiSignal) + ",";
-        json += "\"hasBluetooth\":" + std::string(hasBt ? "true" : "false") + ",";
-        json += "\"bluetoothEnabled\":" + std::string(btEnabled ? "true" : "false") + ",";
-        json += "\"airplaneMode\":" + std::string(isAirplane ? "true" : "false");
-        json += "}";
+        std::string escapedSsid = EscapeJsonString(wifiSsid);
+        int written = std::snprintf(
+            outBuf, static_cast<size_t>(maxBufLen),
+            "{\"hasWifi\":%s,\"wifiEnabled\":%s,\"wifiConnected\":%s,\"wifiSsid\":\"%s\","
+            "\"wifiSignal\":%d,\"hasBluetooth\":%s,\"bluetoothEnabled\":%s,\"airplaneMode\":%s}",
+            hasWifi ? "true" : "false",
+            wifiEnabled ? "true" : "false",
+            wifiConnected ? "true" : "false",
+            escapedSsid.c_str(),
+            wifiSignal,
+            hasBt ? "true" : "false",
+            btEnabled ? "true" : "false",
+            isAirplane ? "true" : "false"
+        );
 
-        if (json.length() >= static_cast<size_t>(maxBufLen)) return 0;
-        strcpy_s(outBuf, maxBufLen, json.c_str());
-        return 1;
+        return (written > 0 && written < maxBufLen) ? 1 : 0;
     } catch (...) {
         return 0;
     }

@@ -404,8 +404,12 @@ var (
 // SetAppHidden informs the native services whether Vinta is currently hidden to throttle high-frequency events.
 func SetAppHidden(hidden bool) {
 	hiddenMu.Lock()
+	wasHidden := isAppHidden
 	isAppHidden = hidden
 	hiddenMu.Unlock()
+	if wasHidden && !hidden {
+		go RequestMediaUpdate()
+	}
 }
 
 // ResetMediaArtCacheState flushes in-memory media artwork deduplication state.
@@ -594,7 +598,7 @@ func onNativeAudioPeak(peakBits uintptr) uintptr {
 
 	peakMu.Lock()
 	now := time.Now()
-	if peak > 0 && now.Sub(lastAudioPeakTime) < 33*time.Millisecond {
+	if peak > 0 && now.Sub(lastAudioPeakTime) < 50*time.Millisecond {
 		peakMu.Unlock()
 		return 0
 	}
