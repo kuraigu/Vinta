@@ -1,8 +1,5 @@
 /**
- * @fileoverview Weather data fetching and Open-Meteo integration.
- *
- * Downloads forecasts, humidity, wind, and UV data, caches responses for 15 minutes,
- * translates weather codes to condition titles and icons, and handles city search.
+ * @fileoverview Open-Meteo client, caching, and WMO weather code helpers.
  */
 
 import {
@@ -64,6 +61,16 @@ export type WeatherTheme = {
   badgeBg: string
 }
 
+export type TempFormatted = {
+  val: number
+  symbol: string
+  str: string
+}
+
+const CACHE_TTL = 15 * 60 * 1000
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const WIND_DIRS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
+
 const CONDITION_STRING_MAP: Record<string, string> = {
   'clear sky': 'weather.conditions.clear_sky',
   'clear night': 'weather.conditions.clear_night',
@@ -78,13 +85,99 @@ const CONDITION_STRING_MAP: Record<string, string> = {
   thunderstorm: 'weather.conditions.thunderstorm'
 }
 
+const THEMES: Record<string, WeatherTheme> = {
+  night: {
+    color: '#818cf8',
+    glow: 'rgba(129, 140, 248, 0.25)',
+    badgeBg: 'rgba(129, 140, 248, 0.15)'
+  },
+  clear: {
+    color: '#f59e0b',
+    glow: 'rgba(245, 158, 11, 0.22)',
+    badgeBg: 'rgba(245, 158, 11, 0.15)'
+  },
+  cloudy: {
+    color: '#38bdf8',
+    glow: 'rgba(56, 189, 248, 0.2)',
+    badgeBg: 'rgba(56, 189, 248, 0.15)'
+  },
+  fog: {
+    color: '#94a3b8',
+    glow: 'rgba(148, 163, 184, 0.2)',
+    badgeBg: 'rgba(148, 163, 184, 0.15)'
+  },
+  rain: {
+    color: '#3b82f6',
+    glow: 'rgba(59, 130, 246, 0.25)',
+    badgeBg: 'rgba(59, 130, 246, 0.15)'
+  },
+  snow: {
+    color: '#06b6d4',
+    glow: 'rgba(6, 182, 212, 0.25)',
+    badgeBg: 'rgba(6, 182, 212, 0.15)'
+  },
+  thunder: {
+    color: '#a855f7',
+    glow: 'rgba(168, 85, 247, 0.3)',
+    badgeBg: 'rgba(168, 85, 247, 0.18)'
+  }
+}
+
+const memoryCache = new Map<string, WeatherData>()
+const inflightRequests = new Map<string, Promise<WeatherData | null>>()
+
+function getCacheKey(lat: number, lon: number): string {
+  return `vinta_weather_cache_${lat.toFixed(4)}_${lon.toFixed(4)}`
+}
+
 /**
- * Resolves the i18n translation key corresponding to a WMO weather code or string.
- *
- * @param code - Numeric WMO code.
- * @param isNight - Whether current local time is nighttime.
- * @param fallbackCondition - Optional literal condition string.
- * @returns Translation catalog key for `$tStore()`.
+ * Re-attaches Lucide icon components lost during JSON serialization.
+ */
+function hydrateWeather(data: WeatherData): WeatherData {
+  if (Array.isArray(data.forecast)) {
+    data.forecast = data.forecast.map((f) => ({
+      ...f,
+      icon: parseWmoCode(f.weatherCode).icon
+    }))
+  }
+  return data
+}
+
+/**
+ * Reads cached weather from memory or localStorage without waiting for async ticks.
+ */
+export function getCachedWeatherData(
+  lat: number,
+  lon: number,
+  allowExpired = false
+): WeatherData | null {
+  const key = getCacheKey(lat, lon)
+  const mem = memoryCache.get(key)
+
+  if (mem) {
+    if (allowExpired || Date.now() - mem.lastUpdated <= CACHE_TTL) {
+      return { ...mem, isCached: true }
+    }
+  }
+
+  try {
+    const raw = localStorage.getItem(key)
+    if (!raw) return null
+    const parsed = hydrateWeather(JSON.parse(raw) as WeatherData)
+    memoryCache.set(key, parsed)
+
+    if (allowExpired || Date.now() - parsed.lastUpdated <= CACHE_TTL) {
+      return { ...parsed, isCached: true }
+    }
+  } catch {
+    localStorage.removeItem(key)
+  }
+
+  return null
+}
+
+/**
+ * Maps a WMO code or condition label to its i18n key.
  */
 export function getWmoConditionKey(
   code: number,
@@ -119,7 +212,7 @@ export function getWmoConditionKey(
 }
 
 /**
- * Maps a WMO weather code to a condition name, Lucide icon, and color theme.
+ * Returns display label, Lucide icon, and color tokens for a WMO code.
  */
 export function parseWmoCode(
   code: number,
@@ -134,17 +227,7 @@ export function parseWmoCode(
     return {
       condition: isNight ? 'Clear Night' : 'Clear Sky',
       icon: isNight ? Moon : Sun,
-      theme: isNight
-        ? {
-            color: '#818cf8',
-            glow: 'rgba(129, 140, 248, 0.25)',
-            badgeBg: 'rgba(129, 140, 248, 0.15)'
-          }
-        : {
-            color: '#f59e0b',
-            glow: 'rgba(245, 158, 11, 0.22)',
-            badgeBg: 'rgba(245, 158, 11, 0.15)'
-          }
+      theme: isNight ? THEMES.night : THEMES.clear
     }
   }
   if (code >= 1 && code <= 3) {
@@ -152,240 +235,168 @@ export function parseWmoCode(
       condition:
         code === 1 ? 'Mainly Clear' : code === 2 ? 'Partly Cloudy' : 'Overcast',
       icon: isNight ? CloudMoon : CloudSun,
-      theme: isNight
-        ? {
-            color: '#818cf8',
-            glow: 'rgba(129, 140, 248, 0.25)',
-            badgeBg: 'rgba(129, 140, 248, 0.15)'
-          }
-        : {
-            color: '#38bdf8',
-            glow: 'rgba(56, 189, 248, 0.2)',
-            badgeBg: 'rgba(56, 189, 248, 0.15)'
-          }
+      theme: isNight ? THEMES.night : THEMES.cloudy
     }
   }
   if (code === 45 || code === 48) {
-    return {
-      condition: 'Foggy',
-      icon: Cloud,
-      theme: {
-        color: '#94a3b8',
-        glow: 'rgba(148, 163, 184, 0.2)',
-        badgeBg: 'rgba(148, 163, 184, 0.15)'
-      }
-    }
+    return { condition: 'Foggy', icon: Cloud, theme: THEMES.fog }
   }
   if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) {
-    return {
-      condition: 'Rainy',
-      icon: CloudRain,
-      theme: {
-        color: '#3b82f6',
-        glow: 'rgba(59, 130, 246, 0.25)',
-        badgeBg: 'rgba(59, 130, 246, 0.15)'
-      }
-    }
+    return { condition: 'Rainy', icon: CloudRain, theme: THEMES.rain }
   }
   if (code >= 71 && code <= 77) {
-    return {
-      condition: 'Snowy',
-      icon: CloudSnow,
-      theme: {
-        color: '#06b6d4',
-        glow: 'rgba(6, 182, 212, 0.25)',
-        badgeBg: 'rgba(6, 182, 212, 0.15)'
-      }
-    }
+    return { condition: 'Snowy', icon: CloudSnow, theme: THEMES.snow }
   }
   if (code >= 95 && code <= 99) {
     return {
       condition: 'Thunderstorm',
       icon: CloudLightning,
-      theme: {
-        color: '#a855f7',
-        glow: 'rgba(168, 85, 247, 0.3)',
-        badgeBg: 'rgba(168, 85, 247, 0.18)'
-      }
+      theme: THEMES.thunder
     }
   }
-  return {
-    condition: 'Partly Cloudy',
-    icon: CloudSun,
-    theme: {
-      color: '#38bdf8',
-      glow: 'rgba(56, 189, 248, 0.2)',
-      badgeBg: 'rgba(56, 189, 248, 0.15)'
-    }
-  }
+  return { condition: 'Partly Cloudy', icon: CloudSun, theme: THEMES.cloudy }
 }
 
-const CACHE_DURATION_MS = 15 * 60 * 1000 // 15 minutes
-
 /**
- * Fetches current weather and 7-day forecast from Open-Meteo, using cache when fresh.
+ * Loads current conditions and 7-day forecast from Open-Meteo.
+ * Deduplicates concurrent calls and serves cached data when valid.
  */
 export async function fetchWeatherData(
   locationName: string,
   lat: number,
   lon: number,
-  simulateOffline = false
+  simulateOffline = false,
+  forceRefresh = false
 ): Promise<WeatherData | null> {
-  const cacheKey = `vinta_weather_cache_${lat.toFixed(4)}_${lon.toFixed(4)}`
-  const cachedStr = localStorage.getItem(cacheKey)
-
-  if (cachedStr) {
-    try {
-      const cachedData: WeatherData = JSON.parse(cachedStr)
-      const isExpired = Date.now() - cachedData.lastUpdated > CACHE_DURATION_MS
-
-      if (!isExpired && !simulateOffline) {
-        return { ...cachedData, isCached: true, isOffline: false }
-      }
-    } catch {
-      localStorage.removeItem(cacheKey)
-    }
-  }
+  const cacheKey = getCacheKey(lat, lon)
 
   if (simulateOffline) {
-    if (cachedStr) {
-      try {
-        const cachedData: WeatherData = JSON.parse(cachedStr)
-        return { ...cachedData, isCached: true, isOffline: true }
-      } catch {
-        return null
-      }
-    }
-    return null
+    const fallback = getCachedWeatherData(lat, lon, true)
+    return fallback ? { ...fallback, isCached: true, isOffline: true } : null
   }
 
-  try {
+  if (!forceRefresh) {
+    const freshCache = getCachedWeatherData(lat, lon, false)
+    if (freshCache) {
+      return { ...freshCache, location: locationName, isOffline: false }
+    }
+  }
+
+  const existingRequest = inflightRequests.get(cacheKey)
+  if (existingRequest) return existingRequest
+
+  const requestPromise = (async (): Promise<WeatherData | null> => {
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), 6000)
 
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,surface_pressure,wind_speed_10m,wind_direction_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,uv_index_max,precipitation_probability_max,sunrise,sunset&timezone=auto`
+    try {
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,surface_pressure,wind_speed_10m,wind_direction_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,uv_index_max,precipitation_probability_max,sunrise,sunset&timezone=auto`
 
-    const response = await fetch(url, { signal: controller.signal })
-    clearTimeout(timeoutId)
-
-    if (!response.ok) {
-      throw new Error(`Weather API error: ${response.statusText}`)
-    }
-
-    const data = await response.json()
-    const current = data.current
-    const daily = data.daily
-
-    const isNightNow =
-      typeof current.is_day === 'number'
-        ? current.is_day === 0
-        : (() => {
-            const now = new Date()
-            if (daily?.sunrise?.[0] && daily?.sunset?.[0]) {
-              const sr = new Date(daily.sunrise[0])
-              const ss = new Date(daily.sunset[0])
-              return now < sr || now >= ss
-            }
-            const hr = now.getHours()
-            return hr < 6 || hr >= 18
-          })()
-
-    const parsedCondition = parseWmoCode(current.weather_code, isNightNow)
-
-    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-    const forecastList: ForecastDay[] = []
-
-    if (daily && daily.time) {
-      for (let i = 0; i < Math.min(daily.time.length, 7); i++) {
-        const dateObj = new Date(daily.time[i])
-        const dayLabel = i === 0 ? 'Today' : dayNames[dateObj.getDay()] || 'Day'
-        const wCode = daily.weather_code[i]
-        const wInfo = parseWmoCode(wCode)
-
-        forecastList.push({
-          day: dayLabel,
-          tempMax: Math.round(daily.temperature_2m_max[i]),
-          tempMin: Math.round(daily.temperature_2m_min[i]),
-          weatherCode: wCode,
-          icon: wInfo.icon
-        })
+      const response = await fetch(url, { signal: controller.signal })
+      if (!response.ok) {
+        throw new Error(`Weather API error: ${response.statusText}`)
       }
-    }
 
-    const uvMax =
-      daily && daily.uv_index_max ? Math.round(daily.uv_index_max[0]) : 3
-    const uvLabel = String(uvMax)
+      const { current, daily } = await response.json()
 
-    const windDirections = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']
-    const windDeg = current.wind_direction_10m ?? 0
-    const windIdx = Math.round((((windDeg % 360) + 360) % 360) / 45) % 8
-    const windDirLabel = windDirections[windIdx] || 'N'
+      const isNightNow =
+        typeof current.is_day === 'number'
+          ? current.is_day === 0
+          : (() => {
+              const now = new Date()
+              if (daily?.sunrise?.[0] && daily?.sunset?.[0]) {
+                return (
+                  now < new Date(daily.sunrise[0]) ||
+                  now >= new Date(daily.sunset[0])
+                )
+              }
+              const hr = now.getHours()
+              return hr < 6 || hr >= 18
+            })()
 
-    const feelsLikeTemp =
-      typeof current.apparent_temperature === 'number'
-        ? Math.round(current.apparent_temperature)
-        : Math.round(current.temperature_2m)
+      const parsedCondition = parseWmoCode(current.weather_code, isNightNow)
+      const forecastList: ForecastDay[] = []
 
-    const precipProb =
-      daily && daily.precipitation_probability_max
-        ? Math.round(daily.precipitation_probability_max[0])
-        : 0
+      if (daily?.time) {
+        const count = Math.min(daily.time.length, 7)
+        for (let i = 0; i < count; i++) {
+          const dateObj = new Date(`${daily.time[i]}T00:00:00`)
+          const wCode = daily.weather_code[i]
+          forecastList.push({
+            day: i === 0 ? 'Today' : DAY_NAMES[dateObj.getDay()] || 'Day',
+            tempMax: Math.round(daily.temperature_2m_max[i]),
+            tempMin: Math.round(daily.temperature_2m_min[i]),
+            weatherCode: wCode,
+            icon: parseWmoCode(wCode).icon
+          })
+        }
+      }
 
-    const pressureVal =
-      typeof current.surface_pressure === 'number'
-        ? Math.round(current.surface_pressure)
-        : 1013
+      const windDeg = current.wind_direction_10m ?? 0
+      const windIdx = Math.round((((windDeg % 360) + 360) % 360) / 45) % 8
+      const baseTemp = Math.round(current.temperature_2m)
 
-    const freshData: WeatherData = {
-      location: locationName,
-      temp: Math.round(current.temperature_2m),
-      feelsLike: feelsLikeTemp,
-      condition: parsedCondition.condition,
-      high:
-        daily && daily.temperature_2m_max
+      const freshData: WeatherData = {
+        location: locationName,
+        temp: baseTemp,
+        feelsLike:
+          typeof current.apparent_temperature === 'number'
+            ? Math.round(current.apparent_temperature)
+            : baseTemp,
+        condition: parsedCondition.condition,
+        high: daily?.temperature_2m_max
           ? Math.round(daily.temperature_2m_max[0])
-          : Math.round(current.temperature_2m),
-      low:
-        daily && daily.temperature_2m_min
+          : baseTemp,
+        low: daily?.temperature_2m_min
           ? Math.round(daily.temperature_2m_min[0])
-          : Math.round(current.temperature_2m),
-      humidity: Math.round(current.relative_humidity_2m),
-      windSpeed: Math.round(current.wind_speed_10m),
-      windDirection: windDeg,
-      windDirectionLabel: windDirLabel,
-      pressure: pressureVal,
-      precipitationProbability: precipProb,
-      uvIndex: uvLabel,
-      weatherCode: current.weather_code,
-      forecast: forecastList,
-      sunrise: daily?.sunrise?.[0],
-      sunset: daily?.sunset?.[0],
-      isNight: isNightNow,
-      isCached: false,
-      isOffline: false,
-      lastUpdated: Date.now()
-    }
-
-    localStorage.setItem(cacheKey, JSON.stringify(freshData))
-    return freshData
-  } catch {
-    if (cachedStr) {
-      try {
-        const cachedData: WeatherData = JSON.parse(cachedStr)
-        return { ...cachedData, isCached: true, isOffline: true }
-      } catch {
-        return null
+          : baseTemp,
+        humidity: Math.round(current.relative_humidity_2m),
+        windSpeed: Math.round(current.wind_speed_10m),
+        windDirection: windDeg,
+        windDirectionLabel: WIND_DIRS[windIdx] || 'N',
+        pressure:
+          typeof current.surface_pressure === 'number'
+            ? Math.round(current.surface_pressure)
+            : 1013,
+        precipitationProbability: daily?.precipitation_probability_max
+          ? Math.round(daily.precipitation_probability_max[0])
+          : 0,
+        uvIndex: String(
+          daily?.uv_index_max ? Math.round(daily.uv_index_max[0]) : 3
+        ),
+        weatherCode: current.weather_code,
+        forecast: forecastList,
+        sunrise: daily?.sunrise?.[0],
+        sunset: daily?.sunset?.[0],
+        isNight: isNightNow,
+        isCached: false,
+        isOffline: false,
+        lastUpdated: Date.now()
       }
+
+      memoryCache.set(cacheKey, freshData)
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify(freshData))
+      } catch {
+        // Ignore storage quota errors
+      }
+
+      return freshData
+    } catch {
+      const stale = getCachedWeatherData(lat, lon, true)
+      return stale ? { ...stale, isCached: true, isOffline: true } : null
+    } finally {
+      clearTimeout(timeoutId)
+      inflightRequests.delete(cacheKey)
     }
-    return null
-  }
+  })()
+
+  inflightRequests.set(cacheKey, requestPromise)
+  return requestPromise
 }
 
 /**
- * Formats a geocoding result into a human-readable display string with country and administrative division.
- *
- * @param item - Geocoding result.
- * @returns Disambiguated location string (e.g. "Cambridge, England, United Kingdom").
+ * Formats a geocoding entry into "City, Region, Country".
  */
 export function formatLocationName(item: {
   name: string
@@ -393,43 +404,45 @@ export function formatLocationName(item: {
   admin1?: string
 }): string {
   const parts = [item.name]
-  if (item.admin1 && item.admin1 !== item.name) {
-    parts.push(item.admin1)
-  }
-  if (item.country && item.country !== item.name) {
-    parts.push(item.country)
-  }
+  if (item.admin1 && item.admin1 !== item.name) parts.push(item.admin1)
+  if (item.country && item.country !== item.name) parts.push(item.country)
   return parts.join(', ')
 }
 
+let searchAbortController: AbortController | null = null
+
 /**
- * Searches global cities by name using Open-Meteo geocoding.
+ * Queries Open-Meteo geocoding API for matching city names, aborting stale queries.
  */
 export async function searchCities(query: string): Promise<GeocodingResult[]> {
-  if (!query || query.trim().length < 2) return []
+  const trimmed = query?.trim()
+  if (!trimmed || trimmed.length < 2) return []
+
+  if (searchAbortController) searchAbortController.abort()
+  searchAbortController = new AbortController()
 
   try {
-    const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query.trim())}&count=10&language=en&format=json`
-    const res = await fetch(url)
+    const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(trimmed)}&count=10&language=en&format=json`
+    const res = await fetch(url, { signal: searchAbortController.signal })
     if (!res.ok) return []
     const data = await res.json()
     if (!data.results) return []
 
     return data.results.map(
-      (item: {
-        name: string
-        country?: string
-        admin1?: string
-        latitude: number
-        longitude: number
-        timezone?: string
-      }) => ({
-        name: item.name,
-        country: item.country,
-        admin1: item.admin1,
-        latitude: item.latitude,
-        longitude: item.longitude,
-        timezone: item.timezone
+      ({
+        name,
+        country,
+        admin1,
+        latitude,
+        longitude,
+        timezone
+      }: GeocodingResult) => ({
+        name,
+        country,
+        admin1,
+        latitude,
+        longitude,
+        timezone
       })
     )
   } catch {
@@ -437,14 +450,8 @@ export async function searchCities(query: string): Promise<GeocodingResult[]> {
   }
 }
 
-export type TempFormatted = {
-  val: number
-  symbol: string
-  str: string
-}
-
 /**
- * Converts Celsius temperatures to Fahrenheit or Kelvin.
+ * Converts Celsius to Fahrenheit or Kelvin.
  */
 export function convertTemp(
   celsius: number,
