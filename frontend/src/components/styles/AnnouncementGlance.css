@@ -89,6 +89,7 @@
   justify-content: space-between;
   gap: 10px;
   width: 100%;
+  min-height: 46px;
 }
 
 .glance-text-col {
@@ -155,6 +156,7 @@
   font-size: 0.72rem;
   color: var(--vinta-text-secondary);
   line-height: 1.35;
+  min-height: calc(1.35em * 2);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;

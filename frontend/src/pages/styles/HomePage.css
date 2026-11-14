@@ -74,6 +74,7 @@
   text-align: center;
 }
 
+:global(.scroll-view-host:has(.home-feed-scroll)),
 :global(.home-feed-scroll) {
   flex: 1;
   min-height: 0;
