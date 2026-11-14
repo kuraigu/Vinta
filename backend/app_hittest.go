@@ -169,7 +169,12 @@ func (a *App) startHitTestingLoop(hwnd uintptr) {
 		defer ticker.Stop()
 
 		missCount := 0
+		hitCount := 0
 		forceOutsideCount := 0
+		var rects []pillHitBounds
+		var lastPt point32
+		hasLastPt := false
+		lastRectCount := -1
 
 		for range ticker.C {
 			if hwnd == 0 {
@@ -183,7 +188,12 @@ func (a *App) startHitTestingLoop(hwnd uintptr) {
 			a.pillHitMu.RLock()
 			outbound := a.isOutboundDragging
 			force := a.isForceInteractive
-			rects := make([]pillHitBounds, len(a.pillHitRects))
+			nRects := len(a.pillHitRects)
+			if cap(rects) < nRects {
+				rects = make([]pillHitBounds, nRects)
+			} else {
+				rects = rects[:nRects]
+			}
 			copy(rects, a.pillHitRects)
 			a.pillHitMu.RUnlock()
 
@@ -194,6 +204,14 @@ func (a *App) startHitTestingLoop(hwnd uintptr) {
 					var pt point32
 					ret, _, _ := procGetCursorPos.Call(uintptr(unsafe.Pointer(&pt)))
 					if ret != 0 {
+						// Fast path: if cursor has not moved, rect count is unchanged, and not in force mode, reuse previous hit state
+						if hasLastPt && pt.X == lastPt.X && pt.Y == lastPt.Y && nRects == lastRectCount && !force && (missCount > 4 || hitCount > 4) {
+							continue
+						}
+						lastPt = pt
+						hasLastPt = true
+						lastRectCount = nRects
+
 						retScreen, _, _ := procScreenToClient.Call(hwnd, uintptr(unsafe.Pointer(&pt)))
 						if retScreen != 0 {
 							for _, rect := range rects {
@@ -239,11 +257,13 @@ func (a *App) startHitTestingLoop(hwnd uintptr) {
 			needsUpdate := false
 			if isHit {
 				missCount = 0
+				hitCount++
 				if hasTransparent {
 					style &^= WS_EX_TRANSPARENT
 					needsUpdate = true
 				}
 			} else {
+				hitCount = 0
 				missCount++
 				// Hold interactive state for an ~120ms grace window (8 frames at 60Hz)
 				// to allow swift cursor motion across satellite gaps without dropping clicks.

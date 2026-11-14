@@ -1099,7 +1099,7 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 	}
 
 	go func() {
-		ticker := time.NewTicker(150 * time.Millisecond)
+		ticker := time.NewTicker(600 * time.Millisecond)
 		defer ticker.Stop()
 		for range ticker.C {
 			evaluateForegroundState()

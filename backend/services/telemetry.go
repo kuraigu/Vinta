@@ -70,6 +70,8 @@ type telemetrySampler struct {
 	pdhCounter uintptr
 	pdhReady   bool
 	gpuBuf     []byte
+	lastGPU    float64
+	lastGPUTs  time.Time
 
 	activeListeners atomic.Int32
 	stopCh          chan struct{}
@@ -198,6 +200,11 @@ func (s *telemetrySampler) closePDH() {
 }
 
 func (s *telemetrySampler) sampleGPU() float64 {
+	now := time.Now()
+	if !s.lastGPUTs.IsZero() && now.Sub(s.lastGPUTs) < 2400*time.Millisecond {
+		return s.lastGPU
+	}
+
 	if !s.pdhReady {
 		s.initPDH()
 		if !s.pdhReady {
@@ -207,7 +214,7 @@ func (s *telemetrySampler) sampleGPU() float64 {
 
 	r, _, _ := procPdhCollectQueryData.Call(s.pdhQuery)
 	if r != 0 {
-		return 0
+		return s.lastGPU
 	}
 
 	var bufSize uint32
@@ -224,7 +231,7 @@ func (s *telemetrySampler) sampleGPU() float64 {
 
 	const pdhMoreData = 0x800007D2
 	if r != pdhMoreData || bufSize == 0 || itemCount == 0 {
-		return 0
+		return s.lastGPU
 	}
 
 	if uint32(len(s.gpuBuf)) < bufSize {
@@ -239,7 +246,7 @@ func (s *telemetrySampler) sampleGPU() float64 {
 		uintptr(unsafe.Pointer(&s.gpuBuf[0])),
 	)
 	if r != 0 {
-		return 0
+		return s.lastGPU
 	}
 
 	items := (*[1 << 16]pdhFmtCounterValueItem)(unsafe.Pointer(&s.gpuBuf[0]))[:itemCount:itemCount]
@@ -253,6 +260,8 @@ func (s *telemetrySampler) sampleGPU() float64 {
 	if totalGPU > 100 {
 		totalGPU = 100
 	}
+	s.lastGPU = totalGPU
+	s.lastGPUTs = now
 	return totalGPU
 }
 
@@ -289,7 +298,7 @@ func StartTelemetryStream() {
 	sampler.stopCh = make(chan struct{})
 
 	go func() {
-		ticker := time.NewTicker(1000 * time.Millisecond)
+		ticker := time.NewTicker(2500 * time.Millisecond)
 		defer ticker.Stop()
 
 		for {
