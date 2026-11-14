@@ -55,6 +55,50 @@ function optimizeLucideImports(): Plugin {
   }
 }
 
+function optimizeBackdropFilter(): Plugin {
+  return {
+    name: 'optimize-backdrop-filter',
+    enforce: 'pre',
+    transform(code, id) {
+      if (!id.endsWith('.css') && !id.endsWith('.svelte')) return null
+      if (!code.includes('backdrop-filter')) return null
+
+      // Process each CSS rule block that contains a non-none backdrop-filter:
+      // 1. Emit -webkit-backdrop-filter for WebView2 release-build parity
+      // 2. Add isolation: isolate to bound the backdrop-filter stacking context
+      // 3. Add transform: translateZ(0) when transform is absent for GPU layer promotion
+      const transformed = code.replace(
+        /([^{}]+)\{([^{}]*backdrop-filter\s*:\s*(?!none\b)[^;{}]+;[^{}]*)\}/g,
+        (fullMatch, selector: string, body: string) => {
+          let nextBody = body
+          const match = body.match(
+            /(^|[;\s])backdrop-filter\s*:\s*([^;{}]+);/
+          )
+          if (!match) return fullMatch
+
+          const val = match[2].trim()
+          if (!/-webkit-backdrop-filter\s*:/.test(nextBody)) {
+            nextBody = nextBody.replace(
+              /(^|[;\s])(backdrop-filter\s*:\s*[^;{}]+;)/,
+              `$1-webkit-backdrop-filter: ${val};\n  $2`
+            )
+          }
+          if (!/\bisolation\s*:/.test(nextBody)) {
+            nextBody += '\n  isolation: isolate;'
+          }
+          if (!/(^|[;\s])transform\s*:/.test(nextBody)) {
+            nextBody += '\n  transform: translateZ(0);'
+          }
+          return `${selector}{${nextBody}}`
+        }
+      )
+
+      if (transformed === code) return null
+      return { code: transformed, map: null }
+    }
+  }
+}
+
 // https://vitejs.dev/config/
 export default defineConfig({
   server: {
@@ -62,7 +106,12 @@ export default defineConfig({
     port: Number(process.env.WAILS_VITE_PORT) || 9245,
     strictPort: true
   },
-  plugins: [optimizeLucideImports(), svelte(), wails('./bindings')],
+  plugins: [
+    optimizeLucideImports(),
+    optimizeBackdropFilter(),
+    svelte(),
+    wails('./bindings')
+  ],
   optimizeDeps: {
     include: ['svelte', 'svelte/internal', 'svelte/transition', 'svelte/store'],
     exclude: ['lucide-svelte']

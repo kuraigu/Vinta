@@ -60,3 +60,11 @@
 :global(.island-wrapper > *) {
   pointer-events: auto;
 }
+
+:global(.vinta-glass) {
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  isolation: isolate;
+  contain: layout style;
+  transform: translateZ(0);
+}
