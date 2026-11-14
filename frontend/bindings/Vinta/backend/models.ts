@@ -194,7 +194,7 @@ export class Contributor {
 }
 
 /**
- * DisplayLayout captures multi-monitor geometry and the composite virtual desktop space.
+ * DisplayLayout represents the combined virtual desktop and all connected monitors.
  */
 export class DisplayLayout {
     "virtualLeft": number;
@@ -286,7 +286,7 @@ export class HitRect {
 }
 
 /**
- * MonitorInfo describes a connected physical display's boundaries and properties.
+ * MonitorInfo holds physical display bounds and orientation flags.
  */
 export class MonitorInfo {
     "id": number;

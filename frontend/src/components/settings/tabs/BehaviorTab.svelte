@@ -32,13 +32,25 @@
     allowDragPositionStore,
     displayLayoutStore,
     autoHideBorderlessStore,
-    followActiveDisplayStore
+    fullscreenBehaviorStore,
+    returnOnFullscreenExitStore,
+    tStore
   } from '../../../store'
 
-  const widgetContentOptions = [
-    { label: 'Compact Dashboard', value: 'dash' },
-    { label: 'Compact Clock', value: 'clock' }
-  ]
+  let widgetContentOptions = $derived([
+    { label: $tStore('settings.collapsed_pill_dash'), value: 'dash' },
+    { label: $tStore('settings.collapsed_pill_clock'), value: 'clock' }
+  ])
+
+  let wakeMethodOptions = $derived([
+    { value: 'hover', label: $tStore('settings.wake_method_hover') },
+    { value: 'click', label: $tStore('settings.wake_method_click') }
+  ])
+
+  let fullscreenBehaviorOptions = $derived([
+    { label: $tStore('settings.fullscreen_move_display'), value: 'relocate' },
+    { label: $tStore('settings.fullscreen_hide_island'), value: 'hide' }
+  ])
 
   let isResettingOffset = $state(false)
 
@@ -71,23 +83,23 @@
 
 <div class="setting-group">
   <BentoCard variant="group">
-    <SettingItem label="Auto-Hide Home Page" icon={EyeOff}>
+    <SettingItem label={$tStore('settings.autohide_home_label')} icon={EyeOff}>
       <ToggleSwitch
         bind:checked={$homeAutoHideStore}
-        ariaLabel="Auto-Hide Home Page"
+        ariaLabel={$tStore('settings.autohide_home_label')}
       />
     </SettingItem>
 
-    <SettingItem label="Auto-Hide Media Widget" icon={EyeOff}>
+    <SettingItem label={$tStore('settings.autohide_media_label')} icon={EyeOff}>
       <ToggleSwitch
         bind:checked={$mediaAutoHideStore}
-        ariaLabel="Auto-Hide Media Widget"
+        ariaLabel={$tStore('settings.autohide_media_label')}
       />
     </SettingItem>
 
     <SettingItem
-      label="Auto-Hide Delay"
-      description="Inactivity duration before collapsing"
+      label={$tStore('settings.autohide_delay_label')}
+      description={$tStore('settings.autohide_delay_desc')}
       icon={Timer}
       flexCol={true}
       isDefault={$autoHideDelayStore === autoHideDelayStore.defaultValue}
@@ -104,8 +116,8 @@
     </SettingItem>
 
     <SettingItem
-      label="Collapsed Pill Content"
-      description="Widget display when collapsed"
+      label={$tStore('settings.collapsed_pill_label')}
+      description={$tStore('settings.collapsed_pill_desc')}
       icon={Layout}
       flexCol={true}
       isDefault={$autoHideDisplayStore === autoHideDisplayStore.defaultValue}
@@ -123,8 +135,8 @@
 
   <BentoCard variant="group">
     <SettingItem
-      label="Wake Trigger Method"
-      description="Interaction used to expand the island"
+      label={$tStore('settings.wake_method_label')}
+      description={$tStore('settings.wake_method_desc')}
       icon={MousePointer}
       flexCol={true}
       isDefault={$wakeMethodStore === wakeMethodStore.defaultValue}
@@ -132,24 +144,24 @@
     >
       <SegmentedControl
         fullWidth={true}
-        options={[
-          { value: 'hover', label: 'Hover' },
-          { value: 'click', label: 'Click' }
-        ]}
+        options={wakeMethodOptions}
         bind:value={$wakeMethodStore}
       />
     </SettingItem>
 
-    <SettingItem label="Allow Dragging Position" icon={MousePointer}>
+    <SettingItem
+      label={$tStore('settings.allow_drag_label')}
+      icon={MousePointer}
+    >
       <ToggleSwitch
         bind:checked={$allowDragPositionStore}
-        ariaLabel="Allow Dragging Position"
+        ariaLabel={$tStore('settings.allow_drag_label')}
       />
     </SettingItem>
 
     <SettingItem
-      label="Center Island Position"
-      description="Resets the horizontal offset of the Dynamic Island to monitor center"
+      label={$tStore('settings.center_island_label')}
+      description={$tStore('settings.center_island_desc')}
       icon={RotateCcw}
       flexCol={true}
     >
@@ -159,27 +171,25 @@
         onclick={handleResetOffset}
       >
         <RotateCcw size={13} />
-        <span>{isResettingOffset ? 'Centered' : 'Reset Offset to Center'}</span>
+        <span
+          >{isResettingOffset
+            ? $tStore('settings.center_island_done')
+            : $tStore('settings.center_island_btn')}</span
+        >
       </SettingActionButton>
     </SettingItem>
   </BentoCard>
 
-  <BentoCard variant="group">
-    {#if $displayLayoutStore.monitors && $displayLayoutStore.monitors.length > 1}
-      <SettingItem
-        label="Follow Active Display"
-        description="Automatically move Vinta to the display containing the active window"
-        icon={MonitorSmartphone}
-      >
-        <ToggleSwitch
-          bind:checked={$followActiveDisplayStore}
-          ariaLabel="Follow Active Display"
-        />
-      </SettingItem>
+  {#if $displayLayoutStore.monitors && $displayLayoutStore.monitors.length > 1}
+    <div class="section-title">
+      <Monitor size={14} />
+      <span>{$tStore('settings.section_display')}</span>
+    </div>
 
+    <BentoCard variant="group">
       <SettingItem
-        label="Active Display"
-        description="Select which connected monitor Vinta is positioned on"
+        label={$tStore('settings.active_display_label')}
+        description={$tStore('settings.active_display_desc')}
         icon={Monitor}
         flexCol={true}
       >
@@ -187,7 +197,9 @@
           fullWidth={true}
           options={$displayLayoutStore.monitors.map((mon) => ({
             value: String(mon.id),
-            label: mon.name || `Display ${mon.id}`
+            label:
+              mon.name ||
+              $tStore('settings.display_fallback_name', { id: mon.id })
           }))}
           value={String($displayLayoutStore.currentMonitor?.id ?? '')}
           onchange={(val) => {
@@ -198,18 +210,56 @@
           }}
         />
       </SettingItem>
-    {/if}
+    </BentoCard>
+  {/if}
 
+  <div class="section-title">
+    <Maximize2 size={14} />
+    <span>{$tStore('settings.section_fullscreen')}</span>
+  </div>
+
+  <BentoCard variant="group">
     <SettingItem
-      label="Auto-Hide for Borderless Fullscreen"
-      description="Automatically hide the island when borderless full-screen games or apps are active"
+      label={$tStore('settings.autohide_borderless_label')}
+      description={$tStore('settings.autohide_borderless_desc')}
       icon={Maximize2}
     >
       <ToggleSwitch
         bind:checked={$autoHideBorderlessStore}
-        ariaLabel="Auto-Hide for Borderless Fullscreen"
+        ariaLabel={$tStore('settings.autohide_borderless_label')}
       />
     </SettingItem>
+
+    {#if $displayLayoutStore.monitors && $displayLayoutStore.monitors.length > 1}
+      <SettingItem
+        label={$tStore('settings.fullscreen_behavior_label')}
+        description={$tStore('settings.fullscreen_behavior_desc')}
+        icon={MonitorSmartphone}
+        flexCol={true}
+      >
+        <SegmentedControl
+          fullWidth={true}
+          options={fullscreenBehaviorOptions}
+          value={$fullscreenBehaviorStore}
+          onchange={(val) => {
+            $fullscreenBehaviorStore = val as 'relocate' | 'hide'
+          }}
+        />
+      </SettingItem>
+
+      <SettingItem
+        label={$tStore('settings.return_fullscreen_label')}
+        description={$tStore('settings.return_fullscreen_desc')}
+        icon={RotateCcw}
+        disabled={$fullscreenBehaviorStore !== 'relocate'}
+      >
+        <ToggleSwitch
+          bind:checked={$returnOnFullscreenExitStore}
+          disabled={$fullscreenBehaviorStore !== 'relocate'}
+          ariaLabel={$tStore('settings.return_fullscreen_label')}
+        />
+      </SettingItem>
+    {/if}
   </BentoCard>
 </div>
 

@@ -45,7 +45,7 @@ export function BundleShelfZip(paths: string[]): $CancellablePromise<$models.She
 }
 
 /**
- * CancelFullscreenRelocate clears any temporary relocation state.
+ * CancelFullscreenRelocate resets relocation state and clears the offset grace timer.
  */
 export function CancelFullscreenRelocate(): $CancellablePromise<void> {
     return $Call.ByID(3945761807);
@@ -152,7 +152,7 @@ export function FocusNotificationApp(sourceApp: string, aumid: string): $Cancell
 }
 
 /**
- * FocusWindow requests operating system input focus for the Vinta window.
+ * FocusWindow gives OS input focus to Vinta if it is not already focused.
  */
 export function FocusWindow(): $CancellablePromise<void> {
     return $Call.ByID(1046471345);
@@ -232,7 +232,7 @@ export function GetContributors(): $CancellablePromise<$models.Contributor[]> {
 }
 
 /**
- * GetCurrentMonitor returns the active monitor where Vinta is currently located.
+ * GetCurrentMonitor returns the display where Vinta is currently positioned.
  */
 export function GetCurrentMonitor(): $CancellablePromise<$models.MonitorInfo> {
     return $Call.ByID(3990780328).then(($result: any) => {
@@ -260,7 +260,7 @@ export function GetDeveloperAnnouncements(): $CancellablePromise<$models.Announc
 }
 
 /**
- * GetDisplayLayout returns multi-monitor geometry and composite virtual desktop layout.
+ * GetDisplayLayout returns the virtual desktop geometry and current monitor state.
  */
 export function GetDisplayLayout(): $CancellablePromise<$models.DisplayLayout> {
     return $Call.ByID(2439750779).then(($result: any) => {
@@ -656,7 +656,7 @@ export function SetAppAudioVolume(pid: number, volume: number): $CancellableProm
 }
 
 /**
- * SetAutoHideBorderless toggles automatic hiding when a borderless fullscreen window is detected on Vinta's monitor.
+ * SetAutoHideBorderless toggles auto-hide when borderless fullscreen windows cover Vinta's monitor.
  */
 export function SetAutoHideBorderless(enabled: boolean): $CancellablePromise<void> {
     return $Call.ByID(2287815453, enabled);
@@ -705,7 +705,7 @@ export function SetDefaultAudioEndpoint(endpointID: string): $CancellablePromise
 }
 
 /**
- * SetDevPillBounds is called by the frontend to update the size of the developer menu.
+ * SetDevPillBounds updates the developer menu dimensions and recalculates the window region.
  */
 export function SetDevPillBounds(width: number, height: number, extraH: number, scale: number): $CancellablePromise<void> {
     return $Call.ByID(2026897698, width, height, extraH, scale);
@@ -719,7 +719,7 @@ export function SetDevWindow(win: application$0.WebviewWindow | null): $Cancella
 }
 
 /**
- * SetDragCapture controls Win32 OS-level mouse capture during drag gestures.
+ * SetDragCapture is a no-op stub kept for Wails binding compatibility.
  */
 export function SetDragCapture(enable: boolean): $CancellablePromise<void> {
     return $Call.ByID(1965237067, enable);
@@ -730,13 +730,6 @@ export function SetDragCapture(enable: boolean): $CancellablePromise<void> {
  */
 export function SetFloatingControlsBounds(width: number, height: number, radius: number, gap: number): $CancellablePromise<void> {
     return $Call.ByID(2706679968, width, height, radius, gap);
-}
-
-/**
- * SetFollowActiveDisplay configures whether Vinta dynamically tracks the active monitor with the mouse or foreground window.
- */
-export function SetFollowActiveDisplay(enabled: boolean): $CancellablePromise<void> {
-    return $Call.ByID(103202128, enabled);
 }
 
 /**
@@ -761,14 +754,14 @@ export function SetHitRects(rects: $models.HitRect[]): $CancellablePromise<void>
 }
 
 /**
- * SetIgnoreMouseEvents toggles click-through for the entire window and its children using Win32 WS_EX_TRANSPARENT.
+ * SetIgnoreMouseEvents toggles WS_EX_TRANSPARENT click-through on the native window.
  */
 export function SetIgnoreMouseEvents(ignore: boolean): $CancellablePromise<void> {
     return $Call.ByID(1718867283, ignore);
 }
 
 /**
- * SetIsHidden informs native background services whether Vinta is hidden to throttle high-frequency IPC.
+ * SetIsHidden updates the hidden state and notifies background services to throttle IPC.
  */
 export function SetIsHidden(hidden: boolean): $CancellablePromise<void> {
     return $Call.ByID(3839965369, hidden);
@@ -789,6 +782,20 @@ export function SetPillBounds(left: number, top: number, width: number, height: 
 }
 
 /**
+ * SetRelocateOnFullscreen toggles whether Vinta moves to a free monitor instead of hiding during fullscreen apps.
+ */
+export function SetRelocateOnFullscreen(enabled: boolean): $CancellablePromise<void> {
+    return $Call.ByID(3054201482, enabled);
+}
+
+/**
+ * SetReturnOnFullscreenExit toggles whether Vinta returns to its previous display after a fullscreen app exits.
+ */
+export function SetReturnOnFullscreenExit(enabled: boolean): $CancellablePromise<void> {
+    return $Call.ByID(3918888735, enabled);
+}
+
+/**
  * SetSatelliteBounds registers or updates a floating satellite dock in the window region manager.
  */
 export function SetSatelliteBounds(bounds: $models.SatelliteBounds): $CancellablePromise<void> {
@@ -803,7 +810,7 @@ export function SetTooltipBounds(bounds: $models.TooltipBounds): $CancellablePro
 }
 
 /**
- * SetWidgetBounds is called by the frontend whenever the widget dimensions change.
+ * SetWidgetBounds updates the pill dimensions, scale, and horizontal offset from the frontend.
  */
 export function SetWidgetBounds(width: number, height: number, radius: number, scale: number, offsetX: number): $CancellablePromise<void> {
     return $Call.ByID(4226352792, width, height, radius, scale, offsetX);
@@ -852,7 +859,7 @@ export function StartBackgroundUpdateChecker(): $CancellablePromise<void> {
 }
 
 /**
- * StartInertiaGlide resets active glide generation tokens.
+ * StartInertiaGlide increments the glide generation token and notifies the frontend.
  */
 export function StartInertiaGlide(startOffset: number, velocity: number, minOffset: number, maxOffset: number): $CancellablePromise<void> {
     return $Call.ByID(537051494, startOffset, velocity, minOffset, maxOffset);
@@ -884,7 +891,7 @@ export function Startup(): $CancellablePromise<void> {
 }
 
 /**
- * StopInertiaGlide immediately halts any in-progress inertia glide and returns current offset.
+ * StopInertiaGlide cancels any active glide and returns the current horizontal offset.
  */
 export function StopInertiaGlide(): $CancellablePromise<number> {
     return $Call.ByID(446266388);
@@ -914,7 +921,7 @@ export function ToggleMasterAudioMute(): $CancellablePromise<boolean> {
 }
 
 /**
- * TrimMemory requests Windows to reclaim unused physical RAM pages from Vinta and child WebView2 processes.
+ * TrimMemory flushes unused working-set pages from Vinta and its child WebView2 processes.
  */
 export function TrimMemory(): $CancellablePromise<void> {
     return $Call.ByID(1258805264);

@@ -1410,6 +1410,8 @@
         if (layout && layout.virtualWidth > 0) {
           displayLayout = layout
           $displayLayoutStore = layout
+          bounds.syncPillBounds(islandNode, isHidden)
+          resyncAllSatellites()
         }
       } catch {}
     }

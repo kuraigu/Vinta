@@ -44,7 +44,8 @@ type App struct {
 	scale                    float64
 	isHidden                 bool
 	autoHideBorderless       bool
-	followActiveDisplay      bool
+	relocateOnFullscreen     bool
+	returnOnFullscreenExit   bool
 	autoHideMu               sync.RWMutex
 	updaterMu                sync.Mutex
 	downloadCancel           context.CancelFunc
@@ -56,10 +57,8 @@ type App struct {
 	fullscreenRelocatedMu    sync.Mutex
 	isFullscreenRelocated    bool
 	originalFullscreenOffset int
-	originalFullscreenMonID  int
 	fullscreenTriggerHwnd    uintptr
 	fullscreenTriggerMonID   int
-	lastRelocateExitTime     time.Time
 	pillHitMu                sync.RWMutex
 	pillHitRects             []pillHitBounds
 	isForceInteractive       bool
@@ -85,14 +84,16 @@ func NewApp(icon []byte) *App {
 	screenHeight = sh
 
 	return &App{
-		icon:               icon,
-		pillW:              340,
-		pillH:              34,
-		pillR:              24,
-		scale:              1.0,
-		autoHideBorderless: false,
-		tooltips:           make(map[string]TooltipBounds),
-		themeService:       NewThemeService(),
+		icon:                 icon,
+		pillW:                340,
+		pillH:                34,
+		pillR:                24,
+		scale:                1.0,
+		autoHideBorderless:     false,
+		relocateOnFullscreen:   true,
+		returnOnFullscreenExit: false,
+		tooltips:             make(map[string]TooltipBounds),
+		themeService:         NewThemeService(),
 	}
 }
 
@@ -105,11 +106,6 @@ func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 		a.ctx = wailsApp.Context()
 		wailsApp.Event.On("cancel-fullscreen-relocate", func(_ *application.CustomEvent) {
 			a.CancelFullscreenRelocate()
-		})
-		wailsApp.Event.On("set-follow-active-display", func(e *application.CustomEvent) {
-			if enabled, ok := e.Data.(bool); ok {
-				a.SetFollowActiveDisplay(enabled)
-			}
 		})
 		wailsApp.Event.On("set-autohide-borderless", func(e *application.CustomEvent) {
 			if enabled, ok := e.Data.(bool); ok {
