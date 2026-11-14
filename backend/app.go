@@ -61,6 +61,7 @@ type App struct {
 	fullscreenTriggerMonID   int
 	pillHitMu                sync.RWMutex
 	pillHitRects             []pillHitBounds
+	hitRectsVersion          uint64
 	isForceInteractive       bool
 	isCurrentlyInteractive   bool
 	isOutboundDragging       bool
@@ -84,16 +85,16 @@ func NewApp(icon []byte) *App {
 	screenHeight = sh
 
 	return &App{
-		icon:                 icon,
-		pillW:                340,
-		pillH:                34,
-		pillR:                24,
-		scale:                1.0,
+		icon:                   icon,
+		pillW:                  340,
+		pillH:                  34,
+		pillR:                  24,
+		scale:                  1.0,
 		autoHideBorderless:     false,
 		relocateOnFullscreen:   true,
 		returnOnFullscreenExit: false,
-		tooltips:             make(map[string]TooltipBounds),
-		themeService:         NewThemeService(),
+		tooltips:               make(map[string]TooltipBounds),
+		themeService:           NewThemeService(),
 	}
 }
 

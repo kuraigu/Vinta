@@ -117,6 +117,16 @@ export class IslandGestureController {
   private dragHistory: Array<{ x: number; time: number }> = []
   private inertiaAnimFrame: number | undefined
   private inertiaSafetyTimeout: number | undefined
+  private pendingMoveOffset: number | undefined
+  private moveRafId: number | undefined
+
+  private cancelPendingMove(): void {
+    if (this.moveRafId !== undefined) {
+      cancelAnimationFrame(this.moveRafId)
+      this.moveRafId = undefined
+    }
+    this.pendingMoveOffset = undefined
+  }
 
   /**
    * Evaluates whether an element or event can initiate dragging.
@@ -169,6 +179,7 @@ export class IslandGestureController {
     onWatchdogFailsafe: () => void
   ): void {
     this.stopInertia()
+    this.cancelPendingMove()
     this.isDragging = true
     this.isSettling = false
     this.hasPointerCaptured = false
@@ -231,7 +242,18 @@ export class IslandGestureController {
       }
 
       const clamped = Math.max(virtualMin, Math.min(virtualMax, targetOffset))
-      onUpdateOffset(clamped)
+      this.pendingMoveOffset = clamped
+      if (this.moveRafId === undefined) {
+        this.moveRafId = requestAnimationFrame(() => {
+          this.moveRafId = undefined
+          if (!this.isDragging || this.pendingMoveOffset === undefined) {
+            return
+          }
+          const next = this.pendingMoveOffset
+          this.pendingMoveOffset = undefined
+          onUpdateOffset(next)
+        })
+      }
     }
   }
 
@@ -253,6 +275,13 @@ export class IslandGestureController {
     ) => void,
     onGlideStep?: (liveOffset: number) => void
   ): void {
+    const pendingOffset = this.pendingMoveOffset
+    this.cancelPendingMove()
+    if (pendingOffset !== undefined) {
+      currentOffset = pendingOffset
+      onUpdateOffset(pendingOffset)
+    }
+
     if (this.isInertia) {
       return
     }

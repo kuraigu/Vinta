@@ -46,13 +46,12 @@ export class WindowBoundsManager {
   public getIsDragging: () => boolean = () => false
 
   /**
-   * Synchronizes physical client pixel bounds of the active island and any satellite hosts to the Go backend.
+   * Measures physical client pixel bounds of the active island, satellites, menus, and folder windows.
    */
-  public syncPillBounds(
+  private measureHitRects(
     islandNode?: HTMLElement | null,
-    isHidden: boolean = false,
-    force: boolean = false
-  ): void {
+    isHidden: boolean = false
+  ): { hitRects: HitRect[]; hiddenSig?: string } {
     if (islandNode) {
       this.activeIslandNode = islandNode
     }
@@ -67,26 +66,13 @@ export class WindowBoundsManager {
           const t = 0
           const w = Math.round(rect.width * dpr)
           const h = Math.round((rect.bottom + 2) * dpr)
-          const sig = `hidden:${l},${t},${w},${h}`
-          if (sig !== this.lastHitRectsSignature) {
-            this.lastHitRectsSignature = sig
-            SetHitRects([
-              new HitRect({
-                left: l,
-                top: t,
-                width: w,
-                height: h
-              })
-            ]).catch(() => {})
+          return {
+            hitRects: [new HitRect({ left: l, top: t, width: w, height: h })],
+            hiddenSig: `hidden:${l},${t},${w},${h}`
           }
-          return
         }
       }
-      if (this.lastHitRectsSignature !== 'hidden:empty') {
-        this.lastHitRectsSignature = 'hidden:empty'
-        SetHitRects([]).catch(() => {})
-      }
-      return
+      return { hitRects: [], hiddenSig: 'hidden:empty' }
     }
 
     const hitRects: HitRect[] = []
@@ -169,9 +155,20 @@ export class WindowBoundsManager {
       }
     }
 
-    const sig = hitRects
-      .map((r) => `${r.left},${r.top},${r.width},${r.height}`)
-      .join(';')
+    return { hitRects }
+  }
+
+  /**
+   * Sends hit rectangles to the Go backend if the serialized signature changed.
+   */
+  private dispatchHitRects(
+    hitRects: HitRect[],
+    force: boolean = false,
+    explicitSig?: string
+  ): void {
+    const sig =
+      explicitSig ??
+      hitRects.map((r) => `${r.left},${r.top},${r.width},${r.height}`).join(';')
     if (!force && sig === this.lastHitRectsSignature) {
       return
     }
@@ -179,12 +176,95 @@ export class WindowBoundsManager {
     SetHitRects(hitRects).catch(() => {})
   }
 
+  /**
+   * Synchronizes physical client pixel bounds of the active island and any satellite hosts to the Go backend.
+   */
+  public syncPillBounds(
+    islandNode?: HTMLElement | null,
+    isHidden: boolean = false,
+    force: boolean = false
+  ): void {
+    const { hitRects, hiddenSig } = this.measureHitRects(islandNode, isHidden)
+    this.dispatchHitRects(hitRects, force, hiddenSig)
+  }
+
   private liveTrackingRaf: number | undefined
   private transitionTimer: number | undefined
+  private transitionCleanup: (() => void) | undefined
+  private baselineHitRects: HitRect[] | null = null
+  private baselineOffsetX: number = 0
+  private baselineDpr: number = 1
+  private lastSyncedDragOffset: number = Number.NaN
+  private lastDragSyncTime: number = 0
+  private baselineInvalidated: boolean = false
+  private isDragBaselineActive: boolean = false
+  private resyncListenerAttached: boolean = false
+
+  private handleResyncBounds = () => {
+    if (this.isDragBaselineActive || this.liveTrackingRaf !== undefined) {
+      this.baselineInvalidated = true
+    }
+  }
 
   /**
-   * Starts a live requestAnimationFrame tracking loop that reports physical client coordinates
-   * of the island to Go during mounting, resizing, dragging, transitions, or gliding.
+   * Captures a single DOM baseline snapshot at drag or glide start so subsequent
+   * movement frames shift hit rects arithmetically with zero layout reflows.
+   */
+  public captureDragBaseline(
+    islandNode?: HTMLElement | null,
+    explicitOffset?: number
+  ): void {
+    if (islandNode) this.activeIslandNode = islandNode
+    if (typeof window !== 'undefined' && !this.resyncListenerAttached) {
+      window.addEventListener('vinta-resync-bounds', this.handleResyncBounds)
+      this.resyncListenerAttached = true
+    }
+    const { hitRects } = this.measureHitRects(this.activeIslandNode, false)
+    this.baselineHitRects = hitRects
+    this.baselineOffsetX = explicitOffset ?? this.getLiveOffset()
+    this.baselineDpr = window.devicePixelRatio || 1
+    this.lastSyncedDragOffset = this.baselineOffsetX
+    this.lastDragSyncTime = performance.now()
+    this.baselineInvalidated = false
+    this.isDragBaselineActive = true
+    this.dispatchHitRects(hitRects)
+  }
+
+  /**
+   * Event-driven drag/glide hit-rect update called from pointermove/glide callbacks.
+   */
+  public syncDragOffset(liveOffset: number): void {
+    if (this.baselineInvalidated || !this.baselineHitRects) {
+      this.captureDragBaseline(this.activeIslandNode, liveOffset)
+      return
+    }
+    const now = performance.now()
+    if (
+      now - this.lastDragSyncTime < 32 ||
+      Math.abs(liveOffset - this.lastSyncedDragOffset) < 0.5
+    ) {
+      return
+    }
+    this.lastDragSyncTime = now
+    this.lastSyncedDragOffset = liveOffset
+    const deltaPx = Math.round(
+      (liveOffset - this.baselineOffsetX) * this.baselineDpr
+    )
+    const shifted = this.baselineHitRects.map(
+      (r) =>
+        new HitRect({
+          left: Math.max(0, r.left + deltaPx),
+          top: r.top,
+          width: r.width,
+          height: r.height
+        })
+    )
+    this.dispatchHitRects(shifted)
+  }
+
+  /**
+   * Starts timed live tracking when durationMs is provided, or captures an event-driven
+   * drag baseline when durationMs is omitted.
    */
   public startLiveTracking(
     islandNode?: HTMLElement | null,
@@ -193,6 +273,11 @@ export class WindowBoundsManager {
   ): void {
     if (islandNode) this.activeIslandNode = islandNode
     this.stopLiveTracking()
+
+    if (durationMs === undefined) {
+      this.captureDragBaseline(this.activeIslandNode)
+      return
+    }
 
     const startTime = performance.now()
     let lastSyncTime = startTime
@@ -203,7 +288,7 @@ export class WindowBoundsManager {
         lastSyncTime = now
         this.syncPillBounds(this.activeIslandNode)
       }
-      if (durationMs !== undefined && now - startTime >= durationMs) {
+      if (now - startTime >= durationMs) {
         this.stopLiveTracking()
         this.syncPillBounds(this.activeIslandNode)
         onSettled?.()
@@ -217,24 +302,28 @@ export class WindowBoundsManager {
   }
 
   /**
-   * Stops active live requestAnimationFrame tracking loop.
+   * Stops active live tracking loop and clears any drag baseline.
    */
   public stopLiveTracking(): void {
     if (this.liveTrackingRaf !== undefined) {
       cancelAnimationFrame(this.liveTrackingRaf)
       this.liveTrackingRaf = undefined
     }
+    this.isDragBaselineActive = false
+    this.baselineHitRects = null
+    this.baselineInvalidated = false
+    this.lastSyncedDragOffset = Number.NaN
   }
 
   /**
    * Pre-commits a union bounding rectangle covering both current and target dimensions
-   * at transition start, then schedules a single DOM measurement when the transition settles.
-   * Eliminates 30Hz synchronous layout reflows during expand/collapse morphs.
+   * at transition start, then settles via transitionend (with a safety fallback timeout).
    */
   public startTrackingTransition(
     islandNode?: HTMLElement | null,
     durationMs: number = 340,
-    isHidden: boolean = false
+    isHidden: boolean = false,
+    onSettled?: () => void
   ): void {
     if (islandNode) this.activeIslandNode = islandNode
     this.stopTrackingTransition()
@@ -271,19 +360,49 @@ export class WindowBoundsManager {
       }
     }
 
-    this.transitionTimer = window.setTimeout(() => {
-      this.transitionTimer = undefined
+    let settled = false
+    const finishOnce = () => {
+      if (settled) return
+      settled = true
+      this.transitionCleanup?.()
+      this.transitionCleanup = undefined
+      if (this.transitionTimer !== undefined) {
+        clearTimeout(this.transitionTimer)
+        this.transitionTimer = undefined
+      }
       this.syncPillBounds(this.activeIslandNode, isHidden, true)
       resyncAllSatellites()
       dismissAllTooltips()
-    }, durationMs)
+      onSettled?.()
+    }
+
+    if (node) {
+      const handleTransitionEnd = (e: TransitionEvent) => {
+        if (e.target !== node) return
+        if (
+          e.propertyName === 'width' ||
+          e.propertyName === 'height' ||
+          e.propertyName === 'transform'
+        ) {
+          finishOnce()
+        }
+      }
+      node.addEventListener('transitionend', handleTransitionEnd)
+      this.transitionCleanup = () => {
+        node.removeEventListener('transitionend', handleTransitionEnd)
+      }
+    }
+
+    this.transitionTimer = window.setTimeout(finishOnce, durationMs)
   }
 
   /**
-   * Stops any active transition timer or tracking frame.
+   * Stops any active transition timer, listener, or tracking frame.
    */
   public stopTrackingTransition(): void {
     this.stopLiveTracking()
+    this.transitionCleanup?.()
+    this.transitionCleanup = undefined
     if (this.transitionTimer !== undefined) {
       clearTimeout(this.transitionTimer)
       this.transitionTimer = undefined
@@ -374,10 +493,7 @@ export class WindowBoundsManager {
   ): void {
     if (islandNode) this.activeIslandNode = islandNode
     this.currentOSBounds = { ...target }
-    this.startTrackingTransition(islandNode, 360, false)
-    setTimeout(() => {
-      onSettled?.()
-    }, 360)
+    this.startTrackingTransition(islandNode, 360, false, onSettled)
   }
 
   /**
@@ -473,7 +589,8 @@ export class WindowBoundsManager {
   }
 
   /**
-   * Initializes a background idle reconciler that periodically reconciles true DOM geometry.
+   * Initializes an event-driven ResizeObserver on the island node so bounds reconcile
+   * whenever DOM geometry changes without a periodic polling timer.
    */
   public startIdleReconciler(
     getIslandNode: () => HTMLElement | null,
@@ -482,23 +599,51 @@ export class WindowBoundsManager {
   ): () => void {
     if (typeof window === 'undefined') return () => {}
 
-    const runIdleCheck = () => {
-      if (!this.getIsDragging() && !getIsHidden()) {
+    let observer: ResizeObserver | undefined
+    let mountRaf: number | undefined
+    let observedNode: HTMLElement | null = null
+
+    const reconcile = () => {
+      if (
+        !this.getIsDragging() &&
+        !getIsHidden() &&
+        this.transitionTimer === undefined
+      ) {
         const node = getIslandNode()
         if (node) {
           this.activeIslandNode = node
-          const target = getTargetBounds()
-          this.currentOSBounds = { ...target }
+          this.currentOSBounds = { ...getTargetBounds() }
           this.syncPillBounds(node, false, false)
         }
       }
-      this.idleWatchdogTimer = window.setTimeout(runIdleCheck, 2000)
     }
 
-    this.idleWatchdogTimer = window.setTimeout(runIdleCheck, 2000)
+    const attachObserver = () => {
+      const node = getIslandNode()
+      if (!node) {
+        mountRaf = requestAnimationFrame(attachObserver)
+        return
+      }
+      if (node === observedNode) return
+      observedNode = node
+      reconcile()
+      if (typeof ResizeObserver !== 'undefined') {
+        observer?.disconnect()
+        observer = new ResizeObserver(reconcile)
+        observer.observe(node)
+      }
+    }
+
+    attachObserver()
 
     return () => {
-      clearTimeout(this.idleWatchdogTimer)
+      if (mountRaf !== undefined) {
+        cancelAnimationFrame(mountRaf)
+        mountRaf = undefined
+      }
+      observer?.disconnect()
+      observer = undefined
+      observedNode = null
     }
   }
 
@@ -508,5 +653,9 @@ export class WindowBoundsManager {
   public cleanup(): void {
     this.cancelPendingTransition()
     clearTimeout(this.idleWatchdogTimer)
+    if (this.resyncListenerAttached && typeof window !== 'undefined') {
+      window.removeEventListener('vinta-resync-bounds', this.handleResyncBounds)
+      this.resyncListenerAttached = false
+    }
   }
 }

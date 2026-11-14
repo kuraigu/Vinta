@@ -158,7 +158,11 @@
   })
 </script>
 
-<canvas bind:this={canvasEl} class="baked-canvas-layer {className}" aria-hidden="true"></canvas>
+<canvas
+  bind:this={canvasEl}
+  class="baked-canvas-layer {className}"
+  aria-hidden="true"
+></canvas>
 
 <style>
   canvas.baked-canvas-layer {

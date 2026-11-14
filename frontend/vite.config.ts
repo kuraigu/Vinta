@@ -71,9 +71,7 @@ function optimizeBackdropFilter(): Plugin {
         /([^{}]+)\{([^{}]*backdrop-filter\s*:\s*(?!none\b)[^;{}]+;[^{}]*)\}/g,
         (fullMatch, selector: string, body: string) => {
           let nextBody = body
-          const match = body.match(
-            /(^|[;\s])backdrop-filter\s*:\s*([^;{}]+);/
-          )
+          const match = body.match(/(^|[;\s])backdrop-filter\s*:\s*([^;{}]+);/)
           if (!match) return fullMatch
 
           const val = match[2].trim()

@@ -380,25 +380,44 @@
     // Concentric gold rings pulsing & gliding metallic glint
     const ringWaveA = 0.5 - 0.5 * Math.cos((t / 3.4) * Math.PI * 2)
     const ringWaveB = 0.5 - 0.5 * Math.cos(((t + 1.2) / 4.2) * Math.PI * 2)
-    const glintAngle = Math.PI + 0.12 + 0.36 * (0.5 - 0.5 * Math.cos((t / 5.0) * Math.PI * 2))
+    const glintAngle =
+      Math.PI + 0.12 + 0.36 * (0.5 - 0.5 * Math.cos((t / 5.0) * Math.PI * 2))
     ctx.lineCap = 'round'
 
     ctx.strokeStyle = `rgba(235, 190, 95, ${(0.18 + 0.72 * ringWaveA).toFixed(3)})`
     ctx.lineWidth = 1.6 * s
     ctx.beginPath()
-    ctx.arc(ox + 314 * s, oy + 86 * s, 68 * s * (1 + 0.025 * ringWaveA), Math.PI, Math.PI * 1.65)
+    ctx.arc(
+      ox + 314 * s,
+      oy + 86 * s,
+      68 * s * (1 + 0.025 * ringWaveA),
+      Math.PI,
+      Math.PI * 1.65
+    )
     ctx.stroke()
 
     ctx.strokeStyle = `rgba(255, 226, 148, ${(0.4 + 0.55 * ringWaveA).toFixed(3)})`
     ctx.lineWidth = 2.0 * s
     ctx.beginPath()
-    ctx.arc(ox + 314 * s, oy + 86 * s, 58 * s * (1 + 0.025 * ringWaveB), glintAngle, glintAngle + 0.28)
+    ctx.arc(
+      ox + 314 * s,
+      oy + 86 * s,
+      58 * s * (1 + 0.025 * ringWaveB),
+      glintAngle,
+      glintAngle + 0.28
+    )
     ctx.stroke()
 
     ctx.strokeStyle = `rgba(235, 190, 95, ${(0.2 + 0.68 * ringWaveB).toFixed(3)})`
     ctx.lineWidth = 1.6 * s
     ctx.beginPath()
-    ctx.arc(ox + 314 * s, oy + 86 * s, 58 * s * (1 + 0.025 * ringWaveB), Math.PI, Math.PI * 1.65)
+    ctx.arc(
+      ox + 314 * s,
+      oy + 86 * s,
+      58 * s * (1 + 0.025 * ringWaveB),
+      Math.PI,
+      Math.PI * 1.65
+    )
     ctx.stroke()
 
     // Floating golden dust motes drifting through the sunbeam
@@ -420,7 +439,13 @@
       if (enohotelSunSprite && alpha > 0.05) {
         const glowR = m.r * 3.2 * s
         ctx.globalAlpha = alpha * 0.55
-        ctx.drawImage(enohotelSunSprite, mx - glowR, my - glowR, glowR * 2, glowR * 2)
+        ctx.drawImage(
+          enohotelSunSprite,
+          mx - glowR,
+          my - glowR,
+          glowR * 2,
+          glowR * 2
+        )
       }
       ctx.globalAlpha = 1
       ctx.fillStyle = `rgba(255, 232, 165, ${Math.max(0, alpha).toFixed(3)})`
@@ -468,7 +493,10 @@
             onDraw={drawEnohotelAmbient}
           />
         {/if}
-        <div class="spotlight-card-body" style="position: relative; z-index: 1;">
+        <div
+          class="spotlight-card-body"
+          style="position: relative; z-index: 1;"
+        >
           {#if item.iconType === 'image' && item.iconSrc}
             <IconBadge
               size="lg"
@@ -476,12 +504,7 @@
               customBg={item.badgeColorName ? undefined : item.badgeBg}
               customColor={item.badgeColorName ? undefined : item.badgeColor}
             >
-              <img
-                src={item.iconSrc}
-                alt=""
-                draggable="false"
-                loading="lazy"
-              />
+              <img src={item.iconSrc} alt="" draggable="false" loading="lazy" />
             </IconBadge>
           {:else}
             <IconBadge

@@ -659,7 +659,7 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
     RequestMediaUpdate()
   }
 
-  // Periodic Hardware Status Polling
+  // Event-driven Hardware Status Sync (BatteryManager events + expanded-only wireless refresh)
   const updateBattery = () => {
     if (callbacks.getIsHidden() || get(isSimulatingBatteryStore)) return
     const hwVis = get(homeWidgetsVisibilityStore)
@@ -676,7 +676,33 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
     }
   }
   updateBattery()
-  const batteryInterval = window.setInterval(updateBattery, 8000)
+
+  let batteryInterval: number | undefined
+  let cleanupBatteryEvents: (() => void) | undefined
+  const nav = navigator as Navigator & {
+    getBattery?: () => Promise<{
+      addEventListener: (type: string, listener: () => void) => void
+      removeEventListener: (type: string, listener: () => void) => void
+    }>
+  }
+  if (typeof nav.getBattery === 'function') {
+    nav
+      .getBattery()
+      .then((bat) => {
+        const onBatChange = () => updateBattery()
+        bat.addEventListener('levelchange', onBatChange)
+        bat.addEventListener('chargingchange', onBatChange)
+        cleanupBatteryEvents = () => {
+          bat.removeEventListener('levelchange', onBatChange)
+          bat.removeEventListener('chargingchange', onBatChange)
+        }
+      })
+      .catch(() => {
+        batteryInterval = window.setInterval(updateBattery, 30000)
+      })
+  } else {
+    batteryInterval = window.setInterval(updateBattery, 30000)
+  }
 
   const updateWireless = () => {
     if (callbacks.getIsHidden() || get(isSimulatingWirelessStore)) return
@@ -694,11 +720,28 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
     }
   }
   updateWireless()
-  const wirelessInterval = window.setInterval(updateWireless, 10000)
+
+  const handleHardwareFocusOrResync = () => {
+    if (!callbacks.getIsHidden()) {
+      updateBattery()
+      updateWireless()
+    }
+  }
+  window.addEventListener('focus', handleHardwareFocusOrResync)
+
+  const wirelessInterval = window.setInterval(() => {
+    if (callbacks.getIsExpanded()) {
+      updateWireless()
+    }
+  }, 30000)
 
   return () => {
-    window.clearInterval(batteryInterval)
+    if (batteryInterval !== undefined) {
+      window.clearInterval(batteryInterval)
+    }
+    cleanupBatteryEvents?.()
     window.clearInterval(wirelessInterval)
+    window.removeEventListener('focus', handleHardwareFocusOrResync)
     window.removeEventListener(
       'vinta-navigate-settings',
       handleNavigateSettings

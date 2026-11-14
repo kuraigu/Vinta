@@ -39,6 +39,19 @@
   -webkit-user-select: none;
 }
 
+:global(img[draggable='true']),
+:global([draggable='true'] img) {
+  -webkit-user-drag: element;
+}
+
+:global(input),
+:global(textarea),
+:global([contenteditable='true']),
+:global([data-selectable='true']) {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
 .island-container {
   display: flex;
   flex-direction: column;

@@ -1351,7 +1351,51 @@
   // Mount & Window Lifecycle
   onMount(() => {
     const disableGlobalContextMenu = (e: MouseEvent) => e.preventDefault()
+    const disableDefaultBrowserDrag = (e: DragEvent) => {
+      const target = e.target as HTMLElement | null
+      if (!target || target.closest('[draggable="true"]')) return
+      if (
+        target.tagName === 'IMG' ||
+        target.tagName === 'SVG' ||
+        target.tagName === 'A' ||
+        target.closest('img, svg, a')
+      ) {
+        e.preventDefault()
+      }
+    }
+    const disableMiddleClickScroll = (e: MouseEvent) => {
+      if (e.button !== 1) return
+      const target = e.target as HTMLElement | null
+      if (target?.closest('[data-allow-middle-scroll]')) return
+      e.preventDefault()
+    }
+    const disableBrowserShortcuts = (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return
+      const target = e.target as HTMLElement | null
+      if (target?.closest('[data-allow-browser-shortcut]')) return
+      const mod = e.ctrlKey || e.metaKey
+      const key = e.key.toLowerCase()
+      if (
+        e.key === 'F5' ||
+        e.key === 'F3' ||
+        (mod &&
+          (key === 'p' ||
+            key === 's' ||
+            key === 'u' ||
+            key === 'r' ||
+            key === 'g' ||
+            key === '=' ||
+            key === '+' ||
+            key === '-' ||
+            key === '0'))
+      ) {
+        e.preventDefault()
+      }
+    }
     window.addEventListener('contextmenu', disableGlobalContextMenu)
+    window.addEventListener('dragstart', disableDefaultBrowserDrag, true)
+    window.addEventListener('mousedown', disableMiddleClickScroll, true)
+    window.addEventListener('keydown', disableBrowserShortcuts)
 
     $hiddenPillOffsetXStore = 0
     currentLiveOffsetX = 0
@@ -1573,12 +1617,6 @@
       () => isHidden
     )
 
-    const idleMemoryWatchdog = window.setInterval(() => {
-      if (!expanded || isHidden) {
-        bounds.trimMemory()
-      }
-    }, 30000)
-
     const cleanupEvents = initIslandEvents({
       showWidget,
       hideWidget,
@@ -1654,7 +1692,6 @@
     } catch {}
 
     return () => {
-      window.clearInterval(idleMemoryWatchdog)
       clearTimeout(initSyncTimer1)
       clearTimeout(initSyncTimer2)
       stopIdleReconciler()
@@ -1670,6 +1707,9 @@
       clearTimeout(hideTimeout)
       clearTimeout(islandTransitionTimeout)
       window.removeEventListener('contextmenu', disableGlobalContextMenu)
+      window.removeEventListener('dragstart', disableDefaultBrowserDrag, true)
+      window.removeEventListener('mousedown', disableMiddleClickScroll, true)
+      window.removeEventListener('keydown', disableBrowserShortcuts)
       window.removeEventListener('vinta-overlay', handleOverlayChange)
       window.removeEventListener('vinta-quit', handleQuit)
       window.removeEventListener('vinta-resync-bounds', handleResyncBounds)
@@ -1759,24 +1799,20 @@
       {currentLiveOffsetX}
       {wasExpandedBeforeHide}
       onStartDragRunway={() => {
-        bounds.startLiveTracking(islandNode)
         const { h, r } = getBoundsForState()
-        bounds.updateBounds(-1, Math.max(h, 200), r, 0)
+        bounds.currentOSBounds = { w: -1, h: Math.max(h, 200), r }
+        bounds.captureDragBaseline(islandNode, currentLiveOffsetX)
       }}
       onStartInertia={(start, target) => {
         bounds.syncGlideCorridor(islandNode, isHidden, start, target)
       }}
       onGlideStep={(live) => {
         currentLiveOffsetX = live
-        if (islandWrapperNode) {
-          islandWrapperNode.style.transform = `translateX(${live}px)`
-        }
+        bounds.syncDragOffset(live)
       }}
       onUpdateOffset={(next) => {
         currentLiveOffsetX = next
-        if (islandWrapperNode) {
-          islandWrapperNode.style.transform = `translateX(${next}px)`
-        }
+        bounds.syncDragOffset(next)
       }}
       onFinishDrag={finishDragGesture}
       onExpand={handleExpand}

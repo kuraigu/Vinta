@@ -121,16 +121,6 @@
     }
   }
 
-  let settleTimeout1: number | undefined
-  let settleTimeout2: number | undefined
-  let settleTimeout3: number | undefined
-
-  function clearSettleTimeouts() {
-    clearTimeout(settleTimeout1)
-    clearTimeout(settleTimeout2)
-    clearTimeout(settleTimeout3)
-  }
-
   let lastActiveState: boolean | undefined
 
   /**
@@ -149,15 +139,10 @@
       syncSatelliteBounds()
       if (lastActiveState !== active) {
         lastActiveState = active
-        clearSettleTimeouts()
-        settleTimeout1 = window.setTimeout(syncSatelliteBounds, 80)
-        settleTimeout2 = window.setTimeout(syncSatelliteBounds, 250)
-        settleTimeout3 = window.setTimeout(syncSatelliteBounds, 350)
       }
     } else {
       if (lastActiveState !== false) {
         lastActiveState = false
-        clearSettleTimeouts()
         syncSatelliteBounds()
       }
     }
@@ -166,12 +151,14 @@
   $effect(syncSatelliteBoundsEffect)
 
   let resizeObserver: ResizeObserver | undefined
+  let transitionCleanup: (() => void) | undefined
 
   /**
    * Immediately synchronizes bounds when the DOM element mounts into the document.
    */
   function handleHostMount() {
     if (hostEl && active) {
+      const node = hostEl
       syncSatelliteBounds()
       requestAnimationFrame(() => {
         syncSatelliteBounds()
@@ -179,10 +166,19 @@
           window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))
         }
       })
-      clearSettleTimeouts()
-      settleTimeout1 = window.setTimeout(syncSatelliteBounds, 80)
-      settleTimeout2 = window.setTimeout(syncSatelliteBounds, 250)
-      settleTimeout3 = window.setTimeout(syncSatelliteBounds, 350)
+
+      transitionCleanup?.()
+      const handleTransitionEnd = (e: TransitionEvent) => {
+        if (e.target !== node) return
+        syncSatelliteBounds()
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))
+        }
+      }
+      node.addEventListener('transitionend', handleTransitionEnd)
+      transitionCleanup = () => {
+        node.removeEventListener('transitionend', handleTransitionEnd)
+      }
 
       if (typeof ResizeObserver !== 'undefined') {
         resizeObserver?.disconnect()
@@ -192,7 +188,7 @@
             window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))
           }
         })
-        resizeObserver.observe(hostEl)
+        resizeObserver.observe(node)
       }
     }
   }
@@ -201,7 +197,8 @@
 
   onDestroy(() => {
     resizeObserver?.disconnect()
-    clearSettleTimeouts()
+    transitionCleanup?.()
+    transitionCleanup = undefined
     unregisterSatellite(id)
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))

@@ -76,7 +76,13 @@
         <!-- Reusable Vinta Robot Base Chassis (Centered at 60, 62) -->
         <g id="vintaBotChassis">
           <!-- Soft Vector Drop Shadow Beneath Chassis -->
-          <ellipse cx="60" cy="89" rx="22" ry="4.5" fill="rgba(15, 23, 42, 0.35)" />
+          <ellipse
+            cx="60"
+            cy="89"
+            rx="22"
+            ry="4.5"
+            fill="rgba(15, 23, 42, 0.35)"
+          />
 
           <!-- Side Ear Pods (Split Two-Tone Slate) -->
           <g clip-path="url(#vintaEarsClip)">
@@ -315,12 +321,7 @@
         <!-- ===============================================================
              CLOUDY: Peeking Sun + Drifting Fluffy Clouds + Signature Vinta Bot
              =============================================================== -->
-        <circle
-          cx="34"
-          cy="24"
-          r="14"
-          fill="url(#sunCoreGrad)"
-        />
+        <circle cx="34" cy="24" r="14" fill="url(#sunCoreGrad)" />
 
         <!-- Background Cloud Puff -->
         <path
@@ -334,10 +335,7 @@
         <g class="anim-float-calm">
           <use href="#vintaBotChassis" />
 
-          <g
-            class="anim-look-around"
-            fill="#facc15"
-          >
+          <g class="anim-look-around" fill="#facc15">
             <!-- Left & Right Signature Rounded Squircle Eyes -->
             <rect x="43" y="53" width="13" height="13" rx="5.5" />
             <rect x="64" y="53" width="13" height="13" rx="5.5" />
@@ -371,10 +369,7 @@
         <g class="anim-float-calm">
           <use href="#vintaBotChassis" />
 
-          <g
-            class="anim-look-around"
-            fill="#facc15"
-          >
+          <g class="anim-look-around" fill="#facc15">
             <rect x="43" y="53.5" width="13" height="12.5" rx="5.5" />
             <rect x="64" y="53.5" width="13" height="12.5" rx="5.5" />
             <path d="M 52.5 69 Q 60 70.5 67.5 69 C 66.5 75 53.5 75 52.5 69 Z" />

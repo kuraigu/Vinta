@@ -417,22 +417,25 @@ func ComputeOverlayHeight(vTop, vHeight int, monitors []MonitorInfo) int {
 	return overlayHeight
 }
 
-// GetDisplayMetrics returns virtual screen bounds and connected monitors, caching results for 1s.
+// GetDisplayMetrics returns virtual screen bounds and connected monitors, caching results for 10s unless geometry or monitor count changes.
 func GetDisplayMetrics() (vLeft, vTop, vWidth, vHeight, pCenter int, monitors []MonitorInfo) {
+	const smCMonitors = 80
 	vx, _, _ := procGetSystemMetrics.Call(SM_XVIRTUALSCREEN)
 	vy, _, _ := procGetSystemMetrics.Call(SM_YVIRTUALSCREEN)
 	vw, _, _ := procGetSystemMetrics.Call(SM_CXVIRTUALSCREEN)
 	vh, _, _ := procGetSystemMetrics.Call(SM_CYVIRTUALSCREEN)
+	mc, _, _ := procGetSystemMetrics.Call(smCMonitors)
 
-	currVx, currVy, currVw, currVh := int(int32(vx)), int(int32(vy)), int(vw), int(vh)
+	currVx, currVy, currVw, currVh, currMc := int(int32(vx)), int(int32(vy)), int(vw), int(vh), int(mc)
 
 	isCacheValid := func() bool {
-		return time.Since(lastDisplayFetch) < time.Second &&
+		return time.Since(lastDisplayFetch) < 10*time.Second &&
 			cachedDisplayLayout.VirtualWidth > 0 &&
 			cachedDisplayLayout.VirtualWidth == currVw &&
 			cachedDisplayLayout.VirtualHeight == currVh &&
 			cachedDisplayLayout.VirtualLeft == currVx &&
-			cachedDisplayLayout.VirtualTop == currVy
+			cachedDisplayLayout.VirtualTop == currVy &&
+			(currMc <= 0 || len(cachedDisplayLayout.Monitors) == currMc)
 	}
 
 	cachedDisplayMu.RLock()
@@ -782,6 +785,13 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 		autoHiddenMu           sync.Mutex
 		fgEvalMu               sync.Mutex
 		wasSubordinatedToSnip  bool
+		lastSnipCheckFg        uintptr
+		lastSnipEnumTime       time.Time
+		lastEvalFg             uintptr
+		lastEvalFgStyle        uint32
+		lastEvalFgRect         monitorInfoW
+		lastEvalShouldHide     bool
+		lastEvalTime           time.Time
 		lastVLeft              = initVLeft
 		lastVTop               = initVTop
 		lastVWidth             = initVWidth
@@ -819,7 +829,11 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 			return
 		}
 		if !snipKnown {
-			snipHwnd = findActiveSnippingWindow(curFg)
+			if curFg != lastSnipCheckFg || isSnippingTool(curFg) || wasSubordinatedToSnip || time.Since(lastSnipEnumTime) >= 3*time.Second {
+				lastSnipCheckFg = curFg
+				lastSnipEnumTime = time.Now()
+				snipHwnd = findActiveSnippingWindow(curFg)
+			}
 		}
 		if snipHwnd != 0 {
 			wasSubordinatedToSnip = true
@@ -919,10 +933,14 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 			return
 		}
 
-		if snipHwnd := findActiveSnippingWindow(curFg); snipHwnd != 0 {
-			exitFullscreenHide()
-			reassertTopmost(curFg, snipHwnd, true)
-			return
+		if curFg != lastSnipCheckFg || isSnippingTool(curFg) || wasSubordinatedToSnip || time.Since(lastSnipEnumTime) >= 3*time.Second {
+			lastSnipCheckFg = curFg
+			lastSnipEnumTime = time.Now()
+			if snipHwnd := findActiveSnippingWindow(curFg); snipHwnd != 0 {
+				exitFullscreenHide()
+				reassertTopmost(curFg, snipHwnd, true)
+				return
+			}
 		}
 
 		vintaMon := a.GetCurrentMonitor()
@@ -934,13 +952,27 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 		a.autoHideMu.RUnlock()
 
 		shouldHideForMonitor := func(mon MonitorInfo) (bool, string, string) {
-			covers, _ := windowCoversMonitor(curFg, mon)
+			covers, fgRect := windowCoversMonitor(curFg, mon)
 			if !covers {
+				lastEvalFg = curFg
+				lastEvalFgRect = fgRect
+				lastEvalShouldHide = false
 				return false, "", ""
 			}
 			style, _ := winStyle(curFg)
 			isMaximizedStandard := (style&WS_CAPTION == WS_CAPTION) && (style&WS_MAXIMIZE != 0)
 			if isMaximizedStandard {
+				lastEvalFg = curFg
+				lastEvalFgStyle = style
+				lastEvalFgRect = fgRect
+				lastEvalShouldHide = false
+				return false, "", ""
+			}
+			if curFg == lastEvalFg &&
+				style == lastEvalFgStyle &&
+				fgRect == lastEvalFgRect &&
+				!lastEvalShouldHide &&
+				time.Since(lastEvalTime) < 2400*time.Millisecond {
 				return false, "", ""
 			}
 			isFramelessOrPopup := isFullscreenStyle(style)
@@ -956,18 +988,26 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 			}
 			goruntime.UnlockOSThread()
 
+			var hideRes bool
+			var reasonRes string
 			switch {
 			case ret == 0 && qState == QUNS_PRESENTATION_MODE:
-				return true, "presentation_mode", appName
+				hideRes, reasonRes = true, "presentation_mode"
 			case (hasExclusiveDisplayOwnership() || (ret == 0 && qState == QUNS_RUNNING_D3D_FULL_SCREEN)) && isFramelessOrPopup:
-				return true, "exclusive_fullscreen", appName
+				hideRes, reasonRes = true, "exclusive_fullscreen"
 			case isUnsupportedGame:
-				return true, "unsupported_app", appName
+				hideRes, reasonRes = true, "unsupported_app"
 			case isFramelessOrPopup && hideBorderless:
-				return true, "borderless_fullscreen", appName
+				hideRes, reasonRes = true, "borderless_fullscreen"
 			default:
-				return false, "", appName
+				hideRes, reasonRes = false, ""
 			}
+			lastEvalFg = curFg
+			lastEvalFgStyle = style
+			lastEvalFgRect = fgRect
+			lastEvalShouldHide = hideRes
+			lastEvalTime = time.Now()
+			return hideRes, reasonRes, appName
 		}
 
 		// Only trigger fullscreen hide/relocation if the foreground app actually covers Vinta's current monitor.

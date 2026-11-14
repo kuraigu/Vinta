@@ -64,9 +64,15 @@
     }
   }
 
-  const WAVE_BACK = new Path2D('M -50 70 Q 70 35 190 65 T 450 50 L 450 130 L -50 130 Z')
-  const WAVE_MID = new Path2D('M -50 82 Q 90 55 220 80 T 450 68 L 450 130 L -50 130 Z')
-  const WAVE_FRONT = new Path2D('M -50 94 Q 110 75 250 92 T 450 85 L 450 130 L -50 130 Z')
+  const WAVE_BACK = new Path2D(
+    'M -50 70 Q 70 35 190 65 T 450 50 L 450 130 L -50 130 Z'
+  )
+  const WAVE_MID = new Path2D(
+    'M -50 82 Q 90 55 220 80 T 450 68 L 450 130 L -50 130 Z'
+  )
+  const WAVE_FRONT = new Path2D(
+    'M -50 94 Q 110 75 250 92 T 450 85 L 450 130 L -50 130 Z'
+  )
 
   let haloSprite: HTMLCanvasElement | null = null
   let cloudSprite: HTMLCanvasElement | null = null
@@ -181,9 +187,39 @@
     const mWave = Math.sin((t / 8.5) * Math.PI * 2 + 1.2)
     const fWave = Math.sin((t / 6.5) * Math.PI * 2 + 2.4)
 
-    drawWaveLayer(ctx, w, h, WAVE_BACK, palette.back[0], palette.back[1], bWave * 18, bWave * -3, 1 + bWave * 0.04)
-    drawWaveLayer(ctx, w, h, WAVE_MID, palette.mid[0], palette.mid[1], mWave * -18, mWave * 4, 1 + mWave * 0.04)
-    drawWaveLayer(ctx, w, h, WAVE_FRONT, palette.front[0], palette.front[1], fWave * 15, fWave * -4, 1 + fWave * 0.05)
+    drawWaveLayer(
+      ctx,
+      w,
+      h,
+      WAVE_BACK,
+      palette.back[0],
+      palette.back[1],
+      bWave * 18,
+      bWave * -3,
+      1 + bWave * 0.04
+    )
+    drawWaveLayer(
+      ctx,
+      w,
+      h,
+      WAVE_MID,
+      palette.mid[0],
+      palette.mid[1],
+      mWave * -18,
+      mWave * 4,
+      1 + mWave * 0.04
+    )
+    drawWaveLayer(
+      ctx,
+      w,
+      h,
+      WAVE_FRONT,
+      palette.front[0],
+      palette.front[1],
+      fWave * 15,
+      fWave * -4,
+      1 + fWave * 0.05
+    )
 
     if (condition === 'sunny' || condition === 'night') {
       drawHalos(ctx, w, t, condition === 'night')
@@ -199,7 +235,8 @@
         [0.25, 0.45, 1.0, 1.8]
       ]
       for (const [rx, ry, r, ph] of stars) {
-        const a = 0.25 + 0.65 * (0.5 + 0.5 * Math.sin(((t + ph) / 2.5) * Math.PI * 2))
+        const a =
+          0.25 + 0.65 * (0.5 + 0.5 * Math.sin(((t + ph) / 2.5) * Math.PI * 2))
         ctx.fillStyle = `rgba(224, 231, 255, ${a.toFixed(3)})`
         ctx.beginPath()
         ctx.arc(w * rx, h * ry, r, 0, Math.PI * 2)
@@ -210,7 +247,7 @@
       ctx.lineWidth = 1.2
       ctx.lineCap = 'round'
       for (let i = 0; i < 12; i++) {
-        const p = ((t * 1.15 + i * 0.19) % 1)
+        const p = (t * 1.15 + i * 0.19) % 1
         const x = w * (0.08 + ((i * 0.083) % 0.88)) - p * 10
         const y = -16 + p * (h + 32)
         ctx.beginPath()
@@ -220,7 +257,7 @@
       }
     } else if (condition === 'snow') {
       for (let i = 0; i < 7; i++) {
-        const p = ((t * 0.28 + i * 0.17) % 1)
+        const p = (t * 0.28 + i * 0.17) % 1
         const x = w * (0.1 + ((i * 0.13) % 0.82)) + Math.sin(t * 1.6 + i) * 6
         const y = -10 + p * (h + 20)
         ctx.fillStyle = 'rgba(241, 245, 249, 0.65)'
@@ -228,7 +265,11 @@
         ctx.arc(x, y, i % 2 === 0 ? 2.2 : 1.5, 0, Math.PI * 2)
         ctx.fill()
       }
-    } else if (condition === 'cloudy' || condition === 'cloudy-night' || condition === 'fog') {
+    } else if (
+      condition === 'cloudy' ||
+      condition === 'cloudy-night' ||
+      condition === 'fog'
+    ) {
       if (cloudSprite) {
         for (let i = 0; i < 4; i++) {
           const drift = Math.sin((t / 12) * Math.PI * 2 + i * 1.7) * 18
