@@ -402,6 +402,21 @@ func (a *App) monitorTargetOffset(m MonitorInfo, vLeft, pCenter int) int {
 	return int(float64(centerScreenX-(vLeft+pCenter)) / a.effectiveScale())
 }
 
+// ComputeOverlayHeight returns the virtual overlay height covering the lowest monitor top edge.
+func ComputeOverlayHeight(vTop, vHeight int, monitors []MonitorInfo) int {
+	maxTopOffset := 0
+	for _, mon := range monitors {
+		if offset := mon.Top - vTop; offset > maxTopOffset {
+			maxTopOffset = offset
+		}
+	}
+	overlayHeight := maxTopOffset + 680
+	if vHeight > 0 && overlayHeight >= vHeight {
+		overlayHeight = vHeight - 1
+	}
+	return overlayHeight
+}
+
 // GetDisplayMetrics returns virtual screen bounds and connected monitors, caching results for 1s.
 func GetDisplayMetrics() (vLeft, vTop, vWidth, vHeight, pCenter int, monitors []MonitorInfo) {
 	vx, _, _ := procGetSystemMetrics.Call(SM_XVIRTUALSCREEN)
@@ -628,7 +643,10 @@ func isHwndFullscreenOnMonitor(hwnd uintptr, m MonitorInfo, vintaHwnd uintptr) b
 		return false
 	}
 	style, _ := winStyle(hwnd)
-	return isFullscreenStyle(style)
+	if isFullscreenStyle(style) {
+		return true
+	}
+	return strings.Contains(strings.ToLower(getWindowAppName(hwnd)), "stardew")
 }
 
 // isMonitorCoveredByFullscreen checks the foreground window and 3 sample points on monitor m
@@ -758,11 +776,17 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 		return 0
 	}
 
+	initVLeft, initVTop, initVWidth, initVHeight, _, initMonitors := GetDisplayMetrics()
 	var (
 		autoHiddenByFullscreen bool
 		autoHiddenMu           sync.Mutex
 		fgEvalMu               sync.Mutex
 		wasSubordinatedToSnip  bool
+		lastVLeft              = initVLeft
+		lastVTop               = initVTop
+		lastVWidth             = initVWidth
+		lastVHeight            = initVHeight
+		lastMonitorCount       = len(initMonitors)
 	)
 
 	exitFullscreenHide := func() {
@@ -824,7 +848,66 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 	evaluateForegroundState := func() {
 		fgEvalMu.Lock()
 		defer fgEvalMu.Unlock()
-		if !services.IsFrontendReady() || a.IsOutboundDragging() {
+		if !services.IsFrontendReady() {
+			return
+		}
+
+		vLeft, vTop, vWidth, vHeight, pCenter, monitors := GetDisplayMetrics()
+		if vLeft != lastVLeft || vTop != lastVTop || vWidth != lastVWidth || vHeight != lastVHeight || len(monitors) != lastMonitorCount {
+			lastVLeft, lastVTop, lastVWidth, lastVHeight = vLeft, vTop, vWidth, vHeight
+			lastMonitorCount = len(monitors)
+			overlayHeight := ComputeOverlayHeight(vTop, vHeight, monitors)
+			targetW := vWidth
+			if targetW <= 0 {
+				targetW = 1920
+			}
+			const swpNoZOrder = 0x0004
+			_, _, _ = procSetWindowPos.Call(
+				vintaHwnd, 0,
+				uintptr(vLeft), uintptr(vTop), uintptr(targetW), uintptr(overlayHeight),
+				swpNoZOrder|SWP_NOACTIVATE,
+			)
+
+			// If Vinta was on a disconnected monitor, snap back onto an active monitor.
+			a.fullscreenRelocatedMu.Lock()
+			curOffsetX := a.offsetX
+			if len(monitors) <= 1 {
+				a.isFullscreenRelocated = false
+				a.fullscreenTriggerHwnd = 0
+				a.fullscreenTriggerMonID = 0
+			}
+			a.fullscreenRelocatedMu.Unlock()
+
+			screenCenterX := vLeft + pCenter + int(float64(curOffsetX)*a.effectiveScale())
+			onActiveMonitor := false
+			for _, mon := range monitors {
+				if screenCenterX >= mon.Left && screenCenterX < mon.Left+mon.Width {
+					onActiveMonitor = true
+					break
+				}
+			}
+			if !onActiveMonitor && len(monitors) > 0 {
+				fallbackMon := resolveCurrentMonitor(screenCenterX, monitors)
+				targetOffsetX := a.monitorTargetOffset(fallbackMon, vLeft, pCenter)
+				a.fullscreenRelocatedMu.Lock()
+				relocateGraceUntil = time.Now().Add(1500 * time.Millisecond)
+				relocateTargetX = targetOffsetX
+				a.offsetX = targetOffsetX
+				a.fullscreenRelocatedMu.Unlock()
+				if app := application.Get(); app != nil && services.IsFrontendReady() {
+					app.Event.Emit("active-monitor-follow", map[string]interface{}{
+						"targetMonitor": fallbackMon, "targetOffset": targetOffsetX,
+					})
+				}
+			}
+
+			a.updateWindowRegion()
+			if app := application.Get(); app != nil {
+				app.Event.Emit("display-layout-changed", nil)
+			}
+		}
+
+		if a.IsOutboundDragging() {
 			return
 		}
 		if lmb, _, _ := procGetAsyncKeyState.Call(0x01); (lmb & 0x8000) != 0 {
@@ -842,80 +925,95 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 			return
 		}
 
-		vLeft, _, _, _, pCenter, monitors := GetDisplayMetrics()
 		vintaMon := a.GetCurrentMonitor()
 
-		a.fullscreenRelocatedMu.Lock()
-		a.isFullscreenRelocated = false
-		a.fullscreenTriggerHwnd = 0
-		a.fullscreenTriggerMonID = 0
-		a.fullscreenRelocatedMu.Unlock()
+		a.autoHideMu.RLock()
+		hideBorderless := a.autoHideBorderless
+		relocateOnFullscreen := a.relocateOnFullscreen
+		returnOnExit := a.returnOnFullscreenExit
+		a.autoHideMu.RUnlock()
 
-		// Only trigger fullscreen hide/relocation if the foreground app actually covers Vinta's current monitor.
-		covers, _ := windowCoversMonitor(curFg, vintaMon)
-		shouldHide, reason, appName := false, "", ""
-
-		if covers {
+		shouldHideForMonitor := func(mon MonitorInfo) (bool, string, string) {
+			covers, _ := windowCoversMonitor(curFg, mon)
+			if !covers {
+				return false, "", ""
+			}
 			style, _ := winStyle(curFg)
 			isMaximizedStandard := (style&WS_CAPTION == WS_CAPTION) && (style&WS_MAXIMIZE != 0)
-			if !isMaximizedStandard {
-				isFramelessOrPopup := isFullscreenStyle(style)
-				appName = getWindowAppName(curFg)
-				isUnsupportedGame := strings.Contains(strings.ToLower(appName), "stardew")
+			if isMaximizedStandard {
+				return false, "", ""
+			}
+			isFramelessOrPopup := isFullscreenStyle(style)
+			appName := getWindowAppName(curFg)
+			isUnsupportedGame := strings.Contains(strings.ToLower(appName), "stardew")
 
-				a.autoHideMu.RLock()
-				hideBorderless := a.autoHideBorderless
-				a.autoHideMu.RUnlock()
+			var qState uint32
+			goruntime.LockOSThread()
+			coRes, _, _ := procCoInitializeEx.Call(0, 0)
+			ret, _, _ := procSHQueryUserNotificationState.Call(uintptr(unsafe.Pointer(&qState)))
+			if coRes == 0 || coRes == 1 {
+				_, _, _ = procCoUninitialize.Call()
+			}
+			goruntime.UnlockOSThread()
 
-				var qState uint32
-				goruntime.LockOSThread()
-				coRes, _, _ := procCoInitializeEx.Call(0, 0)
-				ret, _, _ := procSHQueryUserNotificationState.Call(uintptr(unsafe.Pointer(&qState)))
-				if coRes == 0 || coRes == 1 {
-					_, _, _ = procCoUninitialize.Call()
-				}
-				goruntime.UnlockOSThread()
-
-				switch {
-				case ret == 0 && qState == QUNS_PRESENTATION_MODE:
-					shouldHide, reason = true, "presentation_mode"
-				case (hasExclusiveDisplayOwnership() || (ret == 0 && qState == QUNS_RUNNING_D3D_FULL_SCREEN)) && isFramelessOrPopup:
-					shouldHide, reason = true, "exclusive_fullscreen"
-				case isUnsupportedGame:
-					shouldHide, reason = true, "unsupported_app"
-				case isFramelessOrPopup && hideBorderless:
-					shouldHide, reason = true, "borderless_fullscreen"
-				}
+			switch {
+			case ret == 0 && qState == QUNS_PRESENTATION_MODE:
+				return true, "presentation_mode", appName
+			case (hasExclusiveDisplayOwnership() || (ret == 0 && qState == QUNS_RUNNING_D3D_FULL_SCREEN)) && isFramelessOrPopup:
+				return true, "exclusive_fullscreen", appName
+			case isUnsupportedGame:
+				return true, "unsupported_app", appName
+			case isFramelessOrPopup && hideBorderless:
+				return true, "borderless_fullscreen", appName
+			default:
+				return false, "", appName
 			}
 		}
 
+		// Only trigger fullscreen hide/relocation if the foreground app actually covers Vinta's current monitor.
+		shouldHide, reason, appName := shouldHideForMonitor(vintaMon)
+
 		if shouldHide {
-			for _, m := range monitors {
-				if m.ID != vintaMon.ID && !isMonitorCoveredByFullscreen(m, vintaHwnd) {
-					targetOffsetX := a.monitorTargetOffset(m, vLeft, pCenter)
+			if relocateOnFullscreen {
+				for _, m := range monitors {
+					if m.ID != vintaMon.ID && !isMonitorCoveredByFullscreen(m, vintaHwnd) {
+						targetOffsetX := a.monitorTargetOffset(m, vLeft, pCenter)
 
-					a.fullscreenRelocatedMu.Lock()
-					relocateGraceUntil = time.Now().Add(1500 * time.Millisecond)
-					relocateTargetX = targetOffsetX
-					a.offsetX = targetOffsetX
-					a.fullscreenRelocatedMu.Unlock()
+						a.fullscreenRelocatedMu.Lock()
+						if returnOnExit && !a.isFullscreenRelocated {
+							a.originalFullscreenOffset = a.offsetX
+							a.isFullscreenRelocated = true
+						}
+						a.fullscreenTriggerHwnd = curFg
+						a.fullscreenTriggerMonID = vintaMon.ID
+						relocateGraceUntil = time.Now().Add(1500 * time.Millisecond)
+						relocateTargetX = targetOffsetX
+						a.offsetX = targetOffsetX
+						a.fullscreenRelocatedMu.Unlock()
 
-					a.updateWindowRegion()
-					if a.window != nil {
-						a.window.Show()
+						exitFullscreenHide()
+						a.updateWindowRegion()
+						if a.window != nil {
+							a.window.Show()
+						}
+						if app := application.Get(); app != nil && services.IsFrontendReady() {
+							app.Event.Emit("game-mode-relocate", map[string]interface{}{
+								"appName":         appName,
+								"targetMonitor":   m,
+								"targetOffset":    targetOffsetX,
+								"originalMonitor": vintaMon,
+								"reason":          reason,
+							})
+						}
+						return
 					}
-					if app := application.Get(); app != nil && services.IsFrontendReady() {
-						app.Event.Emit("game-mode-relocate", map[string]interface{}{
-							"appName":         appName,
-							"targetMonitor":   m,
-							"targetOffset":    targetOffsetX,
-							"originalMonitor": vintaMon,
-							"reason":          reason,
-						})
-					}
-					return
 				}
 			}
+
+			a.fullscreenRelocatedMu.Lock()
+			a.fullscreenTriggerHwnd = curFg
+			a.fullscreenTriggerMonID = vintaMon.ID
+			a.fullscreenRelocatedMu.Unlock()
 
 			autoHiddenMu.Lock()
 			if !autoHiddenByFullscreen {
@@ -941,40 +1039,61 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 		exitFullscreenHide()
 		reassertTopmost(curFg, 0, true)
 
-		a.autoHideMu.RLock()
-		followDisplay := a.followActiveDisplay
-		a.autoHideMu.RUnlock()
+		a.fullscreenRelocatedMu.Lock()
+		wasRelocated := a.isFullscreenRelocated
+		triggerHwnd := a.fullscreenTriggerHwnd
+		triggerMonID := a.fullscreenTriggerMonID
+		restoreOffset := a.originalFullscreenOffset
+		a.fullscreenRelocatedMu.Unlock()
 
-		if followDisplay && len(monitors) > 1 {
-			if hMonFg, _, _ := procMonitorFromWindow.Call(curFg, MONITOR_DEFAULTTONEAREST); hMonFg != 0 {
-				var fgMi monitorInfoW
-				fgMi.CbSize = uint32(unsafe.Sizeof(fgMi))
-				if res, _, _ := procGetMonitorInfoW.Call(hMonFg, uintptr(unsafe.Pointer(&fgMi))); res != 0 {
-					for _, m := range monitors {
-						if m.Left == int(fgMi.RcMonitor.Left) && m.Top == int(fgMi.RcMonitor.Top) {
-							if m.ID != vintaMon.ID && !isMonitorCoveredByFullscreen(m, vintaHwnd) {
-								targetOffsetX := a.monitorTargetOffset(m, vLeft, pCenter)
-								a.fullscreenRelocatedMu.Lock()
-								changed := targetOffsetX != a.offsetX
-								if changed {
-									relocateGraceUntil = time.Now().Add(1500 * time.Millisecond)
-									relocateTargetX = targetOffsetX
-									a.offsetX = targetOffsetX
+		triggerAppActive := false
+		if triggerHwnd != 0 {
+			if ret, _, _ := procIsWindow.Call(triggerHwnd); ret != 0 {
+				vis, _, _ := procIsWindowVisible.Call(triggerHwnd)
+				iconic, _, _ := procIsIconic.Call(triggerHwnd)
+				if vis != 0 || iconic != 0 {
+					triggerAppActive = true
+					// If the trigger app itself is focused, visible, and no longer fullscreen (e.g. F11 exited), re-enable.
+					if curFg == triggerHwnd && vis != 0 && iconic == 0 {
+						for _, m := range monitors {
+							if m.ID == triggerMonID {
+								if trigHide, _, _ := shouldHideForMonitor(m); !trigHide {
+									triggerAppActive = false
 								}
-								a.fullscreenRelocatedMu.Unlock()
-								if changed {
-									a.updateWindowRegion()
-									if app := application.Get(); app != nil && services.IsFrontendReady() {
-										app.Event.Emit("active-monitor-follow", map[string]interface{}{
-											"targetMonitor": m, "targetOffset": targetOffsetX,
-										})
-									}
-								}
+								break
 							}
-							break
 						}
 					}
 				}
+			}
+			if !triggerAppActive {
+				a.fullscreenRelocatedMu.Lock()
+				a.fullscreenTriggerHwnd = 0
+				a.fullscreenTriggerMonID = 0
+				a.fullscreenRelocatedMu.Unlock()
+			}
+		}
+
+		if wasRelocated {
+			if !returnOnExit {
+				a.fullscreenRelocatedMu.Lock()
+				a.isFullscreenRelocated = false
+				a.fullscreenRelocatedMu.Unlock()
+			} else if !triggerAppActive {
+				a.fullscreenRelocatedMu.Lock()
+				a.isFullscreenRelocated = false
+				relocateGraceUntil = time.Now().Add(1500 * time.Millisecond)
+				relocateTargetX = restoreOffset
+				a.offsetX = restoreOffset
+				a.fullscreenRelocatedMu.Unlock()
+
+				a.updateWindowRegion()
+				if app := application.Get(); app != nil && services.IsFrontendReady() {
+					app.Event.Emit("game-mode-exit-relocate", map[string]interface{}{
+						"restoreOffset": restoreOffset,
+					})
+				}
+				return
 			}
 		}
 	}
@@ -1044,6 +1163,8 @@ func (a *App) GetCurrentMonitor() MonitorInfo {
 func (a *App) CancelFullscreenRelocate() {
 	a.fullscreenRelocatedMu.Lock()
 	a.isFullscreenRelocated = false
+	a.fullscreenTriggerHwnd = 0
+	a.fullscreenTriggerMonID = 0
 	relocateGraceUntil = time.Time{}
 	a.fullscreenRelocatedMu.Unlock()
 }
@@ -1245,10 +1366,17 @@ func (a *App) SetAutoHideBorderless(enabled bool) {
 	a.autoHideMu.Unlock()
 }
 
-// SetFollowActiveDisplay toggles whether Vinta moves to the monitor with the active foreground window.
-func (a *App) SetFollowActiveDisplay(enabled bool) {
+// SetRelocateOnFullscreen toggles whether Vinta moves to a free monitor instead of hiding during fullscreen apps.
+func (a *App) SetRelocateOnFullscreen(enabled bool) {
 	a.autoHideMu.Lock()
-	a.followActiveDisplay = enabled
+	a.relocateOnFullscreen = enabled
+	a.autoHideMu.Unlock()
+}
+
+// SetReturnOnFullscreenExit toggles whether Vinta returns to its previous display after a fullscreen app exits.
+func (a *App) SetReturnOnFullscreenExit(enabled bool) {
+	a.autoHideMu.Lock()
+	a.returnOnFullscreenExit = enabled
 	a.autoHideMu.Unlock()
 }
 

@@ -126,16 +126,7 @@ func main() {
 
 	// Calculate multi-monitor spanning geometry
 	vLeft, vTop, vWidth, vHeight, _, monitors := backend.GetDisplayMetrics()
-	maxTopOffset := 0
-	for _, mon := range monitors {
-		if offset := mon.Top - vTop; offset > maxTopOffset {
-			maxTopOffset = offset
-		}
-	}
-	overlayHeight := maxTopOffset + 680
-	if vHeight > 0 && overlayHeight >= vHeight {
-		overlayHeight = vHeight - 1
-	}
+	overlayHeight := backend.ComputeOverlayHeight(vTop, vHeight, monitors)
 	if vWidth <= 0 {
 		vWidth = 1920
 	}

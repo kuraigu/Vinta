@@ -22,48 +22,50 @@ var screenWidth, screenHeight int
 
 // App represents the primary application orchestrator and Wails v3 service bridge.
 type App struct {
-	ctx                    context.Context
-	wailsApp               *application.App
-	window                 *application.WebviewWindow
-	devWindow              *application.WebviewWindow
-	icon                   []byte
-	pillW                  int
-	pillH                  int
-	pillR                  int
-	restingW               int
-	restingH               int
-	restingR               int
-	offsetX                int
-	devW                   int
-	devH                   int
-	devExtra               int
-	satellitesMu           sync.RWMutex
-	satellites             map[string]SatelliteBounds
-	tooltipsMu             sync.RWMutex
-	tooltips               map[string]TooltipBounds
-	scale                  float64
-	isHidden               bool
-	autoHideBorderless     bool
-	followActiveDisplay    bool
-	autoHideMu             sync.RWMutex
-	updaterMu              sync.Mutex
-	downloadCancel         context.CancelFunc
-	downloadPaused         bool
-	activeDownloadURL      string
-	activeChecksumURL      string
-	pendingInstallPath     string
-	customUpdateRepo       string
-	fullscreenRelocatedMu  sync.Mutex
-	isFullscreenRelocated  bool
-	fullscreenTriggerHwnd  uintptr
-	fullscreenTriggerMonID int
-	pillHitMu              sync.RWMutex
-	pillHitRects           []pillHitBounds
-	isForceInteractive     bool
-	isCurrentlyInteractive bool
-	isOutboundDragging     bool
-	initialShowOnce        sync.Once
-	themeService           *ThemeService
+	ctx                      context.Context
+	wailsApp                 *application.App
+	window                   *application.WebviewWindow
+	devWindow                *application.WebviewWindow
+	icon                     []byte
+	pillW                    int
+	pillH                    int
+	pillR                    int
+	restingW                 int
+	restingH                 int
+	restingR                 int
+	offsetX                  int
+	devW                     int
+	devH                     int
+	devExtra                 int
+	satellitesMu             sync.RWMutex
+	satellites               map[string]SatelliteBounds
+	tooltipsMu               sync.RWMutex
+	tooltips                 map[string]TooltipBounds
+	scale                    float64
+	isHidden                 bool
+	autoHideBorderless       bool
+	relocateOnFullscreen     bool
+	returnOnFullscreenExit   bool
+	autoHideMu               sync.RWMutex
+	updaterMu                sync.Mutex
+	downloadCancel           context.CancelFunc
+	downloadPaused           bool
+	activeDownloadURL        string
+	activeChecksumURL        string
+	pendingInstallPath       string
+	customUpdateRepo         string
+	fullscreenRelocatedMu    sync.Mutex
+	isFullscreenRelocated    bool
+	originalFullscreenOffset int
+	fullscreenTriggerHwnd    uintptr
+	fullscreenTriggerMonID   int
+	pillHitMu                sync.RWMutex
+	pillHitRects             []pillHitBounds
+	isForceInteractive       bool
+	isCurrentlyInteractive   bool
+	isOutboundDragging       bool
+	initialShowOnce          sync.Once
+	themeService             *ThemeService
 }
 
 // NewApp initializes and returns a new App instance.
@@ -82,14 +84,16 @@ func NewApp(icon []byte) *App {
 	screenHeight = sh
 
 	return &App{
-		icon:               icon,
-		pillW:              340,
-		pillH:              34,
-		pillR:              24,
-		scale:              1.0,
-		autoHideBorderless: false,
-		tooltips:           make(map[string]TooltipBounds),
-		themeService:       NewThemeService(),
+		icon:                 icon,
+		pillW:                340,
+		pillH:                34,
+		pillR:                24,
+		scale:                1.0,
+		autoHideBorderless:     false,
+		relocateOnFullscreen:   true,
+		returnOnFullscreenExit: false,
+		tooltips:             make(map[string]TooltipBounds),
+		themeService:         NewThemeService(),
 	}
 }
 
@@ -102,11 +106,6 @@ func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 		a.ctx = wailsApp.Context()
 		wailsApp.Event.On("cancel-fullscreen-relocate", func(_ *application.CustomEvent) {
 			a.CancelFullscreenRelocate()
-		})
-		wailsApp.Event.On("set-follow-active-display", func(e *application.CustomEvent) {
-			if enabled, ok := e.Data.(bool); ok {
-				a.SetFollowActiveDisplay(enabled)
-			}
 		})
 		wailsApp.Event.On("set-autohide-borderless", func(e *application.CustomEvent) {
 			if enabled, ok := e.Data.(bool); ok {
