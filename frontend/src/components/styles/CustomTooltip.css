@@ -5,8 +5,6 @@
 .custom-tooltip {
   position: fixed;
   background: var(--vinta-dock-popover-bg, rgba(20, 20, 24, 0.96));
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
   color: var(--vinta-text-primary, #ffffff);
   padding: 4px 8px;
   border-radius: 6px;

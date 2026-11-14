@@ -22,6 +22,7 @@
   touch-action: pan-y;
   will-change: scroll-position;
   transform: translateZ(0);
+  contain: layout paint;
   -webkit-overflow-scrolling: touch;
 }
 

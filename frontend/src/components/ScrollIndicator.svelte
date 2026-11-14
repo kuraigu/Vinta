@@ -30,22 +30,23 @@
   )
 </script>
 
-<button
-  type="button"
-  class="vinta-scroll-indicator {className}"
-  class:compact={isCompact}
-  class:hidden={!visible}
-  {onclick}
-  aria-label={resolvedAriaLabel}
->
-  {#if label && !compact}
-    <span class="scroll-indicator-text">{label}</span>
-  {/if}
-  <ChevronDown
-    size={isCompact ? 12 : 13}
-    class="scroll-indicator-icon"
-    strokeWidth={2.4}
-  />
-</button>
+{#if visible}
+  <button
+    type="button"
+    class="vinta-scroll-indicator {className}"
+    class:compact={isCompact}
+    {onclick}
+    aria-label={resolvedAriaLabel}
+  >
+    {#if label && !compact}
+      <span class="scroll-indicator-text">{label}</span>
+    {/if}
+    <ChevronDown
+      size={isCompact ? 12 : 13}
+      class="scroll-indicator-icon"
+      strokeWidth={2.4}
+    />
+  </button>
+{/if}
 
 <style src="./styles/ScrollIndicator.css"></style>

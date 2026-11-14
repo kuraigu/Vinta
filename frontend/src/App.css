@@ -31,6 +31,14 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+:global(img),
+:global(svg),
+:global(a) {
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 .island-container {
   display: flex;
   flex-direction: column;

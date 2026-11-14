@@ -21,7 +21,8 @@ import {
   timeFormatStore,
   alarmSoundPresetStore,
   alarmVolumeStore,
-  alarmSnoozeMinutesStore
+  alarmSnoozeMinutesStore,
+  pageVisibilityStore
 } from './settings'
 
 export type TimerAppTab = 'timer' | 'stopwatch' | 'focus' | 'alarms'
@@ -1004,6 +1005,12 @@ function formatAlarmRepeatDescription(
  * Checks wall clock against registered and snoozed alarms.
  */
 function checkAlarmsClock(): void {
+  if (get(pageVisibilityStore).timer === false) return
+  const state = get(timerAppStore)
+  const hasEnabledAlarm =
+    state.alarms.some((a) => a.enabled) || state.snoozedAlarms.length > 0
+  if (!hasEnabledAlarm) return
+
   const now = new Date()
   const currentDay = now.getDay() // 0 to 6
   const hrs = now.getHours().toString().padStart(2, '0')
@@ -1011,8 +1018,6 @@ function checkAlarmsClock(): void {
   const currentTime = `${hrs}:${mins}`
   const todayStr = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`
   const nowTimestamp = now.getTime()
-
-  const state = get(timerAppStore)
 
   // 1. Check snoozed alarms ready to ring again
   const pendingSnoozes = state.snoozedAlarms.filter(

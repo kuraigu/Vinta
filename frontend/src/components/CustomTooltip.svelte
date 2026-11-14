@@ -105,12 +105,9 @@
         dispatchTooltipBounds(id, rect, 7)
         lastDispatchedId = id
       }
-    } else if (!isVisible) {
-      if (lastDispatchedId) {
-        dismissTooltipBounds(lastDispatchedId)
-        lastDispatchedId = ''
-      }
-      dismissAllTooltips()
+    } else if (!isVisible && lastDispatchedId) {
+      dismissTooltipBounds(lastDispatchedId)
+      lastDispatchedId = ''
     }
   }
 

@@ -1818,7 +1818,9 @@
 </div>
 
 <CustomTooltip />
-<ClassInspectorOverlay />
+{#if $debugClassInspector}
+  <ClassInspectorOverlay />
+{/if}
 <VirtualCursor
   primaryCenter={displayLayout.primaryCenter}
   {clampedOffsetX}

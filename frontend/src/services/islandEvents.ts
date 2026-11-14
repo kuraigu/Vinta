@@ -42,6 +42,7 @@ import {
   notifAutoWakeStore,
   notifSatelliteEnabledStore,
   pageVisibilityStore,
+  homeWidgetsVisibilityStore,
   activeSettingsTabStore,
   updateInfoStore,
   autoCheckUpdatesStore,
@@ -310,7 +311,13 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
     const isIncomingAvailable =
       data.isAvailable !== false && hasValidTrackInfo && hasPlaybackControls
     const isIncomingPlaying = Boolean(data.isPlaying) && isIncomingAvailable
-    if (callbacks.getIsPageDormant() && !isIncomingPlaying) return
+    if (
+      callbacks.getIsPageDormant() &&
+      !isIncomingPlaying &&
+      !get(globalMediaStore).isPlaying
+    ) {
+      return
+    }
 
     globalMediaStore.update((m) => {
       const isLocked = Boolean(
@@ -387,7 +394,8 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
     if (
       callbacks.getIsHidden() ||
       callbacks.getIsPageDormant() ||
-      callbacks.getActivePage() !== MediaPage
+      callbacks.getActivePage() !== MediaPage ||
+      get(pageVisibilityStore).media === false
     ) {
       return
     }
@@ -654,6 +662,9 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
   // Periodic Hardware Status Polling
   const updateBattery = () => {
     if (callbacks.getIsHidden() || get(isSimulatingBatteryStore)) return
+    const hwVis = get(homeWidgetsVisibilityStore)
+    const pageVis = get(pageVisibilityStore)
+    if (!hwVis.battery && !hwVis.actionCenter && !pageVis.actioncenter) return
     if (typeof GetBatteryStatus === 'function') {
       GetBatteryStatus()
         .then((status) => {
@@ -669,6 +680,9 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
 
   const updateWireless = () => {
     if (callbacks.getIsHidden() || get(isSimulatingWirelessStore)) return
+    const hwVis = get(homeWidgetsVisibilityStore)
+    const pageVis = get(pageVisibilityStore)
+    if (!hwVis.wireless && !hwVis.actionCenter && !pageVis.actioncenter) return
     if (typeof GetWirelessStatus === 'function') {
       GetWirelessStatus()
         .then((status) => {

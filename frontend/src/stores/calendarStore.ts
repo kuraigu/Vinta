@@ -11,7 +11,11 @@ import {
   SaveCalendarData
 } from '../../bindings/Vinta/backend/app.js'
 import { sendVintaNotification } from '../services/vintaNotification'
-import { autoDiscardPastEventsStore } from './settings'
+import {
+  autoDiscardPastEventsStore,
+  pageVisibilityStore,
+  homeWidgetsVisibilityStore
+} from './settings'
 
 export interface CalendarEvent {
   id: string
@@ -525,6 +529,12 @@ let reminderWatcherInterval: ReturnType<typeof setInterval> | null = null
  * after scheduled events have already started.
  */
 export function checkCalendarEventReminders(): void {
+  if (
+    get(pageVisibilityStore).calendar === false &&
+    get(homeWidgetsVisibilityStore).calendar === false
+  ) {
+    return
+  }
   const state = get(calendarStore)
   if (!state.events || state.events.length === 0) return
 

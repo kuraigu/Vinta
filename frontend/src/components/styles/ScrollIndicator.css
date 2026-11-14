@@ -17,8 +17,6 @@
   background: var(--vinta-surface-elevated, #1c273a);
   border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.12));
   color: var(--vinta-text-primary, #ffffff);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   font-size: 0.72rem;
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -28,15 +26,17 @@
     0 4px 16px rgba(0, 0, 0, 0.45),
     var(--vinta-contrast-border);
   transition:
-    opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-    transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.2s ease,
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
     background 0.2s ease,
     border-color 0.2s ease,
     color 0.2s ease,
     box-shadow 0.2s ease;
   user-select: none;
   -webkit-user-select: none;
-  animation: scrollIndicatorFloat 2.4s ease-in-out infinite;
+  contain: layout style;
+  isolation: isolate;
+  animation: scrollIndicatorFloat 2.4s ease-in-out 3;
 }
 
 .vinta-scroll-indicator.compact {
@@ -50,6 +50,7 @@
   background: var(--vinta-accent-primary, #38bdf8);
   border-color: var(--vinta-accent-primary, #38bdf8);
   color: var(--vinta-text-on-accent, #ffffff);
+  transform: translateX(-50%) translateY(-1px);
   box-shadow:
     0 6px 20px rgba(0, 0, 0, 0.55),
     0 0 12px var(--vinta-accent-muted, rgba(56, 189, 248, 0.4));
@@ -59,15 +60,9 @@
   transform: translateX(-50%) scale(0.96);
 }
 
-.vinta-scroll-indicator.hidden {
-  opacity: 0;
-  pointer-events: none;
-  transform: translateX(-50%) translateY(8px);
-}
-
 :global(.scroll-indicator-icon) {
   opacity: 0.85;
-  animation: scrollIndicatorBounce 1.8s ease-in-out infinite;
+  animation: scrollIndicatorBounce 1.8s ease-in-out 3;
 }
 
 @keyframes scrollIndicatorFloat {

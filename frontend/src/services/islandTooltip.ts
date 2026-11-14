@@ -12,6 +12,12 @@ import {
 
 export type IslandTooltipOptions = TooltipOptions
 
+let mountedTooltipCount = 0
+
+function handleGlobalScroll() {
+  hideTooltip()
+}
+
 /**
  * Attaches a tooltip to an element on pointer hover.
  */
@@ -32,10 +38,13 @@ export function islandTooltip(
   node.addEventListener('pointerenter', handleEnter)
   node.addEventListener('pointerleave', handleLeave)
   node.addEventListener('click', handleLeave)
-  window.addEventListener('scroll', handleLeave, {
-    capture: true,
-    passive: true
-  })
+  if (mountedTooltipCount === 0) {
+    window.addEventListener('scroll', handleGlobalScroll, {
+      capture: true,
+      passive: true
+    })
+  }
+  mountedTooltipCount += 1
 
   return {
     update(newOptions: string | IslandTooltipOptions) {
@@ -46,7 +55,12 @@ export function islandTooltip(
       node.removeEventListener('pointerenter', handleEnter)
       node.removeEventListener('pointerleave', handleLeave)
       node.removeEventListener('click', handleLeave)
-      window.removeEventListener('scroll', handleLeave, { capture: true })
+      mountedTooltipCount = Math.max(0, mountedTooltipCount - 1)
+      if (mountedTooltipCount === 0) {
+        window.removeEventListener('scroll', handleGlobalScroll, {
+          capture: true
+        })
+      }
     }
   }
 }
