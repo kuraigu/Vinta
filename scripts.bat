@@ -80,20 +80,28 @@ if "%~1"=="dev" (
         call :build_native
         if errorlevel 1 exit /b !ERRORLEVEL!
     )
+    call :generate_syso
+    if errorlevel 1 exit /b !ERRORLEVEL!
     set "VINTA_SHOWCASE="
     set "VINTA_NO_DEVTEST="
     wails3 dev -config ./build/config.yml -port 9245
-    exit /b !ERRORLEVEL!
+    set "DEV_ERR=!ERRORLEVEL!"
+    if exist "wails_windows_amd64.syso" del /f /q "wails_windows_amd64.syso"
+    exit /b !DEV_ERR!
 )
 
 if "%~1"=="showcase" (
     call :kill_app
     call :build_native
     if errorlevel 1 exit /b !ERRORLEVEL!
+    call :generate_syso
+    if errorlevel 1 exit /b !ERRORLEVEL!
     set "VINTA_SHOWCASE=1"
     set "VINTA_NO_DEVTEST="
     wails3 dev -config ./build/config.yml -port 9245
-    exit /b !ERRORLEVEL!
+    set "DEV_ERR=!ERRORLEVEL!"
+    if exist "wails_windows_amd64.syso" del /f /q "wails_windows_amd64.syso"
+    exit /b !DEV_ERR!
 )
 
 if "%~1"=="build" (

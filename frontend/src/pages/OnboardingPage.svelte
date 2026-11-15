@@ -227,11 +227,15 @@
   /**
    * Toggles Windows autostart on system boot.
    */
-  function handleToggleAutostart() {
+  async function handleToggleAutostart() {
     const nextVal = !$autostartStore
     $autostartStore = nextVal
     if (typeof SetAutostart === 'function') {
-      SetAutostart(nextVal).catch(() => {})
+      try {
+        await SetAutostart(nextVal)
+      } catch {
+        $autostartStore = !nextVal
+      }
     }
   }
 
