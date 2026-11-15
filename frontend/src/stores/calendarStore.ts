@@ -527,14 +527,9 @@ let reminderWatcherInterval: ReturnType<typeof setInterval> | null = null
  * Checks upcoming, in-progress, and concluded calendar events against current system time
  * and dispatches one-shot Vinta notifications when scheduled times arrive or when launching
  * after scheduled events have already started.
+ * Do not gate on calendar UI visibility: hiding the tab or widget must not silence reminders.
  */
 export function checkCalendarEventReminders(): void {
-  if (
-    get(pageVisibilityStore).calendar === false &&
-    get(homeWidgetsVisibilityStore).calendar === false
-  ) {
-    return
-  }
   const state = get(calendarStore)
   if (!state.events || state.events.length === 0) return
 

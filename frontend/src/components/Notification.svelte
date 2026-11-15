@@ -389,9 +389,10 @@
   function syncRelativeTimeTicker() {
     if ($isIslandHiddenStore || $notifData.length === 0) return
 
-    now = Date.now()
+    const currentNow = Date.now()
+    now = currentNow
     const hasFreshNotif = $notifData.some(
-      (n) => typeof n.timestamp === 'number' && now - n.timestamp < 60000
+      (n) => typeof n.timestamp === 'number' && currentNow - n.timestamp < 60000
     )
     const intervalMs = hasFreshNotif ? 1000 : 15000
     const interval = setInterval(() => {

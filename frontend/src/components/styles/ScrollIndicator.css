@@ -56,6 +56,12 @@
     0 0 12px var(--vinta-accent-muted, rgba(56, 189, 248, 0.4));
 }
 
+.vinta-scroll-indicator.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-50%) translateY(6px);
+}
+
 .vinta-scroll-indicator:active {
   transform: translateX(-50%) scale(0.96);
 }

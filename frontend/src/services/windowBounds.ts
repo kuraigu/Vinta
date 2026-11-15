@@ -345,17 +345,16 @@ export class WindowBoundsManager {
         const l = Math.max(0, Math.round((centerX - unionW / 2) * dpr))
         const w = Math.round(unionW * dpr)
         const h = Math.round(unionH * dpr)
-        const sig = `transition:${l},0,${w},${h}`
+        // Include active satellites, context menus, and folder windows alongside the union rect
+        // so satellite buttons and popovers remain clickable during island morphs.
+        const { hitRects } = this.measureHitRects(node, false)
+        const unionRect = new HitRect({ left: l, top: 0, width: w, height: h })
+        const combined =
+          hitRects.length > 0 ? [unionRect, ...hitRects.slice(1)] : [unionRect]
+        const sig = `transition:${combined.map((r) => `${r.left},${r.top},${r.width},${r.height}`).join(';')}`
         if (sig !== this.lastHitRectsSignature) {
           this.lastHitRectsSignature = sig
-          SetHitRects([
-            new HitRect({
-              left: l,
-              top: 0,
-              width: w,
-              height: h
-            })
-          ]).catch(() => {})
+          SetHitRects(combined).catch(() => {})
         }
       }
     }
@@ -376,23 +375,8 @@ export class WindowBoundsManager {
       onSettled?.()
     }
 
-    if (node) {
-      const handleTransitionEnd = (e: TransitionEvent) => {
-        if (e.target !== node) return
-        if (
-          e.propertyName === 'width' ||
-          e.propertyName === 'height' ||
-          e.propertyName === 'transform'
-        ) {
-          finishOnce()
-        }
-      }
-      node.addEventListener('transitionend', handleTransitionEnd)
-      this.transitionCleanup = () => {
-        node.removeEventListener('transitionend', handleTransitionEnd)
-      }
-    }
-
+    // Do not settle on the first width/transform transitionend event: width and height can finish
+    // on different frames, which would commit clipped resting bounds and unblock ResizeObserver early.
     this.transitionTimer = window.setTimeout(finishOnce, durationMs)
   }
 
@@ -553,13 +537,15 @@ export class WindowBoundsManager {
     this.syncPillBounds(islandNode, isHidden)
   }
 
+  private trimTimer: number | undefined
+
   /**
-   * Compatibility adapter delegating to consolidated syncBounds.
+   * Compatibility adapter delegating to consolidated syncBounds and scheduling memory trims on idle/collapsed state changes.
    */
   public syncOnStateChange(
     target: WindowBounds,
     _wasExpanded: boolean,
-    _expanded: boolean,
+    expanded: boolean,
     _wasHidden: boolean,
     isHidden: boolean,
     isDragging: boolean,
@@ -567,12 +553,41 @@ export class WindowBoundsManager {
     islandNode: HTMLElement | null
   ): void {
     this.syncBounds(target, offset, islandNode, isDragging, isHidden)
+    if (expanded && !isHidden) {
+      this.cancelScheduledTrimMemory()
+    } else if (!isDragging) {
+      this.scheduleTrimMemory(isHidden ? 800 : 900)
+    }
+  }
+
+  /**
+   * Cancels any pending scheduled memory trim.
+   */
+  public cancelScheduledTrimMemory(): void {
+    if (this.trimTimer !== undefined) {
+      clearTimeout(this.trimTimer)
+      this.trimTimer = undefined
+    }
+  }
+
+  /**
+   * Schedules a debounced working-set memory trim after a state change settles.
+   * Keep delay >= 800ms so rapid hover/re-expand does not page-fault freshly trimmed memory.
+   */
+  public scheduleTrimMemory(delayMs: number = 850): void {
+    if (typeof window === 'undefined') return
+    this.cancelScheduledTrimMemory()
+    this.trimTimer = window.setTimeout(() => {
+      this.trimTimer = undefined
+      this.trimMemory()
+    }, delayMs)
   }
 
   /**
    * Trims unused OS working set memory.
    */
   public trimMemory(): void {
+    this.cancelScheduledTrimMemory()
     if (typeof TrimMemory === 'function') {
       TrimMemory().catch(() => {})
     }
@@ -601,9 +616,10 @@ export class WindowBoundsManager {
 
     let observer: ResizeObserver | undefined
     let mountRaf: number | undefined
+    let reconcileRaf: number | undefined
     let observedNode: HTMLElement | null = null
 
-    const reconcile = () => {
+    const reconcileNow = () => {
       if (
         !this.getIsDragging() &&
         !getIsHidden() &&
@@ -618,6 +634,14 @@ export class WindowBoundsManager {
       }
     }
 
+    const reconcile = () => {
+      if (reconcileRaf !== undefined) return
+      reconcileRaf = requestAnimationFrame(() => {
+        reconcileRaf = undefined
+        reconcileNow()
+      })
+    }
+
     const attachObserver = () => {
       const node = getIslandNode()
       if (!node) {
@@ -626,7 +650,7 @@ export class WindowBoundsManager {
       }
       if (node === observedNode) return
       observedNode = node
-      reconcile()
+      reconcileNow()
       if (typeof ResizeObserver !== 'undefined') {
         observer?.disconnect()
         observer = new ResizeObserver(reconcile)
@@ -641,6 +665,10 @@ export class WindowBoundsManager {
         cancelAnimationFrame(mountRaf)
         mountRaf = undefined
       }
+      if (reconcileRaf !== undefined) {
+        cancelAnimationFrame(reconcileRaf)
+        reconcileRaf = undefined
+      }
       observer?.disconnect()
       observer = undefined
       observedNode = null
@@ -652,6 +680,7 @@ export class WindowBoundsManager {
    */
   public cleanup(): void {
     this.cancelPendingTransition()
+    this.cancelScheduledTrimMemory()
     clearTimeout(this.idleWatchdogTimer)
     if (this.resyncListenerAttached && typeof window !== 'undefined') {
       window.removeEventListener('vinta-resync-bounds', this.handleResyncBounds)

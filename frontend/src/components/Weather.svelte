@@ -120,11 +120,18 @@
     }
 
     if (loadedLocationKey !== locKey) {
-      weather = null
-      loadedLocationKey = ''
+      const stale = getCachedWeatherData(lat, lon, true)
+      if (stale) {
+        weather = { ...stale, location: name, isOffline: offline }
+        loadedLocationKey = locKey
+      } else {
+        weather = null
+        loadedLocationKey = ''
+      }
     }
 
-    loading = true
+    // Only show loading spinner when no cached data is available (stale-while-revalidate).
+    loading = !weather
     error = false
 
     try {

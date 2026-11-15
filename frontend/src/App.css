@@ -79,5 +79,4 @@
   backdrop-filter: blur(12px);
   isolation: isolate;
   contain: layout style;
-  transform: translateZ(0);
 }

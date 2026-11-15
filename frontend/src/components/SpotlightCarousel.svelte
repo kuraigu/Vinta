@@ -479,7 +479,7 @@
       onDragEnd: handleDragEnd
     }}
   >
-    {#each computedItems as item (item.id)}
+    {#each computedItems as item, index (item.id)}
       <button
         type="button"
         class="spotlight-card"
@@ -489,6 +489,7 @@
         {#if item.id === 'enohotel'}
           <BakedCanvasLayer
             fps={14}
+            paused={currentIndex !== index}
             onBake={bakeEnohotelBg}
             onDraw={drawEnohotelAmbient}
           />

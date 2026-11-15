@@ -322,16 +322,7 @@
         </div>
       {/if}
       {#if $homeWidgetsVisibilityStore.calendar}
-        <div
-          class="minimal-slot clickable-slot"
-          role="button"
-          tabindex="0"
-          onclick={(e) => {
-            e.stopPropagation()
-            openCalendar()
-          }}
-          onkeydown={(e) => e.key === 'Enter' && openCalendar()}
-        >
+        <div class="minimal-slot">
           <Calendar expanded={false} />
         </div>
       {/if}

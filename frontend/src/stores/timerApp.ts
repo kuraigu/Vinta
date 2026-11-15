@@ -1003,9 +1003,9 @@ function formatAlarmRepeatDescription(
 
 /**
  * Checks wall clock against registered and snoozed alarms.
+ * Do not gate on pageVisibilityStore.timer: hiding the Timer nav tab must not silence alarms.
  */
 function checkAlarmsClock(): void {
-  if (get(pageVisibilityStore).timer === false) return
   const state = get(timerAppStore)
   const hasEnabledAlarm =
     state.alarms.some((a) => a.enabled) || state.snoozedAlarms.length > 0

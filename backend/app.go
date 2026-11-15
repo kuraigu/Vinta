@@ -63,10 +63,13 @@ type App struct {
 	pillHitRects             []pillHitBounds
 	hitRectsVersion          uint64
 	isForceInteractive       bool
-	isCurrentlyInteractive   bool
-	isOutboundDragging       bool
-	initialShowOnce          sync.Once
-	themeService             *ThemeService
+	// Tracks whether WS_EX_TRANSPARENT is currently cleared on the overlay HWND so mouse
+	// events go to WebView2 instead of clicking through to desktop windows behind Vinta.
+	// Protected by pillHitMu.
+	isCurrentlyInteractive bool
+	isOutboundDragging     bool
+	initialShowOnce        sync.Once
+	themeService           *ThemeService
 }
 
 // NewApp initializes and returns a new App instance.

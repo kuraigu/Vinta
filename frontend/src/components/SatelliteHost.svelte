@@ -153,52 +153,67 @@
   let resizeObserver: ResizeObserver | undefined
   let transitionCleanup: (() => void) | undefined
 
+  function teardownObservers() {
+    resizeObserver?.disconnect()
+    resizeObserver = undefined
+    transitionCleanup?.()
+    transitionCleanup = undefined
+  }
+
   /**
    * Immediately synchronizes bounds when the DOM element mounts into the document.
    */
   function handleHostMount() {
-    if (hostEl && active) {
-      const node = hostEl
+    if (!hostEl || !active) {
+      teardownObservers()
+      return
+    }
+    const node = hostEl
+    syncSatelliteBounds()
+    requestAnimationFrame(() => {
       syncSatelliteBounds()
-      requestAnimationFrame(() => {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))
+      }
+    })
+
+    transitionCleanup?.()
+    // Satellites animate on child wrappers (.controls-satellite-wrapper, .notification-satellite),
+    // not on hostEl itself, so allow bubbled transitionend events from direct/nested children.
+    const handleTransitionEnd = (e: TransitionEvent) => {
+      if (
+        e.propertyName === 'transform' ||
+        e.propertyName === 'opacity' ||
+        e.propertyName === 'width' ||
+        e.propertyName === 'height'
+      ) {
+        syncSatelliteBounds()
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))
+        }
+      }
+    }
+    node.addEventListener('transitionend', handleTransitionEnd)
+    transitionCleanup = () => {
+      node.removeEventListener('transitionend', handleTransitionEnd)
+    }
+
+    if (typeof ResizeObserver !== 'undefined') {
+      resizeObserver?.disconnect()
+      resizeObserver = new ResizeObserver(() => {
         syncSatelliteBounds()
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))
         }
       })
-
-      transitionCleanup?.()
-      const handleTransitionEnd = (e: TransitionEvent) => {
-        if (e.target !== node) return
-        syncSatelliteBounds()
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))
-        }
-      }
-      node.addEventListener('transitionend', handleTransitionEnd)
-      transitionCleanup = () => {
-        node.removeEventListener('transitionend', handleTransitionEnd)
-      }
-
-      if (typeof ResizeObserver !== 'undefined') {
-        resizeObserver?.disconnect()
-        resizeObserver = new ResizeObserver(() => {
-          syncSatelliteBounds()
-          if (typeof window !== 'undefined') {
-            window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))
-          }
-        })
-        resizeObserver.observe(node)
-      }
+      resizeObserver.observe(node)
     }
   }
 
   $effect(handleHostMount)
 
   onDestroy(() => {
-    resizeObserver?.disconnect()
-    transitionCleanup?.()
-    transitionCleanup = undefined
+    teardownObservers()
     unregisterSatellite(id)
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))

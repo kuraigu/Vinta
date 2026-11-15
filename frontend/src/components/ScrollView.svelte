@@ -44,6 +44,7 @@
   let canScrollDown = $state(false)
   let isScrolledDown = $state(false)
   let resizeObserver: ResizeObserver | null = null
+  let mutationObserver: MutationObserver | null = null
   let scrollStateRaf: number | null = null
 
   let swipeOptions = $derived({
@@ -82,13 +83,25 @@
 
   onMount(() => {
     if (showScrollIndicators && element) {
+      const container = element
       updateScrollState()
+      const observeChildren = () => {
+        if (!resizeObserver) return
+        for (const child of Array.from(container.children)) {
+          resizeObserver.observe(child)
+        }
+      }
       if (typeof ResizeObserver !== 'undefined') {
         resizeObserver = new ResizeObserver(() => updateScrollState())
-        resizeObserver.observe(element)
-        if (element.firstElementChild) {
-          resizeObserver.observe(element.firstElementChild)
-        }
+        resizeObserver.observe(container)
+        observeChildren()
+      }
+      if (typeof MutationObserver !== 'undefined') {
+        mutationObserver = new MutationObserver(() => {
+          observeChildren()
+          updateScrollState()
+        })
+        mutationObserver.observe(container, { childList: true })
       }
     }
   })
@@ -98,6 +111,8 @@
       cancelAnimationFrame(scrollStateRaf)
       scrollStateRaf = null
     }
+    mutationObserver?.disconnect()
+    mutationObserver = null
     resizeObserver?.disconnect()
     resizeObserver = null
   })
@@ -120,14 +135,13 @@
         {@render children()}
       {/if}
     </div>
-    {#if canScrollDown && (!hideIndicatorOnScroll || !isScrolledDown)}
-      <ScrollIndicator
-        onclick={scrollDownStep}
-        label={scrollIndicatorLabel}
-        ariaLabel={scrollIndicatorAriaLabel}
-        compact={scrollIndicatorCompact}
-      />
-    {/if}
+    <ScrollIndicator
+      visible={canScrollDown && (!hideIndicatorOnScroll || !isScrolledDown)}
+      onclick={scrollDownStep}
+      label={scrollIndicatorLabel}
+      ariaLabel={scrollIndicatorAriaLabel}
+      compact={scrollIndicatorCompact}
+    />
   </div>
 {:else}
   <div

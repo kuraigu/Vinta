@@ -13,7 +13,6 @@ import (
 	"os"
 	"path/filepath"
 	goruntime "runtime"
-	"runtime/debug"
 	"strings"
 	"sync"
 	"syscall"
@@ -61,6 +60,9 @@ var (
 	procDispatchMessage          = user32.NewProc("DispatchMessageW")
 	procTranslateMessage         = user32.NewProc("TranslateMessage")
 	procUnhookWinEvent           = user32.NewProc("UnhookWinEvent")
+	procRegisterClassEx          = user32.NewProc("RegisterClassExW")
+	procCreateWindowEx           = user32.NewProc("CreateWindowExW")
+	procDefWindowProc            = user32.NewProc("DefWindowProcW")
 
 	shell32                          = syscall.NewLazyDLL("shell32.dll")
 	procSHQueryUserNotificationState = shell32.NewProc("SHQueryUserNotificationState")
@@ -287,11 +289,16 @@ var (
 	cbEnumMonitorsPtr  uintptr
 
 	lastTrimTime          time.Time
+	trimRunning           bool
+	trimPending           bool
+	trimTimer             *time.Timer
 	trimMu                sync.Mutex
 	enumChildWebviewOnce  sync.Once
 	enumChildWebviewPtr   uintptr
 	enumChildWebviewMu    sync.Mutex
 	discoveredWebviewPIDs []uint32
+	cachedWebviewPIDs     []uint32
+	lastWebviewScanTime   time.Time
 )
 
 func winClass(hwnd uintptr) string {
@@ -417,7 +424,14 @@ func ComputeOverlayHeight(vTop, vHeight int, monitors []MonitorInfo) int {
 	return overlayHeight
 }
 
-// GetDisplayMetrics returns virtual screen bounds and connected monitors, caching results for 10s unless geometry or monitor count changes.
+// InvalidateDisplayCache clears the cached display metrics so the next query re-enumerates monitors.
+func InvalidateDisplayCache() {
+	cachedDisplayMu.Lock()
+	lastDisplayFetch = time.Time{}
+	cachedDisplayMu.Unlock()
+}
+
+// GetDisplayMetrics returns virtual screen bounds and connected monitors, caching results for 1s unless geometry or monitor count changes.
 func GetDisplayMetrics() (vLeft, vTop, vWidth, vHeight, pCenter int, monitors []MonitorInfo) {
 	const smCMonitors = 80
 	vx, _, _ := procGetSystemMetrics.Call(SM_XVIRTUALSCREEN)
@@ -429,7 +443,7 @@ func GetDisplayMetrics() (vLeft, vTop, vWidth, vHeight, pCenter int, monitors []
 	currVx, currVy, currVw, currVh, currMc := int(int32(vx)), int(int32(vy)), int(vw), int(vh), int(mc)
 
 	isCacheValid := func() bool {
-		return time.Since(lastDisplayFetch) < 10*time.Second &&
+		return time.Since(lastDisplayFetch) < time.Second &&
 			cachedDisplayLayout.VirtualWidth > 0 &&
 			cachedDisplayLayout.VirtualWidth == currVw &&
 			cachedDisplayLayout.VirtualHeight == currVh &&
@@ -779,6 +793,22 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 		return 0
 	}
 
+	monitorsSignature := func(mons []MonitorInfo) string {
+		var sb strings.Builder
+		for _, m := range mons {
+			fmt.Fprintf(&sb, "%d:%d,%d,%dx%d,%v;", m.ID, m.Left, m.Top, m.Width, m.Height, m.IsPrimary)
+		}
+		return sb.String()
+	}
+
+	type monEvalCache struct {
+		fg         uintptr
+		style      uint32
+		winRect    rect32
+		shouldHide bool
+		evalTime   time.Time
+	}
+
 	initVLeft, initVTop, initVWidth, initVHeight, _, initMonitors := GetDisplayMetrics()
 	var (
 		autoHiddenByFullscreen bool
@@ -787,16 +817,15 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 		wasSubordinatedToSnip  bool
 		lastSnipCheckFg        uintptr
 		lastSnipEnumTime       time.Time
-		lastEvalFg             uintptr
-		lastEvalFgStyle        uint32
-		lastEvalFgRect         monitorInfoW
-		lastEvalShouldHide     bool
-		lastEvalTime           time.Time
-		lastVLeft              = initVLeft
-		lastVTop               = initVTop
-		lastVWidth             = initVWidth
-		lastVHeight            = initVHeight
-		lastMonitorCount       = len(initMonitors)
+		// Cache fullscreen evaluations per monitor ID; sharing one slot across monitors causes
+		// Monitor B (covers=false) to overwrite Monitor A and bounce Vinta back onto a game.
+		evalCacheByMon   = make(map[int]monEvalCache, 4)
+		lastVLeft        = initVLeft
+		lastVTop         = initVTop
+		lastVWidth       = initVWidth
+		lastVHeight      = initVHeight
+		lastMonitorCount = len(initMonitors)
+		lastMonitorsSig  = monitorsSignature(initMonitors)
 	)
 
 	exitFullscreenHide := func() {
@@ -867,9 +896,11 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 		}
 
 		vLeft, vTop, vWidth, vHeight, pCenter, monitors := GetDisplayMetrics()
-		if vLeft != lastVLeft || vTop != lastVTop || vWidth != lastVWidth || vHeight != lastVHeight || len(monitors) != lastMonitorCount {
+		currSig := monitorsSignature(monitors)
+		if vLeft != lastVLeft || vTop != lastVTop || vWidth != lastVWidth || vHeight != lastVHeight || len(monitors) != lastMonitorCount || currSig != lastMonitorsSig {
 			lastVLeft, lastVTop, lastVWidth, lastVHeight = vLeft, vTop, vWidth, vHeight
 			lastMonitorCount = len(monitors)
+			lastMonitorsSig = currSig
 			overlayHeight := ComputeOverlayHeight(vTop, vHeight, monitors)
 			targetW := vWidth
 			if targetW <= 0 {
@@ -952,27 +983,25 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 		a.autoHideMu.RUnlock()
 
 		shouldHideForMonitor := func(mon MonitorInfo) (bool, string, string) {
-			covers, fgRect := windowCoversMonitor(curFg, mon)
+			covers, _ := windowCoversMonitor(curFg, mon)
 			if !covers {
-				lastEvalFg = curFg
-				lastEvalFgRect = fgRect
-				lastEvalShouldHide = false
+				delete(evalCacheByMon, mon.ID)
 				return false, "", ""
 			}
 			style, _ := winStyle(curFg)
 			isMaximizedStandard := (style&WS_CAPTION == WS_CAPTION) && (style&WS_MAXIMIZE != 0)
 			if isMaximizedStandard {
-				lastEvalFg = curFg
-				lastEvalFgStyle = style
-				lastEvalFgRect = fgRect
-				lastEvalShouldHide = false
+				delete(evalCacheByMon, mon.ID)
 				return false, "", ""
 			}
-			if curFg == lastEvalFg &&
-				style == lastEvalFgStyle &&
-				fgRect == lastEvalFgRect &&
-				!lastEvalShouldHide &&
-				time.Since(lastEvalTime) < 2400*time.Millisecond {
+			var fgWinRect rect32
+			_, _, _ = procGetWindowRect.Call(curFg, uintptr(unsafe.Pointer(&fgWinRect)))
+			if cached, ok := evalCacheByMon[mon.ID]; ok &&
+				curFg == cached.fg &&
+				style == cached.style &&
+				fgWinRect == cached.winRect &&
+				!cached.shouldHide &&
+				time.Since(cached.evalTime) < 2400*time.Millisecond {
 				return false, "", ""
 			}
 			isFramelessOrPopup := isFullscreenStyle(style)
@@ -1002,11 +1031,13 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 			default:
 				hideRes, reasonRes = false, ""
 			}
-			lastEvalFg = curFg
-			lastEvalFgStyle = style
-			lastEvalFgRect = fgRect
-			lastEvalShouldHide = hideRes
-			lastEvalTime = time.Now()
+			evalCacheByMon[mon.ID] = monEvalCache{
+				fg:         curFg,
+				style:      style,
+				winRect:    fgWinRect,
+				shouldHide: hideRes,
+				evalTime:   time.Now(),
+			}
 			return hideRes, reasonRes, appName
 		}
 
@@ -1158,6 +1189,50 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 		hHook, _, _ := procSetWinEventHook.Call(
 			EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND, 0, cb, 0, 0, WINEVENT_OUTOFCONTEXT,
 		)
+
+		// Hidden top-level listener window so Windows broadcasts WM_DISPLAYCHANGE / WM_SETTINGCHANGE
+		// immediately on monitor hot-plug, resolution changes, or display mode switches.
+		const (
+			wmDisplayChange = 0x007E
+			wmSettingChange = 0x001A
+			spiSetWorkArea  = 0x002F
+			wsPopup         = 0x80000000
+		)
+		classNamePtr, _ := windows.UTF16PtrFromString("VintaDisplayEventListener")
+		wndProc := syscall.NewCallback(func(h uintptr, msg uint32, wParam, lParam uintptr) uintptr {
+			if msg == wmDisplayChange || (msg == wmSettingChange && wParam == spiSetWorkArea) {
+				InvalidateDisplayCache()
+				time.AfterFunc(120*time.Millisecond, evaluateForegroundState)
+			}
+			r, _, _ := procDefWindowProc.Call(h, uintptr(msg), wParam, lParam)
+			return r
+		})
+		type wndClassExW struct {
+			CbSize        uint32
+			Style         uint32
+			LpfnWndProc   uintptr
+			CbClsExtra    int32
+			CbWndExtra    int32
+			HInstance     uintptr
+			HIcon         uintptr
+			HCursor       uintptr
+			HbrBackground uintptr
+			LpszMenuName  *uint16
+			LpszClassName *uint16
+			HIconSm       uintptr
+		}
+		wc := wndClassExW{
+			CbSize:        uint32(unsafe.Sizeof(wndClassExW{})),
+			LpfnWndProc:   wndProc,
+			LpszClassName: classNamePtr,
+		}
+		atom, _, _ := procRegisterClassEx.Call(uintptr(unsafe.Pointer(&wc)))
+		if atom != 0 {
+			_, _, _ = procCreateWindowEx.Call(
+				0, uintptr(unsafe.Pointer(classNamePtr)), 0, wsPopup,
+				0, 0, 0, 0, 0, 0, 0, 0,
+			)
+		}
 		var msg struct {
 			Hwnd    uintptr
 			Message uint32
@@ -1296,81 +1371,132 @@ func getEnumChildWebviewCallback() uintptr {
 	return enumChildWebviewPtr
 }
 
-// TrimMemory flushes unused working-set pages from Vinta and its child WebView2 processes.
+// TrimMemory flushes unused working-set pages from Vinta and its child WebView2 processes asynchronously.
+// Requests arriving during the 500ms cooldown or while a trim is running are coalesced into a single timer
+// so they never drop silently or spawn recursive timer loops.
 func (a *App) TrimMemory() {
 	trimMu.Lock()
-	if time.Since(lastTrimTime) < 500*time.Millisecond {
+	if trimRunning {
+		trimPending = true
 		trimMu.Unlock()
 		return
 	}
+	elapsed := time.Since(lastTrimTime)
+	if elapsed < 500*time.Millisecond {
+		if !trimPending {
+			trimPending = true
+			delay := 500*time.Millisecond - elapsed
+			if trimTimer != nil {
+				trimTimer.Stop()
+			}
+			trimTimer = time.AfterFunc(delay, a.TrimMemory)
+		}
+		trimMu.Unlock()
+		return
+	}
+	if trimTimer != nil {
+		trimTimer.Stop()
+		trimTimer = nil
+	}
+	trimRunning = true
+	trimPending = false
 	lastTrimTime = time.Now()
 	trimMu.Unlock()
+
+	go a.executeTrimMemory()
+}
+
+func (a *App) executeTrimMemory() {
+	defer func() {
+		trimMu.Lock()
+		trimRunning = false
+		rerun := trimPending
+		trimPending = false
+		if rerun {
+			if trimTimer != nil {
+				trimTimer.Stop()
+			}
+			trimTimer = time.AfterFunc(500*time.Millisecond, a.TrimMemory)
+		}
+		trimMu.Unlock()
+	}()
 
 	if procEmptyWorkingSet.Find() != nil {
 		return
 	}
 
 	currentPID := uint32(os.Getpid())
-	targetPIDs := make(map[uint32]bool)
 
 	enumChildWebviewMu.Lock()
-	discoveredWebviewPIDs = discoveredWebviewPIDs[:0]
-	cb := getEnumChildWebviewCallback()
-	if hwnd := a.getHwnd(); hwnd != 0 && procEnumChildWindows.Find() == nil {
-		_, _, _ = procEnumChildWindows.Call(hwnd, cb, 0)
-	}
-	if a.devWindow != nil && procEnumChildWindows.Find() == nil {
-		if devHwnd := uintptr(a.devWindow.NativeWindow()); devHwnd != 0 {
-			_, _, _ = procEnumChildWindows.Call(devHwnd, cb, 0)
+	// Reuse discovered WebView2 process IDs for 30s so TrimMemory avoids walking every OS
+	// process via CreateToolhelp32Snapshot on every state transition.
+	if len(cachedWebviewPIDs) == 0 || time.Since(lastWebviewScanTime) >= 30*time.Second {
+		targetPIDs := make(map[uint32]bool)
+		discoveredWebviewPIDs = discoveredWebviewPIDs[:0]
+		cb := getEnumChildWebviewCallback()
+		if hwnd := a.getHwnd(); hwnd != 0 && procEnumChildWindows.Find() == nil {
+			_, _, _ = procEnumChildWindows.Call(hwnd, cb, 0)
 		}
-	}
-	for _, pid := range discoveredWebviewPIDs {
-		if pid != currentPID {
-			targetPIDs[pid] = true
+		if a.devWindow != nil && procEnumChildWindows.Find() == nil {
+			if devHwnd := uintptr(a.devWindow.NativeWindow()); devHwnd != 0 {
+				_, _, _ = procEnumChildWindows.Call(devHwnd, cb, 0)
+			}
 		}
-	}
-	enumChildWebviewMu.Unlock()
-
-	if snapshot, err := windows.CreateToolhelp32Snapshot(windows.TH32CS_SNAPPROCESS, 0); err == nil {
-		defer func() { _ = windows.CloseHandle(snapshot) }()
-
-		var pe windows.ProcessEntry32
-		pe.Size = uint32(unsafe.Sizeof(pe))
-
-		type procItem struct{ pid, parentPID uint32 }
-		allProcs := make([]procItem, 0, 64)
-		for err = windows.Process32First(snapshot, &pe); err == nil; err = windows.Process32Next(snapshot, &pe) {
-			if strings.Contains(strings.ToLower(windows.UTF16ToString(pe.ExeFile[:])), "msedgewebview2") {
-				allProcs = append(allProcs, procItem{pid: pe.ProcessID, parentPID: pe.ParentProcessID})
+		for _, pid := range discoveredWebviewPIDs {
+			if pid != currentPID {
+				targetPIDs[pid] = true
 			}
 		}
 
-		for _, p := range allProcs {
-			if p.parentPID == currentPID {
-				targetPIDs[p.pid] = true
+		if snapshot, err := windows.CreateToolhelp32Snapshot(windows.TH32CS_SNAPPROCESS, 0); err == nil {
+			var pe windows.ProcessEntry32
+			pe.Size = uint32(unsafe.Sizeof(pe))
+
+			type procItem struct{ pid, parentPID uint32 }
+			allProcs := make([]procItem, 0, 64)
+			for err = windows.Process32First(snapshot, &pe); err == nil; err = windows.Process32Next(snapshot, &pe) {
+				if strings.Contains(strings.ToLower(windows.UTF16ToString(pe.ExeFile[:])), "msedgewebview2") {
+					allProcs = append(allProcs, procItem{pid: pe.ProcessID, parentPID: pe.ParentProcessID})
+				}
 			}
-		}
-		for added := true; added; {
-			added = false
+			_ = windows.CloseHandle(snapshot)
+
 			for _, p := range allProcs {
-				if targetPIDs[p.parentPID] && !targetPIDs[p.pid] {
+				if p.parentPID == currentPID {
 					targetPIDs[p.pid] = true
-					added = true
+				}
+			}
+			for added := true; added; {
+				added = false
+				for _, p := range allProcs {
+					if targetPIDs[p.parentPID] && !targetPIDs[p.pid] {
+						targetPIDs[p.pid] = true
+						added = true
+					}
 				}
 			}
 		}
 
+		cachedWebviewPIDs = cachedWebviewPIDs[:0]
 		for pid := range targetPIDs {
 			if pid != currentPID {
-				if hChild, err := windows.OpenProcess(windows.PROCESS_SET_QUOTA|windows.PROCESS_QUERY_LIMITED_INFORMATION, false, pid); err == nil {
-					_, _, _ = procEmptyWorkingSet.Call(uintptr(hChild))
-					_ = windows.CloseHandle(hChild)
-				}
+				cachedWebviewPIDs = append(cachedWebviewPIDs, pid)
 			}
+		}
+		lastWebviewScanTime = time.Now()
+	}
+	pidsToTrim := make([]uint32, len(cachedWebviewPIDs))
+	copy(pidsToTrim, cachedWebviewPIDs)
+	enumChildWebviewMu.Unlock()
+
+	for _, pid := range pidsToTrim {
+		if hChild, err := windows.OpenProcess(windows.PROCESS_SET_QUOTA|windows.PROCESS_QUERY_LIMITED_INFORMATION, false, pid); err == nil {
+			_, _, _ = procEmptyWorkingSet.Call(uintptr(hChild))
+			_ = windows.CloseHandle(hChild)
 		}
 	}
 
-	debug.FreeOSMemory()
+	// Flush OS working-set pages without forcing synchronous Go GC (debug.FreeOSMemory).
 	if hProcess, _, _ := procGetCurrentProcess.Call(); hProcess != 0 {
 		_, _, _ = procEmptyWorkingSet.Call(hProcess)
 	}

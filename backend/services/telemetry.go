@@ -231,7 +231,9 @@ func (s *telemetrySampler) sampleGPU() float64 {
 
 	const pdhMoreData = 0x800007D2
 	if r != pdhMoreData || bufSize == 0 || itemCount == 0 {
-		return s.lastGPU
+		s.lastGPU = 0
+		s.lastGPUTs = time.Now()
+		return 0
 	}
 
 	if uint32(len(s.gpuBuf)) < bufSize {
@@ -298,7 +300,7 @@ func StartTelemetryStream() {
 	sampler.stopCh = make(chan struct{})
 
 	go func() {
-		ticker := time.NewTicker(2500 * time.Millisecond)
+		ticker := time.NewTicker(1000 * time.Millisecond)
 		defer ticker.Stop()
 
 		for {

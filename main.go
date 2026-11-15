@@ -13,7 +13,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"runtime/debug"
 	"strings"
 	"syscall"
 
@@ -31,13 +30,6 @@ var appIconPNG []byte
 
 //go:embed docs/CONTRIBUTORS.md
 var contributorsMD string
-
-// This function is executed automatically by Go before main
-// Do not use this for callbacks and runtime initialization (DippedInSoju 11 Nov 2026)
-func init() {
-	// Set GC threshold to 50% to maintain a lean, stable RAM footprint while continuously polling hardware metrics.
-	debug.SetGCPercent(50)
-}
 
 func main() {
 	// Ensure panic recovery is always first in the defer stack
@@ -85,6 +77,8 @@ func main() {
 		"--no-first-run",
 		"--no-pings",
 		"--renderer-process-limit=1",
+		// Keep Chromium from throttling rAF, timers, and compositing when another app has OS focus.
+		"--disable-renderer-backgrounding",
 	}
 
 	disabledFeatures := []string{
@@ -108,6 +102,9 @@ func main() {
 		"BackForwardCache",
 		"Prerender2",
 		"SpeculativeServiceWorkerWarmUp",
+		// Required for transparent layered overlays: otherwise Windows marks Vinta occluded behind
+		// maximized windows and freezes CSS/canvas animations.
+		"CalculateNativeWinOcclusion",
 	}
 
 	if hwAccel {

@@ -56,40 +56,62 @@ function optimizeLucideImports(): Plugin {
 }
 
 function optimizeBackdropFilter(): Plugin {
+  const transformCss = (css: string): string => {
+    if (!css.includes('backdrop-filter')) return css
+    return css.replace(
+      /([^{}]+)\{([^{}]*backdrop-filter\s*:\s*(?!none\b)[^;{}]+;[^{}]*)\}/g,
+      (fullMatch, selector: string, body: string) => {
+        const trimmedSel = selector.trim()
+        // Never inject declarations into @keyframes step blocks (from, to, 0%, 100%).
+        if (
+          trimmedSel === 'from' ||
+          trimmedSel === 'to' ||
+          /(?:^|[\s,])\d+(?:\.\d+)?%$/.test(trimmedSel) ||
+          trimmedSel.includes('@keyframes')
+        ) {
+          return fullMatch
+        }
+
+        let nextBody = body
+        const match = body.match(/(^|[;\s])backdrop-filter\s*:\s*([^;{}]+);/)
+        if (!match) return fullMatch
+
+        const val = match[2].trim()
+        if (!/-webkit-backdrop-filter\s*:/.test(nextBody)) {
+          nextBody = nextBody.replace(
+            /(^|[;\s])(backdrop-filter\s*:\s*[^;{}]+;)/,
+            `$1-webkit-backdrop-filter: ${val};\n  $2`
+          )
+        }
+        // Bound the backdrop-filter stacking context without transform: translateZ(0),
+        // which breaks position: fixed popovers/modals and disables Windows ClearType text smoothing.
+        if (!/\bisolation\s*:/.test(nextBody)) {
+          nextBody += '\n  isolation: isolate;'
+        }
+        return `${selector}{${nextBody}}`
+      }
+    )
+  }
+
   return {
     name: 'optimize-backdrop-filter',
     enforce: 'pre',
     transform(code, id) {
-      if (!id.endsWith('.css') && !id.endsWith('.svelte')) return null
+      const cleanId = id.split('?')[0]
+      if (!cleanId.endsWith('.css') && !cleanId.endsWith('.svelte')) return null
       if (!code.includes('backdrop-filter')) return null
 
-      // Process each CSS rule block that contains a non-none backdrop-filter:
-      // 1. Emit -webkit-backdrop-filter for WebView2 release-build parity
-      // 2. Add isolation: isolate to bound the backdrop-filter stacking context
-      // 3. Add transform: translateZ(0) when transform is absent for GPU layer promotion
-      const transformed = code.replace(
-        /([^{}]+)\{([^{}]*backdrop-filter\s*:\s*(?!none\b)[^;{}]+;[^{}]*)\}/g,
-        (fullMatch, selector: string, body: string) => {
-          let nextBody = body
-          const match = body.match(/(^|[;\s])backdrop-filter\s*:\s*([^;{}]+);/)
-          if (!match) return fullMatch
-
-          const val = match[2].trim()
-          if (!/-webkit-backdrop-filter\s*:/.test(nextBody)) {
-            nextBody = nextBody.replace(
-              /(^|[;\s])(backdrop-filter\s*:\s*[^;{}]+;)/,
-              `$1-webkit-backdrop-filter: ${val};\n  $2`
-            )
-          }
-          if (!/\bisolation\s*:/.test(nextBody)) {
-            nextBody += '\n  isolation: isolate;'
-          }
-          if (!/(^|[;\s])transform\s*:/.test(nextBody)) {
-            nextBody += '\n  transform: translateZ(0);'
-          }
-          return `${selector}{${nextBody}}`
-        }
-      )
+      let transformed = code
+      if (cleanId.endsWith('.svelte')) {
+        // Scope CSS transforms strictly to <style> blocks so script/template expressions are untouched.
+        transformed = code.replace(
+          /(<style\b[^>]*>)([\s\S]*?)(<\/style>)/gi,
+          (_m, open: string, css: string, close: string) =>
+            `${open}${transformCss(css)}${close}`
+        )
+      } else {
+        transformed = transformCss(code)
+      }
 
       if (transformed === code) return null
       return { code: transformed, map: null }
@@ -115,7 +137,9 @@ export default defineConfig({
     exclude: ['lucide-svelte']
   },
   build: {
-    emptyOutDir: true
+    emptyOutDir: true,
+    target: 'esnext',
+    cssTarget: 'chrome120'
   },
   resolve: {
     alias: {

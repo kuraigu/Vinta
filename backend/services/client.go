@@ -598,7 +598,7 @@ func onNativeAudioPeak(peakBits uintptr) uintptr {
 
 	peakMu.Lock()
 	now := time.Now()
-	if peak > 0 && now.Sub(lastAudioPeakTime) < 50*time.Millisecond {
+	if peak > 0 && now.Sub(lastAudioPeakTime) < 33*time.Millisecond {
 		peakMu.Unlock()
 		return 0
 	}

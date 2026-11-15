@@ -137,7 +137,11 @@ func (a *App) UpdateIslandRect(x, y, w, h float64) {
 func (a *App) SetForceInteractive(active bool) {
 	a.pillHitMu.Lock()
 	a.isForceInteractive = active
+	a.hitRectsVersion++
 	outbound := a.isOutboundDragging
+	if !outbound {
+		a.isCurrentlyInteractive = active
+	}
 	a.pillHitMu.Unlock()
 
 	if outbound {
@@ -147,15 +151,12 @@ func (a *App) SetForceInteractive(active bool) {
 	if hwnd == 0 {
 		return
 	}
-	gwl := int32(GWL_EXSTYLE)
-	style, _, _ := procGetWindowLong.Call(hwnd, uintptr(gwl))
 	if active {
-		a.isCurrentlyInteractive = true
+		gwl := int32(GWL_EXSTYLE)
+		style, _, _ := procGetWindowLong.Call(hwnd, uintptr(gwl))
 		style &^= WS_EX_TRANSPARENT
 		_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwl), style)
 		_, _, _ = procSetLayeredWindowAttrs.Call(hwnd, 0, 255, 2)
-	} else {
-		a.isCurrentlyInteractive = false
 	}
 }
 
@@ -170,6 +171,8 @@ func (a *App) IsOutboundDragging() bool {
 func (a *App) setOutboundDragging(active bool) {
 	a.pillHitMu.Lock()
 	a.isOutboundDragging = active
+	a.isCurrentlyInteractive = !active
+	a.hitRectsVersion++
 	a.pillHitMu.Unlock()
 
 	hwnd := a.getHwnd()
@@ -179,12 +182,10 @@ func (a *App) setOutboundDragging(active bool) {
 	gwl := int32(GWL_EXSTYLE)
 	style, _, _ := procGetWindowLong.Call(hwnd, uintptr(gwl))
 	if active {
-		a.isCurrentlyInteractive = false
 		style |= WS_EX_LAYERED | WS_EX_TRANSPARENT
 		_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwl), style)
 		_, _, _ = procSetLayeredWindowAttrs.Call(hwnd, 0, 255, 2)
 	} else {
-		a.isCurrentlyInteractive = true
 		style &^= WS_EX_TRANSPARENT
 		_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwl), style)
 		_, _, _ = procSetLayeredWindowAttrs.Call(hwnd, 0, 255, 2)
@@ -237,12 +238,15 @@ func (a *App) startHitTestingLoop(hwnd uintptr) {
 					var pt point32
 					ret, _, _ := procGetCursorPos.Call(uintptr(unsafe.Pointer(&pt)))
 					if ret != 0 {
-						// Fast path: if cursor and hit rects have not changed and not in force mode, reuse previous hit state
-						if hasLastPt && pt.X == lastPt.X && pt.Y == lastPt.Y && rectsVer == lastRectsVersion && verifiedStyle && !force && (missCount > 4 || hitCount > 4) {
-							continue
-						}
+						// Only short-circuit stationary cursors after the 8-frame miss grace window
+						// or after force mode settles. Skipping earlier freezes missCount below 8
+						// and leaves WS_EX_TRANSPARENT off until the mouse moves again.
 						if rectsVer != lastRectsVersion {
 							verifiedStyle = false
+							hitCount = 0
+							missCount = 0
+						} else if hasLastPt && pt.X == lastPt.X && pt.Y == lastPt.Y && verifiedStyle && !force && (missCount >= 8 || hitCount > 4) {
+							continue
 						}
 						lastPt = pt
 						hasLastPt = true
@@ -286,10 +290,14 @@ func (a *App) startHitTestingLoop(hwnd uintptr) {
 				}
 			}
 
+			a.pillHitMu.RLock()
+			currInteractive := a.isCurrentlyInteractive
+			a.pillHitMu.RUnlock()
+
 			if isHit {
 				missCount = 0
 				hitCount++
-				if a.isCurrentlyInteractive && hitCount > 1 && verifiedStyle {
+				if currInteractive && hitCount > 1 && verifiedStyle {
 					continue
 				}
 			} else {
@@ -300,7 +308,7 @@ func (a *App) startHitTestingLoop(hwnd uintptr) {
 				if missCount < 8 {
 					continue
 				}
-				if !a.isCurrentlyInteractive && missCount > 8 && verifiedStyle {
+				if !currInteractive && missCount > 8 && verifiedStyle {
 					continue
 				}
 			}
@@ -328,14 +336,14 @@ func (a *App) startHitTestingLoop(hwnd uintptr) {
 				needsUpdate = true
 			}
 
+			a.pillHitMu.Lock()
+			a.isCurrentlyInteractive = isHit
+			a.pillHitMu.Unlock()
 			if needsUpdate {
-				a.isCurrentlyInteractive = isHit
 				_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwl), style)
 				if isHit {
 					_, _, _ = procSetLayeredWindowAttrs.Call(hwnd, 0, 255, 2)
 				}
-			} else {
-				a.isCurrentlyInteractive = isHit
 			}
 		}
 	}()
