@@ -7,7 +7,9 @@
   align-items: center;
   justify-content: center;
   background: var(--vinta-bg);
-  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  contain: layout style;
   border-radius: inherit;
   border: 1.5px dashed var(--vinta-accent-primary);
   box-sizing: border-box;

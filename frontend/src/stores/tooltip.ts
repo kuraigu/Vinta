@@ -38,6 +38,7 @@ const initialTooltipState: ActiveTooltipState = {
 }
 
 export const activeTooltipStore = writable<ActiveTooltipState>(initialTooltipState)
+let isTooltipVisible = false
 
 /**
  * Activates the tooltip for a given target element.
@@ -53,6 +54,7 @@ export function showTooltip(
   if (!opts.text || !opts.text.trim()) return
 
   const rect = target.getBoundingClientRect()
+  isTooltipVisible = true
   activeTooltipStore.set({
     id: 'tip-' + Math.random().toString(36).slice(2, 9),
     text: opts.text,
@@ -67,6 +69,8 @@ export function showTooltip(
  * Dismisses any currently visible tooltip.
  */
 export function hideTooltip(): void {
+  if (!isTooltipVisible) return
+  isTooltipVisible = false
   activeTooltipStore.update((state) => {
     if (!state.visible) return state
     return { ...state, visible: false }

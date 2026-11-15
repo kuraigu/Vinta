@@ -1,11 +1,9 @@
 <!--
-  @fileoverview Weather forecast and environmental metrics display component.
-
-  Fetches real-time temperature, humidity, UV index, wind speed, air pressure, and
-  7-day outlooks from Open-Meteo with offline caching and condition artwork.
+  @fileoverview Weather widget, minimal capsule pill, and full-page forecast view.
 -->
 <script lang="ts">
   import { onMount, getContext } from 'svelte'
+  import { get } from 'svelte/store'
   import { slide } from 'svelte/transition'
   import {
     Wind,
@@ -31,6 +29,7 @@
   } from '../store'
   import {
     fetchWeatherData,
+    getCachedWeatherData,
     convertTemp,
     parseWmoCode,
     getWmoConditionKey,
@@ -39,7 +38,6 @@
   import WeatherPage, {
     config as weatherPageConfig
   } from '../pages/WeatherPage.svelte'
-  import BackButton from './BackButton.svelte'
   import BentoCard from './BentoCard.svelte'
   import PageHeader from './PageHeader.svelte'
   import RefreshButton from './RefreshButton.svelte'
@@ -65,56 +63,107 @@
     simulateOffline?: boolean
   } = $props()
 
-  let weather = $state<WeatherData | null>(null)
-  let loading = $state<boolean>(true)
+  // Seed initial state synchronously from cache or mock store to prevent loading flashes
+  const initialLoc = get(weatherLocationStore)
+  const initialMock = get(simulateWeatherStore)
+  const initialCache =
+    initialMock ?? getCachedWeatherData(initialLoc.lat, initialLoc.lon, true)
+
+  let weather = $state<WeatherData | null>(initialCache)
+  let loading = $state<boolean>(!initialCache)
   let error = $state<boolean>(false)
   let isForecastOpen = $state(false)
+
   let lastFetchKey = ''
+  let loadedLocationKey = initialCache
+    ? `${initialLoc.lat.toFixed(4)},${initialLoc.lon.toFixed(4)}`
+    : ''
+  let fetchSeq = 0
 
   /**
-   * Queries Open-Meteo for meteorological data matching target coordinates.
-   *
-   * @param name - Location display name.
-   * @param lat - Latitude coordinate.
-   * @param lon - Longitude coordinate.
-   * @param offline - Whether to read directly from local cache.
+   * Synchronizes weather state when the simulateOffline component prop changes after mount.
+   */
+  function syncOfflinePropEffect() {
+    if (!lastFetchKey) return
+    if (get(simulateWeatherStore)) return
+    const isOffline = Boolean($simulateOfflineStore || simulateOffline)
+    const loc = $weatherLocationStore
+    const key = `${loc.lat.toFixed(4)}_${loc.lon.toFixed(4)}_${isOffline}`
+    if (key === lastFetchKey) return
+    lastFetchKey = key
+    void loadWeather(loc.name, loc.lat, loc.lon, isOffline)
+  }
+  $effect(syncOfflinePropEffect)
+
+  /**
+   * Fetches weather for the given coordinates and guards against stale responses.
    */
   async function loadWeather(
     name: string,
     lat: number,
     lon: number,
-    offline: boolean
+    offline: boolean,
+    forceRefresh = false
   ) {
-    loading = true
+    const seq = ++fetchSeq
+    const locKey = `${lat.toFixed(4)},${lon.toFixed(4)}`
+
+    if (!forceRefresh) {
+      const cached = getCachedWeatherData(lat, lon, offline)
+      if (cached) {
+        weather = { ...cached, location: name, isOffline: offline }
+        loadedLocationKey = locKey
+        loading = false
+        error = false
+        return
+      }
+    }
+
+    if (loadedLocationKey !== locKey) {
+      const stale = getCachedWeatherData(lat, lon, true)
+      if (stale) {
+        weather = { ...stale, location: name, isOffline: offline }
+        loadedLocationKey = locKey
+      } else {
+        weather = null
+        loadedLocationKey = ''
+      }
+    }
+
+    // Only show loading spinner when no cached data is available (stale-while-revalidate).
+    loading = !weather
     error = false
 
     try {
-      const data = await fetchWeatherData(name, lat, lon, offline)
+      const data = await fetchWeatherData(name, lat, lon, offline, forceRefresh)
+      if (seq !== fetchSeq) return
+
       if (data) {
         weather = data
+        loadedLocationKey = locKey
         error = false
-      } else {
+      } else if (!weather) {
         error = true
       }
     } catch {
-      error = true
+      if (seq === fetchSeq && !weather) error = true
     } finally {
-      loading = false
+      if (seq === fetchSeq) loading = false
     }
   }
 
-  /**
-   * Manually retries fetching weather data for the current location.
-   */
   function handleRetry(e?: MouseEvent) {
     if (e) e.stopPropagation()
     const isOffline = Boolean($simulateOfflineStore || simulateOffline)
     const loc = $weatherLocationStore
-    loadWeather(loc.name, loc.lat, loc.lon, isOffline)
+    loadWeather(loc.name, loc.lat, loc.lon, isOffline, true)
   }
 
   onMount(() => {
+    let hadMock = Boolean(get(simulateWeatherStore))
+
     function checkAndFetch() {
+      if (get(simulateWeatherStore)) return
       const isOffline = Boolean($simulateOfflineStore || simulateOffline)
       const loc = $weatherLocationStore
       const key = `${loc.lat.toFixed(4)}_${loc.lon.toFixed(4)}_${isOffline}`
@@ -123,16 +172,16 @@
       loadWeather(loc.name, loc.lat, loc.lon, isOffline)
     }
 
-    checkAndFetch()
-
     const unsubLoc = weatherLocationStore.subscribe(checkAndFetch)
     const unsubOff = simulateOfflineStore.subscribe(checkAndFetch)
     const unsubMock = simulateWeatherStore.subscribe((mock) => {
       if (mock) {
+        hadMock = true
         weather = mock
         loading = false
         error = false
-      } else {
+      } else if (hadMock) {
+        hadMock = false
         lastFetchKey = ''
         checkAndFetch()
       }
@@ -145,164 +194,98 @@
     }
   })
 
-  // Reactive temperature conversions
-  function computeDisplayTemp() {
-    if (!weather) return { val: 0, symbol: '°', str: '--' }
-    return convertTemp(weather.temp, $weatherUnitStore)
-  }
-  let displayTemp = $derived.by(computeDisplayTemp)
+  let displayTemp = $derived(
+    weather
+      ? convertTemp(weather.temp, $weatherUnitStore)
+      : { val: 0, symbol: '°', str: '--' }
+  )
 
-  function computeDisplayFeelsLike() {
-    if (!weather) return { val: 0, symbol: '°', str: '--' }
-    return convertTemp(weather.feelsLike, $weatherUnitStore)
-  }
-  let displayFeelsLike = $derived.by(computeDisplayFeelsLike)
+  let displayFeelsLike = $derived(
+    weather
+      ? convertTemp(weather.feelsLike, $weatherUnitStore)
+      : { val: 0, symbol: '°', str: '--' }
+  )
 
-  function computeUnitLetter(): string {
-    if ($weatherUnitStore === 'fahrenheit') return 'F'
-    if ($weatherUnitStore === 'kelvin') return 'K'
-    return 'C'
-  }
-  let unitLetter = $derived.by(computeUnitLetter)
+  let unitLetter = $derived(
+    $weatherUnitStore === 'fahrenheit'
+      ? 'F'
+      : $weatherUnitStore === 'kelvin'
+        ? 'K'
+        : 'C'
+  )
 
-  /**
-   * Navigates directly to the dedicated WeatherPage.
-   *
-   * @param e - Optional click event.
-   */
-  function openWeatherPage(e?: MouseEvent) {
-    if (e) e.stopPropagation()
-    if (navigate) {
-      navigate(WeatherPage, weatherPageConfig, true)
-    }
-  }
-
-  /**
-   * Derives parsed condition code metadata for current weather state.
-   */
-  function computeWeatherInfo() {
-    if (!weather) return parseWmoCode(2, isNight)
-    return parseWmoCode(weather.weatherCode, isNight)
-  }
-  let weatherInfo = $derived.by(computeWeatherInfo)
-
-  /**
-   * Evaluates whether current conditions reflect daytime or nighttime.
-   */
-  function computeIsNight() {
-    if (typeof weather?.isNight === 'boolean') {
-      return weather.isNight
-    }
+  let isNight = $derived.by(() => {
+    if (typeof weather?.isNight === 'boolean') return weather.isNight
     const hour = new Date().getHours()
     return hour < 6 || hour >= 18
-  }
-  let isNight = $derived.by(computeIsNight)
+  })
 
-  /**
-   * Resolves the primary artwork illustration variant matching active conditions.
-   *
-   * @returns Condition identifier string for illustration component.
-   */
-  function computeIllustrationType(): WeatherConditionType {
-    if (!weather) return isNight ? 'cloudy-night' : 'cloudy'
-    const code = weather.weatherCode
+  let weatherInfo = $derived(parseWmoCode(weather?.weatherCode ?? 2, isNight))
+
+  function mapCodeToArt(code: number, night = false): WeatherConditionType {
     if (code >= 95) return 'thunder'
     if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return 'rain'
     if (code >= 71 && code <= 77) return 'snow'
-    if (code === 0) return isNight ? 'night' : 'sunny'
-    if (code >= 1 && code <= 3) return isNight ? 'cloudy-night' : 'cloudy'
+    if (code === 0) return night ? 'night' : 'sunny'
+    if (code >= 1 && code <= 3) return night ? 'cloudy-night' : 'cloudy'
     if (code === 45 || code === 48) return 'fog'
-    return isNight ? 'cloudy-night' : 'cloudy'
-  }
-  let illustrationType = $derived.by(computeIllustrationType)
-
-  /**
-   * Resolves the secondary illustration icon variant for daily forecast tiles.
-   *
-   * @param code - WMO weather interpretation code.
-   * @returns Condition identifier string for forecast artwork.
-   */
-  function getForecastIllustrationType(code: number): WeatherConditionType {
-    if (code >= 95) return 'thunder'
-    if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return 'rain'
-    if (code >= 71 && code <= 77) return 'snow'
-    if (code === 0) return 'sunny'
-    if (code >= 1 && code <= 3) return 'cloudy'
-    if (code === 45 || code === 48) return 'fog'
-    return 'cloudy'
+    return night ? 'cloudy-night' : 'cloudy'
   }
 
-  /**
-   * Derives localized condition title string corresponding to current WMO code.
-   *
-   * @returns Translated weather condition phrase.
-   */
-  function computeBannerConditionTitle() {
-    if (!weather) {
-      return isNight
-        ? $tStore('weather.conditions.clear_night')
-        : $tStore('weather.conditions.sunny')
-    }
-    const key = getWmoConditionKey(
-      weather.weatherCode ?? 0,
-      isNight,
-      weather.condition
-    )
-    return $tStore(key)
-  }
-  let bannerConditionTitle = $derived.by(computeBannerConditionTitle)
+  let illustrationType = $derived<WeatherConditionType>(
+    weather
+      ? mapCodeToArt(weather.weatherCode, isNight)
+      : isNight
+        ? 'cloudy-night'
+        : 'cloudy'
+  )
 
-  /**
-   * Extracts a concise city name from longer location strings for compact headers.
-   *
-   * @returns Short city name string.
-   */
-  function computeShortCityName() {
-    const raw = $weatherLocationStore.name || 'Auto'
-    return raw.split(',')[0].trim()
-  }
-  let shortCityName = $derived.by(computeShortCityName)
+  let bannerConditionTitle = $derived(
+    weather
+      ? $tStore(
+          getWmoConditionKey(
+            weather.weatherCode ?? 0,
+            isNight,
+            weather.condition
+          )
+        )
+      : $tStore(
+          isNight
+            ? 'weather.conditions.clear_night'
+            : 'weather.conditions.sunny'
+        )
+  )
 
-  /**
-   * Formats sunrise time into local clock format string.
-   */
-  function computeFormattedSunrise() {
-    if (!weather?.sunrise) return '--:--'
+  let shortCityName = $derived(
+    ($weatherLocationStore.name || 'Auto').split(',')[0].trim()
+  )
+
+  function formatClockTime(iso?: string): string {
+    if (!iso) return '--:--'
     try {
-      const d = new Date(weather.sunrise)
-      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      return new Date(iso).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit'
+      })
     } catch {
       return '--:--'
     }
   }
-  let formattedSunrise = $derived.by(computeFormattedSunrise)
 
-  /**
-   * Formats sunset time into local clock format string.
-   */
-  function computeFormattedSunset() {
-    if (!weather?.sunset) return '--:--'
-    try {
-      const d = new Date(weather.sunset)
-      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    } catch {
-      return '--:--'
-    }
-  }
-  let formattedSunset = $derived.by(computeFormattedSunset)
+  let formattedSunrise = $derived(formatClockTime(weather?.sunrise))
+  let formattedSunset = $derived(formatClockTime(weather?.sunset))
 
-  /**
-   * Evaluates numerical UV index value to determine qualitative safety rating.
-   *
-   * @param uvStr - Numeric UV index as string.
-   * @returns Localized UV rating (Low, Moderate, High, Very High, Extreme).
-   */
   function getUvRating(uvStr: string): string {
     const n = parseFloat(uvStr) || 0
     if (n >= 8) return 'Very High'
     if (n >= 6) return 'High'
     if (n >= 3) return 'Moderate'
     return 'Low'
+  }
+
+  function openWeatherPage(e?: MouseEvent) {
+    if (e) e.stopPropagation()
+    navigate?.(WeatherPage, weatherPageConfig, true)
   }
 </script>
 
@@ -335,15 +318,12 @@
       </div>
     {:else if weather}
       <div class="banner-top-layout">
-        <!-- Left Content Details Block -->
         <div class="banner-left-content">
-          <!-- Temperature -->
           <div class="banner-temp-row">
             <span class="banner-temp">{displayTemp.val}</span>
             <span class="banner-unit">°{unitLetter}</span>
           </div>
 
-          <!-- Secondary Condition & Heat Index (Feels like) -->
           <div class="banner-sub-meta">
             <span class="meta-sub-item">{bannerConditionTitle}</span>
             <span class="sub-divider">|</span>
@@ -354,13 +334,11 @@
             </span>
           </div>
 
-          <!-- Location Name -->
           <div class="banner-location">
             <MapPin size={11} class="loc-pin" />
             <span>{$weatherLocationStore.name || shortCityName}</span>
           </div>
 
-          <!-- Forecast Button -->
           {#if !isPage}
             <button
               type="button"
@@ -370,11 +348,11 @@
                 isForecastOpen = !isForecastOpen
               }}
             >
-              <span
-                >{isForecastOpen
+              <span>
+                {isForecastOpen
                   ? $tStore('weather.hide_forecast')
-                  : $tStore('weather.see_forecast')}</span
-              >
+                  : $tStore('weather.see_forecast')}
+              </span>
               <ChevronDown
                 size={13}
                 strokeWidth={2.4}
@@ -384,7 +362,6 @@
           {/if}
         </div>
 
-        <!-- Right Illustrated Graphic & More Action -->
         <div class="banner-right-art">
           {#if !isPage}
             <button
@@ -408,7 +385,6 @@
       </div>
 
       {#if !isPage && isForecastOpen}
-        <!-- Animated Forecast & Detailed Metrics Drawer -->
         <div class="forecast-drawer" transition:slide={{ duration: 220 }}>
           <div class="drawer-metrics-row">
             <div class="drawer-chip">
@@ -427,9 +403,7 @@
 
           <div class="forecast-strip-box">
             {#each weather.forecast.slice(0, 4) as f (f.day)}
-              {@const forecastArtType = getForecastIllustrationType(
-                f.weatherCode
-              )}
+              {@const forecastArtType = mapCodeToArt(f.weatherCode)}
               {@const maxConv = convertTemp(f.tempMax, $weatherUnitStore)}
               {@const minConv = convertTemp(f.tempMin, $weatherUnitStore)}
               <div class="f-day-col">
@@ -452,14 +426,13 @@
 {/snippet}
 
 {#if !expanded}
-  <!-- MINIMAL CAPSULE PILL -->
   <div
     class="weather-minimal"
     style="--weather-color: {weatherInfo.theme.color}"
   >
-    {#if loading}
+    {#if loading && !weather}
       <div class="minimal-skeleton"></div>
-    {:else if error}
+    {:else if error && !weather}
       <WifiOff size={14} class="offline-icon" />
       <span class="temp-minimal">--</span>
     {:else}
@@ -468,7 +441,6 @@
     {/if}
   </div>
 {:else if variant === 'page'}
-  <!-- FULL PAGE STANDALONE WEATHER VIEW -->
   <div
     class="weather-page-view"
     style="--weather-color: {weatherInfo.theme
@@ -488,7 +460,6 @@
         </button>
       </div>
     {:else if weather}
-      <!-- Standardized Page Header -->
       <PageHeader title={$tStore('apps.weather_name')}>
         {#snippet actions()}
           <RefreshButton
@@ -501,10 +472,8 @@
 
       <ScrollView class="weather-scroll-area">
         <div class="weather-content-stream">
-          <!-- Hero Illustrated Card (Identical to Home feed card) -->
           {@render bannerCard('page')}
 
-          <!-- 7-Day Forecast Section: Consolidated into 1 Bento Card with Dividers -->
           {#if weather.forecast && weather.forecast.length > 0}
             <section class="forecast-section">
               <BentoCard variant="bento" class="forecast-bento-card">
@@ -514,9 +483,7 @@
                 </div>
                 <div class="forecast-days-strip">
                   {#each weather.forecast as f, idx (f.day + idx)}
-                    {@const forecastArtType = getForecastIllustrationType(
-                      f.weatherCode
-                    )}
+                    {@const forecastArtType = mapCodeToArt(f.weatherCode)}
                     {@const maxConv = convertTemp(f.tempMax, $weatherUnitStore)}
                     {@const minConv = convertTemp(f.tempMin, $weatherUnitStore)}
                     <div class="forecast-col">
@@ -542,9 +509,7 @@
             </section>
           {/if}
 
-          <!-- Standardized Bento Metrics Grid -->
           <div class="bento-metrics-grid">
-            <!-- Wind -->
             <BentoCard variant="bento" class="forecast-bento-card">
               <div class="tile-head">
                 <Wind size={13} class="tile-head-icon" />
@@ -559,7 +524,6 @@
               </div>
             </BentoCard>
 
-            <!-- UV Index -->
             <BentoCard variant="bento" class="forecast-bento-card">
               <div class="tile-head">
                 <Compass size={13} class="tile-head-icon" />
@@ -576,7 +540,6 @@
               </div>
             </BentoCard>
 
-            <!-- Humidity -->
             <BentoCard variant="bento" class="forecast-bento-card">
               <div class="tile-head">
                 <Droplets size={13} class="tile-head-icon" />
@@ -595,7 +558,6 @@
               </div>
             </BentoCard>
 
-            <!-- Pressure -->
             <BentoCard variant="bento" class="forecast-bento-card">
               <div class="tile-head">
                 <Gauge size={13} class="tile-head-icon" />
@@ -608,7 +570,6 @@
               <div class="tile-sub">Atmospheric</div>
             </BentoCard>
 
-            <!-- Sun Timing -->
             <BentoCard variant="bento" class="forecast-bento-card">
               <div class="tile-head">
                 <Sun size={13} class="tile-head-icon" />
@@ -623,7 +584,6 @@
               </div>
             </BentoCard>
 
-            <!-- Precipitation -->
             <BentoCard variant="bento" class="forecast-bento-card">
               <div class="tile-head">
                 <CloudRain size={13} class="tile-head-icon" />
@@ -643,7 +603,6 @@
     {/if}
   </div>
 {:else}
-  <!-- WIDGET VARIANT (Home Feed Card) -->
   {@render bannerCard('widget')}
 {/if}
 

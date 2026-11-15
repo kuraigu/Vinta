@@ -12,7 +12,8 @@
     Quit,
     GetDisplayLayout,
     SendMediaControl,
-    SaveNotifications
+    SaveNotifications,
+    RequestMediaUpdate
   } from '../bindings/Vinta/backend/app.js'
   import { Events } from '$lib/events'
 
@@ -203,9 +204,6 @@
   let previousExpanded: boolean | undefined = undefined
 
   // Timers
-  let islandTransitionTimeout: number | undefined
-  let dormantUnmountTimeout: number | undefined
-  let memoryTrimTimeout: number | undefined
   let glowTimeout: number | undefined
   let hideTimeout: number | undefined
   let hoverGraceTimeout: number | undefined
@@ -684,10 +682,8 @@
       wasHiddenBeforeNotif = false
     }
 
-    clearTimeout(dormantUnmountTimeout)
-    dormantUnmountTimeout = undefined
-    clearTimeout(memoryTrimTimeout)
-    memoryTrimTimeout = undefined
+    bounds.stopTrackingTransition()
+    bounds.cancelScheduledTrimMemory()
     isPageDormant = false
 
     if (isHidden) {
@@ -722,8 +718,31 @@
       currentLiveOffsetX = targetOffset
       $hiddenPillOffsetXStore = targetOffset
     }
+    // Update currentOSBounds before startTrackingTransition so the transition union rect
+    // expands immediately instead of leaving a click-through deadzone during the morph.
+    bounds.currentOSBounds = { ...nextBounds }
     bounds.syncPillBounds(islandNode, false, true)
-    bounds.startTrackingTransition(islandNode, expand ? 350 : 250, false)
+    bounds.startTrackingTransition(
+      islandNode,
+      expand ? 350 : 250,
+      false,
+      () => {
+        if (!isGestureBusy()) {
+          bounds.recoverRestingBounds(
+            getBoundsForState(),
+            clampedOffsetX,
+            islandNode,
+            isHidden
+          )
+          bounds.syncPillBounds(islandNode, isHidden, true)
+        }
+        Events.Emit('vinta:state-change', {
+          expanded: expand,
+          isHidden,
+          page: pageId
+        })
+      }
+    )
 
     triggerGlow()
   }
@@ -741,10 +760,8 @@
 
   function showWidget() {
     clearHoverGrace()
-    clearTimeout(dormantUnmountTimeout)
-    dormantUnmountTimeout = undefined
-    clearTimeout(memoryTrimTimeout)
-    memoryTrimTimeout = undefined
+    bounds.stopTrackingTransition()
+    bounds.cancelScheduledTrimMemory()
     isPageDormant = false
 
     if (!isHidden) {
@@ -752,6 +769,9 @@
       return
     }
 
+    if (typeof RequestMediaUpdate === 'function') {
+      RequestMediaUpdate().catch(() => {})
+    }
     finishDragGesture()
     wasExpandedBeforeHide = false
     expanded = false
@@ -801,33 +821,29 @@
       : '0.22s cubic-bezier(0.2, 0.8, 0.2, 1)'
 
     isHidden = true
-    bounds.startTrackingTransition(islandNode, duration + 50, true)
-
-    dormantUnmountTimeout = window.setTimeout(() => {
-      if (isHidden) {
-        isPageDormant = true
-        expanded = false
-        const fallback = getFallbackPage()
-        if (activePage !== fallback.page) {
-          activePage = fallback.page as Component
-          islandConfig = fallback.config
-          $activePageIdStore = fallback.page === HomePage ? 'home' : 'media'
-        }
-        bounds.notifyHidden(true)
-        bounds.recoverRestingBounds(
-          getBoundsForState(islandConfig, false, true),
-          clampedOffsetX,
-          islandNode,
-          true
-        )
+    bounds.startTrackingTransition(islandNode, duration + 50, true, () => {
+      if (!isHidden) return
+      isPageDormant = true
+      expanded = false
+      const fallback = getFallbackPage()
+      if (activePage !== fallback.page) {
+        activePage = fallback.page as Component
+        islandConfig = fallback.config
+        $activePageIdStore = fallback.page === HomePage ? 'home' : 'media'
       }
-    }, duration + 50)
-
-    memoryTrimTimeout = window.setTimeout(() => {
-      if (isHidden && isPageDormant) {
-        bounds.trimMemory()
-      }
-    }, 500)
+      bounds.notifyHidden(true)
+      bounds.recoverRestingBounds(
+        getBoundsForState(islandConfig, false, true),
+        clampedOffsetX,
+        islandNode,
+        true
+      )
+      Events.Emit('vinta:state-change', {
+        expanded: false,
+        isHidden: true,
+        dormant: true
+      })
+    })
   }
 
   function finishDragGesture() {
@@ -906,9 +922,11 @@
       currentLiveOffsetX = targetOffset
       $hiddenPillOffsetXStore = targetOffset
     }
+    bounds.cancelScheduledTrimMemory()
+    bounds.currentOSBounds = { ...nextBounds }
     islandAnim = '0.34s cubic-bezier(0.16, 1, 0.3, 1)'
-    expanded = true
     bounds.startTrackingTransition(islandNode, 350, false)
+    expanded = true
   }
 
   function recoverBoundsIfIdle() {
@@ -963,13 +981,12 @@
     hideTooltip()
     gestures.finishSettling()
 
+    if (isExp) {
+      bounds.cancelScheduledTrimMemory()
+    }
+    bounds.currentOSBounds = { ...getBoundsForState() }
     bounds.syncPillBounds(islandNode, isHidden, true)
-    bounds.startTrackingTransition(islandNode, isExp ? 350 : 250, false)
-
-    clearTimeout(islandTransitionTimeout)
-    const transitionDuration = isExp ? 340 : 280
-
-    islandTransitionTimeout = window.setTimeout(() => {
+    bounds.startTrackingTransition(islandNode, isExp ? 350 : 250, false, () => {
       if (!isGestureBusy()) {
         bounds.recoverRestingBounds(
           getBoundsForState(),
@@ -979,10 +996,26 @@
         )
         bounds.syncPillBounds(islandNode, isHidden, true)
       }
-      if (!isExp) {
-        bounds.trimMemory()
-      }
-    }, transitionDuration)
+      Events.Emit('vinta:state-change', {
+        expanded: isExp,
+        isHidden,
+        page: $activePageIdStore
+      })
+    })
+  })
+
+  $effect(function handleStateChangeTrim() {
+    void activePage
+    const exp = expanded
+    const hidden = isHidden
+    const dormant = isPageDormant
+    untrack(() => {
+      Events.Emit('vinta:state-change', {
+        expanded: exp,
+        isHidden: hidden,
+        dormant
+      })
+    })
   })
 
   $effect(function handleAutoHideSync() {
@@ -1351,7 +1384,51 @@
   // Mount & Window Lifecycle
   onMount(() => {
     const disableGlobalContextMenu = (e: MouseEvent) => e.preventDefault()
+    const disableDefaultBrowserDrag = (e: DragEvent) => {
+      const target = e.target as HTMLElement | null
+      if (!target || target.closest('[draggable="true"]')) return
+      if (
+        target.tagName === 'IMG' ||
+        target.tagName === 'SVG' ||
+        target.tagName === 'A' ||
+        target.closest('img, svg, a')
+      ) {
+        e.preventDefault()
+      }
+    }
+    const disableMiddleClickScroll = (e: MouseEvent) => {
+      if (e.button !== 1) return
+      const target = e.target as HTMLElement | null
+      if (target?.closest('[data-allow-middle-scroll]')) return
+      e.preventDefault()
+    }
+    const disableBrowserShortcuts = (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return
+      const target = e.target as HTMLElement | null
+      if (target?.closest('[data-allow-browser-shortcut]')) return
+      const mod = e.ctrlKey || e.metaKey
+      const key = e.key.toLowerCase()
+      if (
+        e.key === 'F5' ||
+        e.key === 'F3' ||
+        (mod &&
+          (key === 'p' ||
+            key === 's' ||
+            key === 'u' ||
+            key === 'r' ||
+            key === 'g' ||
+            key === '=' ||
+            key === '+' ||
+            key === '-' ||
+            key === '0'))
+      ) {
+        e.preventDefault()
+      }
+    }
     window.addEventListener('contextmenu', disableGlobalContextMenu)
+    window.addEventListener('dragstart', disableDefaultBrowserDrag, true)
+    window.addEventListener('mousedown', disableMiddleClickScroll, true)
+    window.addEventListener('keydown', disableBrowserShortcuts)
 
     $hiddenPillOffsetXStore = 0
     currentLiveOffsetX = 0
@@ -1410,7 +1487,21 @@
         if (layout && layout.virtualWidth > 0) {
           displayLayout = layout
           $displayLayoutStore = layout
-          bounds.syncPillBounds(islandNode, isHidden)
+          const clamped = Math.max(
+            allowedOffsets.min,
+            Math.min(allowedOffsets.max, currentLiveOffsetX)
+          )
+          if (clamped !== currentLiveOffsetX) {
+            currentLiveOffsetX = clamped
+            $hiddenPillOffsetXStore = clamped
+          }
+          bounds.syncBounds(
+            getBoundsForState(),
+            currentLiveOffsetX,
+            islandNode,
+            false,
+            isHidden
+          )
           resyncAllSatellites()
         }
       } catch {}
@@ -1573,11 +1664,14 @@
       () => isHidden
     )
 
-    const idleMemoryWatchdog = window.setInterval(() => {
-      if (!expanded || isHidden) {
-        bounds.trimMemory()
+    // Event-driven working-set trim via $lib/events instead of a periodic polling watchdog.
+    const unsubStateTrim = Events.OnGlobal('vinta:state-change', () => {
+      if (expanded && !isHidden) {
+        bounds.cancelScheduledTrimMemory()
+      } else {
+        bounds.scheduleTrimMemory(isHidden ? 800 : 900)
       }
-    }, 30000)
+    })
 
     const cleanupEvents = initIslandEvents({
       showWidget,
@@ -1654,22 +1748,22 @@
     } catch {}
 
     return () => {
-      window.clearInterval(idleMemoryWatchdog)
       clearTimeout(initSyncTimer1)
       clearTimeout(initSyncTimer2)
       stopIdleReconciler()
+      unsubStateTrim()
       finishDragGesture()
       cleanupEvents()
       bounds.cleanup()
       gestures.cleanup()
       simulatedClockStore.set(null)
       clearHoverGrace()
-      clearTimeout(dormantUnmountTimeout)
-      clearTimeout(memoryTrimTimeout)
       clearTimeout(glowTimeout)
       clearTimeout(hideTimeout)
-      clearTimeout(islandTransitionTimeout)
       window.removeEventListener('contextmenu', disableGlobalContextMenu)
+      window.removeEventListener('dragstart', disableDefaultBrowserDrag, true)
+      window.removeEventListener('mousedown', disableMiddleClickScroll, true)
+      window.removeEventListener('keydown', disableBrowserShortcuts)
       window.removeEventListener('vinta-overlay', handleOverlayChange)
       window.removeEventListener('vinta-quit', handleQuit)
       window.removeEventListener('vinta-resync-bounds', handleResyncBounds)
@@ -1759,24 +1853,27 @@
       {currentLiveOffsetX}
       {wasExpandedBeforeHide}
       onStartDragRunway={() => {
-        bounds.startLiveTracking(islandNode)
         const { h, r } = getBoundsForState()
-        bounds.updateBounds(-1, Math.max(h, 200), r, 0)
+        bounds.currentOSBounds = { w: -1, h: Math.max(h, 200), r }
+        bounds.captureDragBaseline(islandNode, currentLiveOffsetX)
       }}
       onStartInertia={(start, target) => {
         bounds.syncGlideCorridor(islandNode, isHidden, start, target)
       }}
       onGlideStep={(live) => {
         currentLiveOffsetX = live
+        // Apply transform directly during drag/glide to avoid Svelte microtask frame jitter.
         if (islandWrapperNode) {
           islandWrapperNode.style.transform = `translateX(${live}px)`
         }
+        bounds.syncDragOffset(live)
       }}
       onUpdateOffset={(next) => {
         currentLiveOffsetX = next
         if (islandWrapperNode) {
           islandWrapperNode.style.transform = `translateX(${next}px)`
         }
+        bounds.syncDragOffset(next)
       }}
       onFinishDrag={finishDragGesture}
       onExpand={handleExpand}
@@ -1818,7 +1915,9 @@
 </div>
 
 <CustomTooltip />
-<ClassInspectorOverlay />
+{#if $debugClassInspector}
+  <ClassInspectorOverlay />
+{/if}
 <VirtualCursor
   primaryCenter={displayLayout.primaryCenter}
   {clampedOffsetX}

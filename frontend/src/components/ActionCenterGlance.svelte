@@ -19,6 +19,7 @@
   import {
     wirelessDataStore,
     batteryDataStore,
+    pageVisibilityStore,
     tStore,
     type WirelessData,
     type BatteryData,
@@ -45,6 +46,7 @@
     >('navigate')
 
   function handleOpenActionCenter() {
+    if (!$pageVisibilityStore.actioncenter) return
     if (typeof navigate === 'function') {
       navigate(ActionCenterPage, actionCenterConfig, true)
     }

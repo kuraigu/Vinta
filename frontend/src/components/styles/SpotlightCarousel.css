@@ -32,6 +32,8 @@
 }
 
 .spotlight-card {
+  position: relative;
+  overflow: hidden;
   flex: 0 0 calc(100% - 28px);
   max-width: calc(100% - 28px);
   display: flex;
@@ -74,6 +76,12 @@
   gap: 12px;
   min-width: 0;
   flex: 1;
+}
+
+.spotlight-card-body img {
+  pointer-events: none;
+  -webkit-user-drag: none;
+  user-select: none;
 }
 
 .spotlight-text-block {

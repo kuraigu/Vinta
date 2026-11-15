@@ -51,11 +51,10 @@ type SatelliteBounds struct {
 
 // SetHitRects updates the list of physical pixel rectangles that receive mouse input.
 func (a *App) SetHitRects(rects []HitRect) {
-	a.pillHitMu.Lock()
-	a.pillHitRects = make([]pillHitBounds, 0, len(rects))
+	nextRects := make([]pillHitBounds, 0, len(rects))
 	for _, r := range rects {
 		if r.Width > 0 && r.Height > 0 {
-			a.pillHitRects = append(a.pillHitRects, pillHitBounds{
+			nextRects = append(nextRects, pillHitBounds{
 				left:   int32(r.Left),
 				top:    int32(r.Top),
 				right:  int32(r.Left + r.Width),
@@ -63,14 +62,31 @@ func (a *App) SetHitRects(rects []HitRect) {
 			})
 		}
 	}
+
+	a.pillHitMu.Lock()
+	changed := len(nextRects) != len(a.pillHitRects)
+	if !changed {
+		for i := range nextRects {
+			if nextRects[i] != a.pillHitRects[i] {
+				changed = true
+				break
+			}
+		}
+	}
+	if changed {
+		a.pillHitRects = nextRects
+		a.hitRectsVersion++
+	}
 	a.pillHitMu.Unlock()
 
-	activeIslandMu.Lock()
-	if activeIslandHwnd != 0 {
-		activeIslandRects = make([]pillHitBounds, len(a.pillHitRects))
-		copy(activeIslandRects, a.pillHitRects)
+	if changed {
+		activeIslandMu.Lock()
+		if activeIslandHwnd != 0 {
+			activeIslandRects = make([]pillHitBounds, len(nextRects))
+			copy(activeIslandRects, nextRects)
+		}
+		activeIslandMu.Unlock()
 	}
-	activeIslandMu.Unlock()
 
 	if len(rects) > 0 {
 		a.initialShowOnce.Do(func() {
@@ -79,6 +95,21 @@ func (a *App) SetHitRects(rects []HitRect) {
 			}
 			if a.window != nil {
 				a.window.Show()
+			}
+			if h := a.getHwnd(); h != 0 {
+				a.pillHitMu.Lock()
+				shouldBeTransparent := !a.isForceInteractive && !a.isCurrentlyInteractive
+				a.hitRectsVersion++
+				a.pillHitMu.Unlock()
+				if shouldBeTransparent {
+					gwl := int32(GWL_EXSTYLE)
+					style, _, _ := procGetWindowLong.Call(h, uintptr(gwl))
+					if (style & WS_EX_TRANSPARENT) == 0 {
+						style |= WS_EX_LAYERED | WS_EX_TRANSPARENT
+						_, _, _ = procSetWindowLong.Call(h, uintptr(gwl), style)
+					}
+				}
+				_, _, _ = procSetLayeredWindowAttrs.Call(h, 0, 255, 2)
 			}
 		})
 	}
@@ -106,7 +137,11 @@ func (a *App) UpdateIslandRect(x, y, w, h float64) {
 func (a *App) SetForceInteractive(active bool) {
 	a.pillHitMu.Lock()
 	a.isForceInteractive = active
+	a.hitRectsVersion++
 	outbound := a.isOutboundDragging
+	if !outbound {
+		a.isCurrentlyInteractive = active
+	}
 	a.pillHitMu.Unlock()
 
 	if outbound {
@@ -116,15 +151,12 @@ func (a *App) SetForceInteractive(active bool) {
 	if hwnd == 0 {
 		return
 	}
-	gwl := int32(GWL_EXSTYLE)
-	style, _, _ := procGetWindowLong.Call(hwnd, uintptr(gwl))
 	if active {
-		a.isCurrentlyInteractive = true
+		gwl := int32(GWL_EXSTYLE)
+		style, _, _ := procGetWindowLong.Call(hwnd, uintptr(gwl))
 		style &^= WS_EX_TRANSPARENT
 		_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwl), style)
 		_, _, _ = procSetLayeredWindowAttrs.Call(hwnd, 0, 255, 2)
-	} else {
-		a.isCurrentlyInteractive = false
 	}
 }
 
@@ -139,6 +171,8 @@ func (a *App) IsOutboundDragging() bool {
 func (a *App) setOutboundDragging(active bool) {
 	a.pillHitMu.Lock()
 	a.isOutboundDragging = active
+	a.isCurrentlyInteractive = !active
+	a.hitRectsVersion++
 	a.pillHitMu.Unlock()
 
 	hwnd := a.getHwnd()
@@ -148,12 +182,10 @@ func (a *App) setOutboundDragging(active bool) {
 	gwl := int32(GWL_EXSTYLE)
 	style, _, _ := procGetWindowLong.Call(hwnd, uintptr(gwl))
 	if active {
-		a.isCurrentlyInteractive = false
 		style |= WS_EX_LAYERED | WS_EX_TRANSPARENT
 		_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwl), style)
 		_, _, _ = procSetLayeredWindowAttrs.Call(hwnd, 0, 255, 2)
 	} else {
-		a.isCurrentlyInteractive = true
 		style &^= WS_EX_TRANSPARENT
 		_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwl), style)
 		_, _, _ = procSetLayeredWindowAttrs.Call(hwnd, 0, 255, 2)
@@ -169,7 +201,13 @@ func (a *App) startHitTestingLoop(hwnd uintptr) {
 		defer ticker.Stop()
 
 		missCount := 0
+		hitCount := 0
 		forceOutsideCount := 0
+		var rects []pillHitBounds
+		var lastPt point32
+		hasLastPt := false
+		lastRectsVersion := ^uint64(0)
+		verifiedStyle := false
 
 		for range ticker.C {
 			if hwnd == 0 {
@@ -183,7 +221,13 @@ func (a *App) startHitTestingLoop(hwnd uintptr) {
 			a.pillHitMu.RLock()
 			outbound := a.isOutboundDragging
 			force := a.isForceInteractive
-			rects := make([]pillHitBounds, len(a.pillHitRects))
+			rectsVer := a.hitRectsVersion
+			nRects := len(a.pillHitRects)
+			if cap(rects) < nRects {
+				rects = make([]pillHitBounds, nRects)
+			} else {
+				rects = rects[:nRects]
+			}
 			copy(rects, a.pillHitRects)
 			a.pillHitMu.RUnlock()
 
@@ -194,6 +238,20 @@ func (a *App) startHitTestingLoop(hwnd uintptr) {
 					var pt point32
 					ret, _, _ := procGetCursorPos.Call(uintptr(unsafe.Pointer(&pt)))
 					if ret != 0 {
+						// Only short-circuit stationary cursors after the 8-frame miss grace window
+						// or after force mode settles. Skipping earlier freezes missCount below 8
+						// and leaves WS_EX_TRANSPARENT off until the mouse moves again.
+						if rectsVer != lastRectsVersion {
+							verifiedStyle = false
+							hitCount = 0
+							missCount = 0
+						} else if hasLastPt && pt.X == lastPt.X && pt.Y == lastPt.Y && verifiedStyle && !force && (missCount >= 8 || hitCount > 4) {
+							continue
+						}
+						lastPt = pt
+						hasLastPt = true
+						lastRectsVersion = rectsVer
+
 						retScreen, _, _ := procScreenToClient.Call(hwnd, uintptr(unsafe.Pointer(&pt)))
 						if retScreen != 0 {
 							for _, rect := range rects {
@@ -232,40 +290,56 @@ func (a *App) startHitTestingLoop(hwnd uintptr) {
 				}
 			}
 
-			gwl := int32(GWL_EXSTYLE)
-			style, _, _ := procGetWindowLong.Call(hwnd, uintptr(gwl))
-			hasTransparent := (style & WS_EX_TRANSPARENT) != 0
+			a.pillHitMu.RLock()
+			currInteractive := a.isCurrentlyInteractive
+			a.pillHitMu.RUnlock()
 
-			needsUpdate := false
 			if isHit {
 				missCount = 0
-				if hasTransparent {
-					style &^= WS_EX_TRANSPARENT
-					needsUpdate = true
+				hitCount++
+				if currInteractive && hitCount > 1 && verifiedStyle {
+					continue
 				}
 			} else {
+				hitCount = 0
 				missCount++
 				// Hold interactive state for an ~120ms grace window (8 frames at 60Hz)
 				// to allow swift cursor motion across satellite gaps without dropping clicks.
 				if missCount < 8 {
 					continue
 				}
-
-				if !hasTransparent {
-					// Never switch to WS_EX_TRANSPARENT while the left mouse button is held down during an inbound drag,
-					// because changing window styles mid-drag causes OLE to lose DragLeave/Drop synchronization and lock up File Explorer.
-					if !outbound {
-						if lmbState, _, _ := procGetAsyncKeyState.Call(0x01); (lmbState & 0x8000) != 0 {
-							continue
-						}
-					}
-					style |= WS_EX_TRANSPARENT
-					needsUpdate = true
+				if !currInteractive && missCount > 8 && verifiedStyle {
+					continue
 				}
 			}
 
+			gwl := int32(GWL_EXSTYLE)
+			style, _, _ := procGetWindowLong.Call(hwnd, uintptr(gwl))
+			hasTransparent := (style & WS_EX_TRANSPARENT) != 0
+			verifiedStyle = true
+
+			needsUpdate := false
+			if isHit {
+				if hasTransparent {
+					style &^= WS_EX_TRANSPARENT
+					needsUpdate = true
+				}
+			} else if !hasTransparent {
+				// Never switch to WS_EX_TRANSPARENT while the left mouse button is held down during an inbound drag,
+				// because changing window styles mid-drag causes OLE to lose DragLeave/Drop synchronization and lock up File Explorer.
+				if !outbound {
+					if lmbState, _, _ := procGetAsyncKeyState.Call(0x01); (lmbState & 0x8000) != 0 {
+						continue
+					}
+				}
+				style |= WS_EX_TRANSPARENT
+				needsUpdate = true
+			}
+
+			a.pillHitMu.Lock()
+			a.isCurrentlyInteractive = isHit
+			a.pillHitMu.Unlock()
 			if needsUpdate {
-				a.isCurrentlyInteractive = isHit
 				_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwl), style)
 				if isHit {
 					_, _, _ = procSetLayeredWindowAttrs.Call(hwnd, 0, 255, 2)

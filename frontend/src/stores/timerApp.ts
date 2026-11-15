@@ -21,7 +21,8 @@ import {
   timeFormatStore,
   alarmSoundPresetStore,
   alarmVolumeStore,
-  alarmSnoozeMinutesStore
+  alarmSnoozeMinutesStore,
+  pageVisibilityStore
 } from './settings'
 
 export type TimerAppTab = 'timer' | 'stopwatch' | 'focus' | 'alarms'
@@ -1002,8 +1003,14 @@ function formatAlarmRepeatDescription(
 
 /**
  * Checks wall clock against registered and snoozed alarms.
+ * Do not gate on pageVisibilityStore.timer: hiding the Timer nav tab must not silence alarms.
  */
 function checkAlarmsClock(): void {
+  const state = get(timerAppStore)
+  const hasEnabledAlarm =
+    state.alarms.some((a) => a.enabled) || state.snoozedAlarms.length > 0
+  if (!hasEnabledAlarm) return
+
   const now = new Date()
   const currentDay = now.getDay() // 0 to 6
   const hrs = now.getHours().toString().padStart(2, '0')
@@ -1011,8 +1018,6 @@ function checkAlarmsClock(): void {
   const currentTime = `${hrs}:${mins}`
   const todayStr = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')}`
   const nowTimestamp = now.getTime()
-
-  const state = get(timerAppStore)
 
   // 1. Check snoozed alarms ready to ring again
   const pendingSnoozes = state.snoozedAlarms.filter(
@@ -1140,9 +1145,19 @@ function checkAlarmsClock(): void {
   }
 }
 
-// Start alarms background check every 3 seconds
+// Start alarms background check only while at least one alarm is enabled or snoozed
+let alarmClockInterval: ReturnType<typeof setInterval> | null = null
 if (typeof setInterval !== 'undefined') {
-  setInterval(checkAlarmsClock, 3000)
+  timerAppStore.subscribe((state) => {
+    const needsCheck =
+      state.alarms.some((a) => a.enabled) || state.snoozedAlarms.length > 0
+    if (needsCheck && !alarmClockInterval) {
+      alarmClockInterval = setInterval(checkAlarmsClock, 3000)
+    } else if (!needsCheck && alarmClockInterval) {
+      clearInterval(alarmClockInterval)
+      alarmClockInterval = null
+    }
+  })
 }
 
 /**

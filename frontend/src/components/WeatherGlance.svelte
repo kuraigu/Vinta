@@ -183,20 +183,21 @@
         <h1 class="hero-banner-username">{userName}</h1>
       {/if}
       <div class="hero-banner-info-stack">
-        {#if weather}
-          <div class="hero-banner-weather-row">
-            <span class="hero-weather-temp">{displayTemp.val}°{unitLetter}</span
-            >
-            <span class="sub-divider">•</span>
-            <span class="hero-weather-cond">{bannerConditionTitle}</span>
-          </div>
+        <div class="hero-banner-weather-row">
+          <span class="hero-weather-temp">
+            {weather ? `${displayTemp.val}°${unitLetter}` : `--°${unitLetter}`}
+          </span>
+          <span class="sub-divider">•</span>
+          <span class="hero-weather-cond">
+            {weather ? bannerConditionTitle : $tStore('common.loading')}
+          </span>
+        </div>
+        <div class="hero-banner-loc-row">
           {#if $weatherLocationStore.name || shortCityName}
-            <div class="hero-banner-loc-row">
-              <MapPin size={10} class="loc-pin" />
-              <span>{$weatherLocationStore.name || shortCityName}</span>
-            </div>
+            <MapPin size={10} class="loc-pin" />
           {/if}
-        {/if}
+          <span>{$weatherLocationStore.name || shortCityName || '\u00A0'}</span>
+        </div>
 
         {#if timeText}
           <div class="hero-banner-time-row">

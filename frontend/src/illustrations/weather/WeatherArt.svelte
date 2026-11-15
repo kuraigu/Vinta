@@ -1,4 +1,7 @@
 <script lang="ts">
+  import { onMount, onDestroy } from 'svelte'
+  import { isIslandHiddenStore } from '../../store'
+
   /**
    * WeatherArt
    *
@@ -26,13 +29,38 @@
     monochrome?: boolean
     class?: string
   } = $props()
+
+  let heroEl = $state<HTMLDivElement | null>(null)
+  let isInView = $state(true)
+  let observer: IntersectionObserver | null = null
+
+  onMount(() => {
+    if (heroEl && typeof IntersectionObserver !== 'undefined') {
+      observer = new IntersectionObserver(
+        (entries) => {
+          isInView = entries[0]?.isIntersecting ?? true
+        },
+        { threshold: 0.01 }
+      )
+      observer.observe(heroEl)
+    }
+  })
+
+  onDestroy(() => {
+    observer?.disconnect()
+    observer = null
+  })
 </script>
 
 {#if variant === 'hero'}
   <!-- =========================================================================
        HERO ANIMATED VINTA MASCOT ARTWORK (Banner Cards and Full Weather Page)
        ========================================================================= -->
-  <div class="weather-art-hero {className}">
+  <div
+    bind:this={heroEl}
+    class="weather-art-hero {className}"
+    class:is-paused={!isInView || $isIslandHiddenStore}
+  >
     <svg class="hero-svg" viewBox="0 0 120 100" aria-label="{type} weather">
       <defs>
         <!-- Vinta Mascot Clip Paths -->
@@ -47,6 +75,15 @@
 
         <!-- Reusable Vinta Robot Base Chassis (Centered at 60, 62) -->
         <g id="vintaBotChassis">
+          <!-- Soft Vector Drop Shadow Beneath Chassis -->
+          <ellipse
+            cx="60"
+            cy="89"
+            rx="22"
+            ry="4.5"
+            fill="rgba(15, 23, 42, 0.35)"
+          />
+
           <!-- Side Ear Pods (Split Two-Tone Slate) -->
           <g clip-path="url(#vintaEarsClip)">
             <rect x="27" y="50" width="66" height="11" fill="#68788e" />
@@ -139,37 +176,6 @@
           <stop offset="75%" stop-color="#e2e8f0" stop-opacity="0.85" />
           <stop offset="100%" stop-color="#cbd5e1" stop-opacity="0" />
         </linearGradient>
-
-        <!-- Signature Vinta Golden Face Glow -->
-        <filter id="vintaEyeGlow" x="-40%" y="-40%" width="180%" height="180%">
-          <feDropShadow
-            dx="0"
-            dy="0"
-            stdDeviation="2.2"
-            flood-color="#facc15"
-            flood-opacity="0.85"
-          />
-        </filter>
-
-        <filter id="amberGlow" x="-30%" y="-30%" width="160%" height="160%">
-          <feDropShadow
-            dx="0"
-            dy="0"
-            stdDeviation="2"
-            flood-color="#facc15"
-            flood-opacity="0.9"
-          />
-        </filter>
-
-        <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow
-            dx="0"
-            dy="5"
-            stdDeviation="5"
-            flood-color="#0f172a"
-            flood-opacity="0.35"
-          />
-        </filter>
       </defs>
 
       {#if type === 'sunny'}
@@ -205,7 +211,7 @@
         </g>
 
         <!-- Vinta Mascot Character -->
-        <g class="anim-float-hot" filter="url(#softShadow)">
+        <g class="anim-float-hot">
           <use href="#vintaBotChassis" />
 
           <!-- Heat Flush Cheeks -->
@@ -228,7 +234,6 @@
 
           <!-- Squinting Golden Eyes & Overheated Wavy Mouth -->
           <g
-            filter="url(#vintaEyeGlow)"
             stroke="#facc15"
             stroke-width="2.6"
             stroke-linecap="round"
@@ -274,16 +279,14 @@
           style="transform-origin: 84px 26px;"
           d="M 86 10 C 75 10 66 19 66 30 C 66 37 70 44 76 47 C 72 44 70 39 70 34 C 70 24 78 16 88 16 C 91 16 94 17 97 19 C 94 13 90 10 86 10 Z"
           fill="url(#moonGrad)"
-          filter="url(#amberGlow)"
         />
 
         <!-- Sleeping Vinta Mascot -->
-        <g class="anim-float-sleep" filter="url(#softShadow)">
+        <g class="anim-float-sleep">
           <use href="#vintaBotChassis" />
 
           <!-- Peaceful Sleeping Golden Arcs & Breathing Mouth -->
           <g
-            filter="url(#vintaEyeGlow)"
             stroke="#facc15"
             stroke-width="2.6"
             stroke-linecap="round"
@@ -318,13 +321,7 @@
         <!-- ===============================================================
              CLOUDY: Peeking Sun + Drifting Fluffy Clouds + Signature Vinta Bot
              =============================================================== -->
-        <circle
-          cx="34"
-          cy="24"
-          r="14"
-          fill="url(#sunCoreGrad)"
-          filter="url(#amberGlow)"
-        />
+        <circle cx="34" cy="24" r="14" fill="url(#sunCoreGrad)" />
 
         <!-- Background Cloud Puff -->
         <path
@@ -335,14 +332,10 @@
         />
 
         <!-- Vinta Mascot with Exact Signature Squircle Eyes & Filled Smile -->
-        <g class="anim-float-calm" filter="url(#softShadow)">
+        <g class="anim-float-calm">
           <use href="#vintaBotChassis" />
 
-          <g
-            class="anim-look-around"
-            filter="url(#vintaEyeGlow)"
-            fill="#facc15"
-          >
+          <g class="anim-look-around" fill="#facc15">
             <!-- Left & Right Signature Rounded Squircle Eyes -->
             <rect x="43" y="53" width="13" height="13" rx="5.5" />
             <rect x="64" y="53" width="13" height="13" rx="5.5" />
@@ -356,7 +349,6 @@
           class="anim-cloud-drift"
           d="M 62 48 A 8 8 0 0 1 55 40 A 9 9 0 0 1 65 31 A 11 11 0 0 1 84 29 A 10 10 0 0 1 95 39 A 8 8 0 0 1 95 48 Z"
           fill="url(#cloudLightGrad)"
-          filter="url(#softShadow)"
         />
       {:else if type === 'cloudy-night'}
         <!-- ===============================================================
@@ -371,18 +363,13 @@
         <path
           d="M 42 10 C 33 10 26 17 26 26 C 26 32 29 37 34 40 C 31 37 29 33 29 29 C 29 21 35 15 43 15 C 46 15 48 16 50 17 C 48 12 45 10 42 10 Z"
           fill="url(#moonGrad)"
-          filter="url(#amberGlow)"
         />
 
         <!-- Vinta Mascot with Happy Nocturnal Expression -->
-        <g class="anim-float-calm" filter="url(#softShadow)">
+        <g class="anim-float-calm">
           <use href="#vintaBotChassis" />
 
-          <g
-            class="anim-look-around"
-            filter="url(#vintaEyeGlow)"
-            fill="#facc15"
-          >
+          <g class="anim-look-around" fill="#facc15">
             <rect x="43" y="53.5" width="13" height="12.5" rx="5.5" />
             <rect x="64" y="53.5" width="13" height="12.5" rx="5.5" />
             <path d="M 52.5 69 Q 60 70.5 67.5 69 C 66.5 75 53.5 75 52.5 69 Z" />
@@ -396,7 +383,6 @@
           fill="url(#cloudNightLitGrad)"
           stroke="rgba(226, 232, 240, 0.38)"
           stroke-width="0.8"
-          filter="url(#softShadow)"
         />
       {:else if type === 'rain'}
         <!-- ===============================================================
@@ -427,11 +413,11 @@
         </g>
 
         <!-- Vinta Mascot Sheltering Under Umbrella -->
-        <g class="anim-float-calm" filter="url(#softShadow)">
+        <g class="anim-float-calm">
           <use href="#vintaBotChassis" />
 
           <!-- Pensive / Gloomy Golden Eyes & Pout -->
-          <g filter="url(#vintaEyeGlow)" fill="#facc15">
+          <g fill="#facc15">
             <!-- Flat-topped Droopy Squircle Eyes -->
             <path
               d="M 43 57 L 56 59 L 56 63 A 4 4 0 0 1 52 67 L 47 67 A 4 4 0 0 1 43 63 Z"
@@ -474,7 +460,6 @@
           fill="url(#cloudNightLitGrad)"
           stroke="rgba(226, 232, 240, 0.32)"
           stroke-width="0.8"
-          filter="url(#softShadow)"
         />
 
         <!-- Flashing Lightning Bolts Left & Right -->
@@ -482,21 +467,19 @@
           class="anim-lightning-1"
           points="27,28 17,46 26,46 20,64 36,42 26,42"
           fill="#facc15"
-          filter="url(#amberGlow)"
         />
         <polygon
           class="anim-lightning-2"
           points="89,26 80,43 88,43 83,59 97,39 88,39"
           fill="#fef08a"
-          filter="url(#amberGlow)"
         />
 
         <!-- Startled Jittering Vinta Mascot -->
-        <g class="anim-shock-shake" filter="url(#softShadow)">
+        <g class="anim-shock-shake">
           <use href="#vintaBotChassis" />
 
           <!-- Shocked Hollow Golden Squircle Eyes & Surprised Mouth -->
-          <g filter="url(#vintaEyeGlow)">
+          <g>
             <rect
               x="44"
               y="54"
@@ -539,7 +522,7 @@
         </g>
 
         <!-- Chilly Shivering Vinta Mascot with Knit Beanie -->
-        <g class="anim-shiver-cold" filter="url(#softShadow)">
+        <g class="anim-shiver-cold">
           <use href="#vintaBotChassis" />
 
           <!-- Rosy Cold Cheeks -->
@@ -561,7 +544,7 @@
           />
 
           <!-- Chilly Golden Squircle Eyes & Shivering Wavy Mouth -->
-          <g filter="url(#vintaEyeGlow)">
+          <g>
             <rect
               x="44"
               y="54"
@@ -657,11 +640,11 @@
         />
 
         <!-- Vinta Mascot Peering Through the Mist -->
-        <g class="anim-float-calm" filter="url(#softShadow)">
+        <g class="anim-float-calm">
           <use href="#vintaBotChassis" />
 
           <!-- Narrowed Golden Squircle Eyes Scanning Left & Right -->
-          <g class="anim-scan-eyes" filter="url(#vintaEyeGlow)" fill="#facc15">
+          <g class="anim-scan-eyes" fill="#facc15">
             <rect x="43" y="56.5" width="12.5" height="6.5" rx="3.2" />
             <rect x="64.5" y="56.5" width="12.5" height="6.5" rx="3.2" />
             <path
@@ -855,6 +838,11 @@
     height: 100%;
     pointer-events: none;
     user-select: none;
+    contain: layout style paint;
+  }
+
+  .weather-art-hero.is-paused :global(*) {
+    animation-play-state: paused !important;
   }
 
   .hero-svg {

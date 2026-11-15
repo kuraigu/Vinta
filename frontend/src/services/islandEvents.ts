@@ -42,6 +42,7 @@ import {
   notifAutoWakeStore,
   notifSatelliteEnabledStore,
   pageVisibilityStore,
+  homeWidgetsVisibilityStore,
   activeSettingsTabStore,
   updateInfoStore,
   autoCheckUpdatesStore,
@@ -310,7 +311,13 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
     const isIncomingAvailable =
       data.isAvailable !== false && hasValidTrackInfo && hasPlaybackControls
     const isIncomingPlaying = Boolean(data.isPlaying) && isIncomingAvailable
-    if (callbacks.getIsPageDormant() && !isIncomingPlaying) return
+    if (
+      callbacks.getIsPageDormant() &&
+      !isIncomingPlaying &&
+      !get(globalMediaStore).isPlaying
+    ) {
+      return
+    }
 
     globalMediaStore.update((m) => {
       const isLocked = Boolean(
@@ -387,7 +394,8 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
     if (
       callbacks.getIsHidden() ||
       callbacks.getIsPageDormant() ||
-      callbacks.getActivePage() !== MediaPage
+      callbacks.getActivePage() !== MediaPage ||
+      get(pageVisibilityStore).media === false
     ) {
       return
     }
@@ -651,12 +659,27 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
     RequestMediaUpdate()
   }
 
-  // Periodic Hardware Status Polling
-  const updateBattery = () => {
-    if (callbacks.getIsHidden() || get(isSimulatingBatteryStore)) return
+  // Hardware Status Sync: keep battery/wireless active when visible (even minimized),
+  // because WS_EX_NOACTIVATE windows rarely receive focus events and minimal Home renders WiFi/battery.
+  let batteryCapabilityDiscovered = false
+  const updateBattery = (forceDiscovery = false) => {
+    if (get(isSimulatingBatteryStore)) return
+    if (callbacks.getIsHidden() && !forceDiscovery) return
+    const hwVis = get(homeWidgetsVisibilityStore)
+    const pageVis = get(pageVisibilityStore)
+    if (
+      !forceDiscovery &&
+      batteryCapabilityDiscovered &&
+      !hwVis.battery &&
+      !hwVis.actionCenter &&
+      !pageVis.actioncenter
+    ) {
+      return
+    }
     if (typeof GetBatteryStatus === 'function') {
       GetBatteryStatus()
         .then((status) => {
+          batteryCapabilityDiscovered = true
           if (status && !get(isSimulatingBatteryStore)) {
             batteryDataStore.set(status as BatteryData)
           }
@@ -664,11 +687,41 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
         .catch(() => {})
     }
   }
-  updateBattery()
-  const batteryInterval = window.setInterval(updateBattery, 8000)
+  updateBattery(true)
+
+  let cleanupBatteryEvents: (() => void) | undefined
+  const nav = navigator as Navigator & {
+    getBattery?: () => Promise<{
+      addEventListener: (type: string, listener: () => void) => void
+      removeEventListener: (type: string, listener: () => void) => void
+    }>
+  }
+  if (typeof nav.getBattery === 'function') {
+    nav
+      .getBattery()
+      .then((bat) => {
+        const onBatChange = () => updateBattery()
+        bat.addEventListener('levelchange', onBatChange)
+        bat.addEventListener('chargingchange', onBatChange)
+        cleanupBatteryEvents = () => {
+          bat.removeEventListener('levelchange', onBatChange)
+          bat.removeEventListener('chargingchange', onBatChange)
+        }
+      })
+      .catch(() => {})
+  }
+  // Keep a lightweight poll even with BatteryManager so Windows Battery Saver changes still surface.
+  const batteryInterval = window.setInterval(() => {
+    if (!callbacks.getIsHidden()) {
+      updateBattery()
+    }
+  }, 30000)
 
   const updateWireless = () => {
     if (callbacks.getIsHidden() || get(isSimulatingWirelessStore)) return
+    const hwVis = get(homeWidgetsVisibilityStore)
+    const pageVis = get(pageVisibilityStore)
+    if (!hwVis.wireless && !hwVis.actionCenter && !pageVis.actioncenter) return
     if (typeof GetWirelessStatus === 'function') {
       GetWirelessStatus()
         .then((status) => {
@@ -680,11 +733,26 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
     }
   }
   updateWireless()
-  const wirelessInterval = window.setInterval(updateWireless, 10000)
+
+  const handleHardwareFocusOrResync = () => {
+    if (!callbacks.getIsHidden()) {
+      updateBattery()
+      updateWireless()
+    }
+  }
+  window.addEventListener('focus', handleHardwareFocusOrResync)
+
+  const wirelessInterval = window.setInterval(() => {
+    if (!callbacks.getIsHidden()) {
+      updateWireless()
+    }
+  }, 20000)
 
   return () => {
     window.clearInterval(batteryInterval)
+    cleanupBatteryEvents?.()
     window.clearInterval(wirelessInterval)
+    window.removeEventListener('focus', handleHardwareFocusOrResync)
     window.removeEventListener(
       'vinta-navigate-settings',
       handleNavigateSettings

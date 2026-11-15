@@ -921,7 +921,9 @@ export function ToggleMasterAudioMute(): $CancellablePromise<boolean> {
 }
 
 /**
- * TrimMemory flushes unused working-set pages from Vinta and its child WebView2 processes.
+ * TrimMemory flushes unused working-set pages from Vinta and its child WebView2 processes asynchronously.
+ * Requests arriving during the 500ms cooldown or while a trim is running are coalesced into a single timer
+ * so they never drop silently or spawn recursive timer loops.
  */
 export function TrimMemory(): $CancellablePromise<void> {
     return $Call.ByID(1258805264);

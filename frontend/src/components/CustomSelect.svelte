@@ -113,6 +113,7 @@
     if (!isOpen) {
       updateRect()
       searchTerm = ''
+      onSearch?.('')
       setTimeout(() => {
         if (searchInputNode) searchInputNode.focus()
       }, 50)

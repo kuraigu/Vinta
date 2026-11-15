@@ -31,6 +31,27 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+:global(img),
+:global(svg),
+:global(a) {
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+:global(img[draggable='true']),
+:global([draggable='true'] img) {
+  -webkit-user-drag: element;
+}
+
+:global(input),
+:global(textarea),
+:global([contenteditable='true']),
+:global([data-selectable='true']) {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
 .island-container {
   display: flex;
   flex-direction: column;
@@ -51,4 +72,11 @@
 
 :global(.island-wrapper > *) {
   pointer-events: auto;
+}
+
+:global(.vinta-glass) {
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  isolation: isolate;
+  contain: layout style;
 }

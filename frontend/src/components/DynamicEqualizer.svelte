@@ -90,16 +90,22 @@
 
   $effect(handleProgressChangeEffect)
 
+  let lastFrameTime = 0
+  const FRAME_INTERVAL_MS = 45 // ~22 FPS to match 20Hz WASAPI peak updates
+
   function renderLoop(time: number) {
     if (!canvasRef) return
-    if ($isIslandHiddenStore) {
+    if ($isIslandHiddenStore || document.hidden) {
       if (animFrame) {
         cancelAnimationFrame(animFrame)
         animFrame = 0
       }
       return
     }
-    drawFrame(time)
+    if (time - lastFrameTime >= FRAME_INTERVAL_MS) {
+      lastFrameTime = time
+      drawFrame(time)
+    }
     if (isPlaying && !$isIslandHiddenStore) {
       animFrame = requestAnimationFrame(renderLoop)
     }
@@ -236,6 +242,12 @@
     }
   }
 
+  function handleVisibilityChange() {
+    if (!document.hidden && isPlaying && !$isIslandHiddenStore && !animFrame) {
+      animFrame = requestAnimationFrame(renderLoop)
+    }
+  }
+
   onMount(() => {
     updateCanvasSize()
 
@@ -247,10 +259,12 @@
       resizeObserver.observe(canvasRef)
     }
 
+    document.addEventListener('visibilitychange', handleVisibilityChange)
     renderStatic()
   })
 
   onDestroy(() => {
+    document.removeEventListener('visibilitychange', handleVisibilityChange)
     if (animFrame) {
       cancelAnimationFrame(animFrame)
       animFrame = 0
