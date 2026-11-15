@@ -297,6 +297,7 @@ func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 	}()
 
 	a.StartBackgroundUpdateChecker()
+	go a.SyncAutostartOnBoot()
 
 	go func() {
 		time.Sleep(600 * time.Millisecond)

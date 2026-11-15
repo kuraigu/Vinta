@@ -35,6 +35,15 @@ func main() {
 	// Ensure panic recovery is always first in the defer stack
 	defer backend.SetupPanicRecovery()
 
+	// Windows Explorer launches Run entries with C:\Windows\System32 as the working directory.
+	if wd, wdErr := os.Getwd(); wdErr == nil {
+		if sysRoot := os.Getenv("SystemRoot"); sysRoot != "" && strings.EqualFold(filepath.Clean(wd), filepath.Join(filepath.Clean(sysRoot), "System32")) {
+			if exePath, exeErr := os.Executable(); exeErr == nil {
+				_ = os.Chdir(filepath.Dir(exePath))
+			}
+		}
+	}
+
 	backend.SetEmbeddedContributors(contributorsMD)
 
 	// Initialize AppData icon asset safely

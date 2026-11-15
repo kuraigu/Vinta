@@ -2,49 +2,152 @@
 package backend
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"golang.org/x/sys/windows/registry"
 
 	"Vinta/backend/services"
 )
 
-// SetAutostart registers or unregisters the app in Windows Startup Registry.
-func (a *App) SetAutostart(enable bool) error {
-	if isTestModeSync() {
-		return nil
-	}
+const (
+	autostartRunKeyPath             = `Software\Microsoft\Windows\CurrentVersion\Run`
+	autostartStartupApprovedKeyPath = `Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run`
+	autostartValueName              = "Vinta"
+)
 
+type autostartConfig struct {
+	runKeyPath      string
+	approvedKeyPath string
+	valueName       string
+}
+
+func defaultAutostartConfig() autostartConfig {
+	return autostartConfig{
+		runKeyPath:      autostartRunKeyPath,
+		approvedKeyPath: autostartStartupApprovedKeyPath,
+		valueName:       autostartValueName,
+	}
+}
+
+func resolveExecutablePath() (string, error) {
 	exePath, err := os.Executable()
 	if err != nil {
-		return err
+		return "", err
 	}
+	if resolved, err := filepath.EvalSymlinks(exePath); err == nil && resolved != "" {
+		exePath = resolved
+	}
+	return filepath.Clean(exePath), nil
+}
 
-	key, _, err := registry.CreateKey(
+func parseRunCommandExecutable(cmd string) string {
+	trimmed := strings.TrimSpace(cmd)
+	if trimmed == "" {
+		return ""
+	}
+	if strings.HasPrefix(trimmed, `"`) {
+		endIdx := strings.Index(trimmed[1:], `"`)
+		if endIdx <= 0 {
+			return ""
+		}
+		return filepath.Clean(trimmed[1 : endIdx+1])
+	}
+	if spaceIdx := strings.IndexAny(trimmed, " \t"); spaceIdx > 0 {
+		trimmed = trimmed[:spaceIdx]
+	}
+	return filepath.Clean(trimmed)
+}
+
+// isStartupApprovedEnabled inspects Windows Explorer's StartupApproved\Run binary entry.
+// Windows stores a 12-byte REG_BINARY value where byte 0 is the approval flag (even values
+// 0x02 and 0x06 mean enabled; odd values such as 0x03, 0x05, or 0x07 mean disabled via Task
+// Manager or Windows Settings, with bytes 4..11 holding the disabled FILETIME).
+// Returns (exists, enabled); missing entries default to (false, true).
+func isStartupApprovedEnabled(cfg autostartConfig) (bool, bool) {
+	key, err := registry.OpenKey(
 		registry.CURRENT_USER,
-		`Software\Microsoft\Windows\CurrentVersion\Run`,
-		registry.SET_VALUE,
+		cfg.approvedKeyPath,
+		registry.QUERY_VALUE,
 	)
 	if err != nil {
-		return err
+		return false, true
 	}
 	defer func() { _ = key.Close() }()
 
-	if enable {
-		return key.SetStringValue("Vinta", fmt.Sprintf(`"%s"`, exePath))
+	data, _, err := key.GetBinaryValue(cfg.valueName)
+	if err != nil || len(data) == 0 {
+		return false, true
 	}
-	_ = key.DeleteValue("Vinta")
+
+	return true, data[0] == 0x02 || data[0] == 0x06
+}
+
+func setAutostartWithConfig(cfg autostartConfig, enable bool, exePath string) error {
+	if enable {
+		key, _, err := registry.CreateKey(
+			registry.CURRENT_USER,
+			cfg.runKeyPath,
+			registry.SET_VALUE,
+		)
+		if err != nil {
+			return err
+		}
+		err = key.SetStringValue(cfg.valueName, fmt.Sprintf(`"%s"`, exePath))
+		_ = key.Close()
+		if err != nil {
+			return err
+		}
+
+		approvedKey, _, err := registry.CreateKey(
+			registry.CURRENT_USER,
+			cfg.approvedKeyPath,
+			registry.SET_VALUE,
+		)
+		if err != nil {
+			return err
+		}
+		defer func() { _ = approvedKey.Close() }()
+
+		enabledBlob := []byte{0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
+		return approvedKey.SetBinaryValue(cfg.valueName, enabledBlob)
+	}
+
+	if key, err := registry.OpenKey(
+		registry.CURRENT_USER,
+		cfg.runKeyPath,
+		registry.SET_VALUE,
+	); err == nil {
+		err = key.DeleteValue(cfg.valueName)
+		_ = key.Close()
+		if err != nil && !errors.Is(err, registry.ErrNotExist) {
+			return err
+		}
+	} else if !errors.Is(err, registry.ErrNotExist) {
+		return err
+	}
+
+	if approvedKey, err := registry.OpenKey(
+		registry.CURRENT_USER,
+		cfg.approvedKeyPath,
+		registry.SET_VALUE,
+	); err == nil {
+		_ = approvedKey.DeleteValue(cfg.valueName)
+		_ = approvedKey.Close()
+	}
+
 	return nil
 }
 
-// GetAutostart checks whether autostart is currently enabled in Windows Registry.
-func (a *App) GetAutostart() bool {
+func getAutostartWithConfig(cfg autostartConfig) bool {
 	key, err := registry.OpenKey(
 		registry.CURRENT_USER,
-		`Software\Microsoft\Windows\CurrentVersion\Run`,
+		cfg.runKeyPath,
 		registry.QUERY_VALUE,
 	)
 	if err != nil {
@@ -52,8 +155,116 @@ func (a *App) GetAutostart() bool {
 	}
 	defer func() { _ = key.Close() }()
 
-	val, _, err := key.GetStringValue("Vinta")
-	return err == nil && val != ""
+	val, _, err := key.GetStringValue(cfg.valueName)
+	if err != nil || val == "" {
+		return false
+	}
+
+	regExe := parseRunCommandExecutable(val)
+	if regExe == "" {
+		return false
+	}
+	// Check that the registered target exists on disk rather than requiring an exact
+	// os.Executable() match so side-by-side official and dev builds sharing Run\Vinta
+	// both reflect that Windows startup is active.
+	info, err := os.Stat(regExe)
+	if err != nil || info.IsDir() {
+		return false
+	}
+
+	_, approved := isStartupApprovedEnabled(cfg)
+	return approved
+}
+
+func syncAutostartWithConfig(cfg autostartConfig, enabled bool, currentExe string) error {
+	if !enabled || currentExe == "" {
+		return nil
+	}
+
+	if exists, approved := isStartupApprovedEnabled(cfg); exists && !approved {
+		return nil
+	}
+
+	tempDir := filepath.Clean(os.TempDir())
+	if tempDir != "" && strings.HasPrefix(strings.ToLower(currentExe), strings.ToLower(tempDir+string(filepath.Separator))) {
+		return nil
+	}
+
+	key, err := registry.OpenKey(
+		registry.CURRENT_USER,
+		cfg.runKeyPath,
+		registry.QUERY_VALUE,
+	)
+	if err != nil {
+		return setAutostartWithConfig(cfg, true, currentExe)
+	}
+	val, _, valErr := key.GetStringValue(cfg.valueName)
+	_ = key.Close()
+
+	regExe := parseRunCommandExecutable(val)
+	if valErr != nil || regExe == "" {
+		return setAutostartWithConfig(cfg, true, currentExe)
+	}
+
+	if info, statErr := os.Stat(regExe); statErr != nil || info.IsDir() {
+		return setAutostartWithConfig(cfg, true, currentExe)
+	}
+
+	return nil
+}
+
+// SetAutostart registers or unregisters the app in Windows Startup Registry.
+func (a *App) SetAutostart(enable bool) error {
+	if isTestModeSync() {
+		return nil
+	}
+
+	cfg := defaultAutostartConfig()
+	if !enable {
+		return setAutostartWithConfig(cfg, false, "")
+	}
+
+	exePath, err := resolveExecutablePath()
+	if err != nil {
+		return err
+	}
+	return setAutostartWithConfig(cfg, true, exePath)
+}
+
+// GetAutostart checks whether autostart is currently enabled and valid in Windows Registry.
+func (a *App) GetAutostart() bool {
+	return getAutostartWithConfig(defaultAutostartConfig())
+}
+
+// SyncAutostartOnBoot repairs missing or broken Run registry paths when autostart is enabled
+// in settings, while respecting explicit user disables in Windows StartupApproved and leaving
+// any existing valid executable path untouched.
+func (a *App) SyncAutostartOnBoot() {
+	if isTestModeSync() {
+		return
+	}
+
+	settingsJSON, err := a.GetSettings()
+	if err != nil || settingsJSON == "" || settingsJSON == "{}" {
+		return
+	}
+
+	var m map[string]any
+	if json.Unmarshal([]byte(settingsJSON), &m) != nil {
+		return
+	}
+
+	enabled, ok := m["vinta_autostart"].(bool)
+	if !ok || !enabled {
+		return
+	}
+
+	currentExe, err := resolveExecutablePath()
+	if err != nil {
+		return
+	}
+
+	_ = syncAutostartWithConfig(defaultAutostartConfig(), enabled, currentExe)
 }
 
 // OpenWindowsSettings launches Windows Settings flyouts and pages corresponding to the target category.

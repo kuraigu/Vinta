@@ -193,7 +193,7 @@ export function GetAudioEndpoints(): $CancellablePromise<services$0.AudioEndpoin
 }
 
 /**
- * GetAutostart checks whether autostart is currently enabled in Windows Registry.
+ * GetAutostart checks whether autostart is currently enabled and valid in Windows Registry.
  */
 export function GetAutostart(): $CancellablePromise<boolean> {
     return $Call.ByID(982008890);
@@ -911,6 +911,15 @@ export function StripShelfImageMetadata(paths: string[]): $CancellablePromise<$m
     return $Call.ByID(4085277947, paths).then(($result: any) => {
         return $$createType20($result);
     });
+}
+
+/**
+ * SyncAutostartOnBoot repairs missing or broken Run registry paths when autostart is enabled
+ * in settings, while respecting explicit user disables in Windows StartupApproved and leaving
+ * any existing valid executable path untouched.
+ */
+export function SyncAutostartOnBoot(): $CancellablePromise<void> {
+    return $Call.ByID(400711656);
 }
 
 /**
