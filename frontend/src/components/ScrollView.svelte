@@ -14,8 +14,11 @@
     enableSwipe?: boolean
     hideScrollbar?: boolean
     showScrollIndicators?: boolean
+    hideIndicatorOnScroll?: boolean
     scrollIndicatorLabel?: string
+    scrollIndicatorAriaLabel?: string
     scrollIndicatorCompact?: boolean
+    scrollStep?: number
     ignoreSelector?: string
     onscroll?: (e: Event) => void
     element?: HTMLElement
@@ -27,8 +30,11 @@
     enableSwipe = true,
     hideScrollbar = false,
     showScrollIndicators = false,
+    hideIndicatorOnScroll = false,
     scrollIndicatorLabel,
+    scrollIndicatorAriaLabel,
     scrollIndicatorCompact = false,
+    scrollStep = 110,
     ignoreSelector = 'input, select, textarea, range, .custom-select, .no-swipe, .no-drag',
     onscroll,
     element = $bindable()
@@ -36,7 +42,10 @@
 
   let canScrollUp = $state(false)
   let canScrollDown = $state(false)
+  let isScrolledDown = $state(false)
   let resizeObserver: ResizeObserver | null = null
+  let mutationObserver: MutationObserver | null = null
+  let scrollStateRaf: number | null = null
 
   let swipeOptions = $derived({
     axis: 'y' as const,
@@ -48,39 +57,62 @@
     if (!element || !showScrollIndicators) {
       canScrollUp = false
       canScrollDown = false
+      isScrolledDown = false
       return
     }
     const { scrollTop, scrollHeight, clientHeight } = element
     canScrollUp = scrollTop > 4
-    canScrollDown = scrollHeight - scrollTop - clientHeight > 4
+    isScrolledDown = scrollTop > 20
+    canScrollDown = scrollHeight - scrollTop - clientHeight > 8
   }
 
   function handleInternalScroll(e: Event) {
-    if (showScrollIndicators) {
-      updateScrollState()
+    if (showScrollIndicators && scrollStateRaf === null) {
+      scrollStateRaf = requestAnimationFrame(() => {
+        scrollStateRaf = null
+        updateScrollState()
+      })
     }
     onscroll?.(e)
   }
 
   function scrollDownStep(e: MouseEvent) {
     e.stopPropagation()
-    element?.scrollBy({ top: 110, behavior: 'smooth' })
+    element?.scrollBy({ top: scrollStep, behavior: 'smooth' })
   }
 
   onMount(() => {
     if (showScrollIndicators && element) {
+      const container = element
       updateScrollState()
+      const observeChildren = () => {
+        if (!resizeObserver) return
+        for (const child of Array.from(container.children)) {
+          resizeObserver.observe(child)
+        }
+      }
       if (typeof ResizeObserver !== 'undefined') {
         resizeObserver = new ResizeObserver(() => updateScrollState())
-        resizeObserver.observe(element)
-        if (element.firstElementChild) {
-          resizeObserver.observe(element.firstElementChild)
-        }
+        resizeObserver.observe(container)
+        observeChildren()
+      }
+      if (typeof MutationObserver !== 'undefined') {
+        mutationObserver = new MutationObserver(() => {
+          observeChildren()
+          updateScrollState()
+        })
+        mutationObserver.observe(container, { childList: true })
       }
     }
   })
 
   onDestroy(() => {
+    if (scrollStateRaf !== null) {
+      cancelAnimationFrame(scrollStateRaf)
+      scrollStateRaf = null
+    }
+    mutationObserver?.disconnect()
+    mutationObserver = null
     resizeObserver?.disconnect()
     resizeObserver = null
   })
@@ -103,13 +135,13 @@
         {@render children()}
       {/if}
     </div>
-    {#if canScrollDown}
-      <ScrollIndicator
-        onclick={scrollDownStep}
-        label={scrollIndicatorLabel}
-        compact={scrollIndicatorCompact}
-      />
-    {/if}
+    <ScrollIndicator
+      visible={canScrollDown && (!hideIndicatorOnScroll || !isScrolledDown)}
+      onclick={scrollDownStep}
+      label={scrollIndicatorLabel}
+      ariaLabel={scrollIndicatorAriaLabel}
+      compact={scrollIndicatorCompact}
+    />
   </div>
 {:else}
   <div

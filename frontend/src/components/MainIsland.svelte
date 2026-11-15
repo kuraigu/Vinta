@@ -520,6 +520,10 @@
       ></div>
     {/key}
   {/if}
+
+  {#if isTransitionGlow}
+    <div class="transition-glow-ring" aria-hidden="true"></div>
+  {/if}
 </div>
 
 <style src="./styles/MainIsland.css"></style>

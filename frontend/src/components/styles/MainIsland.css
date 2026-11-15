@@ -57,7 +57,6 @@
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
 
-  will-change: width, height, border-radius;
   contain: layout style;
   font-variant-numeric: tabular-nums;
   overflow: hidden;
@@ -245,18 +244,12 @@
   z-index: 10;
 }
 
-@property --angle {
-  syntax: '<angle>';
-  initial-value: 0deg;
-  inherits: false;
-}
-
-@keyframes orbit {
+@keyframes orbit-rotate {
   from {
-    --angle: 0deg;
+    transform: translate(-50%, -50%) rotate(0deg);
   }
   to {
-    --angle: 360deg;
+    transform: translate(-50%, -50%) rotate(360deg);
   }
 }
 
@@ -275,43 +268,49 @@
   }
 }
 
-.island::before {
-  content: '';
+.transition-glow-ring {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  box-shadow: var(--ambient-glow-ring);
-  clip-path: inset(0 -30px -30px -30px);
-  -webkit-mask: conic-gradient(
-    from var(--angle),
-    rgba(0, 0, 0, 0) 0%,
-    rgba(0, 0, 0, 1) 50%,
-    rgba(0, 0, 0, 0) 100%
-  );
-  mask: conic-gradient(
-    from var(--angle),
-    rgba(0, 0, 0, 0) 0%,
-    rgba(0, 0, 0, 1) 50%,
-    rgba(0, 0, 0, 0) 100%
-  );
+  padding: 0 2px 2px 2px;
   pointer-events: none;
-  opacity: 0;
-  filter: drop-shadow(0 4px 10px var(--island-glow-color))
-    drop-shadow(0 2px 4px var(--island-glow-color));
+  overflow: hidden;
   z-index: 10;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  will-change: opacity;
+  animation: fade-glow 3s ease-in-out forwards;
 }
 
-.island.is-transition-glow::before {
-  animation:
-    orbit 3s linear forwards,
-    fade-glow 3s ease-in-out forwards;
+.transition-glow-ring::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 220%;
+  aspect-ratio: 1;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0%,
+    var(--island-glow-color) 25%,
+    transparent 50%,
+    transparent 100%
+  );
+  will-change: transform;
+  animation: orbit-rotate 3s linear forwards;
 }
 
 .island:not(.expanded) {
   cursor: pointer;
 }
 
-.island:not(.expanded):not(.is-hidden):hover::before {
+.island:not(.expanded):not(.is-hidden):hover .transition-glow-ring {
   opacity: 0 !important;
   animation: none !important;
 }
@@ -352,6 +351,14 @@
 
 .island.is-transitioning :global(*) {
   animation-play-state: paused !important;
+}
+
+.island.is-hidden .content :global(*) {
+  animation-play-state: paused !important;
+}
+
+.island.is-hidden .content {
+  visibility: hidden;
 }
 
 .view.has-dock {

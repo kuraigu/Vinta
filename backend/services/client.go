@@ -404,8 +404,12 @@ var (
 // SetAppHidden informs the native services whether Vinta is currently hidden to throttle high-frequency events.
 func SetAppHidden(hidden bool) {
 	hiddenMu.Lock()
+	wasHidden := isAppHidden
 	isAppHidden = hidden
 	hiddenMu.Unlock()
+	if wasHidden && !hidden {
+		go RequestMediaUpdate()
+	}
 }
 
 // ResetMediaArtCacheState flushes in-memory media artwork deduplication state.

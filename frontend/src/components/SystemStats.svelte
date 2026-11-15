@@ -47,14 +47,18 @@
   const radius = 22
   const circumference = 2 * Math.PI * radius
 
+  let cpuPctRounded = $derived(Math.round(telemetry.cpuPercent))
+  let ramPctRounded = $derived(Math.round(telemetry.ramPercent))
+  let gpuPctRounded = $derived(Math.round(telemetry.gpuPercent))
+
   let cpuOffset = $derived(
-    circumference - (telemetry.cpuPercent / 100) * circumference
+    circumference - (cpuPctRounded / 100) * circumference
   )
   let ramOffset = $derived(
-    circumference - (telemetry.ramPercent / 100) * circumference
+    circumference - (ramPctRounded / 100) * circumference
   )
   let gpuOffset = $derived(
-    circumference - (telemetry.gpuPercent / 100) * circumference
+    circumference - (gpuPctRounded / 100) * circumference
   )
 </script>
 

@@ -74,8 +74,9 @@
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 6px;
+  min-height: 18px;
   margin-top: 0;
   padding: 0;
   background: transparent;
@@ -85,28 +86,36 @@
   color: rgba(255, 255, 255, 0.92);
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
   width: 100%;
+  overflow: hidden;
 }
 
 .hero-weather-temp {
   font-weight: 800;
   font-variant-numeric: tabular-nums;
   color: #ffffff;
+  flex-shrink: 0;
 }
 
 .hero-weather-cond {
   opacity: 0.92;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .hero-banner-loc-row {
   display: inline-flex;
   align-items: center;
   gap: 3px;
+  min-height: 15px;
   font-size: 0.74rem;
   font-weight: 500;
   color: rgba(255, 255, 255, 0.82);
   text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 :global(.hero-banner-loc-row .loc-pin) {

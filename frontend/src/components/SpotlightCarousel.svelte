@@ -18,6 +18,8 @@
     config as settingsConfig
   } from '../pages/SettingsPage.svelte'
   import IconBadge, { type IconBadgeColor } from './IconBadge.svelte'
+  import BakedCanvasLayer from './BakedCanvasLayer.svelte'
+  import { bakeImageToCanvas } from '../services/bakedAnimation'
   import { OpenURL } from '../../bindings/Vinta/backend/app.js'
   import { swipe } from '../utils/useSwipe'
   import { reportFeedback } from '../services/feedbackService'
@@ -299,6 +301,159 @@
       goToIndex(currentIndex, true)
     }
   }
+
+  let enohotelSunSprite: HTMLCanvasElement | null = null
+
+  async function bakeEnohotelBg(
+    ctx: CanvasRenderingContext2D,
+    w: number,
+    h: number,
+    dpr: number
+  ) {
+    const imgCanvas = await bakeImageToCanvas(enohotelBgSvg, w, h, dpr)
+    if (imgCanvas) {
+      ctx.drawImage(imgCanvas, 0, 0, w, h)
+    }
+    const sunSize = 64
+    const sunCanvas = document.createElement('canvas')
+    sunCanvas.width = Math.round(sunSize * dpr)
+    sunCanvas.height = Math.round(sunSize * dpr)
+    const sCtx = sunCanvas.getContext('2d')
+    if (sCtx) {
+      sCtx.setTransform(dpr, 0, 0, dpr, 0, 0)
+      const r = sunSize / 2
+      const grad = sCtx.createRadialGradient(r, r, 0, r, r, r)
+      grad.addColorStop(0, 'rgba(255, 238, 173, 0.95)')
+      grad.addColorStop(0.55, 'rgba(255, 224, 130, 0.45)')
+      grad.addColorStop(1, 'rgba(184, 110, 51, 0)')
+      sCtx.fillStyle = grad
+      sCtx.beginPath()
+      sCtx.arc(r, r, r, 0, Math.PI * 2)
+      sCtx.fill()
+      enohotelSunSprite = sunCanvas
+    }
+  }
+
+  function drawEnohotelAmbient(
+    ctx: CanvasRenderingContext2D,
+    w: number,
+    h: number,
+    t: number,
+    baked: HTMLCanvasElement | null
+  ) {
+    ctx.clearRect(0, 0, w, h)
+    if (baked) {
+      ctx.drawImage(baked, 0, 0, w, h)
+    }
+    // Match SVG preserveAspectRatio="xMidYMid slice"
+    const s = Math.max(w / 320, h / 84)
+    const ox = (w - 320 * s) / 2
+    const oy = (h - 84 * s) / 2
+
+    // Breathing warm golden aura around the portal & cellar floor
+    const sunWave = 0.5 - 0.5 * Math.cos((t / 3.8) * Math.PI * 2)
+    if (enohotelSunSprite) {
+      const sunR = 38 * s * (1 + 0.14 * sunWave)
+      ctx.save()
+      ctx.globalCompositeOperation = 'screen'
+      ctx.globalAlpha = 0.22 + 0.68 * sunWave
+      ctx.drawImage(
+        enohotelSunSprite,
+        ox + 273 * s - sunR,
+        oy + 39 * s - sunR,
+        sunR * 2,
+        sunR * 2
+      )
+      // Subtle floor light-spill breath
+      const floorR = 34 * s * (1 + 0.1 * sunWave)
+      ctx.globalAlpha = 0.12 + 0.35 * sunWave
+      ctx.drawImage(
+        enohotelSunSprite,
+        ox + 258 * s - floorR,
+        oy + 70 * s - floorR * 0.6,
+        floorR * 2,
+        floorR * 1.2
+      )
+      ctx.restore()
+    }
+
+    // Concentric gold rings pulsing & gliding metallic glint
+    const ringWaveA = 0.5 - 0.5 * Math.cos((t / 3.4) * Math.PI * 2)
+    const ringWaveB = 0.5 - 0.5 * Math.cos(((t + 1.2) / 4.2) * Math.PI * 2)
+    const glintAngle =
+      Math.PI + 0.12 + 0.36 * (0.5 - 0.5 * Math.cos((t / 5.0) * Math.PI * 2))
+    ctx.lineCap = 'round'
+
+    ctx.strokeStyle = `rgba(235, 190, 95, ${(0.18 + 0.72 * ringWaveA).toFixed(3)})`
+    ctx.lineWidth = 1.6 * s
+    ctx.beginPath()
+    ctx.arc(
+      ox + 314 * s,
+      oy + 86 * s,
+      68 * s * (1 + 0.025 * ringWaveA),
+      Math.PI,
+      Math.PI * 1.65
+    )
+    ctx.stroke()
+
+    ctx.strokeStyle = `rgba(255, 226, 148, ${(0.4 + 0.55 * ringWaveA).toFixed(3)})`
+    ctx.lineWidth = 2.0 * s
+    ctx.beginPath()
+    ctx.arc(
+      ox + 314 * s,
+      oy + 86 * s,
+      58 * s * (1 + 0.025 * ringWaveB),
+      glintAngle,
+      glintAngle + 0.28
+    )
+    ctx.stroke()
+
+    ctx.strokeStyle = `rgba(235, 190, 95, ${(0.2 + 0.68 * ringWaveB).toFixed(3)})`
+    ctx.lineWidth = 1.6 * s
+    ctx.beginPath()
+    ctx.arc(
+      ox + 314 * s,
+      oy + 86 * s,
+      58 * s * (1 + 0.025 * ringWaveB),
+      Math.PI,
+      Math.PI * 1.65
+    )
+    ctx.stroke()
+
+    // Floating golden dust motes drifting through the sunbeam
+    const motes = [
+      { x: 242, y: 28, r: 1.4, dur: 3.6, phase: 0 },
+      { x: 266, y: 20, r: 1.7, dur: 4.4, phase: 1.1 },
+      { x: 284, y: 24, r: 1.3, dur: 3.8, phase: 0.6 },
+      { x: 222, y: 36, r: 1.3, dur: 4.6, phase: 2.1 },
+      { x: 254, y: 42, r: 1.5, dur: 3.9, phase: 1.7 },
+      { x: 274, y: 34, r: 1.4, dur: 4.2, phase: 2.9 }
+    ]
+    for (const m of motes) {
+      const p = ((t + m.phase) % m.dur) / m.dur
+      const alpha = p < 0.3 ? (p / 0.3) * 0.95 : (1 - (p - 0.3) / 0.7) * 0.95
+      const dy = 6 - 22 * p
+      const dx = -6 * p
+      const mx = ox + (m.x + dx) * s
+      const my = oy + (m.y + dy) * s
+      if (enohotelSunSprite && alpha > 0.05) {
+        const glowR = m.r * 3.2 * s
+        ctx.globalAlpha = alpha * 0.55
+        ctx.drawImage(
+          enohotelSunSprite,
+          mx - glowR,
+          my - glowR,
+          glowR * 2,
+          glowR * 2
+        )
+      }
+      ctx.globalAlpha = 1
+      ctx.fillStyle = `rgba(255, 232, 165, ${Math.max(0, alpha).toFixed(3)})`
+      ctx.beginPath()
+      ctx.arc(mx, my, m.r * s, 0, Math.PI * 2)
+      ctx.fill()
+    }
+  }
 </script>
 
 <div bind:this={wrapEl} class="spotlight-carousel-wrap">
@@ -324,17 +479,25 @@
       onDragEnd: handleDragEnd
     }}
   >
-    {#each computedItems as item (item.id)}
+    {#each computedItems as item, index (item.id)}
       <button
         type="button"
         class="spotlight-card"
-        style={item.badgeBg && item.badgeBg.startsWith('url(')
-          ? `background: ${item.badgeBg}; background-size: cover;`
-          : ''}
         onclick={() => void handleCardClick(item)}
         aria-label="{item.title}: {item.description}"
       >
-        <div class="spotlight-card-body">
+        {#if item.id === 'enohotel'}
+          <BakedCanvasLayer
+            fps={14}
+            paused={currentIndex !== index}
+            onBake={bakeEnohotelBg}
+            onDraw={drawEnohotelAmbient}
+          />
+        {/if}
+        <div
+          class="spotlight-card-body"
+          style="position: relative; z-index: 1;"
+        >
           {#if item.iconType === 'image' && item.iconSrc}
             <IconBadge
               size="lg"
@@ -342,7 +505,7 @@
               customBg={item.badgeColorName ? undefined : item.badgeBg}
               customColor={item.badgeColorName ? undefined : item.badgeColor}
             >
-              <img src={item.iconSrc} alt="" loading="lazy" />
+              <img src={item.iconSrc} alt="" draggable="false" loading="lazy" />
             </IconBadge>
           {:else}
             <IconBadge
@@ -360,7 +523,7 @@
           </div>
         </div>
 
-        <div class="spotlight-chevron">
+        <div class="spotlight-chevron" style="position: relative; z-index: 1;">
           <ChevronRight size={15} strokeWidth={2.4} />
         </div>
       </button>

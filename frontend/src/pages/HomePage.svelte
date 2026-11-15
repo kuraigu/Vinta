@@ -17,7 +17,6 @@
    */
 
   import { onMount, onDestroy, getContext } from 'svelte'
-  import ScrollIndicator from '../components/ScrollIndicator.svelte'
   import Calendar from '../components/Calendar.svelte'
   import CalendarGlance from '../components/CalendarGlance.svelte'
   import Weather from '../components/Weather.svelte'
@@ -127,23 +126,17 @@
 
   let { expanded = false }: Props = $props()
 
-  let scrollContainer: HTMLElement | undefined = $state()
   let feedContainerEl: HTMLElement | undefined = $state()
-  let isScrolledDown = $state(false)
-  let canScrollMore = $state(false)
 
   /**
    * Synchronizes the measured height of the scrollable feed container
-   * and updates the scroll cue pill in a single ResizeObserver pass.
+   * in a single ResizeObserver pass.
    */
   function syncHomeFeedMeasuredHeight() {
     const el = feedContainerEl
-    const scrollEl = scrollContainer
-    if ((!el && !scrollEl) || typeof ResizeObserver === 'undefined') {
-      canScrollMore = false
+    if (!el || typeof ResizeObserver === 'undefined') {
       return
     }
-    updateScrollCueVisibility()
     const ro = new ResizeObserver((entries) => {
       for (const entry of entries) {
         if (entry.target === el) {
@@ -156,54 +149,13 @@
           }
         }
       }
-      updateScrollCueVisibility()
     })
-    if (el) ro.observe(el)
-    if (scrollEl) ro.observe(scrollEl)
+    ro.observe(el)
     return () => {
       ro.disconnect()
     }
   }
   $effect(syncHomeFeedMeasuredHeight)
-
-  /**
-   * Checks container scroll offset against client height to toggle the
-   * visibility of the bottom scroll cue indicator.
-   */
-  function updateScrollCueVisibility() {
-    if (!scrollContainer) {
-      canScrollMore = false
-      return
-    }
-    const maxScroll =
-      scrollContainer.scrollHeight - scrollContainer.clientHeight
-    isScrolledDown = scrollContainer.scrollTop > 20
-    canScrollMore = maxScroll > 8 && scrollContainer.scrollTop < maxScroll - 8
-  }
-
-  /**
-   * Handles feed scroll events, updating scroll indicators and preventing bubbling.
-   *
-   * @param e - DOM scroll event from the feed container.
-   */
-  function handleFeedScroll(e: Event) {
-    const target = e.currentTarget as HTMLElement
-    if (target) {
-      updateScrollCueVisibility()
-    }
-  }
-
-  /**
-   * Smoothly scrolls the primary home feed container downward by one viewport view.
-   */
-  function scrollFeedDown() {
-    if (scrollContainer) {
-      scrollContainer.scrollBy({
-        top: 180,
-        behavior: 'smooth'
-      })
-    }
-  }
 
   let internalTime = $state(new Date())
   let time = $derived($simulatedClockStore ?? internalTime)
@@ -370,16 +322,7 @@
         </div>
       {/if}
       {#if $homeWidgetsVisibilityStore.calendar}
-        <div
-          class="minimal-slot clickable-slot"
-          role="button"
-          tabindex="0"
-          onclick={(e) => {
-            e.stopPropagation()
-            openCalendar()
-          }}
-          onkeydown={(e) => e.key === 'Enter' && openCalendar()}
-        >
+        <div class="minimal-slot">
           <Calendar expanded={false} />
         </div>
       {/if}
@@ -391,8 +334,11 @@
     >
       <ScrollView
         class="home-feed-scroll"
-        bind:element={scrollContainer}
-        onscroll={handleFeedScroll}
+        showScrollIndicators={true}
+        hideIndicatorOnScroll={true}
+        scrollStep={180}
+        scrollIndicatorLabel={$tStore('home.scroll_cue_more')}
+        scrollIndicatorAriaLabel={$tStore('home.scroll_cue_aria')}
       >
         <div class="social-feed-container" bind:this={feedContainerEl}>
           {#if $homeWidgetsVisibilityStore.weather}
@@ -489,14 +435,6 @@
           </footer>
         </div>
       </ScrollView>
-
-      <!-- Scroll indicator cue -->
-      <ScrollIndicator
-        visible={canScrollMore && !isScrolledDown}
-        onclick={scrollFeedDown}
-        label={$tStore('home.scroll_cue_more')}
-        ariaLabel={$tStore('home.scroll_cue_aria')}
-      />
     </div>
   {/if}
 </div>

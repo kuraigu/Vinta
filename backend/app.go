@@ -61,11 +61,15 @@ type App struct {
 	fullscreenTriggerMonID   int
 	pillHitMu                sync.RWMutex
 	pillHitRects             []pillHitBounds
+	hitRectsVersion          uint64
 	isForceInteractive       bool
-	isCurrentlyInteractive   bool
-	isOutboundDragging       bool
-	initialShowOnce          sync.Once
-	themeService             *ThemeService
+	// Tracks whether WS_EX_TRANSPARENT is currently cleared on the overlay HWND so mouse
+	// events go to WebView2 instead of clicking through to desktop windows behind Vinta.
+	// Protected by pillHitMu.
+	isCurrentlyInteractive bool
+	isOutboundDragging     bool
+	initialShowOnce        sync.Once
+	themeService           *ThemeService
 }
 
 // NewApp initializes and returns a new App instance.
@@ -84,16 +88,16 @@ func NewApp(icon []byte) *App {
 	screenHeight = sh
 
 	return &App{
-		icon:                 icon,
-		pillW:                340,
-		pillH:                34,
-		pillR:                24,
-		scale:                1.0,
+		icon:                   icon,
+		pillW:                  340,
+		pillH:                  34,
+		pillR:                  24,
+		scale:                  1.0,
 		autoHideBorderless:     false,
 		relocateOnFullscreen:   true,
 		returnOnFullscreenExit: false,
-		tooltips:             make(map[string]TooltipBounds),
-		themeService:         NewThemeService(),
+		tooltips:               make(map[string]TooltipBounds),
+		themeService:           NewThemeService(),
 	}
 }
 

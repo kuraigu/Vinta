@@ -5,7 +5,12 @@
 <script lang="ts">
   import { getContext } from 'svelte'
   import { Bell, X } from 'lucide-svelte'
-  import { notifData, tStore, type IslandConfig } from '../store'
+  import {
+    notifData,
+    pageVisibilityStore,
+    tStore,
+    type IslandConfig
+  } from '../store'
   import NotificationPage, {
     config as notifConfig
   } from '../pages/NotificationPage.svelte'
@@ -58,6 +63,7 @@
 
   function openNotifications(e?: Event) {
     if (e) e.stopPropagation()
+    if (!$pageVisibilityStore.notifications) return
     if (navigate) {
       navigate(NotificationPage, notifConfig, true)
     }

@@ -46,6 +46,12 @@ export default ts.config(
             "CallExpression[callee.name='onMount'] CallExpression[callee.object.name='Events'][callee.property.name=/^(On|OnMultiple)$/]",
           message:
             'Call Events.On() at the top level of <script>, not inside onMount(), so onDestroy() can register properly.'
+        },
+        {
+          selector:
+            "CallExpression[callee.object.name='window'][callee.property.name='addEventListener'][arguments.0.value='scroll']",
+          message:
+            'Avoid per-component window scroll listeners; use <ScrollView> or a single ref-counted service listener.'
         }
       ]
     }

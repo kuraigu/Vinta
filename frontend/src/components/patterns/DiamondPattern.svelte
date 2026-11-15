@@ -21,43 +21,101 @@
 
   const OPACITY_VARIANTS = ['v1', 'v3', 'v2', 'v4', 'v1', 'v4', 'v3', 'v2']
 
-  /**
-   * Generates row indices for the diamond pattern grid.
-   *
-   * @returns Array of row indices.
-   */
-  function computeRowIndices(): number[] {
-    return Array.from({ length: rows }, (_, i) => i)
+  const OPACITY_MAP: Record<string, number> = {
+    v1: 0.45,
+    v2: 0.7,
+    v3: 0.9,
+    v4: 1
+  }
+
+  interface DiamondRect {
+    x: number
+    y: number
+    cx: number
+    cy: number
+    isLight: boolean
+    opacity: number
+  }
+
+  interface DiamondGridGeometry {
+    width: number
+    height: number
+    cellSize: number
+    radius: number
+    rects: DiamondRect[]
   }
 
   /**
-   * Generates column indices for the diamond pattern grid.
+   * Computes deterministic SVG coordinates for all diamonds in the grid.
    *
-   * @returns Array of column indices.
+   * @returns SVG canvas dimensions and positioned diamond descriptors.
    */
-  function computeColIndices(): number[] {
-    return Array.from({ length: cols }, (_, i) => i)
+  function computeDiamondGrid(): DiamondGridGeometry {
+    const isCompact = size === 'compact'
+    const cellSize = isCompact ? 9.5 : 12
+    const colGap = isCompact ? 6 : 8
+    const rowStep = isCompact ? 7.5 : 9
+    const rowOffset = isCompact ? 8 : 10
+    const radius = isCompact ? 1.2 : 1.5
+
+    const rowWidth = cols > 0 ? cols * cellSize + (cols - 1) * colGap : 0
+    const svgWidth = rowWidth + rowOffset * 2 + 8
+    const svgHeight = rows > 0 ? (rows - 1) * rowStep + cellSize + 8 : 0
+    const startXBase = (svgWidth - rowWidth) / 2
+    const startY = 4
+
+    const rects: DiamondRect[] = []
+    for (let r = 0; r < rows; r++) {
+      const offsetX = r % 2 !== 0 ? rowOffset : 0
+      const y = startY + r * rowStep
+      const cy = y + cellSize / 2
+      for (let d = 0; d < cols; d++) {
+        const x = startXBase + offsetX + d * (cellSize + colGap)
+        const cx = x + cellSize / 2
+        const isLight = (r * 3 + d) % 2 === 0
+        const variant =
+          OPACITY_VARIANTS[(r * 5 + d * 3) % OPACITY_VARIANTS.length]
+        const opacity = OPACITY_MAP[variant] ?? 0.7
+        rects.push({ x, y, cx, cy, isLight, opacity })
+      }
+    }
+
+    return {
+      width: svgWidth,
+      height: svgHeight,
+      cellSize,
+      radius,
+      rects
+    }
   }
 
-  let rowIndices = $derived.by(computeRowIndices)
-  let colIndices = $derived.by(computeColIndices)
+  let grid = $derived.by(computeDiamondGrid)
 </script>
 
 <div
   class="vinta-diamond-pattern align-{align} size-{size} {className}"
   aria-hidden="true"
 >
-  {#each rowIndices as r (r)}
-    <div class="diamond-row" class:offset={r % 2 !== 0}>
-      {#each colIndices as d (d)}
-        {@const isLight = (r * 3 + d) % 2 === 0}
-        {@const variant =
-          OPACITY_VARIANTS[(r * 5 + d * 3) % OPACITY_VARIANTS.length]}
-        <span class="diamond-cell {isLight ? 'light' : 'dark'} {variant}"
-        ></span>
-      {/each}
-    </div>
-  {/each}
+  <svg
+    class="diamond-pattern-svg"
+    width={grid.width}
+    height={grid.height}
+    viewBox="0 0 {grid.width} {grid.height}"
+  >
+    {#each grid.rects as rect, i (i)}
+      <rect
+        x={rect.x}
+        y={rect.y}
+        width={grid.cellSize}
+        height={grid.cellSize}
+        rx={grid.radius}
+        ry={grid.radius}
+        opacity={rect.opacity}
+        transform="rotate(45 {rect.cx} {rect.cy})"
+        class={rect.isLight ? 'diamond-light' : 'diamond-dark'}
+      />
+    {/each}
+  </svg>
 </div>
 
 <style>
@@ -71,6 +129,11 @@
     overflow: hidden;
     pointer-events: none;
     z-index: 0;
+  }
+
+  .diamond-pattern-svg {
+    flex-shrink: 0;
+    overflow: visible;
   }
 
   .vinta-diamond-pattern.align-center {
@@ -111,62 +174,11 @@
     );
   }
 
-  .diamond-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin: -1.5px 0;
-    flex-shrink: 0;
+  .diamond-dark {
+    fill: var(--vinta-agenda-diamond-dark, rgba(0, 0, 0, 0.24));
   }
 
-  .diamond-row.offset {
-    transform: translateX(10px);
-  }
-
-  .diamond-cell {
-    width: 12px;
-    height: 12px;
-    border-radius: 1.5px;
-    transform: rotate(45deg);
-    flex-shrink: 0;
-  }
-
-  .vinta-diamond-pattern.size-compact .diamond-row {
-    gap: 6px;
-    margin: -1px 0;
-  }
-
-  .vinta-diamond-pattern.size-compact .diamond-row.offset {
-    transform: translateX(8px);
-  }
-
-  .vinta-diamond-pattern.size-compact .diamond-cell {
-    width: 9.5px;
-    height: 9.5px;
-    border-radius: 1.2px;
-  }
-
-  .diamond-cell.dark {
-    background: var(--vinta-agenda-diamond-dark, rgba(0, 0, 0, 0.24));
-  }
-
-  .diamond-cell.light {
-    background: var(--vinta-agenda-diamond-light, rgba(255, 255, 255, 0.24));
-  }
-
-  .diamond-cell.v1 {
-    opacity: 0.45;
-  }
-
-  .diamond-cell.v2 {
-    opacity: 0.7;
-  }
-
-  .diamond-cell.v3 {
-    opacity: 0.9;
-  }
-
-  .diamond-cell.v4 {
-    opacity: 1;
+  .diamond-light {
+    fill: var(--vinta-agenda-diamond-light, rgba(255, 255, 255, 0.24));
   }
 </style>

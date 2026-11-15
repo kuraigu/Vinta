@@ -13,7 +13,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"runtime/debug"
 	"strings"
 	"syscall"
 
@@ -31,13 +30,6 @@ var appIconPNG []byte
 
 //go:embed docs/CONTRIBUTORS.md
 var contributorsMD string
-
-// This function is executed automatically by Go before main
-// Do not use this for callbacks and runtime initialization (DippedInSoju 11 Nov 2026)
-func init() {
-	// Set GC threshold to 50% to maintain a lean, stable RAM footprint while continuously polling hardware metrics.
-	debug.SetGCPercent(50)
-}
 
 func main() {
 	// Ensure panic recovery is always first in the defer stack
@@ -65,14 +57,54 @@ func main() {
 	hwAccel := backend.GetHardwareAccelerationConfig()
 
 	browserArgs := []string{
-		"--disable-renderer-backgrounding",
 		"--disable-extensions",
 		"--disable-component-extensions-with-background-pages",
+		"--disable-component-update",
 		"--disable-background-networking",
+		"--disable-domain-reliability",
+		"--disable-client-side-phishing-detection",
 		"--disable-sync",
 		"--disable-translate",
-		"--metrics-recording-only",
 		"--disable-default-apps",
+		"--disable-spell-checking",
+		"--disable-speech-api",
+		"--disable-notifications",
+		"--disable-print-preview",
+		"--disable-pdf-extension",
+		"--disable-webgl",
+		"--disable-3d-apis",
+		"--metrics-recording-only",
+		"--no-first-run",
+		"--no-pings",
+		"--renderer-process-limit=1",
+		// Keep Chromium from throttling rAF, timers, and compositing when another app has OS focus.
+		"--disable-renderer-backgrounding",
+	}
+
+	disabledFeatures := []string{
+		"msWebOOUI",
+		"msPdfOOUI",
+		"msSmartScreenProtection",
+		"Translate",
+		"TranslateUI",
+		"AutofillServerCommunication",
+		"PasswordImport",
+		"OptimizationHints",
+		"OptimizationGuideModelDownloading",
+		"InterestFeedContentSuggestions",
+		"MediaRouter",
+		"DialMediaRouteProvider",
+		"GlobalMediaControls",
+		"HardwareMediaKeyHandling",
+		"MediaSessionService",
+		"AudioServiceOutOfProcess",
+		"WinUseBrowserSpellChecker",
+		"BackForwardCache",
+		"Prerender2",
+		"SpeculativeServiceWorkerWarmUp",
+		// Required for transparent layered overlays: otherwise Windows marks Vinta occluded behind
+		// maximized windows and freezes CSS/canvas animations.
+		"CalculateNativeWinOcclusion",
 	}
 
 	if hwAccel {
@@ -119,7 +151,7 @@ func main() {
 		Windows: application.WindowsOptions{
 			WebviewUserDataPath:           filepath.Join(backend.GetAppDataDir(), "webview2"),
 			DisableQuitOnLastWindowClosed: false,
-			DisabledFeatures:              []string{"CalculateNativeWinOcclusion"},
+			DisabledFeatures:              disabledFeatures,
 			AdditionalBrowserArgs:         browserArgs,
 		},
 	})
@@ -132,24 +164,31 @@ func main() {
 	}
 
 	win := wailsApp.Window.NewWithOptions(application.WebviewWindowOptions{
-		Title:             "Vinta",
-		Width:             vWidth,
-		Height:            overlayHeight,
-		InitialPosition:   application.WindowXY,
-		X:                 vLeft,
-		Y:                 vTop,
-		Frameless:         true,
-		AlwaysOnTop:       true,
-		DisableResize:     true,
-		Hidden:            false,
-		BackgroundType:    application.BackgroundTypeTransparent,
-		BackgroundColour:  application.NewRGBA(0, 0, 0, 0),
-		IgnoreMouseEvents: false,
-		EnableFileDrop:    true,
+		Title:                      "Vinta",
+		Width:                      vWidth,
+		Height:                     overlayHeight,
+		InitialPosition:            application.WindowXY,
+		X:                          vLeft,
+		Y:                          vTop,
+		Frameless:                  true,
+		AlwaysOnTop:                true,
+		DisableResize:              true,
+		Hidden:                     false,
+		BackgroundType:             application.BackgroundTypeTransparent,
+		BackgroundColour:           application.NewRGBA(0, 0, 0, 0),
+		IgnoreMouseEvents:          false,
+		EnableFileDrop:             true,
+		DefaultContextMenuDisabled: true,
+		ZoomControlEnabled:         false,
+		DevToolsEnabled:            app.IsTestMode(),
 		Windows: application.WindowsWindow{
 			DisableFramelessWindowDecorations: true,
 			HiddenOnTaskbar:                   true,
 			BackdropType:                      application.None,
+			DisableMenu:                       true,
+			GeneralAutofillEnabled:            false,
+			PasswordAutosaveEnabled:           false,
+			EnableSwipeGestures:               false,
 		},
 	})
 

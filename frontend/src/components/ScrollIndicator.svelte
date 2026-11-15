@@ -35,6 +35,8 @@
   class="vinta-scroll-indicator {className}"
   class:compact={isCompact}
   class:hidden={!visible}
+  aria-hidden={!visible}
+  tabindex={visible ? 0 : -1}
   {onclick}
   aria-label={resolvedAriaLabel}
 >

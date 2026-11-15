@@ -110,6 +110,7 @@
   }
 
   let weatherOptions = $state(buildPresetOptions())
+  let searchSeq = 0
 
   let selectedWeatherCity = $derived($weatherLocationStore.name)
 
@@ -123,12 +124,14 @@
   }
 
   async function handleWeatherSearch(query: string) {
+    const seq = ++searchSeq
     if (!query || query.trim().length < 2) {
       weatherOptions = buildPresetOptions()
       return
     }
 
     const results = await searchCities(query)
+    if (seq !== searchSeq) return
     if (results && results.length > 0) {
       const searchedOpts = results.map((r) => {
         const displayName = formatLocationName(r)

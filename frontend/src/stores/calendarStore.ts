@@ -11,7 +11,11 @@ import {
   SaveCalendarData
 } from '../../bindings/Vinta/backend/app.js'
 import { sendVintaNotification } from '../services/vintaNotification'
-import { autoDiscardPastEventsStore } from './settings'
+import {
+  autoDiscardPastEventsStore,
+  pageVisibilityStore,
+  homeWidgetsVisibilityStore
+} from './settings'
 
 export interface CalendarEvent {
   id: string
@@ -523,6 +527,7 @@ let reminderWatcherInterval: ReturnType<typeof setInterval> | null = null
  * Checks upcoming, in-progress, and concluded calendar events against current system time
  * and dispatches one-shot Vinta notifications when scheduled times arrive or when launching
  * after scheduled events have already started.
+ * Do not gate on calendar UI visibility: hiding the tab or widget must not silence reminders.
  */
 export function checkCalendarEventReminders(): void {
   const state = get(calendarStore)
