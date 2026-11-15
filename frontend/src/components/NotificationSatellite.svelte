@@ -38,6 +38,7 @@
     monitorLeft?: number
     activeMonitorWidth?: number
     islandWidth?: number
+    uiScale?: number
   }
 
   let {
@@ -46,7 +47,8 @@
     clampedOffsetX = 0,
     monitorLeft = 0,
     activeMonitorWidth = 1920,
-    islandWidth = 368
+    islandWidth = 368,
+    uiScale = 1
   }: Props = $props()
 
   const navigate =
@@ -84,12 +86,15 @@
    */
   function computeSatelliteAnchor(): 'left' | 'right' {
     const islandCenterOnScreen = primaryCenter + clampedOffsetX - monitorLeft
-    const halfIslandW = islandWidth / 2
+    const scale = uiScale > 0 ? uiScale : 1
+    const halfIslandW = (islandWidth / 2) * scale
+    const scaledGap = 12 * scale
+    const scaledSatW = satelliteWidth * scale
     const leftEdge = islandCenterOnScreen - halfIslandW
-    const leftClearance = leftEdge - 12 - satelliteWidth
+    const leftClearance = leftEdge - scaledGap - scaledSatW
     const rightEdge = islandCenterOnScreen + halfIslandW
     const rightClearance =
-      activeMonitorWidth - (rightEdge + 12 + satelliteWidth)
+      activeMonitorWidth - (rightEdge + scaledGap + scaledSatW)
 
     if (leftClearance < 6 && rightClearance >= 6) {
       return 'right'

@@ -13,7 +13,8 @@
     GetDisplayLayout,
     SendMediaControl,
     SaveNotifications,
-    RequestMediaUpdate
+    RequestMediaUpdate,
+    SetUIScale
   } from '../bindings/Vinta/backend/app.js'
   import { Events } from '$lib/events'
 
@@ -101,6 +102,10 @@
     opacityExpandedStore,
     opacityHiddenStore,
     uiScaleStore,
+    monitorUiScalesStore,
+    getMonitorScaleKey,
+    getMonitorBasePhysicalScale,
+    getMaxScaleForMonitor,
     hiddenPillOffsetXStore,
     isIslandHiddenStore,
     notifSoundStore,
@@ -252,12 +257,19 @@
   let extraDropdownW = $state(0)
   let extraDropdownH = $state(0)
 
+  function getWindowDpr(): number {
+    return typeof window !== 'undefined' && window.devicePixelRatio > 0
+      ? window.devicePixelRatio
+      : 1.0
+  }
+
   let activeMonitor = $derived.by(() => {
     const baseCenter = displayLayout.virtualLeft + displayLayout.primaryCenter
     const resolved = getMonitorForOffset(
       currentLiveOffsetX,
       displayLayout.monitors,
-      baseCenter
+      baseCenter,
+      getWindowDpr()
     )
     return (
       resolved ||
@@ -269,21 +281,41 @@
         width: 1920,
         height: 1080,
         isPrimary: true,
-        isPortrait: false
+        isPortrait: false,
+        dpiScale: 1.0
       }
     )
   })
 
-  let maxScaleForActiveMonitor = $derived.by(() => {
-    const h = activeMonitor?.height || 1080
-    if (h <= 900) return 1.1
-    if (h <= 1080) return 1.2
-    return 1.25
+  let monitorCustomScale = $derived.by(() => {
+    const key = getMonitorScaleKey(activeMonitor)
+    const perMonitor = $monitorUiScalesStore?.[key]
+    if (typeof perMonitor === 'number' && perMonitor >= 1.0) {
+      return perMonitor
+    }
+    return activeMonitor?.isPrimary ? $uiScaleStore || 1.0 : 1.0
   })
 
+  let maxScaleForActiveMonitor = $derived.by(() =>
+    getMaxScaleForMonitor(
+      activeMonitor?.width,
+      activeMonitor?.height,
+      activeMonitor?.dpiScale
+    )
+  )
+
   let effectiveUiScale = $derived.by(() => {
-    const configured = $uiScaleStore || 1.0
-    return Math.max(1.0, Math.min(maxScaleForActiveMonitor, configured))
+    const clampedCustom = Math.max(
+      1.0,
+      Math.min(maxScaleForActiveMonitor, monitorCustomScale)
+    )
+    const windowDpr = getWindowDpr()
+    const basePhysical = getMonitorBasePhysicalScale(
+      activeMonitor?.width,
+      activeMonitor?.height,
+      activeMonitor?.dpiScale
+    )
+    return clampedCustom * (basePhysical / windowDpr)
   })
 
   let hiddenBounds = $derived(
@@ -348,15 +380,22 @@
         )
   )
 
+  let scaledIslandW = $derived(currentIslandW * effectiveUiScale)
+
   let virtualMinOffset = $derived.by(() => {
-    const halfW = currentIslandW / 2
-    return Math.floor(12 + halfW - displayLayout.primaryCenter)
+    const halfW = scaledIslandW / 2
+    const dpr = getWindowDpr()
+    return Math.floor(12 + halfW - displayLayout.primaryCenter / dpr)
   })
 
   let virtualMaxOffset = $derived.by(() => {
-    const halfW = currentIslandW / 2
+    const halfW = scaledIslandW / 2
+    const dpr = getWindowDpr()
     return Math.floor(
-      displayLayout.virtualWidth - 12 - halfW - displayLayout.primaryCenter
+      displayLayout.virtualWidth / dpr -
+        12 -
+        halfW -
+        displayLayout.primaryCenter / dpr
     )
   })
 
@@ -364,24 +403,28 @@
     computeMonitorSnapOffsets(
       displayLayout.monitors,
       displayLayout.virtualLeft,
-      displayLayout.primaryCenter
+      displayLayout.primaryCenter,
+      getWindowDpr()
     )
   )
 
-  let activeLeftSatelliteFootprint = $derived.by(() =>
-    getActiveSatelliteFootprint('left', $satellitesStore)
+  let activeLeftSatelliteFootprint = $derived.by(
+    () =>
+      getActiveSatelliteFootprint('left', $satellitesStore) * effectiveUiScale
   )
-  let activeRightSatelliteFootprint = $derived.by(() =>
-    getActiveSatelliteFootprint('right', $satellitesStore)
+  let activeRightSatelliteFootprint = $derived.by(
+    () =>
+      getActiveSatelliteFootprint('right', $satellitesStore) * effectiveUiScale
   )
 
   let allowedOffsets = $derived.by(() =>
     computeAllowedOffsets(
-      currentIslandW,
+      scaledIslandW,
       activeMonitor,
       displayLayout.virtualLeft + displayLayout.primaryCenter,
       activeLeftSatelliteFootprint,
-      activeRightSatelliteFootprint
+      activeRightSatelliteFootprint,
+      getWindowDpr()
     )
   )
 
@@ -433,11 +476,12 @@
     offset: number = currentLiveOffsetX
   ): number {
     const range = computeAllowedOffsets(
-      width,
+      width * effectiveUiScale,
       activeMonitor,
       displayLayout.virtualLeft + displayLayout.primaryCenter,
       activeLeftSatelliteFootprint,
-      activeRightSatelliteFootprint
+      activeRightSatelliteFootprint,
+      getWindowDpr()
     )
     if (Math.abs(offset) < 3) return 0
     return Math.max(range.min, Math.min(range.max, offset))
@@ -850,18 +894,21 @@
     const wasInRunway = isGestureBusy()
     gestures.finishDrag(undefined, () => {
       const baseCenter = displayLayout.virtualLeft + displayLayout.primaryCenter
+      const dpr = getWindowDpr()
       const targetMon =
         getMonitorForOffset(
           currentLiveOffsetX,
           displayLayout.monitors,
-          baseCenter
+          baseCenter,
+          dpr
         ) || activeMonitor
       const monAllowed = computeAllowedOffsets(
-        currentIslandW,
+        currentIslandW * effectiveUiScale,
         targetMon,
         baseCenter,
         activeLeftSatelliteFootprint,
-        activeRightSatelliteFootprint
+        activeRightSatelliteFootprint,
+        dpr
       )
       const resting = Math.max(
         monAllowed.min,
@@ -1097,8 +1144,21 @@
   })
 
   $effect(function handleUiScaleSyncEffect() {
-    void effectiveUiScale
-    bounds.syncPillBounds(islandNode, isHidden, true)
+    const scale = effectiveUiScale
+    if (typeof document !== 'undefined') {
+      document.documentElement.style.setProperty(
+        '--vinta-ui-scale',
+        String(scale)
+      )
+    }
+    if (typeof SetUIScale === 'function') {
+      void SetUIScale(scale).catch(() => {})
+    }
+    const rafId = requestAnimationFrame(() => {
+      resyncAllSatellites()
+      bounds.syncPillBounds(islandNode, isHidden, true)
+    })
+    return () => cancelAnimationFrame(rafId)
   })
 
   // Wails Event Subscriptions (Top-Level for Auto-Unsubscribe)
@@ -1700,7 +1760,8 @@
         const targetMon = getMonitorForOffset(
           offset,
           displayLayout.monitors,
-          baseCenter
+          baseCenter,
+          getWindowDpr()
         )
         if (targetMon && displayLayout.currentMonitor?.id !== targetMon.id) {
           displayLayout = {
@@ -1796,9 +1857,10 @@
   onpointerdown={() => {
     FocusWindow().catch(() => {})
   }}
-  style="position: absolute; left: {displayLayout.primaryCenter}px; top: {Math.max(
+  style="position: absolute; left: {displayLayout.primaryCenter /
+    getWindowDpr()}px; top: {Math.max(
     0,
-    activeMonitor.top - displayLayout.virtualTop
+    (activeMonitor.top - displayLayout.virtualTop) / getWindowDpr()
   )}px; transform: translateX(-50%);"
 >
   <div
@@ -1820,9 +1882,12 @@
       transition: {gestures.isDragging || gestures.isInertia
       ? 'none'
       : islandAnim};
-      --vinta-ui-scale: {effectiveUiScale};
     "
   >
+    <div
+      class="island-scale-box"
+      style="--vinta-ui-scale: {effectiveUiScale};"
+    >
     <MainIsland
       bind:islandNode
       {activePage}
@@ -1891,26 +1956,31 @@
           !isHidden &&
           activePage !== OnboardingPage &&
           $hasCompletedOnboardingStore}
-        primaryCenter={displayLayout.primaryCenter}
+        primaryCenter={displayLayout.primaryCenter / getWindowDpr()}
         {clampedOffsetX}
-        monitorLeft={activeMonitor.left}
-        activeMonitorWidth={activeMonitor.width}
+        monitorLeft={(activeMonitor.left - displayLayout.virtualLeft) /
+          getWindowDpr()}
+        activeMonitorWidth={activeMonitor.width / getWindowDpr()}
         islandWidth={currentIslandW}
+        uiScale={effectiveUiScale}
       />
       <ControlsSatellite
         {activePage}
         {expanded}
         expandedHeight={currentExpandedH}
         expandedWidth={currentIslandW}
-        activeMonitorWidth={activeMonitor.width}
-        monitorLeft={activeMonitor.left}
-        primaryCenter={displayLayout.primaryCenter}
+        activeMonitorWidth={activeMonitor.width / getWindowDpr()}
+        monitorLeft={(activeMonitor.left - displayLayout.virtualLeft) /
+          getWindowDpr()}
+        primaryCenter={displayLayout.primaryCenter / getWindowDpr()}
         {clampedOffsetX}
+        uiScale={effectiveUiScale}
         active={!isQuitting && !isHidden}
         onmouseenter={handleSatelliteMouseEnter}
         onmouseleave={handleSatelliteMouseLeave}
       />
     {/if}
+    </div>
   </div>
 </div>
 

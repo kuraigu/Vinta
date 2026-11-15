@@ -240,7 +240,7 @@ export class WindowBoundsManager {
     }
     const now = performance.now()
     if (
-      now - this.lastDragSyncTime < 32 ||
+      now - this.lastDragSyncTime < 16 ||
       Math.abs(liveOffset - this.lastSyncedDragOffset) < 0.5
     ) {
       return

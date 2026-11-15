@@ -473,6 +473,57 @@ export const opacityHiddenStore = persistentWritable<number>(
   1.0
 )
 export const uiScaleStore = persistentWritable<number>('vinta_ui_scale', 1.0)
+export const monitorUiScalesStore = persistentWritable<Record<string, number>>(
+  'vinta_monitor_ui_scales',
+  {}
+)
+
+/**
+ * Returns a stable storage key for a monitor's custom UI scale override.
+ */
+export function getMonitorScaleKey(
+  monitor?: {
+    name?: string
+    left?: number
+    top?: number
+    isPrimary?: boolean
+  } | null
+): string {
+  if (!monitor || monitor.isPrimary) return 'primary'
+  return `${monitor.name || 'display'}_${monitor.left ?? 0}_${monitor.top ?? 0}`
+}
+
+/**
+ * Computes the baseline physical scale for a monitor relative to the 1080p design base,
+ * ensuring 1.0x looks proportionally consistent on 1440p/4K displays while respecting OS DPI.
+ */
+export function getMonitorBasePhysicalScale(
+  width: number = 1920,
+  height: number = 1080,
+  dpiScale: number = 1.0
+): number {
+  const shortEdge = Math.min(width || 1920, height || 1080)
+  const resBase = Math.max(1.0, shortEdge / 1080)
+  const osDpi = dpiScale > 0 ? dpiScale : 1.0
+  return Math.max(osDpi, resBase)
+}
+
+/**
+ * Computes the maximum safe user UI scale multiplier on top of the monitor's baseline scale.
+ */
+export function getMaxScaleForMonitor(
+  width: number = 1920,
+  height: number = 1080,
+  dpr?: number
+): number {
+  const shortEdge = Math.min(width || 1920, height || 1080)
+  const basePhysical = getMonitorBasePhysicalScale(width, height, dpr)
+  const effectiveShortEdge = shortEdge / basePhysical
+  if (effectiveShortEdge <= 900) return 1.1
+  if (shortEdge <= 1080) return 1.2
+  if (shortEdge <= 1440) return 1.25
+  return 1.5
+}
 
 // ============================================================================
 // 2. Behavior & Auto-Hide

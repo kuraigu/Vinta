@@ -23,60 +23,70 @@ export function computeAllowedOffsets(
   monitor: MonitorInfo,
   baseCenter: number,
   leftFootprint: number = 0,
-  rightFootprint: number = 0
+  rightFootprint: number = 0,
+  windowDpr: number = 1
 ): AllowedOffsetRange {
+  const dpr = windowDpr > 0 ? windowDpr : 1
+  const monLeft = monitor.left / dpr
+  const monWidth = monitor.width / dpr
+  const cssBaseCenter = baseCenter / dpr
   const halfW = islandWidth / 2
   const leftMargin = 12 + leftFootprint
   const rightMargin = 12 + rightFootprint
-  const targetLeft = monitor.left + leftMargin + halfW
-  const targetRight = monitor.left + monitor.width - rightMargin - halfW
+  const targetLeft = monLeft + leftMargin + halfW
+  const targetRight = monLeft + monWidth - rightMargin - halfW
 
   if (targetLeft > targetRight) {
-    const center = Math.floor(monitor.left + monitor.width / 2 - baseCenter)
+    const center = Math.floor(monLeft + monWidth / 2 - cssBaseCenter)
     return { min: center, max: center }
   }
 
   return {
-    min: Math.floor(targetLeft - baseCenter),
-    max: Math.floor(targetRight - baseCenter)
+    min: Math.floor(targetLeft - cssBaseCenter),
+    max: Math.floor(targetRight - cssBaseCenter)
   }
 }
 
 /**
- * Computes magnetic snap positions for monitor centers.
+ * Computes magnetic snap positions for monitor centers in CSS pixels.
  */
 export function computeMonitorSnapOffsets(
   monitors: MonitorInfo[] | undefined,
   virtualLeft: number,
-  primaryCenter: number
+  primaryCenter: number,
+  windowDpr: number = 1
 ): number[] {
   if (!monitors || monitors.length === 0) {
     return [0]
   }
+  const dpr = windowDpr > 0 ? windowDpr : 1
   return monitors.map((mon) => {
     const monClientLeft = mon.left - virtualLeft
     const monCenter = monClientLeft + mon.width / 2
-    return Math.round(monCenter - primaryCenter)
+    return Math.round((monCenter - primaryCenter) / dpr)
   })
 }
 
 /**
- * Resolves the physical display monitor corresponding to a horizontal offset.
+ * Resolves the physical display monitor corresponding to a horizontal CSS offset.
  *
- * @param offset - Current horizontal live offset from primary display center.
+ * @param offset - Current horizontal live offset in CSS pixels from primary display center.
  * @param monitors - List of connected physical monitors.
- * @param baseCenter - Virtual center coordinate (virtualLeft + primaryCenter).
+ * @param baseCenter - Virtual center coordinate in physical pixels (virtualLeft + primaryCenter).
+ * @param windowDpr - WebView2 devicePixelRatio converting CSS offset to physical pixels.
  * @returns The monitor enclosing the coordinate, or the nearest monitor.
  */
 export function getMonitorForOffset(
   offset: number,
   monitors: MonitorInfo[] | undefined,
-  baseCenter: number
+  baseCenter: number,
+  windowDpr: number = 1
 ): MonitorInfo | undefined {
   if (!monitors || monitors.length === 0) {
     return undefined
   }
-  const currentVirtualX = baseCenter + offset
+  const dpr = windowDpr > 0 ? windowDpr : 1
+  const currentVirtualX = baseCenter + offset * dpr
   for (const mon of monitors) {
     if (currentVirtualX >= mon.left && currentVirtualX < mon.left + mon.width) {
       return mon
@@ -313,6 +323,15 @@ export class IslandGestureController {
     const maxVelocity = 2.5
     velocity = Math.max(-maxVelocity, Math.min(maxVelocity, velocity))
 
+    const snappedOnRelease = _snapOffsets.some(
+      (snap) => Math.abs(currentOffset - snap) <= 2
+    )
+    if (snappedOnRelease && Math.abs(velocity) < 0.35) {
+      this.stopInertia()
+      onComplete()
+      return
+    }
+
     if (Math.abs(velocity) >= 0.04 && this.dragMovedDistance > 3) {
       this.isInertia = true
       this.isTrackRegionActive = true
@@ -359,8 +378,15 @@ export class IslandGestureController {
           }
 
           if (Math.abs(velocity) < 0.03) {
+            let finalOffset = liveOffset
+            for (const snap of _snapOffsets) {
+              if (Math.abs(liveOffset - snap) <= 20) {
+                finalOffset = snap
+                break
+              }
+            }
             this.stopInertia()
-            onUpdateOffset(liveOffset)
+            onUpdateOffset(finalOffset)
             onComplete()
             return
           }

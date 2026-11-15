@@ -62,6 +62,8 @@ type App struct {
 	pillHitMu                sync.RWMutex
 	pillHitRects             []pillHitBounds
 	hitRectsVersion          uint64
+	uiScale                  float64
+	overlayHeight            int
 	isForceInteractive       bool
 	// Tracks whether WS_EX_TRANSPARENT is currently cleared on the overlay HWND so mouse
 	// events go to WebView2 instead of clicking through to desktop windows behind Vinta.
@@ -93,6 +95,7 @@ func NewApp(icon []byte) *App {
 		pillH:                  34,
 		pillR:                  24,
 		scale:                  1.0,
+		uiScale:                1.0,
 		autoHideBorderless:     false,
 		relocateOnFullscreen:   true,
 		returnOnFullscreenExit: false,
@@ -184,16 +187,13 @@ func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 			a.setupForegroundEventHook(hwnd)
 
 			vLeft, vTop, vWidth, vHeight, _, monitors := GetDisplayMetrics()
-			maxTopOffset := 0
-			for _, mon := range monitors {
-				if offset := mon.Top - vTop; offset > maxTopOffset {
-					maxTopOffset = offset
-				}
-			}
-			overlayHeight := maxTopOffset + 680
-			if vHeight > 0 && overlayHeight >= vHeight {
-				overlayHeight = vHeight - 1
-			}
+			a.pillHitMu.RLock()
+			uiScale := a.uiScale
+			a.pillHitMu.RUnlock()
+			overlayHeight := ComputeOverlayHeightForScale(vTop, vHeight, monitors, uiScale, a.effectiveScale())
+			a.pillHitMu.Lock()
+			a.overlayHeight = overlayHeight
+			a.pillHitMu.Unlock()
 			if vWidth > 0 {
 				_, _, _ = procSetWindowPos.Call(
 					hwnd,

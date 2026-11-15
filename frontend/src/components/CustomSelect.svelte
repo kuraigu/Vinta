@@ -241,6 +241,12 @@
   </button>
 
   {#if isOpen}
+    {@const uiScale =
+      (typeof document !== 'undefined' &&
+        parseFloat(
+          document.documentElement.style.getPropertyValue('--vinta-ui-scale')
+        )) ||
+      1}
     <div
       use:portal
       use:clickOutside
@@ -248,12 +254,13 @@
       transition:slide={{ duration: 120 }}
       style="
         position: fixed;
-        left: {dropdownRect.left}px;
-        width: {dropdownRect.width}px;
+        zoom: {uiScale};
+        left: {dropdownRect.left / uiScale}px;
+        width: {dropdownRect.width / uiScale}px;
         {dropdownRect.dropUp
-        ? `bottom: ${window.innerHeight - dropdownRect.top}px;`
-        : `top: ${dropdownRect.top}px;`}
-        max-height: {dropdownRect.maxHeight}px;
+        ? `bottom: ${(window.innerHeight - dropdownRect.top) / uiScale}px;`
+        : `top: ${dropdownRect.top / uiScale}px;`}
+        max-height: {dropdownRect.maxHeight / uiScale}px;
         z-index: 999999;
       "
       onwheel={stopPropagation}

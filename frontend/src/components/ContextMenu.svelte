@@ -115,11 +115,17 @@
   }
 </script>
 
+{@const uiScale =
+  (typeof document !== 'undefined' &&
+    parseFloat(
+      document.documentElement.style.getPropertyValue('--vinta-ui-scale')
+    )) ||
+  1}
 <div
   use:portal
   use:clickOutside
   class="ctx-menu no-swipe"
-  style="left: {adjustedX}px; top: {adjustedY}px;"
+  style="left: {adjustedX / uiScale}px; top: {adjustedY / uiScale}px;"
   transition:slide={{ duration: 100, axis: 'y' }}
   onmousedown={stopPropagation}
   role="menu"
@@ -148,6 +154,7 @@
 <style>
   .ctx-menu {
     position: fixed;
+    zoom: var(--vinta-ui-scale, 1);
     z-index: 999999;
     background: var(--vinta-bg);
     border: 1px solid var(--vinta-border);

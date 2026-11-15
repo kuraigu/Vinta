@@ -84,7 +84,13 @@
       left = target.left + target.width / 2
     }
 
-    return `left: ${Math.round(left)}px; top: ${Math.round(top)}px; transform: ${transform};`
+    const uiScale =
+      (typeof document !== 'undefined' &&
+        parseFloat(
+          document.documentElement.style.getPropertyValue('--vinta-ui-scale')
+        )) ||
+      1
+    return `left: ${Math.round(left / uiScale)}px; top: ${Math.round(top / uiScale)}px; transform: ${transform};`
   }
 
   let computedStyle = $derived.by(computeStyle)

@@ -22,6 +22,7 @@
     monitorLeft?: number
     primaryCenter?: number
     clampedOffsetX?: number
+    uiScale?: number
     active?: boolean
     onmouseenter?: (e: MouseEvent) => void
     onmouseleave?: (e: MouseEvent) => void
@@ -36,6 +37,7 @@
     monitorLeft = 0,
     primaryCenter = 960,
     clampedOffsetX = 0,
+    uiScale = 1,
     active = true,
     onmouseenter,
     onmouseleave
@@ -96,9 +98,10 @@
    */
   function computeExpandedTooltipSide(): 'right' | 'left' {
     const islandCenterOnScreen = primaryCenter + clampedOffsetX - monitorLeft
-    const halfExpandedW = expandedWidth / 2
-    const dockGap = 6
-    const dockWidth = 32
+    const scale = uiScale > 0 ? uiScale : 1
+    const halfExpandedW = (expandedWidth / 2) * scale
+    const dockGap = 6 * scale
+    const dockWidth = 32 * scale
     const dockRightEdge =
       islandCenterOnScreen + halfExpandedW + dockGap + dockWidth
     const dockLeftEdge = dockRightEdge - dockWidth

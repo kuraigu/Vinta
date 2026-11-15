@@ -89,6 +89,21 @@ func (a *App) SetHitRects(rects []HitRect) {
 	}
 
 	if len(rects) > 0 {
+		var maxBottom int32
+		for _, r := range nextRects {
+			if r.bottom > maxBottom {
+				maxBottom = r.bottom
+			}
+		}
+		if maxBottom > 0 {
+			a.pillHitMu.RLock()
+			currHeight := a.overlayHeight
+			a.pillHitMu.RUnlock()
+			if currHeight > 0 && int(maxBottom)+16 > currHeight {
+				go a.ensureOverlayHeight(int(maxBottom) + 16)
+			}
+		}
+
 		a.initialShowOnce.Do(func() {
 			if h := a.getHwnd(); h != 0 {
 				_, _, _ = procSetLayeredWindowAttrs.Call(h, 0, 255, 2)
@@ -234,38 +249,55 @@ func (a *App) startHitTestingLoop(hwnd uintptr) {
 			isHit := false
 			if !outbound {
 				cursorInAnyRect := false
+				cursorHidden := false
 				if len(rects) > 0 || force {
-					var pt point32
-					ret, _, _ := procGetCursorPos.Call(uintptr(unsafe.Pointer(&pt)))
+					const cursorShowing = 0x00000001
+					var ci struct {
+						cbSize      uint32
+						flags       uint32
+						hCursor     uintptr
+						ptScreenPos point32
+					}
+					ci.cbSize = uint32(unsafe.Sizeof(ci))
+					ret, _, _ := procGetCursorInfo.Call(uintptr(unsafe.Pointer(&ci)))
 					if ret != 0 {
-						// Only short-circuit stationary cursors after the 8-frame miss grace window
-						// or after force mode settles. Skipping earlier freezes missCount below 8
-						// and leaves WS_EX_TRANSPARENT off until the mouse moves again.
-						if rectsVer != lastRectsVersion {
-							verifiedStyle = false
-							hitCount = 0
-							missCount = 0
-						} else if hasLastPt && pt.X == lastPt.X && pt.Y == lastPt.Y && verifiedStyle && !force && (missCount >= 8 || hitCount > 4) {
-							continue
-						}
-						lastPt = pt
-						hasLastPt = true
-						lastRectsVersion = rectsVer
+						if (ci.flags & cursorShowing) == 0 {
+							// Hidden cursors (such as locked FPS game pointers) must never click Vinta.
+							cursorHidden = true
+							hasLastPt = false
+						} else {
+							pt := ci.ptScreenPos
+							// Only short-circuit stationary cursors after the 8-frame miss grace window
+							// or after force mode settles. Skipping earlier freezes missCount below 8
+							// and leaves WS_EX_TRANSPARENT off until the mouse moves again.
+							if rectsVer != lastRectsVersion {
+								verifiedStyle = false
+								hitCount = 0
+								missCount = 0
+							} else if hasLastPt && pt.X == lastPt.X && pt.Y == lastPt.Y && verifiedStyle && !force && (missCount >= 8 || hitCount > 4) {
+								continue
+							}
+							lastPt = pt
+							hasLastPt = true
+							lastRectsVersion = rectsVer
 
-						retScreen, _, _ := procScreenToClient.Call(hwnd, uintptr(unsafe.Pointer(&pt)))
-						if retScreen != 0 {
-							for _, rect := range rects {
-								if pt.X >= rect.left && pt.X <= rect.right &&
-									pt.Y >= rect.top && pt.Y <= rect.bottom {
-									cursorInAnyRect = true
-									break
+							retScreen, _, _ := procScreenToClient.Call(hwnd, uintptr(unsafe.Pointer(&pt)))
+							if retScreen != 0 {
+								for _, rect := range rects {
+									if pt.X >= rect.left && pt.X <= rect.right &&
+										pt.Y >= rect.top && pt.Y <= rect.bottom {
+										cursorInAnyRect = true
+										break
+									}
 								}
 							}
 						}
 					}
 				}
 
-				if force {
+				if cursorHidden {
+					isHit = false
+				} else if force {
 					if cursorInAnyRect {
 						forceOutsideCount = 0
 						isHit = true
@@ -304,8 +336,10 @@ func (a *App) startHitTestingLoop(hwnd uintptr) {
 				hitCount = 0
 				missCount++
 				// Hold interactive state for an ~120ms grace window (8 frames at 60Hz)
-				// to allow swift cursor motion across satellite gaps without dropping clicks.
-				if missCount < 8 {
+				// only when multiple hit rects (such as satellites) are active so swift
+				// cursor motion across gaps does not drop clicks. Single-rect islands clear
+				// immediately so vacated glide paths remain clickable.
+				if len(rects) > 1 && missCount < 8 {
 					continue
 				}
 				if !currInteractive && missCount > 8 && verifiedStyle {

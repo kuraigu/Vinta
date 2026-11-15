@@ -29,6 +29,9 @@
     opacityMinimalStore,
     opacityExpandedStore,
     uiScaleStore,
+    monitorUiScalesStore,
+    getMonitorScaleKey,
+    getMaxScaleForMonitor,
     displayLayoutStore,
     tStore
   } from '../../../store'
@@ -107,24 +110,30 @@
   const currentMonitor = $derived($displayLayoutStore.currentMonitor)
   const monitorHeight = $derived(currentMonitor?.height || 1080)
   const monitorWidth = $derived(currentMonitor?.width || 1920)
+  const monitorDpi = $derived(
+    currentMonitor?.dpiScale && currentMonitor.dpiScale > 0
+      ? currentMonitor.dpiScale
+      : 1.0
+  )
+  const monitorKey = $derived(getMonitorScaleKey(currentMonitor))
 
   const maxAllowedScale = $derived(
-    monitorHeight <= 900 ? 1.1 : monitorHeight <= 1080 ? 1.2 : 1.25
+    getMaxScaleForMonitor(monitorWidth, monitorHeight, monitorDpi)
   )
 
   const uiScaleOptions = $derived([
     { label: '100% (1.0x)', value: '1', isDefault: true },
     {
       label:
-        monitorHeight <= 900 ? '110% (1.1x - Max for display)' : '110% (1.1x)',
+        maxAllowedScale <= 1.1 ? '110% (1.1x - Max for display)' : '110% (1.1x)',
       value: '1.1'
     },
     ...(maxAllowedScale >= 1.2
       ? [
           {
             label:
-              monitorHeight <= 1080
-                ? '120% (1.2x - Max for 1080p)'
+              maxAllowedScale <= 1.2
+                ? '120% (1.2x - Max for display)'
                 : '120% (1.2x)',
             value: '1.2'
           }
@@ -132,17 +141,57 @@
       : []),
     ...(maxAllowedScale >= 1.25
       ? [{ label: '125% (1.25x - Large)', value: '1.25' }]
+      : []),
+    ...(maxAllowedScale >= 1.5
+      ? [
+          {
+            label:
+              maxAllowedScale <= 1.5
+                ? '150% (1.5x - Max for display)'
+                : '150% (1.5x)',
+            value: '1.5'
+          }
+        ]
+      : []),
+    ...(maxAllowedScale >= 1.75
+      ? [{ label: '175% (1.75x - Extra Large)', value: '1.75' }]
+      : []),
+    ...(maxAllowedScale >= 2.0
+      ? [{ label: '200% (2.0x - 4K)', value: '2' }]
       : [])
   ])
 
-  let selectedScale = $state(String($uiScaleStore || 1.0))
+  const activeMonitorScale = $derived.by(() => {
+    const perMonitor = $monitorUiScalesStore?.[monitorKey]
+    if (typeof perMonitor === 'number' && perMonitor >= 1.0) {
+      return perMonitor
+    }
+    return currentMonitor?.isPrimary ? $uiScaleStore || 1.0 : 1.0
+  })
+
+  let selectedScale = $state('1')
+  let lastSyncedMonitorKey = ''
+
+  function syncScaleFromMonitor() {
+    if (monitorKey !== lastSyncedMonitorKey) {
+      lastSyncedMonitorKey = monitorKey
+      selectedScale = String(activeMonitorScale)
+    }
+  }
+  $effect(syncScaleFromMonitor)
 
   function handleScaleEffect() {
     const val = parseFloat(selectedScale)
     if (!isNaN(val) && val >= 1.0) {
       const clamped = Math.max(1.0, Math.min(maxAllowedScale, val))
-      if ($uiScaleStore !== clamped) {
-        $uiScaleStore = clamped
+      if (activeMonitorScale !== clamped) {
+        monitorUiScalesStore.update((prev) => ({
+          ...prev,
+          [monitorKey]: clamped
+        }))
+        if (currentMonitor?.isPrimary && $uiScaleStore !== clamped) {
+          $uiScaleStore = clamped
+        }
       }
     }
   }
@@ -302,13 +351,20 @@
 
     <SettingItem
       label="UI Scale"
-      description="Proportionally scales the island interface (Display: {monitorWidth}×{monitorHeight})"
+      description="Proportionally scales the island interface for this display ({monitorWidth}×{monitorHeight} · {Math.round(monitorDpi * 100)}%)"
       icon={Scale}
       flexCol={true}
-      isDefault={$uiScaleStore === uiScaleStore.defaultValue}
+      isDefault={activeMonitorScale === 1.0}
       onReset={() => {
         selectedScale = '1'
-        uiScaleStore.reset()
+        monitorUiScalesStore.update((prev) => {
+          const next = { ...prev }
+          delete next[monitorKey]
+          return next
+        })
+        if (currentMonitor?.isPrimary) {
+          uiScaleStore.reset()
+        }
       }}
     >
       <CustomSelect
