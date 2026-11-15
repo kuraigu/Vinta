@@ -310,6 +310,8 @@ Section "uninstall"
 
     # Clean up registry keys
     SetRegView 64
+    DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Run" "${INFO_PRODUCTNAME}"
+    DeleteRegValue HKCU "Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run" "${INFO_PRODUCTNAME}"
     DeleteRegKey HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\${INFO_PRODUCTNAME}"
     DeleteRegKey HKCU "Software\${INFO_COMPANYNAME}\${INFO_PRODUCTNAME}"
     DeleteRegKey /ifempty HKCU "Software\${INFO_COMPANYNAME}"

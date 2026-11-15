@@ -4,6 +4,7 @@
   run-at-startup preferences, hardware acceleration, and factory reset options.
 -->
 <script lang="ts">
+  import { onMount } from 'svelte'
   import {
     Power,
     Cpu,
@@ -26,6 +27,7 @@
     importSettingsFromFile
   } from '../../../store'
   import {
+    GetAutostart,
     SetAutostart,
     SetHardwareAcceleration,
     GetCacheSize,
@@ -33,10 +35,34 @@
     ResetSettings
   } from '../../../../bindings/Vinta/backend/app.js'
 
-  function handleAutostartEffect() {
-    SetAutostart($autostartStore).catch(() => {})
+  onMount(async () => {
+    if (typeof GetAutostart === 'function') {
+      try {
+        const osEnabled = await GetAutostart()
+        if (typeof osEnabled === 'boolean' && osEnabled !== $autostartStore) {
+          $autostartStore = osEnabled
+        }
+      } catch {
+        // Ignore if backend binding is unavailable
+      }
+    }
+  })
+
+  /**
+   * Updates Windows autostart registration and reverts the store if the registry write fails.
+   *
+   * @param nextVal - Target autostart state.
+   */
+  async function handleAutostartChange(nextVal: boolean) {
+    $autostartStore = nextVal
+    if (typeof SetAutostart === 'function') {
+      try {
+        await SetAutostart(nextVal)
+      } catch {
+        $autostartStore = !nextVal
+      }
+    }
   }
-  $effect(handleAutostartEffect)
 
   function handleHardwareAccelEffect() {
     SetHardwareAcceleration($hardwareAccelStore).catch(() => {})
@@ -236,7 +262,8 @@
   <BentoCard variant="group">
     <SettingItem label={$tStore('settings.startup_label')} icon={Power}>
       <ToggleSwitch
-        bind:checked={$autostartStore}
+        checked={$autostartStore}
+        onchange={(checked) => void handleAutostartChange(checked)}
         ariaLabel={$tStore('settings.startup_label')}
       />
     </SettingItem>
