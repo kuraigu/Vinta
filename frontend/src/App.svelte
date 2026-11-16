@@ -16,7 +16,10 @@
     RequestMediaUpdate,
     SetUIScale
   } from '../bindings/Vinta/backend/app.js'
-  import type { DisplayLayout } from '../bindings/Vinta/backend/models.js'
+  import type {
+    DisplayLayout,
+    MonitorInfo
+  } from '../bindings/Vinta/backend/models.js'
   import { Events } from '$lib/events'
 
   // Pages & Configs
@@ -107,6 +110,8 @@
     getMonitorBasePhysicalScale,
     getMaxScaleForMonitor,
     hiddenPillOffsetXStore,
+    hiddenPillPositionStore,
+    type HiddenPillPosition,
     isIslandHiddenStore,
     notifSoundStore,
     notifVolumeStore,
@@ -180,7 +185,8 @@
     [TimerPage, 'timer'],
     [CalendarPage, 'calendar'],
     [WeatherPage, 'weather'],
-    [FileShelfPage, 'fileshelf']
+    [FileShelfPage, 'fileshelf'],
+    [OnboardingPage, 'onboarding']
   ])
 
   // DOM References
@@ -271,6 +277,8 @@
   })
 
   let currentLiveOffsetX = $state(0)
+  let isDisplayLayoutReady = $state(false)
+  let lastSyncedAlignment: HiddenPillPosition | null = null
   let extraDropdownW = $state(0)
   let extraDropdownH = $state(0)
 
@@ -514,6 +522,75 @@
     return Math.max(range.min, Math.min(range.max, offset))
   }
 
+  /**
+   * Computes the horizontal CSS offset for a resting alignment on a monitor.
+   */
+  function computeAlignmentOffset(
+    alignment: HiddenPillPosition,
+    mon: MonitorInfo = activeMonitor,
+    targetWidth: number = currentIslandW
+  ): number {
+    const baseCenter = displayLayout.virtualLeft + displayLayout.primaryCenter
+    const dpr = getWindowDpr()
+    const range = computeAllowedOffsets(
+      targetWidth * effectiveUiScale,
+      mon,
+      baseCenter,
+      activeLeftSatelliteFootprint,
+      activeRightSatelliteFootprint,
+      dpr
+    )
+    if (alignment === 'top-left') return range.min
+    if (alignment === 'top-right') return range.max
+    const monCenter = mon.left + mon.width / 2
+    const centerOffset = Math.round((monCenter - baseCenter) / dpr)
+    return Math.max(range.min, Math.min(range.max, centerOffset))
+  }
+
+  /**
+   * Glides or positions the island to the requested alignment on the target display.
+   */
+  function applyAlignment(
+    alignment: HiddenPillPosition,
+    targetMonitor: MonitorInfo = activeMonitor,
+    animate: boolean = true
+  ): void {
+    gestures.finishSettling()
+    lastSyncedAlignment = alignment
+    if ($hiddenPillPositionStore !== alignment) {
+      $hiddenPillPositionStore = alignment
+    }
+    const targetOffset = computeAlignmentOffset(alignment, targetMonitor)
+    currentLiveOffsetX = targetOffset
+    $hiddenPillOffsetXStore = targetOffset
+    if (
+      targetMonitor.id &&
+      displayLayout.currentMonitor?.id !== targetMonitor.id
+    ) {
+      displayLayout = {
+        ...displayLayout,
+        currentMonitor: targetMonitor
+      }
+      $displayLayoutStore = displayLayout
+    }
+    islandAnim = animate ? formatIslandAnim(0.55) : '0s linear'
+    bounds.syncBounds(
+      getBoundsForState(),
+      targetOffset,
+      islandNode,
+      false,
+      isHidden
+    )
+    if (animate) {
+      bounds.startLiveTracking(islandNode, scaleAnimMs(580), () => {
+        recoverBoundsIfIdle()
+        resyncAllSatellites()
+      })
+    } else {
+      resyncAllSatellites()
+    }
+  }
+
   function getBoundsForState(
     config: IslandConfig = islandConfig,
     isExp: boolean = expanded,
@@ -601,6 +678,7 @@
    * Notifications always auto-dismiss, while Home and Media follow user settings.
    */
   let shouldCurrentPageAutoHide = $derived.by(() => {
+    if (activePage === OnboardingPage) return false
     if (activePage === Notification) return true
     if (activePage === HomePage) return $homeAutoHideStore
     if (activePage === MediaPage) {
@@ -929,20 +1007,24 @@
       RequestMediaUpdate().catch(() => {})
     }
     finishDragGesture()
+    const restoreExpanded =
+      wasExpandedBeforeHide &&
+      (!$hasCompletedOnboardingStore || activePage === OnboardingPage)
     wasExpandedBeforeHide = false
-    expanded = false
+    expanded = restoreExpanded
 
     const fallback = getFallbackPage()
     if (activePage !== fallback.page) {
       activePage = fallback.page as Component
       islandConfig = fallback.config
-      $activePageIdStore = fallback.page === HomePage ? 'home' : 'media'
+      $activePageIdStore =
+        PAGE_ID_BY_COMPONENT.get(fallback.page as Component) ?? 'home'
     }
 
     islandAnim = formatIslandAnim(0.65)
     isHidden = false
     bounds.notifyHidden(false)
-    const nextBounds = getBoundsForState(islandConfig, false, false)
+    const nextBounds = getBoundsForState(islandConfig, restoreExpanded, false)
     const targetOffset = calculateTargetOffsetForWidth(
       nextBounds.w,
       currentLiveOffsetX
@@ -956,11 +1038,7 @@
   }
 
   function hideWidget() {
-    if (
-      isHidden ||
-      !$hasCompletedOnboardingStore ||
-      activePage === OnboardingPage
-    ) {
+    if (isHidden) {
       return
     }
     wasHiddenBeforeNotif = false
@@ -987,7 +1065,8 @@
         if (activePage !== fallback.page) {
           activePage = fallback.page as Component
           islandConfig = fallback.config
-          $activePageIdStore = fallback.page === HomePage ? 'home' : 'media'
+          $activePageIdStore =
+            PAGE_ID_BY_COMPONENT.get(fallback.page as Component) ?? 'home'
         }
         bounds.notifyHidden(true)
         bounds.recoverRestingBounds(
@@ -1254,6 +1333,24 @@
     const val = $hiddenPillOffsetXStore
     if (!gestures.isDragging && !gestures.isInertia) {
       currentLiveOffsetX = val
+    }
+  })
+
+  $effect(function handleSavedAlignmentSync() {
+    if (!isDisplayLayoutReady) return
+    const align = $hiddenPillPositionStore
+    if (lastSyncedAlignment === null) {
+      lastSyncedAlignment = align
+      if (align !== 'center') {
+        untrack(() => applyAlignment(align, activeMonitor, false))
+      }
+      return
+    }
+    if (lastSyncedAlignment !== align) {
+      lastSyncedAlignment = align
+      untrack(() =>
+        applyAlignment(align, activeMonitor, activePage === OnboardingPage)
+      )
     }
   })
 
@@ -1705,12 +1802,43 @@
       resyncAllSatellites()
     }
 
+    const handleApplyAlignment = (ev: unknown) => {
+      const data = unwrapEventData<{
+        alignment?: HiddenPillPosition
+        monitorId?: number | string
+        animate?: boolean
+      }>(ev)
+      const alignment = data?.alignment || $hiddenPillPositionStore || 'center'
+      const targetMon =
+        data?.monitorId !== undefined
+          ? displayLayout.monitors?.find(
+              (m) => String(m.id) === String(data.monitorId)
+            ) || activeMonitor
+          : activeMonitor
+      applyAlignment(alignment, targetMon, data?.animate !== false)
+    }
+
+    const handleSwitchMonitor = (ev: unknown) => {
+      const data = unwrapEventData<{
+        monitorId?: number | string
+        alignment?: HiddenPillPosition
+      }>(ev)
+      if (data?.monitorId === undefined) return
+      const targetMon = displayLayout.monitors?.find(
+        (m) => String(m.id) === String(data.monitorId)
+      )
+      if (!targetMon) return
+      const alignment = data.alignment || $hiddenPillPositionStore || 'center'
+      applyAlignment(alignment, targetMon, true)
+    }
+
     const refreshDisplay = async () => {
       try {
         const layout = await GetDisplayLayout()
         if (layout && layout.virtualWidth > 0) {
           displayLayout = layout
           $displayLayoutStore = layout
+          isDisplayLayoutReady = true
           const clamped = Math.max(
             allowedOffsets.min,
             Math.min(allowedOffsets.max, currentLiveOffsetX)
@@ -1764,9 +1892,6 @@
     const handleWindowKeydownFailsafe = (e: KeyboardEvent) => {
       if (e.defaultPrevented) return
       if (e.key === 'Escape') {
-        if (!$hasCompletedOnboardingStore || activePage === OnboardingPage) {
-          return
-        }
         if (gestures.isDragging || gestures.isInertia) {
           finishDragGesture()
           return
@@ -1809,6 +1934,11 @@
 
     const handleHotkeyToggle = () => {
       if (!$hasCompletedOnboardingStore || activePage === OnboardingPage) {
+        if (isHidden) {
+          showWidget()
+        } else {
+          hideWidget()
+        }
         return
       }
       if (expanded && !isHidden) {
@@ -1838,9 +1968,6 @@
     }
 
     const handleModeSwitchHotkey = () => {
-      if (!$hasCompletedOnboardingStore || activePage === OnboardingPage) {
-        return
-      }
       if (isHidden) {
         showWidget()
         return
@@ -1851,7 +1978,8 @@
         if (activePage !== fallback.page) {
           activePage = fallback.page as Component
           islandConfig = fallback.config
-          $activePageIdStore = fallback.page === HomePage ? 'home' : 'media'
+          $activePageIdStore =
+            PAGE_ID_BY_COMPONENT.get(fallback.page as Component) ?? 'home'
         }
         const nextBounds = getBoundsForState(islandConfig, false, false)
         const targetOffset = calculateTargetOffsetForWidth(
@@ -1875,6 +2003,14 @@
     const unsubResyncBounds = Events.OnGlobal(
       'vinta:resync-bounds',
       handleResyncBounds
+    )
+    const unsubApplyAlignment = Events.OnGlobal(
+      'vinta:apply-alignment',
+      handleApplyAlignment
+    )
+    const unsubSwitchMonitor = Events.OnGlobal(
+      'vinta:switch-monitor',
+      handleSwitchMonitor
     )
     window.addEventListener('resize', handleResize)
     window.addEventListener('blur', handleGlobalDragFailsafe)
@@ -1992,6 +2128,8 @@
       unsubOverlay()
       unsubQuit()
       unsubResyncBounds()
+      unsubApplyAlignment()
+      unsubSwitchMonitor()
       window.removeEventListener('resize', handleResize)
       window.removeEventListener('blur', handleGlobalDragFailsafe)
       window.removeEventListener('pointercancel', handleGlobalDragFailsafe)
