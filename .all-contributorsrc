@@ -76,6 +76,15 @@
       "contributions": [
         "tester"
       ]
+    },
+    {
+      "login": "sagereros",
+      "name": "Eros Sager",
+      "avatar_url": "https://avatars.githubusercontent.com/u/356609228?v=4",
+      "profile": "https://github.com/sagereros",
+      "contributions": [
+        "maintainer"
+      ]
     }
   ],
   "commitConvention": "angular"
