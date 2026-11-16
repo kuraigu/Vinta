@@ -145,7 +145,10 @@
     "page_title": "Notifications",
     "empty_title": "All Caught Up",
     "empty_desc": "No new notifications right now.",
-    "clear_all": "Clear All"
+    "clear_all": "Clear All",
+    "confirm_clear": "Confirm",
+    "fold": "Fold",
+    "expand": "Expand"
   },
   "calendar": {
     "title": "Calendar",

@@ -185,6 +185,8 @@
 .notif-header-actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
+  margin-left: auto;
   gap: 6px;
 }
 
@@ -238,8 +240,15 @@ h3 {
 }
 
 .clear-btn.is-confirming {
+  width: auto;
+  padding: 0 10px;
+  gap: 5px;
+  border-radius: var(--vinta-radius-pill, 9999px);
+  font-size: 0.72rem;
+  font-weight: 600;
   background: var(--vinta-accent-danger-hover-bg, rgba(239, 68, 68, 0.2));
   color: var(--vinta-accent-danger, #ef4444);
+  border-color: var(--vinta-accent-danger, #ef4444);
   box-shadow: inset 0 0 0 1px var(--vinta-accent-danger, #ef4444);
 }
 
@@ -388,7 +397,8 @@ h3 {
 }
 
 .notif-item:hover .notif-actions,
-.notif-group-header:hover .notif-actions {
+.notif-group-header:hover .notif-actions,
+.notif-group.is-expanded > .notif-group-header .notif-actions {
   opacity: 1;
   pointer-events: auto;
 }
@@ -458,31 +468,18 @@ h3 {
   border-left: 1px dashed var(--vinta-hover);
 }
 
-.expand-indicator {
-  color: var(--vinta-text-secondary);
-  background: var(--vinta-contrast-bg);
-  border: 1px solid var(--vinta-contrast-bg);
-  border-radius: 50%;
-  width: 26px;
-  height: 26px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
 .expand-indicator,
 .expand-indicator-btn {
   color: var(--vinta-text-secondary);
   background: var(--vinta-contrast-bg);
-  border: 1px solid var(--vinta-contrast-bg);
+  border: 1px solid var(--vinta-border);
   border-radius: 50%;
   width: 26px;
   height: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
   padding: 0;
   box-sizing: border-box;
@@ -490,15 +487,9 @@ h3 {
 
 .expand-indicator:hover,
 .expand-indicator-btn:hover {
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--vinta-contrast-hover);
   color: var(--vinta-text-primary);
-  border-color: rgba(255, 255, 255, 0.22);
-}
-
-/* Keep visible when expanded so user can collapse */
-.expand-indicator.is-expanded,
-.expand-indicator-btn.is-expanded {
-  transform: rotate(180deg);
+  border-color: var(--vinta-border-strong);
 }
 
 .notif-item-app-group {

@@ -145,7 +145,10 @@
     "page_title": "Mga Notification",
     "empty_title": "All Caught Up Ka Na",
     "empty_desc": "Walang bagong notification sa ngayon.",
-    "clear_all": "I-clear Lahat"
+    "clear_all": "I-clear Lahat",
+    "confirm_clear": "Kumpirmahin",
+    "fold": "Itiklop",
+    "expand": "Buksan"
   },
   "calendar": {
     "title": "Kalendaryo",

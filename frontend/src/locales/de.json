@@ -145,7 +145,10 @@
     "page_title": "Benachrichtigungen",
     "empty_title": "Alles erledigt",
     "empty_desc": "Momentan keine neuen Benachrichtigungen.",
-    "clear_all": "Alle löschen"
+    "clear_all": "Alle löschen",
+    "confirm_clear": "Bestätigen",
+    "fold": "Einklappen",
+    "expand": "Ausklappen"
   },
   "calendar": {
     "title": "Kalender",

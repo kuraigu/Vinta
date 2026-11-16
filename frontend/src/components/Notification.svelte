@@ -15,6 +15,7 @@
     Trash2,
     X,
     ChevronDown,
+    ChevronUp,
     ArrowUpRight,
     Calendar,
     MessageCircle,
@@ -112,9 +113,7 @@
     notifData.update((n) =>
       n.filter((x) => {
         const brand = getDisplayBrand(x)
-        const header = (x.title || '').trim() || 'Notification'
-        const k = `${brand.name}::${header}`
-        return k !== groupKey
+        return brand.name !== groupKey
       })
     )
   }
@@ -338,7 +337,7 @@
     for (const notif of processedNotifications) {
       const brand = getDisplayBrand(notif)
       const headerTitle = (notif.title || '').trim() || 'Notification'
-      const groupKey = `${brand.name}::${headerTitle}`
+      const groupKey = brand.name
       if (!groups[groupKey]) {
         groups[groupKey] = {
           groupKey,
@@ -677,6 +676,9 @@
               aria-label="Clear all notifications"
             >
               <Trash2 size={14} />
+              {#if isConfirmingClear}
+                <span>{$tStore('notification.confirm_clear')}</span>
+              {/if}
             </button>
           {/if}
         </div>
@@ -1054,12 +1056,27 @@
                         >
                       {/if}
                       <div class="notif-actions">
-                        <div
-                          class="expand-indicator"
+                        <button
+                          type="button"
+                          class="expand-indicator-btn"
                           class:is-expanded={expandedGroups.has(group.groupKey)}
+                          onclick={(e) => {
+                            e.stopPropagation()
+                            toggleGroupExpand(group.groupKey)
+                          }}
+                          use:islandTooltip={expandedGroups.has(group.groupKey)
+                            ? $tStore('notification.fold')
+                            : $tStore('notification.expand')}
+                          aria-label={expandedGroups.has(group.groupKey)
+                            ? $tStore('notification.fold')
+                            : $tStore('notification.expand')}
                         >
-                          <ChevronDown size={14} />
-                        </div>
+                          {#if expandedGroups.has(group.groupKey)}
+                            <ChevronUp size={14} />
+                          {:else}
+                            <ChevronDown size={14} />
+                          {/if}
+                        </button>
                         <button
                           class="dismiss-item-btn"
                           onclick={(e) => {
