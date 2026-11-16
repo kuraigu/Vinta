@@ -35,7 +35,10 @@ export interface AnnouncementsPayload {
 }
 
 const ANNOUNCEMENTS_CACHE_KEY = 'vinta_announcements_cache_v1'
+const ANNOUNCEMENTS_TTL_MS = 10 * 60 * 1000
 let inMemoryAnnouncements: AnnouncementsPayload | null = null
+let lastAnnouncementsFetchMs = 0
+let inFlightAnnouncementsPromise: Promise<AnnouncementsPayload> | null = null
 
 /**
  * Synchronously returns the cached announcements payload from memory or localStorage
@@ -82,23 +85,44 @@ export async function getReleaseNotes(version: string): Promise<string> {
 }
 
 /**
- * Fetches announcements from the release feed and updates the persistent cache.
+ * Fetches announcements from the release feed and updates the persistent cache,
+ * deduplicating concurrent calls and respecting a 10-minute TTL unless forced.
  */
-export async function getDeveloperAnnouncements(): Promise<AnnouncementsPayload> {
-  try {
-    const res = await GetDeveloperAnnouncements()
-    const payload = (res as AnnouncementsPayload) || {
-      items: [],
-      hasUnread: false
-    }
-    if (Array.isArray(payload.items) && payload.items.length > 0) {
-      saveCachedAnnouncements(payload)
-    }
-    return payload
-  } catch (err) {
-    console.error('Failed to retrieve developer announcements:', err)
-    return getCachedAnnouncements() || { items: [], hasUnread: false }
+export async function getDeveloperAnnouncements(
+  forceRefresh: boolean = false
+): Promise<AnnouncementsPayload> {
+  if (
+    !forceRefresh &&
+    inMemoryAnnouncements &&
+    Date.now() - lastAnnouncementsFetchMs < ANNOUNCEMENTS_TTL_MS
+  ) {
+    return inMemoryAnnouncements
   }
+  if (inFlightAnnouncementsPromise) {
+    return inFlightAnnouncementsPromise
+  }
+
+  inFlightAnnouncementsPromise = (async () => {
+    try {
+      const res = await GetDeveloperAnnouncements()
+      const payload = (res as AnnouncementsPayload) || {
+        items: [],
+        hasUnread: false
+      }
+      lastAnnouncementsFetchMs = Date.now()
+      if (Array.isArray(payload.items) && payload.items.length > 0) {
+        saveCachedAnnouncements(payload)
+      }
+      return payload
+    } catch (err) {
+      console.error('Failed to retrieve developer announcements:', err)
+      return getCachedAnnouncements() || { items: [], hasUnread: false }
+    } finally {
+      inFlightAnnouncementsPromise = null
+    }
+  })()
+
+  return inFlightAnnouncementsPromise
 }
 
 /**

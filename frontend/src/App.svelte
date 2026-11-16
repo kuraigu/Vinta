@@ -132,6 +132,10 @@
     isSimulatingWirelessStore,
     devPinnedStore,
     activePageIdStore,
+    activeOverlayStore,
+    notificationsOverlayTabStore,
+    type OverlayPageId,
+    type NotificationsOverlayTab,
     isMediaDrawerOpenStore,
     timerAppStore,
     isAnyTimerRunning,
@@ -354,33 +358,39 @@
     Boolean($updateInfoStore?.updateAvailable)
   )
 
-  let currentExpandedH = $derived(
-    activePage === HomePage
-      ? $homeMeasuredHeightStore > 0
-        ? Math.max(
-            islandConfig.expanded.minH ?? 260,
-            Math.min(
-              islandConfig.expanded.maxH ?? 640,
-              $homeMeasuredHeightStore
+  let currentExpandedH = $derived.by(() => {
+    const baseH =
+      activePage === HomePage
+        ? $homeMeasuredHeightStore > 0
+          ? Math.max(
+              islandConfig.expanded.minH ?? 260,
+              Math.min(
+                islandConfig.expanded.maxH ?? 640,
+                $homeMeasuredHeightStore
+              )
             )
-          )
-        : calculateHomeExpandedHeight(
-            $homeWidgetsVisibilityStore,
-            hasActiveNotification,
-            hasActiveUpdateBanner,
-            islandConfig.expanded.minH ?? 260,
-            islandConfig.expanded.maxH ?? islandConfig.expanded.h
-          )
-      : activePage === MediaPage && $isMediaDrawerOpenStore
-        ? 335
-        : islandConfig.expanded.h
-  )
+          : calculateHomeExpandedHeight(
+              $homeWidgetsVisibilityStore,
+              hasActiveNotification,
+              hasActiveUpdateBanner,
+              islandConfig.expanded.minH ?? 260,
+              islandConfig.expanded.maxH ?? islandConfig.expanded.h
+            )
+        : activePage === MediaPage && $isMediaDrawerOpenStore
+          ? 335
+          : islandConfig.expanded.h
+    return $activeOverlayStore !== null ? Math.max(baseH, 380) : baseH
+  })
 
   let currentIslandW = $derived(
     isHidden
       ? hiddenBounds.w
       : Math.min(
-          expanded ? islandConfig.expanded.w : currentMinimalW,
+          expanded
+            ? $activeOverlayStore !== null
+              ? Math.max(islandConfig.expanded.w, 440)
+              : islandConfig.expanded.w
+            : currentMinimalW,
           activeMonitor.width ? activeMonitor.width - 24 : 1920
         )
   )
@@ -516,7 +526,7 @@
       effectiveConfig === homeConfig ||
       (effectiveConfig === islandConfig && activePage === HomePage)
 
-    const baseW = isHid
+    const rawBaseW = isHid
       ? hiddenBounds.w
       : isExp
         ? effectiveConfig.expanded.w
@@ -524,7 +534,12 @@
           ? calculateHomeMinimalWidth($homeWidgetsVisibilityStore, hasBattery)
           : effectiveConfig.minimal.w
 
-    const baseH = isHid
+    const baseW =
+      !isHid && isExp && $activeOverlayStore !== null
+        ? Math.max(rawBaseW, 440)
+        : rawBaseW
+
+    const rawBaseH = isHid
       ? hiddenBounds.h
       : isExp
         ? isEffectiveHome
@@ -545,6 +560,11 @@
               )
           : effectiveConfig.expanded.h
         : effectiveConfig.minimal.h
+
+    const baseH =
+      !isHid && isExp && $activeOverlayStore !== null
+        ? Math.max(rawBaseH, 380)
+        : rawBaseH
 
     const maxMonW = activeMonitor?.width ? activeMonitor.width - 24 : 1920
     const boundedBaseW = isHid ? baseW : Math.min(baseW, maxMonW)
@@ -682,6 +702,77 @@
     }, HOVER_GRACE_MS)
   }
 
+  let collapseOnOverlayClose = false
+
+  function openOverlay(
+    overlay: OverlayPageId,
+    options?: { tab?: NotificationsOverlayTab; collapseOnClose?: boolean }
+  ) {
+    if (!overlay) {
+      closeOverlay()
+      return
+    }
+    if (options?.tab) {
+      $notificationsOverlayTabStore = options.tab
+    }
+    collapseOnOverlayClose = Boolean(options?.collapseOnClose)
+    if (activePage === NotificationPage) {
+      const fallback = getFallbackPage()
+      activePage = fallback.page as Component
+      islandConfig = fallback.config
+      $activePageIdStore = PAGE_ID_BY_COMPONENT.get(activePage) ?? 'home'
+    }
+    if (isHidden) {
+      isHidden = false
+      bounds.notifyHidden(false)
+    }
+    isPageDormant = false
+    clearTimeout(hideTimeout)
+    isTimeoutActive = false
+    $activeOverlayStore = overlay
+    expanded = true
+    const nextBounds = getBoundsForState(islandConfig, true, false)
+    const targetOffset = calculateTargetOffsetForWidth(
+      nextBounds.w,
+      currentLiveOffsetX
+    )
+    if (targetOffset !== currentLiveOffsetX) {
+      currentLiveOffsetX = targetOffset
+      $hiddenPillOffsetXStore = targetOffset
+    }
+    bounds.currentOSBounds = { ...nextBounds }
+    islandAnim = '0.34s cubic-bezier(0.16, 1, 0.3, 1)'
+    bounds.startTrackingTransition(islandNode, 350, false)
+    triggerGlow()
+  }
+
+  function closeOverlay() {
+    if ($activeOverlayStore === null) return
+    $activeOverlayStore = null
+    if (collapseOnOverlayClose) {
+      collapseOnOverlayClose = false
+      expanded = false
+      const nextBounds = getBoundsForState(islandConfig, false, false)
+      const targetOffset = calculateTargetOffsetForWidth(
+        nextBounds.w,
+        currentLiveOffsetX
+      )
+      if (targetOffset !== currentLiveOffsetX) {
+        currentLiveOffsetX = targetOffset
+        $hiddenPillOffsetXStore = targetOffset
+      }
+      bounds.currentOSBounds = { ...nextBounds }
+      islandAnim = '0.26s cubic-bezier(0.2, 0.8, 0.2, 1)'
+      bounds.startTrackingTransition(islandNode, 280, false)
+      resetHideTimer()
+      return
+    }
+    const nextBounds = getBoundsForState(islandConfig, expanded, false)
+    bounds.currentOSBounds = { ...nextBounds }
+    islandAnim = '0.28s cubic-bezier(0.16, 1, 0.3, 1)'
+    bounds.startTrackingTransition(islandNode, 300, false)
+  }
+
   // Navigation, Show/Hide & Drag Gestures
   function navigateTo(
     page: Component,
@@ -689,6 +780,21 @@
     expand: boolean = false,
     isBackNav: boolean = false
   ) {
+    if (expand && page === NotificationPage) {
+      openOverlay('notifications', {
+        tab: 'notifications',
+        collapseOnClose: !expanded && activePage === NotificationPage
+      })
+      return
+    }
+    if (expand && page === AppsPage) {
+      openOverlay('apps')
+      return
+    }
+    if ($activeOverlayStore !== null) {
+      $activeOverlayStore = null
+      collapseOnOverlayClose = false
+    }
     if (page === HomePage && activePage === OnboardingPage) {
       hasCompletedOnboardingStore.set(true)
       try {
@@ -952,6 +1058,13 @@
   async function handleExpand() {
     if (expanded) return
     if (gestures.isDragging || gestures.isInertia) finishDragGesture()
+    if (activePage === NotificationPage) {
+      openOverlay('notifications', {
+        tab: 'notifications',
+        collapseOnClose: true
+      })
+      return
+    }
     if (isHidden) {
       isHidden = false
       bounds.notifyHidden(false)
@@ -986,6 +1099,8 @@
   setContext('navigate', navigateTo)
   setContext('goBack', goBack)
   setContext('hidePill', hideWidget)
+  setContext('openOverlay', openOverlay)
+  setContext('closeOverlay', closeOverlay)
 
   // Reactive Effects
   $effect(function handleDebugBoundsOverlayEffect() {
@@ -1603,6 +1718,10 @@
           finishDragGesture()
           return
         }
+        if ($activeOverlayStore !== null) {
+          closeOverlay()
+          return
+        }
         if (expanded && !isHidden) {
           const fallback = getFallbackPage()
           if (activePage !== fallback.page) {
@@ -1894,6 +2013,8 @@
       {islandConfig}
       {currentMinimalW}
       {currentExpandedH}
+      activeOverlay={$activeOverlayStore}
+      onCloseOverlay={closeOverlay}
       {hiddenBounds}
       {activeOpacity}
       {glowOpacity}

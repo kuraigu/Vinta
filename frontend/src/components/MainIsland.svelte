@@ -17,8 +17,11 @@
   import FileShelfPage, {
     config as fileShelfConfig
   } from '../pages/FileShelfPage.svelte'
+  import NotificationsOverlayPage from '../pages/overlays/NotificationsOverlayPage.svelte'
+  import AppsOverlayPage from '../pages/overlays/AppsOverlayPage.svelte'
   import {
     autoHideDisplayStore,
+    type OverlayPageId,
     allowDragPositionStore,
     autoHideDelayStore,
     pageVisibilityStore,
@@ -47,6 +50,8 @@
     islandConfig: IslandConfig
     currentMinimalW: number
     currentExpandedH?: number
+    activeOverlay?: OverlayPageId
+    onCloseOverlay?: () => void
     hiddenBounds: { w: number; h: number; r: number }
     activeOpacity?: number
     glowOpacity?: number
@@ -94,6 +99,8 @@
     islandConfig,
     currentMinimalW,
     currentExpandedH,
+    activeOverlay = null,
+    onCloseOverlay = () => {},
     hiddenBounds,
     activeOpacity = 1,
     glowOpacity = 0.6,
@@ -407,7 +414,11 @@
     width: {isHidden
     ? hiddenBounds.w
     : Math.min(
-        expanded ? islandConfig.expanded.w : currentMinimalW,
+        expanded
+          ? activeOverlay !== null
+            ? Math.max(islandConfig.expanded.w, 440)
+            : islandConfig.expanded.w
+          : currentMinimalW,
         activeMonitorWidth ? activeMonitorWidth - 24 : 1920
       )}px;
     height: {isHidden
@@ -490,7 +501,11 @@
         <div
           class="view"
           style="width: {Math.min(
-            expanded ? islandConfig.expanded.w : currentMinimalW,
+            expanded
+              ? activeOverlay !== null
+                ? Math.max(islandConfig.expanded.w, 440)
+                : islandConfig.expanded.w
+              : currentMinimalW,
             activeMonitorWidth ? activeMonitorWidth - 24 : 1920
           )}px; height: {expanded
             ? (currentExpandedH ?? islandConfig.expanded.h)
@@ -501,6 +516,12 @@
           {/if}
         </div>
       {/key}
+    {/if}
+
+    {#if expanded && !isPageDormant && activeOverlay === 'notifications'}
+      <NotificationsOverlayPage onClose={onCloseOverlay} />
+    {:else if expanded && !isPageDormant && activeOverlay === 'apps'}
+      <AppsOverlayPage onClose={onCloseOverlay} />
     {/if}
 
     {#if expanded && isDockVisible}

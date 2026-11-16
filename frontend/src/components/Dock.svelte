@@ -37,6 +37,7 @@
   import type { IslandConfig } from '../store'
   import {
     notifData,
+    activeOverlayStore,
     pageVisibilityStore,
     dockPinnedAppsStore,
     globalMediaStore,
@@ -102,7 +103,9 @@
   const checkShowNotifs = () =>
     Boolean(
       $pageVisibilityStore.notifications !== false &&
-      ($notifData.length > 0 || activePage === NotificationPage)
+      ($notifData.length > 0 ||
+        activePage === NotificationPage ||
+        $activeOverlayStore === 'notifications')
     )
   const showNotifs = $derived.by(checkShowNotifs)
 
@@ -243,7 +246,9 @@
         id: 'notifications',
         tooltip: $tStore('dock.notifications'),
         icon: Bell,
-        active: activePage === NotificationPage,
+        active:
+          activePage === NotificationPage ||
+          $activeOverlayStore === 'notifications',
         badge: $notifData.length > 0 ? $notifData.length : undefined,
         group: 'dynamic',
         onclick: (e: MouseEvent) => AppControls.goNotif(navigate, e)
@@ -361,7 +366,7 @@
       <DockButton
         tooltip={$tStore('dock.apps')}
         tooltipPosition="bottom"
-        active={activePage === AppsPage}
+        active={activePage === AppsPage || $activeOverlayStore === 'apps'}
         onclick={(e: MouseEvent) => AppControls.goApps(navigate, e)}
       >
         <Grid size={18} />

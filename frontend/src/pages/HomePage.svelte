@@ -111,11 +111,18 @@
     }
   }
 
+  const openOverlay =
+    getContext<
+      (overlay: 'notifications' | 'apps' | null, opts?: { tab?: 'notifications' | 'announcements' | 'releases' }) => void
+    >('openOverlay')
+
   /**
-   * Navigates the island viewport to the Developer Announcements feed.
+   * Opens the Developer Announcements tab inside NotificationsOverlayPage.
    */
   function openAnnouncementsPage() {
-    if (navigate) {
+    if (typeof openOverlay === 'function') {
+      openOverlay('notifications', { tab: 'announcements' })
+    } else if (navigate) {
       navigate(AnnouncementsPage, announcementsConfig, true)
     }
   }

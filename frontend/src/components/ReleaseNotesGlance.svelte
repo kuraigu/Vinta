@@ -24,6 +24,11 @@
       (page: unknown, pageConfig: IslandConfig, expand?: boolean) => void
     >('navigate')
 
+  const openOverlay =
+    getContext<
+      (overlay: 'notifications' | 'apps' | null, opts?: { tab?: 'notifications' | 'announcements' | 'releases' }) => void
+    >('openOverlay')
+
   let rawNotes = $state('')
 
   function formatVersion(ver: string | undefined): string {
@@ -113,6 +118,8 @@
   function handleOpen() {
     if (onClick) {
       onClick()
+    } else if (typeof openOverlay === 'function') {
+      openOverlay('notifications', { tab: 'releases' })
     } else if (typeof navigate === 'function') {
       navigate(ReleaseNotesPage, releaseNotesConfig, true)
     }
