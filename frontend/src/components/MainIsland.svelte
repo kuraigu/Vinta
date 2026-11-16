@@ -7,6 +7,7 @@
 <script lang="ts">
   import { getContext, onMount, type Component } from 'svelte'
   import { fade } from 'svelte/transition'
+  import { Events } from '$lib/events'
   import Clock from './Clock.svelte'
   import Dock from './Dock.svelte'
   import FileDropIndicator from './FileDropIndicator.svelte'
@@ -351,10 +352,12 @@
       }
     }
 
-    const handleDevFileHold = (e: Event) => {
-      const custom = e as CustomEvent<{ active?: boolean; progress?: number }>
-      isHoldingFilesOverIsland = !!custom.detail?.active
-      fileHoldProgress = custom.detail?.progress ?? 0
+    const handleDevFileHold = (ev: any) => {
+      const detail = (ev?.data ?? ev) as
+        | { active?: boolean; progress?: number }
+        | undefined
+      isHoldingFilesOverIsland = !!detail?.active
+      fileHoldProgress = detail?.progress ?? 0
     }
 
     document.documentElement.addEventListener(
@@ -362,7 +365,7 @@
       handleDocumentPointerLeave
     )
     window.addEventListener('blur', handleWindowBlur)
-    window.addEventListener('vinta-devtest-file-hold', handleDevFileHold)
+    const unsubFileHold = Events.OnGlobal('devtest:file-hold', handleDevFileHold)
 
     return () => {
       stopFileHoldTimer()
@@ -371,7 +374,7 @@
         handleDocumentPointerLeave
       )
       window.removeEventListener('blur', handleWindowBlur)
-      window.removeEventListener('vinta-devtest-file-hold', handleDevFileHold)
+      unsubFileHold()
     }
   })
 </script>

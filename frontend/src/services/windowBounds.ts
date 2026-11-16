@@ -11,6 +11,7 @@ import {
   SetIsHidden
 } from '../../bindings/Vinta/backend/app.js'
 import { HitRect } from '../../bindings/Vinta/backend/models.js'
+import { Events } from '$lib/events'
 import { resyncAllSatellites } from '../stores/satellites'
 import { dismissAllTooltips } from './tooltipBounds'
 
@@ -198,7 +199,7 @@ export class WindowBoundsManager {
   private lastDragSyncTime: number = 0
   private baselineInvalidated: boolean = false
   private isDragBaselineActive: boolean = false
-  private resyncListenerAttached: boolean = false
+  private resyncUnsub?: () => void
 
   private handleResyncBounds = () => {
     if (this.isDragBaselineActive || this.liveTrackingRaf !== undefined) {
@@ -215,9 +216,11 @@ export class WindowBoundsManager {
     explicitOffset?: number
   ): void {
     if (islandNode) this.activeIslandNode = islandNode
-    if (typeof window !== 'undefined' && !this.resyncListenerAttached) {
-      window.addEventListener('vinta-resync-bounds', this.handleResyncBounds)
-      this.resyncListenerAttached = true
+    if (!this.resyncUnsub) {
+      this.resyncUnsub = Events.OnGlobal(
+        'vinta:resync-bounds',
+        this.handleResyncBounds
+      )
     }
     const { hitRects } = this.measureHitRects(this.activeIslandNode, false)
     this.baselineHitRects = hitRects
@@ -682,9 +685,9 @@ export class WindowBoundsManager {
     this.cancelPendingTransition()
     this.cancelScheduledTrimMemory()
     clearTimeout(this.idleWatchdogTimer)
-    if (this.resyncListenerAttached && typeof window !== 'undefined') {
-      window.removeEventListener('vinta-resync-bounds', this.handleResyncBounds)
-      this.resyncListenerAttached = false
+    if (this.resyncUnsub) {
+      this.resyncUnsub()
+      this.resyncUnsub = undefined
     }
   }
 }

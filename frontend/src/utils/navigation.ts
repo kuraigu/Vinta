@@ -5,6 +5,7 @@
  * if playing, or onboarding on first run) and provides navigation helper functions.
  */
 
+import { Events } from '$lib/events'
 import HomePage, { config as homeConfig } from '../pages/HomePage.svelte'
 import AppsPage, { config as appsConfig } from '../pages/AppsPage.svelte'
 import SettingsPage, {
@@ -196,6 +197,6 @@ export const AppControls = {
 
   doQuit: (e?: Event) => {
     if (e) e.stopPropagation()
-    window.dispatchEvent(new CustomEvent('vinta-quit'))
+    Events.Emit('vinta:quit')
   }
 }

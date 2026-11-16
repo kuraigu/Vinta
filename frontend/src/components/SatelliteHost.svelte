@@ -6,6 +6,7 @@
 -->
 <script lang="ts">
   import { onDestroy, type Snippet } from 'svelte'
+  import { Events } from '$lib/events'
   import { fly, scale } from 'svelte/transition'
   import { cubicOut } from 'svelte/easing'
   import {
@@ -117,7 +118,7 @@
     })
 
     if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))
+      Events.Emit('vinta:resync-bounds')
     }
   }
 
@@ -173,7 +174,7 @@
     requestAnimationFrame(() => {
       syncSatelliteBounds()
       if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))
+        Events.Emit('vinta:resync-bounds')
       }
     })
 
@@ -189,7 +190,7 @@
       ) {
         syncSatelliteBounds()
         if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))
+          Events.Emit('vinta:resync-bounds')
         }
       }
     }
@@ -203,7 +204,7 @@
       resizeObserver = new ResizeObserver(() => {
         syncSatelliteBounds()
         if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))
+          Events.Emit('vinta:resync-bounds')
         }
       })
       resizeObserver.observe(node)
@@ -216,7 +217,7 @@
     teardownObservers()
     unregisterSatellite(id)
     if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))
+      Events.Emit('vinta:resync-bounds')
     }
   })
 

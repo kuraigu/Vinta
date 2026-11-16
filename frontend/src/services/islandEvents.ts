@@ -100,7 +100,7 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
     eventName: string,
     callback: (data: T) => void
   ): () => void {
-    const unsub = Events.On(eventName, (ev: any) => {
+    const unsub = Events.OnGlobal(eventName, (ev: any) => {
       const data =
         ev?.data !== undefined
           ? Array.isArray(ev.data)
@@ -576,16 +576,14 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
     }
   })
 
-  // Navigation to Settings via Custom DOM Event
-  const handleNavigateSettings = (e: Event) => {
-    const customEv = e as CustomEvent<{ tab?: string }>
-    if (customEv.detail?.tab) {
-      activeSettingsTabStore.set(customEv.detail.tab)
+  // Navigation to Settings via Events bus
+  onEvent<{ tab?: string }>('vinta:navigate-settings', (data) => {
+    if (data?.tab) {
+      activeSettingsTabStore.set(data.tab)
     }
     callbacks.showWidget()
     callbacks.navigateTo(SettingsPage, settingsConfig, true)
-  }
-  window.addEventListener('vinta-navigate-settings', handleNavigateSettings)
+  })
 
   // Application Updates
   onEvent('update:available', (data: UpdateCheckResult) => {
@@ -764,10 +762,6 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
     cleanupBatteryEvents?.()
     window.clearInterval(wirelessInterval)
     window.removeEventListener('focus', handleHardwareFocusOrResync)
-    window.removeEventListener(
-      'vinta-navigate-settings',
-      handleNavigateSettings
-    )
     unsubs.forEach((unsub) => {
       try {
         unsub()

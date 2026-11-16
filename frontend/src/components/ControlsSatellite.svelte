@@ -6,6 +6,7 @@
 -->
 <script lang="ts">
   import { onDestroy } from 'svelte'
+  import { Events } from '$lib/events'
   import SatelliteHost from './SatelliteHost.svelte'
   import FloatingControls from './FloatingControls.svelte'
   import type { FourPartRadii, FourPartGaps } from '../stores/satellites'
@@ -79,9 +80,7 @@
       layoutExpanded = true
       settleTimer = window.setTimeout(() => {
         isTransitioning = false
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))
-        }
+        Events.Emit('vinta:resync-bounds')
       }, 30)
     }, islandDuration)
   }

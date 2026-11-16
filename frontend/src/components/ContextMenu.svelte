@@ -5,6 +5,7 @@
 -->
 <script lang="ts">
   import { slide } from 'svelte/transition'
+  import { Events } from '$lib/events'
 
   export interface ContextMenuItem {
     label: string
@@ -76,17 +77,13 @@
 
       adjustedX = finalX
       adjustedY = finalY
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))
-      }
+      Events.Emit('vinta:resync-bounds')
     })
 
     return {
       destroy() {
         if (node.parentElement) node.parentElement.removeChild(node)
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))
-        }
+        Events.Emit('vinta:resync-bounds')
       }
     }
   }
@@ -113,19 +110,23 @@
   function stopPropagation(e: Event) {
     e.stopPropagation()
   }
+
+  function getUiScale(): number {
+    return (
+      (typeof document !== 'undefined' &&
+        parseFloat(
+          document.documentElement.style.getPropertyValue('--vinta-ui-scale')
+        )) ||
+      1
+    )
+  }
 </script>
 
-{@const uiScale =
-  (typeof document !== 'undefined' &&
-    parseFloat(
-      document.documentElement.style.getPropertyValue('--vinta-ui-scale')
-    )) ||
-  1}
 <div
   use:portal
   use:clickOutside
   class="ctx-menu no-swipe"
-  style="left: {adjustedX / uiScale}px; top: {adjustedY / uiScale}px;"
+  style="left: {adjustedX / getUiScale()}px; top: {adjustedY / getUiScale()}px;"
   transition:slide={{ duration: 100, axis: 'y' }}
   onmousedown={stopPropagation}
   role="menu"

@@ -100,7 +100,7 @@ export function subscribeToTelemetry(): () => void {
       })
       .catch(() => {})
 
-    unbindEvent = Events.On('system:telemetry', (payload: any) => {
+    unbindEvent = Events.OnGlobal('system:telemetry', (payload: any) => {
       const data = payload?.data?.[0] ?? payload?.data ?? payload
       handleTelemetryUpdate(data)
     })

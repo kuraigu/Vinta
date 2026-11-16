@@ -8,6 +8,7 @@
   import { flip } from 'svelte/animate'
   import { fly, fade, slide } from 'svelte/transition'
   import { cubicOut } from 'svelte/easing'
+  import { Events } from '$lib/events'
   import {
     Bell,
     MessageSquareDot,
@@ -916,11 +917,9 @@
                       onclick={(e) => {
                         e.stopPropagation()
                         if (notif.isUpdate) {
-                          window.dispatchEvent(
-                            new CustomEvent('vinta-navigate-settings', {
-                              detail: { tab: 'updates' }
-                            })
-                          )
+                          Events.Emit('vinta:navigate-settings', {
+                            tab: 'updates'
+                          })
                           return
                         }
                         FocusNotificationApp(

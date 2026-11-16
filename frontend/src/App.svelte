@@ -16,6 +16,7 @@
     RequestMediaUpdate,
     SetUIScale
   } from '../bindings/Vinta/backend/app.js'
+  import type { DisplayLayout } from '../bindings/Vinta/backend/models.js'
   import { Events } from '$lib/events'
 
   // Pages & Configs
@@ -234,7 +235,7 @@
   })
 
   // Multi-Monitor Geometry & Derived Bounds
-  let displayLayout = $state({
+  let displayLayout = $state<DisplayLayout>({
     virtualLeft: 0,
     virtualTop: 0,
     virtualWidth: 1920,
@@ -248,7 +249,8 @@
       width: 1920,
       height: 1080,
       isPrimary: true,
-      isPortrait: false
+      isPortrait: false,
+      dpiScale: 1.0
     },
     monitors: []
   })
@@ -1390,9 +1392,7 @@
 
   Events.On('devtest-file-drop-hold', (ev) => {
     const data = ev?.data as { active?: boolean; progress?: number }
-    window.dispatchEvent(
-      new CustomEvent('vinta-devtest-file-hold', { detail: data })
-    )
+    Events.Emit('devtest:file-hold', data)
   })
 
   Events.On('devtest-clear-notifications', () => {
@@ -1510,10 +1510,11 @@
       resyncAllSatellites()
     }, 320)
 
-    const handleOverlayChange = (e: Event) => {
-      const detail = (e as CustomEvent).detail as
+    const handleOverlayChange = (ev: unknown) => {
+      const detail = unwrapEventData<
         | { open: boolean; x?: number; y?: number; w?: number; h?: number }
         | undefined
+      >(ev)
       if (!detail?.open) {
         extraDropdownH = 0
         extraDropdownW = 0
@@ -1636,15 +1637,6 @@
       recoverBoundsIfIdle()
     }
 
-    const handleRecoverBoundsEvent = () => {
-      bounds.recoverRestingBounds(
-        getBoundsForState(),
-        clampedOffsetX,
-        islandNode,
-        isHidden
-      )
-    }
-
     const handleHotkeyToggle = () => {
       if (!$hasCompletedOnboardingStore || activePage === OnboardingPage) {
         return
@@ -1708,15 +1700,17 @@
       }
     }
 
-    window.addEventListener('vinta-overlay', handleOverlayChange)
-    window.addEventListener('vinta-quit', handleQuit)
-    window.addEventListener('vinta-resync-bounds', handleResyncBounds)
+    const unsubOverlay = Events.OnGlobal('vinta:overlay', handleOverlayChange)
+    const unsubQuit = Events.OnGlobal('vinta:quit', handleQuit)
+    const unsubResyncBounds = Events.OnGlobal(
+      'vinta:resync-bounds',
+      handleResyncBounds
+    )
     window.addEventListener('resize', handleResize)
     window.addEventListener('blur', handleGlobalDragFailsafe)
     window.addEventListener('pointercancel', handleGlobalDragFailsafe)
     window.addEventListener('keydown', handleWindowKeydownFailsafe)
     window.addEventListener('focus', handleWindowFocus)
-    window.addEventListener('vinta-recover-bounds', handleRecoverBoundsEvent)
 
     const stopIdleReconciler = bounds.startIdleReconciler(
       () => islandNode,
@@ -1825,18 +1819,14 @@
       window.removeEventListener('dragstart', disableDefaultBrowserDrag, true)
       window.removeEventListener('mousedown', disableMiddleClickScroll, true)
       window.removeEventListener('keydown', disableBrowserShortcuts)
-      window.removeEventListener('vinta-overlay', handleOverlayChange)
-      window.removeEventListener('vinta-quit', handleQuit)
-      window.removeEventListener('vinta-resync-bounds', handleResyncBounds)
+      unsubOverlay()
+      unsubQuit()
+      unsubResyncBounds()
       window.removeEventListener('resize', handleResize)
       window.removeEventListener('blur', handleGlobalDragFailsafe)
       window.removeEventListener('pointercancel', handleGlobalDragFailsafe)
       window.removeEventListener('keydown', handleWindowKeydownFailsafe)
       window.removeEventListener('focus', handleWindowFocus)
-      window.removeEventListener(
-        'vinta-recover-bounds',
-        handleRecoverBoundsEvent
-      )
     }
   })
 </script>

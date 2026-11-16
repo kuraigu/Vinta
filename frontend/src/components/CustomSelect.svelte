@@ -6,6 +6,7 @@
 -->
 <script lang="ts">
   import { slide } from 'svelte/transition'
+  import { Events } from '$lib/events'
   import { ChevronDown, Search } from 'lucide-svelte'
   import FlagIcon from './FlagIcon.svelte'
   import { tStore } from '../store'
@@ -145,11 +146,7 @@
     open: boolean,
     rect?: { x: number; y: number; w: number; h: number }
   ) {
-    window.dispatchEvent(
-      new CustomEvent('vinta-overlay', {
-        detail: open ? { open, ...rect } : { open }
-      })
-    )
+    Events.Emit('vinta:overlay', open ? { open, ...rect } : { open })
   }
 
   let selectedOption = $derived(options.find((o) => o.value === value))

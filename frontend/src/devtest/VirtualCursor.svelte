@@ -705,9 +705,7 @@
     }
     // Resync hit bounds so folder windows are immediately clickable by real mouse
     setTimeout(() => {
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))
-      }
+      Events.Emit('vinta:resync-bounds')
     }, 30)
   })
 </script>
