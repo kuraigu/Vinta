@@ -7,13 +7,16 @@
 import { writable } from 'svelte/store'
 import { dismissAllTooltips } from '../services/tooltipBounds'
 
+export type TooltipPosition = 'top' | 'bottom' | 'left' | 'right'
+
 /**
  * Options for configuring a custom tooltip display.
  */
 export interface TooltipOptions {
   text: string
+  subtitle?: string
   align?: 'left' | 'center' | 'right'
-  position?: 'top' | 'bottom'
+  position?: TooltipPosition
 }
 
 /**
@@ -22,8 +25,9 @@ export interface TooltipOptions {
 export interface ActiveTooltipState {
   id: string
   text: string
+  subtitle: string
   align: 'left' | 'center' | 'right'
-  position: 'top' | 'bottom'
+  position: TooltipPosition
   targetRect: DOMRect | null
   visible: boolean
 }
@@ -31,6 +35,7 @@ export interface ActiveTooltipState {
 const initialTooltipState: ActiveTooltipState = {
   id: '',
   text: '',
+  subtitle: '',
   align: 'center',
   position: 'bottom',
   targetRect: null,
@@ -58,6 +63,7 @@ export function showTooltip(
   activeTooltipStore.set({
     id: 'tip-' + Math.random().toString(36).slice(2, 9),
     text: opts.text,
+    subtitle: opts.subtitle || '',
     align: opts.align || 'center',
     position: opts.position || 'bottom',
     targetRect: rect,
