@@ -1,0 +1,1373 @@
+/* ============================================================================
+   Onboarding Animated Preview Stage Stylesheet
+   Uses BentoCard and SegmentedControl primitives with clean non-clipping zones
+   ============================================================================ */
+
+:global(.vinta-bento-card.onboarding-diagram-card) {
+  gap: 8px;
+  padding: 10px 12px;
+  text-align: left;
+  align-items: stretch;
+}
+
+/* ============================================================================
+   Mode 0: Welcome Feature & Action Rotator
+   ============================================================================ */
+:global(.vinta-bento-card.welcome-showcase-card) {
+  gap: 6px;
+  padding: 10px 12px;
+}
+
+.welcome-feature-stage {
+  position: relative;
+  width: 100%;
+  height: 62px;
+  overflow: hidden;
+}
+
+.welcome-feature-slide {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  opacity: 0;
+  pointer-events: none;
+  animation: vintaWelcomeSlide7 21s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.welcome-feature-stage.animations-paused .welcome-feature-slide {
+  animation: none;
+  opacity: 0;
+}
+
+.welcome-feature-stage.animations-paused
+  .welcome-feature-slide.is-static-active {
+  opacity: 1;
+}
+
+.welcome-slide-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
+.welcome-slide-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  text-align: left;
+}
+
+.welcome-slide-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--vinta-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.welcome-slide-action {
+  font-size: 0.67rem;
+  line-height: 1.32;
+  color: var(--vinta-text-secondary);
+  white-space: normal;
+}
+
+.welcome-action-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: var(--vinta-radius-pill, 9999px);
+  background: var(--vinta-contrast-bg);
+  border: 1px solid var(--vinta-border);
+  flex-shrink: 0;
+}
+
+.mini-action-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--vinta-accent-muted);
+  border: 1px solid var(--vinta-border-accent);
+  color: var(--vinta-accent-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mini-action-btn.press-pulse {
+  animation: vintaWelcomeActionTap 3s ease-in-out infinite;
+}
+
+.mini-eq-bars {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 11px;
+  padding: 0 2px;
+}
+
+.mini-eq-bars span {
+  width: 2px;
+  border-radius: 9999px;
+  background: var(--vinta-accent-primary);
+  animation: vintaWelcomeEq 0.9s ease-in-out infinite alternate;
+}
+
+.mini-eq-bars span:nth-child(1) {
+  height: 5px;
+}
+
+.mini-eq-bars span:nth-child(2) {
+  height: 10px;
+  animation-delay: 0.2s;
+}
+
+.mini-eq-bars span:nth-child(3) {
+  height: 7px;
+  animation-delay: 0.4s;
+}
+
+.mini-timer-readout {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.67rem;
+  font-weight: 700;
+  color: var(--vinta-text-primary);
+  padding-left: 2px;
+}
+
+.mini-note-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 24px;
+  padding-left: 2px;
+}
+
+.mini-note-lines span {
+  height: 2.5px;
+  border-radius: 9999px;
+  background: var(--vinta-text-secondary);
+}
+
+.mini-note-lines span:last-child {
+  width: 16px;
+}
+
+.mini-file-chip {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--vinta-text-primary);
+  padding: 0 3px;
+}
+
+.mini-notif-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--vinta-accent-primary);
+  margin-left: 2px;
+}
+
+.mini-swatch-dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 2px;
+}
+
+.mini-swatch-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--vinta-text-secondary);
+}
+
+.mini-swatch-dots span:first-child {
+  background: var(--vinta-accent-primary);
+}
+
+.welcome-progress-dots {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.welcome-dot-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding: 5px 0;
+  margin: -3px 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.welcome-dot-bar {
+  width: 100%;
+  height: 3px;
+  border-radius: 9999px;
+  background: var(--vinta-contrast-bg);
+  animation: vintaWelcomeDot7 21s linear infinite;
+  transition: transform 0.15s ease;
+}
+
+.welcome-dot-btn:hover .welcome-dot-bar {
+  transform: scaleY(1.4);
+}
+
+.welcome-progress-dots.animations-paused .welcome-dot-bar {
+  animation: none;
+  background: var(--vinta-contrast-bg);
+}
+
+.welcome-progress-dots.animations-paused .welcome-dot-bar.is-static-active {
+  background: var(--vinta-accent-primary);
+}
+
+@keyframes vintaWelcomeSlide7 {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  2.4%,
+  12% {
+    opacity: 1;
+    transform: translateY(0px);
+  }
+  14.28%,
+  100% {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes vintaWelcomeDot7 {
+  0%,
+  14.2% {
+    background: var(--vinta-accent-primary);
+  }
+  14.3%,
+  100% {
+    background: var(--vinta-contrast-bg);
+  }
+}
+
+@keyframes vintaWelcomeActionTap {
+  0%,
+  38%,
+  62%,
+  100% {
+    transform: scale(1);
+  }
+  48% {
+    transform: scale(0.84);
+  }
+}
+
+@keyframes vintaWelcomeEq {
+  from {
+    transform: scaleY(0.5);
+  }
+  to {
+    transform: scaleY(1.1);
+  }
+}
+
+/* ============================================================================
+   Miniature Desktop Viewport Stage
+   ============================================================================ */
+.mini-desktop-screen {
+  position: relative;
+  width: 100%;
+  border-radius: 12px;
+  background:
+    radial-gradient(
+      circle at 50% 0%,
+      var(--vinta-accent-muted) 0%,
+      transparent 65%
+    ),
+    var(--vinta-contrast-bg);
+  border: 1px solid var(--vinta-border);
+  overflow: hidden;
+  box-sizing: border-box;
+  user-select: none;
+}
+
+.mini-desktop-screen.position-stage {
+  height: 112px;
+}
+
+.mini-desktop-screen.states-stage {
+  height: 138px;
+}
+
+/* Faint Desktop App Window Silhouette */
+.mini-bg-window {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 0;
+  height: 50px;
+  border-radius: 10px 10px 0 0;
+  background: var(--vinta-surface-card);
+  border: 1px solid var(--vinta-border-light);
+  border-bottom: none;
+  opacity: 0.4;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.mini-bg-dots {
+  display: flex;
+  gap: 4px;
+}
+
+.mini-bg-dots span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--vinta-text-muted);
+  opacity: 0.5;
+}
+
+.mini-bg-lines {
+  display: flex;
+  gap: 8px;
+}
+
+.mini-bg-lines span {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--vinta-border);
+}
+
+.mini-bg-lines span:first-child {
+  width: 34%;
+}
+
+.mini-bg-lines span:last-child {
+  width: 22%;
+}
+
+/* ============================================================================
+   Mode 1: Cursor Drag Animation Preview
+   ============================================================================ */
+.drag-demo-track {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.drag-demo-island-group {
+  position: relative;
+  top: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  z-index: 3;
+  animation: vintaDragSlide 6.4s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.mini-island-pill-preview {
+  position: relative;
+  width: 112px;
+  height: 36px;
+  border-radius: 0 0 15px 15px;
+  background: var(--vinta-island-bg);
+  border: 1px solid var(--vinta-border-accent);
+  border-top: none;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.32);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 5px 10px 4px;
+  box-sizing: border-box;
+}
+
+.mini-drag-bar {
+  width: 30px;
+  height: 3px;
+  border-radius: 9999px;
+  background: var(--vinta-accent-primary);
+  animation: vintaDragBarGlow 6.4s ease-in-out infinite;
+}
+
+.mini-pill-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--vinta-text-primary);
+}
+
+.mini-pill-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--vinta-accent-primary);
+  font-size: 0.62rem;
+}
+
+.mini-satellite-preview {
+  margin-top: 4px;
+  width: 14px;
+  height: 28px;
+  border-radius: 6px;
+  background: var(--vinta-surface-elevated);
+  border: 1px solid var(--vinta-border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.28);
+}
+
+.mini-sat-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--vinta-text-secondary);
+}
+
+.mini-sat-dot.accent {
+  background: var(--vinta-accent-primary);
+}
+
+.mini-sat-dot.danger {
+  background: var(--vinta-accent-danger);
+}
+
+.drag-demo-cursor {
+  position: absolute;
+  left: 53px;
+  top: 6px;
+  pointer-events: none;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45));
+  animation: vintaDragCursor 6.4s ease-in-out infinite;
+}
+
+.diagram-drag-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  font-size: 0.67rem;
+  font-weight: 600;
+  color: var(--vinta-text-muted);
+  text-align: left;
+}
+
+@keyframes vintaDragSlide {
+  0%,
+  18% {
+    transform: translateX(0px);
+  }
+  38%,
+  46% {
+    transform: translateX(-86px);
+  }
+  68%,
+  76% {
+    transform: translateX(86px);
+  }
+  92%,
+  100% {
+    transform: translateX(0px);
+  }
+}
+
+@keyframes vintaDragCursor {
+  0% {
+    transform: translate(0px, 28px) scale(1);
+    opacity: 0;
+  }
+  10% {
+    transform: translate(0px, 14px) scale(1);
+    opacity: 1;
+  }
+  16%,
+  86% {
+    transform: translate(0px, 0px) scale(0.9);
+    opacity: 1;
+  }
+  94% {
+    transform: translate(0px, 22px) scale(1);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(0px, 28px) scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes vintaDragBarGlow {
+  0%,
+  14%,
+  90%,
+  100% {
+    opacity: 0.65;
+    width: 26px;
+  }
+  20%,
+  84% {
+    opacity: 1;
+    width: 36px;
+  }
+}
+
+/* ============================================================================
+   Mode 2: Morphing 3-State & Control Satellite Stage
+   ============================================================================ */
+.morph-stage-center {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.morph-island-cluster {
+  position: relative;
+  top: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  z-index: 3;
+}
+
+.morph-island-shell {
+  position: relative;
+  background: var(--vinta-island-bg);
+  border: 1px solid var(--vinta-border-accent);
+  border-top: none;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.38);
+  overflow: hidden;
+  transition:
+    width calc(0.42s * var(--vinta-anim-scale, 1))
+      cubic-bezier(0.22, 1, 0.36, 1),
+    height calc(0.42s * var(--vinta-anim-scale, 1))
+      cubic-bezier(0.22, 1, 0.36, 1),
+    border-radius calc(0.42s * var(--vinta-anim-scale, 1))
+      cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.morph-layer-slot {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  box-sizing: border-box;
+  transition: opacity calc(0.2s * var(--vinta-anim-scale, 1)) ease;
+}
+
+.morph-expanded-inner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 5px;
+}
+
+.morph-drag-handle {
+  align-self: center;
+  width: 28px;
+  height: 2.5px;
+  border-radius: 9999px;
+  background: var(--vinta-text-muted);
+  opacity: 0.7;
+}
+
+.morph-bento-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  flex: 1;
+}
+
+.morph-bento-tile {
+  border-radius: 8px;
+  background: var(--vinta-surface-card);
+  border: 1px solid var(--vinta-border);
+  padding: 5px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  text-align: left;
+}
+
+.morph-tile-title {
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: var(--vinta-text-primary);
+}
+
+.morph-tile-sub {
+  font-size: 0.56rem;
+  color: var(--vinta-accent-primary);
+  font-weight: 700;
+}
+
+.morph-dock-strip {
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  background: var(--vinta-contrast-bg);
+  border: 1px solid var(--vinta-border);
+}
+
+.morph-dock-strip span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--vinta-text-muted);
+}
+
+.morph-dock-strip span:first-child {
+  background: var(--vinta-accent-primary);
+}
+
+.morph-compact-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--vinta-text-primary);
+}
+
+.morph-compact-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--vinta-accent-primary);
+  font-size: 0.63rem;
+}
+
+.morph-timeout-track {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 2px;
+  height: 2px;
+  border-radius: 9999px;
+  background: var(--vinta-accent-primary);
+  transform-origin: center;
+  animation: vintaMorphTimeout 3s linear infinite;
+}
+
+.morph-hidden-dash {
+  width: 50px;
+  height: 3.5px;
+  border-radius: 9999px;
+  background: var(--vinta-text-secondary);
+}
+
+.morph-hidden-clock {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--vinta-text-primary);
+}
+
+.morph-hidden-clock-dot {
+  width: 14px;
+  height: 3px;
+  border-radius: 9999px;
+  background: var(--vinta-accent-primary);
+}
+
+.morph-satellite-dock {
+  position: absolute;
+  left: calc(100% + 7px);
+  top: 14px;
+  width: 24px;
+  padding: 4px 0;
+  border-radius: 9px;
+  background: var(--vinta-surface-elevated);
+  border: 1px solid var(--vinta-border-accent);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transition:
+    opacity calc(0.22s * var(--vinta-anim-scale, 1)) ease,
+    transform calc(0.22s * var(--vinta-anim-scale, 1)) ease;
+}
+
+.morph-sat-btn {
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--vinta-text-primary);
+  background: var(--vinta-contrast-bg);
+}
+
+.morph-sat-btn.highlight {
+  background: var(--vinta-accent-muted);
+  color: var(--vinta-accent-primary);
+}
+
+.morph-sat-btn.danger {
+  color: var(--vinta-accent-danger);
+}
+
+.morph-sat-divider {
+  width: 12px;
+  height: 1px;
+  background: var(--vinta-border);
+}
+
+/* Single-Line Bottom Hint Zone */
+.morph-stage-hints {
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  pointer-events: none;
+  transition: opacity calc(0.2s * var(--vinta-anim-scale, 1)) ease;
+}
+
+.stage-hint-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: var(--vinta-radius-pill, 9999px);
+  background: var(--vinta-surface-elevated);
+  border: 1px solid var(--vinta-border);
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--vinta-text-primary);
+  white-space: nowrap;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+}
+
+/* Animated White Pointer Cursor across States */
+.morph-state-cursor {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  z-index: 5;
+  pointer-events: none;
+  transform-origin: top left;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.45));
+}
+
+.cursor-click-ring {
+  position: absolute;
+  left: -7px;
+  top: -7px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--vinta-accent-primary);
+  background: var(--vinta-accent-muted);
+  opacity: 0;
+  transform: scale(0.35);
+  pointer-events: none;
+}
+
+.states-stage.mode-loop .morph-state-cursor {
+  animation: vintaMorphLoopCursor 9s ease-in-out infinite;
+}
+
+.states-stage.mode-loop .cursor-click-ring {
+  animation: vintaMorphLoopClickRing 9s ease-out infinite;
+}
+
+.states-stage.mode-expanded .morph-state-cursor {
+  animation: vintaStaticExpandedCursor 2.4s ease-in-out infinite;
+}
+
+.states-stage.mode-compact .morph-state-cursor {
+  animation: vintaStaticCompactCursor 2.4s ease-in-out infinite;
+}
+
+.states-stage.mode-hidden .morph-state-cursor {
+  animation: vintaStaticHiddenClickCursor 3.6s ease-in-out infinite;
+}
+
+.states-stage.mode-expanded .cursor-click-ring,
+.states-stage.mode-compact .cursor-click-ring {
+  animation: vintaStaticClickRing 2.4s ease-out infinite;
+}
+
+.states-stage.mode-hidden .cursor-click-ring {
+  animation: vintaHiddenWakeClickRing 3.6s ease-out infinite;
+}
+
+.states-stage.mode-hidden .morph-state-cursor.wake-hover {
+  animation: vintaStaticHiddenHoverCursor 3.6s ease-in-out infinite;
+}
+
+.states-stage.mode-hidden .morph-state-cursor.wake-hover .cursor-click-ring {
+  animation: none;
+  opacity: 0;
+}
+
+.states-stage.mode-hidden.hidden-dash .morph-island-shell {
+  animation: vintaHiddenWakeShellDash 3.6s cubic-bezier(0.22, 1, 0.36, 1)
+    infinite;
+}
+
+.states-stage.mode-hidden.hidden-clock .morph-island-shell {
+  animation: vintaHiddenWakeShellClock 3.6s cubic-bezier(0.22, 1, 0.36, 1)
+    infinite;
+}
+
+.states-stage.mode-hidden .slot-hidden {
+  animation: vintaHiddenWakeSlotHidden 3.6s ease-in-out infinite;
+}
+
+.states-stage.mode-hidden .slot-compact {
+  animation: vintaHiddenWakeSlotCompact 3.6s ease-in-out infinite;
+}
+
+/* Static State Overrides */
+.states-stage.mode-expanded .morph-island-shell {
+  width: 170px;
+  height: 82px;
+  border-radius: 0 0 18px 18px;
+}
+
+.states-stage.mode-compact .morph-island-shell {
+  width: 148px;
+  height: 30px;
+  border-radius: 0 0 15px 15px;
+}
+
+.states-stage.mode-hidden.hidden-dash .morph-island-shell {
+  width: 82px;
+  height: 12px;
+  border-radius: 0 0 7px 7px;
+}
+
+.states-stage.mode-hidden.hidden-clock .morph-island-shell {
+  width: 96px;
+  height: 24px;
+  border-radius: 0 0 12px 12px;
+}
+
+.states-stage.mode-expanded .slot-compact,
+.states-stage.mode-expanded .slot-hidden,
+.states-stage.mode-expanded .hints-compact,
+.states-stage.mode-expanded .hints-hidden,
+.states-stage.mode-compact .slot-expanded,
+.states-stage.mode-compact .slot-hidden,
+.states-stage.mode-compact .morph-satellite-dock,
+.states-stage.mode-compact .hints-expanded,
+.states-stage.mode-compact .hints-hidden,
+.states-stage.mode-hidden .slot-expanded,
+.states-stage.mode-hidden .morph-satellite-dock,
+.states-stage.mode-hidden .hints-expanded,
+.states-stage.mode-hidden .hints-compact {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.states-stage.mode-compact .morph-satellite-dock,
+.states-stage.mode-hidden .morph-satellite-dock {
+  transform: scale(0.84);
+}
+
+/* Continuous Pure-CSS Auto Loop (9s Cycle, Clean Non-Overlapping Fades) */
+.states-stage.mode-loop.hidden-dash .morph-island-shell {
+  animation: vintaShellMorphDash 9s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.states-stage.mode-loop.hidden-clock .morph-island-shell {
+  animation: vintaShellMorphClock 9s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+}
+
+.states-stage.mode-loop .slot-expanded,
+.states-stage.mode-loop .morph-satellite-dock,
+.states-stage.mode-loop .hints-expanded {
+  animation: vintaSlotExpanded 9s ease-in-out infinite;
+}
+
+.states-stage.mode-loop .slot-compact,
+.states-stage.mode-loop .hints-compact {
+  animation: vintaSlotCompact 9s ease-in-out infinite;
+}
+
+.states-stage.mode-loop .slot-hidden,
+.states-stage.mode-loop .hints-hidden {
+  animation: vintaSlotHidden 9s ease-in-out infinite;
+}
+
+@keyframes vintaMorphLoopCursor {
+  0% {
+    transform: translate(60px, 56px) scale(1);
+    opacity: 0;
+  }
+  8% {
+    transform: translate(98px, 24px) scale(1);
+    opacity: 1;
+  }
+  18% {
+    transform: translate(98px, 24px) scale(1);
+    opacity: 1;
+  }
+  23% {
+    transform: translate(98px, 24px) scale(0.82);
+    opacity: 1;
+  }
+  27% {
+    transform: translate(98px, 24px) scale(1);
+    opacity: 0.9;
+  }
+  35% {
+    transform: translate(24px, 38px) scale(1);
+    opacity: 0.7;
+  }
+  44% {
+    transform: translate(0px, 18px) scale(1);
+    opacity: 1;
+  }
+  53% {
+    transform: translate(0px, 18px) scale(1);
+    opacity: 1;
+  }
+  58% {
+    transform: translate(0px, 18px) scale(0.82);
+    opacity: 1;
+  }
+  62% {
+    transform: translate(0px, 18px) scale(1);
+    opacity: 0.9;
+  }
+  70% {
+    transform: translate(0px, 42px) scale(1);
+    opacity: 0.8;
+  }
+  78%,
+  85% {
+    transform: translate(0px, 14px) scale(1);
+    opacity: 1;
+  }
+  89% {
+    transform: translate(0px, 14px) scale(0.82);
+    opacity: 1;
+  }
+  94% {
+    transform: translate(0px, 24px) scale(1);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(60px, 56px) scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes vintaStaticExpandedCursor {
+  0% {
+    transform: translate(62px, 56px) scale(1);
+    opacity: 0;
+  }
+  22% {
+    transform: translate(98px, 24px) scale(1);
+    opacity: 1;
+  }
+  45% {
+    transform: translate(98px, 24px) scale(1);
+    opacity: 1;
+  }
+  58% {
+    transform: translate(98px, 24px) scale(0.82);
+    opacity: 1;
+  }
+  72% {
+    transform: translate(98px, 24px) scale(1);
+    opacity: 1;
+  }
+  92%,
+  100% {
+    transform: translate(98px, 24px) scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes vintaStaticCompactCursor {
+  0% {
+    transform: translate(24px, 48px) scale(1);
+    opacity: 0;
+  }
+  25% {
+    transform: translate(0px, 18px) scale(1);
+    opacity: 1;
+  }
+  48% {
+    transform: translate(0px, 18px) scale(1);
+    opacity: 1;
+  }
+  60% {
+    transform: translate(0px, 18px) scale(0.82);
+    opacity: 1;
+  }
+  74% {
+    transform: translate(0px, 18px) scale(1);
+    opacity: 1;
+  }
+  92%,
+  100% {
+    transform: translate(0px, 18px) scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes vintaStaticHiddenClickCursor {
+  0% {
+    transform: translate(16px, 46px) scale(1);
+    opacity: 0;
+  }
+  20% {
+    transform: translate(0px, 14px) scale(1);
+    opacity: 1;
+  }
+  34% {
+    transform: translate(0px, 14px) scale(1);
+    opacity: 1;
+  }
+  40% {
+    transform: translate(0px, 14px) scale(0.82);
+    opacity: 1;
+  }
+  48% {
+    transform: translate(0px, 18px) scale(1);
+    opacity: 1;
+  }
+  72%,
+  100% {
+    transform: translate(16px, 46px) scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes vintaHiddenWakeClickRing {
+  0%,
+  36%,
+  52%,
+  100% {
+    opacity: 0;
+    transform: scale(0.35);
+  }
+  40% {
+    opacity: 0.95;
+    transform: scale(0.75);
+  }
+  49% {
+    opacity: 0;
+    transform: scale(1.85);
+  }
+}
+
+@keyframes vintaStaticHiddenHoverCursor {
+  0% {
+    transform: translate(18px, 48px) scale(1);
+    opacity: 0;
+  }
+  22% {
+    transform: translate(0px, 15px) scale(1);
+    opacity: 1;
+  }
+  68% {
+    transform: translate(0px, 15px) scale(1);
+    opacity: 1;
+  }
+  86%,
+  100% {
+    transform: translate(18px, 48px) scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes vintaHiddenWakeShellDash {
+  0%,
+  38% {
+    width: 82px;
+    height: 12px;
+    border-radius: 0 0 7px 7px;
+  }
+  48%,
+  80% {
+    width: 148px;
+    height: 30px;
+    border-radius: 0 0 15px 15px;
+  }
+  92%,
+  100% {
+    width: 82px;
+    height: 12px;
+    border-radius: 0 0 7px 7px;
+  }
+}
+
+@keyframes vintaHiddenWakeShellClock {
+  0%,
+  38% {
+    width: 96px;
+    height: 24px;
+    border-radius: 0 0 12px 12px;
+  }
+  48%,
+  80% {
+    width: 148px;
+    height: 30px;
+    border-radius: 0 0 15px 15px;
+  }
+  92%,
+  100% {
+    width: 96px;
+    height: 24px;
+    border-radius: 0 0 12px 12px;
+  }
+}
+
+@keyframes vintaHiddenWakeSlotHidden {
+  0%,
+  38% {
+    opacity: 1;
+  }
+  44%,
+  86% {
+    opacity: 0;
+  }
+  92%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes vintaHiddenWakeSlotCompact {
+  0%,
+  42% {
+    opacity: 0;
+  }
+  48%,
+  80% {
+    opacity: 1;
+  }
+  86%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes vintaShellMorphDash {
+  0%,
+  27% {
+    width: 170px;
+    height: 82px;
+    border-radius: 0 0 18px 18px;
+  }
+  34%,
+  60% {
+    width: 148px;
+    height: 30px;
+    border-radius: 0 0 15px 15px;
+  }
+  67%,
+  93% {
+    width: 82px;
+    height: 12px;
+    border-radius: 0 0 7px 7px;
+  }
+  100% {
+    width: 170px;
+    height: 82px;
+    border-radius: 0 0 18px 18px;
+  }
+}
+
+@keyframes vintaShellMorphClock {
+  0%,
+  27% {
+    width: 170px;
+    height: 82px;
+    border-radius: 0 0 18px 18px;
+  }
+  34%,
+  60% {
+    width: 148px;
+    height: 30px;
+    border-radius: 0 0 15px 15px;
+  }
+  67%,
+  93% {
+    width: 96px;
+    height: 24px;
+    border-radius: 0 0 12px 12px;
+  }
+  100% {
+    width: 170px;
+    height: 82px;
+    border-radius: 0 0 18px 18px;
+  }
+}
+
+@keyframes vintaSlotExpanded {
+  0%,
+  26% {
+    opacity: 1;
+  }
+  29%,
+  96% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes vintaSlotCompact {
+  0%,
+  31% {
+    opacity: 0;
+  }
+  35%,
+  59% {
+    opacity: 1;
+  }
+  62%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes vintaSlotHidden {
+  0%,
+  64% {
+    opacity: 0;
+  }
+  68%,
+  92% {
+    opacity: 1;
+  }
+  95%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes vintaMorphTimeout {
+  0% {
+    transform: scaleX(1);
+    opacity: 0.9;
+  }
+  85% {
+    transform: scaleX(0.1);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scaleX(0);
+    opacity: 0;
+  }
+}
+
+@keyframes vintaMorphLoopClickRing {
+  0%,
+  20%,
+  30%,
+  55%,
+  65%,
+  86%,
+  96%,
+  100% {
+    opacity: 0;
+    transform: scale(0.35);
+  }
+  23%,
+  58%,
+  89% {
+    opacity: 0.95;
+    transform: scale(0.75);
+  }
+  28%,
+  63%,
+  94% {
+    opacity: 0;
+    transform: scale(1.85);
+  }
+}
+
+@keyframes vintaStaticClickRing {
+  0%,
+  54%,
+  74%,
+  100% {
+    opacity: 0;
+    transform: scale(0.35);
+  }
+  58% {
+    opacity: 0.95;
+    transform: scale(0.75);
+  }
+  70% {
+    opacity: 0;
+    transform: scale(1.85);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .welcome-feature-slide,
+  .welcome-dot-bar,
+  .mini-action-btn.press-pulse,
+  .mini-eq-bars span,
+  .drag-demo-island-group,
+  .drag-demo-cursor,
+  .mini-drag-bar,
+  .morph-state-cursor,
+  .cursor-click-ring,
+  .states-stage.mode-hidden .morph-island-shell,
+  .states-stage.mode-hidden .slot-hidden,
+  .states-stage.mode-hidden .slot-compact,
+  .states-stage.mode-loop .morph-island-shell,
+  .states-stage.mode-loop .slot-expanded,
+  .states-stage.mode-loop .morph-satellite-dock,
+  .states-stage.mode-loop .hints-expanded,
+  .states-stage.mode-loop .slot-compact,
+  .states-stage.mode-loop .hints-compact,
+  .states-stage.mode-loop .slot-hidden,
+  .states-stage.mode-loop .hints-hidden,
+  .morph-timeout-track {
+    animation: none !important;
+  }
+}

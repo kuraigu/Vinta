@@ -151,9 +151,6 @@ export const AppControls = {
       e.stopPropagation()
       e.preventDefault()
     }
-    if (!get(hasCompletedOnboardingStore)) {
-      return
-    }
     if (currentPage === MediaPage) {
       navigate(MediaPage, mediaConfig, false)
       return
@@ -187,9 +184,6 @@ export const AppControls = {
     if (e) {
       e.stopPropagation()
       e.preventDefault()
-    }
-    if (!get(hasCompletedOnboardingStore)) {
-      return
     }
     hidePill()
   },
