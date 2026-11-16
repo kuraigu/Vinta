@@ -32,7 +32,8 @@
     pinnedMediaSourceStore,
     isIslandHiddenStore,
     isMediaDrawerOpenStore,
-    tStore
+    tStore,
+    type WidgetSizePreset
   } from '../store'
   import {
     Volume1,
@@ -43,7 +44,9 @@
     Repeat1,
     ListMusic,
     Pin,
-    SlidersHorizontal
+    SlidersHorizontal,
+    SkipBack,
+    SkipForward
   } from 'lucide-svelte'
   import { untrack } from 'svelte'
 
@@ -53,9 +56,15 @@
 
   interface Props {
     expanded?: boolean
+    glanceMode?: boolean
+    widgetSize?: WidgetSizePreset
   }
 
-  let { expanded = false }: Props = $props()
+  let {
+    expanded = false,
+    glanceMode = false,
+    widgetSize = '2x1'
+  }: Props = $props()
 
   let media = $derived($globalMediaStore)
 
@@ -157,6 +166,19 @@
     if (isSessionMenuOpen) {
       isAudioMixerOpen = false
     }
+  }
+
+  /**
+   * Pins or unpins the active media source directly from the player footer.
+   *
+   * @param e - Click event.
+   */
+  function togglePinCurrentSource(e: MouseEvent) {
+    e.stopPropagation()
+    const sourceApp = media.sourceApp
+    if (!sourceApp) return
+    $pinnedMediaSourceStore =
+      $pinnedMediaSourceStore === sourceApp ? null : sourceApp
   }
 
   /**
@@ -862,9 +884,11 @@
 <div
   data-vinta="media-widget"
   class="media-container {expanded ? 'expanded' : 'minimal'}"
+  class:is-glance={glanceMode}
+  class:is-glance-1x1={glanceMode && widgetSize === '1x1'}
 >
   {#if !expanded}
-    <!-- Compact Minimal View with Spinning Vinyl Disc, Track Info, Clock, and Audio Wave Bars -->
+    <!-- Compact Minimal View with Spinning Vinyl Disc, Track Info, Clock/Controls, and Audio Wave Bars -->
     <div class="minimal-layout">
       <!-- Spinning Vinyl Disc Album Art -->
       <div class="vinyl-disc {media.isPlaying ? 'spinning' : 'paused'}">
@@ -931,11 +955,132 @@
         {/if}
       </div>
 
-      <!-- Minimal Re-used <Clock> and Bouncing Equalizer -->
+      <!-- Minimal Re-used <Clock> (or inline glance controls) and Bouncing Equalizer -->
       <div class="minimal-right-meta">
-        <div class="minimal-clock-box">
-          <Clock expanded={false} />
-        </div>
+        {#if glanceMode}
+          <div class="minimal-glance-controls">
+            {#if widgetSize === '2x2' && media.isShuffleEnabled !== false && media.isShuffleActive !== undefined}
+              <button
+                type="button"
+                class="action-btn"
+                class:is-active={media.isShuffleActive}
+                use:islandTooltip={{
+                  text: media.isShuffleActive
+                    ? $tStore('media.shuffle_on')
+                    : $tStore('media.shuffle_off')
+                }}
+                aria-label={$tStore('media.shuffle_off')}
+                onclick={(e) => handleControl('shuffle', e)}
+              >
+                <Shuffle size={13} />
+              </button>
+            {/if}
+
+            <button
+              type="button"
+              class="action-btn"
+              use:islandTooltip={{ text: $tStore('media.previous_track') }}
+              aria-label={$tStore('media.previous_track')}
+              onclick={(e) => handleControl('prev', e)}
+            >
+              <SkipBack size={14} />
+            </button>
+            <button
+              type="button"
+              class="minimal-glance-play"
+              use:islandTooltip={{
+                text: media.isPlaying
+                  ? $tStore('media.pause')
+                  : $tStore('media.play')
+              }}
+              aria-label={media.isPlaying
+                ? $tStore('media.pause')
+                : $tStore('media.play')}
+              onclick={(e) => handleControl('play_pause', e)}
+            >
+              {#if media.isPlaying}
+                <svg
+                  viewBox="0 0 24 24"
+                  width="16"
+                  height="16"
+                  fill="currentColor"
+                >
+                  <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                </svg>
+              {:else}
+                <svg
+                  viewBox="0 0 24 24"
+                  width="16"
+                  height="16"
+                  fill="currentColor"
+                >
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              {/if}
+            </button>
+            <button
+              type="button"
+              class="action-btn"
+              use:islandTooltip={{ text: $tStore('media.next_track') }}
+              aria-label={$tStore('media.next_track')}
+              onclick={(e) => handleControl('next', e)}
+            >
+              <SkipForward size={14} />
+            </button>
+
+            {#if widgetSize === '2x2' && media.isRepeatEnabled !== false && media.autoRepeatMode !== undefined}
+              <button
+                type="button"
+                class="action-btn"
+                class:is-active={Boolean(
+                  media.autoRepeatMode && media.autoRepeatMode > 0
+                )}
+                use:islandTooltip={{
+                  text:
+                    media.autoRepeatMode === 1
+                      ? $tStore('media.repeat_one')
+                      : media.autoRepeatMode === 2
+                        ? $tStore('media.repeat_all')
+                        : $tStore('media.repeat_off')
+                }}
+                aria-label={$tStore('media.repeat_off')}
+                onclick={(e) => handleControl('repeat', e)}
+              >
+                {#if media.autoRepeatMode === 1}
+                  <Repeat1 size={13} />
+                {:else}
+                  <Repeat size={13} />
+                {/if}
+              </button>
+            {/if}
+
+            {#if widgetSize !== '1x1' && media.sourceApp}
+              {@const isCurrentPinned =
+                Boolean($pinnedMediaSourceStore) &&
+                media.sourceApp === $pinnedMediaSourceStore}
+              <button
+                type="button"
+                class="action-btn"
+                class:is-active={isCurrentPinned}
+                use:islandTooltip={{
+                  text: isCurrentPinned
+                    ? $tStore('media.unpin_source', { name: appBrand.name })
+                    : $tStore('media.pin_source', { name: appBrand.name })
+                }}
+                aria-label={isCurrentPinned
+                  ? $tStore('media.unpin_source', { name: appBrand.name })
+                  : $tStore('media.pin_source', { name: appBrand.name })}
+                onclick={togglePinCurrentSource}
+              >
+                <Pin size={13} />
+              </button>
+            {/if}
+          </div>
+        {:else}
+          <div class="minimal-clock-box">
+            <Clock expanded={false} />
+          </div>
+        {/if}
         {#if media.title || media.isPlaying}
           <DynamicEqualizer
             isPlaying={media.isPlaying}
@@ -988,7 +1133,7 @@
       class="expanded-card"
       class:has-active-drawer={isSessionMenuOpen || isAudioMixerOpen}
     >
-      {#if isSessionMenuOpen && media.sessions && media.sessions.length > 1}
+      {#if isSessionMenuOpen && media.sessions && media.sessions.length > 0}
         <MediaSourcesDrawer
           sessions={media.sessions}
           activeSessionId={media.activeSessionId}
@@ -1180,7 +1325,29 @@
               </button>
             {/if}
 
-            {#if media.sessions && media.sessions.length > 1}
+            {#if media.sourceApp}
+              {@const isCurrentPinned =
+                Boolean($pinnedMediaSourceStore) &&
+                media.sourceApp === $pinnedMediaSourceStore}
+              <button
+                type="button"
+                class="action-btn"
+                class:is-active={isCurrentPinned}
+                use:islandTooltip={{
+                  text: isCurrentPinned
+                    ? $tStore('media.unpin_source', { name: appBrand.name })
+                    : $tStore('media.pin_source', { name: appBrand.name })
+                }}
+                aria-label={isCurrentPinned
+                  ? $tStore('media.unpin_source', { name: appBrand.name })
+                  : $tStore('media.pin_source', { name: appBrand.name })}
+                onclick={togglePinCurrentSource}
+              >
+                <Pin size={14} />
+              </button>
+            {/if}
+
+            {#if media.sessions && media.sessions.length > 0}
               <button
                 class="action-btn session-btn"
                 class:is-active={isSessionMenuOpen}
@@ -1189,11 +1356,13 @@
                     count: media.sessions.length
                   })
                 }}
-                aria-label="Media Sources"
+                aria-label={$tStore('media.sources_title')}
                 onclick={toggleSessionMenu}
               >
                 <ListMusic size={14} />
-                <span class="session-indicator-dot"></span>
+                {#if media.sessions.length > 1 || ($pinnedMediaSourceStore && media.sourceApp === $pinnedMediaSourceStore)}
+                  <span class="session-indicator-dot"></span>
+                {/if}
               </button>
             {/if}
 

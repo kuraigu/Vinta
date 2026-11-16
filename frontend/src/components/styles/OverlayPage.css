@@ -1,0 +1,110 @@
+.overlay-page-shell {
+  position: absolute;
+  top: 0;
+  left: 1px;
+  right: 1px;
+  bottom: 1px;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  padding-top: var(--vinta-dock-height, 48px);
+  border-radius: inherit;
+  overflow: hidden;
+  background: var(--vinta-scrim, rgba(6, 7, 10, 0.45));
+  color: var(--vinta-text-primary);
+  contain: layout style;
+}
+
+.overlay-page-card {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+  background: var(
+    --vinta-bg-opaque,
+    var(--vinta-surface-elevated, var(--vinta-bg))
+  );
+  border-top: 1px solid var(--vinta-border-light, var(--vinta-border));
+  border-radius: 0;
+  box-shadow: var(--vinta-dock-popover-shadow);
+}
+
+.overlay-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid var(--vinta-border);
+  flex-shrink: 0;
+}
+
+.overlay-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow-x: auto;
+  overflow-y: visible;
+  scrollbar-width: none;
+}
+
+.overlay-header-left::-webkit-scrollbar {
+  display: none;
+}
+
+.overlay-title {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--vinta-text-primary);
+  letter-spacing: -0.01em;
+}
+
+.overlay-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 2px 0;
+  overflow: visible;
+}
+
+.overlay-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: var(--vinta-radius-pill, 9999px);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--vinta-text-secondary);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.overlay-close-btn:hover {
+  background: var(--vinta-contrast-hover);
+  border-color: var(--vinta-border);
+  color: var(--vinta-text-primary);
+}
+
+.overlay-page-body {
+  --vinta-dock-clearance: 0px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: 10px 12px 12px;
+}

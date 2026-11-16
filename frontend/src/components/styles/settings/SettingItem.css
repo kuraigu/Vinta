@@ -104,4 +104,10 @@
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
+  max-width: 55%;
+  min-width: 0;
+}
+
+:global(.vinta-bento-card.variant-setting.flex-col) .setting-control {
+  max-width: 100%;
 }

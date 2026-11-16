@@ -40,6 +40,22 @@
   align-items: center;
   gap: 6px;
   flex-shrink: 0;
+  color: var(--vinta-text-muted);
+}
+
+:global(.system-stats-glance-card) :global(.glance-nav-chevron) {
+  opacity: 0.6;
+  flex-shrink: 0;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease,
+    color 0.15s ease;
+}
+
+:global(.system-stats-glance-card:hover) :global(.glance-nav-chevron) {
+  opacity: 1;
+  transform: translateX(2px);
+  color: var(--vinta-text-primary);
 }
 
 .system-stats-rings-row {
@@ -119,4 +135,33 @@
   color: var(--vinta-text-secondary);
   letter-spacing: 0.5px;
   text-transform: uppercase;
+}
+
+:global([data-widget-size='1x1']) .system-stats-rings-row {
+  justify-content: space-between;
+  gap: 4px;
+  flex: 1;
+}
+
+:global([data-widget-size='1x1']) .ring-container {
+  width: 44px;
+  height: 44px;
+}
+
+:global([data-widget-size='1x1']) .value {
+  font-size: 10px;
+}
+
+:global([data-widget-size='2x2']) .system-stats-rings-row {
+  flex: 1;
+  align-items: center;
+}
+
+:global([data-widget-size='2x2']) .ring-container {
+  width: 66px;
+  height: 66px;
+}
+
+:global([data-widget-size='2x2']) .value {
+  font-size: 12px;
 }

@@ -810,6 +810,14 @@ export function SetTooltipBounds(bounds: $models.TooltipBounds): $CancellablePro
 }
 
 /**
+ * SetUIScale updates the active UI scale and resizes the Win32 overlay height proportionally
+ * so scaled pages are never clipped by the bottom edge of the WebView2 window.
+ */
+export function SetUIScale(scale: number): $CancellablePromise<void> {
+    return $Call.ByID(1427478915, scale);
+}
+
+/**
  * SetWidgetBounds updates the pill dimensions, scale, and horizontal offset from the frontend.
  */
 export function SetWidgetBounds(width: number, height: number, radius: number, scale: number, offsetX: number): $CancellablePromise<void> {

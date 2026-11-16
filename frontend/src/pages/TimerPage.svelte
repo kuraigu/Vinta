@@ -11,9 +11,9 @@
 
   export const config: IslandConfig = {
     minimal: { w: 320, h: 42, r: 16 },
-    expanded: { w: 420, h: 370, r: 28 },
-    borderColor: 'rgba(56, 189, 248, 0.35)',
-    glowColor: 'rgba(56, 189, 248, 0.25)'
+    expanded: { w: 420, h: 405, r: 28 },
+    borderColor: 'var(--vinta-island-border-idle)',
+    glowColor: 'var(--vinta-island-glow-idle)'
   }
 </script>
 

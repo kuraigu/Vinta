@@ -67,10 +67,19 @@
   align-items: flex-start;
   justify-content: center;
   pointer-events: none;
-  zoom: var(--vinta-ui-scale, 1);
+  contain: layout style;
 }
 
-:global(.island-wrapper > *) {
+.island-scale-box {
+  position: relative;
+  display: inline-flex;
+  align-items: flex-start;
+  justify-content: center;
+  zoom: var(--vinta-ui-scale, 1);
+  contain: layout style;
+}
+
+:global(.island-scale-box > *) {
   pointer-events: auto;
 }
 

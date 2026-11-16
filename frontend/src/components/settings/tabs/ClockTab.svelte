@@ -23,24 +23,25 @@
     timezoneStore,
     dateFormatStore,
     autoDiscardPastEventsStore,
-    getInitialTimezone
+    getInitialTimezone,
+    tStore
   } from '../../../store'
   import { discardPastCalendarEvents } from '../../../stores/calendarStore'
 
-  const timeFormatOptions = [
-    { label: '12-Hour (1:30 PM)', value: '12h' },
-    { label: '24-Hour (13:30)', value: '24h' }
-  ]
+  const timeFormatOptions = $derived([
+    { label: $tStore('settings.clock_12h'), value: '12h' },
+    { label: $tStore('settings.clock_24h'), value: '24h' }
+  ])
 
-  const dateFormatOptions = [
-    { label: 'Thu, Oct 15 (Short)', value: 'short' },
-    { label: 'Thursday, October 15 (Full)', value: 'full' },
+  const dateFormatOptions = $derived([
+    { label: $tStore('settings.clock_date_short'), value: 'short' },
+    { label: $tStore('settings.clock_date_full'), value: 'full' },
     { label: '10/15/2026 (MM/DD/YYYY)', value: 'us_numeric' },
     { label: '15/10/2026 (DD/MM/YYYY)', value: 'eu_numeric' },
-    { label: 'October 15, 2026 (Month D, YYYY)', value: 'us_long' },
-    { label: '15 October 2026 (D Month YYYY)', value: 'eu_long' },
+    { label: $tStore('settings.clock_date_us_long'), value: 'us_long' },
+    { label: $tStore('settings.clock_date_eu_long'), value: 'eu_long' },
     { label: '2026-10-15 (ISO YYYY-MM-DD)', value: 'iso' }
-  ]
+  ])
 
   onMount(() => {
     if ($dateFormatStore === 'default') {
@@ -77,13 +78,13 @@
           'Australia/Sydney'
         ]
 
-  const timezoneOptions = [
-    { label: 'Auto-detect (System Local)', value: 'auto' },
+  const timezoneOptions = $derived([
+    { label: $tStore('settings.clock_timezone_auto'), value: 'auto' },
     ...rawTimezones.map((tz) => ({
       label: tz.replace(/_/g, ' '),
       value: tz
     }))
-  ]
+  ])
 
   let selectedTz = $state(
     $timezoneStore === getInitialTimezone() ? 'auto' : $timezoneStore
@@ -112,8 +113,8 @@
 <div class="setting-group">
   <BentoCard variant="group">
     <SettingItem
-      label="Time Format"
-      description="Clock presentation style"
+      label={$tStore('settings.clock_time_format_label')}
+      description={$tStore('settings.clock_time_format_desc')}
       icon={Clock}
       flexCol={true}
       isDefault={$timeFormatStore === timeFormatStore.defaultValue}
@@ -129,8 +130,8 @@
     </SettingItem>
 
     <SettingItem
-      label="Timezone"
-      description="Active timezone for clock and agenda calculations"
+      label={$tStore('settings.clock_timezone_label')}
+      description={$tStore('settings.clock_timezone_desc')}
       icon={Globe}
       flexCol={true}
       isDefault={selectedTz === 'auto'}
@@ -147,8 +148,8 @@
     </SettingItem>
 
     <SettingItem
-      label="Date Display Format"
-      description="Format used across date widgets"
+      label={$tStore('settings.clock_date_format_label')}
+      description={$tStore('settings.clock_date_format_desc')}
       icon={Calendar}
       flexCol={true}
       isDefault={$dateFormatStore === 'short'}
@@ -166,37 +167,41 @@
 
   <BentoCard variant="group">
     <SettingItem
-      label="Auto-Discard Past Events"
-      description="Automatically purges agenda events after their scheduled date has passed"
+      label={$tStore('settings.clock_auto_discard_label')}
+      description={$tStore('settings.clock_auto_discard_desc')}
       icon={CalendarX}
+      isDefault={$autoDiscardPastEventsStore ===
+        autoDiscardPastEventsStore.defaultValue}
+      onReset={() => autoDiscardPastEventsStore.reset()}
     >
       <ToggleSwitch
         bind:checked={$autoDiscardPastEventsStore}
-        ariaLabel="Auto-Discard Past Events"
+        ariaLabel={$tStore('settings.clock_auto_discard_label')}
       />
     </SettingItem>
 
     <SettingItem
-      label="Clear Past Events"
-      description="Manually removes all expired agenda items preceding today"
+      label={$tStore('settings.clock_clear_past_label')}
+      description={$tStore('settings.clock_clear_past_desc')}
       icon={Trash2}
       flexCol={true}
     >
       <SettingActionButton
-        variant={clearedCount !== null ? 'success' : 'default'}
+        variant="default"
+        status={clearedCount !== null ? 'success' : 'idle'}
+        successLabel={clearedCount !== null
+          ? $tStore(
+              clearedCount === 1
+                ? 'settings.clock_removed_one'
+                : 'settings.clock_removed_many',
+              { count: clearedCount }
+            )
+          : undefined}
         fullWidth={true}
         onclick={handleClearPast}
       >
-        {#if clearedCount !== null}
-          <Check size={13} />
-          <span
-            >Removed {clearedCount}
-            {clearedCount === 1 ? 'event' : 'events'}</span
-          >
-        {:else}
-          <Trash2 size={13} />
-          <span>Clear Past Events</span>
-        {/if}
+        <Trash2 size={13} />
+        <span>{$tStore('settings.clock_clear_past_label')}</span>
       </SettingActionButton>
     </SettingItem>
   </BentoCard>

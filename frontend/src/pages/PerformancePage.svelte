@@ -18,9 +18,9 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { Cpu, Activity, Zap } from 'lucide-svelte'
-  import BackButton from '../components/BackButton.svelte'
   import BentoCard from '../components/BentoCard.svelte'
   import IconBadge from '../components/IconBadge.svelte'
+  import PageHeader from '../components/PageHeader.svelte'
   import ScrollView from '../components/ScrollView.svelte'
   import { tStore } from '../store'
   import {
@@ -302,12 +302,7 @@
   </ScrollView>
 
   <!-- Bottom Navigation Footer Bar (Swapped with Top Dock) -->
-  <footer class="perf-meta-footer">
-    <div class="perf-footer-left">
-      <BackButton title={$tStore('performance.back_to_apps')} />
-      <span class="perf-footer-title">{$tStore('performance.title')}</span>
-    </div>
-  </footer>
+  <PageHeader position="bottom" title={$tStore('performance.title')} />
 </div>
 
 <style src="./styles/PerformancePage.css"></style>

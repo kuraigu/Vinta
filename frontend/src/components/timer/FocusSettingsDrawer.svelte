@@ -5,6 +5,7 @@
 -->
 <script lang="ts">
   import DrawerPanel from '../DrawerPanel.svelte'
+  import ToggleSwitch from '../ToggleSwitch.svelte'
   import { islandTooltip } from '../../services/islandTooltip'
   import { timerAppStore, updateFocusSettings } from '../../store'
 
@@ -184,47 +185,31 @@
 
       <div class="drawer-row">
         <span class="drawer-row-label">Sound Chimes</span>
-        <label class="drawer-switch">
-          <input
-            type="checkbox"
-            checked={$timerAppStore.focus.settings.soundEnabled}
-            onchange={(e) =>
-              updateFocusSettings({
-                soundEnabled: (e.target as HTMLInputElement).checked
-              })}
-          />
-          <span class="switch-slider"></span>
-        </label>
+        <ToggleSwitch
+          checked={$timerAppStore.focus.settings.soundEnabled}
+          ariaLabel="Sound Chimes"
+          onchange={(checked) => updateFocusSettings({ soundEnabled: checked })}
+        />
       </div>
 
       <div class="drawer-row">
         <span class="drawer-row-label">Auto-start Breaks</span>
-        <label class="drawer-switch">
-          <input
-            type="checkbox"
-            checked={$timerAppStore.focus.settings.autoStartBreaks}
-            onchange={(e) =>
-              updateFocusSettings({
-                autoStartBreaks: (e.target as HTMLInputElement).checked
-              })}
-          />
-          <span class="switch-slider"></span>
-        </label>
+        <ToggleSwitch
+          checked={$timerAppStore.focus.settings.autoStartBreaks}
+          ariaLabel="Auto-start Breaks"
+          onchange={(checked) =>
+            updateFocusSettings({ autoStartBreaks: checked })}
+        />
       </div>
 
       <div class="drawer-row">
         <span class="drawer-row-label">Auto-start Focus</span>
-        <label class="drawer-switch">
-          <input
-            type="checkbox"
-            checked={$timerAppStore.focus.settings.autoStartFocus}
-            onchange={(e) =>
-              updateFocusSettings({
-                autoStartFocus: (e.target as HTMLInputElement).checked
-              })}
-          />
-          <span class="switch-slider"></span>
-        </label>
+        <ToggleSwitch
+          checked={$timerAppStore.focus.settings.autoStartFocus}
+          ariaLabel="Auto-start Focus"
+          onchange={(checked) =>
+            updateFocusSettings({ autoStartFocus: checked })}
+        />
       </div>
     </div>
   </DrawerPanel>

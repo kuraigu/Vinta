@@ -229,7 +229,8 @@ export const defaultDisplayLayout: DisplayLayout = {
     width: 1920,
     height: 1080,
     isPrimary: true,
-    isPortrait: false
+    isPortrait: false,
+    dpiScale: 1.0
   },
   monitors: []
 }

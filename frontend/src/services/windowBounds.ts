@@ -11,6 +11,7 @@ import {
   SetIsHidden
 } from '../../bindings/Vinta/backend/app.js'
 import { HitRect } from '../../bindings/Vinta/backend/models.js'
+import { Events } from '$lib/events'
 import { resyncAllSatellites } from '../stores/satellites'
 import { dismissAllTooltips } from './tooltipBounds'
 
@@ -31,6 +32,7 @@ export class WindowBoundsManager {
   private activeIslandNode: HTMLElement | null = null
   private idleWatchdogTimer: number | undefined
   private lastHitRectsSignature: string = ''
+  private lastHitRects: HitRect[] = []
 
   public currentOSBounds: WindowBounds = { w: 0, h: 0, r: 0 }
   public targetPendingBounds: WindowBounds = { w: 0, h: 0, r: 0 }
@@ -159,20 +161,46 @@ export class WindowBoundsManager {
   }
 
   /**
-   * Sends hit rectangles to the Go backend if the serialized signature changed.
+   * Sends hit rectangles to the Go backend only when coordinates actually changed.
    */
   private dispatchHitRects(
     hitRects: HitRect[],
-    force: boolean = false,
+    _force: boolean = false,
     explicitSig?: string
   ): void {
-    const sig =
-      explicitSig ??
-      hitRects.map((r) => `${r.left},${r.top},${r.width},${r.height}`).join(';')
-    if (!force && sig === this.lastHitRectsSignature) {
+    if (explicitSig !== undefined) {
+      if (explicitSig === this.lastHitRectsSignature) {
+        return
+      }
+      this.lastHitRectsSignature = explicitSig
+      this.lastHitRects = hitRects
+      SetHitRects(hitRects).catch(() => {})
       return
     }
-    this.lastHitRectsSignature = sig
+
+    const prev = this.lastHitRects
+    if (prev.length === hitRects.length && prev.length > 0) {
+      let same = true
+      for (let i = 0; i < hitRects.length; i++) {
+        const a = hitRects[i]
+        const b = prev[i]
+        if (
+          a.left !== b.left ||
+          a.top !== b.top ||
+          a.width !== b.width ||
+          a.height !== b.height
+        ) {
+          same = false
+          break
+        }
+      }
+      if (same) {
+        return
+      }
+    }
+
+    this.lastHitRects = hitRects
+    this.lastHitRectsSignature = ''
     SetHitRects(hitRects).catch(() => {})
   }
 
@@ -198,7 +226,7 @@ export class WindowBoundsManager {
   private lastDragSyncTime: number = 0
   private baselineInvalidated: boolean = false
   private isDragBaselineActive: boolean = false
-  private resyncListenerAttached: boolean = false
+  private resyncUnsub?: () => void
 
   private handleResyncBounds = () => {
     if (this.isDragBaselineActive || this.liveTrackingRaf !== undefined) {
@@ -215,9 +243,11 @@ export class WindowBoundsManager {
     explicitOffset?: number
   ): void {
     if (islandNode) this.activeIslandNode = islandNode
-    if (typeof window !== 'undefined' && !this.resyncListenerAttached) {
-      window.addEventListener('vinta-resync-bounds', this.handleResyncBounds)
-      this.resyncListenerAttached = true
+    if (!this.resyncUnsub) {
+      this.resyncUnsub = Events.OnGlobal(
+        'vinta:resync-bounds',
+        this.handleResyncBounds
+      )
     }
     const { hitRects } = this.measureHitRects(this.activeIslandNode, false)
     this.baselineHitRects = hitRects
@@ -240,7 +270,7 @@ export class WindowBoundsManager {
     }
     const now = performance.now()
     if (
-      now - this.lastDragSyncTime < 32 ||
+      now - this.lastDragSyncTime < 16 ||
       Math.abs(liveOffset - this.lastSyncedDragOffset) < 0.5
     ) {
       return
@@ -682,9 +712,9 @@ export class WindowBoundsManager {
     this.cancelPendingTransition()
     this.cancelScheduledTrimMemory()
     clearTimeout(this.idleWatchdogTimer)
-    if (this.resyncListenerAttached && typeof window !== 'undefined') {
-      window.removeEventListener('vinta-resync-bounds', this.handleResyncBounds)
-      this.resyncListenerAttached = false
+    if (this.resyncUnsub) {
+      this.resyncUnsub()
+      this.resyncUnsub = undefined
     }
   }
 }

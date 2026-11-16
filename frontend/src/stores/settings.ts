@@ -65,6 +65,7 @@ export interface HomeWidgetsVisibility {
   battery: boolean
   wireless: boolean
   actionCenter: boolean
+  media?: boolean
   systemStats?: boolean
   spotlight?: boolean
   announcements?: boolean
@@ -77,9 +78,22 @@ export const defaultHomeWidgetsVisibility: HomeWidgetsVisibility = {
   battery: true,
   wireless: true,
   actionCenter: true,
+  media: true,
   systemStats: false,
   spotlight: true,
   announcements: true
+}
+
+export type WidgetSizePreset = '1x1' | '2x1' | '2x2'
+
+export const defaultHomeWidgetSizes: Record<string, WidgetSizePreset> = {
+  weather: '2x1',
+  media: '2x1',
+  announcements: '2x1',
+  notifications: '2x1',
+  calendar: '2x1',
+  actionCenter: '2x1',
+  systemStats: '2x1'
 }
 
 export interface PageVisibility {
@@ -276,7 +290,7 @@ function persistentWritable<T>(key: string, initialValue: T) {
   }
 }
 
-export const CURRENT_SETTINGS_SCHEMA_VERSION = 1
+export const CURRENT_SETTINGS_SCHEMA_VERSION = 2
 
 export interface MigrationResult {
   migrated: Record<string, unknown>
@@ -335,6 +349,14 @@ const migrations: Record<number, MigrationFn> = {
       updated['_sparse_migrated'] = true
     }
     updated['_schema_version'] = 1
+    return updated
+  },
+  2: (settings) => {
+    const updated = { ...settings }
+    if (updated['vinta_home_widget_menu_enabled'] === false) {
+      delete updated['vinta_home_widget_menu_enabled']
+    }
+    updated['_schema_version'] = 2
     return updated
   }
 }
@@ -473,6 +495,58 @@ export const opacityHiddenStore = persistentWritable<number>(
   1.0
 )
 export const uiScaleStore = persistentWritable<number>('vinta_ui_scale', 1.0)
+export const animScaleStore = persistentWritable<number>('vinta_anim_scale', 1.0)
+export const monitorUiScalesStore = persistentWritable<Record<string, number>>(
+  'vinta_monitor_ui_scales',
+  {}
+)
+
+/**
+ * Returns a stable storage key for a monitor's custom UI scale override.
+ */
+export function getMonitorScaleKey(
+  monitor?: {
+    name?: string
+    left?: number
+    top?: number
+    isPrimary?: boolean
+  } | null
+): string {
+  if (!monitor || monitor.isPrimary) return 'primary'
+  return `${monitor.name || 'display'}_${monitor.left ?? 0}_${monitor.top ?? 0}`
+}
+
+/**
+ * Computes the baseline physical scale for a monitor relative to the 1080p design base,
+ * ensuring 1.0x looks proportionally consistent on 1440p/4K displays while respecting OS DPI.
+ */
+export function getMonitorBasePhysicalScale(
+  width: number = 1920,
+  height: number = 1080,
+  dpiScale: number = 1.0
+): number {
+  const shortEdge = Math.min(width || 1920, height || 1080)
+  const resBase = Math.max(1.0, shortEdge / 1080)
+  const osDpi = dpiScale > 0 ? dpiScale : 1.0
+  return Math.max(osDpi, resBase)
+}
+
+/**
+ * Computes the maximum safe user UI scale multiplier on top of the monitor's baseline scale.
+ */
+export function getMaxScaleForMonitor(
+  width: number = 1920,
+  height: number = 1080,
+  dpr?: number
+): number {
+  const shortEdge = Math.min(width || 1920, height || 1080)
+  const basePhysical = getMonitorBasePhysicalScale(width, height, dpr)
+  const effectiveShortEdge = shortEdge / basePhysical
+  if (effectiveShortEdge <= 900) return 1.1
+  if (shortEdge <= 1080) return 1.2
+  if (shortEdge <= 1440) return 1.25
+  return 1.5
+}
 
 // ============================================================================
 // 2. Behavior & Auto-Hide
@@ -562,6 +636,8 @@ export const weatherUnitStore = persistentWritable<TemperatureUnit>('vinta_weath
 // 6. Home & Page Visibility
 // ============================================================================
 export const homeWidgetsVisibilityStore = persistentWritable<HomeWidgetsVisibility>('vinta_home_widgets_visibility', defaultHomeWidgetsVisibility)
+export const homeWidgetSizesStore = persistentWritable<Record<string, WidgetSizePreset>>('vinta_home_widget_sizes', defaultHomeWidgetSizes)
+export const homeWidgetMenuEnabledStore = persistentWritable<boolean>('vinta_home_widget_menu_enabled', true)
 export const pageVisibilityStore = persistentWritable<PageVisibility>('vinta_page_visibility', defaultPageVisibility)
 export const dockPinnedAppsStore = persistentWritable<DockPinnedApps>('vinta_dock_pinned_apps', defaultDockPinnedApps)
 export const pinnedMediaSourceStore = persistentWritable<string | null>('vinta_pinned_media_source', null)
@@ -781,6 +857,8 @@ function sanitizeSettingsPayload(raw: Record<string, unknown>): Record<string, u
         if (typeof defaultVal === 'number') {
           if (key === 'vinta_autohide_delay') {
             sanitized[key] = Math.max(3, Math.min(60, Number(val)))
+          } else if (key === 'vinta_anim_scale') {
+            sanitized[key] = Math.max(0, Math.min(2.0, Number(val)))
           } else if (key.startsWith('vinta_opacity_')) {
             sanitized[key] = Math.max(0.1, Math.min(1.0, Number(val)))
           } else {

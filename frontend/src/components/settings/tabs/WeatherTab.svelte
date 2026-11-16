@@ -11,7 +11,11 @@
   import SegmentedControl from '../../SegmentedControl.svelte'
   import SettingItem from '../SettingItem.svelte'
   import CustomSelect from '../../CustomSelect.svelte'
-  import { weatherLocationStore, weatherUnitStore } from '../../../store'
+  import {
+    weatherLocationStore,
+    weatherUnitStore,
+    tStore
+  } from '../../../store'
   import {
     searchCities,
     formatLocationName
@@ -171,8 +175,8 @@
 <div class="setting-group">
   <BentoCard variant="group">
     <SettingItem
-      label="Weather Location"
-      description="Target location for forecasts"
+      label={$tStore('settings.weather_location_label')}
+      description={$tStore('settings.weather_location_desc')}
       icon={MapPin}
       flexCol={true}
       isDefault={selectedWeatherCity === weatherLocationStore.defaultValue.name}
@@ -191,8 +195,8 @@
     </SettingItem>
 
     <SettingItem
-      label="Temperature Unit"
-      description="Measurement unit for temperatures"
+      label={$tStore('settings.weather_unit_label')}
+      description={$tStore('settings.weather_unit_desc')}
       icon={Thermometer}
       flexCol={true}
       isDefault={$weatherUnitStore === weatherUnitStore.defaultValue}
@@ -201,8 +205,8 @@
       <SegmentedControl
         fullWidth={true}
         options={[
-          { value: 'celsius', label: '°C (Celsius)' },
-          { value: 'fahrenheit', label: '°F (Fahrenheit)' }
+          { value: 'celsius', label: $tStore('settings.weather_unit_c') },
+          { value: 'fahrenheit', label: $tStore('settings.weather_unit_f') }
         ]}
         bind:value={$weatherUnitStore}
       />

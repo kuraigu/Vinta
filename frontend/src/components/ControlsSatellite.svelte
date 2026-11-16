@@ -6,6 +6,7 @@
 -->
 <script lang="ts">
   import { onDestroy } from 'svelte'
+  import { Events } from '$lib/events'
   import SatelliteHost from './SatelliteHost.svelte'
   import FloatingControls from './FloatingControls.svelte'
   import type { FourPartRadii, FourPartGaps } from '../stores/satellites'
@@ -22,6 +23,7 @@
     monitorLeft?: number
     primaryCenter?: number
     clampedOffsetX?: number
+    uiScale?: number
     active?: boolean
     onmouseenter?: (e: MouseEvent) => void
     onmouseleave?: (e: MouseEvent) => void
@@ -36,6 +38,7 @@
     monitorLeft = 0,
     primaryCenter = 960,
     clampedOffsetX = 0,
+    uiScale = 1,
     active = true,
     onmouseenter,
     onmouseleave
@@ -77,9 +80,7 @@
       layoutExpanded = true
       settleTimer = window.setTimeout(() => {
         isTransitioning = false
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))
-        }
+        Events.Emit('vinta:resync-bounds')
       }, 30)
     }, islandDuration)
   }
@@ -96,16 +97,19 @@
    */
   function computeExpandedTooltipSide(): 'right' | 'left' {
     const islandCenterOnScreen = primaryCenter + clampedOffsetX - monitorLeft
-    const halfExpandedW = expandedWidth / 2
-    const dockGap = 6
-    const dockWidth = 32
+    const scale = uiScale > 0 ? uiScale : 1
+    const halfExpandedW = (expandedWidth / 2) * scale
+    const dockGap = 6 * scale
+    const dockWidth = 32 * scale
     const dockRightEdge =
       islandCenterOnScreen + halfExpandedW + dockGap + dockWidth
     const dockLeftEdge = dockRightEdge - dockWidth
 
     const rightClearance = activeMonitorWidth - dockRightEdge
     const leftClearance = dockLeftEdge
-    return rightClearance >= leftClearance ? 'right' : 'left'
+    return rightClearance < 160 && leftClearance > rightClearance
+      ? 'left'
+      : 'right'
   }
 
   let expandedTooltipSide = $derived.by(computeExpandedTooltipSide)
@@ -114,10 +118,10 @@
    * Computes layout dimensions, 4-part gaps, and corner radii for the controls satellite.
    */
   function computeSatelliteBounds() {
-    const centerOffsetY = Math.max(0, Math.round((expandedHeight - 88) / 2))
+    const centerOffsetY = Math.max(0, Math.round((expandedHeight - 95) / 2))
     return {
       width: 32,
-      height: 88,
+      height: 95,
       radius: 12,
       radii: EXPANDED_RADII,
       gap: 6,

@@ -8,7 +8,6 @@
 import type { Component } from 'svelte'
 import { get } from 'svelte/store'
 import { Events } from '$lib/events'
-import appIcon from '@appicon'
 import {
   GetBatteryStatus,
   GetWirelessStatus,
@@ -17,9 +16,9 @@ import {
 } from '../../bindings/Vinta/backend/app.js'
 import HomePage from '../pages/HomePage.svelte'
 import MediaPage, { config as mediaConfig } from '../pages/MediaPage.svelte'
-import NotificationPage, {
+import Notification, {
   config as notifConfig
-} from '../pages/NotificationPage.svelte'
+} from '../components/Notification.svelte'
 import SettingsPage, {
   config as settingsConfig
 } from '../pages/SettingsPage.svelte'
@@ -61,7 +60,12 @@ import {
   hasCompletedOnboardingStore
 } from '../store'
 import type { MonitorInfo } from '../../bindings/Vinta/backend/models.js'
-import { sendVintaNotification } from './vintaNotification.js'
+import {
+  notifyAutoHidden,
+  notifyDisplayRelocated,
+  notifyUpdateAvailable,
+  notifyPostUpdateInstalled
+} from './vintaNotification.js'
 import { showSatelliteNotification } from '../stores/notificationSatellite'
 import { getDeveloperAnnouncements } from './announcementsService'
 
@@ -100,7 +104,7 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
     eventName: string,
     callback: (data: T) => void
   ): () => void {
-    const unsub = Events.On(eventName, (ev: any) => {
+    const unsub = Events.OnGlobal(eventName, (ev: any) => {
       const data =
         ev?.data !== undefined
           ? Array.isArray(ev.data)
@@ -125,6 +129,17 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
   })
 
   onEvent('show-pill', () => {
+    callbacks.showWidget()
+  })
+
+  onEvent('open-settings', () => {
+    callbacks.showWidget()
+    callbacks.navigateTo(SettingsPage, settingsConfig, true)
+  })
+
+  onEvent('reset-position', () => {
+    hiddenPillOffsetXStore.set(0)
+    callbacks.onRelocateOffset?.(0)
     callbacks.showWidget()
   })
 
@@ -185,35 +200,7 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
     // Only dispatch notification if cooldown has elapsed for this application
     if (now - lastSent >= AUTO_HIDE_NOTIF_COOLDOWN_MS) {
       lastAutoHideNotifPerApp.set(targetAppName, now)
-
-      let reasonText = 'an exclusive fullscreen application'
-      if (reason === 'presentation_mode') {
-        reasonText = 'presentation mode'
-      } else if (reason === 'unsupported_app') {
-        reasonText = 'an incompatible application'
-      } else if (reason === 'borderless_fullscreen') {
-        reasonText = 'a borderless fullscreen application'
-      }
-
-      const notifTitle = 'Auto-Hidden'
-      const notifMessage = appName
-        ? `${appName}: Hidden to prevent overlay conflicts with ${reasonText}.`
-        : `Vinta was hidden to prevent overlay conflicts with ${reasonText}.`
-
-      // Prune previous auto-hide notification for this specific application before dispatching
-      notifData.update((items) =>
-        items.filter(
-          (item) =>
-            !(item.title === notifTitle && item.appName === targetAppName)
-        )
-      )
-
-      sendVintaNotification({
-        title: notifTitle,
-        message: notifMessage,
-        subApp: appName || undefined,
-        playSound: false
-      })
+      void notifyAutoHidden({ appName, reason })
     }
   })
 
@@ -245,16 +232,7 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
     const now = Date.now()
     if (now - lastRelocateTime > 5000) {
       lastRelocateTime = now
-      const notifTitle = `Moved to ${targetName}`
-      const notifMessage = appName
-        ? `${appName}: Moved to ${targetName} to prevent overlay conflicts.`
-        : `Moved to ${targetName} to prevent overlay conflicts.`
-
-      sendVintaNotification({
-        title: notifTitle,
-        message: notifMessage,
-        subApp: 'Display Manager'
-      })
+      notifyDisplayRelocated({ targetName, appName })
     }
   })
 
@@ -391,11 +369,17 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
 
   // Audio Peak Visualizer Feed
   onEvent('audio-peak', (data: Record<string, unknown>) => {
+    const activePage = callbacks.getActivePage()
+    const isMediaOnMediaPage =
+      activePage === MediaPage && get(pageVisibilityStore).media !== false
+    const isMediaOnHomePage =
+      activePage === HomePage &&
+      callbacks.getIsExpanded() &&
+      get(homeWidgetsVisibilityStore).media !== false
     if (
       callbacks.getIsHidden() ||
       callbacks.getIsPageDormant() ||
-      callbacks.getActivePage() !== MediaPage ||
-      get(pageVisibilityStore).media === false
+      (!isMediaOnMediaPage && !isMediaOnHomePage)
     ) {
       return
     }
@@ -487,7 +471,7 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
         isNotifEnabled &&
         get(notifSatelliteEnabledStore) &&
         currentPage !== HomePage &&
-        currentPage !== NotificationPage
+        currentPage !== Notification
 
       if (shouldShowSatellite) {
         showSatelliteNotification(newNotif)
@@ -501,7 +485,7 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
       ) {
         callbacks.onNotificationWake?.()
         callbacks.showWidget()
-        callbacks.navigateTo(NotificationPage, notifConfig, false)
+        callbacks.navigateTo(Notification, notifConfig, false)
         callbacks.triggerGlow()
       }
 
@@ -561,42 +545,25 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
     notificationPermissionDenied.set(true)
     if (get(pageVisibilityStore).notifications) {
       callbacks.showWidget()
-      callbacks.navigateTo(NotificationPage, notifConfig, true)
+      callbacks.navigateTo(Notification, notifConfig, true)
     }
   })
 
-  // Navigation to Settings via Custom DOM Event
-  const handleNavigateSettings = (e: Event) => {
-    const customEv = e as CustomEvent<{ tab?: string }>
-    if (customEv.detail?.tab) {
-      activeSettingsTabStore.set(customEv.detail.tab)
+  // Navigation to Settings via Events bus
+  onEvent<{ tab?: string }>('vinta:navigate-settings', (data) => {
+    if (data?.tab) {
+      activeSettingsTabStore.set(data.tab)
     }
     callbacks.showWidget()
     callbacks.navigateTo(SettingsPage, settingsConfig, true)
-  }
-  window.addEventListener('vinta-navigate-settings', handleNavigateSettings)
+  })
 
   // Application Updates
   onEvent('update:available', (data: UpdateCheckResult) => {
     if (data && data.updateAvailable) {
       updateInfoStore.set(data)
       if (get(autoCheckUpdatesStore)) {
-        const notifs = get(notifData)
-        notifData.set([
-          {
-            id: Date.now(),
-            appName: 'Vinta System',
-            title: `Vinta Update Available (${data.latestVersion})`,
-            message:
-              'A new version of Vinta is ready for download. Open Settings > Updates to review release highlights.',
-            timestamp: Date.now(),
-            canOpen: true,
-            isUpdate: true,
-            icon: appIcon,
-            appLogo: appIcon
-          },
-          ...notifs
-        ])
+        notifyUpdateAvailable(data.latestVersion)
         callbacks.showWidget()
       }
     }
@@ -606,22 +573,7 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
     CheckPostUpdateInstalled()
       .then((newVer: string) => {
         if (newVer) {
-          const notifs = get(notifData)
-          notifData.set([
-            {
-              id: Date.now(),
-              appName: 'Vinta System',
-              title: `Welcome to Vinta ${newVer}!`,
-              message:
-                'Vinta has been successfully updated. Check out the Updates tab in Settings to see what is new.',
-              timestamp: Date.now(),
-              canOpen: true,
-              isUpdate: true,
-              icon: appIcon,
-              appLogo: appIcon
-            },
-            ...notifs
-          ])
+          notifyPostUpdateInstalled(newVer)
           callbacks.showWidget()
         }
       })
@@ -753,10 +705,6 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
     cleanupBatteryEvents?.()
     window.clearInterval(wirelessInterval)
     window.removeEventListener('focus', handleHardwareFocusOrResync)
-    window.removeEventListener(
-      'vinta-navigate-settings',
-      handleNavigateSettings
-    )
     unsubs.forEach((unsub) => {
       try {
         unsub()

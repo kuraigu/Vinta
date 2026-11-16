@@ -5,7 +5,6 @@
 <script lang="ts">
   import { getContext } from 'svelte'
   import { ArrowLeft } from 'lucide-svelte'
-  import AppsPage, { config as appsConfig } from '../pages/AppsPage.svelte'
   import { islandTooltip } from '../services/islandTooltip'
   import { tStore } from '../store'
   import type { IslandConfig } from '../store'
@@ -17,12 +16,10 @@
 
   let { onback, title }: Props = $props()
 
-  const navigate =
-    getContext<
-      (page: unknown, pageConfig: IslandConfig, expand?: boolean) => void
-    >('navigate')
-
   const goBack = getContext<(() => void) | undefined>('goBack')
+  const openOverlay = getContext<
+    ((overlay: 'notifications' | 'apps' | null) => void) | undefined
+  >('openOverlay')
 
   let resolvedTitle = $derived(title || $tStore('common.back') || 'Back')
 
@@ -31,8 +28,8 @@
       onback()
     } else if (typeof goBack === 'function') {
       goBack()
-    } else if (typeof navigate === 'function') {
-      navigate(AppsPage, appsConfig, true)
+    } else if (typeof openOverlay === 'function') {
+      openOverlay('apps')
     }
   }
 </script>

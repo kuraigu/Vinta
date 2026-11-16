@@ -7,6 +7,7 @@
 <script lang="ts">
   import { getContext, onMount, type Component } from 'svelte'
   import { fade } from 'svelte/transition'
+  import { Events } from '$lib/events'
   import Clock from './Clock.svelte'
   import Dock from './Dock.svelte'
   import FileDropIndicator from './FileDropIndicator.svelte'
@@ -16,11 +17,15 @@
   import FileShelfPage, {
     config as fileShelfConfig
   } from '../pages/FileShelfPage.svelte'
+  import NotificationsOverlayPage from '../pages/overlays/NotificationsOverlayPage.svelte'
+  import AppsOverlayPage from '../pages/overlays/AppsOverlayPage.svelte'
   import {
     autoHideDisplayStore,
+    type OverlayPageId,
     allowDragPositionStore,
     autoHideDelayStore,
     pageVisibilityStore,
+    animScaleStore,
     type IslandConfig
   } from '../store'
   import type { IslandGestureController } from '../services/islandGestures'
@@ -46,6 +51,8 @@
     islandConfig: IslandConfig
     currentMinimalW: number
     currentExpandedH?: number
+    activeOverlay?: OverlayPageId
+    onCloseOverlay?: () => void
     hiddenBounds: { w: number; h: number; r: number }
     activeOpacity?: number
     glowOpacity?: number
@@ -93,6 +100,8 @@
     islandConfig,
     currentMinimalW,
     currentExpandedH,
+    activeOverlay = null,
+    onCloseOverlay = () => {},
     hiddenBounds,
     activeOpacity = 1,
     glowOpacity = 0.6,
@@ -128,12 +137,20 @@
     if (expanded !== prevExpandedState || isHidden !== prevHiddenState) {
       prevExpandedState = expanded
       prevHiddenState = isHidden
+      const scale = $animScaleStore
+      if (scale <= 0) {
+        isMorphing = false
+        return
+      }
       isMorphing = true
       if (morphTimer) clearTimeout(morphTimer)
-      morphTimer = setTimeout(() => {
-        isMorphing = false
-        morphTimer = null
-      }, 340)
+      morphTimer = setTimeout(
+        () => {
+          isMorphing = false
+          morphTimer = null
+        },
+        Math.round(650 * scale)
+      )
     }
   })
 
@@ -351,10 +368,11 @@
       }
     }
 
-    const handleDevFileHold = (e: Event) => {
-      const custom = e as CustomEvent<{ active?: boolean; progress?: number }>
-      isHoldingFilesOverIsland = !!custom.detail?.active
-      fileHoldProgress = custom.detail?.progress ?? 0
+    const handleDevFileHold = (ev: any) => {
+      const detail = (ev?.data ?? ev) as
+        { active?: boolean; progress?: number } | undefined
+      isHoldingFilesOverIsland = !!detail?.active
+      fileHoldProgress = detail?.progress ?? 0
     }
 
     document.documentElement.addEventListener(
@@ -362,7 +380,10 @@
       handleDocumentPointerLeave
     )
     window.addEventListener('blur', handleWindowBlur)
-    window.addEventListener('vinta-devtest-file-hold', handleDevFileHold)
+    const unsubFileHold = Events.OnGlobal(
+      'devtest:file-hold',
+      handleDevFileHold
+    )
 
     return () => {
       stopFileHoldTimer()
@@ -371,7 +392,7 @@
         handleDocumentPointerLeave
       )
       window.removeEventListener('blur', handleWindowBlur)
-      window.removeEventListener('vinta-devtest-file-hold', handleDevFileHold)
+      unsubFileHold()
     }
   })
 </script>
@@ -404,7 +425,11 @@
     width: {isHidden
     ? hiddenBounds.w
     : Math.min(
-        expanded ? islandConfig.expanded.w : currentMinimalW,
+        expanded
+          ? activeOverlay !== null
+            ? Math.max(islandConfig.expanded.w, 460)
+            : islandConfig.expanded.w
+          : currentMinimalW,
         activeMonitorWidth ? activeMonitorWidth - 24 : 1920
       )}px;
     height: {isHidden
@@ -445,8 +470,8 @@
       <div
         class="hidden-widget-pill"
         transition:fade={{
-          duration: 140,
-          delay: wasExpandedBeforeHide ? 180 : 0
+          duration: Math.round(140 * $animScaleStore),
+          delay: wasExpandedBeforeHide ? Math.round(180 * $animScaleStore) : 0
         }}
       >
         <Clock expanded={false} />
@@ -456,8 +481,8 @@
       <div
         class="hidden-dash"
         transition:fade={{
-          duration: 140,
-          delay: wasExpandedBeforeHide ? 180 : 0
+          duration: Math.round(140 * $animScaleStore),
+          delay: wasExpandedBeforeHide ? Math.round(180 * $animScaleStore) : 0
         }}
       ></div>
     {/if}
@@ -479,7 +504,7 @@
       ? 'none'
       : 'auto'}; transition: opacity {isBlinking
       ? '0s'
-      : '0.22s cubic-bezier(0.2, 0.8, 0.2, 1)'};"
+      : 'calc(0.42s * var(--vinta-anim-scale, 1)) cubic-bezier(0.18, 0.9, 0.32, 1)'};"
   >
     {#if !isPageDormant}
       {#key activePage}
@@ -487,7 +512,11 @@
         <div
           class="view"
           style="width: {Math.min(
-            expanded ? islandConfig.expanded.w : currentMinimalW,
+            expanded
+              ? activeOverlay !== null
+                ? Math.max(islandConfig.expanded.w, 460)
+                : islandConfig.expanded.w
+              : currentMinimalW,
             activeMonitorWidth ? activeMonitorWidth - 24 : 1920
           )}px; height: {expanded
             ? (currentExpandedH ?? islandConfig.expanded.h)
@@ -500,11 +529,17 @@
       {/key}
     {/if}
 
+    {#if expanded && !isPageDormant && activeOverlay === 'notifications'}
+      <NotificationsOverlayPage onClose={onCloseOverlay} />
+    {:else if expanded && !isPageDormant && activeOverlay === 'apps'}
+      <AppsOverlayPage onClose={onCloseOverlay} />
+    {/if}
+
     {#if expanded && isDockVisible}
       <div
         class="dock-overlay-wrapper"
-        in:fade={{ duration: 160 }}
-        out:fade={{ duration: 80 }}
+        in:fade={{ duration: Math.round(260 * $animScaleStore) }}
+        out:fade={{ duration: Math.round(140 * $animScaleStore) }}
       >
         <Dock {activePage} {islandConfig} />
       </div>

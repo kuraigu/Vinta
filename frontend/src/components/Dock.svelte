@@ -22,14 +22,13 @@
   } from 'lucide-svelte'
   import { AppControls } from '../utils/AppControls.svelte'
   import DockButton from './DockButton.svelte'
-  import AppsPage from '../pages/AppsPage.svelte'
   import HomePage from '../pages/HomePage.svelte'
   import CalendarPage from '../pages/CalendarPage.svelte'
   import NotesPage from '../pages/NotesPage.svelte'
   import CalculatorPage from '../pages/CalculatorPage.svelte'
   import TimerPage from '../pages/TimerPage.svelte'
   import MediaPage from '../pages/MediaPage.svelte'
-  import NotificationPage from '../pages/NotificationPage.svelte'
+  import Notification from './Notification.svelte'
   import SettingsPage from '../pages/SettingsPage.svelte'
   import PerformancePage from '../pages/PerformancePage.svelte'
   import FileShelfPage from '../pages/FileShelfPage.svelte'
@@ -37,6 +36,7 @@
   import type { IslandConfig } from '../store'
   import {
     notifData,
+    activeOverlayStore,
     pageVisibilityStore,
     dockPinnedAppsStore,
     globalMediaStore,
@@ -49,6 +49,12 @@
     getContext<
       (page: unknown, pageConfig: IslandConfig, expand?: boolean) => void
     >('navigate')
+
+  const openOverlay =
+    getContext<(overlay: 'notifications' | 'apps' | null) => void>(
+      'openOverlay'
+    )
+  const closeOverlay = getContext<() => void>('closeOverlay')
 
   let {
     activePage,
@@ -102,7 +108,9 @@
   const checkShowNotifs = () =>
     Boolean(
       $pageVisibilityStore.notifications !== false &&
-      ($notifData.length > 0 || activePage === NotificationPage)
+      ($notifData.length > 0 ||
+        activePage === Notification ||
+        $activeOverlayStore === 'notifications')
     )
   const showNotifs = $derived.by(checkShowNotifs)
 
@@ -243,7 +251,9 @@
         id: 'notifications',
         tooltip: $tStore('dock.notifications'),
         icon: Bell,
-        active: activePage === NotificationPage,
+        active:
+          activePage === Notification ||
+          $activeOverlayStore === 'notifications',
         badge: $notifData.length > 0 ? $notifData.length : undefined,
         group: 'dynamic',
         onclick: (e: MouseEvent) => AppControls.goNotif(navigate, e)
@@ -361,8 +371,15 @@
       <DockButton
         tooltip={$tStore('dock.apps')}
         tooltipPosition="bottom"
-        active={activePage === AppsPage}
-        onclick={(e: MouseEvent) => AppControls.goApps(navigate, e)}
+        active={$activeOverlayStore === 'apps'}
+        onclick={(e: MouseEvent) =>
+          AppControls.goApps(
+            () =>
+              $activeOverlayStore === 'apps'
+                ? closeOverlay?.()
+                : openOverlay?.('apps'),
+            e
+          )}
       >
         <Grid size={18} />
       </DockButton>

@@ -2,8 +2,8 @@
   export const config = {
     minimal: { w: 368, h: 44, r: 16 },
     expanded: { w: 400, h: 225, r: 28 },
-    borderColor: 'var(--vinta-island-border-media, #ff3366)',
-    glowColor: 'var(--vinta-island-glow-media, #ff3366)'
+    borderColor: 'var(--vinta-island-border-media)',
+    glowColor: 'var(--vinta-island-glow-media)'
   }
 </script>
 

@@ -16,7 +16,7 @@ import {
   startAlarmRingingChime,
   stopAlarmRingingChime
 } from '../services/audioService'
-import { sendVintaNotification } from '../services/vintaNotification'
+import { notifyTimerAlert } from '../services/vintaNotification'
 import {
   timeFormatStore,
   alarmSoundPresetStore,
@@ -352,11 +352,7 @@ if (typeof window !== 'undefined') {
  * @param message Notification body.
  */
 function sendToastNotification(title: string, message: string): void {
-  sendVintaNotification({
-    title,
-    message,
-    subApp: 'Timer'
-  })
+  notifyTimerAlert(title, message)
 }
 
 // ============================================================================

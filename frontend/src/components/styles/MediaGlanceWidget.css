@@ -1,0 +1,4 @@
+:global(.media-glance-card) {
+  padding: 0;
+  overflow: hidden;
+}

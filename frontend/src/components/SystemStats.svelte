@@ -4,14 +4,13 @@
 -->
 <script lang="ts">
   import { onMount, getContext } from 'svelte'
-  import { Activity } from 'lucide-svelte'
+  import { Activity, ChevronRight } from 'lucide-svelte'
   import {
     systemTelemetryStore,
     subscribeToTelemetry
   } from '../stores/systemTelemetry'
   import { islandTooltip } from '../services/islandTooltip'
   import BentoCard from './BentoCard.svelte'
-  import ActionCapsule from './ActionCapsule.svelte'
   import IconBadge from './IconBadge.svelte'
   import PerformancePage, {
     config as performanceConfig
@@ -74,13 +73,7 @@
         <span>System Stats</span>
       </div>
       <div class="glance-actions-group">
-        <ActionCapsule
-          label="View"
-          onclick={(e) => {
-            e.stopPropagation()
-            handleCardClick()
-          }}
-        />
+        <ChevronRight size={14} class="glance-nav-chevron" />
       </div>
     </div>
 

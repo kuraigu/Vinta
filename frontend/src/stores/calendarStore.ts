@@ -10,7 +10,7 @@ import {
   GetCalendarData,
   SaveCalendarData
 } from '../../bindings/Vinta/backend/app.js'
-import { sendVintaNotification } from '../services/vintaNotification'
+import { notifyCalendarEvent } from '../services/vintaNotification'
 import {
   autoDiscardPastEventsStore,
   pageVisibilityStore,
@@ -601,10 +601,9 @@ export function checkCalendarEventReminders(): void {
 
     const message = parts.join(' • ')
 
-    sendVintaNotification({
-      title: event.title?.trim() || 'Calendar Event',
-      message,
-      subApp: 'Agenda'
+    notifyCalendarEvent({
+      title: event.title,
+      message
     })
   }
 

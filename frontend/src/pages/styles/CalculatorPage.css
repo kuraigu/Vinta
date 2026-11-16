@@ -27,7 +27,7 @@
 }
 
 .calc-display-card:hover {
-  border-color: var(--vinta-border-accent, rgba(255, 255, 255, 0.18));
+  border-color: var(--vinta-border-accent);
 }
 
 .display-history-row {
@@ -86,7 +86,7 @@
 .error-text {
   font-size: 13px;
   font-weight: 600;
-  color: #ef4444;
+  color: var(--vinta-accent-danger);
   white-space: nowrap;
 }
 

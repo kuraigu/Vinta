@@ -1,0 +1,66 @@
+.ctx-menu {
+  position: fixed;
+  zoom: var(--vinta-ui-scale, 1);
+  z-index: 999999;
+  background: var(--vinta-dock-popover-bg);
+  border: 1px solid var(--vinta-dock-popover-border);
+  border-radius: 12px;
+  padding: 5px;
+  box-shadow: var(--vinta-dock-popover-shadow);
+  min-width: 164px;
+  pointer-events: auto;
+  user-select: none;
+}
+
+.ctx-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 28px;
+  background: none;
+  border: none;
+  padding: 5px 10px;
+  text-align: left;
+  font-size: 0.78rem;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--vinta-text-secondary);
+  cursor: pointer;
+  border-radius: 7px;
+  transition:
+    background-color 0.12s ease,
+    color 0.12s ease;
+  pointer-events: auto;
+}
+
+.ctx-item:hover {
+  background: var(--vinta-hover);
+  color: var(--vinta-text-primary);
+}
+
+.ctx-item.danger {
+  color: var(--vinta-accent-danger);
+}
+
+.ctx-item.danger:hover {
+  background: var(--vinta-accent-danger-hover-bg);
+  color: var(--vinta-accent-danger-hover-text);
+}
+
+.ctx-item.disabled {
+  opacity: 0.4;
+  cursor: default;
+  pointer-events: none;
+}
+
+:global(.ctx-item-icon) {
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+.ctx-divider {
+  height: 1px;
+  background: var(--vinta-border);
+  margin: 4px 6px;
+}
