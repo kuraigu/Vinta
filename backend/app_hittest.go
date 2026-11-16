@@ -247,6 +247,7 @@ func (a *App) startHitTestingLoop(hwnd uintptr) {
 			a.pillHitMu.RUnlock()
 
 			isHit := false
+			rectsChanged := false
 			if !outbound {
 				cursorInAnyRect := false
 				cursorHidden := false
@@ -270,10 +271,9 @@ func (a *App) startHitTestingLoop(hwnd uintptr) {
 							// Only short-circuit stationary cursors after the 8-frame miss grace window
 							// or after force mode settles. Skipping earlier freezes missCount below 8
 							// and leaves WS_EX_TRANSPARENT off until the mouse moves again.
-							if rectsVer != lastRectsVersion {
+							rectsChanged = rectsVer != lastRectsVersion
+							if rectsChanged {
 								verifiedStyle = false
-								hitCount = 0
-								missCount = 0
 							} else if hasLastPt && pt.X == lastPt.X && pt.Y == lastPt.Y && verifiedStyle && !force && (missCount >= 8 || hitCount > 4) {
 								continue
 							}
@@ -336,10 +336,11 @@ func (a *App) startHitTestingLoop(hwnd uintptr) {
 				hitCount = 0
 				missCount++
 				// Hold interactive state for an ~120ms grace window (8 frames at 60Hz)
-				// only when multiple hit rects (such as satellites) are active so swift
-				// cursor motion across gaps does not drop clicks. Single-rect islands clear
-				// immediately so vacated glide paths remain clickable.
-				if len(rects) > 1 && missCount < 8 {
+				// only when multiple stationary hit rects (such as satellites) are active
+				// so swift cursor motion across gaps does not drop clicks. When rects move
+				// (gliding) or only a single rect is active, clear immediately so vacated
+				// glide paths remain clickable across all island states.
+				if len(rects) > 1 && !rectsChanged && missCount < 8 {
 					continue
 				}
 				if !currInteractive && missCount > 8 && verifiedStyle {
