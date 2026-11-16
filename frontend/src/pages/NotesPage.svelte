@@ -24,6 +24,7 @@
     color: StickyColor
     content: string
     pinned?: boolean
+    order?: number
     createdAt: number
     modTime: number
   }
@@ -31,6 +32,7 @@
 
 <script lang="ts">
   import { onMount, tick } from 'svelte'
+  import { SvelteSet } from 'svelte/reactivity'
   import {
     Plus,
     FolderOpen,
@@ -44,7 +46,9 @@
     Pencil,
     Copy,
     CopyPlus,
-    Image as ImageIcon
+    Image as ImageIcon,
+    Check,
+    X
   } from 'lucide-svelte'
   import BackButton from '../components/BackButton.svelte'
   import SearchInput from '../components/SearchInput.svelte'
@@ -82,6 +86,9 @@
     y: number
     items: ContextMenuItem[]
   } | null>(null)
+  let selectedNoteIds = new SvelteSet<string>()
+  let draggedNoteId = $state<string | null>(null)
+  let dragOverNoteId = $state<string | null>(null)
 
   const colorPaletteCycle: StickyColor[] = [
     'yellow',
@@ -98,6 +105,20 @@
       : null
   )
 
+  function compareNotes(a: VNote, b: VNote): number {
+    if (Boolean(a.pinned) !== Boolean(b.pinned)) {
+      return a.pinned ? -1 : 1
+    }
+    const orderA =
+      typeof a.order === 'number' ? a.order : Number.MAX_SAFE_INTEGER
+    const orderB =
+      typeof b.order === 'number' ? b.order : Number.MAX_SAFE_INTEGER
+    if (orderA !== orderB) {
+      return orderA - orderB
+    }
+    return (b.modTime || b.createdAt) - (a.modTime || a.createdAt)
+  }
+
   let filteredDrawerNotes = $derived(
     notes
       .filter((n) => {
@@ -106,13 +127,14 @@
         const snippet = n.content.replace(/<[^>]*>/g, '').toLowerCase()
         return n.title.toLowerCase().includes(q) || snippet.includes(q)
       })
-      .sort((a, b) => {
-        if (Boolean(a.pinned) !== Boolean(b.pinned)) {
-          return a.pinned ? -1 : 1
-        }
-        return (b.modTime || b.createdAt) - (a.modTime || a.createdAt)
-      })
+      .sort(compareNotes)
   )
+
+  let allSelectedPinned = $derived.by(() => {
+    if (selectedNoteIds.size === 0) return false
+    const selected = notes.filter((n) => selectedNoteIds.has(n.id))
+    return selected.length > 0 && selected.every((n) => Boolean(n.pinned))
+  })
 
   /**
    * Loads all .vnote files from disk and populates the in-memory notes store.
@@ -142,6 +164,8 @@
                   color: parsed.color || 'yellow',
                   content: parsed.content || '',
                   pinned: Boolean(parsed.pinned),
+                  order:
+                    typeof parsed.order === 'number' ? parsed.order : undefined,
                   createdAt: parsed.createdAt || f.modTime || Date.now(),
                   modTime: parsed.modTime || f.modTime || Date.now()
                 }
@@ -166,12 +190,7 @@
           loaded.push(noteObj)
         }
 
-        loaded.sort((a, b) => {
-          if (Boolean(a.pinned) !== Boolean(b.pinned)) {
-            return a.pinned ? -1 : 1
-          }
-          return (b.modTime || b.createdAt) - (a.modTime || a.createdAt)
-        })
+        loaded.sort(compareNotes)
         notes = loaded
         activeIndex = 0
         syncEditorContent()
@@ -214,6 +233,11 @@
     const newFileName = `${newTitle}.vnote`
     const now = Date.now()
 
+    const nextOrder =
+      notes
+        .filter((n) => typeof n.order === 'number')
+        .reduce((min, n) => Math.min(min, n.order!), 0) - 1
+
     const newNote: VNote = {
       id: newTitle,
       title: newTitle,
@@ -221,6 +245,7 @@
       color: nextColor,
       content: '',
       pinned: false,
+      order: nextOrder,
       createdAt: now,
       modTime: now
     }
@@ -236,9 +261,12 @@
    * Persists the given note document to disk as formatted JSON.
    *
    * @param note - Target note object.
+   * @param touchModTime - Whether to bump modTime to current epoch.
    */
-  function persistNote(note: VNote) {
-    note.modTime = Date.now()
+  function persistNote(note: VNote, touchModTime = true) {
+    if (touchModTime) {
+      note.modTime = Date.now()
+    }
     const payload = {
       id: note.id,
       title: note.title,
@@ -246,8 +274,9 @@
       color: note.color || 'yellow',
       content: note.content || '',
       pinned: Boolean(note.pinned),
+      ...(typeof note.order === 'number' ? { order: note.order } : {}),
       createdAt: note.createdAt || Date.now(),
-      modTime: note.modTime
+      modTime: note.modTime || Date.now()
     }
 
     try {
@@ -448,6 +477,13 @@
    * @param e - Drag event.
    */
   function handleDragOver(e: DragEvent) {
+    if (
+      draggedNoteId ||
+      viewMode !== 'editor' ||
+      !e.dataTransfer?.types?.includes('Files')
+    ) {
+      return
+    }
     e.preventDefault()
     isDraggingOver = true
   }
@@ -465,6 +501,10 @@
    * @param e - Drag event.
    */
   function handleDrop(e: DragEvent) {
+    if (draggedNoteId || viewMode !== 'editor') {
+      isDraggingOver = false
+      return
+    }
     e.preventDefault()
     isDraggingOver = false
     if (e.dataTransfer?.files && e.dataTransfer.files.length > 0) {
@@ -531,6 +571,7 @@
     if (e) e.stopPropagation()
     const target = notes[idx]
     if (!target) return
+    selectedNoteIds.delete(target.id)
     notes = notes.filter((_, i) => i !== idx)
     if (activeIndex >= notes.length) {
       activeIndex = Math.max(0, notes.length - 1)
@@ -540,6 +581,127 @@
     } catch {
       // Fallback
     }
+  }
+
+  /**
+   * Toggles selection state of a note card.
+   */
+  function toggleNoteSelection(noteId: string) {
+    if (selectedNoteIds.has(noteId)) {
+      selectedNoteIds.delete(noteId)
+    } else {
+      selectedNoteIds.add(noteId)
+    }
+  }
+
+  function clearSelection() {
+    selectedNoteIds.clear()
+  }
+
+  function bulkTogglePin() {
+    if (selectedNoteIds.size === 0) return
+    const nextPinned = !allSelectedPinned
+    for (const note of notes) {
+      if (selectedNoteIds.has(note.id)) {
+        note.pinned = nextPinned
+        persistNote(note)
+      }
+    }
+  }
+
+  function bulkChangeColor(color: StickyColor) {
+    if (selectedNoteIds.size === 0) return
+    for (const note of notes) {
+      if (selectedNoteIds.has(note.id)) {
+        note.color = color
+        persistNote(note)
+      }
+    }
+  }
+
+  async function bulkDeleteSelected() {
+    if (selectedNoteIds.size === 0) return
+    const targets = notes.filter((n) => selectedNoteIds.has(n.id))
+    notes = notes.filter((n) => !selectedNoteIds.has(n.id))
+    selectedNoteIds.clear()
+    if (activeIndex >= notes.length) {
+      activeIndex = Math.max(0, notes.length - 1)
+    }
+    await Promise.allSettled(targets.map((t) => DeleteNote(t.fileName)))
+  }
+
+  function handleCardClick(e: MouseEvent, noteId: string, idx: number) {
+    if (e.ctrlKey || e.metaKey || selectedNoteIds.size > 0) {
+      e.preventDefault()
+      toggleNoteSelection(noteId)
+      return
+    }
+    openNoteEditor(idx)
+  }
+
+  function handleNoteDragStart(e: DragEvent, noteId: string) {
+    draggedNoteId = noteId
+    dragOverNoteId = null
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move'
+      e.dataTransfer.setData('text/plain', noteId)
+    }
+  }
+
+  function handleNoteDragOver(e: DragEvent, targetId: string) {
+    if (!draggedNoteId || draggedNoteId === targetId) return
+    const src = notes.find((n) => n.id === draggedNoteId)
+    const dst = notes.find((n) => n.id === targetId)
+    if (!src || !dst || Boolean(src.pinned) !== Boolean(dst.pinned)) return
+    e.preventDefault()
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'move'
+    }
+    dragOverNoteId = targetId
+  }
+
+  function handleNoteDragLeave(targetId: string) {
+    if (dragOverNoteId === targetId) {
+      dragOverNoteId = null
+    }
+  }
+
+  function handleNoteDrop(e: DragEvent, targetId: string) {
+    e.preventDefault()
+    e.stopPropagation()
+    const sourceId = draggedNoteId
+    draggedNoteId = null
+    dragOverNoteId = null
+    if (!sourceId || sourceId === targetId) return
+
+    const sorted = [...notes].sort(compareNotes)
+    const srcNote = sorted.find((n) => n.id === sourceId)
+    const dstNote = sorted.find((n) => n.id === targetId)
+    if (
+      !srcNote ||
+      !dstNote ||
+      Boolean(srcNote.pinned) !== Boolean(dstNote.pinned)
+    ) {
+      return
+    }
+
+    const srcIdx = sorted.findIndex((n) => n.id === sourceId)
+    const [moved] = sorted.splice(srcIdx, 1)
+    const dstIdx = sorted.findIndex((n) => n.id === targetId)
+    sorted.splice(dstIdx, 0, moved)
+
+    sorted.forEach((n, index) => {
+      if (n.order !== index) {
+        n.order = index
+        persistNote(n, false)
+      }
+    })
+    notes = sorted
+  }
+
+  function handleNoteDragEnd() {
+    draggedNoteId = null
+    dragOverNoteId = null
   }
 
   /**
@@ -569,6 +731,10 @@
       counter++
     }
     const now = Date.now()
+    const nextOrder =
+      notes
+        .filter((n) => typeof n.order === 'number')
+        .reduce((min, n) => Math.min(min, n.order!), 0) - 1
     const duplicated: VNote = {
       id: copyTitle,
       title: copyTitle,
@@ -576,6 +742,7 @@
       color: source.color || 'yellow',
       content: source.content || '',
       pinned: false,
+      order: nextOrder,
       createdAt: now,
       modTime: now
     }
@@ -629,6 +796,13 @@
     const target = notes[idx]
     if (!target) return []
     return [
+      {
+        label: selectedNoteIds.has(target.id)
+          ? $tStore('notes.deselect')
+          : $tStore('notes.select'),
+        icon: selectedNoteIds.has(target.id) ? X : Check,
+        action: () => toggleNoteSelection(target.id)
+      },
       {
         label: target.pinned ? $tStore('notes.unpin') : $tStore('notes.pin'),
         icon: Pin,
@@ -739,7 +913,16 @@
 
   {#if viewMode === 'board'}
     <!-- Main Notes Screen (Displays all note cards) -->
-    <div class="notes-board-view">
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+      class="notes-board-view"
+      onkeydown={(e) => {
+        if (e.key === 'Escape' && selectedNoteIds.size > 0) {
+          e.stopPropagation()
+          clearSelection()
+        }
+      }}
+    >
       <!-- Notes Grid inside ScrollView -->
       <div class="board-grid-wrapper">
         <ScrollView>
@@ -763,41 +946,53 @@
             <div class="notes-cards-grid">
               {#each filteredDrawerNotes as n, idx (n.id)}
                 {@const realIndex = notes.findIndex((item) => item.id === n.id)}
+                {@const targetIndex = realIndex >= 0 ? realIndex : idx}
                 <div
                   class="note-card card-{n.color || 'yellow'}"
-                  onclick={() =>
-                    openNoteEditor(realIndex >= 0 ? realIndex : idx)}
-                  oncontextmenu={(e) =>
-                    openNoteContextMenu(e, realIndex >= 0 ? realIndex : idx)}
+                  class:is-selected={selectedNoteIds.has(n.id)}
+                  class:is-drag-target={dragOverNoteId === n.id}
+                  class:is-dragging={draggedNoteId === n.id}
+                  draggable="true"
+                  onclick={(e) => handleCardClick(e, n.id, targetIndex)}
+                  oncontextmenu={(e) => openNoteContextMenu(e, targetIndex)}
+                  ondragstart={(e) => handleNoteDragStart(e, n.id)}
+                  ondragover={(e) => handleNoteDragOver(e, n.id)}
+                  ondragleave={() => handleNoteDragLeave(n.id)}
+                  ondrop={(e) => handleNoteDrop(e, n.id)}
+                  ondragend={handleNoteDragEnd}
                   role="button"
                   tabindex="0"
                   onkeydown={(e) => {
                     if (e.key === 'Enter' || e.key === ' ') {
-                      openNoteEditor(realIndex >= 0 ? realIndex : idx)
+                      if (selectedNoteIds.size > 0) {
+                        e.preventDefault()
+                        toggleNoteSelection(n.id)
+                      } else {
+                        openNoteEditor(targetIndex)
+                      }
                     }
                   }}
                 >
-                  <div class="note-card-band">
-                    <button
-                      class="note-card-pin-btn"
-                      class:is-pinned={n.pinned}
-                      use:islandTooltip={n.pinned
-                        ? $tStore('notes.unpin')
-                        : $tStore('notes.pin')}
-                      onclick={(e) =>
-                        togglePinByIndex(e, realIndex >= 0 ? realIndex : idx)}
-                    >
-                      <Pin size={11} />
-                    </button>
-                    <button
-                      class="note-card-delete-btn"
-                      use:islandTooltip={$tStore('notes.delete')}
-                      onclick={(e) =>
-                        deleteNoteByIndex(e, realIndex >= 0 ? realIndex : idx)}
-                    >
-                      <Trash2 size={12} />
-                    </button>
-                  </div>
+                  <div class="note-card-band"></div>
+                  <button
+                    type="button"
+                    class="note-card-pin-btn"
+                    class:is-pinned={n.pinned}
+                    use:islandTooltip={n.pinned
+                      ? $tStore('notes.unpin')
+                      : $tStore('notes.pin')}
+                    onclick={(e) => togglePinByIndex(e, targetIndex)}
+                  >
+                    <Pin size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    class="note-card-delete-btn"
+                    use:islandTooltip={$tStore('notes.delete')}
+                    onclick={(e) => deleteNoteByIndex(e, targetIndex)}
+                  >
+                    <Trash2 size={14} />
+                  </button>
 
                   <div class="note-card-body">
                     <span class="note-card-title"
@@ -826,6 +1021,69 @@
         </ScrollView>
       </div>
 
+      {#if selectedNoteIds.size > 0}
+        <div class="notes-bulk-bar">
+          <span class="bulk-count"
+            >{$tStore('notes.selected_count', {
+              count: selectedNoteIds.size
+            })}</span
+          >
+          <div class="bulk-colors">
+            {#each colorPaletteCycle as c (c)}
+              <button
+                type="button"
+                class="bulk-color-dot card-{c}"
+                onclick={() => bulkChangeColor(c)}
+                use:islandTooltip={$tStore('notes.color_label', { color: c })}
+                aria-label={$tStore('notes.color_label', { color: c })}
+              ></button>
+            {/each}
+          </div>
+          <div class="bulk-actions">
+            <button
+              type="button"
+              class="board-action-btn"
+              onclick={bulkTogglePin}
+              use:islandTooltip={{
+                text: allSelectedPinned
+                  ? $tStore('notes.unpin')
+                  : $tStore('notes.pin'),
+                position: 'top'
+              }}
+              aria-label={allSelectedPinned
+                ? $tStore('notes.unpin')
+                : $tStore('notes.pin')}
+            >
+              <Pin size={14} />
+            </button>
+            <button
+              type="button"
+              class="board-action-btn bulk-delete-btn"
+              onclick={bulkDeleteSelected}
+              use:islandTooltip={{
+                text: $tStore('notes.delete'),
+                position: 'top'
+              }}
+              aria-label={$tStore('notes.delete')}
+            >
+              <Trash2 size={14} />
+            </button>
+            <button
+              type="button"
+              class="board-action-btn"
+              onclick={clearSelection}
+              use:islandTooltip={{
+                text: $tStore('notes.clear_selection'),
+                position: 'top'
+              }}
+              aria-label={$tStore('notes.clear_selection')}
+            >
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+      {/if}
+
       <div class="board-header">
         <div class="board-header-left">
           <BackButton title={$tStore('notes.back_to_apps')} />
@@ -850,11 +1108,14 @@
             }}
             onclick={handleOpenFolder}
           >
-            <FolderOpen size={14} />
+            <FolderOpen size={15} />
           </button>
           <button
             class="board-action-btn new-note-action"
-            use:islandTooltip={{ text: $tStore('notes.new_note'), position: 'top' }}
+            use:islandTooltip={{
+              text: $tStore('notes.new_note'),
+              position: 'top'
+            }}
             onclick={createNewNote}
           >
             <Plus size={16} />
@@ -886,18 +1147,24 @@
       <div class="toolbar-actions-group">
         <button
           class="tool-action-btn"
-          use:islandTooltip={{ text: $tStore('notes.format_bold'), position: 'top' }}
+          use:islandTooltip={{
+            text: $tStore('notes.format_bold'),
+            position: 'top'
+          }}
           onclick={() => applyFormat('bold')}
         >
-          <Bold size={13} />
+          <Bold size={14} />
         </button>
 
         <button
           class="tool-action-btn"
-          use:islandTooltip={{ text: $tStore('notes.format_italic'), position: 'top' }}
+          use:islandTooltip={{
+            text: $tStore('notes.format_italic'),
+            position: 'top'
+          }}
           onclick={() => applyFormat('italic')}
         >
-          <Italic size={13} />
+          <Italic size={14} />
         </button>
 
         <button
@@ -908,31 +1175,40 @@
           }}
           onclick={() => applyFormat('underline')}
         >
-          <Underline size={13} />
+          <Underline size={14} />
         </button>
 
         <button
           class="tool-action-btn"
-          use:islandTooltip={{ text: $tStore('notes.format_strike'), position: 'top' }}
+          use:islandTooltip={{
+            text: $tStore('notes.format_strike'),
+            position: 'top'
+          }}
           onclick={() => applyFormat('strikeThrough')}
         >
-          <Strikethrough size={13} />
+          <Strikethrough size={14} />
         </button>
 
         <button
           class="tool-action-btn"
-          use:islandTooltip={{ text: $tStore('notes.format_list'), position: 'top' }}
+          use:islandTooltip={{
+            text: $tStore('notes.format_list'),
+            position: 'top'
+          }}
           onclick={() => applyFormat('insertUnorderedList')}
         >
-          <List size={13} />
+          <List size={14} />
         </button>
 
         <button
           class="tool-action-btn"
-          use:islandTooltip={{ text: $tStore('notes.format_image'), position: 'top' }}
+          use:islandTooltip={{
+            text: $tStore('notes.format_image'),
+            position: 'top'
+          }}
           onclick={() => fileInputRef?.click()}
         >
-          <ImageIcon size={13} />
+          <ImageIcon size={14} />
         </button>
       </div>
 
@@ -955,7 +1231,10 @@
 
         <button
           class="banner-btn"
-          use:islandTooltip={{ text: $tStore('notes.all_notes'), position: 'top' }}
+          use:islandTooltip={{
+            text: $tStore('notes.all_notes'),
+            position: 'top'
+          }}
           onclick={handleBackToBoard}
         >
           <List size={15} />
@@ -1014,7 +1293,7 @@
           }}
           onclick={handleOpenFolder}
         >
-          <FolderOpen size={14} />
+          <FolderOpen size={15} />
         </button>
 
         <button
@@ -1022,7 +1301,7 @@
           use:islandTooltip={{ text: $tStore('notes.delete'), position: 'top' }}
           onclick={handleDeleteActiveNote}
         >
-          <Trash2 size={14} />
+          <Trash2 size={15} />
         </button>
       </div>
     </div>

@@ -85,7 +85,11 @@
         <button
           type="button"
           class="overlay-close-btn"
-          use:islandTooltip={{ text: $tStore('common.close'), subtitle: 'Esc', position: 'bottom' }}
+          use:islandTooltip={{
+            text: $tStore('common.close'),
+            subtitle: 'Esc',
+            position: 'bottom'
+          }}
           aria-label={$tStore('common.close')}
           onclick={(e) => {
             e.stopPropagation()

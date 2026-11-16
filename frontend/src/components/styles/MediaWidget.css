@@ -232,8 +232,8 @@
 }
 
 .media-container.is-glance .action-btn.is-active {
-  background: var(--vinta-surface-hover);
-  border-color: var(--vinta-border-strong);
+  background: var(--vinta-contrast-hover);
+  border-color: var(--vinta-border-light);
   color: var(--vinta-text-primary);
   box-shadow: none;
 }

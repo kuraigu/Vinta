@@ -51,7 +51,7 @@
 
       {#if showCalendar}
         <section class="calendar-card-feed">
-          <CalendarGlance onOpenCalendar={onOpenCalendar} />
+          <CalendarGlance {onOpenCalendar} />
         </section>
       {/if}
     </BentoCard>

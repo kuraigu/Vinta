@@ -275,12 +275,15 @@
   let formattedSunrise = $derived(formatClockTime(weather?.sunrise))
   let formattedSunset = $derived(formatClockTime(weather?.sunset))
 
-  function getUvRating(uvStr: string): string {
+  function getUvRating(
+    uvStr: string,
+    translate: (key: string) => string
+  ): string {
     const n = parseFloat(uvStr) || 0
-    if (n >= 8) return 'Very High'
-    if (n >= 6) return 'High'
-    if (n >= 3) return 'Moderate'
-    return 'Low'
+    if (n >= 8) return translate('weather.uv_very_high')
+    if (n >= 6) return translate('weather.uv_high')
+    if (n >= 3) return translate('weather.uv_moderate')
+    return translate('weather.uv_low')
   }
 
   function openWeatherPage(e?: MouseEvent) {
@@ -298,7 +301,7 @@
     class:variant-page={isPage}
     onclick={() => (!isPage ? (isForecastOpen = !isForecastOpen) : null)}
   >
-    <WeatherAtmosphere condition={illustrationType} seamless={isPage} />
+    <WeatherAtmosphere condition={illustrationType} seamless={false} />
 
     {#if loading && !weather}
       <div class="banner-loading">
@@ -460,16 +463,6 @@
         </button>
       </div>
     {:else if weather}
-      <PageHeader title={$tStore('apps.weather_name')}>
-        {#snippet actions()}
-          <RefreshButton
-            {loading}
-            onclick={() => handleRetry()}
-            title={$tStore('common.retry')}
-          />
-        {/snippet}
-      </PageHeader>
-
       <ScrollView class="weather-scroll-area">
         <div class="weather-content-stream">
           {@render bannerCard('page')}
@@ -486,13 +479,13 @@
                     {@const forecastArtType = mapCodeToArt(f.weatherCode)}
                     {@const maxConv = convertTemp(f.tempMax, $weatherUnitStore)}
                     {@const minConv = convertTemp(f.tempMin, $weatherUnitStore)}
-                    <div class="forecast-col">
+                    <div class="forecast-col" class:is-today={idx === 0}>
                       <span class="fc-day-title">{f.day}</span>
                       <div class="fc-art-badge">
                         <WeatherArt
                           type={forecastArtType}
                           variant="mini"
-                          monochrome={true}
+                          monochrome={false}
                         />
                       </div>
                       <div class="fc-temp-split">
@@ -500,9 +493,6 @@
                         <span class="fc-min">{minConv.val}°</span>
                       </div>
                     </div>
-                    {#if idx < weather.forecast.length - 1}
-                      <div class="forecast-col-divider"></div>
-                    {/if}
                   {/each}
                 </div>
               </BentoCard>
@@ -513,11 +503,11 @@
             <BentoCard variant="bento" class="forecast-bento-card">
               <div class="tile-head">
                 <Wind size={13} class="tile-head-icon" />
-                <span>Wind</span>
+                <span>{$tStore('weather.wind')}</span>
               </div>
               <div class="tile-body">
                 <span class="tile-val-num">{weather.windSpeed}</span>
-                <span class="tile-val-unit">km/h</span>
+                <span class="tile-val-unit">{$tStore('weather.unit_kmh')}</span>
               </div>
               <div class="tile-sub">
                 {weather.windDirectionLabel} • {weather.windDirection}°
@@ -527,7 +517,7 @@
             <BentoCard variant="bento" class="forecast-bento-card">
               <div class="tile-head">
                 <Compass size={13} class="tile-head-icon" />
-                <span>UV Index</span>
+                <span>{$tStore('weather.uv_index')}</span>
               </div>
               <div class="tile-body">
                 <span class="tile-val-num"
@@ -536,14 +526,14 @@
                 <span class="tile-val-unit">UV</span>
               </div>
               <div class="tile-sub">
-                {getUvRating(weather.uvIndex)}
+                {getUvRating(weather.uvIndex, $tStore)}
               </div>
             </BentoCard>
 
             <BentoCard variant="bento" class="forecast-bento-card">
               <div class="tile-head">
                 <Droplets size={13} class="tile-head-icon" />
-                <span>Humidity</span>
+                <span>{$tStore('weather.humidity')}</span>
               </div>
               <div class="tile-body">
                 <span class="tile-val-num">{weather.humidity}</span>
@@ -551,43 +541,45 @@
               </div>
               <div class="tile-sub">
                 {weather.humidity >= 70
-                  ? 'High Humidity'
+                  ? $tStore('weather.humidity_high')
                   : weather.humidity <= 35
-                    ? 'Dry Air'
-                    : 'Comfortable'}
+                    ? $tStore('weather.humidity_dry')
+                    : $tStore('weather.humidity_comfortable')}
               </div>
             </BentoCard>
 
             <BentoCard variant="bento" class="forecast-bento-card">
               <div class="tile-head">
                 <Gauge size={13} class="tile-head-icon" />
-                <span>Pressure</span>
+                <span>{$tStore('weather.pressure')}</span>
               </div>
               <div class="tile-body">
                 <span class="tile-val-num">{weather.pressure}</span>
-                <span class="tile-val-unit">hPa</span>
+                <span class="tile-val-unit">{$tStore('weather.unit_hpa')}</span>
               </div>
-              <div class="tile-sub">Atmospheric</div>
+              <div class="tile-sub">{$tStore('weather.atmospheric')}</div>
             </BentoCard>
 
             <BentoCard variant="bento" class="forecast-bento-card">
               <div class="tile-head">
                 <Sun size={13} class="tile-head-icon" />
-                <span>Sun Timing</span>
+                <span>{$tStore('weather.sun_timing')}</span>
               </div>
               <div class="tile-body">
                 <span class="tile-val-num time-val">{formattedSunrise}</span>
-                <span class="tile-val-unit">rise</span>
+                <span class="tile-val-unit"
+                  >{$tStore('weather.sunrise_short')}</span
+                >
               </div>
               <div class="tile-sub">
-                Sunset: {formattedSunset}
+                {$tStore('weather.sunset_time', { time: formattedSunset })}
               </div>
             </BentoCard>
 
             <BentoCard variant="bento" class="forecast-bento-card">
               <div class="tile-head">
                 <CloudRain size={13} class="tile-head-icon" />
-                <span>Precipitation</span>
+                <span>{$tStore('weather.precipitation')}</span>
               </div>
               <div class="tile-body">
                 <span class="tile-val-num"
@@ -595,11 +587,21 @@
                 >
                 <span class="tile-val-unit">%</span>
               </div>
-              <div class="tile-sub">Peak probability today</div>
+              <div class="tile-sub">{$tStore('weather.peak_today')}</div>
             </BentoCard>
           </div>
         </div>
       </ScrollView>
+
+      <PageHeader position="bottom" title={$tStore('apps.weather_name')}>
+        {#snippet actions()}
+          <RefreshButton
+            {loading}
+            onclick={() => handleRetry()}
+            title={$tStore('common.retry')}
+          />
+        {/snippet}
+      </PageHeader>
     {/if}
   </div>
 {:else}

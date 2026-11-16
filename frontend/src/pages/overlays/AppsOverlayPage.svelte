@@ -29,13 +29,17 @@
   import { islandTooltip } from '../../services/islandTooltip'
   import HomePage, { config as homeConfig } from '../HomePage.svelte'
   import MediaPage, { config as mediaConfig } from '../MediaPage.svelte'
-  import SettingsPage, { config as settingsConfig } from '../SettingsPage.svelte'
+  import SettingsPage, {
+    config as settingsConfig
+  } from '../SettingsPage.svelte'
   import NotesPage, { config as notesConfig } from '../NotesPage.svelte'
   import CalculatorPage, {
     config as calculatorConfig
   } from '../CalculatorPage.svelte'
   import TimerPage, { config as timerConfig } from '../TimerPage.svelte'
-  import CalendarPage, { config as calendarConfig } from '../CalendarPage.svelte'
+  import CalendarPage, {
+    config as calendarConfig
+  } from '../CalendarPage.svelte'
   import WeatherPage, { config as weatherConfig } from '../WeatherPage.svelte'
   import FileShelfPage, {
     config as fileShelfConfig
@@ -178,8 +182,8 @@
     },
     {
       id: 'notifications',
-      nameKey: 'apps.notifications_name',
-      descKey: 'apps.notifications_desc',
+      nameKey: 'apps.notifs_name',
+      descKey: 'apps.notifs_desc',
       icon: Bell,
       badge: true,
       visibilityKey: 'notifications',
@@ -232,11 +236,13 @@
   ]
 
   let resolvedApps = $derived(
-    allApps.map((app) => ({
-      ...app,
-      name: $tStore(app.nameKey),
-      desc: $tStore(app.descKey)
-    }))
+    allApps
+      .map((app) => ({
+        ...app,
+        name: $tStore(app.nameKey),
+        desc: $tStore(app.descKey)
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name))
   )
 
   let filteredApps = $derived.by(() => {
@@ -247,7 +253,21 @@
         a.name.toLowerCase().includes(q) || a.desc.toLowerCase().includes(q)
     )
   })
+
+  function handleAppsKeyDown(e: KeyboardEvent) {
+    if (e.key === 'Enter' && searchQuery.trim() && filteredApps.length > 0) {
+      const first = filteredApps.find(
+        (app) => !app.visibilityKey || $pageVisibilityStore[app.visibilityKey]
+      )
+      if (first) {
+        e.preventDefault()
+        first.action()
+      }
+    }
+  }
 </script>
+
+<svelte:window onkeydown={handleAppsKeyDown} />
 
 <OverlayPage
   dataVinta="apps-overlay-page"
@@ -262,7 +282,7 @@
     />
   {/snippet}
 
-  <div class="apps-page">
+  <div class="apps-page in-overlay">
     <ScrollView class="apps-scroll-area">
       {#if filteredApps.length === 0}
         <div class="empty-state">
@@ -312,4 +332,4 @@
   </div>
 </OverlayPage>
 
-<style src="../styles/AppsPage.css"></style>
+<style src="../styles/AppsOverlayPage.css"></style>

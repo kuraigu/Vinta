@@ -53,11 +53,7 @@
     onSelect?: (item: SpotlightItem, index: number) => void
   }
 
-  let {
-    items = [],
-    initialIndex = 0,
-    onSelect = undefined
-  }: Props = $props()
+  let { items = [], initialIndex = 0, onSelect = undefined }: Props = $props()
 
   function clampIndex(idx: number, len: number): number {
     if (len <= 0) return 0
@@ -91,7 +87,8 @@
     if (items.length === 0) return []
     const start = Math.max(0, currentIndex - 1)
     const end = Math.min(items.length - 1, currentIndex + 1)
-    const result: Array<{ item: SpotlightItem; index: number; delta: number }> = []
+    const result: Array<{ item: SpotlightItem; index: number; delta: number }> =
+      []
     for (let i = start; i <= end; i++) {
       result.push({
         item: items[i],
@@ -197,10 +194,11 @@
             class="spotlight-card"
             class:is-side={entry.delta !== 0}
             style="
-              transform: translateX(calc({entry.delta * 100}% + {entry.delta * 10}px + {dragOffset}px));
+              transform: translateX(calc({entry.delta * 100}% + {entry.delta *
+              10}px + {dragOffset}px));
               transition: {isDragging
-                ? 'none'
-                : 'transform 0.48s cubic-bezier(0.2, 1.15, 0.35, 1), background 0.18s ease, border-color 0.18s ease, opacity 0.2s ease'};
+              ? 'none'
+              : 'transform 0.48s cubic-bezier(0.2, 1.15, 0.35, 1), background 0.18s ease, border-color 0.18s ease, opacity 0.2s ease'};
             "
             onclick={() => handleSlideClick(item, entry.index)}
             aria-label="{item.title}: {item.description}"
@@ -222,7 +220,9 @@
                   size="lg"
                   color={item.badgeColorName ?? 'blue'}
                   customBg={item.badgeColorName ? undefined : item.badgeBg}
-                  customColor={item.badgeColorName ? undefined : item.badgeColor}
+                  customColor={item.badgeColorName
+                    ? undefined
+                    : item.badgeColor}
                 >
                   <img
                     src={item.iconSrc}
@@ -237,7 +237,9 @@
                   color={item.badgeColorName ?? 'blue'}
                   icon={item.iconComponent}
                   customBg={item.badgeColorName ? undefined : item.badgeBg}
-                  customColor={item.badgeColorName ? undefined : item.badgeColor}
+                  customColor={item.badgeColorName
+                    ? undefined
+                    : item.badgeColor}
                 />
               {/if}
 
@@ -247,7 +249,10 @@
               </div>
             </div>
 
-            <div class="spotlight-chevron" style="position: relative; z-index: 1;">
+            <div
+              class="spotlight-chevron"
+              style="position: relative; z-index: 1;"
+            >
               <ChevronRight size={15} strokeWidth={2.4} />
             </div>
           </button>

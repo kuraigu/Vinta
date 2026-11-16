@@ -8,7 +8,9 @@
   import WidgetFrame from './WidgetFrame.svelte'
   import BentoCard from '../BentoCard.svelte'
   import MediaWidget from '../MediaWidget.svelte'
-  import MediaPage, { config as mediaConfig } from '../../pages/MediaPage.svelte'
+  import MediaPage, {
+    config as mediaConfig
+  } from '../../pages/MediaPage.svelte'
   import {
     globalMediaStore,
     type IslandConfig,
@@ -36,11 +38,11 @@
   let hasMedia = $derived(
     Boolean(
       media &&
-        media.isAvailable &&
-        (media.title ||
-          media.artist ||
-          media.isPlaying ||
-          (media.sessions && media.sessions.length > 0))
+      media.isAvailable &&
+      (media.title ||
+        media.artist ||
+        media.isPlaying ||
+        (media.sessions && media.sessions.length > 0))
     )
   )
 
@@ -54,7 +56,11 @@
 
 {#if hasMedia}
   <WidgetFrame id="media" {size} {showMenuButton} {oncontextmenu}>
-    <BentoCard variant="bento" class="media-glance-card" onclick={openMediaPage}>
+    <BentoCard
+      variant="bento"
+      class="media-glance-card"
+      onclick={openMediaPage}
+    >
       <MediaWidget expanded={false} glanceMode={true} widgetSize={size} />
     </BentoCard>
   </WidgetFrame>

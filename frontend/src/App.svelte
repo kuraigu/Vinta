@@ -20,13 +20,12 @@
   import { Events } from '$lib/events'
 
   // Pages & Configs
-  import NotificationPage, {
+  import Notification, {
     config as notifConfig
-  } from './pages/NotificationPage.svelte'
+  } from './components/Notification.svelte'
   import HomePage, { config as homeConfig } from './pages/HomePage.svelte'
   import MediaPage, { config as mediaConfig } from './pages/MediaPage.svelte'
   import NotesPage, { config as notesConfig } from './pages/NotesPage.svelte'
-  import AppsPage, { config as appsConfig } from './pages/AppsPage.svelte'
   import SettingsPage, {
     config as settingsConfig
   } from './pages/SettingsPage.svelte'
@@ -161,9 +160,8 @@
   > = {
     home: { page: HomePage, config: homeConfig },
     media: { page: MediaPage, config: mediaConfig },
-    notifications: { page: NotificationPage, config: notifConfig },
+    notifications: { page: Notification, config: notifConfig },
     notes: { page: NotesPage, config: notesConfig },
-    apps: { page: AppsPage, config: appsConfig },
     settings: { page: SettingsPage, config: settingsConfig },
     calculator: { page: CalculatorPage, config: calcConfig },
     timer: { page: TimerPage, config: timerConfig },
@@ -175,9 +173,8 @@
   const PAGE_ID_BY_COMPONENT = new Map<Component, string>([
     [HomePage, 'home'],
     [MediaPage, 'media'],
-    [NotificationPage, 'notifications'],
+    [Notification, 'notifications'],
     [NotesPage, 'notes'],
-    [AppsPage, 'apps'],
     [SettingsPage, 'settings'],
     [CalculatorPage, 'calculator'],
     [TimerPage, 'timer'],
@@ -530,7 +527,7 @@
       (config === islandConfig && activePage === MediaPage)
     const isTargetNotif =
       config === notifConfig ||
-      (config === islandConfig && activePage === NotificationPage)
+      (config === islandConfig && activePage === Notification)
 
     const effectiveConfig =
       !isExp && !isHid && !isTargetHome && !isTargetMedia && !isTargetNotif
@@ -551,7 +548,7 @@
 
     const baseW =
       !isHid && isExp && $activeOverlayStore !== null
-        ? Math.max(rawBaseW, 440)
+        ? Math.max(rawBaseW, 460)
         : rawBaseW
 
     const rawBaseH = isHid
@@ -578,7 +575,7 @@
 
     const baseH =
       !isHid && isExp && $activeOverlayStore !== null
-        ? Math.max(rawBaseH, 380)
+        ? Math.max(rawBaseH, 410)
         : rawBaseH
 
     const maxMonW = activeMonitor?.width ? activeMonitor.width - 24 : 1920
@@ -604,7 +601,7 @@
    * Notifications always auto-dismiss, while Home and Media follow user settings.
    */
   let shouldCurrentPageAutoHide = $derived.by(() => {
-    if (activePage === NotificationPage) return true
+    if (activePage === Notification) return true
     if (activePage === HomePage) return $homeAutoHideStore
     if (activePage === MediaPage) {
       return !isMediaActive ? true : $mediaAutoHideStore
@@ -660,7 +657,7 @@
     isTimeoutActive = true
     hideTimeout = window.setTimeout(() => {
       isTimeoutActive = false
-      if (activePage === NotificationPage) {
+      if (activePage === Notification) {
         if (wasHiddenBeforeNotif) {
           wasHiddenBeforeNotif = false
           hideWidget()
@@ -731,7 +728,7 @@
       $notificationsOverlayTabStore = options.tab
     }
     collapseOnOverlayClose = Boolean(options?.collapseOnClose)
-    if (activePage === NotificationPage) {
+    if (activePage === Notification) {
       const fallback = getFallbackPage()
       activePage = fallback.page as Component
       islandConfig = fallback.config
@@ -795,15 +792,15 @@
     expand: boolean = false,
     isBackNav: boolean = false
   ) {
-    if (expand && page === NotificationPage) {
+    if (expand && page === Notification) {
+      if ($activeOverlayStore === 'notifications') {
+        closeOverlay()
+        return
+      }
       openOverlay('notifications', {
         tab: 'notifications',
-        collapseOnClose: !expanded && activePage === NotificationPage
+        collapseOnClose: !expanded && activePage === Notification
       })
-      return
-    }
-    if (expand && page === AppsPage) {
-      openOverlay('apps')
       return
     }
     if ($activeOverlayStore !== null) {
@@ -839,7 +836,7 @@
       finishDragGesture()
     }
 
-    if (page !== NotificationPage) {
+    if (page !== Notification) {
       wasHiddenBeforeNotif = false
     }
 
@@ -914,7 +911,7 @@
         return
       }
     }
-    navigateTo(AppsPage as Component, appsConfig, true, true)
+    openOverlay('apps')
   }
 
   function showWidget() {
@@ -983,28 +980,29 @@
       scaleAnimMs(duration + 50),
       true,
       () => {
-      if (!isHidden) return
-      isPageDormant = true
-      expanded = false
-      const fallback = getFallbackPage()
-      if (activePage !== fallback.page) {
-        activePage = fallback.page as Component
-        islandConfig = fallback.config
-        $activePageIdStore = fallback.page === HomePage ? 'home' : 'media'
+        if (!isHidden) return
+        isPageDormant = true
+        expanded = false
+        const fallback = getFallbackPage()
+        if (activePage !== fallback.page) {
+          activePage = fallback.page as Component
+          islandConfig = fallback.config
+          $activePageIdStore = fallback.page === HomePage ? 'home' : 'media'
+        }
+        bounds.notifyHidden(true)
+        bounds.recoverRestingBounds(
+          getBoundsForState(islandConfig, false, true),
+          clampedOffsetX,
+          islandNode,
+          true
+        )
+        Events.Emit('vinta:state-change', {
+          expanded: false,
+          isHidden: true,
+          dormant: true
+        })
       }
-      bounds.notifyHidden(true)
-      bounds.recoverRestingBounds(
-        getBoundsForState(islandConfig, false, true),
-        clampedOffsetX,
-        islandNode,
-        true
-      )
-      Events.Emit('vinta:state-change', {
-        expanded: false,
-        isHidden: true,
-        dormant: true
-      })
-    })
+    )
   }
 
   function finishDragGesture() {
@@ -1073,7 +1071,7 @@
   async function handleExpand() {
     if (expanded) return
     if (gestures.isDragging || gestures.isInertia) finishDragGesture()
-    if (activePage === NotificationPage) {
+    if (activePage === Notification) {
       openOverlay('notifications', {
         tab: 'notifications',
         collapseOnClose: true
@@ -1111,11 +1109,29 @@
     }
   }
 
+  /**
+   * Hides the minimized notification banner back to the fallback page (or hidden pill).
+   */
+  function foldMinimizedNotification() {
+    clearTimeout(hideTimeout)
+    isTimeoutActive = false
+    if (activePage === Notification && !expanded) {
+      if (wasHiddenBeforeNotif) {
+        wasHiddenBeforeNotif = false
+        hideWidget()
+      } else {
+        const fallback = getFallbackPage()
+        navigateTo(fallback.page as Component, fallback.config, false)
+      }
+    }
+  }
+
   setContext('navigate', navigateTo)
   setContext('goBack', goBack)
   setContext('hidePill', hideWidget)
   setContext('openOverlay', openOverlay)
   setContext('closeOverlay', closeOverlay)
+  setContext('foldMinimizedNotification', foldMinimizedNotification)
 
   // Reactive Effects
   $effect(function handleDebugBoundsOverlayEffect() {
@@ -1164,21 +1180,22 @@
       scaleAnimMs(isExp ? 660 : 500),
       false,
       () => {
-      if (!isGestureBusy()) {
-        bounds.recoverRestingBounds(
-          getBoundsForState(),
-          clampedOffsetX,
-          islandNode,
-          isHidden
-        )
-        bounds.syncPillBounds(islandNode, isHidden, true)
+        if (!isGestureBusy()) {
+          bounds.recoverRestingBounds(
+            getBoundsForState(),
+            clampedOffsetX,
+            islandNode,
+            isHidden
+          )
+          bounds.syncPillBounds(islandNode, isHidden, true)
+        }
+        Events.Emit('vinta:state-change', {
+          expanded: isExp,
+          isHidden,
+          page: $activePageIdStore
+        })
       }
-      Events.Emit('vinta:state-change', {
-        expanded: isExp,
-        isHidden,
-        page: $activePageIdStore
-      })
-    })
+    )
   })
 
   $effect(function handleStateChangeTrim() {
@@ -1328,6 +1345,14 @@
       const fallback = getFallbackPage()
       $devPinnedStore = false
       navigateTo(fallback.page as Component, fallback.config, false)
+      return
+    }
+
+    if (data.mode === 'apps' && expand) {
+      $hasCompletedOnboardingStore = true
+      hasCompletedOnboardingStore.set(true)
+      $devPinnedStore = true
+      openOverlay('apps')
       return
     }
 
@@ -2019,104 +2044,101 @@
       : islandAnim};
     "
   >
-    <div
-      class="island-scale-box"
-      style="--vinta-ui-scale: {effectiveUiScale};"
-    >
-    <MainIsland
-      bind:islandNode
-      {activePage}
-      {expanded}
-      {isHidden}
-      {isQuitting}
-      {isTransitionGlow}
-      {isBlinking}
-      {isPageDormant}
-      {isDockVisible}
-      {isTimeoutActive}
-      {shouldCurrentPageAutoHide}
-      {isMediaActive}
-      {isTimerActive}
-      {hideTrigger}
-      {islandConfig}
-      {currentMinimalW}
-      {currentExpandedH}
-      activeOverlay={$activeOverlayStore}
-      onCloseOverlay={closeOverlay}
-      {hiddenBounds}
-      {activeOpacity}
-      {glowOpacity}
-      {islandAnim}
-      activeMonitorWidth={activeMonitor.width}
-      {gestures}
-      {virtualMinOffset}
-      {virtualMaxOffset}
-      {monitorSnapOffsets}
-      {currentLiveOffsetX}
-      {wasExpandedBeforeHide}
-      onStartDragRunway={() => {
-        const { h, r } = getBoundsForState()
-        bounds.currentOSBounds = { w: -1, h: Math.max(h, 200), r }
-        bounds.captureDragBaseline(islandNode, currentLiveOffsetX)
-      }}
-      onStartInertia={(start, target) => {
-        bounds.syncGlideCorridor(islandNode, isHidden, start, target)
-      }}
-      onGlideStep={(live) => {
-        currentLiveOffsetX = live
-        // Apply transform directly during drag/glide to avoid Svelte microtask frame jitter.
-        if (islandWrapperNode) {
-          islandWrapperNode.style.transform = `translateX(${live}px)`
-        }
-        bounds.syncDragOffset(live)
-      }}
-      onUpdateOffset={(next) => {
-        currentLiveOffsetX = next
-        if (islandWrapperNode) {
-          islandWrapperNode.style.transform = `translateX(${next}px)`
-        }
-        bounds.syncDragOffset(next)
-      }}
-      onFinishDrag={finishDragGesture}
-      onExpand={handleExpand}
-      onShowWidget={showWidget}
-      onHideWidget={hideWidget}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      onRecoverBounds={recoverBoundsIfIdle}
-      onAnimationDone={recoverBoundsIfIdle}
-    />
-
-    {#if !isQuitting && !isHidden}
-      <NotificationSatellite
-        active={!isQuitting &&
-          !isHidden &&
-          activePage !== OnboardingPage &&
-          $hasCompletedOnboardingStore}
-        primaryCenter={displayLayout.primaryCenter / getWindowDpr()}
-        {clampedOffsetX}
-        monitorLeft={(activeMonitor.left - displayLayout.virtualLeft) /
-          getWindowDpr()}
-        activeMonitorWidth={activeMonitor.width / getWindowDpr()}
-        islandWidth={currentIslandW}
-        uiScale={effectiveUiScale}
-      />
-      <ControlsSatellite
+    <div class="island-scale-box" style="--vinta-ui-scale: {effectiveUiScale};">
+      <MainIsland
+        bind:islandNode
         {activePage}
         {expanded}
-        expandedHeight={currentExpandedH}
-        expandedWidth={currentIslandW}
-        activeMonitorWidth={activeMonitor.width / getWindowDpr()}
-        monitorLeft={(activeMonitor.left - displayLayout.virtualLeft) /
-          getWindowDpr()}
-        primaryCenter={displayLayout.primaryCenter / getWindowDpr()}
-        {clampedOffsetX}
-        uiScale={effectiveUiScale}
-        active={!isQuitting && !isHidden}
-        onmouseenter={handleSatelliteMouseEnter}
-        onmouseleave={handleSatelliteMouseLeave}
+        {isHidden}
+        {isQuitting}
+        {isTransitionGlow}
+        {isBlinking}
+        {isPageDormant}
+        {isDockVisible}
+        {isTimeoutActive}
+        {shouldCurrentPageAutoHide}
+        {isMediaActive}
+        {isTimerActive}
+        {hideTrigger}
+        {islandConfig}
+        {currentMinimalW}
+        {currentExpandedH}
+        activeOverlay={$activeOverlayStore}
+        onCloseOverlay={closeOverlay}
+        {hiddenBounds}
+        {activeOpacity}
+        {glowOpacity}
+        {islandAnim}
+        activeMonitorWidth={activeMonitor.width}
+        {gestures}
+        {virtualMinOffset}
+        {virtualMaxOffset}
+        {monitorSnapOffsets}
+        {currentLiveOffsetX}
+        {wasExpandedBeforeHide}
+        onStartDragRunway={() => {
+          const { h, r } = getBoundsForState()
+          bounds.currentOSBounds = { w: -1, h: Math.max(h, 200), r }
+          bounds.captureDragBaseline(islandNode, currentLiveOffsetX)
+        }}
+        onStartInertia={(start, target) => {
+          bounds.syncGlideCorridor(islandNode, isHidden, start, target)
+        }}
+        onGlideStep={(live) => {
+          currentLiveOffsetX = live
+          // Apply transform directly during drag/glide to avoid Svelte microtask frame jitter.
+          if (islandWrapperNode) {
+            islandWrapperNode.style.transform = `translateX(${live}px)`
+          }
+          bounds.syncDragOffset(live)
+        }}
+        onUpdateOffset={(next) => {
+          currentLiveOffsetX = next
+          if (islandWrapperNode) {
+            islandWrapperNode.style.transform = `translateX(${next}px)`
+          }
+          bounds.syncDragOffset(next)
+        }}
+        onFinishDrag={finishDragGesture}
+        onExpand={handleExpand}
+        onShowWidget={showWidget}
+        onHideWidget={hideWidget}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        onRecoverBounds={recoverBoundsIfIdle}
+        onAnimationDone={recoverBoundsIfIdle}
       />
-    {/if}
+
+      {#if !isQuitting && !isHidden}
+        <NotificationSatellite
+          active={!isQuitting &&
+            !isHidden &&
+            activePage !== OnboardingPage &&
+            $hasCompletedOnboardingStore}
+          primaryCenter={displayLayout.primaryCenter / getWindowDpr()}
+          {clampedOffsetX}
+          monitorLeft={(activeMonitor.left - displayLayout.virtualLeft) /
+            getWindowDpr()}
+          activeMonitorWidth={activeMonitor.width / getWindowDpr()}
+          islandWidth={currentIslandW}
+          uiScale={effectiveUiScale}
+        />
+        <ControlsSatellite
+          {activePage}
+          {expanded}
+          expandedHeight={currentExpandedH}
+          expandedWidth={currentIslandW}
+          activeMonitorWidth={activeMonitor.width / getWindowDpr()}
+          monitorLeft={(activeMonitor.left - displayLayout.virtualLeft) /
+            getWindowDpr()}
+          primaryCenter={displayLayout.primaryCenter / getWindowDpr()}
+          {clampedOffsetX}
+          uiScale={effectiveUiScale}
+          active={!isQuitting && !isHidden}
+          onmouseenter={handleSatelliteMouseEnter}
+          onmouseleave={handleSatelliteMouseLeave}
+        />
+      {/if}
     </div>
   </div>
 </div>

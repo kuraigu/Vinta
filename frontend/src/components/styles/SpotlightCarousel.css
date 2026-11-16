@@ -66,8 +66,8 @@
 }
 
 .spotlight-card:hover {
-  background: var(--vinta-contrast-hover, rgba(255, 255, 255, 0.055));
-  border-color: var(--vinta-border-strong, rgba(255, 255, 255, 0.14));
+  background: var(--vinta-contrast-hover);
+  border-color: var(--vinta-border-light);
 }
 
 .spotlight-card:focus-visible {

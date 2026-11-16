@@ -107,47 +107,50 @@
 
 <div class="apps-modules-tab setting-group">
   <BentoCard variant="group">
-    <SettingItem label="Action Center" icon={SlidersHorizontal}>
+    <SettingItem
+      label={$tStore('apps.actioncenter_name')}
+      icon={SlidersHorizontal}
+    >
       <ToggleSwitch
         checked={$pageVisibilityStore.actioncenter}
         onchange={() => togglePage('actioncenter')}
-        ariaLabel="Action Center"
+        ariaLabel={$tStore('apps.actioncenter_name')}
       />
     </SettingItem>
 
-    <SettingItem label="Calendar" icon={Calendar}>
+    <SettingItem label={$tStore('apps.calendar_name')} icon={Calendar}>
       <ToggleSwitch
         checked={$pageVisibilityStore.calendar !== false}
         onchange={() => togglePage('calendar')}
-        ariaLabel="Calendar"
+        ariaLabel={$tStore('apps.calendar_name')}
       />
     </SettingItem>
 
-    <SettingItem label="Calculator" icon={Calculator}>
+    <SettingItem label={$tStore('apps.calculator_name')} icon={Calculator}>
       <ToggleSwitch
         checked={$pageVisibilityStore.calculator}
         onchange={() => togglePage('calculator')}
-        ariaLabel="Calculator"
+        ariaLabel={$tStore('apps.calculator_name')}
       />
     </SettingItem>
 
-    <SettingItem label="File Shelf" icon={FolderDown}>
+    <SettingItem label={$tStore('apps.fileshelf_name')} icon={FolderDown}>
       <ToggleSwitch
         checked={$pageVisibilityStore.fileshelf !== false}
         onchange={() => togglePage('fileshelf')}
-        ariaLabel="File Shelf"
+        ariaLabel={$tStore('apps.fileshelf_name')}
       />
     </SettingItem>
 
-    <SettingItem label="Weather" icon={CloudSun}>
+    <SettingItem label={$tStore('apps.weather_name')} icon={CloudSun}>
       <ToggleSwitch
         checked={$pageVisibilityStore.weather !== false}
         onchange={() => togglePage('weather')}
-        ariaLabel="Weather"
+        ariaLabel={$tStore('apps.weather_name')}
       />
     </SettingItem>
 
-    <SettingItem label="Timer & Focus" icon={Timer}>
+    <SettingItem label={$tStore('settings.modules_timer_focus')} icon={Timer}>
       <ToggleSwitch
         checked={$pageVisibilityStore.timer !== false}
         onchange={() => {
@@ -158,51 +161,51 @@
             focus: next
           }
         }}
-        ariaLabel="Timer & Focus"
+        ariaLabel={$tStore('settings.modules_timer_focus')}
       />
     </SettingItem>
 
-    <SettingItem label="Now Playing / Media" icon={Music}>
+    <SettingItem label={$tStore('settings.modules_now_playing')} icon={Music}>
       <ToggleSwitch
         checked={$pageVisibilityStore.media}
         onchange={() => togglePage('media')}
-        ariaLabel="Now Playing / Media"
+        ariaLabel={$tStore('settings.modules_now_playing')}
       />
     </SettingItem>
 
-    <SettingItem label="Quick Notes" icon={FileText}>
+    <SettingItem label={$tStore('apps.notes_name')} icon={FileText}>
       <ToggleSwitch
         checked={$pageVisibilityStore.notes}
         onchange={() => togglePage('notes')}
-        ariaLabel="Quick Notes"
+        ariaLabel={$tStore('apps.notes_name')}
       />
     </SettingItem>
 
-    <SettingItem label="Notifications" icon={Bell}>
+    <SettingItem label={$tStore('apps.notifs_name')} icon={Bell}>
       <ToggleSwitch
         checked={$pageVisibilityStore.notifications}
         onchange={() => togglePage('notifications')}
-        ariaLabel="Notifications"
+        ariaLabel={$tStore('apps.notifs_name')}
       />
     </SettingItem>
 
-    <SettingItem label="System Stats" icon={Activity}>
+    <SettingItem label={$tStore('apps.stats_name')} icon={Activity}>
       <ToggleSwitch
         checked={$pageVisibilityStore.performance !== false}
         onchange={() => togglePage('performance')}
-        ariaLabel="System Stats"
+        ariaLabel={$tStore('apps.stats_name')}
       />
     </SettingItem>
   </BentoCard>
 
   <div class="setting-section-header">
-    <span>Home Widgets</span>
+    <span>{$tStore('settings.modules_home_widgets')}</span>
   </div>
 
   <BentoCard variant="group">
     <!-- Clock Widget -->
     <div class="item-wrapper" class:shake={shakeKey === 'clock'}>
-      <SettingItem label="Clock & Time" icon={Clock}>
+      <SettingItem label={$tStore('settings.modules_clock_time')} icon={Clock}>
         <div
           class="toggle-container"
           class:locked={isClockLocked}
@@ -216,22 +219,24 @@
             checked={$homeWidgetsVisibilityStore.clock}
             disabled={isClockLocked}
             onchange={() => toggleHomeWidget('clock')}
-            ariaLabel="Clock & Time"
+            ariaLabel={$tStore('settings.modules_clock_time')}
           />
         </div>
       </SettingItem>
       {#if isClockLocked && shakeKey === 'clock'}
         <div class="locked-warning">
           <AlertCircle size={12} />
-          <span>At least one widget must remain visible on the home island</span
-          >
+          <span>{$tStore('settings.modules_one_widget_required')}</span>
         </div>
       {/if}
     </div>
 
     <!-- Calendar Widget -->
     <div class="item-wrapper" class:shake={shakeKey === 'calendar'}>
-      <SettingItem label="Calendar & Date" icon={Calendar}>
+      <SettingItem
+        label={$tStore('settings.modules_calendar_date')}
+        icon={Calendar}
+      >
         <div
           class="toggle-container"
           class:locked={isCalLocked}
@@ -245,22 +250,24 @@
             checked={$homeWidgetsVisibilityStore.calendar}
             disabled={isCalLocked}
             onchange={() => toggleHomeWidget('calendar')}
-            ariaLabel="Calendar & Date"
+            ariaLabel={$tStore('settings.modules_calendar_date')}
           />
         </div>
       </SettingItem>
       {#if isCalLocked && shakeKey === 'calendar'}
         <div class="locked-warning">
           <AlertCircle size={12} />
-          <span>At least one widget must remain visible on the home island</span
-          >
+          <span>{$tStore('settings.modules_one_widget_required')}</span>
         </div>
       {/if}
     </div>
 
     <!-- Weather Widget -->
     <div class="item-wrapper" class:shake={shakeKey === 'weather'}>
-      <SettingItem label="Weather & Forecast" icon={CloudSun}>
+      <SettingItem
+        label={$tStore('settings.modules_weather_forecast')}
+        icon={CloudSun}
+      >
         <div
           class="toggle-container"
           class:locked={isWeatherLocked}
@@ -274,15 +281,14 @@
             checked={$homeWidgetsVisibilityStore.weather}
             disabled={isWeatherLocked}
             onchange={() => toggleHomeWidget('weather')}
-            ariaLabel="Weather & Forecast"
+            ariaLabel={$tStore('settings.modules_weather_forecast')}
           />
         </div>
       </SettingItem>
       {#if isWeatherLocked && shakeKey === 'weather'}
         <div class="locked-warning">
           <AlertCircle size={12} />
-          <span>At least one widget must remain visible on the home island</span
-          >
+          <span>{$tStore('settings.modules_one_widget_required')}</span>
         </div>
       {/if}
     </div>
@@ -290,7 +296,7 @@
     <!-- Battery Widget -->
     <div class="item-wrapper" class:shake={shakeKey === 'battery'}>
       <SettingItem
-        label="Battery & Power"
+        label={$tStore('settings.modules_battery_power')}
         icon={Battery}
         disabled={!hasBattery}
       >
@@ -307,22 +313,21 @@
             checked={hasBattery && $homeWidgetsVisibilityStore.battery}
             disabled={isBatteryLocked || !hasBattery}
             onchange={() => toggleHomeWidget('battery')}
-            ariaLabel="Battery & Power"
+            ariaLabel={$tStore('settings.modules_battery_power')}
           />
         </div>
       </SettingItem>
       {#if isBatteryLocked && shakeKey === 'battery'}
         <div class="locked-warning">
           <AlertCircle size={12} />
-          <span>At least one widget must remain visible on the home island</span
-          >
+          <span>{$tStore('settings.modules_one_widget_required')}</span>
         </div>
       {/if}
     </div>
 
     <!-- Wireless & Connectivity Widget -->
     <div class="item-wrapper" class:shake={shakeKey === 'wireless'}>
-      <SettingItem label="Wireless & Connectivity" icon={Wifi}>
+      <SettingItem label={$tStore('settings.modules_wireless')} icon={Wifi}>
         <div
           class="toggle-container"
           class:locked={isWirelessLocked}
@@ -336,48 +341,56 @@
             checked={$homeWidgetsVisibilityStore.wireless}
             disabled={isWirelessLocked}
             onchange={() => toggleHomeWidget('wireless')}
-            ariaLabel="Wireless & Connectivity"
+            ariaLabel={$tStore('settings.modules_wireless')}
           />
         </div>
       </SettingItem>
       {#if isWirelessLocked && shakeKey === 'wireless'}
         <div class="locked-warning">
           <AlertCircle size={12} />
-          <span>At least one widget must remain visible on the home island</span
-          >
+          <span>{$tStore('settings.modules_one_widget_required')}</span>
         </div>
       {/if}
     </div>
 
-    <SettingItem label="Action Center Glance" icon={SlidersHorizontal}>
+    <SettingItem
+      label={$tStore('settings.modules_action_glance')}
+      icon={SlidersHorizontal}
+    >
       <ToggleSwitch
         checked={$homeWidgetsVisibilityStore.actionCenter}
         onchange={() => toggleHomeWidget('actionCenter')}
-        ariaLabel="Action Center Glance"
+        ariaLabel={$tStore('settings.modules_action_glance')}
       />
     </SettingItem>
 
-    <SettingItem label="System Stats Glance" icon={Activity}>
+    <SettingItem
+      label={$tStore('settings.modules_stats_glance')}
+      icon={Activity}
+    >
       <ToggleSwitch
         checked={Boolean($homeWidgetsVisibilityStore.systemStats)}
         onchange={() => toggleHomeWidget('systemStats')}
-        ariaLabel="System Stats Glance"
+        ariaLabel={$tStore('settings.modules_stats_glance')}
       />
     </SettingItem>
 
-    <SettingItem label="Spotlight Carousel" icon={Sparkles}>
+    <SettingItem label={$tStore('settings.modules_spotlight')} icon={Sparkles}>
       <ToggleSwitch
         checked={$homeWidgetsVisibilityStore.spotlight !== false}
         onchange={() => toggleHomeWidget('spotlight')}
-        ariaLabel="Spotlight Carousel"
+        ariaLabel={$tStore('settings.modules_spotlight')}
       />
     </SettingItem>
 
-    <SettingItem label="Announcements Feed" icon={Megaphone}>
+    <SettingItem
+      label={$tStore('settings.modules_announcements')}
+      icon={Megaphone}
+    >
       <ToggleSwitch
         checked={$homeWidgetsVisibilityStore.announcements !== false}
         onchange={() => toggleHomeWidget('announcements')}
-        ariaLabel="Announcements Feed"
+        ariaLabel={$tStore('settings.modules_announcements')}
       />
     </SettingItem>
 
@@ -412,55 +425,56 @@
   </BentoCard>
 
   <div class="setting-section-header">
-    <span>Dock Pinned Favorites</span>
+    <span>{$tStore('settings.modules_dock_pinned')}</span>
   </div>
 
   <BentoCard variant="group">
-    <SettingItem label="Pin Calendar" icon={Calendar}>
+    <SettingItem
+      label={$tStore('settings.modules_pin_calendar')}
+      icon={Calendar}
+    >
       <ToggleSwitch
         checked={$dockPinnedAppsStore.calendar}
         onchange={() => toggleDockPinned('calendar')}
-        ariaLabel="Pin Calendar"
+        ariaLabel={$tStore('settings.modules_pin_calendar')}
       />
     </SettingItem>
 
-    <SettingItem label="Pin Quick Notes" icon={FileText}>
+    <SettingItem label={$tStore('settings.modules_pin_notes')} icon={FileText}>
       <ToggleSwitch
         checked={$dockPinnedAppsStore.notes}
         onchange={() => toggleDockPinned('notes')}
-        ariaLabel="Pin Quick Notes"
+        ariaLabel={$tStore('settings.modules_pin_notes')}
       />
     </SettingItem>
 
-    <SettingItem label="Pin Calculator" icon={Calculator}>
+    <SettingItem
+      label={$tStore('settings.modules_pin_calculator')}
+      icon={Calculator}
+    >
       <ToggleSwitch
         checked={$dockPinnedAppsStore.calculator}
         onchange={() => toggleDockPinned('calculator')}
-        ariaLabel="Pin Calculator"
+        ariaLabel={$tStore('settings.modules_pin_calculator')}
       />
     </SettingItem>
 
-    <SettingItem label="Pin Timer" icon={Timer}>
+    <SettingItem label={$tStore('settings.modules_pin_timer')} icon={Timer}>
       <ToggleSwitch
         checked={$dockPinnedAppsStore.timer}
         onchange={() => toggleDockPinned('timer')}
-        ariaLabel="Pin Timer"
+        ariaLabel={$tStore('settings.modules_pin_timer')}
       />
     </SettingItem>
 
-    <SettingItem label="Pin Weather" icon={CloudSun}>
-      <ToggleSwitch
-        checked={$dockPinnedAppsStore.weather}
-        onchange={() => toggleDockPinned('weather')}
-        ariaLabel="Pin Weather"
-      />
-    </SettingItem>
-
-    <SettingItem label="Pin File Shelf" icon={FolderDown}>
+    <SettingItem
+      label={$tStore('settings.modules_pin_fileshelf')}
+      icon={FolderDown}
+    >
       <ToggleSwitch
         checked={$dockPinnedAppsStore.fileshelf}
         onchange={() => toggleDockPinned('fileshelf')}
-        ariaLabel="Pin File Shelf"
+        ariaLabel={$tStore('settings.modules_pin_fileshelf')}
       />
     </SettingItem>
   </BentoCard>

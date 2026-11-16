@@ -1032,7 +1032,9 @@
               <button
                 type="button"
                 class="action-btn"
-                class:is-active={Boolean(media.autoRepeatMode && media.autoRepeatMode > 0)}
+                class:is-active={Boolean(
+                  media.autoRepeatMode && media.autoRepeatMode > 0
+                )}
                 use:islandTooltip={{
                   text:
                     media.autoRepeatMode === 1

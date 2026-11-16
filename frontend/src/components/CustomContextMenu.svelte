@@ -7,6 +7,7 @@
   import type { ComponentType } from 'svelte'
   import { slide } from 'svelte/transition'
   import { Events } from '$lib/events'
+  import { portal, getUiScale, clampToBounds } from '../utils/portal'
 
   export interface ContextMenuItem {
     label: string
@@ -35,55 +36,20 @@
   }
   $effect(syncCoordsFromProps)
 
-  function portal(node: HTMLElement) {
-    document.body.appendChild(node)
-
-    requestAnimationFrame(() => {
-      const margin = 8
-      const naturalW = node.offsetWidth || node.scrollWidth || 150
-      const naturalH = node.offsetHeight || node.scrollHeight || 160
-
-      const islandEl = document.querySelector('.island')
-      const bounds = islandEl
-        ? islandEl.getBoundingClientRect()
-        : {
-            left: 0,
-            top: 0,
-            right: window.innerWidth,
-            bottom: window.innerHeight
-          }
-
-      let finalX = x
-      let finalY = y
-
-      if (finalX + naturalW > bounds.right - margin) {
-        finalX = Math.max(
-          bounds.left + margin,
-          bounds.right - naturalW - margin
-        )
-      }
-
-      if (finalY + naturalH > bounds.bottom - margin) {
-        finalY = Math.max(
-          bounds.top + margin,
-          bounds.bottom - naturalH - margin
-        )
-      }
-
-      finalX = Math.max(bounds.left + margin, finalX)
-      finalY = Math.max(bounds.top + margin, finalY)
-
-      adjustedX = finalX
-      adjustedY = finalY
-      Events.Emit('vinta:resync-bounds')
+  function mountMenuPortal(node: HTMLElement) {
+    return portal(node, {
+      onMount: () => {
+        requestAnimationFrame(() => {
+          const naturalW = node.offsetWidth || node.scrollWidth || 150
+          const naturalH = node.offsetHeight || node.scrollHeight || 160
+          const clamped = clampToBounds(x, y, naturalW, naturalH)
+          adjustedX = clamped.x
+          adjustedY = clamped.y
+          Events.Emit('vinta:resync-bounds')
+        })
+      },
+      resyncBounds: true
     })
-
-    return {
-      destroy() {
-        if (node.parentElement) node.parentElement.removeChild(node)
-        Events.Emit('vinta:resync-bounds')
-      }
-    }
   }
 
   function clickOutside(node: HTMLElement) {
@@ -114,20 +80,10 @@
   function stopPropagation(e: Event) {
     e.stopPropagation()
   }
-
-  function getUiScale(): number {
-    return (
-      (typeof document !== 'undefined' &&
-        parseFloat(
-          document.documentElement.style.getPropertyValue('--vinta-ui-scale')
-        )) ||
-      1
-    )
-  }
 </script>
 
 <div
-  use:portal
+  use:mountMenuPortal
   use:clickOutside
   class="ctx-menu no-swipe"
   style="left: {adjustedX / getUiScale()}px; top: {adjustedY / getUiScale()}px;"

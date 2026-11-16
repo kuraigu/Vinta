@@ -7,6 +7,7 @@
   import { Bell, Pencil, Trash2 } from 'lucide-svelte'
   import ScrollView from '../ScrollView.svelte'
   import EmptyState from '../EmptyState.svelte'
+  import ToggleSwitch from '../ToggleSwitch.svelte'
   import { islandTooltip } from '../../services/islandTooltip'
   import {
     timerAppStore,
@@ -96,14 +97,11 @@
                 <Pencil size={13} />
               </button>
 
-              <label class="drawer-switch mini-switch">
-                <input
-                  type="checkbox"
-                  checked={alarm.enabled}
-                  onchange={() => toggleAlarm(alarm.id)}
-                />
-                <span class="switch-slider"></span>
-              </label>
+              <ToggleSwitch
+                checked={alarm.enabled}
+                ariaLabel={alarm.label || 'Reminder'}
+                onchange={() => toggleAlarm(alarm.id)}
+              />
 
               <button
                 class="alarm-delete-btn"

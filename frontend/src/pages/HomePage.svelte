@@ -33,9 +33,6 @@
   import ScrollView from '../components/ScrollView.svelte'
   import CalendarPage, { config as calendarConfig } from './CalendarPage.svelte'
   import SettingsPage, { config as settingsConfig } from './SettingsPage.svelte'
-  import AnnouncementsPage, {
-    config as announcementsConfig
-  } from './AnnouncementsPage.svelte'
   import {
     homeWidgetsVisibilityStore,
     homeWidgetSizesStore,
@@ -117,7 +114,10 @@
 
   const openOverlay =
     getContext<
-      (overlay: 'notifications' | 'apps' | null, opts?: { tab?: 'notifications' | 'announcements' | 'releases' }) => void
+      (
+        overlay: 'notifications' | 'apps' | null,
+        opts?: { tab?: 'notifications' | 'announcements' | 'releases' }
+      ) => void
     >('openOverlay')
 
   /**
@@ -126,8 +126,6 @@
   function openAnnouncementsPage() {
     if (typeof openOverlay === 'function') {
       openOverlay('notifications', { tab: 'announcements' })
-    } else if (navigate) {
-      navigate(AnnouncementsPage, announcementsConfig, true)
     }
   }
 

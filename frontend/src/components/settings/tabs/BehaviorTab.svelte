@@ -164,7 +164,8 @@
     <SettingItem
       label={$tStore('settings.allow_drag_label')}
       icon={MousePointer}
-      isDefault={$allowDragPositionStore === allowDragPositionStore.defaultValue}
+      isDefault={$allowDragPositionStore ===
+        allowDragPositionStore.defaultValue}
       onReset={() => allowDragPositionStore.reset()}
     >
       <ToggleSwitch

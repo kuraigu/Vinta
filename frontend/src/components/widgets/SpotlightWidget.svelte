@@ -5,21 +5,22 @@
 -->
 <script lang="ts">
   import { getContext } from 'svelte'
-  import {
-    Heart,
-    Star,
-    Palette,
-    MessageSquareHeart
-  } from 'lucide-svelte'
+  import { Heart, Star, Palette, MessageSquareHeart } from 'lucide-svelte'
   import { Browser } from '@wailsio/runtime'
-  import SpotlightCarousel, { type SpotlightItem } from '../SpotlightCarousel.svelte'
+  import SpotlightCarousel, {
+    type SpotlightItem
+  } from '../SpotlightCarousel.svelte'
   import SettingsPage, {
     config as settingsConfig
   } from '../../pages/SettingsPage.svelte'
   import { bakeImageToCanvas } from '../../services/bakedAnimation'
   import { reportFeedback } from '../../services/feedbackService'
   import { OpenURL } from '../../../bindings/Vinta/backend/app.js'
-  import { activeSettingsTabStore, tStore, type IslandConfig } from '../../store'
+  import {
+    activeSettingsTabStore,
+    tStore,
+    type IslandConfig
+  } from '../../store'
 
   import enohotelLogoSvg from '../../illustrations/enohotel-daniel-belda/simple_logo.svg'
   import enohotelBgSvg from '../../illustrations/enohotel-daniel-belda/enohotel-card-bg.svg'

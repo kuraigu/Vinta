@@ -491,12 +491,12 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
-  border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.1));
-  background: var(--vinta-item-bg, rgba(255, 255, 255, 0.05));
-  color: var(--vinta-text-secondary, #b0b0b0);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--vinta-text-secondary);
   cursor: pointer;
   transition: all 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
   outline: none;
@@ -504,8 +504,9 @@
 }
 
 .header-tool-btn:hover {
-  background: var(--vinta-hover, rgba(255, 255, 255, 0.1));
-  color: var(--vinta-text-primary, #ffffff);
+  background: var(--vinta-contrast-hover);
+  border-color: var(--vinta-border);
+  color: var(--vinta-text-primary);
   transform: scale(1.04);
 }
 
@@ -514,9 +515,9 @@
 }
 
 .header-tool-btn.active {
-  background: var(--vinta-item-active, rgba(255, 255, 255, 0.14));
-  color: var(--vinta-text-primary, #ffffff);
-  border-color: rgba(255, 255, 255, 0.25);
+  background: var(--vinta-contrast-bg);
+  color: var(--vinta-text-primary);
+  border-color: var(--vinta-border);
 }
 
 .tab-panel {
@@ -1679,15 +1680,14 @@ button.alarm-item-info:hover .alarm-item-time {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  animation: vintaTimerTabFadeIn
-    calc(0.52s * var(--vinta-anim-scale, 1))
+  animation: vintaTimerTabFadeIn calc(0.52s * var(--vinta-anim-scale, 1))
     cubic-bezier(0.18, 0.9, 0.32, 1) forwards;
 }
 
 @keyframes vintaTimerTabFadeIn {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(14px);
   }
   to {
     opacity: 1;

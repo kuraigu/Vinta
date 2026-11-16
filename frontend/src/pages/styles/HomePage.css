@@ -215,7 +215,7 @@
   font-variant-numeric: tabular-nums;
   padding: 1px 6px;
   border-radius: 999px;
-  background: var(--vinta-surface-subtle, rgba(255, 255, 255, 0.05));
-  border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.08));
-  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.5));
+  background: var(--vinta-contrast-bg);
+  border: 1px solid var(--vinta-border);
+  color: var(--vinta-text-muted);
 }

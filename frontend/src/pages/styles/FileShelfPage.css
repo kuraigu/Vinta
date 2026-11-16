@@ -353,14 +353,14 @@
 }
 
 .shelf-tile.is-selected {
-  background: var(--vinta-active-bg, rgba(255, 255, 255, 0.08));
+  background: var(--vinta-contrast-bg);
   border-radius: 12px;
 }
 
 .shelf-tile.is-selected .tile-stage {
   border: 2px solid var(--vinta-accent-primary);
-  background: var(--vinta-active-bg, rgba(255, 255, 255, 0.1));
-  box-shadow: 0 0 0 2px var(--vinta-contrast-border, rgba(255, 255, 255, 0.15));
+  background: var(--vinta-contrast-hover);
+  box-shadow: 0 0 0 2px var(--vinta-accent-muted);
 }
 
 .shelf-tile.is-selected .tile-name {

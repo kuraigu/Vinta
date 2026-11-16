@@ -16,9 +16,9 @@ import {
 } from '../../bindings/Vinta/backend/app.js'
 import HomePage from '../pages/HomePage.svelte'
 import MediaPage, { config as mediaConfig } from '../pages/MediaPage.svelte'
-import NotificationPage, {
+import Notification, {
   config as notifConfig
-} from '../pages/NotificationPage.svelte'
+} from '../components/Notification.svelte'
 import SettingsPage, {
   config as settingsConfig
 } from '../pages/SettingsPage.svelte'
@@ -369,11 +369,17 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
 
   // Audio Peak Visualizer Feed
   onEvent('audio-peak', (data: Record<string, unknown>) => {
+    const activePage = callbacks.getActivePage()
+    const isMediaOnMediaPage =
+      activePage === MediaPage && get(pageVisibilityStore).media !== false
+    const isMediaOnHomePage =
+      activePage === HomePage &&
+      callbacks.getIsExpanded() &&
+      get(homeWidgetsVisibilityStore).media !== false
     if (
       callbacks.getIsHidden() ||
       callbacks.getIsPageDormant() ||
-      callbacks.getActivePage() !== MediaPage ||
-      get(pageVisibilityStore).media === false
+      (!isMediaOnMediaPage && !isMediaOnHomePage)
     ) {
       return
     }
@@ -465,7 +471,7 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
         isNotifEnabled &&
         get(notifSatelliteEnabledStore) &&
         currentPage !== HomePage &&
-        currentPage !== NotificationPage
+        currentPage !== Notification
 
       if (shouldShowSatellite) {
         showSatelliteNotification(newNotif)
@@ -479,7 +485,7 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
       ) {
         callbacks.onNotificationWake?.()
         callbacks.showWidget()
-        callbacks.navigateTo(NotificationPage, notifConfig, false)
+        callbacks.navigateTo(Notification, notifConfig, false)
         callbacks.triggerGlow()
       }
 
@@ -539,7 +545,7 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
     notificationPermissionDenied.set(true)
     if (get(pageVisibilityStore).notifications) {
       callbacks.showWidget()
-      callbacks.navigateTo(NotificationPage, notifConfig, true)
+      callbacks.navigateTo(Notification, notifConfig, true)
     }
   })
 

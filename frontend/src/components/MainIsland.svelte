@@ -144,10 +144,13 @@
       }
       isMorphing = true
       if (morphTimer) clearTimeout(morphTimer)
-      morphTimer = setTimeout(() => {
-        isMorphing = false
-        morphTimer = null
-      }, Math.round(650 * scale))
+      morphTimer = setTimeout(
+        () => {
+          isMorphing = false
+          morphTimer = null
+        },
+        Math.round(650 * scale)
+      )
     }
   })
 
@@ -367,8 +370,7 @@
 
     const handleDevFileHold = (ev: any) => {
       const detail = (ev?.data ?? ev) as
-        | { active?: boolean; progress?: number }
-        | undefined
+        { active?: boolean; progress?: number } | undefined
       isHoldingFilesOverIsland = !!detail?.active
       fileHoldProgress = detail?.progress ?? 0
     }
@@ -378,7 +380,10 @@
       handleDocumentPointerLeave
     )
     window.addEventListener('blur', handleWindowBlur)
-    const unsubFileHold = Events.OnGlobal('devtest:file-hold', handleDevFileHold)
+    const unsubFileHold = Events.OnGlobal(
+      'devtest:file-hold',
+      handleDevFileHold
+    )
 
     return () => {
       stopFileHoldTimer()
@@ -422,7 +427,7 @@
     : Math.min(
         expanded
           ? activeOverlay !== null
-            ? Math.max(islandConfig.expanded.w, 440)
+            ? Math.max(islandConfig.expanded.w, 460)
             : islandConfig.expanded.w
           : currentMinimalW,
         activeMonitorWidth ? activeMonitorWidth - 24 : 1920
@@ -509,7 +514,7 @@
           style="width: {Math.min(
             expanded
               ? activeOverlay !== null
-                ? Math.max(islandConfig.expanded.w, 440)
+                ? Math.max(islandConfig.expanded.w, 460)
                 : islandConfig.expanded.w
               : currentMinimalW,
             activeMonitorWidth ? activeMonitorWidth - 24 : 1920

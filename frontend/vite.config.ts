@@ -160,7 +160,8 @@ export default defineConfig({
         manualChunks(id) {
           const normalized = id.replace(/\\/g, '/')
           if (normalized.includes('node_modules/svelte')) return 'vendor-svelte'
-          if (normalized.includes('node_modules/@wailsio')) return 'vendor-wails'
+          if (normalized.includes('node_modules/@wailsio'))
+            return 'vendor-wails'
           if (normalized.includes('src/devtest/')) return 'devtest'
           if (
             normalized.includes('src/pages/SettingsPage') ||

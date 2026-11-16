@@ -26,7 +26,7 @@ Vinta splits its Svelte UI into four clear layers so workspace state, overlays, 
 - **Primitives (`frontend/src/components/`):** Reusable, token-driven building blocks (`BentoCard`, `CustomSelect`, `OverlayPage`, `ScrollView`, `SearchInput`). Primitives stay free of page-specific layout rules.
 - **Widgets (`frontend/src/components/widgets/`):** Self-contained glance cards for the Home feed (`WeatherWidget`, `MediaGlanceWidget`, `CalendarGlanceWidget`, `SystemStatsWidget`, `ActionCenterWidget`, `AnnouncementWidget`, `NotificationWidget`). Widgets wrap `<WidgetFrame>` to carry `data-vinta-widget="<id>"` theme hooks, `contain: layout style` isolation, and Bento size presets (`1x1`, `2x1`, `2x2`).
 - **Workspace Pages (`frontend/src/pages/`):** Persistent base views (`HomePage`, `MediaPage`, `NotesPage`, `CalculatorPage`, `CalendarPage`, `SettingsPage`) that own the island frame and keep user context.
-- **Overlay Pages (`frontend/src/pages/overlays/`):** Top-level views (`NotificationsOverlayPage`, `AppsOverlayPage`) mounted inside `<OverlayPage>` above the active workspace. Closed overlays leave zero DOM nodes or listeners behind, and open overlays use solid elevated surfaces (`--vinta-bg-elevated`) instead of stacking a second `backdrop-filter: blur()` pass. They expand compact workspaces to at least `440px × 380px` while open, then restore exact workspace dimensions on close or `Escape`.
+- **Overlay Pages (`frontend/src/pages/overlays/`):** Top-level views (`NotificationsOverlayPage`, `AppsOverlayPage`) mounted inside `<OverlayPage>` above the active workspace. Closed overlays leave zero DOM nodes or listeners behind, and open overlays use solid elevated surfaces (`--vinta-bg-opaque` / `--vinta-surface-elevated`) instead of stacking a second `backdrop-filter: blur()` pass. Re-clicking the active dock trigger closes the overlay, and compact workspaces expand to at least `440px × 380px` while open before restoring exact dimensions on close or `Escape`.
 
 ### Where to Look
 
@@ -36,7 +36,7 @@ Check `frontend/src/components/` first:
 - **Navigation and Actions:** Look for `BackButton.svelte`, `DockButton.svelte`, and `RefreshButton.svelte`.
 - **Form Controls:** Look for `CustomSelect.svelte`, `CustomDatePicker.svelte`, `CustomTimePicker.svelte`, and `SearchInput.svelte`.
 - **Settings Primitives:** Check `frontend/src/components/settings/` for items, action buttons, sliders, and banners.
-- **Drawers, Overlays, and Modals:** Look for `OverlayPage.svelte`, `DrawerPanel.svelte`, `EditorModal.svelte`, and `ContextMenu.svelte`.
+- **Drawers, Overlays, and Modals:** Look for `OverlayPage.svelte`, `DrawerPanel.svelte`, `EditorModal.svelte`, and `CustomContextMenu.svelte`.
 - **Scrolling and Layout:** Look for `ScrollView.svelte` and `SidebarLayout.svelte`.
 - **Accents and Badges:** Check `frontend/src/components/patterns/` and components like `ActionCapsule.svelte` or `DotIndicator.svelte`.
 
@@ -165,7 +165,9 @@ Native HTML select menus and date pickers break window transparency and clash wi
 - Use `CustomSelect.svelte` instead of `<select>`.
 - Use `CustomDatePicker.svelte` instead of `<input type="date">`.
 - Use `CustomTimePicker.svelte` instead of `<input type="time">`.
+- Use `CustomContextMenu.svelte` for right-click and overflow menus instead of browser context menus.
 - Use `SearchInput.svelte` for search bars.
+- Use the shared `use:portal` action and bounds helpers (`getUiScale`, `getIslandOrViewportBounds`, `clampToBounds`) from `frontend/src/utils/portal.ts` for tooltips, selects, and menus that must escape clipped island containers while respecting `--vinta-ui-scale`.
 - Standard interactive controls standardize on a 32px height for consistent click targets.
 
 ---
@@ -175,6 +177,7 @@ Native HTML select menus and date pickers break window transparency and clash wi
 ### Dynamic Island Motion
 
 - Animate height and geometry smoothly using GPU-accelerated properties (`transform`, `opacity`) with cubic-bezier easing (`0.22, 1, 0.36, 1`).
+- Multiply CSS and Svelte transition durations by `--vinta-anim-scale` (`animScaleStore`) so morph, overlay, and tab transitions follow the user's animation speed setting cleanly down to instant `0` transitions.
 - Avoid rapid or distracting animations. Keep indicators and glimmers calm.
 
 ### Floating Satellites

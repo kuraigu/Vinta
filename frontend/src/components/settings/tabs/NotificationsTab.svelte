@@ -29,25 +29,33 @@
     alarmSoundPresetStore,
     alarmVolumeStore,
     alarmSnoozeMinutesStore,
-    notifData
+    notifData,
+    tStore
   } from '../../../store'
   import {
     previewAlarmSound,
     type AlarmSoundPreset
   } from '../../../services/audioService'
 
-  const alarmSoundOptions: { value: AlarmSoundPreset; label: string }[] = [
-    { value: 'chime', label: 'Chime (Soft Bell)' },
-    { value: 'radar', label: 'Radar (Sonar Ping)' },
-    { value: 'digital', label: 'Digital (Synth Beep)' },
-    { value: 'marimba', label: 'Marimba (Warm Scale)' }
-  ]
+  const alarmSoundOptions: { value: AlarmSoundPreset; label: string }[] =
+    $derived([
+      { value: 'chime', label: $tStore('settings.notif_sound_chime') },
+      { value: 'radar', label: $tStore('settings.notif_sound_radar') },
+      { value: 'digital', label: $tStore('settings.notif_sound_digital') },
+      { value: 'marimba', label: $tStore('settings.notif_sound_marimba') }
+    ])
 
-  const snoozeOptions = [
-    { value: '5', label: '5 minutes' },
-    { value: '10', label: '10 minutes' },
-    { value: '15', label: '15 minutes' }
-  ]
+  const snoozeOptions = $derived([
+    { value: '5', label: $tStore('settings.notif_snooze_mins', { count: 5 }) },
+    {
+      value: '10',
+      label: $tStore('settings.notif_snooze_mins', { count: 10 })
+    },
+    {
+      value: '15',
+      label: $tStore('settings.notif_snooze_mins', { count: 15 })
+    }
+  ])
 
   let snoozeString = $state(String($alarmSnoozeMinutesStore))
 
@@ -70,29 +78,32 @@
 <div class="setting-group">
   <BentoCard variant="group">
     <SettingItem
-      label="Do Not Disturb Mode"
+      label={$tStore('settings.notif_dnd_label')}
       icon={Bell}
       isDefault={$dndStore === dndStore.defaultValue}
       onReset={() => dndStore.reset()}
     >
-      <ToggleSwitch bind:checked={$dndStore} ariaLabel="Do Not Disturb Mode" />
+      <ToggleSwitch
+        bind:checked={$dndStore}
+        ariaLabel={$tStore('settings.notif_dnd_label')}
+      />
     </SettingItem>
 
     <SettingItem
-      label="Play Sound on Notification"
+      label={$tStore('settings.notif_sound_label')}
       icon={BellRing}
       isDefault={$notifSoundStore === notifSoundStore.defaultValue}
       onReset={() => notifSoundStore.reset()}
     >
       <ToggleSwitch
         bind:checked={$notifSoundStore}
-        ariaLabel="Play Sound on Notification"
+        ariaLabel={$tStore('settings.notif_sound_label')}
       />
     </SettingItem>
 
     <SettingItem
-      label="Notification Sound Volume"
-      description="Audio feedback level for incoming notifications"
+      label={$tStore('settings.notif_volume_label')}
+      description={$tStore('settings.notif_volume_desc')}
       icon={Volume2}
       flexCol={true}
       isDefault={Math.round($notifVolumeStore * 100) ===
@@ -111,20 +122,20 @@
     </SettingItem>
 
     <SettingItem
-      label="Auto-Wake Island on Notification"
+      label={$tStore('settings.notif_autowake_label')}
       icon={Bell}
       isDefault={$notifAutoWakeStore === notifAutoWakeStore.defaultValue}
       onReset={() => notifAutoWakeStore.reset()}
     >
       <ToggleSwitch
         bind:checked={$notifAutoWakeStore}
-        ariaLabel="Auto-Wake Island on Notification"
+        ariaLabel={$tStore('settings.notif_autowake_label')}
       />
     </SettingItem>
 
     <SettingItem
-      label="Show Notification Satellite"
-      description="Display alerts in a companion satellite capsule beside the island during media playback and other active views"
+      label={$tStore('settings.notif_satellite_label')}
+      description={$tStore('settings.notif_satellite_desc')}
       icon={Orbit}
       isDefault={$notifSatelliteEnabledStore ===
         notifSatelliteEnabledStore.defaultValue}
@@ -132,19 +143,19 @@
     >
       <ToggleSwitch
         bind:checked={$notifSatelliteEnabledStore}
-        ariaLabel="Show Notification Satellite"
+        ariaLabel={$tStore('settings.notif_satellite_label')}
       />
     </SettingItem>
   </BentoCard>
 
   <div class="setting-section-header">
-    <span>Alarms & Reminders</span>
+    <span>{$tStore('settings.notif_alarms_section')}</span>
   </div>
 
   <BentoCard variant="group">
     <SettingItem
-      label="Alarm Ringing Sound"
-      description="Procedural synthesis chime played when scheduled alarms fire"
+      label={$tStore('settings.notif_alarm_sound_label')}
+      description={$tStore('settings.notif_alarm_sound_desc')}
       icon={AlarmClock}
       flexCol={true}
       isDefault={$alarmSoundPresetStore === alarmSoundPresetStore.defaultValue}
@@ -155,7 +166,7 @@
           <CustomSelect
             options={alarmSoundOptions}
             bind:value={$alarmSoundPresetStore}
-            placeholder="Select sound..."
+            placeholder={$tStore('settings.notif_alarm_sound_label')}
             fullWidth={true}
           />
         </div>
@@ -163,17 +174,17 @@
           type="button"
           class="sound-preview-btn"
           onclick={handleAuditionAlarmSound}
-          aria-label="Preview alarm sound"
+          aria-label={$tStore('settings.notif_alarm_preview_aria')}
         >
           <Play size={11} />
-          <span>Test</span>
+          <span>{$tStore('settings.notif_alarm_test')}</span>
         </button>
       </div>
     </SettingItem>
 
     <SettingItem
-      label="Alarm Volume"
-      description="Ringing volume level for active alarms and timer completions"
+      label={$tStore('settings.notif_alarm_volume_label')}
+      description={$tStore('settings.notif_alarm_volume_desc')}
       icon={Volume2}
       flexCol={true}
       isDefault={Math.round($alarmVolumeStore * 100) ===
@@ -192,8 +203,8 @@
     </SettingItem>
 
     <SettingItem
-      label="Default Snooze Duration"
-      description="Interval duration before a snoozed alarm rings again"
+      label={$tStore('settings.notif_snooze_label')}
+      description={$tStore('settings.notif_snooze_desc')}
       icon={TimerReset}
       isDefault={$alarmSnoozeMinutesStore ===
         alarmSnoozeMinutesStore.defaultValue}
@@ -206,15 +217,17 @@
         <CustomSelect
           options={snoozeOptions}
           bind:value={snoozeString}
-          placeholder="Duration..."
+          placeholder={$tStore('settings.notif_snooze_label')}
         />
       </div>
     </SettingItem>
   </BentoCard>
 
   <SettingItem
-    label="Clear Notification History"
-    description={`${$notifData?.length || 0} active notifications`}
+    label={$tStore('settings.notif_clear_label')}
+    description={$tStore('settings.notif_clear_desc', {
+      count: $notifData?.length || 0
+    })}
     icon={Trash2}
     flexCol={true}
   >
@@ -223,7 +236,7 @@
       fullWidth={true}
       onclick={clearAllNotifications}
     >
-      Clear Notification History
+      {$tStore('settings.notif_clear_label')}
     </SettingActionButton>
   </SettingItem>
 </div>

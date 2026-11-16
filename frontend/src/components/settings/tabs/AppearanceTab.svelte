@@ -94,7 +94,9 @@
   const themeOptions = $derived(
     availableThemes.length > 0
       ? availableThemes.map((t) => ({
-          label: t.manifest.name + (t.isBuiltIn ? '' : ' (Custom)'),
+          label:
+            t.manifest.name +
+            (t.isBuiltIn ? '' : $tStore('appearance.custom_suffix')),
           value: t.manifest.id
         }))
       : [
@@ -104,11 +106,11 @@
         ]
   )
 
-  const glowIntensityOptions = [
-    { label: 'Disabled', value: 'disabled' },
-    { label: 'Subtle', value: 'subtle' },
-    { label: 'Vibrant Glow', value: 'vibrant' }
-  ]
+  const glowIntensityOptions = $derived([
+    { label: $tStore('appearance.glow_disabled'), value: 'disabled' },
+    { label: $tStore('appearance.glow_subtle'), value: 'subtle' },
+    { label: $tStore('appearance.glow_vibrant'), value: 'vibrant' }
+  ])
 
   const currentMonitor = $derived($displayLayoutStore.currentMonitor)
   const monitorHeight = $derived(currentMonitor?.height || 1080)
@@ -128,7 +130,9 @@
     { label: '100% (1.0x)', value: '1', isDefault: true },
     {
       label:
-        maxAllowedScale <= 1.1 ? '110% (1.1x - Max for display)' : '110% (1.1x)',
+        maxAllowedScale <= 1.1
+          ? $tStore('appearance.scale_max', { pct: 110, scale: '1.1' })
+          : '110% (1.1x)',
       value: '1.1'
     },
     ...(maxAllowedScale >= 1.2
@@ -136,28 +140,28 @@
           {
             label:
               maxAllowedScale <= 1.2
-                ? '120% (1.2x - Max for display)'
+                ? $tStore('appearance.scale_max', { pct: 120, scale: '1.2' })
                 : '120% (1.2x)',
             value: '1.2'
           }
         ]
       : []),
     ...(maxAllowedScale >= 1.25
-      ? [{ label: '125% (1.25x - Large)', value: '1.25' }]
+      ? [{ label: $tStore('appearance.scale_large'), value: '1.25' }]
       : []),
     ...(maxAllowedScale >= 1.5
       ? [
           {
             label:
               maxAllowedScale <= 1.5
-                ? '150% (1.5x - Max for display)'
+                ? $tStore('appearance.scale_max', { pct: 150, scale: '1.5' })
                 : '150% (1.5x)',
             value: '1.5'
           }
         ]
       : []),
     ...(maxAllowedScale >= 1.75
-      ? [{ label: '175% (1.75x - Extra Large)', value: '1.75' }]
+      ? [{ label: $tStore('appearance.scale_xl'), value: '1.75' }]
       : []),
     ...(maxAllowedScale >= 2.0
       ? [{ label: '200% (2.0x - 4K)', value: '2' }]
@@ -204,8 +208,8 @@
 <div class="setting-group">
   <BentoCard variant="group">
     <SettingItem
-      label="Display Name"
-      description="Personalizes the greeting on the Home feed"
+      label={$tStore('appearance.user_label')}
+      description={$tStore('appearance.user_desc')}
       icon={User}
       flexCol={true}
       isDefault={$userNameStore === userNameStore.defaultValue}
@@ -215,7 +219,7 @@
         <input
           type="text"
           class="text-input"
-          placeholder="User"
+          placeholder={$tStore('appearance.user_placeholder')}
           bind:value={$userNameStore}
           maxlength="20"
           onblur={() => {
@@ -302,7 +306,9 @@
                       >{currentTheme.manifest.mode || 'dark'}</span
                     >
                     {#if !currentTheme.isBuiltIn}
-                      <span class="badge custom">Custom</span>
+                      <span class="badge custom"
+                        >{$tStore('appearance.custom_badge')}</span
+                      >
                     {/if}
                   </div>
                 </div>
@@ -315,7 +321,9 @@
 
                 {#if currentTheme.manifest.accentColor}
                   <div class="details-accent">
-                    <span class="accent-label">Accent</span>
+                    <span class="accent-label"
+                      >{$tStore('appearance.accent_label')}</span
+                    >
                     <span
                       class="accent-preview-pill"
                       style="background-color: {currentTheme.manifest
@@ -336,8 +344,8 @@
 
   <BentoCard variant="group">
     <SettingItem
-      label="Ambient Glow Intensity"
-      description="Edge glow accents around the dynamic island"
+      label={$tStore('appearance.glow_label')}
+      description={$tStore('appearance.glow_desc')}
       icon={Sparkles}
       flexCol={true}
       isDefault={$glowIntensityStore === glowIntensityStore.defaultValue}
@@ -353,8 +361,8 @@
     </SettingItem>
 
     <SettingItem
-      label="UI Scale"
-      description="Proportionally scales the island interface for this display ({monitorWidth}×{monitorHeight} · {Math.round(monitorDpi * 100)}%)"
+      label={$tStore('appearance.scale_label')}
+      description={`${$tStore('appearance.scale_desc')} (${monitorWidth}×${monitorHeight} · ${Math.round(monitorDpi * 100)}%)`}
       icon={Scale}
       flexCol={true}
       isDefault={activeMonitorScale === 1.0}
@@ -382,8 +390,8 @@
 
   <BentoCard variant="group">
     <SettingItem
-      label="Compact Opacity"
-      description="Background opacity when collapsed"
+      label={$tStore('appearance.opacity_minimal_label')}
+      description={$tStore('appearance.opacity_minimal_desc')}
       icon={Eye}
       flexCol={true}
       isDefault={$opacityMinimalStore === opacityMinimalStore.defaultValue}
@@ -399,8 +407,8 @@
     </SettingItem>
 
     <SettingItem
-      label="Expanded Opacity"
-      description="Background opacity when expanded"
+      label={$tStore('appearance.opacity_expanded_label')}
+      description={$tStore('appearance.opacity_expanded_desc')}
       icon={Maximize2}
       flexCol={true}
       isDefault={$opacityExpandedStore === opacityExpandedStore.defaultValue}

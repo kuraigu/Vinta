@@ -19,6 +19,7 @@
     dismissTooltipBounds,
     dismissAllTooltips
   } from '../services/tooltipBounds'
+  import { portal } from '../utils/portal'
 
   interface Props {
     text?: string
@@ -41,22 +42,6 @@
   let lastDispatchedId = $state('')
   let resolvedPosition = $state<TooltipPosition>('bottom')
   let clampOffset = $state<{ x: number; y: number }>({ x: 0, y: 0 })
-
-  /**
-   * Action portaling the tooltip element into document.body to escape transformed containers.
-   *
-   * @param node - The tooltip DOM element to portal.
-   */
-  function portal(node: HTMLElement) {
-    document.body.appendChild(node)
-    return {
-      destroy() {
-        if (node.parentElement) {
-          node.parentElement.removeChild(node)
-        }
-      }
-    }
-  }
 
   /**
    * Calculates viewport coordinates and CSS transform for the active tooltip.
@@ -130,12 +115,22 @@
           if (rect.width <= 0 || rect.height <= 0) return
 
           const pad = 8
-          const maxW = typeof window !== 'undefined' ? window.innerWidth - pad : 1912
-          const maxH = typeof window !== 'undefined' ? window.innerHeight - pad : 1072
+          const maxW =
+            typeof window !== 'undefined' ? window.innerWidth - pad : 1912
+          const maxH =
+            typeof window !== 'undefined' ? window.innerHeight - pad : 1072
           let nextPos = tip.position
-          if (nextPos === 'right' && rect.right > maxW && (tip.targetRect?.left ?? 0) - 8 - rect.width >= pad) {
+          if (
+            nextPos === 'right' &&
+            rect.right > maxW &&
+            (tip.targetRect?.left ?? 0) - 8 - rect.width >= pad
+          ) {
             nextPos = 'left'
-          } else if (nextPos === 'left' && rect.left < pad && (tip.targetRect?.right ?? 0) + 8 + rect.width <= maxW) {
+          } else if (
+            nextPos === 'left' &&
+            rect.left < pad &&
+            (tip.targetRect?.right ?? 0) + 8 + rect.width <= maxW
+          ) {
             nextPos = 'right'
           }
           if (nextPos !== resolvedPosition) {

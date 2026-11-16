@@ -11,12 +11,10 @@
   import {
     getCachedAnnouncements,
     getDeveloperAnnouncements,
+    announcementsUnreadStore,
     type AnnouncementItem
   } from '../services/announcementsService'
-  import AnnouncementsPage, {
-    config as announcementsConfig
-  } from '../pages/AnnouncementsPage.svelte'
-  import { tStore, type IslandConfig } from '../store'
+  import { tStore, type IslandConfig, type OverlayPageId } from '../store'
 
   let {
     onClick
@@ -24,16 +22,19 @@
     onClick?: () => void
   } = $props()
 
-  const navigate =
+  const openOverlay =
     getContext<
-      (page: unknown, pageConfig: IslandConfig, expand?: boolean) => void
-    >('navigate')
+      (
+        overlay: OverlayPageId,
+        options?: { tab?: 'notifications' | 'announcements' | 'releases' }
+      ) => void
+    >('openOverlay')
 
   const initialCached = getCachedAnnouncements()
   let latestItem = $state<AnnouncementItem | null>(
     initialCached?.items?.[0] ?? null
   )
-  let hasUnread = $state<boolean>(initialCached?.hasUnread ?? false)
+  let hasUnread = $derived($announcementsUnreadStore)
 
   /**
    * Scans markdown text to find the first valid non-badge preview image.
@@ -117,7 +118,6 @@
       const payload = await getDeveloperAnnouncements()
       if (payload && Array.isArray(payload.items) && payload.items.length > 0) {
         latestItem = payload.items[0]
-        hasUnread = payload.hasUnread
       }
     } catch {
       // Ignore background fetch error
@@ -127,8 +127,8 @@
   function handleOpen() {
     if (onClick) {
       onClick()
-    } else if (typeof navigate === 'function') {
-      navigate(AnnouncementsPage, announcementsConfig, true)
+    } else if (typeof openOverlay === 'function') {
+      openOverlay('notifications', { tab: 'announcements' })
     }
   }
 </script>

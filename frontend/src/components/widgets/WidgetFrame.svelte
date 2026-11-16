@@ -39,7 +39,10 @@
     <button
       type="button"
       class="widget-menu-trigger"
-      use:islandTooltip={{ text: $tStore('home.widget_options'), position: 'top' }}
+      use:islandTooltip={{
+        text: $tStore('home.widget_options'),
+        position: 'top'
+      }}
       aria-label={$tStore('home.widget_options')}
       onmousedown={(e) => e.stopPropagation()}
       onclick={(e) => {

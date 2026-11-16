@@ -23,9 +23,7 @@
     parseAumid,
     requestNativeAppIcon
   } from '../services/iconService'
-  import NotificationPage, {
-    config as notifConfig
-  } from '../pages/NotificationPage.svelte'
+  import Notification, { config as notifConfig } from './Notification.svelte'
   import type { IslandConfig } from '../store'
   import type { FourPartGaps, FourPartRadii } from '../stores/satellites'
   import { swipe } from '../utils/useSwipe'
@@ -204,7 +202,7 @@
    */
   function handleCapsuleClick() {
     if (navigate) {
-      navigate(NotificationPage, notifConfig, true)
+      navigate(Notification, notifConfig, true)
     }
     dismissSatelliteNotification()
   }

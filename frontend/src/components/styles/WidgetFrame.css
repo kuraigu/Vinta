@@ -59,6 +59,6 @@
 
 .widget-menu-trigger:hover {
   opacity: 1 !important;
-  color: var(--vinta-text-primary, #ffffff);
-  background: var(--vinta-surface-hover, rgba(255, 255, 255, 0.16));
+  color: var(--vinta-text-primary);
+  background: var(--vinta-contrast-hover);
 }

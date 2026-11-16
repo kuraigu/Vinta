@@ -4,6 +4,17 @@
   Captures Windows toast notifications via the backend service, groups notifications by
   application or sender, caches sender avatars, and provides inline dismiss controls.
 -->
+<script module lang="ts">
+  import type { IslandConfig } from '../store'
+
+  export const config: IslandConfig = {
+    minimal: { w: 360, h: 65, r: 18 },
+    expanded: { w: 460, h: 410, r: 30 },
+    borderColor: 'var(--vinta-island-border-notification)',
+    glowColor: 'var(--vinta-island-glow-notification)'
+  }
+</script>
+
 <script lang="ts">
   import { flip } from 'svelte/animate'
   import { fly, fade, slide } from 'svelte/transition'
@@ -30,10 +41,11 @@
     notificationPermissionDenied,
     dndStore,
     isIslandHiddenStore,
-    tStore
+    tStore,
+    t
   } from '../store'
   import { swipe } from '../utils/useSwipe'
-  import { onMount } from 'svelte'
+  import { getContext, onMount } from 'svelte'
   import { SvelteSet, SvelteMap } from 'svelte/reactivity'
   import {
     nativeIconsStore,
@@ -41,6 +53,7 @@
     parseAumid
   } from '../services/iconService'
   import ScrollView from '../components/ScrollView.svelte'
+  import EmptyState from '../components/EmptyState.svelte'
   import { islandTooltip } from '../services/islandTooltip'
   import appIcon from '@appicon'
   import {
@@ -65,14 +78,24 @@
 
   interface Props {
     expanded?: boolean
+    inOverlay?: boolean
     notifications?: NotificationItem[]
   }
 
-  let { expanded = false, notifications = [] }: Props = $props()
+  let {
+    expanded = false,
+    inOverlay = false,
+    notifications = undefined
+  }: Props = $props()
+
+  let activeNotifications = $derived(notifications ?? $notifData)
 
   let nativeIcons = $derived($nativeIconsStore)
 
   let expandedIds = new SvelteSet<number>()
+  const foldMinimizedNotification = getContext<(() => void) | undefined>(
+    'foldMinimizedNotification'
+  )
 
   /**
    * Toggles single notification body expansion to view full message text.
@@ -102,6 +125,18 @@
     }
   }
 
+  let failedImageUrls = new SvelteSet<string>()
+
+  function markImageFailed(url: string | undefined | null) {
+    if (url) {
+      failedImageUrls.add(url)
+    }
+  }
+
+  function canRenderImage(url: string | undefined | null): url is string {
+    return Boolean(url && isImageUrl(url) && !failedImageUrls.has(url))
+  }
+
   let itemDragOffsets = new SvelteMap<string, number>()
 
   /**
@@ -125,7 +160,7 @@
     brandIcon: string | null
     brandAppIcon: string | null
     brandCategory?: string
-    items: typeof notifications
+    items: NotificationItem[]
     latestTimestamp: number
   }
 
@@ -211,13 +246,13 @@
     }
     // eslint-disable-next-line svelte/prefer-svelte-reactivity
     const identifiedKeys = new Map<string, number>()
-    for (const notif of notifications) {
+    for (const notif of activeNotifications) {
       if (notif.appName) {
         const key = normTitle(notif.title) + '\0' + normTitle(notif.message)
         identifiedKeys.set(key, notif.timestamp || Date.now())
       }
     }
-    return notifications.filter((notif) => {
+    return activeNotifications.filter((notif) => {
       if (!notif.appName) {
         const key = normTitle(notif.title) + '\0' + normTitle(notif.message)
         const identifiedTs = identifiedKeys.get(key)
@@ -378,9 +413,9 @@
       fallback ||
       ({
         id: 0,
-        title: 'No notifications',
+        title: t('notification.empty_title'),
         message: ''
-      } as (typeof notifications)[0])
+      } as NotificationItem)
     )
   })
 
@@ -406,22 +441,29 @@
    * Formats notification received timestamp into a human-readable relative time (e.g. "5m ago").
    *
    * @param timestamp - Millisecond epoch timestamp.
+   * @param translate - Active translation lookup function.
    * @returns Relative time label.
    */
-  function getRelativeTime(timestamp?: number): string {
-    if (!timestamp) return 'NOW'
+  function getRelativeTime(timestamp?: number, translate = t): string {
+    if (!timestamp) return translate('notification.time_now')
     const diffSeconds = Math.max(0, Math.floor((now - timestamp) / 1000))
-    if (diffSeconds < 5) return 'NOW'
-    if (diffSeconds < 60) return `${diffSeconds}s ago`
+    if (diffSeconds < 5) return translate('notification.time_now')
+    if (diffSeconds < 60) {
+      return translate('notification.time_seconds_ago', { count: diffSeconds })
+    }
 
     const diffMinutes = Math.floor(diffSeconds / 60)
-    if (diffMinutes < 60) return `${diffMinutes}m ago`
+    if (diffMinutes < 60) {
+      return translate('notification.time_minutes_ago', { count: diffMinutes })
+    }
 
     const diffHours = Math.floor(diffMinutes / 60)
-    if (diffHours < 24) return `${diffHours}h ago`
+    if (diffHours < 24) {
+      return translate('notification.time_hours_ago', { count: diffHours })
+    }
 
     const diffDays = Math.floor(diffHours / 24)
-    return `${diffDays}d ago`
+    return translate('notification.time_days_ago', { count: diffDays })
   }
 
   let isConfirmingClear = $state(false)
@@ -431,7 +473,7 @@
    * Flushes all recorded notifications from persistent storage and resets view.
    */
   function handleClearAll() {
-    if (notifications.length <= 2 || isConfirmingClear) {
+    if (activeNotifications.length <= 2 || isConfirmingClear) {
       clearTimeout(clearConfirmTimeout)
       isConfirmingClear = false
       notifData.set([])
@@ -571,7 +613,11 @@
   {/if}
 {/snippet}
 
-<div data-vinta="notification" class="notification-container">
+<div
+  data-vinta="notification"
+  class="notification-container"
+  class:minimal={!expanded}
+>
   {#if !expanded}
     <div class="banner-view-container">
       {#key latest.id}
@@ -583,37 +629,25 @@
         >
           <div class="icon-wrapper">
             <div class="banner-icon">
-              {#if isImageUrl(brand.icon)}
+              {#if canRenderImage(brand.icon)}
                 <img
                   src={brand.icon}
-                  alt="app icon"
+                  alt={brand.name}
                   class="notif-img-icon"
-                  onerror={(e) => {
-                    const img = e.currentTarget as HTMLImageElement
-                    img.style.display = 'none'
-                    if (img.nextElementSibling) {
-                      ;(img.nextElementSibling as HTMLElement).style.display =
-                        'block'
-                    }
-                  }}
+                  onerror={() => markImageFailed(brand.icon)}
                 />
-                <div style="display: none;">
-                  {@render fallbackIcon(brand, 18)}
-                </div>
-              {:else if brand.icon}
+              {:else if brand.icon && !isImageUrl(brand.icon)}
                 <span class="icon-text">{brand.icon}</span>
               {:else}
                 {@render fallbackIcon(brand, 18)}
               {/if}
             </div>
-            {#if brand.appIcon && isImageUrl(brand.appIcon) && brand.appIcon !== brand.icon}
+            {#if canRenderImage(brand.appIcon) && brand.appIcon !== brand.icon}
               <img
                 src={brand.appIcon}
-                alt="app badge"
+                alt={brand.name}
                 class="app-badge"
-                onerror={(e) => {
-                  ;(e.currentTarget as HTMLImageElement).style.display = 'none'
-                }}
+                onerror={() => markImageFailed(brand.appIcon)}
               />
             {/if}
           </div>
@@ -624,72 +658,85 @@
               <span class="banner-message">{latest.message}</span>
             {/if}
           </div>
-          {#if latest.heroImage && isImageUrl(latest.heroImage) && latest.heroImage !== brand.icon && latest.heroImage !== brand.appIcon}
+          {#if canRenderImage(latest.heroImage) && latest.heroImage !== brand.icon && latest.heroImage !== brand.appIcon}
             <div class="banner-hero-thumb-wrapper">
               <img
                 src={latest.heroImage}
-                alt="preview"
+                alt={latest.title}
                 class="banner-hero-thumb"
-                onerror={(e) => {
-                  const target = e.currentTarget as HTMLImageElement
-                  if (target.parentElement) {
-                    target.parentElement.style.display = 'none'
-                  }
-                }}
+                onerror={() => markImageFailed(latest.heroImage)}
               />
             </div>
+          {/if}
+          {#if foldMinimizedNotification}
+            <button
+              type="button"
+              class="banner-fold-btn"
+              onclick={(e) => {
+                e.stopPropagation()
+                foldMinimizedNotification()
+              }}
+              use:islandTooltip={{
+                text: $tStore('notification.fold'),
+                position: 'bottom'
+              }}
+              aria-label={$tStore('notification.fold')}
+            >
+              <ChevronUp size={15} />
+            </button>
           {/if}
         </div>
       {/key}
     </div>
   {:else}
-    <div class="expanded-view">
-      <div class="notif-header">
-        <h3>{$tStore('notification.page_title')}</h3>
-        <div class="notif-header-actions">
-          <button
-            class="dnd-btn"
-            class:dnd-active={$dndStore}
-            onclick={() => dndStore.update((v) => !v)}
-            use:islandTooltip={$dndStore
-              ? 'Do Not Disturb: On'
-              : 'Do Not Disturb'}
-            aria-label="Toggle Do Not Disturb"
-          >
-            {#if $dndStore}
-              <div class="dnd-zzz-icon">
-                <Bell size={14} />
-                <span class="zzz-badge">z<sup>Z</sup></span>
-              </div>
-            {:else}
-              <Bell size={14} />
-            {/if}
-          </button>
-          {#if notifications.length > 0}
+    <div class="expanded-view" class:in-overlay={inOverlay}>
+      {#if !inOverlay}
+        <div class="notif-header">
+          <h3>{$tStore('notification.page_title')}</h3>
+          <div class="notif-header-actions">
             <button
-              class="clear-btn"
-              class:is-confirming={isConfirmingClear}
-              onclick={handleClearAll}
-              use:islandTooltip={isConfirmingClear
-                ? 'Click again to clear'
-                : $tStore('notification.clear_all')}
-              aria-label="Clear all notifications"
+              type="button"
+              class="dnd-btn"
+              class:dnd-active={$dndStore}
+              onclick={() => dndStore.update((v) => !v)}
+              use:islandTooltip={$dndStore
+                ? $tStore('notification.dnd_on')
+                : $tStore('notification.dnd_off')}
+              aria-label={$tStore('notification.dnd_aria')}
             >
-              <Trash2 size={14} />
-              {#if isConfirmingClear}
-                <span>{$tStore('notification.confirm_clear')}</span>
+              {#if $dndStore}
+                <div class="dnd-zzz-icon">
+                  <Bell size={14} />
+                  <span class="zzz-badge">z<sup>Z</sup></span>
+                </div>
+              {:else}
+                <Bell size={14} />
               {/if}
             </button>
-          {/if}
+            {#if activeNotifications.length > 0}
+              <button
+                type="button"
+                class="clear-btn"
+                class:is-confirming={isConfirmingClear}
+                onclick={handleClearAll}
+                use:islandTooltip={isConfirmingClear
+                  ? $tStore('notification.clear_confirm_tooltip')
+                  : $tStore('notification.clear_all')}
+                aria-label={$tStore('notification.clear_aria')}
+              >
+                <Trash2 size={14} />
+                {#if isConfirmingClear}
+                  <span>{$tStore('notification.confirm_clear')}</span>
+                {/if}
+              </button>
+            {/if}
+          </div>
         </div>
-      </div>
+      {/if}
       {#if $notificationPermissionDenied}
         <div class="permission-banner">
           <Settings size={16} />
-          <span
-            >Vinta needs permission to read notifications. Please enable
-            "Notification access" for apps in Windows Settings.</span
-          >
+          <span>{$tStore('notification.permission_required')}</span>
         </div>
       {/if}
       {#snippet renderNotifItem(
@@ -752,7 +799,7 @@
           {#snippet timeAndDismiss()}
             <div class="time-and-dismiss">
               <span class="notif-item-time"
-                >{getRelativeTime(notif.timestamp)}</span
+                >{getRelativeTime(notif.timestamp, $tStore)}</span
               >
               <div class="notif-actions">
                 <button
@@ -764,11 +811,11 @@
                     toggleExpand(notif.id)
                   }}
                   use:islandTooltip={isExpanded
-                    ? 'Collapse notification'
-                    : 'Expand notification'}
+                    ? $tStore('notification.collapse_item')
+                    : $tStore('notification.expand_item')}
                   aria-label={isExpanded
-                    ? 'Collapse notification'
-                    : 'Expand notification'}
+                    ? $tStore('notification.collapse_item')
+                    : $tStore('notification.expand_item')}
                 >
                   <ChevronDown size={14} />
                 </button>
@@ -779,7 +826,7 @@
                     e.stopPropagation()
                     dismiss(notif.id)
                   }}
-                  aria-label="Dismiss notification"
+                  aria-label={$tStore('notification.dismiss_tooltip')}
                 >
                   <X size={14} />
                 </button>
@@ -790,11 +837,12 @@
           {#if !nested}
             <div class="notif-item-header">
               <div class="notif-item-app-group">
-                {#if displayBrand.appIcon && isImageUrl(displayBrand.appIcon) && displayBrand.appIcon !== iconUrl}
+                {#if canRenderImage(displayBrand.appIcon) && displayBrand.appIcon !== iconUrl}
                   <img
                     src={displayBrand.appIcon}
-                    alt="app badge"
+                    alt={brand.brandName}
                     class="notif-header-app-icon"
+                    onerror={() => markImageFailed(displayBrand.appIcon)}
                   />
                 {/if}
                 <span class="notif-item-app">{brand.brandName}</span>
@@ -814,63 +862,21 @@
               <div class="notif-item-avatar-col">
                 <div class="icon-wrapper">
                   <div class="notif-avatar-icon">
-                    {#if isImageUrl(iconUrl)}
+                    {#if canRenderImage(iconUrl)}
                       <img
-                        src={iconUrl!}
-                        alt="app icon"
+                        src={iconUrl}
+                        alt={displayBrand.name}
                         class="notif-img-icon"
-                        onerror={(e) => {
-                          const img = e.currentTarget as HTMLImageElement
-                          img.style.display = 'none'
-                          if (img.nextElementSibling) {
-                            ;(
-                              img.nextElementSibling as HTMLElement
-                            ).style.display = 'block'
-                          }
-                        }}
+                        onerror={() => markImageFailed(iconUrl)}
                       />
-                      <div style="display: none;">
-                        {#if displayBrand.appIcon && isImageUrl(displayBrand.appIcon)}
-                          <img
-                            src={displayBrand.appIcon}
-                            alt="app icon"
-                            class="notif-img-icon"
-                            onerror={(e) => {
-                              const img = e.currentTarget as HTMLImageElement
-                              img.style.display = 'none'
-                              if (img.nextElementSibling) {
-                                ;(
-                                  img.nextElementSibling as HTMLElement
-                                ).style.display = 'block'
-                              }
-                            }}
-                          />
-                          <div style="display: none;">
-                            {@render fallbackIcon(displayBrand, 24)}
-                          </div>
-                        {:else}
-                          {@render fallbackIcon(displayBrand, 24)}
-                        {/if}
-                      </div>
-                    {:else if displayBrand.appIcon && isImageUrl(displayBrand.appIcon)}
+                    {:else if canRenderImage(displayBrand.appIcon)}
                       <img
                         src={displayBrand.appIcon}
-                        alt="app icon"
+                        alt={displayBrand.name}
                         class="notif-img-icon"
-                        onerror={(e) => {
-                          const img = e.currentTarget as HTMLImageElement
-                          img.style.display = 'none'
-                          if (img.nextElementSibling) {
-                            ;(
-                              img.nextElementSibling as HTMLElement
-                            ).style.display = 'block'
-                          }
-                        }}
+                        onerror={() => markImageFailed(displayBrand.appIcon)}
                       />
-                      <div style="display: none;">
-                        {@render fallbackIcon(displayBrand, 24)}
-                      </div>
-                    {:else if iconUrl}
+                    {:else if iconUrl && !isImageUrl(iconUrl)}
                       <span class="icon-text">{iconUrl}</span>
                     {:else}
                       {@render fallbackIcon(displayBrand, 24)}
@@ -896,18 +902,13 @@
                     {notif.message}
                   </p>
                 {/if}
-                {#if notif.heroImage && isImageUrl(notif.heroImage) && notif.heroImage !== notif.icon && notif.heroImage !== displayBrand.icon && notif.heroImage !== displayBrand.appIcon && (!nested || isExpanded)}
+                {#if canRenderImage(notif.heroImage) && notif.heroImage !== notif.icon && notif.heroImage !== displayBrand.icon && notif.heroImage !== displayBrand.appIcon && (!nested || isExpanded)}
                   <div class="hero-image-wrapper">
                     <img
                       src={notif.heroImage}
-                      alt="hero"
+                      alt={notif.title}
                       class="hero-image"
-                      onerror={(e) => {
-                        const target = e.currentTarget as HTMLImageElement
-                        if (target.parentElement) {
-                          target.parentElement.style.display = 'none'
-                        }
-                      }}
+                      onerror={() => markImageFailed(notif.heroImage)}
                     />
                   </div>
                 {/if}
@@ -931,11 +932,17 @@
                         FocusWindow()
                       }}
                       use:islandTooltip={notif.isUpdate
-                        ? 'View Update Details'
-                        : `Open in ${notif.appName || brand.brandName}`}
+                        ? $tStore('notification.view_update_details')
+                        : $tStore('notification.open_in_app', {
+                            app: notif.appName || brand.brandName
+                          })}
                     >
                       <ArrowUpRight size={12} />
-                      <span>{notif.isUpdate ? 'View Update' : 'Open'}</span>
+                      <span
+                        >{notif.isUpdate
+                          ? $tStore('notification.view_update')
+                          : $tStore('notification.open')}</span
+                      >
                     </button>
                   </div>
                 {/if}
@@ -1021,25 +1028,14 @@
                   <div class="notif-group-header-top">
                     <div class="notif-item-app-group">
                       <div class="notif-item-icon">
-                        {#if group.brandAppIcon && isImageUrl(group.brandAppIcon)}
+                        {#if canRenderImage(group.brandAppIcon)}
                           <img
                             src={group.brandAppIcon}
-                            alt="app icon"
+                            alt={group.brandName}
                             class="notif-img-icon"
-                            onerror={(e) => {
-                              const img = e.currentTarget as HTMLImageElement
-                              img.style.display = 'none'
-                              if (img.nextElementSibling) {
-                                ;(
-                                  img.nextElementSibling as HTMLElement
-                                ).style.display = 'block'
-                              }
-                            }}
+                            onerror={() => markImageFailed(group.brandAppIcon)}
                           />
-                          <div style="display: none;">
-                            {@render fallbackIcon(group, 16)}
-                          </div>
-                        {:else if group.brandIcon}
+                        {:else if group.brandIcon && !isImageUrl(group.brandIcon)}
                           <span class="icon-text">{group.brandIcon}</span>
                         {:else}
                           {@render fallbackIcon(group, 16)}
@@ -1052,7 +1048,10 @@
                     <div class="time-and-dismiss">
                       {#if !expandedGroups.has(group.groupKey)}
                         <span class="notif-item-time"
-                          >{getRelativeTime(group.latestTimestamp)}</span
+                          >{getRelativeTime(
+                            group.latestTimestamp,
+                            $tStore
+                          )}</span
                         >
                       {/if}
                       <div class="notif-actions">
@@ -1078,12 +1077,13 @@
                           {/if}
                         </button>
                         <button
+                          type="button"
                           class="dismiss-item-btn"
                           onclick={(e) => {
                             e.stopPropagation()
                             dismissGroup(group.groupKey)
                           }}
-                          aria-label="Dismiss group"
+                          aria-label={$tStore('notification.dismiss_group')}
                         >
                           <X size={14} />
                         </button>
@@ -1093,14 +1093,16 @@
                   {#if !expandedGroups.has(group.groupKey)}
                     <div class="notif-group-preview">
                       <div class="notif-item-layout">
-                        {#if group.items[0].icon && isImageUrl(group.items[0].icon) && !isGenericAppLogo(group.items[0])}
+                        {#if canRenderImage(group.items[0].icon) && !isGenericAppLogo(group.items[0])}
                           <div class="notif-item-avatar-col">
                             <div class="icon-wrapper">
                               <div class="notif-avatar-icon">
                                 <img
                                   src={group.items[0].icon}
-                                  alt="avatar"
+                                  alt={group.brandName}
                                   class="notif-img-icon"
+                                  onerror={() =>
+                                    markImageFailed(group.items[0].icon)}
                                 />
                               </div>
                             </div>
@@ -1139,8 +1141,12 @@
             {/if}
           </div>
         {/each}
-        {#if notifications.length === 0}
-          <div class="empty-state">{$tStore('notification.empty_desc')}</div>
+        {#if activeNotifications.length === 0}
+          <EmptyState
+            icon={Bell}
+            title={$tStore('notification.empty_title')}
+            description={$tStore('notification.empty_desc')}
+          />
         {/if}
       </ScrollView>
     </div>

@@ -7,14 +7,13 @@
 
 import { Events } from '$lib/events'
 import HomePage, { config as homeConfig } from '../pages/HomePage.svelte'
-import AppsPage, { config as appsConfig } from '../pages/AppsPage.svelte'
 import SettingsPage, {
   config as settingsConfig
 } from '../pages/SettingsPage.svelte'
 import MediaPage, { config as mediaConfig } from '../pages/MediaPage.svelte'
-import NotificationPage, {
+import Notification, {
   config as notifConfig
-} from '../pages/NotificationPage.svelte'
+} from '../components/Notification.svelte'
 import NotesPage, { config as notesConfig } from '../pages/NotesPage.svelte'
 import CalculatorPage, {
   config as calculatorConfig
@@ -83,9 +82,9 @@ export const AppControls = {
     navigate(HomePage, homeConfig, true)
   },
 
-  goApps: (navigate: NavFn, e?: Event) => {
+  goApps: (openAppsOverlay?: () => void, e?: Event) => {
     if (e) e.stopPropagation()
-    navigate(AppsPage, appsConfig, true)
+    openAppsOverlay?.()
   },
 
   goMedia: (navigate: NavFn, e?: Event) => {
@@ -95,7 +94,7 @@ export const AppControls = {
 
   goNotif: (navigate: NavFn, e?: Event) => {
     if (e) e.stopPropagation()
-    navigate(NotificationPage, notifConfig, true)
+    navigate(Notification, notifConfig, true)
   },
 
   goSettings: (navigate: NavFn, e?: Event) => {

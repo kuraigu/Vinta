@@ -41,7 +41,8 @@
     triggerCancelDownload,
     triggerApplyUpdate,
     triggerDevSimulation,
-    triggerDevDownloadCycle
+    triggerDevDownloadCycle,
+    tStore
   } from '../../../store'
   import {
     OpenURL,
@@ -63,14 +64,23 @@
   function computeChannelOptions() {
     if (isDevBuild) {
       return [
-        { value: 'stable', label: 'Stable Releases Only' },
-        { value: 'prerelease', label: 'Pre-release (Alpha / Beta)' },
-        { value: 'testing', label: 'Testing Builds & Drafts' }
+        { value: 'stable', label: $tStore('settings.updates_channel_stable') },
+        {
+          value: 'prerelease',
+          label: $tStore('settings.updates_channel_prerelease')
+        },
+        {
+          value: 'testing',
+          label: $tStore('settings.updates_channel_testing')
+        }
       ]
     }
     return [
-      { value: 'stable', label: 'Stable Releases Only' },
-      { value: 'prerelease', label: 'Pre-release (Alpha / Beta)' }
+      { value: 'stable', label: $tStore('settings.updates_channel_stable') },
+      {
+        value: 'prerelease',
+        label: $tStore('settings.updates_channel_prerelease')
+      }
     ]
   }
 
@@ -165,22 +175,24 @@
     <SettingBanner
       variant="amber"
       icon={AlertCircle}
-      title="Non-Official Release"
-      description="Automatic update checking is disabled on non-official and development builds."
+      title={$tStore('settings.updates_nonofficial_title')}
+      description={$tStore('settings.updates_nonofficial_desc')}
     />
   {/if}
 
   <!-- Settings Group -->
   <div class="setting-group">
     <SettingItem
-      label="Check for Updates"
+      label={$tStore('settings.updates_check_label')}
       description={!isOfficialBuild
-        ? 'Update checking is disabled for non-official releases'
+        ? $tStore('settings.updates_check_disabled_desc')
         : $updateInfoStore?.status === 'error'
-          ? $updateInfoStore.message || 'Check failed'
+          ? $updateInfoStore.message || $tStore('settings.updates_check_failed')
           : $updateInfoStore?.checkedAt
-            ? `Last checked: ${$updateInfoStore.checkedAt}`
-            : 'Check for new versions'}
+            ? $tStore('settings.updates_last_checked', {
+                time: $updateInfoStore.checkedAt
+              })
+            : $tStore('settings.updates_check_new_desc')}
       icon={RefreshCw}
       flexCol={true}
       disabled={!isOfficialBuild}
@@ -198,8 +210,8 @@
         />
         <span
           >{$updateCheckingStore
-            ? 'Checking for updates...'
-            : 'Check for Updates Now'}</span
+            ? $tStore('settings.updates_checking_btn')
+            : $tStore('settings.updates_check_btn')}</span
         >
       </SettingActionButton>
     </SettingItem>
@@ -234,15 +246,15 @@
             </div>
             <span class="update-sub">
               {#if $updateLifecycleStatusStore === 'ready'}
-                Update package downloaded and verified against SHA-256 manifest.
+                {$tStore('settings.updates_ready_desc')}
               {:else if $updateLifecycleStatusStore === 'verifying'}
-                Verifying SHA-256 package checksum against release manifest...
+                {$tStore('settings.updates_verifying_desc')}
               {:else if $updateLifecycleStatusStore === 'downloading'}
-                Downloading update package...
+                {$tStore('settings.updates_downloading_desc')}
               {:else if $updateLifecycleStatusStore === 'paused'}
-                Download paused. Click resume to continue from current offset.
+                {$tStore('settings.updates_paused_desc')}
               {:else}
-                A new release is available for download and installation.
+                {$tStore('settings.updates_available_desc')}
               {/if}
             </span>
           </div>
@@ -263,7 +275,7 @@
             <div class="progress-meta-row">
               <span class="progress-text">
                 {#if $updateLifecycleStatusStore === 'verifying'}
-                  Validating checksums...
+                  {$tStore('settings.updates_validating_checksum')}
                 {:else}
                   {formatBytes($downloadProgressStore.downloadedBytes)} /
                   {$downloadProgressStore.totalBytes > 0
@@ -286,13 +298,13 @@
           {#if $updateLifecycleStatusStore === 'ready'}
             <SettingActionButton variant="default" onclick={triggerApplyUpdate}>
               <CheckCircle2 size={12} strokeWidth={2} />
-              <span>Restart & Install Now</span>
+              <span>{$tStore('settings.updates_restart_install')}</span>
             </SettingActionButton>
             <SettingActionButton
               variant="default"
               onclick={() => updateLifecycleStatusStore.set('available')}
             >
-              <span>Install on Exit</span>
+              <span>{$tStore('settings.updates_install_on_exit')}</span>
             </SettingActionButton>
           {:else if $updateLifecycleStatusStore === 'downloading'}
             <SettingActionButton
@@ -300,14 +312,14 @@
               onclick={triggerPauseDownload}
             >
               <Pause size={12} strokeWidth={2} />
-              <span>Pause</span>
+              <span>{$tStore('settings.updates_pause')}</span>
             </SettingActionButton>
             <SettingActionButton
               variant="default"
               onclick={triggerCancelDownload}
             >
               <X size={12} strokeWidth={2} />
-              <span>Cancel</span>
+              <span>{$tStore('settings.updates_cancel')}</span>
             </SettingActionButton>
           {:else if $updateLifecycleStatusStore === 'paused'}
             <SettingActionButton
@@ -315,19 +327,19 @@
               onclick={triggerResumeDownload}
             >
               <Play size={12} strokeWidth={2} />
-              <span>Resume</span>
+              <span>{$tStore('settings.updates_resume')}</span>
             </SettingActionButton>
             <SettingActionButton
               variant="default"
               onclick={triggerCancelDownload}
             >
               <X size={12} strokeWidth={2} />
-              <span>Cancel</span>
+              <span>{$tStore('settings.updates_cancel')}</span>
             </SettingActionButton>
           {:else if $updateLifecycleStatusStore === 'verifying'}
             <SettingActionButton variant="default" disabled={true}>
               <RefreshCw size={12} strokeWidth={2} class="spinning" />
-              <span>Verifying Integrity...</span>
+              <span>{$tStore('settings.updates_verifying_btn')}</span>
             </SettingActionButton>
           {:else}
             <SettingActionButton
@@ -335,7 +347,7 @@
               onclick={handleStartDownload}
             >
               <Download size={12} strokeWidth={2} />
-              <span>Download & Install</span>
+              <span>{$tStore('settings.updates_download_install')}</span>
             </SettingActionButton>
           {/if}
 
@@ -345,7 +357,7 @@
               onclick={() => handleOpenURL($updateInfoStore.release.htmlUrl)}
             >
               <ArrowUpRight size={13} strokeWidth={2} />
-              <span>GitHub</span>
+              <span>{$tStore('settings.updates_github')}</span>
             </SettingActionButton>
           {/if}
         </div>
@@ -366,8 +378,8 @@
 
     <BentoCard variant="group">
       <SettingItem
-        label="Release Channel"
-        description="Choose the update release stability stream"
+        label={$tStore('settings.updates_channel_label')}
+        description={$tStore('settings.updates_channel_desc')}
         icon={GitBranch}
         flexCol={true}
         isDefault={$updateChannelStore === updateChannelStore.defaultValue}
@@ -382,10 +394,10 @@
       </SettingItem>
 
       <SettingItem
-        label="Automatically Check for Updates"
+        label={$tStore('settings.updates_auto_check_label')}
         description={!isOfficialBuild
-          ? 'Disabled for non-official releases'
-          : 'Periodically query GitHub releases in the background'}
+          ? $tStore('settings.updates_check_disabled_desc')
+          : $tStore('settings.updates_auto_check_desc')}
         icon={Download}
         disabled={!isOfficialBuild}
         isDefault={$autoCheckUpdatesStore ===
@@ -395,7 +407,7 @@
         <ToggleSwitch
           disabled={!isOfficialBuild}
           bind:checked={$autoCheckUpdatesStore}
-          ariaLabel="Automatically Check for Updates"
+          ariaLabel={$tStore('settings.updates_auto_check_label')}
         />
       </SettingItem>
     </BentoCard>
@@ -405,8 +417,8 @@
   {#if isDevBuild}
     <div class="setting-group">
       <SettingItem
-        label="Test & Simulation Controls"
-        description="Simulate update states and download lifecycles offline"
+        label={$tStore('settings.updates_dev_title')}
+        description={$tStore('settings.updates_dev_desc')}
         icon={SlidersHorizontal}
         flexCol={true}
       >
@@ -415,7 +427,11 @@
           fullWidth={true}
           onclick={() => (showDevSimulation = !showDevSimulation)}
         >
-          <span>{showDevSimulation ? 'Hide Controls' : 'Show Controls'}</span>
+          <span
+            >{showDevSimulation
+              ? $tStore('settings.updates_hide_controls')
+              : $tStore('settings.updates_show_controls')}</span
+          >
         </SettingActionButton>
       </SettingItem>
 
@@ -427,21 +443,21 @@
               fullWidth={true}
               onclick={() => triggerDevSimulation('v0.4.0-alpha')}
             >
-              <span>Simulate Update Available</span>
+              <span>{$tStore('settings.updates_sim_available')}</span>
             </SettingActionButton>
             <SettingActionButton
               variant="default"
               fullWidth={true}
               onclick={() => triggerDevDownloadCycle(false)}
             >
-              <span>Simulate Download (Success)</span>
+              <span>{$tStore('settings.updates_sim_success')}</span>
             </SettingActionButton>
             <SettingActionButton
               variant="default"
               fullWidth={true}
               onclick={() => triggerDevDownloadCycle(true)}
             >
-              <span>Simulate Download (Checksum Fail)</span>
+              <span>{$tStore('settings.updates_sim_fail')}</span>
             </SettingActionButton>
           </div>
         </div>

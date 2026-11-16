@@ -34,7 +34,9 @@ export function buildTextEditMenuItems(
   } else {
     const sel = window.getSelection()
     selectedText = sel ? sel.toString() : ''
-    hasContent = (target.textContent || '').trim().length > 0 || target.innerHTML.includes('<img')
+    hasContent =
+      (target.textContent || '').trim().length > 0 ||
+      target.innerHTML.includes('<img')
   }
 
   const hasSelection = selectedText.length > 0

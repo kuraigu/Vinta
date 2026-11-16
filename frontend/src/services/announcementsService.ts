@@ -6,6 +6,7 @@
  * whether the user has unread announcements to show a badge on the home feed.
  */
 
+import { writable } from 'svelte/store'
 import {
   GetDeveloperAnnouncements,
   GetReleaseNotes,
@@ -40,12 +41,17 @@ let inMemoryAnnouncements: AnnouncementsPayload | null = null
 let lastAnnouncementsFetchMs = 0
 let inFlightAnnouncementsPromise: Promise<AnnouncementsPayload> | null = null
 
+export const announcementsUnreadStore = writable<boolean>(false)
+
 /**
  * Synchronously returns the cached announcements payload from memory or localStorage
  * so Home feed glance cards render at their exact height on frame 0 without layout shift.
  */
 export function getCachedAnnouncements(): AnnouncementsPayload | null {
-  if (inMemoryAnnouncements) return inMemoryAnnouncements
+  if (inMemoryAnnouncements) {
+    announcementsUnreadStore.set(Boolean(inMemoryAnnouncements.hasUnread))
+    return inMemoryAnnouncements
+  }
   if (typeof localStorage === 'undefined') return null
   try {
     const raw = localStorage.getItem(ANNOUNCEMENTS_CACHE_KEY)
@@ -53,6 +59,7 @@ export function getCachedAnnouncements(): AnnouncementsPayload | null {
     const parsed = JSON.parse(raw) as AnnouncementsPayload
     if (parsed && Array.isArray(parsed.items)) {
       inMemoryAnnouncements = parsed
+      announcementsUnreadStore.set(Boolean(parsed.hasUnread))
       return parsed
     }
   } catch {
@@ -63,6 +70,7 @@ export function getCachedAnnouncements(): AnnouncementsPayload | null {
 
 function saveCachedAnnouncements(payload: AnnouncementsPayload): void {
   inMemoryAnnouncements = payload
+  announcementsUnreadStore.set(Boolean(payload.hasUnread))
   if (typeof localStorage === 'undefined') return
   try {
     localStorage.setItem(ANNOUNCEMENTS_CACHE_KEY, JSON.stringify(payload))
@@ -129,6 +137,7 @@ export async function getDeveloperAnnouncements(
  * Marks announcements as read by saving the current content hash.
  */
 export async function markAnnouncementsRead(): Promise<void> {
+  announcementsUnreadStore.set(false)
   try {
     await MarkAnnouncementsRead()
     if (inMemoryAnnouncements) {

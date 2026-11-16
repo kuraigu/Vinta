@@ -61,8 +61,8 @@
   align-items: center;
   gap: 5px;
   padding: 5px 8px;
-  border-radius: 999px;
-  background: var(--vinta-item-bg, rgba(255, 255, 255, 0.04));
+  border-radius: var(--vinta-radius-pill, 9999px);
+  background: var(--vinta-item-bg);
   border: 1px solid var(--vinta-border);
   flex-shrink: 0;
 }
@@ -72,8 +72,8 @@
   height: 6px;
   padding: 0;
   border: none;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.22);
+  border-radius: var(--vinta-radius-pill, 9999px);
+  background: var(--vinta-contrast-hover);
   cursor: pointer;
   transition:
     width 0.22s cubic-bezier(0.22, 1, 0.36, 1),
@@ -81,12 +81,12 @@
 }
 
 .step-progress-pill.completed {
-  background: rgba(255, 255, 255, 0.45);
+  background: var(--vinta-text-muted);
 }
 
 .step-progress-pill.active {
   width: 18px;
-  background: var(--vinta-accent-primary, #38bdf8);
+  background: var(--vinta-accent-primary);
 }
 
 .pane-body {
@@ -203,13 +203,13 @@
   height: 32px;
   padding: 0 10px;
   border-radius: var(--vinta-radius-button, 10px);
-  background: var(--vinta-input-bg);
+  background: var(--vinta-contrast-bg);
   border: 1px solid var(--vinta-border);
   transition: border-color 0.16s ease;
 }
 
 .onboarding-input-wrapper:focus-within {
-  border-color: var(--vinta-accent-primary, #38bdf8);
+  border-color: var(--vinta-accent-primary);
 }
 
 .onboarding-input-wrapper :global(.input-leading-icon) {
@@ -357,19 +357,19 @@
 }
 
 .onboarding-nav-btn.secondary {
-  background: var(--vinta-item-bg, rgba(255, 255, 255, 0.06));
+  background: var(--vinta-item-bg);
   border: 1px solid var(--vinta-border);
   color: var(--vinta-text-primary);
 }
 
 .onboarding-nav-btn.secondary:hover {
-  background: var(--vinta-contrast-hover, rgba(255, 255, 255, 0.11));
+  background: var(--vinta-contrast-hover);
 }
 
 .onboarding-nav-btn.primary {
-  background: var(--vinta-accent-primary, #38bdf8);
+  background: var(--vinta-accent-primary);
   border: 1px solid transparent;
-  color: var(--vinta-accent-contrast-text, #0b1120);
+  color: var(--vinta-text-on-accent);
 }
 
 .onboarding-nav-btn.primary:hover {
