@@ -128,6 +128,17 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
     callbacks.showWidget()
   })
 
+  onEvent('open-settings', () => {
+    callbacks.showWidget()
+    callbacks.navigateTo(SettingsPage, settingsConfig, true)
+  })
+
+  onEvent('reset-position', () => {
+    hiddenPillOffsetXStore.set(0)
+    callbacks.onRelocateOffset?.(0)
+    callbacks.showWidget()
+  })
+
   onEvent('open-onboarding', () => {
     hasCompletedOnboardingStore.set(false)
     callbacks.showWidget()

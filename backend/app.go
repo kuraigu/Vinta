@@ -327,7 +327,13 @@ func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 	if wailsApp != nil {
 		systray := wailsApp.SystemTray.New()
 		systray.SetIcon(a.icon)
+		systray.SetDarkModeIcon(a.icon)
 		systray.SetTooltip("Vinta Dynamic Island")
+		systray.OnClick(func() {
+			if app := application.Get(); app != nil {
+				app.Event.Emit("show-pill")
+			}
+		})
 
 		menu := wailsApp.NewMenu()
 		menu.Add("Show Vinta").OnClick(func(_ *application.Context) {
@@ -335,15 +341,25 @@ func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 				app.Event.Emit("show-pill")
 			}
 		})
-		menu.Add("Run Onboarding").OnClick(func(_ *application.Context) {
+		menu.Add("Settings").OnClick(func(_ *application.Context) {
 			if app := application.Get(); app != nil {
-				app.Event.Emit("open-onboarding")
+				app.Event.Emit("open-settings")
+			}
+		})
+		menu.Add("Reset Island Position").OnClick(func(_ *application.Context) {
+			if app := application.Get(); app != nil {
+				app.Event.Emit("reset-position")
 			}
 		})
 		menu.AddSeparator()
 		menu.Add("Toggle Theme").OnClick(func(_ *application.Context) {
 			if app := application.Get(); app != nil {
 				app.Event.Emit("toggle-theme")
+			}
+		})
+		menu.Add("Run Onboarding").OnClick(func(_ *application.Context) {
+			if app := application.Get(); app != nil {
+				app.Event.Emit("open-onboarding")
 			}
 		})
 		menu.AddSeparator()

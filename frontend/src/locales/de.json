@@ -377,11 +377,14 @@
     "repeat_all": "Wiederholen: Alle Titel",
     "repeat_off": "Wiederholen: Aus",
     "repeat_not_supported": "Wiederholen: Nicht unterstützt",
+    "sources_title": "Medienquellen",
     "sources_count": "Medienquellen ({count})",
     "audio_mixer": "Audiomixer & Klangwelten",
     "mute": "Stummschalten",
     "unmute": "Stummschaltung aufheben",
     "pinned_source": "Fixierte Quelle: {name}",
+    "pin_source": "{name} als bevorzugte Quelle fixieren",
+    "unpin_source": "Fixierung von {name} aufheben",
     "switch_to": "Zu {name} wechseln"
   },
   "notes": {

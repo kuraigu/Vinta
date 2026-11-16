@@ -160,6 +160,19 @@
   }
 
   /**
+   * Pins or unpins the active media source directly from the player footer.
+   *
+   * @param e - Click event.
+   */
+  function togglePinCurrentSource(e: MouseEvent) {
+    e.stopPropagation()
+    const sourceApp = media.sourceApp
+    if (!sourceApp) return
+    $pinnedMediaSourceStore =
+      $pinnedMediaSourceStore === sourceApp ? null : sourceApp
+  }
+
+  /**
    * Toggles the ambient soundscape and audio mixer drawer.
    *
    * @param e - Click event.
@@ -988,7 +1001,7 @@
       class="expanded-card"
       class:has-active-drawer={isSessionMenuOpen || isAudioMixerOpen}
     >
-      {#if isSessionMenuOpen && media.sessions && media.sessions.length > 1}
+      {#if isSessionMenuOpen && media.sessions && media.sessions.length > 0}
         <MediaSourcesDrawer
           sessions={media.sessions}
           activeSessionId={media.activeSessionId}
@@ -1180,7 +1193,29 @@
               </button>
             {/if}
 
-            {#if media.sessions && media.sessions.length > 1}
+            {#if media.sourceApp}
+              {@const isCurrentPinned =
+                Boolean($pinnedMediaSourceStore) &&
+                media.sourceApp === $pinnedMediaSourceStore}
+              <button
+                type="button"
+                class="action-btn"
+                class:is-active={isCurrentPinned}
+                use:islandTooltip={{
+                  text: isCurrentPinned
+                    ? $tStore('media.unpin_source', { name: appBrand.name })
+                    : $tStore('media.pin_source', { name: appBrand.name })
+                }}
+                aria-label={isCurrentPinned
+                  ? $tStore('media.unpin_source', { name: appBrand.name })
+                  : $tStore('media.pin_source', { name: appBrand.name })}
+                onclick={togglePinCurrentSource}
+              >
+                <Pin size={14} />
+              </button>
+            {/if}
+
+            {#if media.sessions && media.sessions.length > 0}
               <button
                 class="action-btn session-btn"
                 class:is-active={isSessionMenuOpen}
@@ -1189,11 +1224,13 @@
                     count: media.sessions.length
                   })
                 }}
-                aria-label="Media Sources"
+                aria-label={$tStore('media.sources_title')}
                 onclick={toggleSessionMenu}
               >
                 <ListMusic size={14} />
-                <span class="session-indicator-dot"></span>
+                {#if media.sessions.length > 1 || ($pinnedMediaSourceStore && media.sourceApp === $pinnedMediaSourceStore)}
+                  <span class="session-indicator-dot"></span>
+                {/if}
               </button>
             {/if}
 

@@ -377,11 +377,14 @@
     "repeat_all": "Ulitin: Lahat ng Kanta",
     "repeat_off": "Ulitin: Off",
     "repeat_not_supported": "Ulitin: Hindi suportado",
+    "sources_title": "Pinagmulan ng Media",
     "sources_count": "Pinagmulan ng Media ({count})",
     "audio_mixer": "Audio Mixer at Soundscapes",
     "mute": "I-mute",
     "unmute": "I-unmute",
     "pinned_source": "Naka-pin na Source: {name}",
+    "pin_source": "I-pin ang {name} bilang pangunahing source",
+    "unpin_source": "I-unpin ang {name}",
     "switch_to": "Lumipat sa {name}"
   },
   "notes": {

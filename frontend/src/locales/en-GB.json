@@ -377,11 +377,14 @@
     "repeat_all": "Repeat: All Tracks",
     "repeat_off": "Repeat: Off",
     "repeat_not_supported": "Repeat: Not supported",
+    "sources_title": "Media Sources",
     "sources_count": "Media Sources ({count})",
     "audio_mixer": "Audio Mixer & Soundscapes",
     "mute": "Mute",
     "unmute": "Unmute",
     "pinned_source": "Pinned Source: {name}",
+    "pin_source": "Pin {name} as preferred source",
+    "unpin_source": "Unpin {name}",
     "switch_to": "Switch to {name}"
   },
   "notes": {
