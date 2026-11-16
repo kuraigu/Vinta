@@ -1138,10 +1138,10 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 			switch {
 			case ret == 0 && qState == QUNS_PRESENTATION_MODE:
 				hideRes, reasonRes = true, "presentation_mode"
-			case (hasExclusiveDisplayOwnership() || (ret == 0 && qState == QUNS_RUNNING_D3D_FULL_SCREEN)) && isFramelessOrPopup:
-				hideRes, reasonRes = true, "exclusive_fullscreen"
 			case isUnsupportedGame:
 				hideRes, reasonRes = true, "unsupported_app"
+			case (hasExclusiveDisplayOwnership() || (ret == 0 && qState == QUNS_RUNNING_D3D_FULL_SCREEN)) && isFramelessOrPopup:
+				hideRes, reasonRes = true, "exclusive_fullscreen"
 			case isFramelessOrPopup && hideBorderless:
 				hideRes, reasonRes = true, "borderless_fullscreen"
 			default:

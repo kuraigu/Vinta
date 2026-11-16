@@ -518,9 +518,9 @@
     if (isVinta) {
       const vintaIcon = notif.icon || appIcon
       return {
-        name: 'Vinta System',
+        name: 'Vinta',
         icon: vintaIcon,
-        appIcon: notif.appLogo || vintaIcon,
+        appIcon: notif.appLogo || appIcon,
         category: 'system'
       }
     }

@@ -8,7 +8,6 @@
 import type { Component } from 'svelte'
 import { get } from 'svelte/store'
 import { Events } from '$lib/events'
-import appIcon from '@appicon'
 import {
   GetBatteryStatus,
   GetWirelessStatus,
@@ -61,7 +60,12 @@ import {
   hasCompletedOnboardingStore
 } from '../store'
 import type { MonitorInfo } from '../../bindings/Vinta/backend/models.js'
-import { sendVintaNotification } from './vintaNotification.js'
+import {
+  notifyAutoHidden,
+  notifyDisplayRelocated,
+  notifyUpdateAvailable,
+  notifyPostUpdateInstalled
+} from './vintaNotification.js'
 import { showSatelliteNotification } from '../stores/notificationSatellite'
 import { getDeveloperAnnouncements } from './announcementsService'
 
@@ -196,35 +200,7 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
     // Only dispatch notification if cooldown has elapsed for this application
     if (now - lastSent >= AUTO_HIDE_NOTIF_COOLDOWN_MS) {
       lastAutoHideNotifPerApp.set(targetAppName, now)
-
-      let reasonText = 'an exclusive fullscreen application'
-      if (reason === 'presentation_mode') {
-        reasonText = 'presentation mode'
-      } else if (reason === 'unsupported_app') {
-        reasonText = 'an incompatible application'
-      } else if (reason === 'borderless_fullscreen') {
-        reasonText = 'a borderless fullscreen application'
-      }
-
-      const notifTitle = 'Auto-Hidden'
-      const notifMessage = appName
-        ? `${appName}: Hidden to prevent overlay conflicts with ${reasonText}.`
-        : `Vinta was hidden to prevent overlay conflicts with ${reasonText}.`
-
-      // Prune previous auto-hide notification for this specific application before dispatching
-      notifData.update((items) =>
-        items.filter(
-          (item) =>
-            !(item.title === notifTitle && item.appName === targetAppName)
-        )
-      )
-
-      sendVintaNotification({
-        title: notifTitle,
-        message: notifMessage,
-        subApp: appName || undefined,
-        playSound: false
-      })
+      void notifyAutoHidden({ appName, reason })
     }
   })
 
@@ -256,16 +232,7 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
     const now = Date.now()
     if (now - lastRelocateTime > 5000) {
       lastRelocateTime = now
-      const notifTitle = `Moved to ${targetName}`
-      const notifMessage = appName
-        ? `${appName}: Moved to ${targetName} to prevent overlay conflicts.`
-        : `Moved to ${targetName} to prevent overlay conflicts.`
-
-      sendVintaNotification({
-        title: notifTitle,
-        message: notifMessage,
-        subApp: 'Display Manager'
-      })
+      notifyDisplayRelocated({ targetName, appName })
     }
   })
 
@@ -590,22 +557,7 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
     if (data && data.updateAvailable) {
       updateInfoStore.set(data)
       if (get(autoCheckUpdatesStore)) {
-        const notifs = get(notifData)
-        notifData.set([
-          {
-            id: Date.now(),
-            appName: 'Vinta System',
-            title: `Vinta Update Available (${data.latestVersion})`,
-            message:
-              'A new version of Vinta is ready for download. Open Settings > Updates to review release highlights.',
-            timestamp: Date.now(),
-            canOpen: true,
-            isUpdate: true,
-            icon: appIcon,
-            appLogo: appIcon
-          },
-          ...notifs
-        ])
+        notifyUpdateAvailable(data.latestVersion)
         callbacks.showWidget()
       }
     }
@@ -615,22 +567,7 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
     CheckPostUpdateInstalled()
       .then((newVer: string) => {
         if (newVer) {
-          const notifs = get(notifData)
-          notifData.set([
-            {
-              id: Date.now(),
-              appName: 'Vinta System',
-              title: `Welcome to Vinta ${newVer}!`,
-              message:
-                'Vinta has been successfully updated. Check out the Updates tab in Settings to see what is new.',
-              timestamp: Date.now(),
-              canOpen: true,
-              isUpdate: true,
-              icon: appIcon,
-              appLogo: appIcon
-            },
-            ...notifs
-          ])
+          notifyPostUpdateInstalled(newVer)
           callbacks.showWidget()
         }
       })
