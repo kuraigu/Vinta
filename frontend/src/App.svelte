@@ -52,7 +52,6 @@
   import ControlsSatellite from './components/ControlsSatellite.svelte'
   import NotificationSatellite from './components/NotificationSatellite.svelte'
   import CustomTooltip from './components/CustomTooltip.svelte'
-  import ClassInspectorOverlay from './devtest/ClassInspectorOverlay.svelte'
   import VirtualCursor from './devtest/VirtualCursor.svelte'
 
   // Services & Utils
@@ -85,7 +84,7 @@
     getActiveSatelliteFootprint,
     resyncAllSatellites
   } from './stores/satellites'
-  import { hideTooltip } from './stores/tooltip'
+  import { hideTooltip, setCachedUiScale } from './stores/tooltip'
   import {
     debugBoundsOverlay,
     debugLogs,
@@ -259,10 +258,14 @@
   let extraDropdownW = $state(0)
   let extraDropdownH = $state(0)
 
-  function getWindowDpr(): number {
-    return typeof window !== 'undefined' && window.devicePixelRatio > 0
+  let cachedWindowDpr = $state(
+    typeof window !== 'undefined' && window.devicePixelRatio > 0
       ? window.devicePixelRatio
       : 1.0
+  )
+
+  function getWindowDpr(): number {
+    return cachedWindowDpr
   }
 
   let activeMonitor = $derived.by(() => {
@@ -646,15 +649,6 @@
     isHovering = true
     isSatelliteHovering = false
     clearTimeout(hideTimeout)
-    if (!isGestureBusy()) {
-      bounds.recoverRestingBounds(
-        getBoundsForState(),
-        clampedOffsetX,
-        islandNode,
-        isHidden
-      )
-      bounds.syncPillBounds(islandNode, isHidden, true)
-    }
     if (isHidden && $wakeMethodStore === 'hover') {
       hoverShowTimeout = window.setTimeout(showWidget, 150)
     } else if (!isHidden) {
@@ -1147,6 +1141,7 @@
 
   $effect(function handleUiScaleSyncEffect() {
     const scale = effectiveUiScale
+    setCachedUiScale(scale)
     if (typeof document !== 'undefined') {
       document.documentElement.style.setProperty(
         '--vinta-ui-scale',
@@ -1570,6 +1565,9 @@
     refreshDisplay()
 
     const handleResize = () => {
+      if (typeof window !== 'undefined' && window.devicePixelRatio > 0) {
+        cachedWindowDpr = window.devicePixelRatio
+      }
       refreshDisplay()
       bounds.syncPillBounds(islandNode, isHidden)
       resyncAllSatellites()
@@ -1976,7 +1974,9 @@
 
 <CustomTooltip />
 {#if $debugClassInspector}
-  <ClassInspectorOverlay />
+  {#await import('./devtest/ClassInspectorOverlay.svelte') then { default: ClassInspectorOverlay }}
+    <ClassInspectorOverlay />
+  {/await}
 {/if}
 <VirtualCursor
   primaryCenter={displayLayout.primaryCenter}

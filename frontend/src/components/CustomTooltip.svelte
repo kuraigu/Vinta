@@ -11,6 +11,7 @@
     activeTooltipStore,
     showTooltip,
     hideTooltip,
+    getCachedUiScale,
     type TooltipPosition
   } from '../stores/tooltip'
   import {
@@ -100,12 +101,7 @@
       }
     }
 
-    const uiScale =
-      (typeof document !== 'undefined' &&
-        parseFloat(
-          document.documentElement.style.getPropertyValue('--vinta-ui-scale')
-        )) ||
-      1
+    const uiScale = getCachedUiScale()
     const adjLeft = Math.round((left + clampOffset.x) / uiScale)
     const adjTop = Math.round((top + clampOffset.y) / uiScale)
     return `left: ${adjLeft}px; top: ${adjTop}px; transform: ${transform};`
@@ -116,8 +112,7 @@
   let lastMeasuredId = ''
 
   /**
-   * Synchronizes the tooltip's rendered screen bounding box with native Win32 window regions,
-   * flipping or clamping if the tooltip would clip past the viewport edges.
+   * Measures the tooltip once after mount to flip or clamp if it would clip past viewport edges.
    */
   function syncBoundsEffect() {
     const tip = $activeTooltipStore
@@ -165,16 +160,6 @@
           dispatchTooltipBounds(id, rect, 7)
           lastDispatchedId = id
         })
-        return
-      }
-
-      if (lastDispatchedId && lastDispatchedId !== id) {
-        dismissTooltipBounds(lastDispatchedId)
-      }
-      const rect = tooltipNode.getBoundingClientRect()
-      if (rect.width > 0 && rect.height > 0) {
-        dispatchTooltipBounds(id, rect, 7)
-        lastDispatchedId = id
       }
     } else if (!isVisible && lastDispatchedId) {
       lastMeasuredId = ''

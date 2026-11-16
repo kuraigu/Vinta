@@ -44,6 +44,15 @@ const initialTooltipState: ActiveTooltipState = {
 
 export const activeTooltipStore = writable<ActiveTooltipState>(initialTooltipState)
 let isTooltipVisible = false
+let cachedUiScale = 1
+
+export function setCachedUiScale(scale: number): void {
+  cachedUiScale = scale > 0 ? scale : 1
+}
+
+export function getCachedUiScale(): number {
+  return cachedUiScale
+}
 
 /**
  * Activates the tooltip for a given target element.

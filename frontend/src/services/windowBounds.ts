@@ -32,6 +32,7 @@ export class WindowBoundsManager {
   private activeIslandNode: HTMLElement | null = null
   private idleWatchdogTimer: number | undefined
   private lastHitRectsSignature: string = ''
+  private lastHitRects: HitRect[] = []
 
   public currentOSBounds: WindowBounds = { w: 0, h: 0, r: 0 }
   public targetPendingBounds: WindowBounds = { w: 0, h: 0, r: 0 }
@@ -160,20 +161,46 @@ export class WindowBoundsManager {
   }
 
   /**
-   * Sends hit rectangles to the Go backend if the serialized signature changed.
+   * Sends hit rectangles to the Go backend only when coordinates actually changed.
    */
   private dispatchHitRects(
     hitRects: HitRect[],
-    force: boolean = false,
+    _force: boolean = false,
     explicitSig?: string
   ): void {
-    const sig =
-      explicitSig ??
-      hitRects.map((r) => `${r.left},${r.top},${r.width},${r.height}`).join(';')
-    if (!force && sig === this.lastHitRectsSignature) {
+    if (explicitSig !== undefined) {
+      if (explicitSig === this.lastHitRectsSignature) {
+        return
+      }
+      this.lastHitRectsSignature = explicitSig
+      this.lastHitRects = hitRects
+      SetHitRects(hitRects).catch(() => {})
       return
     }
-    this.lastHitRectsSignature = sig
+
+    const prev = this.lastHitRects
+    if (prev.length === hitRects.length && prev.length > 0) {
+      let same = true
+      for (let i = 0; i < hitRects.length; i++) {
+        const a = hitRects[i]
+        const b = prev[i]
+        if (
+          a.left !== b.left ||
+          a.top !== b.top ||
+          a.width !== b.width ||
+          a.height !== b.height
+        ) {
+          same = false
+          break
+        }
+      }
+      if (same) {
+        return
+      }
+    }
+
+    this.lastHitRects = hitRects
+    this.lastHitRectsSignature = ''
     SetHitRects(hitRects).catch(() => {})
   }
 

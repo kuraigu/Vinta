@@ -3,7 +3,12 @@ import { svelte } from '@sveltejs/vite-plugin-svelte'
 import wails from '@wailsio/runtime/plugins/vite'
 import path from 'path'
 
-// Converts PascalCase icon names to kebab-case (e.g., BellRing -> bell-ring, Minimize2 -> minimize-2, Volume2 -> volume-2)
+/**
+ * Converts a PascalCase icon identifier to kebab-case for direct file imports.
+ *
+ * @param str - PascalCase icon name (for example `BellRing` or `Volume2`).
+ * @returns Lowercase kebab-case filename stem.
+ */
 function pascalToKebab(str: string): string {
   return str
     .replace(/([a-zA-Z])([0-9])/g, '$1-$2')
@@ -13,11 +18,12 @@ function pascalToKebab(str: string): string {
     .toLowerCase()
 }
 
-// Vite plugin to automatically rewrite named lucide-svelte imports into direct per-icon imports.
-// Example: import { Eye, Minimize2 } from 'lucide-svelte' ->
-//          import Eye from 'lucide-svelte/icons/eye.js'
-//          import Minimize2 from 'lucide-svelte/icons/minimize-2.js'
-// This eliminates bundling/evaluating all 1500+ icons in lucide-svelte, dramatically boosting startup & build speed.
+/**
+ * Rewrites named `lucide-svelte` imports into per-icon module imports so Vite
+ * only bundles icons actually used rather than evaluating all 1500+ icons.
+ *
+ * @returns Vite pre-transform plugin.
+ */
 function optimizeLucideImports(): Plugin {
   return {
     name: 'optimize-lucide-imports',
@@ -55,6 +61,13 @@ function optimizeLucideImports(): Plugin {
   }
 }
 
+/**
+ * Injects `-webkit-backdrop-filter` and `isolation: isolate` into CSS blocks
+ * using `backdrop-filter` so WebView2 bounds blur contexts cleanly without
+ * forcing GPU `translateZ(0)` layers on fixed-position descendants.
+ *
+ * @returns Vite pre-transform plugin.
+ */
 function optimizeBackdropFilter(): Plugin {
   const transformCss = (css: string): string => {
     if (!css.includes('backdrop-filter')) return css
@@ -139,10 +152,29 @@ export default defineConfig({
   build: {
     emptyOutDir: true,
     target: 'esnext',
-    cssTarget: 'chrome120'
+    cssTarget: 'chrome120',
+    sourcemap: false,
+    modulePreload: { polyfill: false },
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          const normalized = id.replace(/\\/g, '/')
+          if (normalized.includes('node_modules/svelte')) return 'vendor-svelte'
+          if (normalized.includes('node_modules/@wailsio')) return 'vendor-wails'
+          if (normalized.includes('src/devtest/')) return 'devtest'
+          if (
+            normalized.includes('src/pages/SettingsPage') ||
+            normalized.includes('src/components/settings/')
+          ) {
+            return 'page-settings'
+          }
+        }
+      }
+    }
   },
   resolve: {
     alias: {
+      $lib: path.resolve(import.meta.dirname, 'src/lib'),
       'lucide-svelte/icons': path.resolve(
         import.meta.dirname,
         'node_modules/lucide-svelte/dist/icons'

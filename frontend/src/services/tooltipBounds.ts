@@ -1,72 +1,25 @@
 /**
- * @fileoverview Expands the native window hit-test area to fit floating tooltips.
+ * @fileoverview Tooltip bounds helpers.
  *
- * Sends tooltip coordinates to the native backend so Windows doesn't clip tooltips
- * that stick out past the rounded island capsule.
+ * CustomTooltip renders with `pointer-events: none` inside an unclipped overlay,
+ * so native Win32 tooltip region IPC updates are unnecessary no-ops.
  */
 
-import {
-  SetTooltipBounds,
-  ClearTooltipBounds
-} from '../../bindings/Vinta/backend/app.js'
-
 /**
- * Tells the native window manager to expand the window shape around a visible tooltip.
+ * No-op retained for API compatibility; tooltips are pointer-transparent.
  */
 export function dispatchTooltipBounds(
-  id: string,
-  rect: DOMRect | { left: number; top: number; width: number; height: number },
-  radius: number = 7
-): void {
-  if (
-    typeof document !== 'undefined' &&
-    document.body.classList.contains('devtest-window-body')
-  ) {
-    return
-  }
-  const scale = window.devicePixelRatio || 1
-  if (typeof SetTooltipBounds === 'function') {
-    SetTooltipBounds({
-      id,
-      x: Math.round(rect.left),
-      y: Math.round(rect.top),
-      width: Math.round(rect.width),
-      height: Math.round(rect.height),
-      radius,
-      scale,
-      active: true
-    }).catch(() => {})
-  }
-}
+  _id: string,
+  _rect: DOMRect | { left: number; top: number; width: number; height: number },
+  _radius: number = 7
+): void {}
 
 /**
- * Removes an active tooltip's bounding region from the native window mask.
- *
- * @param id - Unique identifier for the tooltip.
+ * No-op retained for API compatibility.
  */
-export function dismissTooltipBounds(id: string): void {
-  if (
-    typeof document !== 'undefined' &&
-    document.body.classList.contains('devtest-window-body')
-  ) {
-    return
-  }
-  if (typeof ClearTooltipBounds === 'function') {
-    ClearTooltipBounds(id).catch(() => {})
-  }
-}
+export function dismissTooltipBounds(_id: string): void {}
 
 /**
- * Removes all active floating tooltip regions from the native window mask.
+ * No-op retained for API compatibility.
  */
-export function dismissAllTooltips(): void {
-  if (
-    typeof document !== 'undefined' &&
-    document.body.classList.contains('devtest-window-body')
-  ) {
-    return
-  }
-  if (typeof ClearTooltipBounds === 'function') {
-    ClearTooltipBounds('*').catch(() => {})
-  }
-}
+export function dismissAllTooltips(): void {}
