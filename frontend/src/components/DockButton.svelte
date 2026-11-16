@@ -10,6 +10,7 @@
   type Props = {
     onclick: (e: MouseEvent) => void
     tooltip?: string
+    tooltipSubtitle?: string
     tooltipPosition?: 'top' | 'left' | 'right' | 'bottom'
     variant?: '' | 'danger' | 'warning' | 'success'
     shape?: 'rounded' | 'circle'
@@ -23,6 +24,7 @@
   let {
     onclick,
     tooltip,
+    tooltipSubtitle = undefined,
     tooltipPosition = 'top',
     variant = '',
     shape = 'rounded',
@@ -40,10 +42,10 @@
     if (!useCustomTooltip || !tooltip) {
       return { text: '' }
     }
-    const pos: 'top' | 'bottom' = tooltipPosition === 'top' ? 'top' : 'bottom'
     return {
       text: tooltip,
-      position: pos
+      subtitle: tooltipSubtitle,
+      position: tooltipPosition
     }
   }
 

@@ -280,8 +280,10 @@
     "autoupdates_desc": "Check GitHub releases periodically for new versions"
   },
   "controls": {
-    "minimize": "Minimise",
+    "minimize": "Collapse",
     "hide": "Hide",
+    "wake_hover_hint": "Hover · {hotkey}",
+    "wake_hotkey_hint": "{hotkey}",
     "quit": "Quit Vinta",
     "window_controls": "Window controls"
   },

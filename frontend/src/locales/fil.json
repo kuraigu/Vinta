@@ -280,8 +280,10 @@
     "autoupdates_desc": "Regular na suriin ang GitHub releases para sa mga bagong version"
   },
   "controls": {
-    "minimize": "I-minimize",
+    "minimize": "I-collapse",
     "hide": "Itago",
+    "wake_hover_hint": "Hover · {hotkey}",
+    "wake_hotkey_hint": "{hotkey}",
     "quit": "I-close ang Vinta",
     "window_controls": "Mga kontrol sa window"
   },

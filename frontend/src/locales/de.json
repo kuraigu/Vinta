@@ -282,6 +282,8 @@
   "controls": {
     "minimize": "Minimieren",
     "hide": "Ausblenden",
+    "wake_hover_hint": "Hover · {hotkey}",
+    "wake_hotkey_hint": "{hotkey}",
     "quit": "Vinta beenden",
     "window_controls": "Fenstersteuerungen"
   },

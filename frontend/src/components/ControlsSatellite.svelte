@@ -107,7 +107,9 @@
 
     const rightClearance = activeMonitorWidth - dockRightEdge
     const leftClearance = dockLeftEdge
-    return rightClearance >= leftClearance ? 'right' : 'left'
+    return rightClearance < 160 && leftClearance > rightClearance
+      ? 'left'
+      : 'right'
   }
 
   let expandedTooltipSide = $derived.by(computeExpandedTooltipSide)
@@ -116,10 +118,10 @@
    * Computes layout dimensions, 4-part gaps, and corner radii for the controls satellite.
    */
   function computeSatelliteBounds() {
-    const centerOffsetY = Math.max(0, Math.round((expandedHeight - 88) / 2))
+    const centerOffsetY = Math.max(0, Math.round((expandedHeight - 95) / 2))
     return {
       width: 32,
-      height: 88,
+      height: 95,
       radius: 12,
       radii: EXPANDED_RADII,
       gap: 6,
