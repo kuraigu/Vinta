@@ -7,6 +7,28 @@
   overflow: hidden;
 }
 
+.notif-overlay-tab-pane {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  animation: vintaOverlayTabFadeIn
+    calc(0.52s * var(--vinta-anim-scale, 1))
+    cubic-bezier(0.18, 0.9, 0.32, 1) forwards;
+}
+
+@keyframes vintaOverlayTabFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .notif-overlay-body :global(.notif-expanded) {
   padding: 0 2px;
 }

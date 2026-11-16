@@ -495,6 +495,7 @@ export const opacityHiddenStore = persistentWritable<number>(
   1.0
 )
 export const uiScaleStore = persistentWritable<number>('vinta_ui_scale', 1.0)
+export const animScaleStore = persistentWritable<number>('vinta_anim_scale', 1.0)
 export const monitorUiScalesStore = persistentWritable<Record<string, number>>(
   'vinta_monitor_ui_scales',
   {}
@@ -856,6 +857,8 @@ function sanitizeSettingsPayload(raw: Record<string, unknown>): Record<string, u
         if (typeof defaultVal === 'number') {
           if (key === 'vinta_autohide_delay') {
             sanitized[key] = Math.max(3, Math.min(60, Number(val)))
+          } else if (key === 'vinta_anim_scale') {
+            sanitized[key] = Math.max(0, Math.min(2.0, Number(val)))
           } else if (key.startsWith('vinta_opacity_')) {
             sanitized[key] = Math.max(0.1, Math.min(1.0, Number(val)))
           } else {

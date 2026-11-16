@@ -25,6 +25,7 @@
     allowDragPositionStore,
     autoHideDelayStore,
     pageVisibilityStore,
+    animScaleStore,
     type IslandConfig
   } from '../store'
   import type { IslandGestureController } from '../services/islandGestures'
@@ -136,12 +137,17 @@
     if (expanded !== prevExpandedState || isHidden !== prevHiddenState) {
       prevExpandedState = expanded
       prevHiddenState = isHidden
+      const scale = $animScaleStore
+      if (scale <= 0) {
+        isMorphing = false
+        return
+      }
       isMorphing = true
       if (morphTimer) clearTimeout(morphTimer)
       morphTimer = setTimeout(() => {
         isMorphing = false
         morphTimer = null
-      }, 340)
+      }, Math.round(650 * scale))
     }
   })
 
@@ -459,8 +465,8 @@
       <div
         class="hidden-widget-pill"
         transition:fade={{
-          duration: 140,
-          delay: wasExpandedBeforeHide ? 180 : 0
+          duration: Math.round(140 * $animScaleStore),
+          delay: wasExpandedBeforeHide ? Math.round(180 * $animScaleStore) : 0
         }}
       >
         <Clock expanded={false} />
@@ -470,8 +476,8 @@
       <div
         class="hidden-dash"
         transition:fade={{
-          duration: 140,
-          delay: wasExpandedBeforeHide ? 180 : 0
+          duration: Math.round(140 * $animScaleStore),
+          delay: wasExpandedBeforeHide ? Math.round(180 * $animScaleStore) : 0
         }}
       ></div>
     {/if}
@@ -493,7 +499,7 @@
       ? 'none'
       : 'auto'}; transition: opacity {isBlinking
       ? '0s'
-      : '0.22s cubic-bezier(0.2, 0.8, 0.2, 1)'};"
+      : 'calc(0.42s * var(--vinta-anim-scale, 1)) cubic-bezier(0.18, 0.9, 0.32, 1)'};"
   >
     {#if !isPageDormant}
       {#key activePage}
@@ -527,8 +533,8 @@
     {#if expanded && isDockVisible}
       <div
         class="dock-overlay-wrapper"
-        in:fade={{ duration: 160 }}
-        out:fade={{ duration: 80 }}
+        in:fade={{ duration: Math.round(260 * $animScaleStore) }}
+        out:fade={{ duration: Math.round(140 * $animScaleStore) }}
       >
         <Dock {activePage} {islandConfig} />
       </div>

@@ -16,10 +16,12 @@
     RefreshCw,
     Info,
     ChevronDown,
-    Scale
+    Scale,
+    Gauge
   } from 'lucide-svelte'
   import BentoCard from '../../BentoCard.svelte'
   import CustomSelect from '../../CustomSelect.svelte'
+  import SegmentedControl from '../../SegmentedControl.svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingSlider from '../SettingSlider.svelte'
   import {
@@ -29,6 +31,7 @@
     opacityMinimalStore,
     opacityExpandedStore,
     uiScaleStore,
+    animScaleStore,
     monitorUiScalesStore,
     getMonitorScaleKey,
     getMaxScaleForMonitor,
@@ -409,6 +412,30 @@
         step={0.05}
         defaultValue={opacityExpandedStore.defaultValue}
         bind:value={$opacityExpandedStore}
+      />
+    </SettingItem>
+
+    <SettingItem
+      label={$tStore('appearance.anim_scale_label')}
+      description={$tStore('appearance.anim_scale_desc')}
+      icon={Gauge}
+      flexCol={true}
+      isDefault={$animScaleStore === animScaleStore.defaultValue}
+      onReset={() => animScaleStore.reset()}
+    >
+      <SegmentedControl
+        fullWidth={true}
+        options={[
+          { value: '0', label: $tStore('appearance.anim_off') },
+          { value: '0.7', label: $tStore('appearance.anim_snappy') },
+          { value: '1', label: $tStore('appearance.anim_default') },
+          { value: '1.3', label: $tStore('appearance.anim_smooth') },
+          { value: '1.65', label: $tStore('appearance.anim_relaxed') }
+        ]}
+        value={String($animScaleStore)}
+        onchange={(val) => {
+          $animScaleStore = parseFloat(val)
+        }}
       />
     </SettingItem>
   </BentoCard>

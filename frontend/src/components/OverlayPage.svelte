@@ -9,7 +9,7 @@
   import { cubicOut } from 'svelte/easing'
   import { X } from 'lucide-svelte'
   import { islandTooltip } from '../services/islandTooltip'
-  import { tStore } from '../store'
+  import { animScaleStore, tStore } from '../store'
 
   interface Props {
     title?: string
@@ -37,7 +37,10 @@
   role="dialog"
   aria-modal="true"
   aria-label={title}
-  transition:fade={{ duration: 180, easing: cubicOut }}
+  transition:fade={{
+    duration: Math.round(340 * $animScaleStore),
+    easing: cubicOut
+  }}
   onclick={(e) => {
     if (e.target === e.currentTarget) {
       e.stopPropagation()
@@ -53,8 +56,18 @@
 >
   <div
     class="overlay-page-card"
-    in:fly={{ y: 56, duration: 280, opacity: 0.2, easing: cubicOut }}
-    out:fly={{ y: 40, duration: 200, opacity: 0, easing: cubicOut }}
+    in:fly={{
+      y: 56,
+      duration: Math.round(520 * $animScaleStore),
+      opacity: 0.2,
+      easing: cubicOut
+    }}
+    out:fly={{
+      y: 40,
+      duration: Math.round(360 * $animScaleStore),
+      opacity: 0,
+      easing: cubicOut
+    }}
   >
     <header class="overlay-page-header">
       <div class="overlay-header-left">

@@ -137,9 +137,11 @@
   {/snippet}
 
   <div class="notif-overlay-body">
-    {#if $notificationsOverlayTabStore === 'notifications'}
-      <Notification expanded={true} notifications={$notifData} />
-    {:else if $notificationsOverlayTabStore === 'announcements'}
+    {#key $notificationsOverlayTabStore}
+      <div class="notif-overlay-tab-pane">
+        {#if $notificationsOverlayTabStore === 'notifications'}
+          <Notification expanded={true} notifications={$notifData} />
+        {:else if $notificationsOverlayTabStore === 'announcements'}
       <ScrollView class="notif-overlay-scroll">
         {#if isLoadingAnnouncements}
           <div class="notif-overlay-empty">
@@ -205,7 +207,9 @@
           </div>
         {/if}
       </ScrollView>
-    {/if}
+        {/if}
+      </div>
+    {/key}
   </div>
 </OverlayPage>
 

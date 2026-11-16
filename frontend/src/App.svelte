@@ -103,6 +103,7 @@
     opacityHiddenStore,
     uiScaleStore,
     monitorUiScalesStore,
+    animScaleStore,
     getMonitorScaleKey,
     getMonitorBasePhysicalScale,
     getMaxScaleForMonitor,
@@ -206,7 +207,21 @@
   let isQuitting = $state(false)
   let isTransitionGlow = $state(false)
   let hideTrigger = $state(0)
-  let islandAnim = $state('0.34s cubic-bezier(0.16, 1, 0.3, 1)')
+  function formatIslandAnim(
+    baseSec: number,
+    easing: string = 'cubic-bezier(0.18, 0.9, 0.32, 1)'
+  ): string {
+    const scale = $animScaleStore
+    if (scale <= 0) return '0s linear'
+    return `${+(baseSec * scale).toFixed(3)}s ${easing}`
+  }
+
+  function scaleAnimMs(baseMs: number): number {
+    const scale = $animScaleStore
+    return scale <= 0 ? 0 : Math.round(baseMs * scale)
+  }
+
+  let islandAnim = $state('0.65s cubic-bezier(0.18, 0.9, 0.32, 1)')
 
   let wasExpandedBeforeHide = $state(false)
   let wasHiddenBeforeNotif = $state(false)
@@ -741,8 +756,8 @@
       $hiddenPillOffsetXStore = targetOffset
     }
     bounds.currentOSBounds = { ...nextBounds }
-    islandAnim = '0.34s cubic-bezier(0.16, 1, 0.3, 1)'
-    bounds.startTrackingTransition(islandNode, 350, false)
+    islandAnim = formatIslandAnim(0.65)
+    bounds.startTrackingTransition(islandNode, scaleAnimMs(660), false)
     triggerGlow()
   }
 
@@ -762,15 +777,15 @@
         $hiddenPillOffsetXStore = targetOffset
       }
       bounds.currentOSBounds = { ...nextBounds }
-      islandAnim = '0.26s cubic-bezier(0.2, 0.8, 0.2, 1)'
-      bounds.startTrackingTransition(islandNode, 280, false)
+      islandAnim = formatIslandAnim(0.54)
+      bounds.startTrackingTransition(islandNode, scaleAnimMs(550), false)
       resetHideTimer()
       return
     }
     const nextBounds = getBoundsForState(islandConfig, expanded, false)
     bounds.currentOSBounds = { ...nextBounds }
-    islandAnim = '0.28s cubic-bezier(0.16, 1, 0.3, 1)'
-    bounds.startTrackingTransition(islandNode, 300, false)
+    islandAnim = formatIslandAnim(0.56)
+    bounds.startTrackingTransition(islandNode, scaleAnimMs(570), false)
   }
 
   // Navigation, Show/Hide & Drag Gestures
@@ -841,9 +856,7 @@
     if (activePage !== page && expanded === expand) {
       triggerBlink()
     }
-    islandAnim = expand
-      ? '0.34s cubic-bezier(0.16, 1, 0.3, 1)'
-      : '0.22s cubic-bezier(0.2, 0.8, 0.2, 1)'
+    islandAnim = formatIslandAnim(expand ? 0.65 : 0.48)
     activePage = page
     islandConfig = pageConfig
     expanded = expand
@@ -870,7 +883,7 @@
     bounds.syncPillBounds(islandNode, false, true)
     bounds.startTrackingTransition(
       islandNode,
-      expand ? 350 : 250,
+      scaleAnimMs(expand ? 660 : 500),
       false,
       () => {
         if (!isGestureBusy()) {
@@ -929,7 +942,7 @@
       $activePageIdStore = fallback.page === HomePage ? 'home' : 'media'
     }
 
-    islandAnim = '0.34s cubic-bezier(0.16, 1, 0.3, 1)'
+    islandAnim = formatIslandAnim(0.65)
     isHidden = false
     bounds.notifyHidden(false)
     const nextBounds = getBoundsForState(islandConfig, false, false)
@@ -941,7 +954,7 @@
       currentLiveOffsetX = targetOffset
       $hiddenPillOffsetXStore = targetOffset
     }
-    bounds.startTrackingTransition(islandNode, 350, false)
+    bounds.startTrackingTransition(islandNode, scaleAnimMs(660), false)
     resetHideTimer()
   }
 
@@ -961,13 +974,15 @@
     finishDragGesture()
 
     wasExpandedBeforeHide = expanded
-    const duration = wasExpandedBeforeHide ? 300 : 220
-    islandAnim = wasExpandedBeforeHide
-      ? '0.30s cubic-bezier(0.16, 1, 0.3, 1)'
-      : '0.22s cubic-bezier(0.2, 0.8, 0.2, 1)'
+    const duration = wasExpandedBeforeHide ? 560 : 440
+    islandAnim = formatIslandAnim(wasExpandedBeforeHide ? 0.56 : 0.44)
 
     isHidden = true
-    bounds.startTrackingTransition(islandNode, duration + 50, true, () => {
+    bounds.startTrackingTransition(
+      islandNode,
+      scaleAnimMs(duration + 50),
+      true,
+      () => {
       if (!isHidden) return
       isPageDormant = true
       expanded = false
@@ -1080,8 +1095,8 @@
     }
     bounds.cancelScheduledTrimMemory()
     bounds.currentOSBounds = { ...nextBounds }
-    islandAnim = '0.34s cubic-bezier(0.16, 1, 0.3, 1)'
-    bounds.startTrackingTransition(islandNode, 350, false)
+    islandAnim = formatIslandAnim(0.65)
+    bounds.startTrackingTransition(islandNode, scaleAnimMs(660), false)
     expanded = true
   }
 
@@ -1144,7 +1159,11 @@
     }
     bounds.currentOSBounds = { ...getBoundsForState() }
     bounds.syncPillBounds(islandNode, isHidden, true)
-    bounds.startTrackingTransition(islandNode, isExp ? 350 : 250, false, () => {
+    bounds.startTrackingTransition(
+      islandNode,
+      scaleAnimMs(isExp ? 660 : 500),
+      false,
+      () => {
       if (!isGestureBusy()) {
         bounds.recoverRestingBounds(
           getBoundsForState(),
@@ -1271,6 +1290,15 @@
       bounds.syncPillBounds(islandNode, isHidden, true)
     })
     return () => cancelAnimationFrame(rafId)
+  })
+
+  $effect(function handleAnimScaleSyncEffect() {
+    if (typeof document !== 'undefined') {
+      document.documentElement.style.setProperty(
+        '--vinta-anim-scale',
+        String($animScaleStore)
+      )
+    }
   })
 
   // Wails Event Subscriptions (Top-Level for Auto-Unsubscribe)
