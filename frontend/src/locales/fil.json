@@ -116,7 +116,13 @@
     "brand_footer": "Vinta ng FreeMatrix Studios at mga Kontribyutor",
     "scroll_cue": "Higit pa",
     "scroll_cue_more": "Higit pa",
-    "scroll_cue_aria": "Mag-scroll pababa para sa iba pang nilalaman"
+    "scroll_cue_aria": "Mag-scroll pababa para sa iba pang nilalaman",
+    "widget_size_1x1": "Compact (1×1)",
+    "widget_size_2x1": "Wide (2×1)",
+    "widget_size_2x2": "Malaki (2×2)",
+    "widget_hide": "Itago ang Widget",
+    "widget_options": "Mga opsyon ng widget",
+    "widget_disable_menu": "I-disable ang Widget Menu"
   },
   "announcements": {
     "title": "Announcement",

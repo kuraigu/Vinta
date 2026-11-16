@@ -116,7 +116,13 @@
     "brand_footer": "Vinta von FreeMatrix Studios & Mitwirkenden",
     "scroll_cue": "Mehr",
     "scroll_cue_more": "Mehr",
-    "scroll_cue_aria": "Nach unten scrollen für mehr Inhalte"
+    "scroll_cue_aria": "Nach unten scrollen für mehr Inhalte",
+    "widget_size_1x1": "Kompakt (1×1)",
+    "widget_size_2x1": "Breit (2×1)",
+    "widget_size_2x2": "Groß (2×2)",
+    "widget_hide": "Widget ausblenden",
+    "widget_options": "Widget-Optionen",
+    "widget_disable_menu": "Widget-Menü deaktivieren"
   },
   "announcements": {
     "title": "Ankündigung",

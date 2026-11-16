@@ -838,7 +838,7 @@
     height: 100%;
     pointer-events: none;
     user-select: none;
-    contain: layout style paint;
+    contain: layout style;
   }
 
   .weather-art-hero.is-paused :global(*) {

@@ -116,7 +116,13 @@
     "brand_footer": "Vinta by FreeMatrix Studios & Contributors",
     "scroll_cue": "More",
     "scroll_cue_more": "More",
-    "scroll_cue_aria": "Scroll down for more content"
+    "scroll_cue_aria": "Scroll down for more content",
+    "widget_size_1x1": "Compact (1×1)",
+    "widget_size_2x1": "Wide (2×1)",
+    "widget_size_2x2": "Large (2×2)",
+    "widget_hide": "Hide Widget",
+    "widget_options": "Widget options",
+    "widget_disable_menu": "Disable Widget Menu"
   },
   "announcements": {
     "title": "Announcement",

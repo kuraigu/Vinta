@@ -24,7 +24,7 @@ Always prioritize existing shared components before writing custom HTML or style
 Vinta splits its Svelte UI into four clear layers so workspace state, overlays, and reusable controls stay decoupled:
 
 - **Primitives (`frontend/src/components/`):** Reusable, token-driven building blocks (`BentoCard`, `CustomSelect`, `OverlayPage`, `ScrollView`, `SearchInput`). Primitives stay free of page-specific layout rules.
-- **Widgets (`frontend/src/components/`):** Self-contained glance cards for the Home feed (`AnnouncementGlance`, `ReleaseNotesGlance`, `NotificationGlance`, `CalendarGlance`).
+- **Widgets (`frontend/src/components/widgets/`):** Self-contained glance cards for the Home feed (`WeatherWidget`, `MediaGlanceWidget`, `CalendarGlanceWidget`, `SystemStatsWidget`, `ActionCenterWidget`, `AnnouncementWidget`, `NotificationWidget`). Widgets wrap `<WidgetFrame>` to carry `data-vinta-widget="<id>"` theme hooks, `contain: layout style` isolation, and Bento size presets (`1x1`, `2x1`, `2x2`).
 - **Workspace Pages (`frontend/src/pages/`):** Persistent base views (`HomePage`, `MediaPage`, `NotesPage`, `CalculatorPage`, `CalendarPage`, `SettingsPage`) that own the island frame and keep user context.
 - **Overlay Pages (`frontend/src/pages/overlays/`):** Top-level views (`NotificationsOverlayPage`, `AppsOverlayPage`) mounted inside `<OverlayPage>` above the active workspace. Closed overlays leave zero DOM nodes or listeners behind, and open overlays use solid elevated surfaces (`--vinta-bg-elevated`) instead of stacking a second `backdrop-filter: blur()` pass. They expand compact workspaces to at least `440px × 380px` while open, then restore exact workspace dimensions on close or `Escape`.
 

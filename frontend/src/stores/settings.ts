@@ -65,6 +65,7 @@ export interface HomeWidgetsVisibility {
   battery: boolean
   wireless: boolean
   actionCenter: boolean
+  media?: boolean
   systemStats?: boolean
   spotlight?: boolean
   announcements?: boolean
@@ -77,9 +78,22 @@ export const defaultHomeWidgetsVisibility: HomeWidgetsVisibility = {
   battery: true,
   wireless: true,
   actionCenter: true,
+  media: true,
   systemStats: false,
   spotlight: true,
   announcements: true
+}
+
+export type WidgetSizePreset = '1x1' | '2x1' | '2x2'
+
+export const defaultHomeWidgetSizes: Record<string, WidgetSizePreset> = {
+  weather: '2x1',
+  media: '2x1',
+  announcements: '2x1',
+  notifications: '2x1',
+  calendar: '2x1',
+  actionCenter: '2x1',
+  systemStats: '2x1'
 }
 
 export interface PageVisibility {
@@ -276,7 +290,7 @@ function persistentWritable<T>(key: string, initialValue: T) {
   }
 }
 
-export const CURRENT_SETTINGS_SCHEMA_VERSION = 1
+export const CURRENT_SETTINGS_SCHEMA_VERSION = 2
 
 export interface MigrationResult {
   migrated: Record<string, unknown>
@@ -335,6 +349,14 @@ const migrations: Record<number, MigrationFn> = {
       updated['_sparse_migrated'] = true
     }
     updated['_schema_version'] = 1
+    return updated
+  },
+  2: (settings) => {
+    const updated = { ...settings }
+    if (updated['vinta_home_widget_menu_enabled'] === false) {
+      delete updated['vinta_home_widget_menu_enabled']
+    }
+    updated['_schema_version'] = 2
     return updated
   }
 }
@@ -613,6 +635,8 @@ export const weatherUnitStore = persistentWritable<TemperatureUnit>('vinta_weath
 // 6. Home & Page Visibility
 // ============================================================================
 export const homeWidgetsVisibilityStore = persistentWritable<HomeWidgetsVisibility>('vinta_home_widgets_visibility', defaultHomeWidgetsVisibility)
+export const homeWidgetSizesStore = persistentWritable<Record<string, WidgetSizePreset>>('vinta_home_widget_sizes', defaultHomeWidgetSizes)
+export const homeWidgetMenuEnabledStore = persistentWritable<boolean>('vinta_home_widget_menu_enabled', true)
 export const pageVisibilityStore = persistentWritable<PageVisibility>('vinta_page_visibility', defaultPageVisibility)
 export const dockPinnedAppsStore = persistentWritable<DockPinnedApps>('vinta_dock_pinned_apps', defaultDockPinnedApps)
 export const pinnedMediaSourceStore = persistentWritable<string | null>('vinta_pinned_media_source', null)

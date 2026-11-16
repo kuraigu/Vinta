@@ -78,13 +78,14 @@
   box-shadow: none;
   border: none;
   background: transparent;
+  overflow: visible;
   margin-left: -14px;
   margin-right: -14px;
-  margin-top: -2px;
+  margin-top: 0;
   margin-bottom: -4px;
   width: calc(100% + 28px);
-  padding: 8px 18px 14px 18px;
-  min-height: 120px;
+  padding: 12px 18px 14px 18px;
+  min-height: 124px;
 }
 
 .banner-top-layout {
@@ -115,7 +116,7 @@
   align-items: center;
   justify-content: flex-end;
   flex: 0 0 120px;
-  height: 95px;
+  height: 100px;
 }
 
 .weather-art-wrap {
