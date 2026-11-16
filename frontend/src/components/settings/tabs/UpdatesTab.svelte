@@ -370,6 +370,8 @@
         description="Choose the update release stability stream"
         icon={GitBranch}
         flexCol={true}
+        isDefault={$updateChannelStore === updateChannelStore.defaultValue}
+        onReset={() => handleChannelChange(updateChannelStore.defaultValue)}
       >
         <CustomSelect
           options={channelOptions}
@@ -386,6 +388,9 @@
           : 'Periodically query GitHub releases in the background'}
         icon={Download}
         disabled={!isOfficialBuild}
+        isDefault={$autoCheckUpdatesStore ===
+          autoCheckUpdatesStore.defaultValue}
+        onReset={() => autoCheckUpdatesStore.reset()}
       >
         <ToggleSwitch
           disabled={!isOfficialBuild}

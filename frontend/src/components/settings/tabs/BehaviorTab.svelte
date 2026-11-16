@@ -19,7 +19,9 @@
   import SegmentedControl from '../../SegmentedControl.svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingSlider from '../SettingSlider.svelte'
-  import SettingActionButton from '../SettingActionButton.svelte'
+  import SettingActionButton, {
+    type SettingButtonStatus
+  } from '../SettingActionButton.svelte'
   import CustomSelect from '../../CustomSelect.svelte'
   import type { MonitorInfo } from '../../../../bindings/Vinta/backend/models.js'
   import {
@@ -52,7 +54,7 @@
     { label: $tStore('settings.fullscreen_hide_island'), value: 'hide' }
   ])
 
-  let isResettingOffset = $state(false)
+  let offsetResetStatus = $state<SettingButtonStatus>('idle')
 
   /**
    * Switches the active display and centers the island on the selected monitor.
@@ -74,23 +76,33 @@
    */
   function handleResetOffset() {
     $hiddenPillOffsetXStore = 0
-    isResettingOffset = true
+    offsetResetStatus = 'success'
     setTimeout(() => {
-      isResettingOffset = false
+      offsetResetStatus = 'idle'
     }, 1200)
   }
 </script>
 
 <div class="setting-group">
   <BentoCard variant="group">
-    <SettingItem label={$tStore('settings.autohide_home_label')} icon={EyeOff}>
+    <SettingItem
+      label={$tStore('settings.autohide_home_label')}
+      icon={EyeOff}
+      isDefault={$homeAutoHideStore === homeAutoHideStore.defaultValue}
+      onReset={() => homeAutoHideStore.reset()}
+    >
       <ToggleSwitch
         bind:checked={$homeAutoHideStore}
         ariaLabel={$tStore('settings.autohide_home_label')}
       />
     </SettingItem>
 
-    <SettingItem label={$tStore('settings.autohide_media_label')} icon={EyeOff}>
+    <SettingItem
+      label={$tStore('settings.autohide_media_label')}
+      icon={EyeOff}
+      isDefault={$mediaAutoHideStore === mediaAutoHideStore.defaultValue}
+      onReset={() => mediaAutoHideStore.reset()}
+    >
       <ToggleSwitch
         bind:checked={$mediaAutoHideStore}
         ariaLabel={$tStore('settings.autohide_media_label')}
@@ -152,6 +164,8 @@
     <SettingItem
       label={$tStore('settings.allow_drag_label')}
       icon={MousePointer}
+      isDefault={$allowDragPositionStore === allowDragPositionStore.defaultValue}
+      onReset={() => allowDragPositionStore.reset()}
     >
       <ToggleSwitch
         bind:checked={$allowDragPositionStore}
@@ -167,22 +181,19 @@
     >
       <SettingActionButton
         variant="default"
+        status={offsetResetStatus}
+        successLabel={$tStore('settings.center_island_done')}
         fullWidth={true}
         onclick={handleResetOffset}
       >
         <RotateCcw size={13} />
-        <span
-          >{isResettingOffset
-            ? $tStore('settings.center_island_done')
-            : $tStore('settings.center_island_btn')}</span
-        >
+        <span>{$tStore('settings.center_island_btn')}</span>
       </SettingActionButton>
     </SettingItem>
   </BentoCard>
 
   {#if $displayLayoutStore.monitors && $displayLayoutStore.monitors.length > 1}
-    <div class="section-title">
-      <Monitor size={14} />
+    <div class="setting-section-header">
       <span>{$tStore('settings.section_display')}</span>
     </div>
 
@@ -213,8 +224,7 @@
     </BentoCard>
   {/if}
 
-  <div class="section-title">
-    <Maximize2 size={14} />
+  <div class="setting-section-header">
     <span>{$tStore('settings.section_fullscreen')}</span>
   </div>
 
@@ -223,6 +233,9 @@
       label={$tStore('settings.autohide_borderless_label')}
       description={$tStore('settings.autohide_borderless_desc')}
       icon={Maximize2}
+      isDefault={$autoHideBorderlessStore ===
+        autoHideBorderlessStore.defaultValue}
+      onReset={() => autoHideBorderlessStore.reset()}
     >
       <ToggleSwitch
         bind:checked={$autoHideBorderlessStore}
@@ -236,6 +249,9 @@
         description={$tStore('settings.fullscreen_behavior_desc')}
         icon={MonitorSmartphone}
         flexCol={true}
+        isDefault={$fullscreenBehaviorStore ===
+          fullscreenBehaviorStore.defaultValue}
+        onReset={() => fullscreenBehaviorStore.reset()}
       >
         <SegmentedControl
           fullWidth={true}
@@ -252,6 +268,9 @@
         description={$tStore('settings.return_fullscreen_desc')}
         icon={RotateCcw}
         disabled={$fullscreenBehaviorStore !== 'relocate'}
+        isDefault={$returnOnFullscreenExitStore ===
+          returnOnFullscreenExitStore.defaultValue}
+        onReset={() => returnOnFullscreenExitStore.reset()}
       >
         <ToggleSwitch
           bind:checked={$returnOnFullscreenExitStore}

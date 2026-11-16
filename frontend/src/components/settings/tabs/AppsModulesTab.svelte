@@ -20,7 +20,8 @@
     Megaphone,
     Clock,
     Battery,
-    Wifi
+    Wifi,
+    MoreHorizontal
   } from 'lucide-svelte'
   import BentoCard from '../../BentoCard.svelte'
   import ToggleSwitch from '../../ToggleSwitch.svelte'
@@ -28,8 +29,10 @@
   import {
     pageVisibilityStore,
     homeWidgetsVisibilityStore,
+    homeWidgetMenuEnabledStore,
     dockPinnedAppsStore,
     batteryDataStore,
+    tStore,
     type HomeWidgetsVisibility,
     type PageVisibility,
     type DockPinnedApps
@@ -102,14 +105,7 @@
   }
 </script>
 
-<div class="apps-modules-tab">
-  <!-- Section 1: Apps -->
-  <div class="section-header">
-    <div class="section-title">
-      <span>Apps & Features</span>
-    </div>
-  </div>
-
+<div class="apps-modules-tab setting-group">
   <BentoCard variant="group">
     <SettingItem label="Action Center" icon={SlidersHorizontal}>
       <ToggleSwitch
@@ -199,13 +195,8 @@
     </SettingItem>
   </BentoCard>
 
-  <div class="divider"></div>
-
-  <!-- Section 2: Home Widgets -->
-  <div class="section-header">
-    <div class="section-title">
-      <span>Home Widgets</span>
-    </div>
+  <div class="setting-section-header">
+    <span>Home Widgets</span>
   </div>
 
   <BentoCard variant="group">
@@ -389,15 +380,39 @@
         ariaLabel="Announcements Feed"
       />
     </SettingItem>
+
+    <SettingItem
+      label={$tStore('settings.widgets_media_label')}
+      description={$tStore('settings.widgets_media_desc')}
+      icon={Music}
+      isDefault={$homeWidgetsVisibilityStore.media !== false}
+      onReset={() =>
+        homeWidgetsVisibilityStore.update((v) => ({ ...v, media: true }))}
+    >
+      <ToggleSwitch
+        checked={$homeWidgetsVisibilityStore.media !== false}
+        onchange={() => toggleHomeWidget('media')}
+        ariaLabel={$tStore('settings.widgets_media_label')}
+      />
+    </SettingItem>
+
+    <SettingItem
+      label={$tStore('settings.widgets_menu_label')}
+      description={$tStore('settings.widgets_menu_desc')}
+      icon={MoreHorizontal}
+      isDefault={$homeWidgetMenuEnabledStore ===
+        homeWidgetMenuEnabledStore.defaultValue}
+      onReset={() => homeWidgetMenuEnabledStore.reset()}
+    >
+      <ToggleSwitch
+        bind:checked={$homeWidgetMenuEnabledStore}
+        ariaLabel={$tStore('settings.widgets_menu_label')}
+      />
+    </SettingItem>
   </BentoCard>
 
-  <div class="divider"></div>
-
-  <!-- Section 3: Dock Pinned Favorites -->
-  <div class="section-header">
-    <div class="section-title">
-      <span>Dock Pinned Favorites</span>
-    </div>
+  <div class="setting-section-header">
+    <span>Dock Pinned Favorites</span>
   </div>
 
   <BentoCard variant="group">

@@ -169,6 +169,9 @@
       label="Auto-Discard Past Events"
       description="Automatically purges agenda events after their scheduled date has passed"
       icon={CalendarX}
+      isDefault={$autoDiscardPastEventsStore ===
+        autoDiscardPastEventsStore.defaultValue}
+      onReset={() => autoDiscardPastEventsStore.reset()}
     >
       <ToggleSwitch
         bind:checked={$autoDiscardPastEventsStore}
@@ -183,20 +186,16 @@
       flexCol={true}
     >
       <SettingActionButton
-        variant={clearedCount !== null ? 'success' : 'default'}
+        variant="default"
+        status={clearedCount !== null ? 'success' : 'idle'}
+        successLabel={clearedCount !== null
+          ? `Removed ${clearedCount} ${clearedCount === 1 ? 'event' : 'events'}`
+          : undefined}
         fullWidth={true}
         onclick={handleClearPast}
       >
-        {#if clearedCount !== null}
-          <Check size={13} />
-          <span
-            >Removed {clearedCount}
-            {clearedCount === 1 ? 'event' : 'events'}</span
-          >
-        {:else}
-          <Trash2 size={13} />
-          <span>Clear Past Events</span>
-        {/if}
+        <Trash2 size={13} />
+        <span>Clear Past Events</span>
       </SettingActionButton>
     </SettingItem>
   </BentoCard>

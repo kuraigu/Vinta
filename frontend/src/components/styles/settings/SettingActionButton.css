@@ -64,3 +64,22 @@
   background: rgba(16, 185, 129, 0.25);
   border-color: rgba(16, 185, 129, 0.45);
 }
+
+.setting-btn.is-loading {
+  opacity: 0.8;
+  cursor: wait;
+}
+
+:global(.setting-btn-spin) {
+  animation: vintaBtnSpin 0.85s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes vintaBtnSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

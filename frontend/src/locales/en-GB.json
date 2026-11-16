@@ -199,9 +199,15 @@
   },
   "settings": {
     "page_title": "Settings",
+    "search_placeholder": "Search settings... (Ctrl+F)",
+    "no_matching_settings": "No settings match \"{query}\"",
+    "widgets_media_label": "Media Player Glance",
+    "widgets_media_desc": "Show active media playback on Home",
+    "widgets_menu_label": "Widget Options Menu",
+    "widgets_menu_desc": "Show the ... button and right-click menu on Home widgets",
     "tabs": {
       "appearance": "Appearance",
-      "modules": "Apps & Features",
+      "modules": "Apps & Widgets",
       "behavior": "Behaviour",
       "shortcuts": "Shortcuts",
       "notifications": "Notifications",

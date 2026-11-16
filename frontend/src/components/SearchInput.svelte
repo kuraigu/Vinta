@@ -17,6 +17,7 @@
     variant?: 'pill' | 'rounded'
     size?: 'sm' | 'md'
     maxWidth?: string
+    enableShortcut?: boolean
     class?: string
   }
 
@@ -26,6 +27,7 @@
     variant = 'pill',
     size = 'md',
     maxWidth,
+    enableShortcut = true,
     class: className = ''
   }: Props = $props()
 
@@ -80,7 +82,26 @@
     )
     ctxCoords = { x: e.clientX, y: e.clientY }
   }
+  function handleWindowKeyDown(e: KeyboardEvent) {
+    if (!enableShortcut) return
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+      e.preventDefault()
+      inputEl?.focus()
+      return
+    }
+    if (e.key === '/') {
+      const target = e.target as HTMLElement | null
+      const tag = target?.tagName?.toLowerCase()
+      if (tag === 'input' || tag === 'textarea' || target?.isContentEditable) {
+        return
+      }
+      e.preventDefault()
+      inputEl?.focus()
+    }
+  }
 </script>
+
+<svelte:window onkeydown={handleWindowKeyDown} />
 
 <div
   class="vinta-search-input variant-{variant} size-{size} {className}"

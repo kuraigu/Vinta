@@ -69,11 +69,21 @@
 
 <div class="setting-group">
   <BentoCard variant="group">
-    <SettingItem label="Do Not Disturb Mode" icon={Bell}>
+    <SettingItem
+      label="Do Not Disturb Mode"
+      icon={Bell}
+      isDefault={$dndStore === dndStore.defaultValue}
+      onReset={() => dndStore.reset()}
+    >
       <ToggleSwitch bind:checked={$dndStore} ariaLabel="Do Not Disturb Mode" />
     </SettingItem>
 
-    <SettingItem label="Play Sound on Notification" icon={BellRing}>
+    <SettingItem
+      label="Play Sound on Notification"
+      icon={BellRing}
+      isDefault={$notifSoundStore === notifSoundStore.defaultValue}
+      onReset={() => notifSoundStore.reset()}
+    >
       <ToggleSwitch
         bind:checked={$notifSoundStore}
         ariaLabel="Play Sound on Notification"
@@ -100,7 +110,12 @@
       />
     </SettingItem>
 
-    <SettingItem label="Auto-Wake Island on Notification" icon={Bell}>
+    <SettingItem
+      label="Auto-Wake Island on Notification"
+      icon={Bell}
+      isDefault={$notifAutoWakeStore === notifAutoWakeStore.defaultValue}
+      onReset={() => notifAutoWakeStore.reset()}
+    >
       <ToggleSwitch
         bind:checked={$notifAutoWakeStore}
         ariaLabel="Auto-Wake Island on Notification"
@@ -111,6 +126,9 @@
       label="Show Notification Satellite"
       description="Display alerts in a companion satellite capsule beside the island during media playback and other active views"
       icon={Orbit}
+      isDefault={$notifSatelliteEnabledStore ===
+        notifSatelliteEnabledStore.defaultValue}
+      onReset={() => notifSatelliteEnabledStore.reset()}
     >
       <ToggleSwitch
         bind:checked={$notifSatelliteEnabledStore}
@@ -129,6 +147,8 @@
       description="Procedural synthesis chime played when scheduled alarms fire"
       icon={AlarmClock}
       flexCol={true}
+      isDefault={$alarmSoundPresetStore === alarmSoundPresetStore.defaultValue}
+      onReset={() => alarmSoundPresetStore.reset()}
     >
       <div class="sound-select-row">
         <div class="sound-select-box">
@@ -156,12 +176,16 @@
       description="Ringing volume level for active alarms and timer completions"
       icon={Volume2}
       flexCol={true}
+      isDefault={Math.round($alarmVolumeStore * 100) ===
+        Math.round(alarmVolumeStore.defaultValue * 100)}
+      onReset={() => alarmVolumeStore.reset()}
     >
       <SettingSlider
         min={10}
         max={100}
         step={5}
         unit="%"
+        defaultValue={Math.round(alarmVolumeStore.defaultValue * 100)}
         value={Math.round($alarmVolumeStore * 100)}
         onchange={(val) => ($alarmVolumeStore = val / 100)}
       />
@@ -171,6 +195,12 @@
       label="Default Snooze Duration"
       description="Interval duration before a snoozed alarm rings again"
       icon={TimerReset}
+      isDefault={$alarmSnoozeMinutesStore ===
+        alarmSnoozeMinutesStore.defaultValue}
+      onReset={() => {
+        alarmSnoozeMinutesStore.reset()
+        snoozeString = String(alarmSnoozeMinutesStore.defaultValue)
+      }}
     >
       <div class="snooze-select-box">
         <CustomSelect

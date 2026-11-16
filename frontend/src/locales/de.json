@@ -199,9 +199,15 @@
   },
   "settings": {
     "page_title": "Einstellungen",
+    "search_placeholder": "Einstellungen durchsuchen... (Strg+F)",
+    "no_matching_settings": "Keine Einstellungen passend zu \"{query}\"",
+    "widgets_media_label": "Medienplayer-Widget",
+    "widgets_media_desc": "Aktive Medienwiedergabe auf der Startseite anzeigen",
+    "widgets_menu_label": "Widget-Optionsmenü",
+    "widgets_menu_desc": "...-Schaltfläche und Rechtsklick-Menü auf Startseiten-Widgets anzeigen",
     "tabs": {
       "appearance": "Erscheinungsbild",
-      "modules": "Apps & Module",
+      "modules": "Apps & Widgets",
       "behavior": "Verhalten",
       "shortcuts": "Tastaturkürzel",
       "notifications": "Benachrichtigungen",

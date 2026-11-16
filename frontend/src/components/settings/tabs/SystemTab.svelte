@@ -17,7 +17,9 @@
   import BentoCard from '../../BentoCard.svelte'
   import ToggleSwitch from '../../ToggleSwitch.svelte'
   import SettingItem from '../SettingItem.svelte'
-  import SettingActionButton from '../SettingActionButton.svelte'
+  import SettingActionButton, {
+    type SettingButtonStatus
+  } from '../SettingActionButton.svelte'
   import {
     autostartStore,
     hardwareAccelStore,
@@ -69,7 +71,7 @@
   }
   $effect(handleHardwareAccelEffect)
 
-  let cacheCleared = $state(false)
+  let cacheStatus = $state<SettingButtonStatus>('idle')
   let clearTimer: ReturnType<typeof setTimeout> | null = null
   let cacheSizeStr = $state('0 B')
 
@@ -105,6 +107,8 @@
     'vinta_weather_location',
     'vinta_weather_unit',
     'vinta_home_widgets_visibility',
+    'vinta_home_widget_sizes',
+    'vinta_home_widget_menu_enabled',
     'vinta_page_visibility',
     'vinta_dock_pinned_apps',
     'vinta_autostart',
@@ -173,6 +177,7 @@
   $effect(handleCalculateCacheSizeEffect)
 
   async function handleClearCache() {
+    cacheStatus = 'loading'
     try {
       await ClearCache().catch(() => {})
       notifData.set([])
@@ -183,63 +188,67 @@
           localStorage.removeItem(key)
         }
       }
-      cacheCleared = true
+      cacheStatus = 'success'
       await calculateCacheSize()
       if (clearTimer) clearTimeout(clearTimer)
       clearTimer = setTimeout(() => {
-        cacheCleared = false
+        cacheStatus = 'idle'
       }, 2000)
     } catch {
-      // Ignore
+      cacheStatus = 'error'
     }
   }
 
-  let isExporting = $state(false)
-  let exportSuccess = $state(false)
+  let exportStatus = $state<SettingButtonStatus>('idle')
   let exportTimer: ReturnType<typeof setTimeout> | null = null
 
-  let isImporting = $state(false)
+  let importStatus = $state<SettingButtonStatus>('idle')
   let importStatusMsg = $state('')
-  let importSuccess = $state(false)
   let importTimer: ReturnType<typeof setTimeout> | null = null
 
   async function handleExportSettings() {
-    isExporting = true
+    exportStatus = 'loading'
     try {
       const res = await exportSettingsToFile()
       if (res.success && res.path) {
-        exportSuccess = true
+        exportStatus = 'success'
         if (exportTimer) clearTimeout(exportTimer)
         exportTimer = setTimeout(() => {
-          exportSuccess = false
+          exportStatus = 'idle'
         }, 2500)
+      } else {
+        exportStatus = 'idle'
       }
-    } finally {
-      isExporting = false
+    } catch {
+      exportStatus = 'error'
     }
   }
 
   async function handleImportSettings() {
-    isImporting = true
+    importStatus = 'loading'
     try {
       const res = await importSettingsFromFile()
       if (res.success) {
-        importSuccess = true
+        importStatus = 'success'
         importStatusMsg = `Imported ${res.count ?? 0} settings successfully`
         if (importTimer) clearTimeout(importTimer)
         importTimer = setTimeout(() => {
-          importSuccess = false
+          importStatus = 'idle'
           importStatusMsg = ''
         }, 3000)
       } else if (res.error) {
+        importStatus = 'error'
         importStatusMsg = `Import failed: ${res.error}`
         if (importTimer) clearTimeout(importTimer)
         importTimer = setTimeout(() => {
+          importStatus = 'idle'
           importStatusMsg = ''
         }, 4000)
+      } else {
+        importStatus = 'idle'
       }
-    } finally {
-      isImporting = false
+    } catch {
+      importStatus = 'error'
     }
   }
 
@@ -260,7 +269,12 @@
 
 <div class="setting-group">
   <BentoCard variant="group">
-    <SettingItem label={$tStore('settings.startup_label')} icon={Power}>
+    <SettingItem
+      label={$tStore('settings.startup_label')}
+      icon={Power}
+      isDefault={$autostartStore === autostartStore.defaultValue}
+      onReset={() => void handleAutostartChange(autostartStore.defaultValue)}
+    >
       <ToggleSwitch
         checked={$autostartStore}
         onchange={(checked) => void handleAutostartChange(checked)}
@@ -268,7 +282,12 @@
       />
     </SettingItem>
 
-    <SettingItem label={$tStore('settings.hardware_accel_label')} icon={Cpu}>
+    <SettingItem
+      label={$tStore('settings.hardware_accel_label')}
+      icon={Cpu}
+      isDefault={$hardwareAccelStore === hardwareAccelStore.defaultValue}
+      onReset={() => hardwareAccelStore.reset()}
+    >
       <ToggleSwitch
         bind:checked={$hardwareAccelStore}
         ariaLabel={$tStore('settings.hardware_accel_label')}
@@ -284,16 +303,13 @@
       flexCol={true}
     >
       <SettingActionButton
-        variant={cacheCleared ? 'success' : 'default'}
+        variant="default"
+        status={cacheStatus}
+        successLabel={$tStore('settings.cache_cleared')}
         fullWidth={true}
         onclick={handleClearCache}
       >
-        {#if cacheCleared}
-          <Check size={13} />
-          {$tStore('settings.cache_cleared')}
-        {:else}
-          {$tStore('settings.cache_clear_btn')}
-        {/if}
+        {$tStore('settings.cache_clear_btn')}
       </SettingActionButton>
     </SettingItem>
 
@@ -304,18 +320,14 @@
       flexCol={true}
     >
       <SettingActionButton
-        variant={exportSuccess ? 'success' : 'default'}
+        variant="default"
+        status={exportStatus}
+        successLabel={$tStore('settings.export_success')}
         fullWidth={true}
-        disabled={isExporting}
         onclick={handleExportSettings}
       >
-        {#if exportSuccess}
-          <Check size={13} />
-          {$tStore('settings.export_success')}
-        {:else}
-          <Download size={13} />
-          {$tStore('settings.export_btn')}
-        {/if}
+        <Download size={13} />
+        {$tStore('settings.export_btn')}
       </SettingActionButton>
     </SettingItem>
 
@@ -326,18 +338,14 @@
       flexCol={true}
     >
       <SettingActionButton
-        variant={importSuccess ? 'success' : 'default'}
+        variant="default"
+        status={importStatus}
+        successLabel={$tStore('settings.import_success')}
         fullWidth={true}
-        disabled={isImporting}
         onclick={handleImportSettings}
       >
-        {#if importSuccess}
-          <Check size={13} />
-          {$tStore('settings.import_success')}
-        {:else}
-          <Upload size={13} />
-          {$tStore('settings.import_btn')}
-        {/if}
+        <Upload size={13} />
+        {$tStore('settings.import_btn')}
       </SettingActionButton>
     </SettingItem>
   </BentoCard>

@@ -199,9 +199,15 @@
   },
   "settings": {
     "page_title": "Settings",
+    "search_placeholder": "Maghanap sa settings... (Ctrl+F)",
+    "no_matching_settings": "Walang setting na tumutugma sa \"{query}\"",
+    "widgets_media_label": "Media Player Glance",
+    "widgets_media_desc": "Ipakita ang kasalukuyang pinapatugtog sa Home",
+    "widgets_menu_label": "Widget Options Menu",
+    "widgets_menu_desc": "Ipakita ang ... button at right-click menu sa mga widget sa Home",
     "tabs": {
       "appearance": "Appearance",
-      "modules": "Apps at Features",
+      "modules": "Apps at Widgets",
       "behavior": "Behavior",
       "shortcuts": "Shortcuts",
       "notifications": "Notifications",

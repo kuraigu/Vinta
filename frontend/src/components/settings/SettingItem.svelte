@@ -4,7 +4,7 @@
   title label, and description subtitle alongside a right-aligned control slot.
 -->
 <script lang="ts">
-  import type { Snippet, ComponentType } from 'svelte'
+  import { getContext, type Snippet, type ComponentType } from 'svelte'
   import { RotateCcw } from 'lucide-svelte'
   import BentoCard from '../BentoCard.svelte'
   import IconBadge, { type IconBadgeColor } from '../IconBadge.svelte'
@@ -37,47 +37,62 @@
     onReset,
     children
   }: Props = $props()
+
+  const getSearchQuery = getContext<(() => string) | undefined>(
+    'settingsSearchQuery'
+  )
+
+  let matchesSearch = $derived.by(() => {
+    const q = getSearchQuery?.().trim().toLowerCase() || ''
+    if (!q) return true
+    return (
+      label.toLowerCase().includes(q) ||
+      (description || '').toLowerCase().includes(q)
+    )
+  })
 </script>
 
-<BentoCard variant="setting" {flexCol} {disabled}>
-  <div class="setting-label-group">
-    {#if IconComponent}
-      <div class="setting-icon-wrap">
-        <IconBadge icon={IconComponent} color={badgeColor} size="md" />
+{#if matchesSearch}
+  <BentoCard variant="setting" {flexCol} {disabled}>
+    <div class="setting-label-group">
+      {#if IconComponent}
+        <div class="setting-icon-wrap">
+          <IconBadge icon={IconComponent} color={badgeColor} size="md" />
+        </div>
+      {/if}
+      <div class="setting-text-col">
+        <div class="setting-label">
+          <span>{label}</span>
+          {#if badge}
+            <span class="setting-badge">{badge}</span>
+          {/if}
+          {#if onReset && !isDefault && !disabled}
+            <button
+              type="button"
+              class="setting-reset-btn"
+              onclick={(e) => {
+                e.stopPropagation()
+                onReset()
+              }}
+              use:islandTooltip={$tStore('common.reset')}
+              aria-label={$tStore('common.reset')}
+            >
+              <RotateCcw size={11} strokeWidth={2.2} />
+            </button>
+          {/if}
+        </div>
+        {#if description}
+          <span class="setting-description">{description}</span>
+        {/if}
+      </div>
+    </div>
+
+    {#if children}
+      <div class="setting-control">
+        {@render children()}
       </div>
     {/if}
-    <div class="setting-text-col">
-      <div class="setting-label">
-        <span>{label}</span>
-        {#if badge}
-          <span class="setting-badge">{badge}</span>
-        {/if}
-        {#if onReset && !isDefault && !disabled}
-          <button
-            type="button"
-            class="setting-reset-btn"
-            onclick={(e) => {
-              e.stopPropagation()
-              onReset()
-            }}
-            use:islandTooltip={$tStore('common.reset')}
-            aria-label={$tStore('common.reset')}
-          >
-            <RotateCcw size={11} strokeWidth={2.2} />
-          </button>
-        {/if}
-      </div>
-      {#if description}
-        <span class="setting-description">{description}</span>
-      {/if}
-    </div>
-  </div>
-
-  {#if children}
-    <div class="setting-control">
-      {@render children()}
-    </div>
-  {/if}
-</BentoCard>
+  </BentoCard>
+{/if}
 
 <style src="../styles/settings/SettingItem.css"></style>
