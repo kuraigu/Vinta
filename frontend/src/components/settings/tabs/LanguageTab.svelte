@@ -4,10 +4,12 @@
   icons, infer regional defaults, and open the custom translations folder in Explorer.
 -->
 <script lang="ts">
-  import { Languages, FolderOpen, RefreshCw, Check } from 'lucide-svelte'
+  import { Languages, FolderOpen, RefreshCw } from 'lucide-svelte'
   import BentoCard from '../../BentoCard.svelte'
   import SettingItem from '../SettingItem.svelte'
-  import SettingActionButton from '../SettingActionButton.svelte'
+  import SettingActionButton, {
+    type SettingButtonStatus
+  } from '../SettingActionButton.svelte'
   import CustomSelect from '../../CustomSelect.svelte'
   import {
     localeStore,
@@ -17,8 +19,7 @@
     tStore
   } from '../../../store'
 
-  let isReloadingLocales = $state(false)
-  let localesReloaded = $state(false)
+  let reloadStatus = $state<SettingButtonStatus>('idle')
   let reloadTimer: ReturnType<typeof setTimeout> | null = null
 
   let localeOptions = $derived(
@@ -34,16 +35,16 @@
   }
 
   async function handleReloadLocales() {
-    isReloadingLocales = true
+    reloadStatus = 'loading'
     try {
       await loadCustomLocales()
-      localesReloaded = true
+      reloadStatus = 'success'
       if (reloadTimer) clearTimeout(reloadTimer)
       reloadTimer = setTimeout(() => {
-        localesReloaded = false
+        reloadStatus = 'idle'
       }, 2500)
-    } finally {
-      isReloadingLocales = false
+    } catch {
+      reloadStatus = 'error'
     }
   }
 </script>
@@ -55,6 +56,8 @@
       description={$tStore('settings.language_desc')}
       icon={Languages}
       flexCol={true}
+      isDefault={$localeStore === localeStore.defaultValue}
+      onReset={() => localeStore.reset()}
     >
       <CustomSelect
         options={localeOptions}
@@ -80,22 +83,16 @@
         </SettingActionButton>
 
         <SettingActionButton
-          variant={localesReloaded ? 'success' : 'default'}
+          variant="default"
+          status={reloadStatus}
+          successLabel={$tStore('settings.reloaded')}
           fullWidth={true}
-          disabled={isReloadingLocales}
           onclick={handleReloadLocales}
         >
-          {#if localesReloaded}
-            <Check size={13} />
-            {$tStore('settings.reloaded')}
-          {:else}
-            <RefreshCw size={13} class={isReloadingLocales ? 'spinning' : ''} />
-            {$tStore('settings.reload_locales')}
-          {/if}
+          <RefreshCw size={13} />
+          {$tStore('settings.reload_locales')}
         </SettingActionButton>
       </div>
     </SettingItem>
   </BentoCard>
 </div>
-
-<style src="../../styles/settings/LanguageTab.css"></style>

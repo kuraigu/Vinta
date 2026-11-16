@@ -43,24 +43,26 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   background: transparent;
-  border: none;
-  color: var(--vinta-text-secondary, rgba(255, 255, 255, 0.7));
+  border: 1px solid transparent;
+  color: var(--vinta-text-secondary);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .banner-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--vinta-text-primary, #ffffff);
+  background: var(--vinta-contrast-hover);
+  border-color: var(--vinta-border);
+  color: var(--vinta-text-primary);
 }
 
 .banner-btn.active {
-  background: rgba(255, 255, 255, 0.15);
-  color: var(--vinta-text-primary, #ffffff);
+  background: var(--vinta-contrast-bg);
+  border-color: var(--vinta-border);
+  color: var(--vinta-text-primary);
 }
 
 .banner-center-title {
@@ -86,7 +88,7 @@
 
 .banner-title-input:hover,
 .banner-title-input:focus {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--vinta-hover);
 }
 
 .banner-right-group {
@@ -100,18 +102,20 @@
 .banner-color-picker {
   display: flex;
   align-items: center;
-  gap: 5px;
-  background: rgba(0, 0, 0, 0.22);
-  padding: 3px 6px;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 6px;
+  min-height: 32px;
+  background: var(--vinta-contrast-bg);
+  padding: 0 8px;
+  border-radius: var(--vinta-radius-pill, 9999px);
+  border: 1px solid var(--vinta-border);
+  box-sizing: border-box;
 }
 
 .swatch-dot-btn {
-  width: 13px;
-  height: 13px;
+  width: 16px;
+  height: 16px;
   border-radius: 50%;
-  border: 1px solid rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--vinta-border);
   cursor: pointer;
   padding: 0;
   transition: transform 0.15s ease;
@@ -122,33 +126,33 @@
 }
 
 .swatch-dot-btn.selected {
-  outline: 2px solid #ffffff;
+  outline: 2px solid var(--vinta-text-primary);
   outline-offset: 1px;
   transform: scale(1.15);
 }
 
 .dot-yellow {
-  background: #f59e0b;
+  background: var(--vinta-note-yellow);
 }
 
 .dot-green {
-  background: #22c55e;
+  background: var(--vinta-note-green);
 }
 
 .dot-pink {
-  background: #ec4899;
+  background: var(--vinta-note-pink);
 }
 
 .dot-purple {
-  background: #a855f7;
+  background: var(--vinta-note-purple);
 }
 
 .dot-blue {
-  background: #0ea5e9;
+  background: var(--vinta-note-blue);
 }
 
 .dot-charcoal {
-  background: #64748b;
+  background: var(--vinta-note-charcoal);
 }
 
 /* Compact Formatting Toolbar */
@@ -156,10 +160,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 32px;
+  height: 36px;
   padding: 0 12px;
-  background: rgba(0, 0, 0, 0.2);
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--vinta-contrast-bg);
+  border-top: 1px solid var(--vinta-border);
   flex-shrink: 0;
   box-sizing: border-box;
 }
@@ -167,26 +171,27 @@
 .toolbar-actions-group {
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
 }
 
 .tool-action-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
   background: transparent;
-  border: none;
-  color: var(--vinta-text-secondary, rgba(255, 255, 255, 0.65));
+  border: 1px solid transparent;
+  color: var(--vinta-text-secondary);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .tool-action-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--vinta-text-primary, #ffffff);
+  background: var(--vinta-contrast-hover);
+  border-color: var(--vinta-border);
+  color: var(--vinta-text-primary);
 }
 
 .tool-action-btn:active {
@@ -233,8 +238,8 @@
 }
 
 .editor-surface:empty::before {
-  content: 'Take a note...';
-  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.35));
+  content: attr(data-placeholder);
+  color: var(--vinta-text-muted);
   pointer-events: none;
 }
 
@@ -258,7 +263,7 @@
   margin: 8px 0;
   display: block;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--vinta-border);
   user-select: auto;
 }
 
@@ -267,16 +272,16 @@
   position: absolute;
   inset: 0;
   top: 48px;
-  background: rgba(14, 165, 233, 0.2);
+  background: var(--vinta-accent-muted);
   -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
   contain: layout style;
-  border: 2px dashed #0ea5e9;
+  border: 2px dashed var(--vinta-accent-primary);
   border-radius: inherit;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ffffff;
+  color: var(--vinta-text-primary);
   font-weight: 600;
   font-size: 0.9rem;
   z-index: 20;
@@ -360,17 +365,17 @@
 .board-title {
   font-size: 0.88rem;
   font-weight: 700;
-  color: var(--vinta-text-primary, #ffffff);
+  color: var(--vinta-text-primary);
   letter-spacing: -0.01em;
 }
 
 .board-count-pill {
   font-size: 0.65rem;
   font-weight: 600;
-  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.5));
-  background: rgba(255, 255, 255, 0.08);
+  color: var(--vinta-text-muted);
+  background: var(--vinta-contrast-bg);
   padding: 1px 6px;
-  border-radius: 999px;
+  border-radius: var(--vinta-radius-pill, 9999px);
 }
 
 .board-header-right {
@@ -384,32 +389,33 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: var(--vinta-radius-pill, 9999px);
-  background: rgba(255, 255, 255, 0.05);
-  border: none;
-  color: var(--vinta-text-secondary, rgba(255, 255, 255, 0.7));
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--vinta-text-secondary);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .board-action-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: var(--vinta-text-primary, #ffffff);
+  background: var(--vinta-contrast-hover);
+  border-color: var(--vinta-border);
+  color: var(--vinta-text-primary);
   transform: translateY(-1px);
 }
 
 .board-action-btn.new-note-action {
-  background: var(--vinta-primary, #38bdf8);
-  color: #0f172a;
+  background: var(--vinta-primary);
+  color: var(--vinta-text-on-accent);
   border-color: transparent;
   font-weight: 700;
 }
 
 .board-action-btn.new-note-action:hover {
-  background: var(--vinta-primary-hover, var(--vinta-accent-hover, #7dd3fc));
-  color: #0f172a;
+  background: var(--vinta-primary-hover);
+  color: var(--vinta-text-on-accent);
 }
 
 .board-grid-wrapper {
@@ -423,7 +429,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  padding: 0 16px 12px 16px;
+  padding: 4px 16px 12px 16px;
   box-sizing: border-box;
 }
 
@@ -442,7 +448,8 @@
     transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1),
     border-color 0.18s ease,
     box-shadow 0.18s ease,
-    background 0.18s ease;
+    background 0.18s ease,
+    opacity 0.15s ease;
   position: relative;
 }
 
@@ -453,27 +460,38 @@
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
 }
 
+.note-card.is-selected {
+  border-color: var(--vinta-accent-primary);
+  box-shadow: inset 0 0 0 1px var(--vinta-accent-primary);
+  background: var(--vinta-note-card-hover-bg, var(--vinta-hover));
+}
+
+.note-card.is-drag-target {
+  border-color: var(--vinta-accent-primary);
+  border-style: dashed;
+}
+
+.note-card.is-dragging {
+  opacity: 0.45;
+}
+
 .note-card-band {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   height: 8px;
   width: 100%;
   background: var(--vinta-note-band, var(--vinta-note-yellow));
   flex-shrink: 0;
-  position: relative;
 }
 
 .note-card-pin-btn {
   position: absolute;
-  top: 10px;
-  right: 34px;
-  width: 22px;
-  height: 22px;
+  top: 12px;
+  right: 40px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.5);
-  border: none;
-  color: rgba(255, 255, 255, 0.6);
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--vinta-text-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -481,15 +499,23 @@
   opacity: 0;
   transition:
     opacity 0.15s ease,
+    right 0.16s cubic-bezier(0.2, 0.8, 0.2, 1),
     background 0.15s ease,
+    border-color 0.15s ease,
     color 0.15s ease;
   z-index: 5;
 }
 
 .note-card-pin-btn.is-pinned {
   opacity: 1;
-  color: var(--vinta-note-band, var(--vinta-primary, #38bdf8));
-  background: rgba(0, 0, 0, 0.65);
+  right: 8px;
+  color: var(--vinta-note-band, var(--vinta-primary));
+  background: var(--vinta-contrast-bg);
+  border-color: var(--vinta-border);
+}
+
+.note-card:hover .note-card-pin-btn.is-pinned {
+  right: 40px;
 }
 
 .note-card:hover .note-card-pin-btn {
@@ -497,20 +523,21 @@
 }
 
 .note-card-pin-btn:hover {
-  background: rgba(255, 255, 255, 0.16);
-  color: #ffffff;
+  background: var(--vinta-contrast-hover);
+  border-color: var(--vinta-border-light, var(--vinta-border));
+  color: var(--vinta-text-primary);
 }
 
 .note-card-delete-btn {
   position: absolute;
-  top: 10px;
+  top: 12px;
   right: 8px;
-  width: 22px;
-  height: 22px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.5);
-  border: none;
-  color: rgba(255, 255, 255, 0.6);
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--vinta-text-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -519,6 +546,7 @@
   transition:
     opacity 0.15s ease,
     background 0.15s ease,
+    border-color 0.15s ease,
     color 0.15s ease;
   z-index: 5;
 }
@@ -528,8 +556,9 @@
 }
 
 .note-card-delete-btn:hover {
-  background: rgba(239, 68, 68, 0.85);
-  color: #ffffff;
+  background: var(--vinta-accent-danger-hover-bg);
+  color: var(--vinta-accent-danger-hover-text);
+  border-color: var(--vinta-accent-danger);
 }
 
 .note-card-body {
@@ -545,16 +574,22 @@
 .note-card-title {
   font-size: 0.82rem;
   font-weight: 700;
-  color: var(--vinta-text-primary, #ffffff);
+  color: var(--vinta-text-primary);
+  padding-right: 36px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.25;
+  transition: padding-right 0.16s ease;
+}
+
+.note-card:hover .note-card-title {
+  padding-right: 68px;
 }
 
 .note-card-snippet {
   font-size: 0.72rem;
-  color: var(--vinta-text-secondary, rgba(255, 255, 255, 0.65));
+  color: var(--vinta-text-secondary);
   line-height: 1.35;
   margin: 0;
   display: -webkit-box;
@@ -571,14 +606,64 @@
   justify-content: space-between;
   padding: 4px 12px 8px 12px;
   font-size: 0.62rem;
-  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.4));
+  color: var(--vinta-text-muted);
   flex-shrink: 0;
 }
 
 .note-card-has-img {
   display: flex;
   align-items: center;
-  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.5));
+  color: var(--vinta-text-muted);
+}
+
+.notes-bulk-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 16px;
+  background: var(--vinta-surface-elevated, var(--vinta-contrast-bg));
+  border-top: 1px solid var(--vinta-border);
+  flex-shrink: 0;
+}
+
+.bulk-count {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--vinta-text-primary);
+  white-space: nowrap;
+}
+
+.bulk-colors {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bulk-color-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid var(--vinta-border);
+  background: var(--vinta-note-band, var(--vinta-note-yellow));
+  padding: 0;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.bulk-color-dot:hover {
+  transform: scale(1.18);
+}
+
+.bulk-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bulk-delete-btn:hover {
+  background: var(--vinta-accent-danger-hover-bg);
+  color: var(--vinta-accent-danger);
 }
 
 .empty-board-state {
@@ -587,7 +672,7 @@
   align-items: center;
   justify-content: center;
   padding: 48px 24px;
-  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.4));
+  color: var(--vinta-text-muted);
   font-size: 0.85rem;
   gap: 12px;
 }
@@ -598,8 +683,8 @@
   gap: 6px;
   padding: 6px 14px;
   border-radius: 8px;
-  background: var(--vinta-primary, #38bdf8);
-  color: #0f172a;
+  background: var(--vinta-primary);
+  color: var(--vinta-text-on-accent);
   border: none;
   font-size: 0.78rem;
   font-weight: 600;

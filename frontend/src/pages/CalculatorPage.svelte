@@ -380,14 +380,16 @@
   <div
     class="calc-display-card"
     onclick={handleCopyResult}
-    use:islandTooltip={copiedIndicator ? 'Copied!' : 'Click to copy'}
+    use:islandTooltip={copiedIndicator
+      ? $tStore('calculator.copied')
+      : $tStore('calculator.click_to_copy')}
   >
     <div class="display-history-row">
       <span class="history-text">
         {historyFormula}
       </span>
       {#if copiedIndicator}
-        <span class="live-preview-text">Copied</span>
+        <span class="live-preview-text">{$tStore('calculator.copied')}</span>
       {:else if livePreview}
         <span class="live-preview-text">{livePreview}</span>
       {/if}

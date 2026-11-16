@@ -6,6 +6,7 @@
  */
 
 import { writable, get } from 'svelte/store'
+import { Events } from '$lib/events'
 import {
   SetSatelliteBounds,
   RemoveSatellite
@@ -138,9 +139,7 @@ export function unregisterSatellite(id: string) {
   if (typeof RemoveSatellite === 'function') {
     RemoveSatellite(id).catch(() => {})
   }
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('vinta-resync-bounds'))
-  }
+  Events.Emit('vinta:resync-bounds')
 }
 
 /**

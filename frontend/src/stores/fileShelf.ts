@@ -61,7 +61,7 @@ export function ensureDragEventsBound(): void {
   if (dragEventsBound) return
   dragEventsBound = true
 
-  Events.On('fileshelf:drag-over-shelf', (rawEv: unknown) => {
+  Events.OnGlobal('fileshelf:drag-over-shelf', (rawEv: unknown) => {
     const isOver = Boolean(
       typeof rawEv === 'object' && rawEv !== null && 'data' in rawEv
         ? (rawEv as { data: unknown }).data
@@ -73,7 +73,7 @@ export function ensureDragEventsBound(): void {
     }))
   })
 
-  Events.On('fileshelf:drag-ended', (rawEv: unknown) => {
+  Events.OnGlobal('fileshelf:drag-ended', (rawEv: unknown) => {
     fileShelfStore.update((s) => ({
       ...s,
       isDraggingOut: false,

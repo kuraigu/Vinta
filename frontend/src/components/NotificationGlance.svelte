@@ -11,9 +11,7 @@
     tStore,
     type IslandConfig
   } from '../store'
-  import NotificationPage, {
-    config as notifConfig
-  } from '../pages/NotificationPage.svelte'
+  import Notification, { config as notifConfig } from './Notification.svelte'
   import {
     nativeIconsStore,
     parseAumid,
@@ -65,7 +63,7 @@
     if (e) e.stopPropagation()
     if (!$pageVisibilityStore.notifications) return
     if (navigate) {
-      navigate(NotificationPage, notifConfig, true)
+      navigate(Notification, notifConfig, true)
     }
   }
 

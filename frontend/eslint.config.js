@@ -34,7 +34,7 @@ export default ts.config(
               name: '@wailsio/runtime',
               importNames: ['Events'],
               message:
-                "Import { Events } from '$lib/utils/events' instead so listeners auto-unsubscribe on unmount."
+                "Import { Events } from '$lib/events' instead so listeners auto-unsubscribe on unmount."
             }
           ]
         }

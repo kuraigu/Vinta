@@ -40,10 +40,8 @@
   box-shadow: var(--island-box-shadow, var(--vinta-island-shadow));
 
   transition:
-    filter 0.4s ease,
-    box-shadow 0.4s ease,
-    border-color 0.3s ease,
-    --island-border-color 0.3s ease,
+    box-shadow 0.15s ease,
+    border-color 0.2s ease,
     width var(--island-anim),
     height var(--island-anim),
     border-radius var(--island-anim);
@@ -335,6 +333,7 @@
   border-radius: inherit;
   overflow: hidden;
   position: relative;
+  contain: layout style;
   transition: opacity 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 

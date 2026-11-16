@@ -71,20 +71,18 @@
   transform: scale(0.995);
 }
 
-/* Seamless Full-Bleed Hero on WeatherPage (Screenshot 1 Reference) */
+/* Rounded Hero Card on WeatherPage */
 .weather-banner-card.variant-page {
   cursor: default;
-  border-radius: 0;
+  border-radius: var(--vinta-radius-card, 14px);
   box-shadow: none;
-  border: none;
+  border: 1px solid var(--vinta-border-light, var(--vinta-border));
   background: transparent;
-  margin-left: -14px;
-  margin-right: -14px;
-  margin-top: -2px;
-  margin-bottom: -4px;
-  width: calc(100% + 28px);
-  padding: 8px 18px 14px 18px;
-  min-height: 120px;
+  overflow: hidden;
+  margin: 0;
+  width: 100%;
+  padding: 14px 18px;
+  min-height: 112px;
 }
 
 .banner-top-layout {
@@ -115,7 +113,7 @@
   align-items: center;
   justify-content: flex-end;
   flex: 0 0 120px;
-  height: 95px;
+  height: 100px;
 }
 
 .weather-art-wrap {
@@ -435,18 +433,17 @@
   flex-direction: column;
   width: 100%;
   height: 100%;
-  padding: 42px 14px 12px 14px;
+  padding: var(--vinta-dock-clearance, 56px) 14px 10px 14px;
   box-sizing: border-box;
   overflow: hidden;
   user-select: none;
-  color: var(--vinta-text-primary, #ffffff);
+  color: var(--vinta-text-primary);
   position: relative;
 }
 
 :global(.weather-page-layout .vinta-page-header) {
   position: relative;
   z-index: 5;
-  margin-bottom: 2px;
   flex-shrink: 0;
 }
 
@@ -461,6 +458,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  padding-bottom: 4px;
   width: 100%;
   box-sizing: border-box;
 }
@@ -478,7 +476,7 @@
   font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: uppercase;
-  color: var(--vinta-text-muted, #94a3b8);
+  color: var(--vinta-text-muted);
   padding-left: 2px;
 }
 
@@ -502,13 +500,14 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  color: var(--vinta-text-muted, #94a3b8);
+  color: var(--vinta-text-muted);
 }
 
 .forecast-days-strip {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: space-between;
+  gap: 4px;
   width: 100%;
   box-sizing: border-box;
 }
@@ -517,15 +516,27 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   flex: 1;
   min-width: 0;
-  padding: 4px 0;
+  padding: 6px 4px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
   box-sizing: border-box;
-  transition: transform 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.forecast-col.is-today {
+  background: var(--vinta-contrast-bg);
+  border-color: var(--vinta-border-light, var(--vinta-border));
 }
 
 .forecast-col:hover {
+  background: var(--vinta-contrast-hover);
   transform: translateY(-1px);
 }
 
@@ -546,18 +557,10 @@
   transform: scale(1.12);
 }
 
-.forecast-col-divider {
-  width: 1px;
-  height: 44px;
-  background: rgba(255, 255, 255, 0.08);
-  flex-shrink: 0;
-  align-self: center;
-}
-
 .fc-day-title {
   font-size: 11px;
   font-weight: 700;
-  color: var(--vinta-text-secondary, #cbd5e1);
+  color: var(--vinta-text-secondary);
 }
 
 .fc-temp-split {
@@ -570,19 +573,19 @@
 .fc-max {
   font-size: 12px;
   font-weight: 700;
-  color: var(--vinta-text-primary, #ffffff);
+  color: var(--vinta-text-primary);
 }
 
 .fc-min {
   font-size: 10px;
   font-weight: 500;
-  color: var(--vinta-text-muted, #94a3b8);
+  color: var(--vinta-text-muted);
 }
 
 /* Standardized Bento Metrics Grid */
 .bento-metrics-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
   width: 100%;
   box-sizing: border-box;
@@ -594,17 +597,17 @@
   gap: 6px;
   font-size: 11px;
   font-weight: 600;
-  color: var(--vinta-text-muted, #94a3b8);
+  color: var(--vinta-text-muted);
 }
 
 .tile-head-icon {
-  color: var(--vinta-text-muted, #94a3b8);
+  color: var(--vinta-text-muted);
   flex-shrink: 0;
   transition: color 0.15s ease;
 }
 
 .forecast-bento-card:hover .tile-head-icon {
-  color: var(--vinta-text-primary, #ffffff);
+  color: var(--vinta-text-primary);
 }
 
 .tile-body {
@@ -619,7 +622,7 @@
   font-weight: 800;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
-  color: var(--vinta-text-primary, #ffffff);
+  color: var(--vinta-text-primary);
   line-height: 1;
 }
 
@@ -631,14 +634,14 @@
 .tile-val-unit {
   font-size: 11px;
   font-weight: 600;
-  color: var(--vinta-text-secondary, #cbd5e1);
+  color: var(--vinta-text-secondary);
   line-height: 1;
 }
 
 .tile-sub {
   font-size: 10.5px;
   font-weight: 500;
-  color: var(--vinta-text-muted, #94a3b8);
+  color: var(--vinta-text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -649,7 +652,7 @@
   align-items: center;
   justify-content: center;
   min-height: 180px;
-  color: var(--vinta-text-muted, #94a3b8);
+  color: var(--vinta-text-muted);
   font-size: 13px;
 }
 

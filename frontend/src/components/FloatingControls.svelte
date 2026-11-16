@@ -10,6 +10,8 @@
   import DockButton from './DockButton.svelte'
   import {
     hasCompletedOnboardingStore,
+    wakeMethodStore,
+    globalHotkeyStore,
     tStore,
     type IslandConfig
   } from '../store'
@@ -32,6 +34,13 @@
   let isOnboarding = $derived(
     !$hasCompletedOnboardingStore || activePage === OnboardingPage
   )
+
+  let wakeHint = $derived.by(() => {
+    const hotkey = $globalHotkeyStore || 'Alt+Shift+V'
+    return $wakeMethodStore === 'hover'
+      ? $tStore('controls.wake_hover_hint', { hotkey })
+      : $tStore('controls.wake_hotkey_hint', { hotkey })
+  })
 </script>
 
 <div
@@ -57,6 +66,7 @@
     <DockButton
       shape="rounded"
       tooltip={isOnboarding ? '' : $tStore('controls.hide')}
+      tooltipSubtitle={isOnboarding ? undefined : wakeHint}
       tooltipPosition={expandedTooltipSide}
       disabled={isOnboarding}
       onclick={(e: MouseEvent) => AppControls.doHide(navigate, hidePill, e)}
@@ -64,6 +74,8 @@
       <EyeOff size={13.5} strokeWidth={2.2} />
     </DockButton>
   </div>
+
+  <div class="controls-divider" aria-hidden="true"></div>
 
   <div class="button-wrapper">
     <DockButton

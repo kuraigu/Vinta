@@ -108,7 +108,7 @@
 }
 
 .about-pill-badge.channel.official {
-  color: var(--vinta-status-success, #4ade80);
+  color: var(--vinta-accent-success, #4ade80);
 }
 
 .about-pill-badge.channel.dev {
@@ -134,11 +134,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
   padding: 4px 2px 0 2px;
   font-size: 12.5px;
   font-weight: 700;
   color: var(--vinta-text-secondary);
   letter-spacing: -0.01em;
+  text-align: left;
 }
 
 .contributor-row {
@@ -207,6 +210,9 @@
   font-weight: 600;
   color: var(--vinta-accent-primary);
   text-decoration: none;
+  text-align: right;
+  white-space: nowrap;
+  flex-shrink: 0;
   transition: opacity 0.15s ease;
 }
 

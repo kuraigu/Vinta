@@ -61,20 +61,18 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
   background: none;
   border: none;
-  padding: 0;
+  padding: 2px 0 2px 2px;
   cursor: pointer;
   color: var(--vinta-text-muted);
-  border-radius: 50%;
-  transition: all 0.15s ease;
+  transition:
+    color 0.15s ease,
+    transform 0.15s ease;
 }
 
 .glance-nav-btn:hover {
   color: var(--vinta-text-primary);
-  background: var(--vinta-contrast-hover, rgba(255, 255, 255, 0.08));
 }
 
 :global(.glance-nav-chevron) {
@@ -136,4 +134,8 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+:global([data-widget-size='2x2']) .glance-agenda-container {
+  max-height: 220px;
 }

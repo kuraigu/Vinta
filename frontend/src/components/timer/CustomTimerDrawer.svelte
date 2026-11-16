@@ -4,8 +4,8 @@
   minutes, and seconds pickers.
 -->
 <script lang="ts">
-  import { X, Check } from 'lucide-svelte'
-  import { islandTooltip } from '../../services/islandTooltip'
+  import { Check } from 'lucide-svelte'
+  import DrawerPanel from '../DrawerPanel.svelte'
 
   interface Props {
     isOpen: boolean
@@ -116,18 +116,12 @@
 </script>
 
 {#if isOpen}
-  <div class="drawer-overlay">
-    <div class="drawer-header">
-      <span class="drawer-title">Custom Duration</span>
-      <button
-        class="header-tool-btn"
-        onclick={onClose}
-        use:islandTooltip={'Close'}
-      >
-        <X size={15} />
-      </button>
-    </div>
-
+  <DrawerPanel
+    title="Custom Duration"
+    variant="overlay"
+    closeTooltip="Close"
+    {onClose}
+  >
     <div class="drawer-content">
       <div class="drawer-row">
         <span class="drawer-row-label">Hours</span>
@@ -220,7 +214,7 @@
         <span>Set Duration</span>
       </button>
     </div>
-  </div>
+  </DrawerPanel>
 {/if}
 
 <style src="../../pages/styles/TimerPage.css"></style>

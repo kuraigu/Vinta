@@ -6,8 +6,10 @@
 -->
 <script lang="ts">
   import { slide } from 'svelte/transition'
+  import { Events } from '$lib/events'
   import { ChevronDown, Search } from 'lucide-svelte'
   import FlagIcon from './FlagIcon.svelte'
+  import { portal, getUiScale } from '../utils/portal'
   import { tStore } from '../store'
 
   export interface SelectOption {
@@ -145,30 +147,21 @@
     open: boolean,
     rect?: { x: number; y: number; w: number; h: number }
   ) {
-    window.dispatchEvent(
-      new CustomEvent('vinta-overlay', {
-        detail: open ? { open, ...rect } : { open }
-      })
-    )
+    Events.Emit('vinta:overlay', open ? { open, ...rect } : { open })
   }
 
   let selectedOption = $derived(options.find((o) => o.value === value))
   let selectedLabel = $derived(selectedOption?.label || value || placeholder)
 
-  function portal(node: HTMLElement) {
-    document.body.appendChild(node)
-    updateRect()
-    // Read the actual rendered position+size of the dropdown and tell App.svelte
-    const r = node.getBoundingClientRect()
-    notifyOverlay(true, { x: r.left, y: r.top, w: r.width, h: r.height })
-    return {
-      destroy() {
-        notifyOverlay(false)
-        if (node.parentElement) {
-          node.parentElement.removeChild(node)
-        }
-      }
-    }
+  function mountSelectPortal(node: HTMLElement) {
+    return portal(node, {
+      onMount: () => {
+        updateRect()
+        const r = node.getBoundingClientRect()
+        notifyOverlay(true, { x: r.left, y: r.top, w: r.width, h: r.height })
+      },
+      onDestroy: () => notifyOverlay(false)
+    })
   }
 
   function clickOutside(node: HTMLElement) {
@@ -235,25 +228,27 @@
       {#if selectedOption?.flag}
         <FlagIcon code={selectedOption.flag} size={14} />
       {/if}
-      <span class="label" title={selectedLabel}>{selectedLabel}</span>
+      <span class="label">{selectedLabel}</span>
     </div>
     <ChevronDown size={14} class="chevron {isOpen ? 'open' : ''}" />
   </button>
 
   {#if isOpen}
+    {@const uiScale = getUiScale()}
     <div
-      use:portal
+      use:mountSelectPortal
       use:clickOutside
       class="select-dropdown portaled no-swipe"
       transition:slide={{ duration: 120 }}
       style="
         position: fixed;
-        left: {dropdownRect.left}px;
-        width: {dropdownRect.width}px;
+        zoom: {uiScale};
+        left: {dropdownRect.left / uiScale}px;
+        width: {dropdownRect.width / uiScale}px;
         {dropdownRect.dropUp
-        ? `bottom: ${window.innerHeight - dropdownRect.top}px;`
-        : `top: ${dropdownRect.top}px;`}
-        max-height: {dropdownRect.maxHeight}px;
+        ? `bottom: ${(window.innerHeight - dropdownRect.top) / uiScale}px;`
+        : `top: ${dropdownRect.top / uiScale}px;`}
+        max-height: {dropdownRect.maxHeight / uiScale}px;
         z-index: 999999;
       "
       onwheel={stopPropagation}
@@ -301,193 +296,4 @@
   {/if}
 </div>
 
-<style>
-  .custom-select-wrapper {
-    position: relative;
-    display: inline-block;
-    width: auto;
-    pointer-events: auto;
-  }
-
-  .custom-select-wrapper.full-width {
-    width: 100%;
-  }
-
-  .select-trigger {
-    background: var(--vinta-contrast-bg, rgba(0, 0, 0, 0.3));
-    color: var(--vinta-text-primary);
-    border: 1px solid var(--vinta-border);
-    padding: 6px 10px;
-    border-radius: 6px;
-    font-size: 0.8rem;
-    font-weight: 500;
-    outline: none;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    justify-content: space-between;
-    min-width: 140px;
-    width: 100%;
-    box-sizing: border-box;
-    transition:
-      border-color 0.2s,
-      background-color 0.2s;
-    pointer-events: auto;
-  }
-
-  :global([data-theme='light']) .select-trigger {
-    background: rgba(255, 255, 255, 0.85);
-  }
-
-  .select-trigger:focus,
-  .custom-select-wrapper:focus-within .select-trigger,
-  .select-trigger:hover {
-    border-color: var(--vinta-primary);
-  }
-
-  .trigger-content {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-    overflow: hidden;
-    flex: 1;
-  }
-
-  .label {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    text-align: left;
-    flex: 1;
-  }
-
-  :global(.chevron) {
-    transition: transform 0.2s ease;
-    flex-shrink: 0;
-  }
-
-  :global(.chevron.open) {
-    transform: rotate(180deg);
-  }
-
-  :global(.select-dropdown.portaled) {
-    pointer-events: auto !important;
-    user-select: auto;
-    max-height: 220px;
-    background: var(--vinta-bg);
-    border: 1px solid var(--vinta-border);
-    border-radius: 8px;
-    z-index: 999999;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-    display: flex;
-    flex-direction: column;
-    padding: 6px;
-    box-sizing: border-box;
-  }
-
-  :global(.search-input-box) {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background: var(--vinta-item-bg, rgba(255, 255, 255, 0.05));
-    border: 1px solid var(--vinta-border);
-    border-radius: 6px;
-    padding: 4px 8px;
-    margin-bottom: 6px;
-    flex-shrink: 0;
-  }
-
-  :global(.search-icon) {
-    color: var(--vinta-text-muted);
-    flex-shrink: 0;
-  }
-
-  :global(.search-field) {
-    flex: 1;
-    background: transparent;
-    border: none;
-    outline: none;
-    color: var(--vinta-text-primary);
-    font-size: 0.78rem;
-    width: 100%;
-  }
-
-  :global(.options-scroll-container) {
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    flex: 1;
-    min-height: 0;
-  }
-
-  :global(.options-scroll-container::-webkit-scrollbar) {
-    width: 4px;
-  }
-  :global(.options-scroll-container::-webkit-scrollbar-track) {
-    background: transparent;
-  }
-  :global(.options-scroll-container::-webkit-scrollbar-thumb) {
-    background: var(--vinta-border);
-    border-radius: 4px;
-  }
-
-  :global(.no-options) {
-    padding: 8px;
-    font-size: 0.78rem;
-    color: var(--vinta-text-muted);
-    text-align: center;
-  }
-
-  .option-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: transparent;
-    border: none;
-    color: var(--vinta-text-secondary);
-    padding: 6px 10px;
-    text-align: left;
-    font-size: 0.8rem;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    flex-shrink: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    pointer-events: auto;
-  }
-
-  .option-label {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    flex: 1;
-  }
-
-  .option-default-tag {
-    font-size: 9px;
-    font-weight: 600;
-    padding: 1px 5px;
-    border-radius: 4px;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid var(--vinta-border);
-    color: var(--vinta-text-muted);
-    flex-shrink: 0;
-    letter-spacing: 0.01em;
-  }
-
-  .option-item:hover {
-    background: var(--vinta-hover);
-    color: var(--vinta-text-primary);
-  }
-
-  .option-item.selected {
-    background: var(--vinta-item-bg);
-    color: var(--vinta-primary);
-    font-weight: 600;
-  }
-</style>
+<style src="./styles/CustomSelect.css"></style>

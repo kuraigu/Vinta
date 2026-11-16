@@ -17,30 +17,34 @@
 
 .spotlight-scroll-track {
   position: relative;
-  display: flex;
   width: 100%;
-  gap: 10px;
-  padding: 2px 20px 0;
+  height: 66px;
   box-sizing: border-box;
   cursor: grab;
   touch-action: pan-y;
-  will-change: transform;
 }
 
 .spotlight-scroll-track:active {
   cursor: grabbing;
 }
 
-.spotlight-card {
+.spotlight-stage {
   position: relative;
+  width: calc(100% - 36px);
+  height: 100%;
+  margin: 0 auto;
+}
+
+.spotlight-card {
+  position: absolute;
+  inset: 2px 0 0 0;
+  width: 100%;
+  height: calc(100% - 2px);
   overflow: hidden;
-  flex: 0 0 calc(100% - 28px);
-  max-width: calc(100% - 28px);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 10px 14px;
-  min-height: 58px;
   box-sizing: border-box;
   border-radius: var(--vinta-radius-card, 14px);
   background: var(--vinta-item-bg, rgba(255, 255, 255, 0.03));
@@ -50,20 +54,20 @@
   text-align: left;
   font: inherit;
   color: inherit;
-  transition:
-    background 0.18s ease,
-    border-color 0.18s ease,
-    transform 0.15s ease;
+  will-change: transform;
+}
+
+.spotlight-card.is-side {
+  opacity: 0.68;
+}
+
+.spotlight-card.is-side:hover {
+  opacity: 0.92;
 }
 
 .spotlight-card:hover {
-  background: var(--vinta-contrast-hover, rgba(255, 255, 255, 0.055));
-  border-color: rgba(255, 255, 255, 0.14);
-  transform: translateY(-1px);
-}
-
-.spotlight-card:active {
-  transform: translateY(0);
+  background: var(--vinta-contrast-hover);
+  border-color: var(--vinta-border-light);
 }
 
 .spotlight-card:focus-visible {

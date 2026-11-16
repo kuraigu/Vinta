@@ -5,7 +5,7 @@
   justify-content: stretch;
   gap: 0;
   width: 32px;
-  height: 88px;
+  height: 95px;
   background: var(--vinta-dock-popover-bg);
   border: none;
   border-radius: 12px;
@@ -42,6 +42,14 @@
 .floating-controls .button-wrapper:last-child {
   height: 29px;
   flex: 0 0 29px;
+}
+
+.controls-divider {
+  width: 18px;
+  height: 1px;
+  margin: 3px auto;
+  background: var(--vinta-border, rgba(255, 255, 255, 0.12));
+  flex-shrink: 0;
 }
 
 .floating-controls .button-wrapper:first-child :global(.dock-btn) {

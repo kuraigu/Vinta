@@ -18,25 +18,26 @@
 
   import { onMount, onDestroy, getContext } from 'svelte'
   import Calendar from '../components/Calendar.svelte'
-  import CalendarGlance from '../components/CalendarGlance.svelte'
   import Weather from '../components/Weather.svelte'
-  import WeatherGlance from '../components/WeatherGlance.svelte'
   import DeviceStatusWidget from '../components/DeviceStatusWidget.svelte'
-  import ActionCenterGlance from '../components/ActionCenterGlance.svelte'
-  import SystemStats from '../components/SystemStats.svelte'
-  import NotificationGlance from '../components/NotificationGlance.svelte'
   import UpdateGlanceCard from '../components/UpdateGlanceCard.svelte'
-  import SpotlightCarousel from '../components/SpotlightCarousel.svelte'
-  import AnnouncementGlance from '../components/AnnouncementGlance.svelte'
-  import BentoCard from '../components/BentoCard.svelte'
+  import SpotlightWidget from '../components/widgets/SpotlightWidget.svelte'
+  import WeatherWidget from '../components/widgets/WeatherWidget.svelte'
+  import MediaGlanceWidget from '../components/widgets/MediaGlanceWidget.svelte'
+  import BriefFeedWidget from '../components/widgets/BriefFeedWidget.svelte'
+  import SystemStatsWidget from '../components/widgets/SystemStatsWidget.svelte'
+  import ActionCenterWidget from '../components/widgets/ActionCenterWidget.svelte'
+  import CustomContextMenu, {
+    type ContextMenuItem
+  } from '../components/CustomContextMenu.svelte'
   import ScrollView from '../components/ScrollView.svelte'
   import CalendarPage, { config as calendarConfig } from './CalendarPage.svelte'
   import SettingsPage, { config as settingsConfig } from './SettingsPage.svelte'
-  import AnnouncementsPage, {
-    config as announcementsConfig
-  } from './AnnouncementsPage.svelte'
   import {
     homeWidgetsVisibilityStore,
+    homeWidgetSizesStore,
+    homeWidgetMenuEnabledStore,
+    type WidgetSizePreset,
     homeMeasuredHeightStore,
     userNameStore,
     timeFormatStore,
@@ -111,13 +112,92 @@
     }
   }
 
+  const openOverlay =
+    getContext<
+      (
+        overlay: 'notifications' | 'apps' | null,
+        opts?: { tab?: 'notifications' | 'announcements' | 'releases' }
+      ) => void
+    >('openOverlay')
+
   /**
-   * Navigates the island viewport to the Developer Announcements feed.
+   * Opens the Developer Announcements tab inside NotificationsOverlayPage.
    */
   function openAnnouncementsPage() {
-    if (navigate) {
-      navigate(AnnouncementsPage, announcementsConfig, true)
+    if (typeof openOverlay === 'function') {
+      openOverlay('notifications', { tab: 'announcements' })
     }
+  }
+
+  const WIDGET_SUPPORTED_SIZES: Record<string, WidgetSizePreset[]> = {
+    brief: ['2x1', '2x2'],
+    media: ['1x1', '2x1', '2x2'],
+    actionCenter: ['1x1', '2x1'],
+    systemStats: ['1x1', '2x1', '2x2']
+  }
+
+  let ctxOpen = $state(false)
+  let ctxCoords = $state({ x: 0, y: 0 })
+  let ctxWidgetId = $state<string | null>(null)
+
+  function getWidgetSize(id: string): WidgetSizePreset {
+    const allowed = WIDGET_SUPPORTED_SIZES[id] || ['2x1']
+    const saved = $homeWidgetSizesStore?.[id]
+    if (saved && allowed.includes(saved)) {
+      return saved
+    }
+    return allowed[0]
+  }
+
+  function setWidgetSize(id: string, size: WidgetSizePreset) {
+    homeWidgetSizesStore.update((prev) => ({
+      ...prev,
+      [id]: size
+    }))
+  }
+
+  function handleWidgetContextMenu(e: MouseEvent, widgetId: string) {
+    if (!$homeWidgetMenuEnabledStore) return
+    e.preventDefault()
+    e.stopPropagation()
+    if (ctxOpen && ctxWidgetId === widgetId && e.type !== 'contextmenu') {
+      ctxOpen = false
+      return
+    }
+    ctxCoords = { x: e.clientX, y: e.clientY }
+    ctxWidgetId = widgetId
+    ctxOpen = true
+  }
+
+  function getWidgetContextMenuItems(): ContextMenuItem[] {
+    const id = ctxWidgetId
+    if (!id) return []
+    const currentSize = getWidgetSize(id)
+    const allowed = WIDGET_SUPPORTED_SIZES[id] || ['2x1']
+    const sizeLabels: Record<WidgetSizePreset, string> = {
+      '1x1': $tStore('home.widget_size_1x1'),
+      '2x1': $tStore('home.widget_size_2x1'),
+      '2x2': $tStore('home.widget_size_2x2')
+    }
+    const items: ContextMenuItem[] = allowed.map((sz) => ({
+      label: `${currentSize === sz ? '• ' : ''}${sizeLabels[sz]}`,
+      action: () => setWidgetSize(id, sz)
+    }))
+    if (id !== 'brief') {
+      items.push(
+        { label: '', action: () => {}, divider: true },
+        {
+          label: $tStore('home.widget_hide'),
+          action: () => {
+            homeWidgetsVisibilityStore.update((vis) => ({
+              ...vis,
+              [id]: false
+            }))
+          }
+        }
+      )
+    }
+    return items
   }
 
   interface Props {
@@ -343,7 +423,7 @@
         <div class="social-feed-container" bind:this={feedContainerEl}>
           {#if $homeWidgetsVisibilityStore.weather}
             <!-- Full-Bleed Weather Hero Header (Background for Salutation + User + Time) -->
-            <WeatherGlance
+            <WeatherWidget
               salutation={salutationText}
               userName={displayName}
               timeText={$homeWidgetsVisibilityStore.clock
@@ -384,49 +464,49 @@
           <!-- Spotlight Promotional Carousel (Issue #201) -->
           {#if $homeWidgetsVisibilityStore.spotlight !== false}
             <section class="spotlight-card-feed">
-              <SpotlightCarousel />
+              <SpotlightWidget />
             </section>
           {/if}
 
-          <!-- Grouped Brief Card: Announcements, Notifications & Calendar Agenda -->
-          {#if $homeWidgetsVisibilityStore.announcements !== false || hasStandardNotifications || $homeWidgetsVisibilityStore.calendar}
-            <BentoCard variant="group" class="home-feed-group">
-              {#if $homeWidgetsVisibilityStore.announcements !== false}
-                <section class="announcements-card-feed">
-                  <AnnouncementGlance onClick={openAnnouncementsPage} />
-                </section>
-              {/if}
+          <!-- Modular Bento Widget Grid -->
+          <div class="home-widgets-bento">
+            {#if $homeWidgetsVisibilityStore.media !== false}
+              <MediaGlanceWidget
+                size={getWidgetSize('media')}
+                showMenuButton={$homeWidgetMenuEnabledStore}
+                oncontextmenu={(e) => handleWidgetContextMenu(e, 'media')}
+              />
+            {/if}
 
-              {#if hasStandardNotifications}
-                <section class="notification-card-feed">
-                  <NotificationGlance />
-                </section>
-              {/if}
+            <BriefFeedWidget
+              showAnnouncements={$homeWidgetsVisibilityStore.announcements !==
+                false}
+              showNotifications={hasStandardNotifications}
+              showCalendar={$homeWidgetsVisibilityStore.calendar}
+              size={getWidgetSize('brief')}
+              showMenuButton={$homeWidgetMenuEnabledStore}
+              onOpenAnnouncements={openAnnouncementsPage}
+              onOpenCalendar={openCalendar}
+              oncontextmenu={(e) => handleWidgetContextMenu(e, 'brief')}
+            />
 
-              {#if $homeWidgetsVisibilityStore.calendar}
-                <section class="calendar-card-feed">
-                  <CalendarGlance onOpenCalendar={openCalendar} />
-                </section>
-              {/if}
-            </BentoCard>
-          {/if}
+            {#if $homeWidgetsVisibilityStore.actionCenter}
+              <ActionCenterWidget
+                size={getWidgetSize('actionCenter')}
+                showMenuButton={$homeWidgetMenuEnabledStore}
+                oncontextmenu={(e) =>
+                  handleWidgetContextMenu(e, 'actionCenter')}
+              />
+            {/if}
 
-          <!-- Grouped System Controls Card: Quick Controls & Hardware Stats -->
-          {#if $homeWidgetsVisibilityStore.actionCenter || $homeWidgetsVisibilityStore.systemStats}
-            <BentoCard variant="group" class="home-feed-group">
-              {#if $homeWidgetsVisibilityStore.actionCenter}
-                <section class="glance-card-feed">
-                  <ActionCenterGlance />
-                </section>
-              {/if}
-
-              {#if $homeWidgetsVisibilityStore.systemStats}
-                <section class="glance-card-feed">
-                  <SystemStats expanded={true} />
-                </section>
-              {/if}
-            </BentoCard>
-          {/if}
+            {#if $homeWidgetsVisibilityStore.systemStats}
+              <SystemStatsWidget
+                size={getWidgetSize('systemStats')}
+                showMenuButton={$homeWidgetMenuEnabledStore}
+                oncontextmenu={(e) => handleWidgetContextMenu(e, 'systemStats')}
+              />
+            {/if}
+          </div>
 
           <!-- Studio Branding Footer -->
           <footer class="home-brand-footer">
@@ -436,6 +516,17 @@
         </div>
       </ScrollView>
     </div>
+  {/if}
+
+  {#if ctxOpen}
+    <CustomContextMenu
+      x={ctxCoords.x}
+      y={ctxCoords.y}
+      items={getWidgetContextMenuItems()}
+      onclose={() => {
+        ctxOpen = false
+      }}
+    />
   {/if}
 </div>
 

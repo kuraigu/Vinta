@@ -55,8 +55,6 @@ if "%~1"=="build-frontend" (
 
 if "%~1"=="dev" (
     if "%~2"=="frontend" (
-        call :generate_bindings
-        if errorlevel 1 exit /b !ERRORLEVEL!
         pushd "%~dp0frontend"
         call npm run dev -- --port 9245 --strictPort
         set "ERR=!ERRORLEVEL!"

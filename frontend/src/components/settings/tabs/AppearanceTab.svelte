@@ -16,10 +16,12 @@
     RefreshCw,
     Info,
     ChevronDown,
-    Scale
+    Scale,
+    Gauge
   } from 'lucide-svelte'
   import BentoCard from '../../BentoCard.svelte'
   import CustomSelect from '../../CustomSelect.svelte'
+  import SegmentedControl from '../../SegmentedControl.svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingSlider from '../SettingSlider.svelte'
   import {
@@ -29,6 +31,10 @@
     opacityMinimalStore,
     opacityExpandedStore,
     uiScaleStore,
+    animScaleStore,
+    monitorUiScalesStore,
+    getMonitorScaleKey,
+    getMaxScaleForMonitor,
     displayLayoutStore,
     tStore
   } from '../../../store'
@@ -88,7 +94,9 @@
   const themeOptions = $derived(
     availableThemes.length > 0
       ? availableThemes.map((t) => ({
-          label: t.manifest.name + (t.isBuiltIn ? '' : ' (Custom)'),
+          label:
+            t.manifest.name +
+            (t.isBuiltIn ? '' : $tStore('appearance.custom_suffix')),
           value: t.manifest.id
         }))
       : [
@@ -98,51 +106,99 @@
         ]
   )
 
-  const glowIntensityOptions = [
-    { label: 'Disabled', value: 'disabled' },
-    { label: 'Subtle', value: 'subtle' },
-    { label: 'Vibrant Glow', value: 'vibrant' }
-  ]
+  const glowIntensityOptions = $derived([
+    { label: $tStore('appearance.glow_disabled'), value: 'disabled' },
+    { label: $tStore('appearance.glow_subtle'), value: 'subtle' },
+    { label: $tStore('appearance.glow_vibrant'), value: 'vibrant' }
+  ])
 
   const currentMonitor = $derived($displayLayoutStore.currentMonitor)
   const monitorHeight = $derived(currentMonitor?.height || 1080)
   const monitorWidth = $derived(currentMonitor?.width || 1920)
+  const monitorDpi = $derived(
+    currentMonitor?.dpiScale && currentMonitor.dpiScale > 0
+      ? currentMonitor.dpiScale
+      : 1.0
+  )
+  const monitorKey = $derived(getMonitorScaleKey(currentMonitor))
 
   const maxAllowedScale = $derived(
-    monitorHeight <= 900 ? 1.1 : monitorHeight <= 1080 ? 1.2 : 1.25
+    getMaxScaleForMonitor(monitorWidth, monitorHeight, monitorDpi)
   )
 
   const uiScaleOptions = $derived([
     { label: '100% (1.0x)', value: '1', isDefault: true },
     {
       label:
-        monitorHeight <= 900 ? '110% (1.1x - Max for display)' : '110% (1.1x)',
+        maxAllowedScale <= 1.1
+          ? $tStore('appearance.scale_max', { pct: 110, scale: '1.1' })
+          : '110% (1.1x)',
       value: '1.1'
     },
     ...(maxAllowedScale >= 1.2
       ? [
           {
             label:
-              monitorHeight <= 1080
-                ? '120% (1.2x - Max for 1080p)'
+              maxAllowedScale <= 1.2
+                ? $tStore('appearance.scale_max', { pct: 120, scale: '1.2' })
                 : '120% (1.2x)',
             value: '1.2'
           }
         ]
       : []),
     ...(maxAllowedScale >= 1.25
-      ? [{ label: '125% (1.25x - Large)', value: '1.25' }]
+      ? [{ label: $tStore('appearance.scale_large'), value: '1.25' }]
+      : []),
+    ...(maxAllowedScale >= 1.5
+      ? [
+          {
+            label:
+              maxAllowedScale <= 1.5
+                ? $tStore('appearance.scale_max', { pct: 150, scale: '1.5' })
+                : '150% (1.5x)',
+            value: '1.5'
+          }
+        ]
+      : []),
+    ...(maxAllowedScale >= 1.75
+      ? [{ label: $tStore('appearance.scale_xl'), value: '1.75' }]
+      : []),
+    ...(maxAllowedScale >= 2.0
+      ? [{ label: '200% (2.0x - 4K)', value: '2' }]
       : [])
   ])
 
-  let selectedScale = $state(String($uiScaleStore || 1.0))
+  const activeMonitorScale = $derived.by(() => {
+    const perMonitor = $monitorUiScalesStore?.[monitorKey]
+    if (typeof perMonitor === 'number' && perMonitor >= 1.0) {
+      return perMonitor
+    }
+    return currentMonitor?.isPrimary ? $uiScaleStore || 1.0 : 1.0
+  })
+
+  let selectedScale = $state('1')
+  let lastSyncedMonitorKey = ''
+
+  function syncScaleFromMonitor() {
+    if (monitorKey !== lastSyncedMonitorKey) {
+      lastSyncedMonitorKey = monitorKey
+      selectedScale = String(activeMonitorScale)
+    }
+  }
+  $effect(syncScaleFromMonitor)
 
   function handleScaleEffect() {
     const val = parseFloat(selectedScale)
     if (!isNaN(val) && val >= 1.0) {
       const clamped = Math.max(1.0, Math.min(maxAllowedScale, val))
-      if ($uiScaleStore !== clamped) {
-        $uiScaleStore = clamped
+      if (activeMonitorScale !== clamped) {
+        monitorUiScalesStore.update((prev) => ({
+          ...prev,
+          [monitorKey]: clamped
+        }))
+        if (currentMonitor?.isPrimary && $uiScaleStore !== clamped) {
+          $uiScaleStore = clamped
+        }
       }
     }
   }
@@ -152,8 +208,8 @@
 <div class="setting-group">
   <BentoCard variant="group">
     <SettingItem
-      label="Display Name"
-      description="Personalizes the greeting on the Home feed"
+      label={$tStore('appearance.user_label')}
+      description={$tStore('appearance.user_desc')}
       icon={User}
       flexCol={true}
       isDefault={$userNameStore === userNameStore.defaultValue}
@@ -163,7 +219,7 @@
         <input
           type="text"
           class="text-input"
-          placeholder="User"
+          placeholder={$tStore('appearance.user_placeholder')}
           bind:value={$userNameStore}
           maxlength="20"
           onblur={() => {
@@ -250,7 +306,9 @@
                       >{currentTheme.manifest.mode || 'dark'}</span
                     >
                     {#if !currentTheme.isBuiltIn}
-                      <span class="badge custom">Custom</span>
+                      <span class="badge custom"
+                        >{$tStore('appearance.custom_badge')}</span
+                      >
                     {/if}
                   </div>
                 </div>
@@ -263,7 +321,9 @@
 
                 {#if currentTheme.manifest.accentColor}
                   <div class="details-accent">
-                    <span class="accent-label">Accent</span>
+                    <span class="accent-label"
+                      >{$tStore('appearance.accent_label')}</span
+                    >
                     <span
                       class="accent-preview-pill"
                       style="background-color: {currentTheme.manifest
@@ -284,8 +344,8 @@
 
   <BentoCard variant="group">
     <SettingItem
-      label="Ambient Glow Intensity"
-      description="Edge glow accents around the dynamic island"
+      label={$tStore('appearance.glow_label')}
+      description={$tStore('appearance.glow_desc')}
       icon={Sparkles}
       flexCol={true}
       isDefault={$glowIntensityStore === glowIntensityStore.defaultValue}
@@ -301,14 +361,21 @@
     </SettingItem>
 
     <SettingItem
-      label="UI Scale"
-      description="Proportionally scales the island interface (Display: {monitorWidth}×{monitorHeight})"
+      label={$tStore('appearance.scale_label')}
+      description={`${$tStore('appearance.scale_desc')} (${monitorWidth}×${monitorHeight} · ${Math.round(monitorDpi * 100)}%)`}
       icon={Scale}
       flexCol={true}
-      isDefault={$uiScaleStore === uiScaleStore.defaultValue}
+      isDefault={activeMonitorScale === 1.0}
       onReset={() => {
         selectedScale = '1'
-        uiScaleStore.reset()
+        monitorUiScalesStore.update((prev) => {
+          const next = { ...prev }
+          delete next[monitorKey]
+          return next
+        })
+        if (currentMonitor?.isPrimary) {
+          uiScaleStore.reset()
+        }
       }}
     >
       <CustomSelect
@@ -323,8 +390,8 @@
 
   <BentoCard variant="group">
     <SettingItem
-      label="Compact Opacity"
-      description="Background opacity when collapsed"
+      label={$tStore('appearance.opacity_minimal_label')}
+      description={$tStore('appearance.opacity_minimal_desc')}
       icon={Eye}
       flexCol={true}
       isDefault={$opacityMinimalStore === opacityMinimalStore.defaultValue}
@@ -340,8 +407,8 @@
     </SettingItem>
 
     <SettingItem
-      label="Expanded Opacity"
-      description="Background opacity when expanded"
+      label={$tStore('appearance.opacity_expanded_label')}
+      description={$tStore('appearance.opacity_expanded_desc')}
       icon={Maximize2}
       flexCol={true}
       isDefault={$opacityExpandedStore === opacityExpandedStore.defaultValue}
@@ -353,6 +420,30 @@
         step={0.05}
         defaultValue={opacityExpandedStore.defaultValue}
         bind:value={$opacityExpandedStore}
+      />
+    </SettingItem>
+
+    <SettingItem
+      label={$tStore('appearance.anim_scale_label')}
+      description={$tStore('appearance.anim_scale_desc')}
+      icon={Gauge}
+      flexCol={true}
+      isDefault={$animScaleStore === animScaleStore.defaultValue}
+      onReset={() => animScaleStore.reset()}
+    >
+      <SegmentedControl
+        fullWidth={true}
+        options={[
+          { value: '0', label: $tStore('appearance.anim_off') },
+          { value: '0.7', label: $tStore('appearance.anim_snappy') },
+          { value: '1', label: $tStore('appearance.anim_default') },
+          { value: '1.3', label: $tStore('appearance.anim_smooth') },
+          { value: '1.65', label: $tStore('appearance.anim_relaxed') }
+        ]}
+        value={String($animScaleStore)}
+        onchange={(val) => {
+          $animScaleStore = parseFloat(val)
+        }}
       />
     </SettingItem>
   </BentoCard>

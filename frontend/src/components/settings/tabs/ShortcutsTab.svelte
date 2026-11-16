@@ -27,7 +27,8 @@
   import {
     globalHotkeyStore,
     quickNotesHotkeyStore,
-    modeSwitchHotkeyStore
+    modeSwitchHotkeyStore,
+    tStore
   } from '../../../store'
 
   type ShortcutDef = {
@@ -39,32 +40,29 @@
     icon: any
   }
 
-  const SHORTCUT_DEFS: ShortcutDef[] = [
+  const SHORTCUT_DEFS: ShortcutDef[] = $derived([
     {
       id: 'toggle',
-      label: 'Toggle Dynamic Island',
-      description:
-        'Summons or dismisses the home dashboard from any window or game',
+      label: $tStore('settings.shortcut_toggle_label'),
+      description: $tStore('settings.shortcut_toggle_desc'),
       defaultKey: 'Alt+Shift+V',
       icon: Keyboard
     },
     {
       id: 'quick_notes',
-      label: 'Quick Note Summon',
-      description:
-        'Instantly opens and focuses Quick Notes over your active workspace',
+      label: $tStore('settings.shortcut_notes_label'),
+      description: $tStore('settings.shortcut_notes_desc'),
       defaultKey: 'Alt+Shift+N',
       icon: FileText
     },
     {
       id: 'mode_switch',
-      label: 'Island Mode Switch',
-      description:
-        'Switches between compact pill and expanded dashboard without hiding',
+      label: $tStore('settings.shortcut_mode_label'),
+      description: $tStore('settings.shortcut_mode_desc'),
       defaultKey: 'Alt+Shift+D',
       icon: Sliders
     }
-  ]
+  ])
 
   const SYSTEM_RESERVED_SHORTCUTS: Record<string, string> = {
     'SUPER+L': 'Lock Computer',
@@ -139,11 +137,15 @@
     const normalized = accel.toUpperCase()
 
     if (SYSTEM_RESERVED_SHORTCUTS[normalized]) {
-      return `Warning: Conflicts with Windows shortcut (${SYSTEM_RESERVED_SHORTCUTS[normalized]})`
+      return $tStore('settings.shortcut_warn_windows', {
+        name: SYSTEM_RESERVED_SHORTCUTS[normalized]
+      })
     }
 
     if (COMMON_APP_COLLISIONS[normalized]) {
-      return `Warning: Conflicts with ${COMMON_APP_COLLISIONS[normalized]}`
+      return $tStore('settings.shortcut_warn_app', {
+        name: COMMON_APP_COLLISIONS[normalized]
+      })
     }
 
     if (
@@ -151,21 +153,27 @@
       $globalHotkeyStore &&
       $globalHotkeyStore.toUpperCase() === normalized
     ) {
-      return 'Warning: Already assigned to Toggle Dynamic Island'
+      return $tStore('settings.shortcut_warn_assigned', {
+        name: $tStore('settings.shortcut_toggle_label')
+      })
     }
     if (
       currentId !== 'quick_notes' &&
       $quickNotesHotkeyStore &&
       $quickNotesHotkeyStore.toUpperCase() === normalized
     ) {
-      return 'Warning: Already assigned to Quick Note Summon'
+      return $tStore('settings.shortcut_warn_assigned', {
+        name: $tStore('settings.shortcut_notes_label')
+      })
     }
     if (
       currentId !== 'mode_switch' &&
       $modeSwitchHotkeyStore &&
       $modeSwitchHotkeyStore.toUpperCase() === normalized
     ) {
-      return 'Warning: Already assigned to Island Mode Switch'
+      return $tStore('settings.shortcut_warn_assigned', {
+        name: $tStore('settings.shortcut_mode_label')
+      })
     }
 
     return null
@@ -186,7 +194,10 @@
           await UnregisterNamedGlobalShortcut(id)
         }
         setShortcutValue(id, '')
-        statusMessages = { ...statusMessages, [id]: 'Shortcut unassigned' }
+        statusMessages = {
+          ...statusMessages,
+          [id]: $tStore('settings.shortcut_msg_unassigned')
+        }
         statusTypes = { ...statusTypes, [id]: 'info' }
         return
       }
@@ -206,7 +217,7 @@
           if (!collisionWarning) {
             statusMessages = {
               ...statusMessages,
-              [id]: 'Shortcut registered successfully'
+              [id]: $tStore('settings.shortcut_msg_registered')
             }
             statusTypes = { ...statusTypes, [id]: 'success' }
           }
@@ -216,7 +227,7 @@
         } else {
           statusMessages = {
             ...statusMessages,
-            [id]: 'Combination reserved or rejected by system'
+            [id]: $tStore('settings.shortcut_msg_rejected')
           }
           statusTypes = { ...statusTypes, [id]: 'error' }
         }
@@ -297,7 +308,7 @@
       if (mods.length === 0) {
         statusMessages = {
           ...statusMessages,
-          [currentTargetId]: 'Shortcut must include Ctrl, Alt, or Shift'
+          [currentTargetId]: $tStore('settings.shortcut_err_modifier')
         }
         statusTypes = { ...statusTypes, [currentTargetId]: 'error' }
         return
@@ -351,8 +362,8 @@
   <SettingBanner
     variant="blue"
     icon={ShieldCheck}
-    title="System Isolation"
-    description="In-app navigation keys only activate when the Island is focused, preventing conflicts with other apps and games."
+    title={$tStore('settings.shortcut_isolation_title')}
+    description={$tStore('settings.shortcut_isolation_desc')}
   />
 
   <div class="divider"></div>
@@ -360,7 +371,7 @@
   <!-- Global Shortcuts Section -->
   <div class="section-header">
     <div class="section-title">
-      <span>Global Shortcuts</span>
+      <span>{$tStore('settings.shortcut_global_section')}</span>
     </div>
   </div>
 
@@ -393,7 +404,9 @@
                 startListening(sc.id)
               }
             }}
-            aria-label={`Rebind ${sc.label}`}
+            aria-label={$tStore('settings.shortcut_rebind_aria', {
+              label: sc.label
+            })}
           >
             {#if isCurrentListening}
               <span class="listening-indicator">
@@ -407,16 +420,16 @@
                       {/if}
                     {/each}
                     <span class="key-plus">+</span>
-                    <span>Press key...</span>
+                    <span>{$tStore('settings.shortcut_press_key')}</span>
                   </span>
                 {:else}
-                  <span>Press keys...</span>
+                  <span>{$tStore('settings.shortcut_press_keys')}</span>
                 {/if}
               </span>
             {:else if isFlash}
               <span class="listening-indicator" style="color: #4ade80;">
                 <Check size={13} />
-                <span>Saved</span>
+                <span>{$tStore('settings.shortcut_saved')}</span>
               </span>
             {:else if keyCaps.length > 0}
               <span class="key-caps-list">
@@ -428,7 +441,9 @@
                 {/each}
               </span>
             {:else}
-              <span class="unassigned-label">Not Bound</span>
+              <span class="unassigned-label"
+                >{$tStore('settings.shortcut_not_bound')}</span
+              >
             {/if}
           </button>
 
@@ -436,9 +451,14 @@
             <button
               type="button"
               class="keybind-action-btn danger"
-              use:islandTooltip={{ text: 'Unbind Shortcut', position: 'top' }}
+              use:islandTooltip={{
+                text: $tStore('settings.shortcut_unbind'),
+                position: 'top'
+              }}
               onclick={() => void applyShortcut(sc.id, '')}
-              aria-label={`Unbind ${sc.label}`}
+              aria-label={$tStore('settings.shortcut_unbind_aria', {
+                label: sc.label
+              })}
             >
               <X size={14} />
             </button>
@@ -449,11 +469,15 @@
               type="button"
               class="keybind-action-btn"
               use:islandTooltip={{
-                text: `Reset to ${sc.defaultKey}`,
+                text: $tStore('settings.shortcut_reset_to', {
+                  key: sc.defaultKey
+                }),
                 position: 'top'
               }}
               onclick={() => void applyShortcut(sc.id, sc.defaultKey)}
-              aria-label={`Reset ${sc.label}`}
+              aria-label={$tStore('settings.shortcut_reset_aria', {
+                label: sc.label
+              })}
             >
               <RotateCcw size={13} />
             </button>
@@ -479,14 +503,14 @@
   <!-- Island Navigation Section -->
   <div class="section-header">
     <div class="section-title">
-      <span>Island Navigation</span>
+      <span>{$tStore('settings.shortcut_nav_section')}</span>
     </div>
   </div>
 
   <BentoCard variant="group">
     <SettingItem
-      label="Dismiss / Minimize Island"
-      description="Minimizes an expanded dashboard, closes active modal, or returns to home"
+      label={$tStore('settings.shortcut_nav_dismiss')}
+      description={$tStore('settings.shortcut_nav_dismiss_desc')}
       icon={Keyboard}
     >
       <div class="shortcut-keys">
@@ -495,8 +519,8 @@
     </SettingItem>
 
     <SettingItem
-      label="Cycle Widgets & Controls"
-      description="Moves keyboard focus between widgets, dock apps, and the satellite controls"
+      label={$tStore('settings.shortcut_nav_cycle_widgets')}
+      description={$tStore('settings.shortcut_nav_cycle_widgets_desc')}
       icon={Layers}
     >
       <div class="shortcut-keys">
@@ -508,20 +532,20 @@
     </SettingItem>
 
     <SettingItem
-      label="Activate / Toggle Playback"
-      description="Activates focused element or toggles active media player playback"
+      label={$tStore('settings.shortcut_nav_activate')}
+      description={$tStore('settings.shortcut_nav_activate_desc')}
       icon={CornerDownLeft}
     >
       <div class="shortcut-keys">
         <kbd class="key-badge">Space</kbd>
-        <span class="key-separator">or</span>
+        <span class="key-separator">{$tStore('settings.shortcut_nav_or')}</span>
         <kbd class="key-badge">Enter</kbd>
       </div>
     </SettingItem>
 
     <SettingItem
-      label="Cycle Island Gallery"
-      description="Navigates between widget cards in expanded gallery carousel"
+      label={$tStore('settings.shortcut_nav_gallery')}
+      description={$tStore('settings.shortcut_nav_gallery_desc')}
       icon={ArrowLeftRight}
     >
       <div class="shortcut-keys">

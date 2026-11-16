@@ -10,6 +10,7 @@ package backend
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	goruntime "runtime"
@@ -27,6 +28,8 @@ import (
 
 var (
 	user32                       = syscall.NewLazyDLL("user32.dll")
+	shcore                       = syscall.NewLazyDLL("shcore.dll")
+	procGetDpiForMonitor         = shcore.NewProc("GetDpiForMonitor")
 	procGetWindowLong            = user32.NewProc("GetWindowLongW")
 	procSetWindowLong            = user32.NewProc("SetWindowLongW")
 	procFindWindow               = user32.NewProc("FindWindowW")
@@ -46,6 +49,7 @@ var (
 	procIsIconic                 = user32.NewProc("IsIconic")
 	procGetAncestor              = user32.NewProc("GetAncestor")
 	procGetCursorPos             = user32.NewProc("GetCursorPos")
+	procGetCursorInfo            = user32.NewProc("GetCursorInfo")
 	procScreenToClient           = user32.NewProc("ScreenToClient")
 	procIsWindow                 = user32.NewProc("IsWindow")
 	procSetWindowRgn             = user32.NewProc("SetWindowRgn")
@@ -237,16 +241,17 @@ type monitorInfoW struct {
 	DwFlags   uint32
 }
 
-// MonitorInfo holds physical display bounds and orientation flags.
+// MonitorInfo holds physical display bounds, orientation flags, and Windows DPI scale.
 type MonitorInfo struct {
-	ID         int    `json:"id"`
-	Name       string `json:"name"`
-	Left       int    `json:"left"`
-	Top        int    `json:"top"`
-	Width      int    `json:"width"`
-	Height     int    `json:"height"`
-	IsPrimary  bool   `json:"isPrimary"`
-	IsPortrait bool   `json:"isPortrait"`
+	ID         int     `json:"id"`
+	Name       string  `json:"name"`
+	Left       int     `json:"left"`
+	Top        int     `json:"top"`
+	Width      int     `json:"width"`
+	Height     int     `json:"height"`
+	IsPrimary  bool    `json:"isPrimary"`
+	IsPortrait bool    `json:"isPortrait"`
+	DpiScale   float64 `json:"dpiScale"`
 }
 
 // DisplayLayout represents the combined virtual desktop and all connected monitors.
@@ -411,17 +416,109 @@ func (a *App) monitorTargetOffset(m MonitorInfo, vLeft, pCenter int) int {
 
 // ComputeOverlayHeight returns the virtual overlay height covering the lowest monitor top edge.
 func ComputeOverlayHeight(vTop, vHeight int, monitors []MonitorInfo) int {
+	return ComputeOverlayHeightForScale(vTop, vHeight, monitors, 1.0, 1.0)
+}
+
+// ComputeOverlayHeightForScale returns the virtual overlay height scaled for the active UI scale
+// and display DPI, capped below vHeight so Windows never treats the overlay as fullscreen exclusive.
+func ComputeOverlayHeightForScale(vTop, vHeight int, monitors []MonitorInfo, uiScale, windowDpr float64) int {
 	maxTopOffset := 0
 	for _, mon := range monitors {
 		if offset := mon.Top - vTop; offset > maxTopOffset {
 			maxTopOffset = offset
 		}
 	}
-	overlayHeight := maxTopOffset + 680
+	if uiScale < 1.0 {
+		uiScale = 1.0
+	}
+	if windowDpr <= 0 {
+		windowDpr = 1.0
+	}
+	effectiveDpr := windowDpr
+	if uiScale <= 1.0 {
+		for _, mon := range monitors {
+			if mon.DpiScale > effectiveDpr {
+				effectiveDpr = mon.DpiScale
+			}
+		}
+	}
+	scaledHeight := int(math.Ceil(960.0 * uiScale * effectiveDpr))
+	overlayHeight := maxTopOffset + scaledHeight
 	if vHeight > 0 && overlayHeight >= vHeight {
 		overlayHeight = vHeight - 1
 	}
 	return overlayHeight
+}
+
+// SetUIScale updates the active UI scale and resizes the Win32 overlay height proportionally
+// so scaled pages are never clipped by the bottom edge of the WebView2 window.
+func (a *App) SetUIScale(scale float64) {
+	if scale < 1.0 {
+		scale = 1.0
+	}
+
+	a.pillHitMu.Lock()
+	if math.Abs(a.uiScale-scale) < 0.001 && a.overlayHeight > 0 {
+		a.pillHitMu.Unlock()
+		return
+	}
+	a.uiScale = scale
+	a.pillHitMu.Unlock()
+
+	a.resizeOverlayHeight(0)
+}
+
+func (a *App) ensureOverlayHeight(minHeight int) {
+	if minHeight <= 0 {
+		return
+	}
+	a.pillHitMu.RLock()
+	currHeight := a.overlayHeight
+	a.pillHitMu.RUnlock()
+	if currHeight > 0 && minHeight <= currHeight {
+		return
+	}
+	a.resizeOverlayHeight(minHeight)
+}
+
+func (a *App) resizeOverlayHeight(minHeight int) {
+	vintaHwnd := a.getHwnd()
+	if vintaHwnd == 0 {
+		return
+	}
+
+	vLeft, vTop, vWidth, vHeight, _, monitors := GetDisplayMetrics()
+	a.pillHitMu.RLock()
+	uiScale := a.uiScale
+	currHeight := a.overlayHeight
+	a.pillHitMu.RUnlock()
+
+	overlayHeight := ComputeOverlayHeightForScale(vTop, vHeight, monitors, uiScale, a.effectiveScale())
+	if minHeight > overlayHeight {
+		overlayHeight = minHeight
+		if vHeight > 0 && overlayHeight >= vHeight {
+			overlayHeight = vHeight - 1
+		}
+	}
+	if overlayHeight == currHeight {
+		return
+	}
+
+	targetW := vWidth
+	if targetW <= 0 {
+		targetW = 1920
+	}
+
+	a.pillHitMu.Lock()
+	a.overlayHeight = overlayHeight
+	a.pillHitMu.Unlock()
+
+	const swpNoZOrder = 0x0004
+	_, _, _ = procSetWindowPos.Call(
+		vintaHwnd, 0,
+		uintptr(vLeft), uintptr(vTop), uintptr(targetW), uintptr(overlayHeight),
+		swpNoZOrder|SWP_NOACTIVATE,
+	)
 }
 
 // InvalidateDisplayCache clears the cached display metrics so the next query re-enumerates monitors.
@@ -497,7 +594,7 @@ func GetDisplayMetrics() (vLeft, vTop, vWidth, vHeight, pCenter int, monitors []
 	if len(monitors) == 0 {
 		monitors = []MonitorInfo{{
 			ID: 1, Name: "Primary Display", Width: primaryW, Height: vHeight,
-			IsPrimary: true, IsPortrait: vHeight > primaryW,
+			IsPrimary: true, IsPortrait: vHeight > primaryW, DpiScale: 1.0,
 		}}
 	}
 
@@ -524,7 +621,7 @@ func resolveCurrentMonitor(screenCenterX int, monitors []MonitorInfo) MonitorInf
 	if len(monitors) > 0 {
 		return monitors[0]
 	}
-	return MonitorInfo{ID: 1, Name: "Primary Display", Width: 1920, Height: 1080, IsPrimary: true}
+	return MonitorInfo{ID: 1, Name: "Primary Display", Width: 1920, Height: 1080, IsPrimary: true, DpiScale: 1.0}
 }
 
 // getMyWindowHwnd finds and caches the HWND for Vinta when Wails native handle lookup is unavailable.
@@ -738,6 +835,18 @@ func getEnumSnipCallback() uintptr {
 	return cbEnumSnipPtr
 }
 
+func getMonitorDpiScale(hMonitor uintptr) float64 {
+	if hMonitor != 0 && procGetDpiForMonitor.Find() == nil {
+		var dpiX, dpiY uint32
+		// MDT_EFFECTIVE_DPI = 0
+		ret, _, _ := procGetDpiForMonitor.Call(hMonitor, 0, uintptr(unsafe.Pointer(&dpiX)), uintptr(unsafe.Pointer(&dpiY)))
+		if ret == 0 && dpiX > 0 {
+			return float64(dpiX) / 96.0
+		}
+	}
+	return 1.0
+}
+
 func getEnumMonitorsCallback() uintptr {
 	cbEnumMonitorsOnce.Do(func() {
 		cbEnumMonitorsPtr = syscall.NewCallback(func(hMonitor, _, _, _ uintptr) uintptr {
@@ -751,6 +860,7 @@ func getEnumMonitorsCallback() uintptr {
 					ID: enumMonitorsID, Name: fmt.Sprintf("Display %d", enumMonitorsID),
 					Left: int(mi.RcMonitor.Left), Top: int(mi.RcMonitor.Top),
 					Width: w, Height: h, IsPrimary: (mi.DwFlags & 1) != 0, IsPortrait: h > w,
+					DpiScale: getMonitorDpiScale(hMonitor),
 				})
 			}
 			return 1
@@ -901,7 +1011,13 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 			lastVLeft, lastVTop, lastVWidth, lastVHeight = vLeft, vTop, vWidth, vHeight
 			lastMonitorCount = len(monitors)
 			lastMonitorsSig = currSig
-			overlayHeight := ComputeOverlayHeight(vTop, vHeight, monitors)
+			a.pillHitMu.RLock()
+			uiScale := a.uiScale
+			a.pillHitMu.RUnlock()
+			overlayHeight := ComputeOverlayHeightForScale(vTop, vHeight, monitors, uiScale, a.effectiveScale())
+			a.pillHitMu.Lock()
+			a.overlayHeight = overlayHeight
+			a.pillHitMu.Unlock()
 			targetW := vWidth
 			if targetW <= 0 {
 				targetW = 1920
@@ -1022,10 +1138,10 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 			switch {
 			case ret == 0 && qState == QUNS_PRESENTATION_MODE:
 				hideRes, reasonRes = true, "presentation_mode"
-			case (hasExclusiveDisplayOwnership() || (ret == 0 && qState == QUNS_RUNNING_D3D_FULL_SCREEN)) && isFramelessOrPopup:
-				hideRes, reasonRes = true, "exclusive_fullscreen"
 			case isUnsupportedGame:
 				hideRes, reasonRes = true, "unsupported_app"
+			case (hasExclusiveDisplayOwnership() || (ret == 0 && qState == QUNS_RUNNING_D3D_FULL_SCREEN)) && isFramelessOrPopup:
+				hideRes, reasonRes = true, "exclusive_fullscreen"
 			case isFramelessOrPopup && hideBorderless:
 				hideRes, reasonRes = true, "borderless_fullscreen"
 			default:

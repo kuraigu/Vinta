@@ -8,10 +8,7 @@
   import BentoCard from './BentoCard.svelte'
   import IconBadge from './IconBadge.svelte'
   import { getReleaseNotes } from '../services/announcementsService'
-  import ReleaseNotesPage, {
-    config as releaseNotesConfig
-  } from '../pages/ReleaseNotesPage.svelte'
-  import { appInfoStore, tStore, type IslandConfig } from '../store'
+  import { appInfoStore, tStore } from '../store'
 
   let {
     onClick
@@ -19,10 +16,13 @@
     onClick?: () => void
   } = $props()
 
-  const navigate =
+  const openOverlay =
     getContext<
-      (page: unknown, pageConfig: IslandConfig, expand?: boolean) => void
-    >('navigate')
+      (
+        overlay: 'notifications' | 'apps' | null,
+        opts?: { tab?: 'notifications' | 'announcements' | 'releases' }
+      ) => void
+    >('openOverlay')
 
   let rawNotes = $state('')
 
@@ -113,8 +113,8 @@
   function handleOpen() {
     if (onClick) {
       onClick()
-    } else if (typeof navigate === 'function') {
-      navigate(ReleaseNotesPage, releaseNotesConfig, true)
+    } else if (typeof openOverlay === 'function') {
+      openOverlay('notifications', { tab: 'releases' })
     }
   }
 </script>

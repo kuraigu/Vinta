@@ -286,7 +286,7 @@ export class HitRect {
 }
 
 /**
- * MonitorInfo holds physical display bounds and orientation flags.
+ * MonitorInfo holds physical display bounds, orientation flags, and Windows DPI scale.
  */
 export class MonitorInfo {
     "id": number;
@@ -297,6 +297,7 @@ export class MonitorInfo {
     "height": number;
     "isPrimary": boolean;
     "isPortrait": boolean;
+    "dpiScale": number;
 
     /** Creates a new MonitorInfo instance. */
     constructor($$source: Partial<MonitorInfo> = {}) {
@@ -323,6 +324,9 @@ export class MonitorInfo {
         }
         if (!("isPortrait" in $$source)) {
             this["isPortrait"] = false;
+        }
+        if (!("dpiScale" in $$source)) {
+            this["dpiScale"] = 0;
         }
 
         Object.assign(this, $$source);
