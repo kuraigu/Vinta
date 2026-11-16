@@ -54,13 +54,13 @@
 }
 
 .banner-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--vinta-text-primary, #ffffff);
+  background: var(--vinta-hover);
+  color: var(--vinta-text-primary);
 }
 
 .banner-btn.active {
-  background: rgba(255, 255, 255, 0.15);
-  color: var(--vinta-text-primary, #ffffff);
+  background: var(--vinta-contrast-bg);
+  color: var(--vinta-text-primary);
 }
 
 .banner-center-title {
@@ -86,7 +86,7 @@
 
 .banner-title-input:hover,
 .banner-title-input:focus {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--vinta-hover);
 }
 
 .banner-right-group {
@@ -101,17 +101,17 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  background: rgba(0, 0, 0, 0.22);
+  background: var(--vinta-contrast-bg);
   padding: 3px 6px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--vinta-border);
 }
 
 .swatch-dot-btn {
   width: 13px;
   height: 13px;
   border-radius: 50%;
-  border: 1px solid rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--vinta-border);
   cursor: pointer;
   padding: 0;
   transition: transform 0.15s ease;
@@ -122,33 +122,33 @@
 }
 
 .swatch-dot-btn.selected {
-  outline: 2px solid #ffffff;
+  outline: 2px solid var(--vinta-text-primary);
   outline-offset: 1px;
   transform: scale(1.15);
 }
 
 .dot-yellow {
-  background: #f59e0b;
+  background: var(--vinta-note-yellow);
 }
 
 .dot-green {
-  background: #22c55e;
+  background: var(--vinta-note-green);
 }
 
 .dot-pink {
-  background: #ec4899;
+  background: var(--vinta-note-pink);
 }
 
 .dot-purple {
-  background: #a855f7;
+  background: var(--vinta-note-purple);
 }
 
 .dot-blue {
-  background: #0ea5e9;
+  background: var(--vinta-note-blue);
 }
 
 .dot-charcoal {
-  background: #64748b;
+  background: var(--vinta-note-charcoal);
 }
 
 /* Compact Formatting Toolbar */
@@ -233,8 +233,8 @@
 }
 
 .editor-surface:empty::before {
-  content: 'Take a note...';
-  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.35));
+  content: attr(data-placeholder);
+  color: var(--vinta-text-muted);
   pointer-events: none;
 }
 
@@ -267,16 +267,16 @@
   position: absolute;
   inset: 0;
   top: 48px;
-  background: rgba(14, 165, 233, 0.2);
+  background: var(--vinta-accent-muted);
   -webkit-backdrop-filter: blur(4px);
   backdrop-filter: blur(4px);
   contain: layout style;
-  border: 2px dashed #0ea5e9;
+  border: 2px dashed var(--vinta-accent-primary);
   border-radius: inherit;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ffffff;
+  color: var(--vinta-text-primary);
   font-weight: 600;
   font-size: 0.9rem;
   z-index: 20;
@@ -395,21 +395,21 @@
 }
 
 .board-action-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: var(--vinta-text-primary, #ffffff);
+  background: var(--vinta-hover);
+  color: var(--vinta-text-primary);
   transform: translateY(-1px);
 }
 
 .board-action-btn.new-note-action {
-  background: var(--vinta-primary, #38bdf8);
-  color: #0f172a;
+  background: var(--vinta-primary);
+  color: var(--vinta-text-on-accent);
   border-color: transparent;
   font-weight: 700;
 }
 
 .board-action-btn.new-note-action:hover {
-  background: var(--vinta-primary-hover, var(--vinta-accent-hover, #7dd3fc));
-  color: #0f172a;
+  background: var(--vinta-primary-hover);
+  color: var(--vinta-text-on-accent);
 }
 
 .board-grid-wrapper {
@@ -471,9 +471,9 @@
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.5);
-  border: none;
-  color: rgba(255, 255, 255, 0.6);
+  background: var(--vinta-contrast-bg);
+  border: 1px solid var(--vinta-border);
+  color: var(--vinta-text-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -488,8 +488,8 @@
 
 .note-card-pin-btn.is-pinned {
   opacity: 1;
-  color: var(--vinta-note-band, var(--vinta-primary, #38bdf8));
-  background: rgba(0, 0, 0, 0.65);
+  color: var(--vinta-note-band, var(--vinta-primary));
+  background: var(--vinta-contrast-bg);
 }
 
 .note-card:hover .note-card-pin-btn {
@@ -497,8 +497,8 @@
 }
 
 .note-card-pin-btn:hover {
-  background: rgba(255, 255, 255, 0.16);
-  color: #ffffff;
+  background: var(--vinta-contrast-hover);
+  color: var(--vinta-text-primary);
 }
 
 .note-card-delete-btn {
@@ -508,9 +508,9 @@
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.5);
-  border: none;
-  color: rgba(255, 255, 255, 0.6);
+  background: var(--vinta-contrast-bg);
+  border: 1px solid var(--vinta-border);
+  color: var(--vinta-text-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -528,8 +528,9 @@
 }
 
 .note-card-delete-btn:hover {
-  background: rgba(239, 68, 68, 0.85);
-  color: #ffffff;
+  background: var(--vinta-accent-danger-hover-bg);
+  color: var(--vinta-accent-danger-hover-text);
+  border-color: var(--vinta-accent-danger);
 }
 
 .note-card-body {

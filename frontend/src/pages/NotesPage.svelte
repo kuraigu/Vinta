@@ -41,11 +41,18 @@
     Underline,
     Strikethrough,
     Pin,
+    Pencil,
+    Copy,
+    CopyPlus,
     Image as ImageIcon
   } from 'lucide-svelte'
   import BackButton from '../components/BackButton.svelte'
   import SearchInput from '../components/SearchInput.svelte'
   import ScrollView from '../components/ScrollView.svelte'
+  import CustomContextMenu, {
+    type ContextMenuItem
+  } from '../components/CustomContextMenu.svelte'
+  import { buildTextEditMenuItems } from '../utils/textContextMenu'
   import { islandTooltip } from '../services/islandTooltip'
   import { tStore } from '../store'
   import {
@@ -67,7 +74,14 @@
   let renameTimer: ReturnType<typeof setTimeout> | null = null
 
   let editorRef = $state<HTMLDivElement | null>(null)
+  let titleInputRef = $state<HTMLInputElement | null>(null)
   let fileInputRef = $state<HTMLInputElement | null>(null)
+  let noteCtxMenu = $state<{ x: number; y: number; index: number } | null>(null)
+  let textCtxMenu = $state<{
+    x: number
+    y: number
+    items: ContextMenuItem[]
+  } | null>(null)
 
   const colorPaletteCycle: StickyColor[] = [
     'yellow',
@@ -186,13 +200,14 @@
    */
   function createNewNote() {
     const existingTitles = new Set(notes.map((n) => n.title.toLowerCase()))
-    let newTitle = 'Untitled'
-    if (existingTitles.has('untitled')) {
+    const baseUntitled = $tStore('notes.untitled')
+    let newTitle = baseUntitled
+    if (existingTitles.has(baseUntitled.toLowerCase())) {
       let counter = 2
-      while (existingTitles.has(`untitled (${counter})`)) {
+      while (existingTitles.has(`${baseUntitled.toLowerCase()} (${counter})`)) {
         counter++
       }
-      newTitle = `Untitled (${counter})`
+      newTitle = `${baseUntitled} (${counter})`
     }
 
     const nextColor = colorPaletteCycle[notes.length % colorPaletteCycle.length]
@@ -268,7 +283,7 @@
     if (renameTimer) clearTimeout(renameTimer)
     renameTimer = setTimeout(async () => {
       if (!activeNote) return
-      const cleanTitle = activeNote.title.trim() || 'Untitled'
+      const cleanTitle = activeNote.title.trim() || $tStore('notes.untitled')
       try {
         const updatedFileName = await RenameNote(
           activeNote.fileName,
@@ -512,8 +527,8 @@
    * @param e - Mouse event.
    * @param idx - Index of note to remove.
    */
-  async function deleteNoteByIndex(e: MouseEvent, idx: number) {
-    e.stopPropagation()
+  async function deleteNoteByIndex(e: MouseEvent | null, idx: number) {
+    if (e) e.stopPropagation()
     const target = notes[idx]
     if (!target) return
     notes = notes.filter((_, i) => i !== idx)
@@ -528,19 +543,139 @@
   }
 
   /**
+   * Opens a note in the editor and focuses its title field for renaming.
+   */
+  async function renameNoteByIndex(idx: number) {
+    if (!notes[idx]) return
+    openNoteEditor(idx)
+    await tick()
+    titleInputRef?.focus()
+    titleInputRef?.select()
+  }
+
+  /**
+   * Duplicates a note with a unique copy title and persists it to disk.
+   */
+  function duplicateNoteByIndex(idx: number) {
+    const source = notes[idx]
+    if (!source) return
+    const existingTitles = new Set(notes.map((n) => n.title.toLowerCase()))
+    const copyWord = $tStore('notes.copy_suffix')
+    const baseName = `${source.title || $tStore('notes.untitled')} (${copyWord})`
+    let copyTitle = baseName
+    let counter = 2
+    while (existingTitles.has(copyTitle.toLowerCase())) {
+      copyTitle = `${source.title || $tStore('notes.untitled')} (${copyWord} ${counter})`
+      counter++
+    }
+    const now = Date.now()
+    const duplicated: VNote = {
+      id: copyTitle,
+      title: copyTitle,
+      fileName: `${copyTitle}.vnote`,
+      color: source.color || 'yellow',
+      content: source.content || '',
+      pinned: false,
+      createdAt: now,
+      modTime: now
+    }
+    notes = [duplicated, ...notes]
+    persistNote(duplicated)
+  }
+
+  /**
+   * Copies plain text content of a note to the system clipboard.
+   */
+  async function copyNoteContentByIndex(idx: number) {
+    const target = notes[idx]
+    if (!target) return
+    const tmp = document.createElement('div')
+    tmp.innerHTML = target.content || ''
+    const plain = (tmp.innerText || tmp.textContent || '').trim()
+    if (!plain && !target.title) return
+    try {
+      await navigator.clipboard.writeText(plain || target.title)
+    } catch {
+      // Clipboard write unavailable
+    }
+  }
+
+  function openNoteContextMenu(e: MouseEvent, idx: number) {
+    e.preventDefault()
+    e.stopPropagation()
+    textCtxMenu = null
+    noteCtxMenu = { x: e.clientX, y: e.clientY, index: idx }
+  }
+
+  function openTextContextMenu(e: MouseEvent, target: HTMLElement | null) {
+    e.preventDefault()
+    e.stopPropagation()
+    noteCtxMenu = null
+    textCtxMenu = {
+      x: e.clientX,
+      y: e.clientY,
+      items: buildTextEditMenuItems(target, {
+        cut: $tStore('context_menu.cut'),
+        copy: $tStore('context_menu.copy'),
+        paste: $tStore('context_menu.paste'),
+        selectAll: $tStore('context_menu.select_all')
+      })
+    }
+  }
+
+  function getNoteContextMenuItems(): ContextMenuItem[] {
+    if (!noteCtxMenu) return []
+    const idx = noteCtxMenu.index
+    const target = notes[idx]
+    if (!target) return []
+    return [
+      {
+        label: target.pinned ? $tStore('notes.unpin') : $tStore('notes.pin'),
+        icon: Pin,
+        action: () => {
+          target.pinned = !target.pinned
+          persistNote(target)
+        }
+      },
+      {
+        label: $tStore('notes.rename'),
+        icon: Pencil,
+        action: () => void renameNoteByIndex(idx)
+      },
+      {
+        label: $tStore('notes.duplicate'),
+        icon: CopyPlus,
+        action: () => duplicateNoteByIndex(idx)
+      },
+      {
+        label: $tStore('notes.copy'),
+        icon: Copy,
+        action: () => void copyNoteContentByIndex(idx)
+      },
+      { label: '', action: () => {}, divider: true },
+      {
+        label: $tStore('notes.delete'),
+        icon: Trash2,
+        danger: true,
+        action: () => void deleteNoteByIndex(null, idx)
+      }
+    ]
+  }
+
+  /**
    * Extracts a plaintext snippet from HTML content.
    *
    * @param html - Note content string.
    * @returns Clean preview excerpt.
    */
   function extractSnippet(html: string): string {
-    if (!html) return 'Empty note'
+    if (!html) return $tStore('notes.empty_note')
     const text = html
       .replace(/<[^>]*>/g, ' ')
       .replace(/&nbsp;/g, ' ')
       .replace(/\s+/g, ' ')
       .trim()
-    return text || 'Empty note'
+    return text || $tStore('notes.empty_note')
   }
 
   /**
@@ -561,10 +696,14 @@
    */
   function formatTimeAgo(timestamp: number): string {
     const diff = Math.floor((Date.now() - timestamp) / 1000)
-    if (diff < 60) return 'Just now'
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`
-    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`
-    return `${Math.floor(diff / 86400)}d ago`
+    if (diff < 60) return $tStore('notes.just_now')
+    if (diff < 3600) {
+      return $tStore('notes.mins_ago', { count: Math.floor(diff / 60) })
+    }
+    if (diff < 86400) {
+      return $tStore('notes.hours_ago', { count: Math.floor(diff / 3600) })
+    }
+    return $tStore('notes.days_ago', { count: Math.floor(diff / 86400) })
   }
 
   onMount(() => {
@@ -581,11 +720,11 @@
   ondragleave={handleDragLeave}
   ondrop={handleDrop}
   role="region"
-  aria-label="Quick Notes"
+  aria-label={$tStore('notes.title')}
 >
   {#if isDraggingOver}
     <div class="drag-drop-overlay">
-      <span>Drop image to insert into note</span>
+      <span>{$tStore('notes.drop_image')}</span>
     </div>
   {/if}
 
@@ -628,6 +767,8 @@
                   class="note-card card-{n.color || 'yellow'}"
                   onclick={() =>
                     openNoteEditor(realIndex >= 0 ? realIndex : idx)}
+                  oncontextmenu={(e) =>
+                    openNoteContextMenu(e, realIndex >= 0 ? realIndex : idx)}
                   role="button"
                   tabindex="0"
                   onkeydown={(e) => {
@@ -640,7 +781,9 @@
                     <button
                       class="note-card-pin-btn"
                       class:is-pinned={n.pinned}
-                      use:islandTooltip={n.pinned ? 'Unpin note' : 'Pin note'}
+                      use:islandTooltip={n.pinned
+                        ? $tStore('notes.unpin')
+                        : $tStore('notes.pin')}
                       onclick={(e) =>
                         togglePinByIndex(e, realIndex >= 0 ? realIndex : idx)}
                     >
@@ -648,7 +791,7 @@
                     </button>
                     <button
                       class="note-card-delete-btn"
-                      use:islandTooltip={'Delete note'}
+                      use:islandTooltip={$tStore('notes.delete')}
                       onclick={(e) =>
                         deleteNoteByIndex(e, realIndex >= 0 ? realIndex : idx)}
                     >
@@ -657,7 +800,9 @@
                   </div>
 
                   <div class="note-card-body">
-                    <span class="note-card-title">{n.title || 'Untitled'}</span>
+                    <span class="note-card-title"
+                      >{n.title || $tStore('notes.untitled')}</span
+                    >
                     <p class="note-card-snippet">{extractSnippet(n.content)}</p>
                   </div>
 
@@ -668,7 +813,7 @@
                     {#if hasImage(n.content)}
                       <span
                         class="note-card-has-img"
-                        use:islandTooltip={'Contains image'}
+                        use:islandTooltip={$tStore('notes.contains_image')}
                       >
                         <ImageIcon size={11} />
                       </span>
@@ -683,8 +828,8 @@
 
       <div class="board-header">
         <div class="board-header-left">
-          <BackButton title="Back to Apps" />
-          <span class="board-title">Quick Notes</span>
+          <BackButton title={$tStore('notes.back_to_apps')} />
+          <span class="board-title">{$tStore('notes.title')}</span>
           {#if notes.length > 0}
             <span class="board-count-pill">{notes.length}</span>
           {/if}
@@ -700,7 +845,7 @@
           <button
             class="board-action-btn"
             use:islandTooltip={{
-              text: 'Open Notes Folder in Explorer',
+              text: $tStore('notes.open_folder'),
               position: 'top'
             }}
             onclick={handleOpenFolder}
@@ -709,7 +854,7 @@
           </button>
           <button
             class="board-action-btn new-note-action"
-            use:islandTooltip={{ text: 'Create Note', position: 'top' }}
+            use:islandTooltip={{ text: $tStore('notes.new_note'), position: 'top' }}
             onclick={createNewNote}
           >
             <Plus size={16} />
@@ -724,10 +869,12 @@
         <div
           bind:this={editorRef}
           class="editor-surface"
+          data-placeholder={$tStore('notes.editor_placeholder')}
           contenteditable="true"
           oninput={triggerAutoSave}
           onpaste={handlePaste}
           onkeydown={handleKeyDown}
+          oncontextmenu={(e) => openTextContextMenu(e, editorRef)}
           role="textbox"
           tabindex="0"
         ></div>
@@ -739,7 +886,7 @@
       <div class="toolbar-actions-group">
         <button
           class="tool-action-btn"
-          use:islandTooltip={{ text: 'Bold (Ctrl+B)', position: 'top' }}
+          use:islandTooltip={{ text: $tStore('notes.format_bold'), position: 'top' }}
           onclick={() => applyFormat('bold')}
         >
           <Bold size={13} />
@@ -747,7 +894,7 @@
 
         <button
           class="tool-action-btn"
-          use:islandTooltip={{ text: 'Italic (Ctrl+I)', position: 'top' }}
+          use:islandTooltip={{ text: $tStore('notes.format_italic'), position: 'top' }}
           onclick={() => applyFormat('italic')}
         >
           <Italic size={13} />
@@ -755,7 +902,10 @@
 
         <button
           class="tool-action-btn"
-          use:islandTooltip={{ text: 'Underline (Ctrl+U)', position: 'top' }}
+          use:islandTooltip={{
+            text: $tStore('notes.format_underline'),
+            position: 'top'
+          }}
           onclick={() => applyFormat('underline')}
         >
           <Underline size={13} />
@@ -763,7 +913,7 @@
 
         <button
           class="tool-action-btn"
-          use:islandTooltip={{ text: 'Strikethrough', position: 'top' }}
+          use:islandTooltip={{ text: $tStore('notes.format_strike'), position: 'top' }}
           onclick={() => applyFormat('strikeThrough')}
         >
           <Strikethrough size={13} />
@@ -771,7 +921,7 @@
 
         <button
           class="tool-action-btn"
-          use:islandTooltip={{ text: 'Bullet List', position: 'top' }}
+          use:islandTooltip={{ text: $tStore('notes.format_list'), position: 'top' }}
           onclick={() => applyFormat('insertUnorderedList')}
         >
           <List size={13} />
@@ -779,7 +929,7 @@
 
         <button
           class="tool-action-btn"
-          use:islandTooltip={{ text: 'Attach image', position: 'top' }}
+          use:islandTooltip={{ text: $tStore('notes.format_image'), position: 'top' }}
           onclick={() => fileInputRef?.click()}
         >
           <ImageIcon size={13} />
@@ -788,9 +938,9 @@
 
       <div class="save-state-tag">
         {#if saveStatus === 'saving'}
-          <span>Saving...</span>
+          <span>{$tStore('notes.saving')}</span>
         {:else if saveStatus === 'saved'}
-          <span class="state-saved-text">Saved</span>
+          <span class="state-saved-text">{$tStore('notes.saved')}</span>
         {/if}
       </div>
     </div>
@@ -798,11 +948,14 @@
     <!-- Subtle Banner Header (Positioned at bottom, swapped with top Dock) -->
     <div class="banner-header">
       <div class="banner-left-group">
-        <BackButton onback={handleBackToBoard} title="Back to Notes" />
+        <BackButton
+          onback={handleBackToBoard}
+          title={$tStore('notes.back_to_notes')}
+        />
 
         <button
           class="banner-btn"
-          use:islandTooltip={{ text: 'All notes', position: 'top' }}
+          use:islandTooltip={{ text: $tStore('notes.all_notes'), position: 'top' }}
           onclick={handleBackToBoard}
         >
           <List size={15} />
@@ -824,11 +977,13 @@
       <div class="banner-center-title">
         {#if activeNote}
           <input
+            bind:this={titleInputRef}
             type="text"
             class="banner-title-input"
             bind:value={activeNote.title}
             oninput={handleTitleChange}
-            placeholder="Note Title..."
+            oncontextmenu={(e) => openTextContextMenu(e, titleInputRef)}
+            placeholder={$tStore('notes.title_placeholder')}
           />
         {/if}
       </div>
@@ -841,8 +996,11 @@
               class="swatch-dot-btn dot-{c} {activeNote?.color === c
                 ? 'selected'
                 : ''}"
-              use:islandTooltip={{ text: `${c} color`, position: 'top' }}
-              aria-label={`${c} color`}
+              use:islandTooltip={{
+                text: $tStore('notes.color_label', { color: c }),
+                position: 'top'
+              }}
+              aria-label={$tStore('notes.color_label', { color: c })}
               onclick={() => handleSelectColor(c)}
             ></button>
           {/each}
@@ -851,7 +1009,7 @@
         <button
           class="banner-btn"
           use:islandTooltip={{
-            text: 'Open Notes Folder in Explorer',
+            text: $tStore('notes.open_folder'),
             position: 'top'
           }}
           onclick={handleOpenFolder}
@@ -861,13 +1019,31 @@
 
         <button
           class="banner-btn"
-          use:islandTooltip={{ text: 'Delete note', position: 'top' }}
+          use:islandTooltip={{ text: $tStore('notes.delete'), position: 'top' }}
           onclick={handleDeleteActiveNote}
         >
           <Trash2 size={14} />
         </button>
       </div>
     </div>
+  {/if}
+
+  {#if noteCtxMenu}
+    <CustomContextMenu
+      x={noteCtxMenu.x}
+      y={noteCtxMenu.y}
+      items={getNoteContextMenuItems()}
+      onclose={() => (noteCtxMenu = null)}
+    />
+  {/if}
+
+  {#if textCtxMenu}
+    <CustomContextMenu
+      x={textCtxMenu.x}
+      y={textCtxMenu.y}
+      items={textCtxMenu.items}
+      onclose={() => (textCtxMenu = null)}
+    />
   {/if}
 </div>
 

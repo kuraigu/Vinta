@@ -27,9 +27,9 @@
   import BriefFeedWidget from '../components/widgets/BriefFeedWidget.svelte'
   import SystemStatsWidget from '../components/widgets/SystemStatsWidget.svelte'
   import ActionCenterWidget from '../components/widgets/ActionCenterWidget.svelte'
-  import ContextMenu, {
+  import CustomContextMenu, {
     type ContextMenuItem
-  } from '../components/ContextMenu.svelte'
+  } from '../components/CustomContextMenu.svelte'
   import ScrollView from '../components/ScrollView.svelte'
   import CalendarPage, { config as calendarConfig } from './CalendarPage.svelte'
   import SettingsPage, { config as settingsConfig } from './SettingsPage.svelte'
@@ -521,7 +521,7 @@
   {/if}
 
   {#if ctxOpen}
-    <ContextMenu
+    <CustomContextMenu
       x={ctxCoords.x}
       y={ctxCoords.y}
       items={getWidgetContextMenuItems()}

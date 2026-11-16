@@ -1,15 +1,18 @@
 <!--
-  @component ContextMenu
+  @component CustomContextMenu
   @description Floating context menu positioned at cursor coordinates. Automatically flips
   orientation near viewport edges and closes on outside clicks or Escape key.
 -->
 <script lang="ts">
+  import type { ComponentType } from 'svelte'
   import { slide } from 'svelte/transition'
   import { Events } from '$lib/events'
 
   export interface ContextMenuItem {
     label: string
     action: () => void
+    icon?: ComponentType<any>
+    danger?: boolean
     divider?: boolean
     disabled?: boolean
   }
@@ -35,8 +38,6 @@
   function portal(node: HTMLElement) {
     document.body.appendChild(node)
 
-    // Position dynamically inside the island container so it never clips
-    // right or bottom and never causes out-of-bounds window expansion.
     requestAnimationFrame(() => {
       const margin = 8
       const naturalW = node.offsetWidth || node.scrollWidth || 150
@@ -55,7 +56,6 @@
       let finalX = x
       let finalY = y
 
-      // If clipping right of island, flip/shift left
       if (finalX + naturalW > bounds.right - margin) {
         finalX = Math.max(
           bounds.left + margin,
@@ -63,7 +63,6 @@
         )
       }
 
-      // If clipping bottom of island, flip/shift up
       if (finalY + naturalH > bounds.bottom - margin) {
         finalY = Math.max(
           bounds.top + margin,
@@ -71,7 +70,6 @@
         )
       }
 
-      // Ensure clamped to top/left bounds
       finalX = Math.max(bounds.left + margin, finalX)
       finalY = Math.max(bounds.top + margin, finalY)
 
@@ -92,11 +90,17 @@
     const handle = (e: MouseEvent) => {
       if (!node.contains(e.target as Node)) onclose()
     }
-    // Delay so the triggering click doesn't immediately close it
-    setTimeout(() => document.addEventListener('mousedown', handle), 0)
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onclose()
+    }
+    setTimeout(() => {
+      document.addEventListener('mousedown', handle)
+      document.addEventListener('keydown', handleKey)
+    }, 0)
     return {
       destroy() {
         document.removeEventListener('mousedown', handle)
+        document.removeEventListener('keydown', handleKey)
       }
     }
   }
@@ -132,13 +136,15 @@
   role="menu"
   tabindex="-1"
 >
-  {#each items as item (item.label)}
+  {#each items as item, idx (item.divider ? `div-${idx}` : item.label)}
     {#if item.divider}
       <div class="ctx-divider"></div>
     {:else}
       <button
+        type="button"
         class="ctx-item"
         class:disabled={item.disabled}
+        class:danger={item.danger}
         role="menuitem"
         onmousedown={(e) => {
           e.preventDefault()
@@ -146,64 +152,14 @@
         }}
         tabindex="-1"
       >
-        {item.label}
+        {#if item.icon}
+          {@const IconComp = item.icon}
+          <IconComp size={13} class="ctx-item-icon" />
+        {/if}
+        <span>{item.label}</span>
       </button>
     {/if}
   {/each}
 </div>
 
-<style>
-  .ctx-menu {
-    position: fixed;
-    zoom: var(--vinta-ui-scale, 1);
-    z-index: 999999;
-    background: var(--vinta-dock-popover-bg, rgba(20, 22, 28, 0.96));
-    border: 1px solid var(--vinta-dock-popover-border, rgba(255, 255, 255, 0.12));
-    border-radius: 12px;
-    padding: 5px;
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.06),
-      var(--vinta-dock-popover-shadow, 0 10px 28px rgba(0, 0, 0, 0.52));
-    min-width: 164px;
-    pointer-events: auto;
-    user-select: none;
-  }
-
-  .ctx-item {
-    display: flex;
-    align-items: center;
-    width: 100%;
-    min-height: 28px;
-    background: none;
-    border: none;
-    padding: 5px 10px;
-    text-align: left;
-    font-size: 0.78rem;
-    font-weight: 500;
-    font-family: inherit;
-    color: var(--vinta-text-secondary);
-    cursor: pointer;
-    border-radius: 7px;
-    transition:
-      background-color 0.12s ease,
-      color 0.12s ease;
-    pointer-events: auto;
-  }
-
-  .ctx-item:hover {
-    background: var(--vinta-surface-hover, rgba(255, 255, 255, 0.1));
-    color: var(--vinta-text-primary);
-  }
-
-  .ctx-item.disabled {
-    opacity: 0.4;
-    cursor: default;
-    pointer-events: none;
-  }
-
-  .ctx-divider {
-    height: 1px;
-    background: var(--vinta-border, rgba(255, 255, 255, 0.08));
-    margin: 4px 6px;
-  }
-</style>
+<style src="./styles/CustomContextMenu.css"></style>
