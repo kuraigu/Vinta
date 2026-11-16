@@ -9,13 +9,11 @@
   import { AppControls } from '../utils/AppControls.svelte'
   import DockButton from './DockButton.svelte'
   import {
-    hasCompletedOnboardingStore,
     wakeMethodStore,
     globalHotkeyStore,
     tStore,
     type IslandConfig
   } from '../store'
-  import OnboardingPage from '../pages/OnboardingPage.svelte'
 
   const navigate =
     getContext<
@@ -30,10 +28,6 @@
   }
 
   let { activePage, expandedTooltipSide = 'right' }: Props = $props()
-
-  let isOnboarding = $derived(
-    !$hasCompletedOnboardingStore || activePage === OnboardingPage
-  )
 
   let wakeHint = $derived.by(() => {
     const hotkey = $globalHotkeyStore || 'Alt+Shift+V'
@@ -52,9 +46,8 @@
   <div class="button-wrapper">
     <DockButton
       shape="rounded"
-      tooltip={isOnboarding ? '' : $tStore('controls.minimize')}
+      tooltip={$tStore('controls.minimize')}
       tooltipPosition={expandedTooltipSide}
-      disabled={isOnboarding}
       onclick={(e: MouseEvent) =>
         AppControls.doMinimize(navigate, e, activePage)}
     >
@@ -65,10 +58,9 @@
   <div class="button-wrapper">
     <DockButton
       shape="rounded"
-      tooltip={isOnboarding ? '' : $tStore('controls.hide')}
-      tooltipSubtitle={isOnboarding ? undefined : wakeHint}
+      tooltip={$tStore('controls.hide')}
+      tooltipSubtitle={wakeHint}
       tooltipPosition={expandedTooltipSide}
-      disabled={isOnboarding}
       onclick={(e: MouseEvent) => AppControls.doHide(navigate, hidePill, e)}
     >
       <EyeOff size={13.5} strokeWidth={2.2} />

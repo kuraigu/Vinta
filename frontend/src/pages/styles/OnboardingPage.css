@@ -1,7 +1,39 @@
 /* ============================================================================
    Onboarding Page Stylesheet
-   Uses shared SidebarLayout, BentoCard, IconBadge, ToggleSwitch, and SegmentedControl primitives
+   Uses shared SidebarLayout, BentoCard, SettingItem, and SegmentedControl primitives
+   Explicitly overrides root #app text-align: center with left-aligned hierarchy
    ============================================================================ */
+
+/* Minimized Compact Pill State (320x36) */
+.onboarding-compact-pill {
+  width: 100%;
+  height: 100%;
+  padding: 0 16px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  user-select: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.compact-pill-divider {
+  width: 1px;
+  height: 14px;
+  background: var(--vinta-border);
+  flex-shrink: 0;
+}
+
+.compact-pill-text {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--vinta-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 .sidebar-mascot-dock {
   display: flex;
@@ -19,7 +51,7 @@
 }
 
 /* ============================================================================
-   Right Main Content Pane (Top-Aligned)
+   Right Main Content Pane (Left-Aligned)
    ============================================================================ */
 .onboarding-main-pane {
   flex: 1;
@@ -30,13 +62,13 @@
   justify-content: space-between;
   padding: 4px 2px 2px 0;
   box-sizing: border-box;
+  text-align: left;
 }
 
 .pane-header {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   flex-shrink: 0;
 }
 
@@ -49,7 +81,7 @@
 
 .pane-title {
   margin: 0;
-  font-size: 1.08rem;
+  font-size: 1.04rem;
   font-weight: 800;
   letter-spacing: -0.02em;
   color: var(--vinta-text-primary);
@@ -95,7 +127,7 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
-  gap: 10px;
+  gap: 8px;
   overflow: hidden;
 }
 
@@ -108,12 +140,13 @@
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
-  padding-right: 8px;
+  padding-right: 6px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  animation: vintaOnboardingStepFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)
-    forwards;
+  gap: 8px;
+  animation: vintaOnboardingStepFadeIn
+    calc(0.28s * max(0.01, var(--vinta-anim-scale, 1)))
+    cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes vintaOnboardingStepFadeIn {
@@ -127,56 +160,29 @@
   }
 }
 
-/* Grouped Feature Rows inside <BentoCard variant="group"> */
-.example-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  text-align: left;
-}
-
-.example-text-col {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.example-title-with-kbd {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+/* Compact SettingItem spacing inside Onboarding */
+:global(
+  .onboarding-main-pane
+    .vinta-bento-card.variant-group
+    > .vinta-bento-card.variant-setting
+) {
+  padding: 10px 12px;
   gap: 8px;
 }
 
-.example-title {
-  font-size: 0.79rem;
-  font-weight: 700;
-  color: var(--vinta-text-primary);
-  line-height: 1.25;
-}
-
-.example-desc {
-  font-size: 0.7rem;
-  color: var(--vinta-text-secondary);
-  line-height: 1.35;
-}
-
 .kbd-pill {
-  font-family: var(--vinta-font-mono, monospace);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.65rem;
   font-weight: 700;
   padding: 2px 7px;
   border-radius: 6px;
-  background: var(--vinta-item-bg, rgba(255, 255, 255, 0.07));
+  background: var(--vinta-contrast-bg);
   border: 1px solid var(--vinta-border);
   color: var(--vinta-text-primary);
   white-space: nowrap;
 }
 
-/* Step 1 Input Cards */
+/* Step 1 Input Cards (Strictly Left-Aligned) */
 .onboarding-inputs-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -186,14 +192,17 @@
 :global(.vinta-bento-card.onboarding-field-card) {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   gap: 6px;
   padding: 10px 12px;
+  text-align: left;
 }
 
 .field-card-label {
   font-size: 0.68rem;
   font-weight: 700;
   color: var(--vinta-text-secondary);
+  text-align: left;
 }
 
 .onboarding-input-wrapper {
@@ -227,69 +236,77 @@
   font-size: 0.76rem;
   font-weight: 600;
   font-family: inherit;
+  text-align: left;
 }
 
-/* Step 2 Resting Alignment Row */
-:global(.vinta-bento-card.onboarding-setting-row) {
-  padding: 10px 12px;
+/* Step 5 Compact Hotkey Grid */
+.onboarding-hotkey-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
 }
 
-.setting-row-text {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-  min-width: 0;
+:global(.vinta-bento-card.hotkey-chip-card) {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 11px;
+  text-align: left;
 }
 
-.setting-row-title {
-  font-size: 0.76rem;
+.hotkey-chip-label {
+  font-size: 0.71rem;
   font-weight: 700;
   color: var(--vinta-text-primary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
 }
 
-.setting-row-desc {
-  font-size: 0.67rem;
-  color: var(--vinta-text-secondary);
-}
-
-/* Step 6 Personalize Theme Grid & Toggles */
+/* Step 6 Personalize Theme Selector (Left-Aligned Horizontal Cards) */
 .onboarding-theme-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
 .theme-preview-card {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 10px 8px;
+  justify-content: flex-start;
+  gap: 8px;
+  height: 36px;
+  padding: 0 10px;
   border-radius: var(--vinta-radius-card, 14px);
-  background: var(--vinta-item-bg, rgba(255, 255, 255, 0.03));
+  background: var(--vinta-item-bg);
   border: 1px solid var(--vinta-border);
   color: var(--vinta-text-secondary);
+  text-align: left;
   cursor: pointer;
   transition: all 0.16s ease;
 }
 
 .theme-preview-card:hover {
-  background: var(--vinta-contrast-hover, rgba(255, 255, 255, 0.06));
+  background: var(--vinta-contrast-hover);
   color: var(--vinta-text-primary);
 }
 
 .theme-preview-card.active {
-  background: var(--vinta-accent-muted, rgba(255, 255, 255, 0.1));
-  border-color: var(--vinta-accent-primary, #38bdf8);
+  background: var(--vinta-accent-muted);
+  border-color: var(--vinta-accent-primary);
   color: var(--vinta-text-primary);
 }
 
 .theme-dot {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 255, 255, 0.25);
+  border: 2px solid var(--vinta-border);
+  flex-shrink: 0;
 }
 
 .theme-dot.dark-gold {
@@ -307,6 +324,9 @@
 .theme-name {
   font-size: 0.72rem;
   font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Footer Navigation Controls */
@@ -315,8 +335,8 @@
   align-items: center;
   justify-content: space-between;
   padding-top: 10px;
-  margin-top: 8px;
-  border-top: 1px solid var(--vinta-border-light, rgba(255, 255, 255, 0.06));
+  margin-top: 6px;
+  border-top: 1px solid var(--vinta-border-light);
   flex-shrink: 0;
 }
 
