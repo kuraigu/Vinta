@@ -256,9 +256,13 @@ export function getLocaleMetadata(
   const meta = catalog?.['@metadata']
   if (!meta || typeof meta !== 'object') return null
   const authors = Array.isArray(meta.authors)
-    ? meta.authors.filter((a: unknown): a is string => typeof a === 'string' && a.trim().length > 0)
+    ? meta.authors.filter(
+        (a: unknown): a is string =>
+          typeof a === 'string' && a.trim().length > 0
+      )
     : []
-  const lastUpdated = typeof meta['last-updated'] === 'string' ? meta['last-updated'] : ''
+  const lastUpdated =
+    typeof meta['last-updated'] === 'string' ? meta['last-updated'] : ''
   if (authors.length === 0 && !lastUpdated) return null
   return { authors, lastUpdated }
 }
