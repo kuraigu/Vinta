@@ -1,4 +1,8 @@
 {
+  "@metadata": {
+    "authors": [],
+    "last-updated": ""
+  },
   "common": {
     "save": "Save",
     "cancel": "Cancel",
@@ -248,6 +252,7 @@
     "reload_locales": "Reload Translations",
     "reloaded": "Translations Reloaded",
     "locales_help": "Add any {locale}.json file into this folder to test translations in real time.",
+    "translated_by": "Translated by {authors}",
     "startup_label": "Run on Windows Startup",
     "hardware_accel_label": "Hardware Acceleration",
     "cache_label": "Clear Application Cache",

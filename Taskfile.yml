@@ -165,6 +165,12 @@ tasks:
     cmds:
       - cmd.exe /c "scripts.bat check-locales"
 
+  sync-locales:
+    desc: Propagate new English keys from en.json to all other locale catalogs
+    aliases: [sync-locals, locales:sync]
+    cmds:
+      - cmd.exe /c "scripts.bat sync-locales {{.CLI_ARGS}}"
+
   contributor:
     desc: "Add a contributor with a custom name (usage: task contributor -- <username> <roles> <name>)"
     cmds:

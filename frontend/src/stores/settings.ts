@@ -666,9 +666,14 @@ function resolveInitialLocale(): string {
         : [navigator.language]
     for (const lang of list) {
       if (!lang) continue
-      const lower = lang.toLowerCase()
+      const lower = lang.toLowerCase().replace(/_/g, '-')
       if (lower.startsWith('fil') || lower.startsWith('tl')) return 'fil'
       if (lower.startsWith('de')) return 'de'
+      if (lower.startsWith('hi')) return 'hi'
+      if (lower.startsWith('es-ar')) return 'es-AR'
+      if (lower.startsWith('es-es')) return 'es-ES'
+      if (lower.startsWith('es-')) return 'es-419'
+      if (lower === 'es') return 'es-ES'
       if (lower.startsWith('en-gb') || lower.startsWith('en-uk')) return 'en-GB'
       if (lower.startsWith('en')) return 'en'
     }

@@ -121,13 +121,15 @@
 
 .about-links-row {
   display: flex;
-  align-items: center;
+  align-items: stretch;
+  flex-wrap: wrap;
   gap: 8px;
   width: 100%;
 }
 
 .about-links-row > :global(*) {
-  flex: 1;
+  flex: 1 1 140px;
+  white-space: nowrap;
 }
 
 .about-section-header {

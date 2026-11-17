@@ -1,4 +1,8 @@
 {
+  "@metadata": {
+    "authors": [],
+    "last-updated": ""
+  },
   "common": {
     "save": "Speichern",
     "cancel": "Abbrechen",
@@ -248,6 +252,7 @@
     "reload_locales": "Übersetzungen neu laden",
     "reloaded": "Übersetzungen neu geladen",
     "locales_help": "Fügen Sie eine beliebige {locale}.json-Datei in diesen Ordner ein, um Übersetzungen direkt zu testen.",
+    "translated_by": "Übersetzt von {authors}",
     "startup_label": "Mit Windows starten",
     "hardware_accel_label": "Hardwarebeschleunigung",
     "cache_label": "Anwendungs-Cache leeren",

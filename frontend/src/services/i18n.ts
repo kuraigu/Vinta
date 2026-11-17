@@ -11,6 +11,10 @@ import enCatalog from '../locales/en.json'
 import enGbCatalog from '../locales/en-GB.json'
 import deCatalog from '../locales/de.json'
 import filCatalog from '../locales/fil.json'
+import es419Catalog from '../locales/es-419.json'
+import esEsCatalog from '../locales/es-ES.json'
+import esArCatalog from '../locales/es-AR.json'
+import hiCatalog from '../locales/hi.json'
 import {
   GetCustomLocales,
   OpenLocalesFolder
@@ -23,12 +27,21 @@ export interface LocaleOption {
   isCustom?: boolean
 }
 
+export interface LocaleMetadata {
+  authors: string[]
+  lastUpdated: string
+}
+
 /** Standard embedded locale metadata */
 export const BUILTIN_LOCALES: LocaleOption[] = [
   { id: 'en', name: 'English (US)', flag: 'en' },
   { id: 'en-GB', name: 'English (UK)', flag: 'en-gb' },
   { id: 'fil', name: 'Filipino', flag: 'fil' },
-  { id: 'de', name: 'Deutsch', flag: 'de' }
+  { id: 'de', name: 'Deutsch', flag: 'de' },
+  { id: 'es-419', name: 'Español (Latinoamérica)', flag: 'es-419' },
+  { id: 'es-ES', name: 'Español (España)', flag: 'es-es' },
+  { id: 'es-AR', name: 'Español (Argentina)', flag: 'es-ar' },
+  { id: 'hi', name: 'हिन्दी', flag: 'hi' }
 ]
 
 type TranslationCatalog = Record<string, any>
@@ -39,7 +52,14 @@ const embeddedCatalogs: Record<string, TranslationCatalog> = {
   'en-GB': enGbCatalog,
   fil: filCatalog,
   tl: filCatalog,
-  de: deCatalog
+  de: deCatalog,
+  'es-419': es419Catalog,
+  'es-es': esEsCatalog,
+  'es-ES': esEsCatalog,
+  es: esEsCatalog,
+  'es-ar': esArCatalog,
+  'es-AR': esArCatalog,
+  hi: hiCatalog
 }
 
 /** Reactive store for custom drop-in translations loaded from disk */
@@ -221,6 +241,29 @@ export async function openTranslationsFolder(): Promise<void> {
 }
 
 /**
+ * Returns @metadata (authors and last-updated) for a given locale ID, if present.
+ */
+export function getLocaleMetadata(
+  localeId: string,
+  customCatalogs: Record<string, TranslationCatalog> = get(customCatalogsStore)
+): LocaleMetadata | null {
+  const normalized = localeId.toLowerCase()
+  const catalog =
+    customCatalogs[localeId] ||
+    customCatalogs[normalized] ||
+    embeddedCatalogs[localeId] ||
+    embeddedCatalogs[normalized]
+  const meta = catalog?.['@metadata']
+  if (!meta || typeof meta !== 'object') return null
+  const authors = Array.isArray(meta.authors)
+    ? meta.authors.filter((a: unknown): a is string => typeof a === 'string' && a.trim().length > 0)
+    : []
+  const lastUpdated = typeof meta['last-updated'] === 'string' ? meta['last-updated'] : ''
+  if (authors.length === 0 && !lastUpdated) return null
+  return { authors, lastUpdated }
+}
+
+/**
  * Detects the user's preferred language from host system environment.
  */
 export function detectSystemLocale(): string {
@@ -228,12 +271,20 @@ export function detectSystemLocale(): string {
     return 'en'
   }
 
-  const raw = navigator.language.toLowerCase()
-  const code = raw.split(/[-_]/)[0]
-
+  const raw = navigator.language.toLowerCase().replace(/_/g, '-')
   const available = get(availableLocalesStore)
-  const match = available.find((l) => l.id.toLowerCase() === code)
-  return match ? match.id : 'en'
+
+  const exact = available.find((l) => l.id.toLowerCase() === raw)
+  if (exact) return exact.id
+
+  if (raw.startsWith('es-ar')) return 'es-AR'
+  if (raw.startsWith('es-es')) return 'es-ES'
+  if (raw.startsWith('es-')) return 'es-419'
+  if (raw === 'es') return 'es-ES'
+
+  const base = raw.split('-')[0]
+  const baseMatch = available.find((l) => l.id.toLowerCase() === base)
+  return baseMatch ? baseMatch.id : 'en'
 }
 
 // Automatically load custom drop-in translations on client startup

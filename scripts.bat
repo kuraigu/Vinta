@@ -258,6 +258,16 @@ if "%~1"=="check-locals" (
     exit /b !ERRORLEVEL!
 )
 
+if "%~1"=="sync-locales" (
+    node "%~dp0scripts\sync-locales.js" %2
+    exit /b !ERRORLEVEL!
+)
+
+if "%~1"=="sync-locals" (
+    node "%~dp0scripts\sync-locales.js" %2
+    exit /b !ERRORLEVEL!
+)
+
 if "%~1"=="installer" (
     call :kill_app
     call :build_native
@@ -271,7 +281,11 @@ if "%~1"=="installer" (
 )
 
 if "%~1"=="contributor" (
-    powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\add_contributor.ps1" %2 %3 %4
+    if "%~4"=="" (
+        powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\add_contributor.ps1" -Username "%~2" -Roles "%~3"
+    ) else (
+        powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\add_contributor.ps1" -Username "%~2" -Roles "%~3" -DisplayName "%~4"
+    )
     exit /b !ERRORLEVEL!
 )
 
@@ -296,6 +310,7 @@ echo   syso                     Generates Windows syso resource file
 echo   installer                Builds standalone production binary and Windows NSIS installer
 echo   pack-theme ^<path^>        Packages a theme directory into a .vintatheme bundle
 echo   check-locales            Validates key parity and schema across all locale catalogs
+echo   sync-locales [--prune]   Propagates new keys from en.json to all other locale catalogs
 echo   lint [ci^|native]         Runs Go, C++, Frontend, Theme, and Locale linters
 echo   contributor ^<args^>       Adds a contributor via scripts\add_contributor.ps1
 exit /b 1
