@@ -36,7 +36,10 @@ You can find your language code in any of the following ways:
 | Language | ISO 639-1 Code | File Name |
 |---|---|---|
 | German (Deutsch) | `de` | `de.json` |
-| Spanish (Español) | `es` | `es.json` |
+| Spanish (Español - Latinoamérica) | `es-419` | `es-419.json` |
+| Spanish (Español - España) | `es-ES` | `es-ES.json` |
+| Spanish (Español - Argentina) | `es-AR` | `es-AR.json` |
+| Hindi (हिन्दी) | `hi` | `hi.json` |
 | French (Français) | `fr` | `fr.json` |
 | Italian (Italiano) | `it` | `it.json` |
 | Japanese (日本語) | `ja` | `ja.json` |
@@ -92,6 +95,14 @@ Open your JSON file in any text editor (such as VS Code, Notepad++, or Sublime T
 
 4. **Character Encoding:** Always save your file in **UTF-8 without BOM**.
 
+5. **Attribution Metadata (`@metadata`):** Each catalog includes a top-level `@metadata` block following the banana-i18n JSON convention. Contributors can add their name or GitHub handle to `authors` and update `last-updated`:
+   ```json
+   "@metadata": {
+     "authors": ["Your Name (@handle)"],
+     "last-updated": "2026-11-17"
+   }
+   ```
+
 ---
 
 ## Step 4: Test Your Translation Locally
@@ -123,7 +134,10 @@ Vinta displays vector SVG country flags in language selectors to make languages 
   - `en-GB` (United Kingdom)
   - `de` (Germany)
   - `fr` (France)
-  - `es` (Spain)
+  - `es` / `es-ES` (Spain)
+  - `es-AR` / `ar` (Argentina)
+  - `es-419` (Globe icon for Latin America)
+  - `hi` / `in` (India)
   - `it` (Italy)
   - `ja` (Japan)
   - `zh` / `zh-CN` (China)
@@ -132,6 +146,17 @@ Vinta displays vector SVG country flags in language selectors to make languages 
   - `pl` (Poland)
   - `nl` (Netherlands)
   - `fil` / `tl` / `ph` (Philippines)
+
+### Synchronizing New Keys
+When new keys are added to `en.json`, propagate them to all other catalogs (preserving existing translations and `@metadata`) by running:
+
+```cmd
+task sync-locales
+# or
+scripts.bat sync-locales
+```
+
+Pass `--prune` to remove obsolete keys that no longer exist in `en.json`.
 
 ### Validating Your Catalog
 To verify that your translation file has zero missing keys, extra keys, or formatting errors, run the locale checker:

@@ -189,11 +189,11 @@
       />
     </SettingItem>
 
-    <SettingItem label={$tStore('apps.stats_name')} icon={Activity}>
+    <SettingItem label={$tStore('apps.performance_name')} icon={Activity}>
       <ToggleSwitch
         checked={$pageVisibilityStore.performance !== false}
         onchange={() => togglePage('performance')}
-        ariaLabel={$tStore('apps.stats_name')}
+        ariaLabel={$tStore('apps.performance_name')}
       />
     </SettingItem>
   </BentoCard>

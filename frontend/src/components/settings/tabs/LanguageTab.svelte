@@ -14,6 +14,8 @@
   import {
     localeStore,
     availableLocalesStore,
+    customCatalogsStore,
+    getLocaleMetadata,
     openTranslationsFolder,
     loadCustomLocales,
     tStore
@@ -28,6 +30,10 @@
       label: l.name,
       flag: l.flag || l.id
     }))
+  )
+
+  let activeLocaleMeta = $derived(
+    getLocaleMetadata($localeStore, $customCatalogsStore)
   )
 
   async function handleOpenLocalesFolder() {
@@ -64,6 +70,13 @@
         bind:value={$localeStore}
         fullWidth={true}
       />
+      {#if activeLocaleMeta && activeLocaleMeta.authors.length > 0}
+        <p class="locale-authors-caption">
+          {$tStore('settings.translated_by', {
+            authors: activeLocaleMeta.authors.join(', ')
+          })}
+        </p>
+      {/if}
     </SettingItem>
 
     <SettingItem
@@ -96,3 +109,11 @@
     </SettingItem>
   </BentoCard>
 </div>
+
+<style>
+  .locale-authors-caption {
+    margin: 6px 0 0;
+    font-size: 11px;
+    color: var(--vinta-text-secondary);
+  }
+</style>

@@ -43,5 +43,6 @@ You can view the live [GitHub Commit Insights](https://github.com/kuraigu/Vinta/
 
 1. **Contributors:** Open a Pull Request to add a feature, fix a bug, or update documentation.
 2. **Testers:** Download a release package, test features, or test PR builds, and report bugs or feedback on GitHub Issues or Pull Requests. Maintainers will tag your issue or PR and add you as a Tester.
+3. **Translators:** Submit a new language catalog or update existing translations via Pull Request or Translation Issue. Translators are credited in the contributor roster with the `translator` role and can also list themselves in the catalog's `@metadata.authors` field.
 
 Check out our [Contributing Guide](../CONTRIBUTING.md) to get started.

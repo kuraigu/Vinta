@@ -104,12 +104,151 @@
       <rect width="1" height="2" x="1" fill="#fff" />
       <rect width="1" height="2" x="2" fill="#ed2939" />
     </svg>
-  {:else if normalized === 'es'}
-    <!-- Spain Flag -->
-    <svg viewBox="0 0 3 2" class="flag-svg" aria-label="Español">
-      <rect width="3" height="0.5" y="0" fill="#aa151b" />
-      <rect width="3" height="1" y="0.5" fill="#f1bf00" />
-      <rect width="3" height="0.5" y="1.5" fill="#aa151b" />
+  {:else if normalized === 'es' || normalized === 'es-es'}
+    <!-- Spain Flag (3:2 with simplified Coat of Arms on the hoist side of the yellow band) -->
+    <svg viewBox="0 0 750 500" class="flag-svg" aria-label="Español (España)">
+      <rect width="750" height="125" y="0" fill="#aa151b" />
+      <rect width="750" height="250" y="125" fill="#f1bf00" />
+      <rect width="750" height="125" y="375" fill="#aa151b" />
+      <!-- Coat of Arms centered at x=250, y=250 -->
+      <g transform="translate(250, 250)">
+        <!-- Pillars of Hercules -->
+        <rect
+          x="-74"
+          y="-44"
+          width="12"
+          height="92"
+          fill="#d4d4d4"
+          stroke="#6b5410"
+          stroke-width="2"
+        />
+        <rect
+          x="62"
+          y="-44"
+          width="12"
+          height="92"
+          fill="#d4d4d4"
+          stroke="#6b5410"
+          stroke-width="2"
+        />
+        <rect
+          x="-78"
+          y="-52"
+          width="20"
+          height="10"
+          fill="#f1bf00"
+          stroke="#6b5410"
+          stroke-width="2"
+        />
+        <rect
+          x="58"
+          y="-52"
+          width="20"
+          height="10"
+          fill="#f1bf00"
+          stroke="#6b5410"
+          stroke-width="2"
+        />
+        <path
+          d="M-82,12 Q-68,26 -54,12"
+          fill="none"
+          stroke="#aa151b"
+          stroke-width="7"
+        />
+        <path
+          d="M54,12 Q68,26 82,12"
+          fill="none"
+          stroke="#aa151b"
+          stroke-width="7"
+        />
+        <!-- Royal Crown -->
+        <path
+          d="M-34,-54 L-40,-78 L-16,-68 L0,-86 L16,-68 L40,-78 L34,-54 Z"
+          fill="#f1bf00"
+          stroke="#6b5410"
+          stroke-width="2.5"
+        />
+        <rect
+          x="-36"
+          y="-56"
+          width="72"
+          height="12"
+          rx="3"
+          fill="#aa151b"
+          stroke="#6b5410"
+          stroke-width="2"
+        />
+        <!-- Shield -->
+        <path
+          d="M-44,-40 H44 V14 C44,44 0,66 0,66 C0,66 -44,44 -44,14 Z"
+          fill="#fff"
+          stroke="#6b5410"
+          stroke-width="3"
+        />
+        <!-- Quarters: Castile (red), Leon (white/magenta), Aragon (yellow/red), Navarre (red) -->
+        <rect x="-42" y="-38" width="42" height="44" fill="#aa151b" />
+        <rect x="0" y="-38" width="42" height="44" fill="#f7f7f7" />
+        <circle cx="21" cy="-16" r="11" fill="#b43c6e" />
+        <path d="M-42,6 H0 V14 C0,36 -21,50 -42,14 Z" fill="#f1bf00" />
+        <rect x="-32" y="6" width="7" height="24" fill="#aa151b" />
+        <rect x="-18" y="6" width="7" height="28" fill="#aa151b" />
+        <path d="M0,6 H42 V14 C42,36 0,62 0,62 Z" fill="#aa151b" />
+        <!-- Center Bourbon Escutcheon -->
+        <ellipse
+          cx="0"
+          cy="6"
+          rx="13"
+          ry="16"
+          fill="#0039a6"
+          stroke="#aa151b"
+          stroke-width="3"
+        />
+        <circle cx="0" cy="6" r="4" fill="#f1bf00" />
+      </g>
+    </svg>
+  {:else if normalized === 'es-ar' || normalized === 'ar'}
+    <!-- Argentina Flag -->
+    <svg
+      viewBox="0 0 800 500"
+      class="flag-svg"
+      aria-label="Español (Argentina)"
+    >
+      <rect width="800" height="500" fill="#74acdf" />
+      <rect width="800" height="166.67" y="166.67" fill="#fff" />
+      <g transform="translate(400, 250)">
+        <circle r="42" fill="#f6b40e" stroke="#85340a" stroke-width="4" />
+        <g fill="#f6b40e">
+          <polygon points="0,-78 6,-45 -6,-45" />
+          <polygon points="0,78 6,45 -6,45" />
+          <polygon points="-78,0 -45,6 -45,-6" />
+          <polygon points="78,0 45,6 45,-6" />
+          <polygon points="-55,-55 -27,-36 -36,-27" />
+          <polygon points="55,55 27,36 36,27" />
+          <polygon points="-55,55 -36,27 -27,36" />
+          <polygon points="55,-55 36,-27 27,-36" />
+        </g>
+      </g>
+    </svg>
+  {:else if normalized === 'hi' || normalized === 'in'}
+    <!-- India Flag -->
+    <svg viewBox="0 0 900 600" class="flag-svg" aria-label="हिन्दी">
+      <rect width="900" height="200" y="0" fill="#ff9933" />
+      <rect width="900" height="200" y="200" fill="#fff" />
+      <rect width="900" height="200" y="400" fill="#138808" />
+      <g transform="translate(450, 300)">
+        <circle r="80" fill="none" stroke="#000080" stroke-width="10" />
+        <circle r="14" fill="#000080" />
+        <g stroke="#000080" stroke-width="4">
+          <line y1="-78" y2="78" />
+          <line x1="-78" x2="78" />
+          <line x1="-55" y1="-55" x2="55" y2="55" />
+          <line x1="-55" y1="55" x2="55" y2="-55" />
+          <line x1="-30" y1="-72" x2="30" y2="72" />
+          <line x1="-72" y1="-30" x2="72" y2="30" />
+          <line x1="-72" y1="30" x2="72" y2="-30" />
+          <line x1="-30" y1="72" x2="30" y2="-72" />
+        </g>
+      </g>
     </svg>
   {:else if normalized === 'it'}
     <!-- Italy Flag -->

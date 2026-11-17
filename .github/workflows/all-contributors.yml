@@ -70,12 +70,13 @@ jobs:
         run: |
           PREFERRED_NAME=$(echo "$BODY_TEXT" | grep -i "Preferred Display Name:" | sed -E 's/.*Preferred Display Name:[[:space:]]*//I' | sed 's/\[Leave blank to use your GitHub display name\]//g' | tr -d '\r' | xargs)
 
+          npx all-contributors-cli add "$PR_AUTHOR" "contributor"
+
           if [ -n "$PREFERRED_NAME" ]; then
-            echo "Adding $PR_AUTHOR with preferred display name: $PREFERRED_NAME"
-            npx all-contributors-cli add "$PR_AUTHOR" "contributor" --name "$PREFERRED_NAME"
-          else
-            echo "Adding $PR_AUTHOR with default GitHub profile name"
-            npx all-contributors-cli add "$PR_AUTHOR" "contributor"
+            echo "Applying preferred display name for $PR_AUTHOR: $PREFERRED_NAME"
+            jq --arg login "$PR_AUTHOR" --arg name "$PREFERRED_NAME" \
+              '(.contributors[] | select((.login | ascii_downcase) == ($login | ascii_downcase))).name = $name' \
+              .all-contributorsrc > .all-contributorsrc.tmp && mv .all-contributorsrc.tmp .all-contributorsrc
           fi
 
           npx all-contributors-cli generate

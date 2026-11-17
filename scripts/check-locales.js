@@ -16,10 +16,35 @@ const path = require('path')
 
 const LOCALES_DIR = path.resolve(__dirname, '../frontend/src/locales')
 const BASE_LOCALE = 'en.json'
+const METADATA_KEY = '@metadata'
+
+function extractTokens(text) {
+  if (typeof text !== 'string') return ''
+  const matches = text.match(/\{\w+\}/g)
+  return matches ? matches.sort().join(',') : ''
+}
+
+function validateMetadata(file, data) {
+  const issues = []
+  const meta = data[METADATA_KEY]
+  if (meta === undefined) return issues
+  if (meta === null || typeof meta !== 'object' || Array.isArray(meta)) {
+    issues.push(`${METADATA_KEY} must be an object`)
+    return issues
+  }
+  if (meta.authors !== undefined && (!Array.isArray(meta.authors) || meta.authors.some((a) => typeof a !== 'string'))) {
+    issues.push(`${METADATA_KEY}.authors must be an array of strings`)
+  }
+  if (meta['last-updated'] !== undefined && typeof meta['last-updated'] !== 'string') {
+    issues.push(`${METADATA_KEY}.last-updated must be a string`)
+  }
+  return issues
+}
 
 function flattenKeys(obj, prefix = '') {
   const result = new Map()
   for (const [key, val] of Object.entries(obj)) {
+    if (!prefix && key === METADATA_KEY) continue
     const fullPath = prefix ? `${prefix}.${key}` : key
     if (val !== null && typeof val === 'object' && !Array.isArray(val)) {
       const nested = flattenKeys(val, fullPath)
@@ -77,6 +102,8 @@ function run() {
     const missingKeys = []
     const emptyKeys = []
     const extraKeys = []
+    const tokenMismatches = []
+    const metaIssues = validateMetadata(file, localeData)
 
     for (const [key, baseVal] of baseMap) {
       if (!localeMap.has(key)) {
@@ -85,6 +112,8 @@ function run() {
         const val = localeMap.get(key)
         if (typeof val === 'string' && val.trim() === '') {
           emptyKeys.push(key)
+        } else if (extractTokens(baseVal) !== extractTokens(val)) {
+          tokenMismatches.push(key)
         }
       }
     }
@@ -95,7 +124,8 @@ function run() {
       }
     }
 
-    const fileErrors = missingKeys.length + emptyKeys.length + extraKeys.length
+    const fileErrors =
+      missingKeys.length + emptyKeys.length + extraKeys.length + tokenMismatches.length + metaIssues.length
 
     if (fileErrors === 0) {
       console.log(`✔ ${file} - 100% in sync (${localeMap.size} keys)`)
@@ -125,6 +155,19 @@ function run() {
         if (extraKeys.length > 10) {
           console.log(`     ... and ${extraKeys.length - 10} more`)
         }
+      }
+
+      if (tokenMismatches.length > 0) {
+        console.log(`   Interpolation {token} mismatches (${tokenMismatches.length}):`)
+        tokenMismatches.slice(0, 10).forEach((k) => console.log(`     ! ${k}`))
+        if (tokenMismatches.length > 10) {
+          console.log(`     ... and ${tokenMismatches.length - 10} more`)
+        }
+      }
+
+      if (metaIssues.length > 0) {
+        console.log(`   Metadata issues (${metaIssues.length}):`)
+        metaIssues.forEach((m) => console.log(`     ! ${m}`))
       }
       console.log('')
     }

@@ -1,4 +1,8 @@
 {
+  "@metadata": {
+    "authors": [],
+    "last-updated": ""
+  },
   "common": {
     "save": "I-save",
     "cancel": "Kanselahin",
@@ -248,6 +252,7 @@
     "reload_locales": "I-reload ang Translations",
     "reloaded": "Na-reload ang Translations",
     "locales_help": "Maglagay ng kahit anong {locale}.json na file sa folder na ito para masubukan agad ang salin sa real time.",
+    "translated_by": "Isinalin ni {authors}",
     "startup_label": "Buksan sa Pag-start ng Windows",
     "hardware_accel_label": "Hardware Acceleration",
     "cache_label": "Linisin ang Cache ng App",
@@ -757,9 +762,9 @@
     "project_resources": "Resources ng Proyekto",
     "repository": "Repository",
     "report_issue": "Mag-report ng Issue",
+    "run_onboarding": "Patakbuhin ang Onboarding",
     "project_credits": "Credits ng Proyekto",
-    "view_full_roster": "Tingnan Lahat",
-    "run_onboarding": "Patakbuhin ang Onboarding"
+    "view_full_roster": "Tingnan Lahat"
   },
   "appearance": {
     "theme_label": "Theme",
