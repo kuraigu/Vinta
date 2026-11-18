@@ -761,10 +761,11 @@ export function SetHitRects(rects: $models.HitRect[]): $CancellablePromise<void>
 }
 
 /**
- * SetIgnoreMouseEvents toggles WS_EX_TRANSPARENT click-through on the native window.
+ * SetIgnoreMouseEvents is retained for binding compatibility and does nothing. The hit-testing
+ * loop is the single owner of WS_EX_TRANSPARENT; use SetForceInteractive to keep the window clickable.
  */
-export function SetIgnoreMouseEvents(ignore: boolean): $CancellablePromise<void> {
-    return $Call.ByID(1718867283, ignore);
+export function SetIgnoreMouseEvents($0: boolean): $CancellablePromise<void> {
+    return $Call.ByID(1718867283, $0);
 }
 
 /**
