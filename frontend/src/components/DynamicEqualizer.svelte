@@ -149,6 +149,7 @@
     }
     drawFrame(time)
     if (isPlaying && !$isIslandHiddenStore) {
+      const intervalMs = variant === 'minimal' ? 80 : FRAME_INTERVAL_MS
       animTimer = window.setTimeout(() => {
         animTimer = 0
         if (
@@ -161,7 +162,7 @@
         ) {
           animFrame = requestAnimationFrame(renderLoop)
         }
-      }, FRAME_INTERVAL_MS)
+      }, intervalMs)
     }
   }
 

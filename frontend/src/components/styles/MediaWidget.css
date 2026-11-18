@@ -38,14 +38,16 @@
   flex-shrink: 0;
   position: relative;
   overflow: hidden;
+  will-change: transform;
+  contain: strict;
 }
 
 .vinyl-disc.spinning {
-  animation: spinVinyl 6s linear infinite;
+  animation: spinVinyl 6s steps(90, end) infinite;
 }
 
 .vinyl-disc.paused {
-  animation: spinVinyl 6s linear infinite;
+  animation: spinVinyl 6s steps(90, end) infinite;
   animation-play-state: paused;
 }
 

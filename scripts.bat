@@ -273,6 +273,11 @@ if "%~1"=="check-transitions" (
     exit /b !ERRORLEVEL!
 )
 
+if "%~1"=="resource-profile" (
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\resource-profile.ps1" %2
+    exit /b !ERRORLEVEL!
+)
+
 if "%~1"=="check-locals" (
     node "%~dp0scripts\check-locales.js"
     exit /b !ERRORLEVEL!
