@@ -422,7 +422,9 @@
     font-weight: 500;
     cursor: pointer;
     outline: none;
-    transition: all 0.16s ease;
+    transition:
+      transform 0.16s ease,
+      opacity 0.16s ease;
     box-sizing: border-box;
   }
 
@@ -566,7 +568,9 @@
     color: var(--vinta-text-secondary, #a1a1aa);
     padding: 2px 5px;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition:
+      transform 0.15s ease,
+      opacity 0.15s ease;
   }
 
   .ampm-btn:hover {
@@ -632,7 +636,9 @@
     font-weight: 500;
     color: var(--vinta-text-primary, #e4e4e7);
     cursor: pointer;
-    transition: all 0.12s ease;
+    transition:
+      transform 0.12s ease,
+      opacity 0.12s ease;
   }
 
   .col-item-btn:hover {
@@ -664,7 +670,9 @@
     padding: 2px 8px;
     border-radius: 6px;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition:
+      transform 0.15s ease,
+      opacity 0.15s ease;
     border: none;
   }
 

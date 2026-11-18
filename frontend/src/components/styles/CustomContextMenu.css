@@ -28,9 +28,6 @@
   color: var(--vinta-text-secondary);
   cursor: pointer;
   border-radius: 7px;
-  transition:
-    background-color 0.12s ease,
-    color 0.12s ease;
   pointer-events: auto;
 }
 

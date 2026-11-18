@@ -39,10 +39,7 @@
       0 4px 18px rgba(0, 0, 0, 0.18);
     position: relative;
     overflow: hidden;
-    transition:
-      transform 0.2s ease,
-      border-color 0.2s ease,
-      box-shadow 0.2s ease;
+    transition: transform 0.2s ease;
   }
 
   .bento-item:hover {

@@ -58,12 +58,14 @@
   interface Props {
     expanded?: boolean
     glanceMode?: boolean
+    active?: boolean
     widgetSize?: WidgetSizePreset
   }
 
   let {
     expanded = false,
     glanceMode = false,
+    active = true,
     widgetSize = '2x1'
   }: Props = $props()
 
@@ -504,6 +506,7 @@
    * Harmonizes dynamic background scrim tint with active album artwork or procedural texture palette.
    */
   function handleCardTintEffect() {
+    if (glanceMode || !expanded) return
     if (displayAlbumArt && !imgLoadFailed) {
       extractArtworkColor(displayAlbumArt)
     } else {
@@ -520,9 +523,10 @@
   }
 
   // Smooth local timeline progression between backend SMTC updates.
-  // Uses a 250ms cadence with CSS transitions for zero-overhead timeline interpolation.
+  // Uses a 1s cadence paired with compositor transform interpolation.
   function handleTimelineProgressEffect() {
-    if (!isPlayingState || isDraggingSeek || $isIslandHiddenStore) return
+    if (!active || !isPlayingState || isDraggingSeek || $isIslandHiddenStore)
+      return
 
     let lastTick = performance.now()
     const timer = setInterval(() => {
@@ -540,7 +544,7 @@
         localPosMs = nextPos
         seekVal = nextPos
       }
-    }, 250)
+    }, 1000)
 
     return () => {
       clearInterval(timer)
@@ -847,6 +851,7 @@
    * Observes and updates marquee metrics when track information or element bounds change.
    */
   function handleTitleMarqueeEffect() {
+    if (!active) return
     const _title = media.title
     const _artist = media.artist
     const _expanded = expanded
@@ -909,7 +914,9 @@
     <!-- Compact Minimal View with Spinning Vinyl Disc, Track Info, Clock/Controls, and Audio Wave Bars -->
     <div class="minimal-layout">
       <!-- Spinning Vinyl Disc Album Art -->
-      <div class="vinyl-disc {media.isPlaying ? 'spinning' : 'paused'}">
+      <div
+        class="vinyl-disc {active && media.isPlaying ? 'spinning' : 'paused'}"
+      >
         <div class="vinyl-groove">
           {#if displayAlbumArt && !imgLoadFailed}
             <img
@@ -1101,7 +1108,7 @@
         {/if}
         {#if media.title || media.isPlaying}
           <DynamicEqualizer
-            isPlaying={media.isPlaying}
+            isPlaying={active && media.isPlaying}
             audioPeak={$audioPeakStore}
             variant="minimal"
             barCount={4}
@@ -1528,7 +1535,8 @@
   {#if glanceMode}
     {@render minimal()}
   {:else}
-    <IslandPage {expanded} {minimal} {expandedContent} />
+    <!-- Delay expanded card pre-warming past the initial startup window so active media does not decode artwork or mount drawers on launch. -->
+    <IslandPage {expanded} {minimal} {expandedContent} prewarmMs={4000} />
   {/if}
 </div>
 

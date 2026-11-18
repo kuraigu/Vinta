@@ -21,7 +21,9 @@
   line-height: 1.2;
   text-decoration: none;
   box-sizing: border-box;
-  transition: all 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .setting-btn:hover {

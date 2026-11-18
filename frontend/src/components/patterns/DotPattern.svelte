@@ -42,7 +42,6 @@
     );
     z-index: 0;
     color: var(--vinta-primary, #38bdf8);
-    transition: color 0.3s ease;
   }
 
   .vinta-dot-pattern.variant-minimal-left {

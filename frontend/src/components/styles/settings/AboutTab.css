@@ -160,7 +160,6 @@
   padding: 10px 14px;
   text-decoration: none;
   color: var(--vinta-text-primary);
-  transition: background 0.15s ease;
   width: 100%;
   box-sizing: border-box;
 }

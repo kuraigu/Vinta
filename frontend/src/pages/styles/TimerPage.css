@@ -89,7 +89,9 @@
   height: 4px;
   border-radius: 50%;
   background: var(--vinta-border, rgba(255, 255, 255, 0.2));
-  transition: all 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
 }
 
 .cycle-dot.active {
@@ -117,7 +119,9 @@
   background: var(--vinta-item-bg, rgba(255, 255, 255, 0.06));
   color: var(--vinta-text-secondary, #b0b0b0);
   cursor: pointer;
-  transition: all 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition:
+    transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
   outline: none;
   padding: 0;
 }
@@ -430,7 +434,9 @@
   font-weight: 600;
   cursor: pointer;
   outline: none;
-  transition: all 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition:
+    transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
   border: 1px solid transparent;
 }
 
@@ -498,7 +504,9 @@
   background: transparent;
   color: var(--vinta-text-secondary);
   cursor: pointer;
-  transition: all 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition:
+    transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
   outline: none;
   flex-shrink: 0;
 }
@@ -562,7 +570,6 @@
   fill: none;
   stroke-width: 5.5;
   stroke-linecap: round;
-  transition: stroke-dashoffset 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .dial-progress.timer-stroke {
@@ -599,7 +606,9 @@
   padding: 8px;
   border-radius: 50%;
   outline: none;
-  transition: all 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .dial-center-btn:hover {
@@ -672,7 +681,9 @@
   font-weight: 600;
   cursor: pointer;
   outline: none;
-  transition: all 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .preset-chip:hover {
@@ -715,7 +726,9 @@
   background: var(--vinta-item-bg, rgba(255, 255, 255, 0.06));
   color: var(--vinta-text-secondary, #b0b0b0);
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition:
+    transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
   outline: none;
 }
 
@@ -747,7 +760,9 @@
   font-weight: 700;
   letter-spacing: 0.2px;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition:
+    transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
   outline: none;
   background: var(--vinta-primary, #38bdf8);
   color: #0b0f19;
@@ -908,7 +923,9 @@
   font-size: 10px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.16s ease;
+  transition:
+    transform 0.16s ease,
+    opacity 0.16s ease;
   user-select: none;
 }
 
@@ -942,7 +959,9 @@
   color: var(--vinta-text-secondary, #b0b0b0);
   cursor: pointer;
   padding: 0;
-  transition: all 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .focus-settings-trigger-btn:hover {
@@ -980,7 +999,9 @@
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease;
   outline: none;
 }
 
@@ -1059,10 +1080,6 @@
   font-family: inherit;
   text-align: left;
   outline: none;
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
 }
 
 .alarm-label-input::placeholder {
@@ -1107,7 +1124,9 @@
   font-weight: 600;
   cursor: pointer;
   outline: none;
-  transition: all 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .repeat-pill:hover {
@@ -1143,7 +1162,9 @@
   padding: 0;
   cursor: pointer;
   outline: none;
-  transition: all 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .day-toggle-btn:hover {
@@ -1175,7 +1196,9 @@
   border: none;
   cursor: pointer;
   outline: none;
-  transition: all 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .card-act-btn.save {
@@ -1238,7 +1261,9 @@
   font-weight: 600;
   cursor: pointer;
   outline: none;
-  transition: all 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .add-first-alarm-btn:hover {
@@ -1254,7 +1279,9 @@
   background: var(--vinta-item-bg, rgba(255, 255, 255, 0.04));
   border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.08));
   margin-bottom: 6px;
-  transition: all 0.2s ease;
+  transition:
+    transform 0.2s ease,
+    opacity 0.2s ease;
 }
 
 .alarm-item-card.disabled {
@@ -1377,7 +1404,9 @@ button.alarm-item-info:hover .alarm-item-time {
   color: var(--vinta-text-muted, #888888);
   cursor: pointer;
   outline: none;
-  transition: all 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .alarm-action-btn:hover {
@@ -1397,7 +1426,9 @@ button.alarm-item-info:hover .alarm-item-time {
   color: var(--vinta-text-muted, #888888);
   cursor: pointer;
   outline: none;
-  transition: all 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .alarm-delete-btn:hover {
@@ -1473,7 +1504,9 @@ button.alarm-item-info:hover .alarm-item-time {
   font-weight: 600;
   cursor: pointer;
   text-align: center;
-  transition: all 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .focus-preset-chip:hover {
@@ -1525,7 +1558,6 @@ button.alarm-item-info:hover .alarm-item-time {
   font-weight: 700;
   font-size: 14px;
   padding: 0;
-  transition: background 0.15s ease;
 }
 
 .stepper-btn:hover {
@@ -1586,7 +1618,9 @@ button.alarm-item-info:hover .alarm-item-time {
   font-weight: 600;
   cursor: pointer;
   outline: none;
-  transition: all 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .quick-sec-chip:hover {
@@ -1610,7 +1644,9 @@ button.alarm-item-info:hover .alarm-item-time {
   cursor: pointer;
   outline: none;
   margin-top: auto;
-  transition: all 0.18s ease;
+  transition:
+    transform 0.18s ease,
+    opacity 0.18s ease;
 }
 
 .drawer-confirm-btn:hover {

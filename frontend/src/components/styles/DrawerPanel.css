@@ -118,7 +118,9 @@
   background: var(--vinta-item-bg);
   color: var(--vinta-text-secondary);
   cursor: pointer;
-  transition: all 0.18s ease;
+  transition:
+    transform 0.18s ease,
+    opacity 0.18s ease;
 }
 
 .vinta-drawer-close-btn svg {

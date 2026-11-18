@@ -87,10 +87,6 @@
   background: transparent;
   color: var(--vinta-text-secondary);
   cursor: pointer;
-  transition:
-    background-color 0.15s ease,
-    color 0.15s ease,
-    border-color 0.15s ease;
 }
 
 .overlay-close-btn:hover {

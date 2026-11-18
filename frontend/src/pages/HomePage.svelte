@@ -483,6 +483,7 @@
               {#if $homeWidgetsVisibilityStore.media !== false}
                 <MediaGlanceWidget
                   size={getWidgetSize('media')}
+                  active={expanded}
                   showMenuButton={$homeWidgetMenuEnabledStore}
                   oncontextmenu={(e) => handleWidgetContextMenu(e, 'media')}
                 />

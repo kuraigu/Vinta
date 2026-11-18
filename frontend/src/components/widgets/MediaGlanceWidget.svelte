@@ -19,12 +19,14 @@
 
   interface Props {
     size?: WidgetSizePreset
+    active?: boolean
     showMenuButton?: boolean
     oncontextmenu?: (e: MouseEvent) => void
   }
 
   let {
     size = '2x1',
+    active = true,
     showMenuButton = false,
     oncontextmenu = undefined
   }: Props = $props()
@@ -61,7 +63,12 @@
       class="media-glance-card"
       onclick={openMediaPage}
     >
-      <MediaWidget expanded={false} glanceMode={true} widgetSize={size} />
+      <MediaWidget
+        expanded={false}
+        glanceMode={true}
+        {active}
+        widgetSize={size}
+      />
     </BentoCard>
   </WidgetFrame>
 {/if}

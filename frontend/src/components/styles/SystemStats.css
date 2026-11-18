@@ -48,8 +48,7 @@
   flex-shrink: 0;
   transition:
     transform 0.15s ease,
-    opacity 0.15s ease,
-    color 0.15s ease;
+    opacity 0.15s ease;
 }
 
 :global(.system-stats-glance-card:hover) :global(.glance-nav-chevron) {

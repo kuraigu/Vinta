@@ -37,7 +37,9 @@
   background: var(--vinta-surface-card);
   border: 1px solid var(--vinta-border-light);
   border-radius: var(--vinta-radius-card);
-  transition: all 0.16s ease;
+  transition:
+    transform 0.16s ease,
+    opacity 0.16s ease;
 }
 
 :global(.perf-metric-card:hover) {
