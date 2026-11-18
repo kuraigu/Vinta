@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" fill="none">
-  <!-- Strict 2-Color Printable Vinta Bot (#18181B Matte Black + #F59E0B Dark Gold) -->
+  <!-- Strict 2-Color Printable Vinta Bot (#111925 Midnight Navy + #F59E0B Dark Gold) -->
 
-  <!-- Full-Bleed Matte-Black Rounded-Square Background (Zero Outer Padding) -->
-  <rect x="0" y="0" width="512" height="512" rx="124" fill="#18181B"/>
+  <!-- Full-Bleed Midnight-Navy Rounded-Square Background (Zero Outer Padding) -->
+  <rect x="0" y="0" width="512" height="512" rx="124" fill="#111925"/>
 
   <!-- Scaled-Up Vinta Bot Filling Full-Bleed Tile Boldly -->
   <g transform="translate(256, 256) scale(1.24) translate(-256, -259)">
@@ -14,10 +14,10 @@
     <rect x="108" y="138" width="296" height="248" rx="112" fill="#F59E0B"/>
 
     <!-- Dynamic-Island Top Notch Cutout -->
-    <rect x="216" y="132" width="80" height="30" rx="15" fill="#18181B"/>
+    <rect x="216" y="132" width="80" height="30" rx="15" fill="#111925"/>
 
-    <!-- Negative-Space Obsidian Visor -->
-    <rect x="138" y="186" width="236" height="168" rx="68" fill="#18181B"/>
+    <!-- Negative-Space Midnight-Navy Visor -->
+    <rect x="138" y="186" width="236" height="168" rx="68" fill="#111925"/>
 
     <!-- Dark-Gold Bot Eyes (> Left Eye, Pill Right Eye) & Smile Inside Visor -->
     <path d="M188 229 L216 250 L188 271" stroke="#F59E0B" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
