@@ -68,6 +68,11 @@ tasks:
     cmds:
       - cmd.exe /c "scripts.bat dev no_build"
 
+  dev:profile:
+    desc: Start live development server with WebView2 remote debugging enabled (port 9222)
+    cmds:
+      - cmd.exe /c "scripts.bat dev profile"
+
   icon:
     desc: Generate multi-resolution build/windows/icon.ico from build/appicon.png
     sources:
@@ -158,6 +163,12 @@ tasks:
     desc: Run all project linters in non-mutating CI check mode
     cmds:
       - cmd.exe /c "scripts.bat lint ci"
+
+  check-themes:
+    desc: Audit theme presets and validate --vinta-* CSS token references
+    aliases: [themes:check]
+    cmds:
+      - cmd.exe /c "scripts.bat check-themes"
 
   check-locales:
     desc: Check translation key parity and schema across all locale catalogs

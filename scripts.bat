@@ -63,12 +63,15 @@ if "%~1"=="dev" (
     )
 
     set "DO_BUILD_NATIVE=1"
+    set "DO_PROFILE=0"
     for %%A in (%2 %3 %4) do (
         if "%%~A"=="no_build" (
             set "DO_BUILD_NATIVE=0"
+        ) else if "%%~A"=="profile" (
+            set "DO_PROFILE=1"
         ) else (
             echo Error: Unknown argument '%%~A' for 'dev'.
-            echo Allowed options for 'dev': [no_build ^| frontend]
+            echo Allowed options for 'dev': [no_build ^| profile ^| frontend]
             exit /b 1
         )
     )
@@ -82,6 +85,13 @@ if "%~1"=="dev" (
     if errorlevel 1 exit /b !ERRORLEVEL!
     set "VINTA_SHOWCASE="
     set "VINTA_NO_DEVTEST="
+    if "!DO_PROFILE!"=="1" (
+        set "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--remote-debugging-port=9222"
+        echo Remote debugging enabled: edge://inspect ^(port 9222^)
+    ) else (
+        set "WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS="
+    )
+    echo Dev server: http://localhost:9245
     wails3 dev -config ./build/config.yml -port 9245
     set "DEV_ERR=!ERRORLEVEL!"
     if exist "wails_windows_amd64.syso" del /f /q "wails_windows_amd64.syso"
@@ -233,14 +243,17 @@ if "%~1"=="lint" (
     if errorlevel 1 ( popd & exit /b !ERRORLEVEL! )
     popd
 
-    echo Auditing Theme Tokens...
-    powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\pack-theme.ps1" -CheckOnly
+    echo Checking Themes ^& Locales...
+    call :check_themes
     if errorlevel 1 exit /b !ERRORLEVEL!
-
-    echo Checking Locale Catalogs...
     node "%~dp0scripts\check-locales.js"
     if errorlevel 1 exit /b !ERRORLEVEL!
     exit /b 0
+)
+
+if "%~1"=="check-themes" (
+    call :check_themes
+    exit /b !ERRORLEVEL!
 )
 
 if "%~1"=="pack-theme" (
@@ -346,11 +359,19 @@ wails3 generate bindings -ts
 exit /b !ERRORLEVEL!
 
 :build_frontend
+node "%~dp0scripts\check-tokens.js"
+if errorlevel 1 exit /b !ERRORLEVEL!
 pushd "%~dp0frontend"
 call npm run build
 set "ERR=!ERRORLEVEL!"
 popd
 exit /b !ERR!
+
+:check_themes
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\pack-theme.ps1" -CheckOnly
+if errorlevel 1 exit /b !ERRORLEVEL!
+node "%~dp0scripts\check-tokens.js"
+exit /b !ERRORLEVEL!
 
 :generate_syso
 wails3 generate syso -arch amd64 -icon build/windows/icon.ico -manifest build/windows/wails.exe.manifest -info build/windows/info.json -out wails_windows_amd64.syso

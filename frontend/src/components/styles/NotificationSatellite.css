@@ -45,7 +45,7 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background: var(--vinta-card-header-bg);
+  background: var(--vinta-surface-card);
   transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
