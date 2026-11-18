@@ -248,6 +248,8 @@ if "%~1"=="lint" (
     if errorlevel 1 exit /b !ERRORLEVEL!
     node "%~dp0scripts\check-locales.js"
     if errorlevel 1 exit /b !ERRORLEVEL!
+    node "%~dp0scripts\check-transitions.js"
+    if errorlevel 1 exit /b !ERRORLEVEL!
     exit /b 0
 )
 
@@ -263,6 +265,11 @@ if "%~1"=="pack-theme" (
 
 if "%~1"=="check-locales" (
     node "%~dp0scripts\check-locales.js"
+    exit /b !ERRORLEVEL!
+)
+
+if "%~1"=="check-transitions" (
+    node "%~dp0scripts\check-transitions.js" %2
     exit /b !ERRORLEVEL!
 )
 

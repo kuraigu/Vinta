@@ -176,6 +176,12 @@ tasks:
     cmds:
       - cmd.exe /c "scripts.bat check-locales"
 
+  check-transitions:
+    desc: Audit frontend CSS transitions for non-composited properties
+    aliases: [transitions:check]
+    cmds:
+      - cmd.exe /c "scripts.bat check-transitions {{.CLI_ARGS}}"
+
   sync-locales:
     desc: Propagate new English keys from en.json to all other locale catalogs
     aliases: [sync-locals, locales:sync]
