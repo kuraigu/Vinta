@@ -128,6 +128,11 @@ func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 				}
 			}
 		})
+		wailsApp.Event.On("devtest:open-devtools", func(_ *application.CustomEvent) {
+			if a.IsTestMode() && a.window != nil {
+				a.window.OpenDevTools()
+			}
+		})
 	}
 
 	if procTimeBeginPeriod.Find() == nil {

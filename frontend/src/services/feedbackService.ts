@@ -7,7 +7,8 @@
 
 import {
   GetSystemDiagnostics,
-  OpenFeedbackIssue
+  OpenFeedbackIssue,
+  OpenFeatureRequest
 } from '../../bindings/Vinta/backend/app'
 
 /**
@@ -42,13 +43,32 @@ export async function getSystemDiagnostics(): Promise<SystemDiagnostics | null> 
 }
 
 /**
- * Launches the default web browser with a pre-populated GitHub issue template
- * containing sanitized runtime diagnostics.
+ * Launches the default web browser with the consolidated bug report template
+ * pre-populated with user input and sanitized runtime diagnostics.
  */
-export async function reportFeedback(): Promise<void> {
+export async function reportFeedback(
+  title: string = '',
+  describe: string = '',
+  reproduce: string = ''
+): Promise<void> {
   try {
-    await OpenFeedbackIssue()
+    await OpenFeedbackIssue(title, describe, reproduce)
   } catch (err) {
     console.error('Failed to open feedback issue:', err)
+  }
+}
+
+/**
+ * Launches the default web browser with the feature request template pre-populated.
+ */
+export async function requestFeature(
+  title: string = '',
+  describe: string = '',
+  useCase: string = ''
+): Promise<void> {
+  try {
+    await OpenFeatureRequest(title, describe, useCase)
+  } catch (err) {
+    console.error('Failed to open feature request:', err)
   }
 }

@@ -1,0 +1,19 @@
+name: Feature request
+description: Suggest a new feature or enhancement for Vinta
+title: "[Enhancement] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: describe
+    attributes:
+      label: Describe the feature
+      description: A clear and concise description of what you want to happen.
+    validations:
+      required: true
+  - type: textarea
+    id: use_case
+    attributes:
+      label: Why it would be useful
+      description: Optional context or use case for this enhancement.
+    validations:
+      required: false

@@ -213,7 +213,7 @@
   border: none;
   background: var(--vinta-text-primary);
   color: var(--vinta-bg);
-  box-shadow: var(--vinta-shadow-sm);
+  box-shadow: var(--vinta-island-hover-shadow);
   cursor: pointer;
   transition:
     transform 0.15s ease,
@@ -223,7 +223,7 @@
 
 .minimal-glance-play:hover {
   transform: scale(1.06);
-  box-shadow: var(--vinta-shadow-md);
+  box-shadow: var(--vinta-dock-popover-shadow);
   filter: brightness(1.05);
 }
 

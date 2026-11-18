@@ -14,12 +14,13 @@
     config as settingsConfig
   } from '../../pages/SettingsPage.svelte'
   import { bakeImageToCanvas } from '../../services/bakedAnimation'
-  import { reportFeedback } from '../../services/feedbackService'
   import { OpenURL } from '../../../bindings/Vinta/backend/app.js'
   import {
     activeSettingsTabStore,
     tStore,
-    type IslandConfig
+    type IslandConfig,
+    type OverlayPageId,
+    type FeedbackOverlayKind
   } from '../../store'
 
   import enohotelLogoSvg from '../../illustrations/enohotel-daniel-belda/simple_logo.svg'
@@ -29,6 +30,14 @@
     getContext<
       (page: unknown, pageConfig: IslandConfig, expand?: boolean) => void
     >('navigate')
+
+  const openOverlay =
+    getContext<
+      (
+        overlay: OverlayPageId,
+        options?: { feedbackKind?: FeedbackOverlayKind }
+      ) => void
+    >('openOverlay')
 
   let enohotelSunSprite: HTMLCanvasElement | null = null
 
@@ -227,7 +236,7 @@
       iconType: 'component',
       iconComponent: MessageSquareHeart,
       badgeColorName: 'emerald',
-      action: () => void reportFeedback()
+      action: () => openOverlay?.('feedback', { feedbackKind: 'bug' })
     }
   ])
 

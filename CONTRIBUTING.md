@@ -10,8 +10,9 @@ Everyone who contributes (code, docs, bug reports, or QA testing) gets listed in
 - [3. How Vinta Works (Architecture)](#3-how-vinta-works-architecture) (backend, C++ bridge, satellites, page hierarchy)
 - [4. Building Components & Pages](#4-building-components--pages) (component-first rules, templates, runes, scoping)
 - [5. Creating & Packaging Themes](#5-creating--packaging-themes) (presets, theme packages, manifest format)
-- [6. Submitting a Pull Request](#6-submitting-a-pull-request) (branching, guidelines, PR checklist)
-- [7. Maintainer Release & Verification Guide](#7-maintainer-release--verification-guide) (releases, attestations, signatures)
+- [6. Translations & Locales](#6-translations--locales) (adding keys, syncing, contributing translations)
+- [7. Submitting a Pull Request](#7-submitting-a-pull-request) (branching, guidelines, PR checklist)
+- [8. Maintainer Release & Verification Guide](#8-maintainer-release--verification-guide) (releases, attestations, signatures)
 
 ---
 
@@ -254,17 +255,43 @@ If you are contributing a new first-party preset directly into Vinta:
 
 ---
 
-## 6. Submitting a Pull Request
+## 6. Translations & Locales
 
-1. Fork the repo and create a branch off `main`.
-2. Follow the design and CSS rules in [docs/DESIGN.md](docs/DESIGN.md).
-3. Run `task lint` (or `.\scripts.bat lint`) and test your changes locally.
-4. Open a PR and fill out `.github/PULL_REQUEST_TEMPLATE.md`.
-5. Once reviewed and merged, we'll add your contributor role and credit!
+Locale catalogs live in `frontend/src/locales/` with `en.json` as the base catalog.
+
+### Adding UI Strings (Code PRs)
+
+1. Add new keys only to `frontend/src/locales/en.json`.
+2. Run `task sync-locales` (or `.\scripts.bat sync-locales`) to copy new keys into the other locale files with English fallback values.
+3. Leave non-English catalogs in English so community translators can localize them.
+
+### Updating an Existing Translation
+
+1. Run `task check-locales` (or `.\scripts.bat check-locales`). Any keys that still match `en.json` are listed under a `⚠` warning.
+2. Open `frontend/src/locales/<locale>.json` and translate the English fallback strings.
+3. Preserve all `{placeholder}` tokens (such as `{build}` or `{count}`) exactly as written in `en.json`, and keep JSON keys unchanged.
+4. Add the translator's name or handle to `@metadata.authors` and update `@metadata.last-updated` at the top of the file.
+5. Re-run `task check-locales` to confirm zero schema or token errors, then open a PR.
+
+### Adding a New Language
+
+1. Copy `frontend/src/locales/en.json` to `frontend/src/locales/<bcp47-code>.json` and translate the values.
+2. Register the catalog, display name, and flag in `frontend/src/services/i18n.ts` (and OS locale mapping in `frontend/src/stores/settings.ts`).
+3. Run `task check-locales` and `task lint` to validate the new catalog.
 
 ---
 
-## 7. Maintainer Release & Verification Guide
+## 7. Submitting a Pull Request
+
+1. Fork the repo and create a branch off `main`.
+2. Follow the design and CSS rules in [docs/DESIGN.md](docs/DESIGN.md).
+3. Run `task lint` (or `.\scripts.bat lint`) and test changes locally.
+4. Open a PR and fill out `.github/PULL_REQUEST_TEMPLATE.md`.
+5. Once reviewed and merged, contributor roles and credits are updated in `docs/CONTRIBUTORS.md`.
+
+---
+
+## 8. Maintainer Release & Verification Guide
 
 Official releases are built on isolated GitHub Actions runners so binaries stay reproducible and verifiable.
 

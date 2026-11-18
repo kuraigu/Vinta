@@ -103,7 +103,9 @@ function run() {
     const emptyKeys = []
     const extraKeys = []
     const tokenMismatches = []
+    const unchangedKeys = []
     const metaIssues = validateMetadata(file, localeData)
+    const isEnglishVariant = file.startsWith('en-')
 
     for (const [key, baseVal] of baseMap) {
       if (!localeMap.has(key)) {
@@ -114,6 +116,13 @@ function run() {
           emptyKeys.push(key)
         } else if (extractTokens(baseVal) !== extractTokens(val)) {
           tokenMismatches.push(key)
+        } else if (
+          !isEnglishVariant &&
+          typeof val === 'string' &&
+          val === baseVal &&
+          /[a-zA-Z]{2,}/.test(baseVal)
+        ) {
+          unchangedKeys.push(key)
         }
       }
     }
@@ -128,7 +137,15 @@ function run() {
       missingKeys.length + emptyKeys.length + extraKeys.length + tokenMismatches.length + metaIssues.length
 
     if (fileErrors === 0) {
-      console.log(`✔ ${file} - 100% in sync (${localeMap.size} keys)`)
+      if (unchangedKeys.length > 0) {
+        console.log(`⚠ ${file} - in sync (${localeMap.size} keys), ${unchangedKeys.length} untranslated (unchanged from en.json):`)
+        unchangedKeys.slice(0, 5).forEach((k) => console.log(`     ~ ${k}`))
+        if (unchangedKeys.length > 5) {
+          console.log(`     ... and ${unchangedKeys.length - 5} more`)
+        }
+      } else {
+        console.log(`✔ ${file} - 100% in sync (${localeMap.size} keys)`)
+      }
     } else {
       hasErrors = true
       console.log(`✖ ${file} - ${fileErrors} issue(s) found:`)

@@ -57,7 +57,7 @@
 }
 
 .banner-fold-btn:hover {
-  background: var(--vinta-contrast-bg-hover);
+  background: var(--vinta-contrast-hover);
   color: var(--vinta-text-primary);
 }
 

@@ -35,6 +35,15 @@ export const debugClassInspector = createDebugFlag(
   false
 )
 
+export interface DebugHitRect {
+  left: number
+  top: number
+  width: number
+  height: number
+}
+
+export const debugHitRects = writable<DebugHitRect[]>([])
+
 if (typeof window !== 'undefined') {
   const isViteDev = Boolean(import.meta.env?.DEV)
 

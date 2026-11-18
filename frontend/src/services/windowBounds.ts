@@ -14,6 +14,8 @@ import { HitRect } from '../../bindings/Vinta/backend/models.js'
 import { Events } from '$lib/events'
 import { resyncAllSatellites } from '../stores/satellites'
 import { dismissAllTooltips } from './tooltipBounds'
+import { debugBoundsOverlay, debugHitRects } from '../devtest/debugConfig'
+import { get } from 'svelte/store'
 
 /**
  * Window region boundary dimensions and corner radius.
@@ -174,6 +176,16 @@ export class WindowBoundsManager {
       }
       this.lastHitRectsSignature = explicitSig
       this.lastHitRects = hitRects
+      if (get(debugBoundsOverlay)) {
+        debugHitRects.set(
+          hitRects.map((r) => ({
+            left: r.left,
+            top: r.top,
+            width: r.width,
+            height: r.height
+          }))
+        )
+      }
       SetHitRects(hitRects).catch(() => {})
       return
     }
@@ -201,6 +213,16 @@ export class WindowBoundsManager {
 
     this.lastHitRects = hitRects
     this.lastHitRectsSignature = ''
+    if (get(debugBoundsOverlay)) {
+      debugHitRects.set(
+        hitRects.map((r) => ({
+          left: r.left,
+          top: r.top,
+          width: r.width,
+          height: r.height
+        }))
+      )
+    }
     SetHitRects(hitRects).catch(() => {})
   }
 
