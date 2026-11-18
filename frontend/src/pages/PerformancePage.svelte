@@ -5,11 +5,11 @@
   history graphs, and shows 3D graphics engine activity.
 -->
 <script module lang="ts">
-  import type { IslandConfig } from '../store'
+  import { ISLAND_WIDTH_TIERS, type IslandConfig } from '../store'
 
   export const config: IslandConfig = {
     minimal: { w: 368, h: 44, r: 16 },
-    expanded: { w: 400, h: 420, r: 28 },
+    expanded: { w: ISLAND_WIDTH_TIERS.standard, h: 420, r: 28 },
     borderColor: 'var(--vinta-island-border-idle)',
     glowColor: 'var(--vinta-island-glow-idle)'
   }

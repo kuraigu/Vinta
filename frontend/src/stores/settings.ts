@@ -35,6 +35,14 @@ import {
   inferDefaultDateFormat
 } from '../utils/localeInference'
 
+/** Standardized expanded island width tiers (px) to prevent horizontal jitter across navigation. */
+export const ISLAND_WIDTH_TIERS = {
+  compact: 340,
+  media: 400,
+  standard: 440,
+  wide: 600
+} as const
+
 export type IslandConfig = {
   minimal: { w: number; h: number; r: number }
   expanded: {

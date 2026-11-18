@@ -1,7 +1,15 @@
 <script module lang="ts">
+  import { ISLAND_WIDTH_TIERS } from '../store'
+
   export const config = {
     minimal: { w: 330, h: 35, r: 16 },
-    expanded: { w: 430, h: 640, r: 28, minH: 260, maxH: 640 },
+    expanded: {
+      w: ISLAND_WIDTH_TIERS.standard,
+      h: 640,
+      r: 28,
+      minH: 260,
+      maxH: 640
+    },
     borderColor: 'var(--vinta-island-border-idle)',
     glowColor: 'var(--vinta-island-glow-idle)'
   }
