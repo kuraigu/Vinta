@@ -64,7 +64,10 @@
   position: absolute;
   top: 2px;
   left: 50%;
-  transform: translateX(-50%);
+  width: 40%;
+  transform: translateX(-50%) scaleX(1);
+  transform-origin: center;
+  will-change: transform, opacity;
   height: 2px;
   border-radius: 9999px;
   background-color: var(--island-hidden-glow);
@@ -88,23 +91,22 @@
   animation: shrinkBar 10s linear forwards;
   z-index: 20;
   pointer-events: none;
-  filter: blur(0.2px);
 }
 
 @keyframes shrinkBar {
   0% {
-    width: 40%;
+    transform: translateX(-50%) scaleX(1);
     opacity: 0;
   }
   6% {
     opacity: 0.75;
   }
   85% {
-    width: 6%;
+    transform: translateX(-50%) scaleX(0.15);
     opacity: 0.75;
   }
   100% {
-    width: 0%;
+    transform: translateX(-50%) scaleX(0);
     opacity: 0;
   }
 }

@@ -136,9 +136,6 @@ func (a *App) setClickThrough(hwnd uintptr, transparent bool) bool {
 		style &^= WS_EX_TRANSPARENT
 	}
 	_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwl), style)
-	if !transparent {
-		_, _, _ = procSetLayeredWindowAttrs.Call(hwnd, 0, 255, 2)
-	}
 	return true
 }
 

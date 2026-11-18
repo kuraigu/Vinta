@@ -133,18 +133,41 @@
   let morphTimer: ReturnType<typeof setTimeout> | null = null
   let prevExpandedState = $state(false)
   let prevHiddenState = $state(false)
+  let prevActivePage = $state<unknown>(undefined)
+  let prevMinimalW = $state<number | undefined>(undefined)
+  let prevExpandedH = $state<number | undefined>(undefined)
 
   $effect(function trackIslandMorphState() {
-    if (expanded !== prevExpandedState || isHidden !== prevHiddenState) {
-      prevExpandedState = expanded
-      prevHiddenState = isHidden
+    const targetMinimalW = expanded ? undefined : currentMinimalW
+    const targetExpandedH = expanded
+      ? (currentExpandedH ?? islandConfig.expanded.h)
+      : undefined
+    const initialized = prevActivePage !== undefined
+    const changed =
+      expanded !== prevExpandedState ||
+      isHidden !== prevHiddenState ||
+      (initialized &&
+        (activePage !== prevActivePage ||
+          targetMinimalW !== prevMinimalW ||
+          targetExpandedH !== prevExpandedH))
+
+    prevExpandedState = expanded
+    prevHiddenState = isHidden
+    prevActivePage = activePage
+    prevMinimalW = targetMinimalW
+    prevExpandedH = targetExpandedH
+
+    if (changed) {
       const scale = $animScaleStore
+      if (morphTimer) {
+        clearTimeout(morphTimer)
+        morphTimer = null
+      }
       if (scale <= 0) {
         isMorphing = false
         return
       }
       isMorphing = true
-      if (morphTimer) clearTimeout(morphTimer)
       morphTimer = setTimeout(
         () => {
           isMorphing = false

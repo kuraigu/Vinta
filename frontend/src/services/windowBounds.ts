@@ -669,8 +669,15 @@ export class WindowBoundsManager {
 
     let observer: ResizeObserver | undefined
     let mountRaf: number | undefined
-    let reconcileRaf: number | undefined
+    let reconcileTimer: number | undefined
     let observedNode: HTMLElement | null = null
+
+    const clearReconcileTimer = () => {
+      if (reconcileTimer !== undefined) {
+        window.clearTimeout(reconcileTimer)
+        reconcileTimer = undefined
+      }
+    }
 
     const reconcileNow = () => {
       if (
@@ -690,21 +697,23 @@ export class WindowBoundsManager {
 
     const reconcile = () => {
       if (
-        reconcileRaf !== undefined ||
         this.getIsDragging() ||
         getIsHidden() ||
         this.transitionTimer !== undefined
       ) {
+        clearReconcileTimer()
         return
       }
       const node = getIslandNode()
       if (node?.classList.contains('is-transitioning')) {
+        clearReconcileTimer()
         return
       }
-      reconcileRaf = requestAnimationFrame(() => {
-        reconcileRaf = undefined
+      clearReconcileTimer()
+      reconcileTimer = window.setTimeout(() => {
+        reconcileTimer = undefined
         reconcileNow()
-      })
+      }, 120)
     }
 
     const attachObserver = () => {
@@ -730,10 +739,7 @@ export class WindowBoundsManager {
         cancelAnimationFrame(mountRaf)
         mountRaf = undefined
       }
-      if (reconcileRaf !== undefined) {
-        cancelAnimationFrame(reconcileRaf)
-        reconcileRaf = undefined
-      }
+      clearReconcileTimer()
       observer?.disconnect()
       observer = undefined
       observedNode = null

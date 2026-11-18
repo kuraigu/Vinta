@@ -64,8 +64,6 @@ type App struct {
 	hitRectsVersion          uint64
 	uiScale                  float64
 	overlayHeight            int
-	overlayNeeded            int
-	overlayFitTimer          *time.Timer
 	isForceInteractive       bool
 	// Tracks whether WS_EX_TRANSPARENT is currently cleared on the overlay HWND so mouse
 	// events go to WebView2 instead of clicking through to desktop windows behind Vinta.

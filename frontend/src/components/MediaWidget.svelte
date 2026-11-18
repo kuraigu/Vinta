@@ -407,7 +407,8 @@
   $effect(handleArtSyncEffect)
 
   let cardTintColor = $state('')
-  const tintCache = new Map<string, string>()
+  const tintCache: Record<string, string> = {}
+  const tintOrder: string[] = []
 
   /**
    * Samples dominant artwork hue across downsampled pixels to supply ambient backdrop tinting.
@@ -419,7 +420,7 @@
       cardTintColor = trackTexture.accentColor
       return
     }
-    const cached = tintCache.get(src)
+    const cached = tintCache[src]
     if (cached) {
       cardTintColor = cached
       return
@@ -479,11 +480,14 @@
           cardTintColor = `rgb(${Math.round(avgR / total)}, ${Math.round(avgG / total)}, ${Math.round(avgB / total)})`
         }
         if (cardTintColor) {
-          if (tintCache.size > 30) {
-            const firstKey = tintCache.keys().next().value
-            if (firstKey) tintCache.delete(firstKey)
+          if (!Object.prototype.hasOwnProperty.call(tintCache, src)) {
+            if (tintOrder.length >= 30) {
+              const oldest = tintOrder.shift()
+              if (oldest) delete tintCache[oldest]
+            }
+            tintOrder.push(src)
           }
-          tintCache.set(src, cardTintColor)
+          tintCache[src] = cardTintColor
         }
       } catch {
         cardTintColor = trackTexture.accentColor
