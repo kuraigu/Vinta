@@ -90,7 +90,8 @@
   import {
     debugBoundsOverlay,
     debugLogs,
-    debugClassInspector
+    debugClassInspector,
+    debugHitRects
   } from './devtest/debugConfig'
   import {
     themeStore,
@@ -139,8 +140,10 @@
     activePageIdStore,
     activeOverlayStore,
     notificationsOverlayTabStore,
+    feedbackOverlayKindStore,
     type OverlayPageId,
     type NotificationsOverlayTab,
+    type FeedbackOverlayKind,
     isMediaDrawerOpenStore,
     timerAppStore,
     isAnyTimerRunning,
@@ -796,7 +799,11 @@
 
   function openOverlay(
     overlay: OverlayPageId,
-    options?: { tab?: NotificationsOverlayTab; collapseOnClose?: boolean }
+    options?: {
+      tab?: NotificationsOverlayTab
+      feedbackKind?: FeedbackOverlayKind
+      collapseOnClose?: boolean
+    }
   ) {
     if (!overlay) {
       closeOverlay()
@@ -804,6 +811,9 @@
     }
     if (options?.tab) {
       $notificationsOverlayTabStore = options.tab
+    }
+    if (options?.feedbackKind) {
+      $feedbackOverlayKindStore = options.feedbackKind
     }
     collapseOnOverlayClose = Boolean(options?.collapseOnClose)
     if (activePage === Notification) {
@@ -1217,6 +1227,11 @@
     const enabled = $debugBoundsOverlay
     if (typeof document !== 'undefined') {
       document.body.classList.toggle('debug-bounds-overlay', enabled)
+    }
+    if (enabled) {
+      bounds.syncPillBounds(islandNode, isHidden, true)
+    } else {
+      debugHitRects.set([])
     }
   })
 
@@ -2282,6 +2297,20 @@
 </div>
 
 <CustomTooltip />
+{#if $debugBoundsOverlay}
+  <div class="debug-bounds-layer" aria-hidden="true">
+    {#each $debugHitRects as r, i (i)}
+      {@const dpr = getWindowDpr()}
+      <div
+        class="debug-hit-rect"
+        style="left: {r.left / dpr}px; top: {r.top / dpr}px; width: {r.width /
+          dpr}px; height: {r.height / dpr}px;"
+      >
+        <span class="debug-hit-label">HIT {r.width}×{r.height}</span>
+      </div>
+    {/each}
+  </div>
+{/if}
 {#if $debugClassInspector}
   {#await import('./devtest/ClassInspectorOverlay.svelte') then { default: ClassInspectorOverlay }}
     <ClassInspectorOverlay />

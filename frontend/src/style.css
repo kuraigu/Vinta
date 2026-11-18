@@ -48,7 +48,37 @@ select {
 
 body.debug-bounds-overlay,
 #app.debug-bounds-overlay {
-  background-color: rgba(255, 0, 100, 0.25) !important;
+  background-color: rgba(255, 0, 100, 0.14) !important;
+}
+
+.debug-bounds-layer {
+  position: fixed;
+  inset: 0;
+  background: rgba(255, 0, 100, 0.14);
+  border-bottom: 2px dashed rgba(255, 0, 100, 0.75);
+  box-sizing: border-box;
+  pointer-events: none;
+  z-index: 99998;
+}
+
+.debug-hit-rect {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1.5px solid rgba(0, 230, 140, 0.95);
+  background: rgba(0, 230, 140, 0.12);
+  pointer-events: none;
+}
+
+.debug-hit-label {
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+  font-size: 10px;
+  font-family: monospace;
+  color: #00e68c;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 1px 4px;
+  border-radius: 3px;
 }
 
 html.devtest-window-root,

@@ -13,7 +13,8 @@
     RefreshCw,
     Copy,
     Check,
-    Eye
+    Eye,
+    Terminal
   } from 'lucide-svelte'
   import CustomSelect from '../components/CustomSelect.svelte'
   import CustomTooltip from '../components/CustomTooltip.svelte'
@@ -46,6 +47,16 @@
       ? new URLSearchParams(window.location.search)
       : null
   const isShowcaseParam = urlParams?.get('showcase') === 'true'
+  const isDesktopRuntime =
+    typeof window !== 'undefined' &&
+    Boolean(
+      (
+        window as unknown as {
+          chrome?: { webview?: unknown }
+          _wails?: unknown
+        }
+      ).chrome?.webview || (window as unknown as { _wails?: unknown })._wails
+    )
   let activeTab = $state<'controls' | 'showcase'>(
     isShowcaseParam ? 'showcase' : 'controls'
   )
@@ -225,6 +236,18 @@
     <div class="header-title">
       <span class="badge">DEV</span>
       <h2>Vinta Developer Tools</h2>
+      <span
+        class="badge runtime-badge"
+        class:desktop={isDesktopRuntime}
+        use:islandTooltip={{
+          text: isDesktopRuntime
+            ? 'Running inside desktop WebView2 host'
+            : 'Running in external web browser',
+          position: 'bottom'
+        }}
+      >
+        {isDesktopRuntime ? 'Desktop' : 'Web'}
+      </span>
     </div>
 
     <div class="header-actions">
@@ -325,6 +348,18 @@
 
       <button
         class="action-btn"
+        onclick={() => Events.Emit('devtest:open-devtools')}
+        use:islandTooltip={{
+          text: 'Open Main Window DevTools (Performance Profiler)',
+          position: 'bottom',
+          align: 'right'
+        }}
+      >
+        <Terminal size={14} strokeWidth={2.2} />
+      </button>
+
+      <button
+        class="action-btn"
         onclick={handleReload}
         use:islandTooltip={{
           text: 'Refresh CSS & Reload Dev Tools',
@@ -345,17 +380,19 @@
     >
       Dev Controls
     </button>
-    <button
-      class="nav-tab-btn"
-      class:active={activeTab === 'showcase'}
-      onclick={() => (activeTab = 'showcase')}
-    >
-      Showcase Studio
-    </button>
+    {#if isShowcaseParam}
+      <button
+        class="nav-tab-btn"
+        class:active={activeTab === 'showcase'}
+        onclick={() => (activeTab = 'showcase')}
+      >
+        Showcase Studio
+      </button>
+    {/if}
   </div>
 
   <div class="window-body">
-    {#if activeTab === 'showcase'}
+    {#if isShowcaseParam && activeTab === 'showcase'}
       <section class="control-section showcase-section">
         <ShowcaseDevControls />
       </section>
@@ -527,6 +564,17 @@
     padding: 2px 6px;
     border-radius: 4px;
     letter-spacing: 0.5px;
+  }
+
+  .runtime-badge {
+    background: #3f3f46;
+    color: #e4e4e7;
+    font-weight: 700;
+  }
+
+  .runtime-badge.desktop {
+    background: #10b981;
+    color: #052e16;
   }
 
   .header-title h2 {
