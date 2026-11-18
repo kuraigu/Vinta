@@ -24,6 +24,7 @@
   } from '../../bindings/Vinta/backend/app.js'
   import Clock from './Clock.svelte'
   import DynamicEqualizer from './DynamicEqualizer.svelte'
+  import IslandPage from './IslandPage.svelte'
   import MediaSourcesDrawer from './MediaSourcesDrawer.svelte'
   import AudioMixerDrawer from './AudioMixerDrawer.svelte'
   import {
@@ -904,7 +905,7 @@
   class:is-glance={glanceMode}
   class:is-glance-1x1={glanceMode && widgetSize === '1x1'}
 >
-  {#if !expanded}
+  {#snippet minimal()}
     <!-- Compact Minimal View with Spinning Vinyl Disc, Track Info, Clock/Controls, and Audio Wave Bars -->
     <div class="minimal-layout">
       <!-- Spinning Vinyl Disc Album Art -->
@@ -1113,11 +1114,13 @@
         <div class="mini-progress-ghost"></div>
         <div
           class="mini-progress-fill"
-          style="width: {progressPercent}%;"
+          style="transform: scaleX({progressPercent / 100});"
         ></div>
       </div>
     </div>
-  {:else}
+  {/snippet}
+
+  {#snippet expandedContent()}
     <!-- Full-Card Background Image / Procedural Texture -->
     <div class="card-bg-wrapper" style="--card-tint: {cardTintColor};">
       {#if displayAlbumArt && !imgLoadFailed}
@@ -1520,6 +1523,12 @@
         </div>
       {/if}
     </div>
+  {/snippet}
+
+  {#if glanceMode}
+    {@render minimal()}
+  {:else}
+    <IslandPage {expanded} {minimal} {expandedContent} />
   {/if}
 </div>
 

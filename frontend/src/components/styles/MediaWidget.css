@@ -301,6 +301,7 @@
   top: 0;
   bottom: 0;
   left: 0;
+  width: 100%;
   height: 100%;
   background: var(
     --vinta-media-seek-gradient,
@@ -316,7 +317,10 @@
   box-shadow:
     0 0 8px var(--vinta-accent-muted, rgba(255, 107, 0, 0.4)),
     0 0 14px var(--vinta-accent-purple, rgba(192, 132, 252, 0.35));
-  transition: width 0.25s linear;
+  transform: scaleX(0);
+  transform-origin: left center;
+  will-change: transform;
+  transition: transform 0.25s linear;
 }
 
 .card-bg-wrapper {

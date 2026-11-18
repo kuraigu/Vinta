@@ -336,7 +336,6 @@
     stroke-width: 14;
     stroke-linecap: round;
     filter: url(#ringGlow);
-    transition: stroke-dashoffset 0.3s linear;
   }
 
   .dial-fill-ring.no-transition {

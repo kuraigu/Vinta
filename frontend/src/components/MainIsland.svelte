@@ -31,6 +31,7 @@
   } from '../store'
   import type { IslandGestureController } from '../services/islandGestures'
   import type { NavFn } from '../utils/navigation'
+  import PageDeck from './PageDeck.svelte'
 
   /**
    * Component properties for MainIsland.
@@ -177,6 +178,23 @@
       )
     }
   })
+
+  let targetViewW = $derived(
+    Math.min(
+      expanded
+        ? activeOverlay !== null
+          ? Math.max(islandConfig.expanded.w, 460)
+          : islandConfig.expanded.w
+        : currentMinimalW,
+      activeMonitorWidth ? activeMonitorWidth - 24 : 1920
+    )
+  )
+
+  let targetViewH = $derived(
+    expanded
+      ? (currentExpandedH ?? islandConfig.expanded.h)
+      : islandConfig.minimal.h
+  )
 
   function handleTransitionEnd(e: TransitionEvent): void {
     if (e.target !== islandNode) return
@@ -446,21 +464,10 @@
   style="
     opacity: {isQuitting ? 0 : activeOpacity};
     filter: {isQuitting ? 'blur(12px)' : 'none'};
-    width: {isHidden
-    ? hiddenBounds.w
-    : Math.min(
-        expanded
-          ? activeOverlay !== null
-            ? Math.max(islandConfig.expanded.w, 460)
-            : islandConfig.expanded.w
-          : currentMinimalW,
-        activeMonitorWidth ? activeMonitorWidth - 24 : 1920
-      )}px;
-    height: {isHidden
-    ? hiddenBounds.h
-    : expanded
-      ? (currentExpandedH ?? islandConfig.expanded.h)
-      : islandConfig.minimal.h}px;
+    width: {isHidden ? hiddenBounds.w : targetViewW}px;
+    height: {isHidden ? hiddenBounds.h : targetViewH}px;
+    --island-target-w: {targetViewW}px;
+    --island-target-h: {targetViewH}px;
     --island-r: {isHidden
     ? hiddenBounds.r
     : expanded
@@ -531,26 +538,12 @@
       : 'calc(0.42s * var(--vinta-anim-scale, 1)) cubic-bezier(0.18, 0.9, 0.32, 1)'};"
   >
     {#if !isPageDormant}
-      {#key activePage}
-        {@const ActivePage = activePage}
-        <div
-          class="view"
-          style="width: {Math.min(
-            expanded
-              ? activeOverlay !== null
-                ? Math.max(islandConfig.expanded.w, 460)
-                : islandConfig.expanded.w
-              : currentMinimalW,
-            activeMonitorWidth ? activeMonitorWidth - 24 : 1920
-          )}px; height: {expanded
-            ? (currentExpandedH ?? islandConfig.expanded.h)
-            : islandConfig.minimal.h}px;"
-        >
-          {#if ActivePage}
-            <ActivePage {expanded} />
-          {/if}
-        </div>
-      {/key}
+      <div
+        class="view"
+        style="width: {targetViewW}px; height: {targetViewH}px;"
+      >
+        <PageDeck activePage={activePage ?? undefined} {expanded} />
+      </div>
     {/if}
 
     {#if expanded && !isPageDormant && activeOverlay === 'notifications'}
@@ -561,11 +554,11 @@
       <FeedbackOverlayPage onClose={onCloseOverlay} />
     {/if}
 
-    {#if expanded && isDockVisible}
+    {#if !isPageDormant}
       <div
         class="dock-overlay-wrapper"
-        in:fade={{ duration: Math.round(260 * $animScaleStore) }}
-        out:fade={{ duration: Math.round(140 * $animScaleStore) }}
+        class:is-visible={expanded && isDockVisible}
+        aria-hidden={!(expanded && isDockVisible)}
       >
         <Dock {activePage} {islandConfig} />
       </div>

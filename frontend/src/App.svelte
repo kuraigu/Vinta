@@ -942,6 +942,7 @@
     if (activePage !== page && expanded === expand) {
       triggerBlink()
     }
+    const expandedChanged = expanded !== expand
     islandAnim = formatIslandAnim(expand ? 0.65 : 0.48)
     activePage = page
     islandConfig = pageConfig
@@ -966,28 +967,30 @@
     // Update currentOSBounds before startTrackingTransition so the transition union rect
     // expands immediately instead of leaving a click-through deadzone during the morph.
     bounds.currentOSBounds = { ...nextBounds }
-    bounds.syncPillBounds(islandNode, false, true)
-    bounds.startTrackingTransition(
-      islandNode,
-      scaleAnimMs(expand ? 660 : 500),
-      false,
-      () => {
-        if (!isGestureBusy()) {
-          bounds.recoverRestingBounds(
-            getBoundsForState(),
-            clampedOffsetX,
-            islandNode,
-            isHidden
-          )
-          bounds.syncPillBounds(islandNode, isHidden, true)
+    if (!expandedChanged) {
+      bounds.syncPillBounds(islandNode, false, true)
+      bounds.startTrackingTransition(
+        islandNode,
+        scaleAnimMs(expand ? 660 : 500),
+        false,
+        () => {
+          if (!isGestureBusy()) {
+            bounds.recoverRestingBounds(
+              getBoundsForState(),
+              clampedOffsetX,
+              islandNode,
+              isHidden
+            )
+            bounds.syncPillBounds(islandNode, isHidden, true)
+          }
+          Events.Emit('vinta:state-change', {
+            expanded: expand,
+            isHidden,
+            page: pageId
+          })
         }
-        Events.Emit('vinta:state-change', {
-          expanded: expand,
-          isHidden,
-          page: pageId
-        })
-      }
-    )
+      )
+    }
 
     triggerGlow()
   }
@@ -2047,12 +2050,12 @@
       () => isHidden
     )
 
-    // Event-driven working-set trim via $lib/events instead of a periodic polling watchdog.
+    // Event-driven working-set trim via $lib/events with idle-only delays to avoid page-fault spikes.
     const unsubStateTrim = Events.OnGlobal('vinta:state-change', () => {
       if (expanded && !isHidden) {
         bounds.cancelScheduledTrimMemory()
       } else {
-        bounds.scheduleTrimMemory(isHidden ? 800 : 900)
+        bounds.scheduleTrimMemory(isHidden ? 20000 : 180000)
       }
     })
 
