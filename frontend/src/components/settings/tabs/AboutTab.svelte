@@ -4,20 +4,24 @@
   GitHub repository and issue tracker, and exports system diagnostics for bug reports.
 -->
 <script lang="ts">
-  import { onMount } from 'svelte'
+  import { onMount, getContext } from 'svelte'
   import {
     ArrowUpRight,
     ShieldCheck,
     GitBranch,
     Bug,
-    Globe
+    Globe,
+    Lightbulb
   } from 'lucide-svelte'
   import BentoCard from '../../BentoCard.svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
   import appIcon from '@appicon'
-  import { reportFeedback } from '../../../services/feedbackService'
-  import { tStore } from '../../../store'
+  import {
+    tStore,
+    type OverlayPageId,
+    type FeedbackOverlayKind
+  } from '../../../store'
   import {
     GetAppInfo,
     GetContributors
@@ -111,8 +115,16 @@
   }
   let generalContributors = $derived(getGeneralContributors())
 
-  function handleReportFeedback() {
-    reportFeedback().catch(() => {})
+  const openOverlay =
+    getContext<
+      (
+        overlay: OverlayPageId,
+        options?: { feedbackKind?: FeedbackOverlayKind }
+      ) => void
+    >('openOverlay')
+
+  function openFeedbackModal(kind: FeedbackOverlayKind) {
+    openOverlay?.('feedback', { feedbackKind: kind })
   }
 
   onMount(() => {
@@ -172,7 +184,7 @@
       icon={Globe}
       flexCol={true}
     >
-      <div class="about-links-row">
+      <div class="about-links-stack">
         <SettingActionButton
           href={appInfo.repoUrl}
           target="_blank"
@@ -182,10 +194,22 @@
           <ArrowUpRight size={13} strokeWidth={2} />
           <span>{$tStore('about.repository')}</span>
         </SettingActionButton>
-        <SettingActionButton onclick={handleReportFeedback} fullWidth={true}>
-          <Bug size={13} strokeWidth={2} />
-          <span>{$tStore('about.report_issue')}</span>
-        </SettingActionButton>
+        <div class="about-links-row">
+          <SettingActionButton
+            onclick={() => openFeedbackModal('bug')}
+            fullWidth={true}
+          >
+            <Bug size={13} strokeWidth={2} />
+            <span>{$tStore('about.report_issue')}</span>
+          </SettingActionButton>
+          <SettingActionButton
+            onclick={() => openFeedbackModal('feature')}
+            fullWidth={true}
+          >
+            <Lightbulb size={13} strokeWidth={2} />
+            <span>{$tStore('about.request_feature')}</span>
+          </SettingActionButton>
+        </div>
       </div>
     </SettingItem>
   </BentoCard>

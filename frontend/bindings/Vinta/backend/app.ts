@@ -437,10 +437,17 @@ export function MarkAnnouncementsRead(): $CancellablePromise<void> {
 }
 
 /**
- * OpenFeedbackIssue launches the default browser with pre-filled sanitized system diagnostics.
+ * OpenFeatureRequest launches the default browser with the feature request template pre-filled.
  */
-export function OpenFeedbackIssue(): $CancellablePromise<void> {
-    return $Call.ByID(3114944467);
+export function OpenFeatureRequest(title: string, describe: string, useCase: string): $CancellablePromise<void> {
+    return $Call.ByID(2628207528, title, describe, useCase);
+}
+
+/**
+ * OpenFeedbackIssue launches the default browser with the consolidated bug report template pre-filled.
+ */
+export function OpenFeedbackIssue(title: string, describe: string, reproduce: string): $CancellablePromise<void> {
+    return $Call.ByID(3114944467, title, describe, reproduce);
 }
 
 /**

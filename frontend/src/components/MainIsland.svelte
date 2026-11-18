@@ -19,6 +19,7 @@
   } from '../pages/FileShelfPage.svelte'
   import NotificationsOverlayPage from '../pages/overlays/NotificationsOverlayPage.svelte'
   import AppsOverlayPage from '../pages/overlays/AppsOverlayPage.svelte'
+  import FeedbackOverlayPage from '../pages/overlays/FeedbackOverlayPage.svelte'
   import {
     autoHideDisplayStore,
     type OverlayPageId,
@@ -533,6 +534,8 @@
       <NotificationsOverlayPage onClose={onCloseOverlay} />
     {:else if expanded && !isPageDormant && activeOverlay === 'apps'}
       <AppsOverlayPage onClose={onCloseOverlay} />
+    {:else if expanded && !isPageDormant && activeOverlay === 'feedback'}
+      <FeedbackOverlayPage onClose={onCloseOverlay} />
     {/if}
 
     {#if expanded && isDockVisible}

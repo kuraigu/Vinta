@@ -8,7 +8,8 @@
 import { writable } from 'svelte/store'
 import type { WeatherData } from '../services/weatherService'
 
-export type OverlayPageId = 'notifications' | 'apps' | null
+export type OverlayPageId = 'notifications' | 'apps' | 'feedback' | null
+export type FeedbackOverlayKind = 'bug' | 'feature'
 export type NotificationsOverlayTab =
   | 'notifications'
   | 'announcements'
@@ -19,6 +20,7 @@ export const activePageIdStore = writable<string>('home')
 export const activeOverlayStore = writable<OverlayPageId>(null)
 export const notificationsOverlayTabStore =
   writable<NotificationsOverlayTab>('notifications')
+export const feedbackOverlayKindStore = writable<FeedbackOverlayKind>('bug')
 export const hiddenPillOffsetXStore = writable<number>(0)
 export const isIslandHiddenStore = writable<boolean>(false)
 export const isMediaDrawerOpenStore = writable<boolean>(false)
