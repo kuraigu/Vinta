@@ -416,111 +416,113 @@
         class="expanded-view"
         class:has-hero-weather={$homeWidgetsVisibilityStore.weather}
       >
-      <ScrollView
-        class="home-feed-scroll"
-        showScrollIndicators={true}
-        hideIndicatorOnScroll={true}
-        scrollStep={180}
-        scrollIndicatorLabel={$tStore('home.scroll_cue_more')}
-        scrollIndicatorAriaLabel={$tStore('home.scroll_cue_aria')}
-      >
-        <div class="social-feed-container" bind:this={feedContainerEl}>
-          {#if $homeWidgetsVisibilityStore.weather}
-            <!-- Full-Bleed Weather Hero Header (Background for Salutation + User + Time) -->
-            <WeatherWidget
-              salutation={salutationText}
-              userName={displayName}
-              timeText={$homeWidgetsVisibilityStore.clock
-                ? `${formattedHours}:${timeParts.m}`
-                : ''}
-              amPmText={$homeWidgetsVisibilityStore.clock ? amPm : ''}
-            />
-          {:else}
-            <!-- Social Feed Header Bar (Fallback when weather hero is disabled) -->
-            <header class="home-feed-status-header">
-              <div class="home-hero-greeting">
-                <span class="hero-salutation">{salutationText},</span>
-                <h1 class="hero-username">{displayName}</h1>
-              </div>
-
-              {#if $homeWidgetsVisibilityStore.clock}
-                <div class="time-subtle-bar">
-                  <span class="meta-date-text"
-                    >{timeParts.friendlyDateText}</span
-                  >
-                  <span class="meta-bullet">•</span>
-                  <span class="time-subtle-digits">
-                    {formattedHours}:{timeParts.m}
-                  </span>
-                  {#if amPm}
-                    <span class="time-subtle-ampm">{amPm}</span>
-                  {/if}
+        <ScrollView
+          class="home-feed-scroll"
+          showScrollIndicators={true}
+          hideIndicatorOnScroll={true}
+          scrollStep={180}
+          scrollIndicatorLabel={$tStore('home.scroll_cue_more')}
+          scrollIndicatorAriaLabel={$tStore('home.scroll_cue_aria')}
+        >
+          <div class="social-feed-container" bind:this={feedContainerEl}>
+            {#if $homeWidgetsVisibilityStore.weather}
+              <!-- Full-Bleed Weather Hero Header (Background for Salutation + User + Time) -->
+              <WeatherWidget
+                salutation={salutationText}
+                userName={displayName}
+                timeText={$homeWidgetsVisibilityStore.clock
+                  ? `${formattedHours}:${timeParts.m}`
+                  : ''}
+                amPmText={$homeWidgetsVisibilityStore.clock ? amPm : ''}
+              />
+            {:else}
+              <!-- Social Feed Header Bar (Fallback when weather hero is disabled) -->
+              <header class="home-feed-status-header">
+                <div class="home-hero-greeting">
+                  <span class="hero-salutation">{salutationText},</span>
+                  <h1 class="hero-username">{displayName}</h1>
                 </div>
+
+                {#if $homeWidgetsVisibilityStore.clock}
+                  <div class="time-subtle-bar">
+                    <span class="meta-date-text"
+                      >{timeParts.friendlyDateText}</span
+                    >
+                    <span class="meta-bullet">•</span>
+                    <span class="time-subtle-digits">
+                      {formattedHours}:{timeParts.m}
+                    </span>
+                    {#if amPm}
+                      <span class="time-subtle-ampm">{amPm}</span>
+                    {/if}
+                  </div>
+                {/if}
+              </header>
+            {/if}
+
+            <!-- Update Glance Banner (Issue #161) -->
+            {#if $updateInfoStore?.updateAvailable && !isUpdateSnoozed}
+              <UpdateGlanceCard onClick={openUpdatesTab} />
+            {/if}
+
+            <!-- Spotlight Promotional Carousel (Issue #201) -->
+            {#if $homeWidgetsVisibilityStore.spotlight !== false}
+              <section class="spotlight-card-feed">
+                <SpotlightWidget />
+              </section>
+            {/if}
+
+            <!-- Modular Bento Widget Grid -->
+            <div class="home-widgets-bento">
+              {#if $homeWidgetsVisibilityStore.media !== false}
+                <MediaGlanceWidget
+                  size={getWidgetSize('media')}
+                  showMenuButton={$homeWidgetMenuEnabledStore}
+                  oncontextmenu={(e) => handleWidgetContextMenu(e, 'media')}
+                />
               {/if}
-            </header>
-          {/if}
 
-          <!-- Update Glance Banner (Issue #161) -->
-          {#if $updateInfoStore?.updateAvailable && !isUpdateSnoozed}
-            <UpdateGlanceCard onClick={openUpdatesTab} />
-          {/if}
-
-          <!-- Spotlight Promotional Carousel (Issue #201) -->
-          {#if $homeWidgetsVisibilityStore.spotlight !== false}
-            <section class="spotlight-card-feed">
-              <SpotlightWidget />
-            </section>
-          {/if}
-
-          <!-- Modular Bento Widget Grid -->
-          <div class="home-widgets-bento">
-            {#if $homeWidgetsVisibilityStore.media !== false}
-              <MediaGlanceWidget
-                size={getWidgetSize('media')}
+              <BriefFeedWidget
+                showAnnouncements={$homeWidgetsVisibilityStore.announcements !==
+                  false}
+                showNotifications={hasStandardNotifications}
+                showCalendar={$homeWidgetsVisibilityStore.calendar}
+                size={getWidgetSize('brief')}
                 showMenuButton={$homeWidgetMenuEnabledStore}
-                oncontextmenu={(e) => handleWidgetContextMenu(e, 'media')}
+                onOpenAnnouncements={openAnnouncementsPage}
+                onOpenCalendar={openCalendar}
+                oncontextmenu={(e) => handleWidgetContextMenu(e, 'brief')}
               />
-            {/if}
 
-            <BriefFeedWidget
-              showAnnouncements={$homeWidgetsVisibilityStore.announcements !==
-                false}
-              showNotifications={hasStandardNotifications}
-              showCalendar={$homeWidgetsVisibilityStore.calendar}
-              size={getWidgetSize('brief')}
-              showMenuButton={$homeWidgetMenuEnabledStore}
-              onOpenAnnouncements={openAnnouncementsPage}
-              onOpenCalendar={openCalendar}
-              oncontextmenu={(e) => handleWidgetContextMenu(e, 'brief')}
-            />
+              {#if $homeWidgetsVisibilityStore.actionCenter}
+                <ActionCenterWidget
+                  size={getWidgetSize('actionCenter')}
+                  showMenuButton={$homeWidgetMenuEnabledStore}
+                  oncontextmenu={(e) =>
+                    handleWidgetContextMenu(e, 'actionCenter')}
+                />
+              {/if}
 
-            {#if $homeWidgetsVisibilityStore.actionCenter}
-              <ActionCenterWidget
-                size={getWidgetSize('actionCenter')}
-                showMenuButton={$homeWidgetMenuEnabledStore}
-                oncontextmenu={(e) =>
-                  handleWidgetContextMenu(e, 'actionCenter')}
-              />
-            {/if}
+              {#if $homeWidgetsVisibilityStore.systemStats}
+                <SystemStatsWidget
+                  size={getWidgetSize('systemStats')}
+                  active={expanded}
+                  showMenuButton={$homeWidgetMenuEnabledStore}
+                  oncontextmenu={(e) =>
+                    handleWidgetContextMenu(e, 'systemStats')}
+                />
+              {/if}
+            </div>
 
-            {#if $homeWidgetsVisibilityStore.systemStats}
-              <SystemStatsWidget
-                size={getWidgetSize('systemStats')}
-                active={expanded}
-                showMenuButton={$homeWidgetMenuEnabledStore}
-                oncontextmenu={(e) => handleWidgetContextMenu(e, 'systemStats')}
-              />
-            {/if}
+            <!-- Studio Branding Footer -->
+            <footer class="home-brand-footer">
+              <span class="home-brand-text">{$tStore('home.brand_footer')}</span
+              >
+              <span class="home-version-pill">v{displayVersion}</span>
+            </footer>
           </div>
-
-          <!-- Studio Branding Footer -->
-          <footer class="home-brand-footer">
-            <span class="home-brand-text">{$tStore('home.brand_footer')}</span>
-            <span class="home-version-pill">v{displayVersion}</span>
-          </footer>
-        </div>
-      </ScrollView>
-    </div>
+        </ScrollView>
+      </div>
     {/snippet}
   </IslandPage>
 

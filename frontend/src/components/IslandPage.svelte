@@ -42,7 +42,10 @@
       fallbackTimer = setTimeout(prewarm, Math.min(prewarmMs, 900))
     }
     return () => {
-      if (idleHandle !== undefined && typeof cancelIdleCallback === 'function') {
+      if (
+        idleHandle !== undefined &&
+        typeof cancelIdleCallback === 'function'
+      ) {
         cancelIdleCallback(idleHandle)
       }
       if (fallbackTimer !== undefined) {
