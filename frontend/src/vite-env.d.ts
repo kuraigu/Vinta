@@ -11,3 +11,8 @@ declare module '@appicon' {
   const src: string
   export default src
 }
+
+declare module '@appicon-svg' {
+  const src: string
+  export default src
+}

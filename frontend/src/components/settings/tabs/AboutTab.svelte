@@ -16,7 +16,7 @@
   import BentoCard from '../../BentoCard.svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
-  import appIcon from '@appicon'
+  import appIcon from '@appicon-svg'
   import {
     tStore,
     type OverlayPageId,

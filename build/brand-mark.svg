@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" fill="none">
+  <!-- Adaptive Transparent-Cutout Vinta Brand Mark (#F59E0B) for Articles, Sponsorships, and Dark/Light Backgrounds -->
+  <defs>
+    <mask id="vinta-bot-cutout" maskUnits="userSpaceOnUse">
+      <rect x="0" y="0" width="512" height="512" fill="#000000"/>
+      <!-- Visible Bot Silhouette -->
+      <rect x="34" y="206" width="35" height="107" rx="17.5" fill="#FFFFFF"/>
+      <rect x="443" y="206" width="35" height="107" rx="17.5" fill="#FFFFFF"/>
+      <rect x="81" y="116" width="350" height="288" rx="130" fill="#FFFFFF"/>
+      <!-- Transparent Cutouts: Top Notch & Visor -->
+      <rect x="208" y="109" width="96" height="35" rx="17.5" fill="#000000"/>
+      <rect x="116" y="172" width="280" height="195" rx="79" fill="#000000"/>
+      <!-- Visible Face Inside Cutout Visor -->
+      <path d="M175 222 L208 246 L175 270" stroke="#FFFFFF" stroke-width="21" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="294" y="211" width="44" height="70" rx="22" fill="#FFFFFF"/>
+      <path d="M215 313 C232 337 280 337 297 313" stroke="#FFFFFF" stroke-width="19" stroke-linecap="round"/>
+    </mask>
+  </defs>
+
+  <rect x="0" y="0" width="512" height="512" fill="#F59E0B" mask="url(#vinta-bot-cutout)"/>
+</svg>

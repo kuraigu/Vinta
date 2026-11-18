@@ -30,6 +30,7 @@
     class?: string
   } = $props()
 
+  const uid = `wa_${Math.random().toString(36).slice(2, 8)}`
   let heroEl = $state<HTMLDivElement | null>(null)
   let isInView = $state(true)
   let observer: IntersectionObserver | null = null
@@ -63,114 +64,120 @@
   >
     <svg class="hero-svg" viewBox="0 0 120 100" aria-label="{type} weather">
       <defs>
-        <!-- Vinta Mascot Clip Paths -->
-        <clipPath id="vintaHeadClip">
-          <circle cx="60" cy="62" r="27" />
-        </clipPath>
-
-        <clipPath id="vintaEarsClip">
-          <rect x="28" y="51" width="6" height="20" rx="3" />
-          <rect x="86" y="51" width="6" height="20" rx="3" />
-        </clipPath>
-
-        <!-- Reusable Vinta Robot Base Chassis (Centered at 60, 62) -->
-        <g id="vintaBotChassis">
+        <!-- Reusable Vinta Robot Base Chassis (Exact 1:1 Match with appicon.svg) -->
+        <g id="{uid}-botChassis">
           <!-- Soft Vector Drop Shadow Beneath Chassis -->
           <ellipse
             cx="60"
-            cy="89"
-            rx="22"
-            ry="4.5"
+            cy="88"
+            rx="20"
+            ry="4"
             fill="rgba(15, 23, 42, 0.35)"
           />
 
-          <!-- Side Ear Pods (Split Two-Tone Slate) -->
-          <g clip-path="url(#vintaEarsClip)">
-            <rect x="27" y="50" width="66" height="11" fill="#68788e" />
-            <rect x="27" y="61" width="66" height="12" fill="#475569" />
-          </g>
-
-          <!-- Main Spherical Head Dome -->
-          <g clip-path="url(#vintaHeadClip)">
-            <!-- Upper Light Slate Metallic Half -->
-            <rect x="30" y="32" width="60" height="30" fill="#94a3b8" />
-            <!-- Lower Dark Slate Metallic Half -->
-            <rect x="30" y="62" width="60" height="30" fill="#475569" />
-
-            <!-- Forehead Geometric Crest: Outer Dark Navy Wedges -->
-            <polygon points="36,41 40,37 51,48 48,48" fill="#182232" />
-            <polygon points="84,41 80,37 69,48 72,48" fill="#182232" />
-
-            <!-- Forehead Geometric Crest: Mid Slate Stripes -->
-            <polygon points="40,37 46,33 55,48 51,48" fill="#3e4c5e" />
-            <polygon points="80,37 74,33 65,48 69,48" fill="#3e4c5e" />
-
-            <!-- Forehead Geometric Crest: Center Shield Diamond -->
-            <polygon points="60,33 69,41 64,48 56,48 51,41" fill="#2e3b4e" />
-          </g>
-
-          <!-- Outer Visor Frame Bezel -->
+          <!-- Side Comms Pods -->
           <rect
-            x="34.5"
-            y="46.5"
-            width="51"
-            height="34"
-            rx="12.5"
-            fill="#2b3748"
+            x="29"
+            y="54.5"
+            width="5"
+            height="15.2"
+            rx="2.5"
+            fill="#F59E0B"
+          />
+          <rect
+            x="86"
+            y="54.5"
+            width="5"
+            height="15.2"
+            rx="2.5"
+            fill="#F59E0B"
           />
 
-          <!-- Inner Deep Space Visor Screen -->
-          <rect x="37" y="49" width="46" height="29" rx="10.5" fill="#09101d" />
+          <!-- Dark-Gold Rounded Bot Helmet -->
+          <rect
+            x="35.6"
+            y="42"
+            width="48.8"
+            height="40.9"
+            rx="18.5"
+            fill="#F59E0B"
+          />
+
+          <!-- Dynamic-Island Top Notch Cutout -->
+          <rect
+            x="53.4"
+            y="41"
+            width="13.2"
+            height="5"
+            rx="2.5"
+            fill="#111925"
+          />
+
+          <!-- Obsidian Visor -->
+          <rect
+            x="40.5"
+            y="50"
+            width="39"
+            height="27.7"
+            rx="11.2"
+            fill="#111925"
+          />
         </g>
 
-        <!-- Weather Element Gradients & Filters -->
-        <linearGradient id="sunCoreGrad" x1="0" y1="0" x2="1" y2="1">
+        <!-- Weather Element Gradients & Filters (Instance-Scoped to Prevent Hidden-SVG Collisions) -->
+        <linearGradient id="{uid}-sunCoreGrad" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stop-color="#fef08a" />
           <stop offset="50%" stop-color="#facc15" />
           <stop offset="100%" stop-color="#f97316" />
         </linearGradient>
 
-        <radialGradient id="sunAuraGrad" cx="50%" cy="50%" r="50%">
+        <radialGradient id="{uid}-sunAuraGrad" cx="50%" cy="50%" r="50%">
           <stop offset="0%" stop-color="#fde047" stop-opacity="0.45" />
           <stop offset="60%" stop-color="#f59e0b" stop-opacity="0.15" />
           <stop offset="100%" stop-color="#f59e0b" stop-opacity="0" />
         </radialGradient>
 
-        <linearGradient id="moonGrad" x1="0" y1="0" x2="1" y2="1">
+        <linearGradient id="{uid}-moonGrad" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stop-color="#ffffff" />
           <stop offset="45%" stop-color="#fef9c3" />
           <stop offset="100%" stop-color="#facc15" />
         </linearGradient>
 
-        <linearGradient id="cloudLightGrad" x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id="{uid}-cloudLightGrad" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stop-color="#ffffff" />
           <stop offset="60%" stop-color="#f1f5f9" />
           <stop offset="100%" stop-color="#cbd5e1" />
         </linearGradient>
 
-        <linearGradient id="cloudNightLitGrad" x1="0" y1="0" x2="0" y2="1">
+        <linearGradient
+          id="{uid}-cloudNightLitGrad"
+          x1="0"
+          y1="0"
+          x2="0"
+          y2="1"
+        >
           <stop offset="0%" stop-color="#cbd5e1" />
           <stop offset="50%" stop-color="#64748b" />
           <stop offset="100%" stop-color="#334155" />
         </linearGradient>
 
-        <linearGradient id="sweatGrad" x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id="{uid}-sweatGrad" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stop-color="#bae6fd" />
           <stop offset="100%" stop-color="#0284c7" />
         </linearGradient>
 
-        <linearGradient id="umbrellaGrad" x1="0" y1="0" x2="1" y2="1">
+        <linearGradient id="{uid}-umbrellaGrad" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stop-color="#38bdf8" />
           <stop offset="100%" stop-color="#0284c7" />
         </linearGradient>
 
-        <linearGradient id="beanieGrad" x1="0" y1="0" x2="1" y2="0">
+        <linearGradient id="{uid}-beanieGrad" x1="0" y1="0" x2="1" y2="0">
           <stop offset="0%" stop-color="#ef4444" />
           <stop offset="50%" stop-color="#dc2626" />
           <stop offset="100%" stop-color="#991b1b" />
         </linearGradient>
 
-        <linearGradient id="fogBandGrad" x1="0" y1="0" x2="1" y2="0">
+        <linearGradient id="{uid}-fogBandGrad" x1="0" y1="0" x2="1" y2="0">
           <stop offset="0%" stop-color="#cbd5e1" stop-opacity="0" />
           <stop offset="25%" stop-color="#f8fafc" stop-opacity="0.85" />
           <stop offset="75%" stop-color="#e2e8f0" stop-opacity="0.85" />
@@ -187,7 +194,7 @@
           cx="60"
           cy="40"
           r="46"
-          fill="url(#sunAuraGrad)"
+          fill="url(#{uid}-sunAuraGrad)"
         />
 
         <!-- Rotating Sun at the Back -->
@@ -207,12 +214,12 @@
             <line x1="39" y1="53" x2="43" y2="49" />
             <line x1="77" y1="15" x2="81" y2="11" />
           </g>
-          <circle cx="60" cy="32" r="18" fill="url(#sunCoreGrad)" />
+          <circle cx="60" cy="32" r="18" fill="url(#{uid}-sunCoreGrad)" />
         </g>
 
         <!-- Vinta Mascot Character -->
         <g class="anim-float-hot">
-          <use href="#vintaBotChassis" />
+          <use href="#{uid}-botChassis" />
 
           <!-- Heat Flush Cheeks -->
           <ellipse
@@ -234,7 +241,7 @@
 
           <!-- Squinting Golden Eyes & Overheated Wavy Mouth -->
           <g
-            stroke="#facc15"
+            stroke="#F59E0B"
             stroke-width="2.6"
             stroke-linecap="round"
             stroke-linejoin="round"
@@ -252,13 +259,13 @@
           <g class="anim-sweat-1">
             <path
               d="M 83 45 C 83 45 87 50 87 52.5 A 2.5 2.5 0 1 1 82 52.5 C 82 50 83 45 83 45 Z"
-              fill="url(#sweatGrad)"
+              fill="url(#{uid}-sweatGrad)"
             />
           </g>
           <g class="anim-sweat-2">
             <path
               d="M 36 49 C 36 49 39 53 39 55 A 2 2 0 1 1 35 55 C 35 53 36 49 36 49 Z"
-              fill="url(#sweatGrad)"
+              fill="url(#{uid}-sweatGrad)"
             />
           </g>
         </g>
@@ -278,16 +285,16 @@
           class="anim-moon-rock"
           style="transform-origin: 84px 26px;"
           d="M 86 10 C 75 10 66 19 66 30 C 66 37 70 44 76 47 C 72 44 70 39 70 34 C 70 24 78 16 88 16 C 91 16 94 17 97 19 C 94 13 90 10 86 10 Z"
-          fill="url(#moonGrad)"
+          fill="url(#{uid}-moonGrad)"
         />
 
         <!-- Sleeping Vinta Mascot -->
         <g class="anim-float-sleep">
-          <use href="#vintaBotChassis" />
+          <use href="#{uid}-botChassis" />
 
           <!-- Peaceful Sleeping Golden Arcs & Breathing Mouth -->
           <g
-            stroke="#facc15"
+            stroke="#F59E0B"
             stroke-width="2.6"
             stroke-linecap="round"
             fill="none"
@@ -300,7 +307,7 @@
               cx="60"
               cy="71"
               r="2.4"
-              fill="#facc15"
+              fill="#F59E0B"
               stroke="none"
             />
           </g>
@@ -321,21 +328,21 @@
         <!-- ===============================================================
              CLOUDY: Peeking Sun + Drifting Fluffy Clouds + Signature Vinta Bot
              =============================================================== -->
-        <circle cx="34" cy="24" r="14" fill="url(#sunCoreGrad)" />
+        <circle cx="34" cy="24" r="14" fill="url(#{uid}-sunCoreGrad)" />
 
         <!-- Background Cloud Puff -->
         <path
           class="anim-cloud-drift-slow"
           d="M 22 42 A 9 9 0 0 1 15 33 A 10 10 0 0 1 26 23 A 12 12 0 0 1 46 21 A 11 11 0 0 1 56 32 A 9 9 0 0 1 56 42 Z"
-          fill="url(#cloudLightGrad)"
+          fill="url(#{uid}-cloudLightGrad)"
           opacity="0.88"
         />
 
         <!-- Vinta Mascot with Exact Signature Squircle Eyes & Filled Smile -->
         <g class="anim-float-calm">
-          <use href="#vintaBotChassis" />
+          <use href="#{uid}-botChassis" />
 
-          <g class="anim-look-around" fill="#facc15">
+          <g class="anim-look-around" fill="#F59E0B">
             <!-- Left & Right Signature Rounded Squircle Eyes -->
             <rect x="43" y="53" width="13" height="13" rx="5.5" />
             <rect x="64" y="53" width="13" height="13" rx="5.5" />
@@ -348,7 +355,7 @@
         <path
           class="anim-cloud-drift"
           d="M 62 48 A 8 8 0 0 1 55 40 A 9 9 0 0 1 65 31 A 11 11 0 0 1 84 29 A 10 10 0 0 1 95 39 A 8 8 0 0 1 95 48 Z"
-          fill="url(#cloudLightGrad)"
+          fill="url(#{uid}-cloudLightGrad)"
         />
       {:else if type === 'cloudy-night'}
         <!-- ===============================================================
@@ -362,14 +369,14 @@
         <!-- Crescent Moon Behind Cloud -->
         <path
           d="M 42 10 C 33 10 26 17 26 26 C 26 32 29 37 34 40 C 31 37 29 33 29 29 C 29 21 35 15 43 15 C 46 15 48 16 50 17 C 48 12 45 10 42 10 Z"
-          fill="url(#moonGrad)"
+          fill="url(#{uid}-moonGrad)"
         />
 
         <!-- Vinta Mascot with Happy Nocturnal Expression -->
         <g class="anim-float-calm">
-          <use href="#vintaBotChassis" />
+          <use href="#{uid}-botChassis" />
 
-          <g class="anim-look-around" fill="#facc15">
+          <g class="anim-look-around" fill="#F59E0B">
             <rect x="43" y="53.5" width="13" height="12.5" rx="5.5" />
             <rect x="64" y="53.5" width="13" height="12.5" rx="5.5" />
             <path d="M 52.5 69 Q 60 70.5 67.5 69 C 66.5 75 53.5 75 52.5 69 Z" />
@@ -380,7 +387,7 @@
         <path
           class="anim-cloud-drift"
           d="M 58 47 A 8 8 0 0 1 51 39 A 9 9 0 0 1 61 30 A 11 11 0 0 1 80 28 A 10 10 0 0 1 91 38 A 8 8 0 0 1 91 47 Z"
-          fill="url(#cloudNightLitGrad)"
+          fill="url(#{uid}-cloudNightLitGrad)"
           stroke="rgba(226, 232, 240, 0.38)"
           stroke-width="0.8"
         />
@@ -392,7 +399,7 @@
         <path
           class="anim-cloud-drift-slow"
           d="M 32 29 A 10 10 0 0 1 23 19 A 12 12 0 0 1 36 7 A 15 15 0 0 1 62 5 A 14 14 0 0 1 80 17 A 10 10 0 0 1 80 29 Z"
-          fill="url(#cloudNightLitGrad)"
+          fill="url(#{uid}-cloudNightLitGrad)"
           stroke="rgba(226, 232, 240, 0.3)"
           stroke-width="0.8"
           opacity="0.92"
@@ -414,10 +421,10 @@
 
         <!-- Vinta Mascot Sheltering Under Umbrella -->
         <g class="anim-float-calm">
-          <use href="#vintaBotChassis" />
+          <use href="#{uid}-botChassis" />
 
           <!-- Pensive / Gloomy Golden Eyes & Pout -->
-          <g fill="#facc15">
+          <g fill="#F59E0B">
             <!-- Flat-topped Droopy Squircle Eyes -->
             <path
               d="M 43 57 L 56 59 L 56 63 A 4 4 0 0 1 52 67 L 47 67 A 4 4 0 0 1 43 63 Z"
@@ -429,7 +436,7 @@
             <path
               d="M 55 73 Q 60 69.5 65 73"
               fill="none"
-              stroke="#facc15"
+              stroke="#F59E0B"
               stroke-width="2.4"
               stroke-linecap="round"
             />
@@ -445,7 +452,7 @@
             />
             <path
               d="M 22 39 C 22 19 98 19 98 39 Q 85 35 72 39 Q 60 35 48 39 Q 35 35 22 39 Z"
-              fill="url(#umbrellaGrad)"
+              fill="url(#{uid}-umbrellaGrad)"
             />
             <circle cx="60" cy="21" r="2.5" fill="#38bdf8" />
           </g>
@@ -457,7 +464,7 @@
         <!-- Dark Thunderhead at Top -->
         <path
           d="M 26 31 A 11 11 0 0 1 16 20 A 13 13 0 0 1 30 7 A 16 16 0 0 1 62 4 A 15 15 0 0 1 88 17 A 11 11 0 0 1 88 31 Z"
-          fill="url(#cloudNightLitGrad)"
+          fill="url(#{uid}-cloudNightLitGrad)"
           stroke="rgba(226, 232, 240, 0.32)"
           stroke-width="0.8"
         />
@@ -466,7 +473,7 @@
         <polygon
           class="anim-lightning-1"
           points="27,28 17,46 26,46 20,64 36,42 26,42"
-          fill="#facc15"
+          fill="#F59E0B"
         />
         <polygon
           class="anim-lightning-2"
@@ -476,7 +483,7 @@
 
         <!-- Startled Jittering Vinta Mascot -->
         <g class="anim-shock-shake">
-          <use href="#vintaBotChassis" />
+          <use href="#{uid}-botChassis" />
 
           <!-- Shocked Hollow Golden Squircle Eyes & Surprised Mouth -->
           <g>
@@ -487,7 +494,7 @@
               height="11"
               rx="4.5"
               fill="none"
-              stroke="#facc15"
+              stroke="#F59E0B"
               stroke-width="2.5"
             />
             <circle cx="49.5" cy="59.5" r="1.8" fill="#fef08a" />
@@ -499,12 +506,12 @@
               height="11"
               rx="4.5"
               fill="none"
-              stroke="#facc15"
+              stroke="#F59E0B"
               stroke-width="2.5"
             />
             <circle cx="70.5" cy="59.5" r="1.8" fill="#fef08a" />
 
-            <ellipse cx="60" cy="71.5" rx="4.2" ry="3.2" fill="#facc15" />
+            <ellipse cx="60" cy="71.5" rx="4.2" ry="3.2" fill="#F59E0B" />
           </g>
         </g>
       {:else if type === 'snow'}
@@ -523,7 +530,7 @@
 
         <!-- Chilly Shivering Vinta Mascot with Knit Beanie -->
         <g class="anim-shiver-cold">
-          <use href="#vintaBotChassis" />
+          <use href="#{uid}-botChassis" />
 
           <!-- Rosy Cold Cheeks -->
           <ellipse
@@ -551,7 +558,7 @@
               width="11.5"
               height="11.5"
               rx="5"
-              fill="#facc15"
+              fill="#F59E0B"
             />
             <rect
               x="64.5"
@@ -559,12 +566,12 @@
               width="11.5"
               height="11.5"
               rx="5"
-              fill="#facc15"
+              fill="#F59E0B"
             />
             <path
               d="M 51 71.5 Q 53.2 69 55.5 71.5 T 60 71.5 T 64.5 71.5 T 69 71.5"
               fill="none"
-              stroke="#facc15"
+              stroke="#F59E0B"
               stroke-width="2.2"
               stroke-linecap="round"
             />
@@ -575,7 +582,10 @@
             <!-- Fluffy Pom-Pom -->
             <circle cx="60" cy="21" r="5.5" fill="#ffffff" />
             <!-- Beanie Dome -->
-            <path d="M 35 43 C 35 23 85 23 85 43 Z" fill="url(#beanieGrad)" />
+            <path
+              d="M 35 43 C 35 23 85 23 85 43 Z"
+              fill="url(#{uid}-beanieGrad)"
+            />
             <!-- Ribbed Beanie Cuff -->
             <rect
               x="32"
@@ -635,21 +645,21 @@
           width="90"
           height="7"
           rx="3.5"
-          fill="url(#fogBandGrad)"
+          fill="url(#{uid}-fogBandGrad)"
           opacity="0.65"
         />
 
         <!-- Vinta Mascot Peering Through the Mist -->
         <g class="anim-float-calm">
-          <use href="#vintaBotChassis" />
+          <use href="#{uid}-botChassis" />
 
           <!-- Narrowed Golden Squircle Eyes Scanning Left & Right -->
-          <g class="anim-scan-eyes" fill="#facc15">
+          <g class="anim-scan-eyes" fill="#F59E0B">
             <rect x="43" y="56.5" width="12.5" height="6.5" rx="3.2" />
             <rect x="64.5" y="56.5" width="12.5" height="6.5" rx="3.2" />
             <path
               d="M 54 70.5 L 65 69"
-              stroke="#facc15"
+              stroke="#F59E0B"
               stroke-width="2.4"
               stroke-linecap="round"
             />
@@ -664,7 +674,7 @@
           width="92"
           height="6.5"
           rx="3.25"
-          fill="url(#fogBandGrad)"
+          fill="url(#{uid}-fogBandGrad)"
         />
         <rect
           class="anim-fog-front-2"
@@ -673,7 +683,7 @@
           width="76"
           height="6"
           rx="3"
-          fill="url(#fogBandGrad)"
+          fill="url(#{uid}-fogBandGrad)"
           opacity="0.9"
         />
       {/if}

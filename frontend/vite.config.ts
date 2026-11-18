@@ -180,7 +180,8 @@ export default defineConfig({
         import.meta.dirname,
         'node_modules/lucide-svelte/dist/icons'
       ),
-      '@appicon': path.resolve(import.meta.dirname, '../build/appicon.png')
+      '@appicon': path.resolve(import.meta.dirname, '../build/appicon.png'),
+      '@appicon-svg': path.resolve(import.meta.dirname, '../build/appicon.svg')
     }
   }
 })
