@@ -28,10 +28,14 @@
   let animFrame: number = 0
   let resizeObserver: ResizeObserver | null = null
 
-  // Cached dimension metrics to avoid getBoundingClientRect layout thrashing during rAF
+  // Cached dimension and theme metrics to avoid layout/style thrashing during rAF
   let cssWidth = 0
   let cssHeight = 0
   let dpr = 1
+  let cachedPrimaryColor = '#ff6b00'
+  let cachedPurpleColor = '#c084fc'
+  let cachedCustomColor = ''
+  let cachedGradient: CanvasGradient | null = null
 
   function getMinHeight(): number {
     return variant === 'full' ? 0.28 : 0.25
@@ -49,9 +53,38 @@
 
   $effect(handleBarCountChangeEffect)
 
+  function refreshThemeColors() {
+    if (!canvasRef) return
+    const style = getComputedStyle(canvasRef)
+    cachedPrimaryColor =
+      style.getPropertyValue('--vinta-accent-primary').trim() || '#ff6b00'
+    cachedPurpleColor =
+      style.getPropertyValue('--vinta-accent-purple').trim() || '#c084fc'
+    if (color && color.startsWith('var(')) {
+      const varName = color.replace(/^var\(\s*([^,)]+).*/, '$1').trim()
+      cachedCustomColor = style.getPropertyValue(varName).trim() || '#00f0ff'
+    } else {
+      cachedCustomColor = color || ''
+    }
+    cachedGradient = null
+  }
+
+  function handleColorChangeEffect() {
+    void color
+    refreshThemeColors()
+    if (!isPlaying) {
+      renderStatic()
+    }
+  }
+
+  $effect(handleColorChangeEffect)
+
   function updateCanvasSize() {
     if (!canvasRef) return
     const rect = canvasRef.getBoundingClientRect()
+    if (cssWidth !== rect.width) {
+      cachedGradient = null
+    }
     cssWidth = rect.width
     cssHeight = rect.height
     dpr = window.devicePixelRatio || 1
@@ -63,18 +96,30 @@
       canvasRef.width = targetW
       canvasRef.height = targetH
     }
+    refreshThemeColors()
+  }
+
+  let animTimer = 0
+  const FRAME_INTERVAL_MS = 45 // ~22 FPS to match 20Hz WASAPI peak updates
+
+  function stopLoop() {
+    if (animTimer) {
+      clearTimeout(animTimer)
+      animTimer = 0
+    }
+    if (animFrame) {
+      cancelAnimationFrame(animFrame)
+      animFrame = 0
+    }
   }
 
   function handlePlayStateEffect() {
-    if (isPlaying && !$isIslandHiddenStore) {
-      if (!animFrame) {
+    if (isPlaying && !$isIslandHiddenStore && cssWidth > 0 && cssHeight > 0) {
+      if (!animFrame && !animTimer) {
         animFrame = requestAnimationFrame(renderLoop)
       }
     } else {
-      if (animFrame) {
-        cancelAnimationFrame(animFrame)
-        animFrame = 0
-      }
+      stopLoop()
       renderStatic()
     }
   }
@@ -90,24 +135,33 @@
 
   $effect(handleProgressChangeEffect)
 
-  let lastFrameTime = 0
-  const FRAME_INTERVAL_MS = 45 // ~22 FPS to match 20Hz WASAPI peak updates
-
   function renderLoop(time: number) {
-    if (!canvasRef) return
-    if ($isIslandHiddenStore || document.hidden) {
-      if (animFrame) {
-        cancelAnimationFrame(animFrame)
-        animFrame = 0
-      }
+    animFrame = 0
+    if (
+      !canvasRef ||
+      cssWidth === 0 ||
+      cssHeight === 0 ||
+      $isIslandHiddenStore ||
+      document.hidden
+    ) {
+      stopLoop()
       return
     }
-    if (time - lastFrameTime >= FRAME_INTERVAL_MS) {
-      lastFrameTime = time
-      drawFrame(time)
-    }
+    drawFrame(time)
     if (isPlaying && !$isIslandHiddenStore) {
-      animFrame = requestAnimationFrame(renderLoop)
+      animTimer = window.setTimeout(() => {
+        animTimer = 0
+        if (
+          isPlaying &&
+          !$isIslandHiddenStore &&
+          !document.hidden &&
+          cssWidth > 0 &&
+          cssHeight > 0 &&
+          !animFrame
+        ) {
+          animFrame = requestAnimationFrame(renderLoop)
+        }
+      }, FRAME_INTERVAL_MS)
     }
   }
 
@@ -148,29 +202,16 @@
       : 0
 
     let activeFill: CanvasGradient | string
-    if (color && !color.startsWith('var(')) {
-      activeFill = color
-    } else if (color && color.startsWith('var(') && canvasRef) {
-      const varName = color.replace(/^var\(\s*([^,)]+).*/, '$1').trim()
-      const computed = getComputedStyle(canvasRef)
-        .getPropertyValue(varName)
-        .trim()
-      activeFill = computed || '#00f0ff'
+    if (cachedCustomColor) {
+      activeFill = cachedCustomColor
     } else {
-      const g = ctx.createLinearGradient(0, 0, width, 0)
-      const primary = canvasRef
-        ? getComputedStyle(canvasRef)
-            .getPropertyValue('--vinta-accent-primary')
-            .trim() || '#ff6b00'
-        : '#ff6b00'
-      const purple = canvasRef
-        ? getComputedStyle(canvasRef)
-            .getPropertyValue('--vinta-accent-purple')
-            .trim() || '#c084fc'
-        : '#c084fc'
-      g.addColorStop(0, primary)
-      g.addColorStop(1, purple)
-      activeFill = g
+      if (!cachedGradient) {
+        const g = ctx.createLinearGradient(0, 0, width, 0)
+        g.addColorStop(0, cachedPrimaryColor)
+        g.addColorStop(1, cachedPurpleColor)
+        cachedGradient = g
+      }
+      activeFill = cachedGradient
     }
 
     const minH = getMinHeight()
@@ -208,13 +249,16 @@
 
     // Draw all unplayed bars with clean, lighter translucent white for clear visibility across dark backdrop
     ctx.fillStyle = 'rgba(255, 255, 255, 0.42)'
-    for (let i = 0; i < count; i++) {
-      const b = barData[i]
-      if (typeof ctx.roundRect === 'function') {
-        ctx.beginPath()
+    if (typeof ctx.roundRect === 'function') {
+      ctx.beginPath()
+      for (let i = 0; i < count; i++) {
+        const b = barData[i]
         ctx.roundRect(b.x, b.y, b.w, b.h, b.r)
-        ctx.fill()
-      } else {
+      }
+      ctx.fill()
+    } else {
+      for (let i = 0; i < count; i++) {
+        const b = barData[i]
         ctx.fillRect(b.x, b.y, b.w, b.h)
       }
     }
@@ -227,14 +271,18 @@
       ctx.clip()
 
       ctx.fillStyle = activeFill
-      for (let i = 0; i < count; i++) {
-        const b = barData[i]
-        if (b.x > progressPx) break
-        if (typeof ctx.roundRect === 'function') {
-          ctx.beginPath()
+      if (typeof ctx.roundRect === 'function') {
+        ctx.beginPath()
+        for (let i = 0; i < count; i++) {
+          const b = barData[i]
+          if (b.x > progressPx) break
           ctx.roundRect(b.x, b.y, b.w, b.h, b.r)
-          ctx.fill()
-        } else {
+        }
+        ctx.fill()
+      } else {
+        for (let i = 0; i < count; i++) {
+          const b = barData[i]
+          if (b.x > progressPx) break
           ctx.fillRect(b.x, b.y, b.w, b.h)
         }
       }
@@ -243,7 +291,15 @@
   }
 
   function handleVisibilityChange() {
-    if (!document.hidden && isPlaying && !$isIslandHiddenStore && !animFrame) {
+    if (
+      !document.hidden &&
+      isPlaying &&
+      !$isIslandHiddenStore &&
+      cssWidth > 0 &&
+      cssHeight > 0 &&
+      !animFrame &&
+      !animTimer
+    ) {
       animFrame = requestAnimationFrame(renderLoop)
     }
   }
@@ -254,21 +310,34 @@
     if (canvasRef && typeof ResizeObserver !== 'undefined') {
       resizeObserver = new ResizeObserver(() => {
         updateCanvasSize()
-        if (!isPlaying) renderStatic()
+        if (cssWidth <= 0 || cssHeight <= 0) {
+          stopLoop()
+          return
+        }
+        if (isPlaying && !$isIslandHiddenStore) {
+          if (!animFrame && !animTimer) {
+            animFrame = requestAnimationFrame(renderLoop)
+          }
+        } else {
+          renderStatic()
+        }
       })
       resizeObserver.observe(canvasRef)
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)
-    renderStatic()
+    if (isPlaying && !$isIslandHiddenStore && cssWidth > 0 && cssHeight > 0) {
+      if (!animFrame && !animTimer) {
+        animFrame = requestAnimationFrame(renderLoop)
+      }
+    } else {
+      renderStatic()
+    }
   })
 
   onDestroy(() => {
     document.removeEventListener('visibilitychange', handleVisibilityChange)
-    if (animFrame) {
-      cancelAnimationFrame(animFrame)
-      animFrame = 0
-    }
+    stopLoop()
     if (resizeObserver) {
       resizeObserver.disconnect()
       resizeObserver = null

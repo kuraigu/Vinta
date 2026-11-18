@@ -33,6 +33,7 @@
     X
   } from 'lucide-svelte'
   import BackButton from '../components/BackButton.svelte'
+  import IslandPage from '../components/IslandPage.svelte'
   import PageHeader from '../components/PageHeader.svelte'
   import DotPattern from '../components/patterns/DotPattern.svelte'
   import HorizontalTabSelection, {
@@ -404,259 +405,266 @@
   class:minimal-mode={!expanded}
   class:expanded-mode={expanded}
 >
-  {#if !expanded}
-    {#if $timerAppStore.ringingAlarm}
-      <div class="timer-minimal ringing-capsule">
-        <div class="minimal-ringing-pulse" aria-hidden="true"></div>
-
-        <div class="minimal-ringing-info">
-          <div class="ringing-bell-badge">
-            <Bell size={13} class="bell-shake" />
-          </div>
-          <div class="ringing-text-col">
-            <span class="ringing-alarm-name">
-              {$timerAppStore.ringingAlarm.label || 'Alarm Reminder'}
-            </span>
-            <span class="ringing-alarm-digits">
-              {formatAlarmDisplayTime($timerAppStore.ringingAlarm.time, is24H)}
-            </span>
-          </div>
-        </div>
-
-        <div class="minimal-actions">
-          <button
-            class="mini-btn ringing-snooze-btn"
-            onclick={(e: MouseEvent) => {
-              e.stopPropagation()
-              snoozeRingingAlarm()
-            }}
-            use:islandTooltip={'Snooze alarm'}
-            aria-label="Snooze alarm"
-          >
-            <Clock size={12} />
-          </button>
-          <button
-            class="mini-btn primary ringing-dismiss-btn"
-            onclick={(e: MouseEvent) => {
-              e.stopPropagation()
-              dismissRingingAlarm()
-            }}
-            use:islandTooltip={'Dismiss alarm'}
-            aria-label="Dismiss alarm"
-          >
-            <X size={13} />
-          </button>
-        </div>
-      </div>
-    {:else}
-      <div class="timer-minimal">
-        <div class="minimal-info-trigger">
-          <span class="minimal-mode-label">{minimalModeLabel}</span>
-
-          <div class="minimal-center-group">
-            <span class="minimal-digits">{minimalTimeDigits}</span>
-
-            {#if activeMinimalMode === 'focus'}
-              <div class="minimal-cycle-dots">
-                {#each Array($timerAppStore.focus.settings.longBreakInterval) as _, idx (idx)}
-                  <span
-                    class="cycle-dot"
-                    class:active={idx < $timerAppStore.focus.currentCycle}
-                  ></span>
-                {/each}
-              </div>
-            {/if}
-          </div>
-        </div>
-
-        <div class="minimal-actions">
-          <button
-            class="mini-btn primary"
-            class:phase-focus={activeMinimalMode === 'focus' &&
-              $timerAppStore.focus.phase === 'focus'}
-            class:phase-break={activeMinimalMode === 'focus' &&
-              $timerAppStore.focus.phase !== 'focus'}
-            class:phase-stopwatch={activeMinimalMode === 'stopwatch'}
-            onclick={(e: MouseEvent) => {
-              e.stopPropagation()
-              handleMinimalToggle()
-            }}
-          >
-            {#if isMinimalActiveRunning}
-              <Pause size={13} />
-            {:else}
-              <Play size={13} />
-            {/if}
-          </button>
-
-          <button
-            class="mini-btn"
-            onclick={(e: MouseEvent) => {
-              e.stopPropagation()
-              handleMinimalReset()
-            }}
-          >
-            <RotateCcw size={12} />
-          </button>
-        </div>
-      </div>
-    {/if}
-  {:else}
-    <div class="timer-expanded">
-      <DotPattern
-        variant="corner-tr"
-        class="expanded-dots-bg {$timerAppStore.activeTab === 'timer'
-          ? 'mode-timer'
-          : $timerAppStore.activeTab === 'stopwatch'
-            ? 'mode-stopwatch'
-            : $timerAppStore.activeTab === 'focus' &&
-                $timerAppStore.focus.phase === 'focus'
-              ? 'mode-focus'
-              : $timerAppStore.activeTab === 'focus'
-                ? 'mode-break'
-                : ''}"
-      />
-
-      <PageHeader>
-        {#snippet center()}
-          <HorizontalTabSelection
-            tabs={timerTabs}
-            value={$timerAppStore.activeTab}
-            onchange={handleTabSelect}
-            ariaLabel={$tStore('timer.title')}
-          />
-        {/snippet}
-
-        {#snippet actions()}
-          {#if $timerAppStore.activeTab === 'focus'}
-            <button
-              class="header-tool-btn"
-              class:active={isSettingsOpen}
-              onclick={() => {
-                isSettingsOpen = !isSettingsOpen
-              }}
-              use:islandTooltip={'Focus settings'}
-              aria-label="Focus settings"
-            >
-              <SlidersHorizontal size={14} />
-            </button>
-          {:else if $timerAppStore.activeTab === 'alarms'}
-            <button
-              class="header-tool-btn"
-              data-action="create-alarm"
-              class:active={isNewAlarmOpen}
-              onclick={() => {
-                if (isNewAlarmOpen) {
-                  cancelAlarmForm()
-                } else {
-                  openCreateAlarm()
-                }
-              }}
-              use:islandTooltip={$tStore('timer.new_alarm')}
-              aria-label={$tStore('timer.new_alarm')}
-            >
-              <Plus size={15} />
-            </button>
-          {:else}
-            <div class="header-spacer" aria-hidden="true"></div>
-          {/if}
-        {/snippet}
-      </PageHeader>
-
+  <IslandPage {expanded}>
+    {#snippet minimal()}
       {#if $timerAppStore.ringingAlarm}
-        <div class="expanded-ringing-banner">
-          <div class="ringing-banner-glow" aria-hidden="true"></div>
-          <div class="ringing-banner-left">
-            <div class="banner-bell-badge">
-              <Bell size={16} class="bell-shake" />
+        <div class="timer-minimal ringing-capsule">
+          <div class="minimal-ringing-pulse" aria-hidden="true"></div>
+
+          <div class="minimal-ringing-info">
+            <div class="ringing-bell-badge">
+              <Bell size={13} class="bell-shake" />
             </div>
-            <div class="banner-info-group">
-              <div class="banner-title-row">
-                <span class="banner-alarm-title">
-                  {$timerAppStore.ringingAlarm.label || 'Alarm Reminder'}
-                </span>
-                <span class="banner-alarm-time">
-                  {formatAlarmDisplayTime(
-                    $timerAppStore.ringingAlarm.time,
-                    is24H
-                  )}
-                </span>
-              </div>
-              <span class="banner-alarm-meta">
-                Scheduled for {formatAlarmDisplayTime(
+            <div class="ringing-text-col">
+              <span class="ringing-alarm-name">
+                {$timerAppStore.ringingAlarm.label || 'Alarm Reminder'}
+              </span>
+              <span class="ringing-alarm-digits">
+                {formatAlarmDisplayTime(
                   $timerAppStore.ringingAlarm.time,
                   is24H
-                )} (Triggered at {formatTriggeredTime(
-                  $timerAppStore.ringingAlarm.triggeredAt,
-                  is24H
-                )}) • {formatAlarmRepeatBadge(
-                  $timerAppStore.ringingAlarm as unknown as AlarmItem
                 )}
               </span>
             </div>
           </div>
 
-          <div class="banner-actions">
+          <div class="minimal-actions">
             <button
-              class="banner-action-btn snooze"
-              onclick={() => snoozeRingingAlarm()}
+              class="mini-btn ringing-snooze-btn"
+              onclick={(e: MouseEvent) => {
+                e.stopPropagation()
+                snoozeRingingAlarm()
+              }}
+              use:islandTooltip={'Snooze alarm'}
+              aria-label="Snooze alarm"
             >
               <Clock size={12} />
-              <span>{$tStore('timer.snooze')}</span>
             </button>
             <button
-              class="banner-action-btn stop"
-              onclick={dismissRingingAlarm}
+              class="mini-btn primary ringing-dismiss-btn"
+              onclick={(e: MouseEvent) => {
+                e.stopPropagation()
+                dismissRingingAlarm()
+              }}
+              use:islandTooltip={'Dismiss alarm'}
+              aria-label="Dismiss alarm"
             >
-              <X size={12} />
-              <span>{$tStore('timer.dismiss')}</span>
+              <X size={13} />
+            </button>
+          </div>
+        </div>
+      {:else}
+        <div class="timer-minimal">
+          <div class="minimal-info-trigger">
+            <span class="minimal-mode-label">{minimalModeLabel}</span>
+
+            <div class="minimal-center-group">
+              <span class="minimal-digits">{minimalTimeDigits}</span>
+
+              {#if activeMinimalMode === 'focus'}
+                <div class="minimal-cycle-dots">
+                  {#each Array($timerAppStore.focus.settings.longBreakInterval) as _, idx (idx)}
+                    <span
+                      class="cycle-dot"
+                      class:active={idx < $timerAppStore.focus.currentCycle}
+                    ></span>
+                  {/each}
+                </div>
+              {/if}
+            </div>
+          </div>
+
+          <div class="minimal-actions">
+            <button
+              class="mini-btn primary"
+              class:phase-focus={activeMinimalMode === 'focus' &&
+                $timerAppStore.focus.phase === 'focus'}
+              class:phase-break={activeMinimalMode === 'focus' &&
+                $timerAppStore.focus.phase !== 'focus'}
+              class:phase-stopwatch={activeMinimalMode === 'stopwatch'}
+              onclick={(e: MouseEvent) => {
+                e.stopPropagation()
+                handleMinimalToggle()
+              }}
+            >
+              {#if isMinimalActiveRunning}
+                <Pause size={13} />
+              {:else}
+                <Play size={13} />
+              {/if}
+            </button>
+
+            <button
+              class="mini-btn"
+              onclick={(e: MouseEvent) => {
+                e.stopPropagation()
+                handleMinimalReset()
+              }}
+            >
+              <RotateCcw size={12} />
             </button>
           </div>
         </div>
       {/if}
+    {/snippet}
 
-      {#key $timerAppStore.activeTab}
-        <div class="timer-tab-transition">
-          {#if $timerAppStore.activeTab === 'timer'}
-            <CountdownTab onOpenCustom={() => (isCustomDrawerOpen = true)} />
-          {:else if $timerAppStore.activeTab === 'stopwatch'}
-            <StopwatchTab />
-          {:else if $timerAppStore.activeTab === 'focus'}
-            <FocusTab />
-          {:else if $timerAppStore.activeTab === 'alarms'}
-            <AlarmsTab
-              {is24H}
-              onStartEdit={startEditAlarm}
-              onOpenCreate={openCreateAlarm}
+    {#snippet expandedContent()}
+      <div class="timer-expanded">
+        <DotPattern
+          variant="corner-tr"
+          class="expanded-dots-bg {$timerAppStore.activeTab === 'timer'
+            ? 'mode-timer'
+            : $timerAppStore.activeTab === 'stopwatch'
+              ? 'mode-stopwatch'
+              : $timerAppStore.activeTab === 'focus' &&
+                  $timerAppStore.focus.phase === 'focus'
+                ? 'mode-focus'
+                : $timerAppStore.activeTab === 'focus'
+                  ? 'mode-break'
+                  : ''}"
+        />
+
+        <PageHeader>
+          {#snippet center()}
+            <HorizontalTabSelection
+              tabs={timerTabs}
+              value={$timerAppStore.activeTab}
+              onchange={handleTabSelect}
+              ariaLabel={$tStore('timer.title')}
             />
-          {/if}
-        </div>
-      {/key}
+          {/snippet}
 
-      <CustomTimerDrawer
-        isOpen={isCustomDrawerOpen}
-        initialTotalSeconds={$timerAppStore.timer.totalDurationSeconds}
-        onClose={() => (isCustomDrawerOpen = false)}
-        onApply={handleApplyCustomDuration}
-      />
+          {#snippet actions()}
+            {#if $timerAppStore.activeTab === 'focus'}
+              <button
+                class="header-tool-btn"
+                class:active={isSettingsOpen}
+                onclick={() => {
+                  isSettingsOpen = !isSettingsOpen
+                }}
+                use:islandTooltip={'Focus settings'}
+                aria-label="Focus settings"
+              >
+                <SlidersHorizontal size={14} />
+              </button>
+            {:else if $timerAppStore.activeTab === 'alarms'}
+              <button
+                class="header-tool-btn"
+                data-action="create-alarm"
+                class:active={isNewAlarmOpen}
+                onclick={() => {
+                  if (isNewAlarmOpen) {
+                    cancelAlarmForm()
+                  } else {
+                    openCreateAlarm()
+                  }
+                }}
+                use:islandTooltip={$tStore('timer.new_alarm')}
+                aria-label={$tStore('timer.new_alarm')}
+              >
+                <Plus size={15} />
+              </button>
+            {:else}
+              <div class="header-spacer" aria-hidden="true"></div>
+            {/if}
+          {/snippet}
+        </PageHeader>
 
-      <FocusSettingsDrawer
-        isOpen={isSettingsOpen}
-        onClose={() => (isSettingsOpen = false)}
-      />
+        {#if $timerAppStore.ringingAlarm}
+          <div class="expanded-ringing-banner">
+            <div class="ringing-banner-glow" aria-hidden="true"></div>
+            <div class="ringing-banner-left">
+              <div class="banner-bell-badge">
+                <Bell size={16} class="bell-shake" />
+              </div>
+              <div class="banner-info-group">
+                <div class="banner-title-row">
+                  <span class="banner-alarm-title">
+                    {$timerAppStore.ringingAlarm.label || 'Alarm Reminder'}
+                  </span>
+                  <span class="banner-alarm-time">
+                    {formatAlarmDisplayTime(
+                      $timerAppStore.ringingAlarm.time,
+                      is24H
+                    )}
+                  </span>
+                </div>
+                <span class="banner-alarm-meta">
+                  Scheduled for {formatAlarmDisplayTime(
+                    $timerAppStore.ringingAlarm.time,
+                    is24H
+                  )} (Triggered at {formatTriggeredTime(
+                    $timerAppStore.ringingAlarm.triggeredAt,
+                    is24H
+                  )}) • {formatAlarmRepeatBadge(
+                    $timerAppStore.ringingAlarm as unknown as AlarmItem
+                  )}
+                </span>
+              </div>
+            </div>
 
-      <AlarmEditorDrawer
-        isOpen={isNewAlarmOpen}
-        isEditing={Boolean(editingAlarmId)}
-        initialTime={editingAlarm?.time || defaultCreateTime || '16:00'}
-        initialLabel={editingAlarm?.label || ''}
-        initialRepeat={editingAlarm?.repeat || 'once'}
-        initialDays={editingAlarm?.days || [1, 2, 3, 4, 5]}
-        onSave={handleSaveAlarm}
-        onCancel={cancelAlarmForm}
-      />
-    </div>
-  {/if}
+            <div class="banner-actions">
+              <button
+                class="banner-action-btn snooze"
+                onclick={() => snoozeRingingAlarm()}
+              >
+                <Clock size={12} />
+                <span>{$tStore('timer.snooze')}</span>
+              </button>
+              <button
+                class="banner-action-btn stop"
+                onclick={dismissRingingAlarm}
+              >
+                <X size={12} />
+                <span>{$tStore('timer.dismiss')}</span>
+              </button>
+            </div>
+          </div>
+        {/if}
+
+        {#key $timerAppStore.activeTab}
+          <div class="timer-tab-transition">
+            {#if $timerAppStore.activeTab === 'timer'}
+              <CountdownTab onOpenCustom={() => (isCustomDrawerOpen = true)} />
+            {:else if $timerAppStore.activeTab === 'stopwatch'}
+              <StopwatchTab />
+            {:else if $timerAppStore.activeTab === 'focus'}
+              <FocusTab />
+            {:else if $timerAppStore.activeTab === 'alarms'}
+              <AlarmsTab
+                {is24H}
+                onStartEdit={startEditAlarm}
+                onOpenCreate={openCreateAlarm}
+              />
+            {/if}
+          </div>
+        {/key}
+
+        <CustomTimerDrawer
+          isOpen={isCustomDrawerOpen}
+          initialTotalSeconds={$timerAppStore.timer.totalDurationSeconds}
+          onClose={() => (isCustomDrawerOpen = false)}
+          onApply={handleApplyCustomDuration}
+        />
+
+        <FocusSettingsDrawer
+          isOpen={isSettingsOpen}
+          onClose={() => (isSettingsOpen = false)}
+        />
+
+        <AlarmEditorDrawer
+          isOpen={isNewAlarmOpen}
+          isEditing={Boolean(editingAlarmId)}
+          initialTime={editingAlarm?.time || defaultCreateTime || '16:00'}
+          initialLabel={editingAlarm?.label || ''}
+          initialRepeat={editingAlarm?.repeat || 'once'}
+          initialDays={editingAlarm?.days || [1, 2, 3, 4, 5]}
+          onSave={handleSaveAlarm}
+          onCancel={cancelAlarmForm}
+        />
+      </div>
+    {/snippet}
+  </IslandPage>
 </div>
 
 <style src="./styles/TimerPage.css"></style>

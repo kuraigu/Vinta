@@ -9,17 +9,19 @@
 
   interface Props {
     size?: WidgetSizePreset
+    active?: boolean
     showMenuButton?: boolean
     oncontextmenu?: (e: MouseEvent) => void
   }
 
   let {
     size = '2x1',
+    active = true,
     showMenuButton = false,
     oncontextmenu = undefined
   }: Props = $props()
 </script>
 
 <WidgetFrame id="systemStats" {size} {showMenuButton} {oncontextmenu}>
-  <SystemStats expanded={true} />
+  <SystemStats expanded={active} />
 </WidgetFrame>

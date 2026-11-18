@@ -1456,24 +1456,9 @@ func (a *App) StopInertiaGlide() float64 {
 	return offset
 }
 
-// SetIgnoreMouseEvents toggles WS_EX_TRANSPARENT click-through on the native window.
-func (a *App) SetIgnoreMouseEvents(ignore bool) {
-	if a.window != nil {
-		a.window.SetIgnoreMouseEvents(ignore)
-	}
-	hwnd := a.getHwnd()
-	if hwnd == 0 {
-		return
-	}
-	gwl := int32(GWL_EXSTYLE)
-	style, _, _ := procGetWindowLong.Call(hwnd, uintptr(gwl))
-	if ignore {
-		style |= WS_EX_TRANSPARENT
-	} else {
-		style &^= WS_EX_TRANSPARENT
-	}
-	_, _, _ = procSetWindowLong.Call(hwnd, uintptr(gwl), style)
-}
+// SetIgnoreMouseEvents is retained for binding compatibility and does nothing. The hit-testing
+// loop is the single owner of WS_EX_TRANSPARENT; use SetForceInteractive to keep the window clickable.
+func (a *App) SetIgnoreMouseEvents(_ bool) {}
 
 func getEnumChildWebviewCallback() uintptr {
 	enumChildWebviewOnce.Do(func() {

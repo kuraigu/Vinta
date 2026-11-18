@@ -3,7 +3,7 @@
   @description Mini telemetry display showing CPU load, RAM utilization, and GPU usage percentages.
 -->
 <script lang="ts">
-  import { onMount, getContext } from 'svelte'
+  import { getContext } from 'svelte'
   import { Activity, ChevronRight } from 'lucide-svelte'
   import {
     systemTelemetryStore,
@@ -30,7 +30,8 @@
 
   let telemetry = $derived($systemTelemetryStore)
 
-  onMount(() => {
+  $effect(function manageTelemetrySubscription() {
+    if (!expanded) return
     const unsubscribe = subscribeToTelemetry()
     return () => {
       unsubscribe()

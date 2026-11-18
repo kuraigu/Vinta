@@ -80,8 +80,6 @@ func main() {
 		"--disable-notifications",
 		"--disable-print-preview",
 		"--disable-pdf-extension",
-		"--disable-webgl",
-		"--disable-3d-apis",
 		"--metrics-recording-only",
 		"--no-first-run",
 		"--no-pings",
@@ -124,7 +122,11 @@ func main() {
 			"--enable-features=CanvasOopRasterization",
 		)
 	} else {
-		browserArgs = append(browserArgs, "--disable-gpu")
+		browserArgs = append(browserArgs,
+			"--disable-gpu",
+			"--disable-webgl",
+			"--disable-3d-apis",
+		)
 	}
 
 	wailsApp := application.New(application.Options{

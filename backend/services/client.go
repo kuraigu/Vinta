@@ -588,9 +588,9 @@ func onNativeAudioPeak(peakBits uintptr) uintptr {
 	}
 
 	hiddenMu.RLock()
-	hidden := isAppHidden
+	appHidden := isAppHidden
 	hiddenMu.RUnlock()
-	if hidden {
+	if appHidden {
 		return 0
 	}
 
@@ -598,7 +598,7 @@ func onNativeAudioPeak(peakBits uintptr) uintptr {
 
 	peakMu.Lock()
 	now := time.Now()
-	if peak > 0 && now.Sub(lastAudioPeakTime) < 33*time.Millisecond {
+	if peak > 0 && now.Sub(lastAudioPeakTime) < 50*time.Millisecond {
 		peakMu.Unlock()
 		return 0
 	}

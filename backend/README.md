@@ -27,7 +27,7 @@ backend/
 ## Key Subsystems
 
 ### 1. Transparent Canvas & Multi-Rect Hit Testing
-Vinta uses a single-window transparent architecture across multi-monitor virtual desktop coordinates. Rather than clipping physical window regions via Win32 `SetWindowRgn`, the application operates an unclipped transparent window and dynamically toggles `WS_EX_TRANSPARENT` via a 60Hz hit-testing loop (`SetHitRects`) based on cursor proximity to active visual elements.
+Vinta uses a single-window transparent architecture across multi-monitor virtual desktop coordinates. Rather than clipping physical window regions via Win32 `SetWindowRgn` (which causes clipping during animations and shadow rendering) or installing a global `WH_MOUSE_LL` hook (which sits on the OS input path and can be silently unhooked by Windows), the application operates an unclipped transparent window and reconciles `WS_EX_TRANSPARENT` at 60Hz (`SetHitRects`) based on cursor proximity to active visual elements. `setClickThrough` is the single writer of `WS_EX_TRANSPARENT` and checks the live window style on every tick without stationary-cursor shortcuts, so click-through state self-heals within 16ms and cannot drift.
 
 ### 2. Native WinRT Services Bridge (`services/`)
 The native services layer compiles to `vintaservices.dll`, an in-process C++/WinRT library that interacts directly with:
