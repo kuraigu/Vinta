@@ -83,7 +83,9 @@
   color: var(--vinta-text-muted);
   cursor: pointer;
   opacity: 0.72;
-  transition: all 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease;
 }
 
 .setting-reset-btn:hover {

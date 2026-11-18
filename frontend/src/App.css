@@ -96,9 +96,10 @@
 
 /* Pause backdrop blur while the island morphs width/height so Chromium does not
    re-blur the transparent surface on every transition frame. */
-:global(.island.is-transitioning .vinta-glass) {
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
+:global(.island.is-transitioning .vinta-glass),
+:global(.island.is-transitioning *) {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
 }
 
 /* Stop 60fps CSS animations (vinyl spin, marquee, pulses) from compositing while hidden. */

@@ -72,8 +72,7 @@
   flex-shrink: 0;
   transition:
     transform 0.15s ease,
-    opacity 0.15s ease,
-    color 0.15s ease;
+    opacity 0.15s ease;
 }
 
 .announcement-glance-wrap:hover :global(.glance-nav-chevron) {

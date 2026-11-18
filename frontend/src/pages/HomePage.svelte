@@ -218,21 +218,27 @@
     if (!el || typeof ResizeObserver === 'undefined') {
       return
     }
+    let measureTimer: ReturnType<typeof setTimeout> | undefined
     const ro = new ResizeObserver((entries) => {
       for (const entry of entries) {
         if (entry.target === el) {
           const height = Math.ceil(entry.contentRect.height)
           if (height > 0) {
-            const totalContentHeight = $homeWidgetsVisibilityStore.weather
-              ? height
-              : height + 48
-            homeMeasuredHeightStore.set(totalContentHeight)
+            if (measureTimer !== undefined) clearTimeout(measureTimer)
+            measureTimer = setTimeout(() => {
+              measureTimer = undefined
+              const totalContentHeight = $homeWidgetsVisibilityStore.weather
+                ? height
+                : height + 48
+              homeMeasuredHeightStore.set(totalContentHeight)
+            }, 60)
           }
         }
       }
     })
     ro.observe(el)
     return () => {
+      if (measureTimer !== undefined) clearTimeout(measureTimer)
       ro.disconnect()
     }
   }
@@ -477,6 +483,7 @@
               {#if $homeWidgetsVisibilityStore.media !== false}
                 <MediaGlanceWidget
                   size={getWidgetSize('media')}
+                  active={expanded}
                   showMenuButton={$homeWidgetMenuEnabledStore}
                   oncontextmenu={(e) => handleWidgetContextMenu(e, 'media')}
                 />

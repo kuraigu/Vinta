@@ -53,7 +53,9 @@
     font-weight: 600;
     letter-spacing: -0.01em;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition:
+      transform 0.2s ease,
+      opacity 0.2s ease;
     user-select: none;
     -webkit-user-select: none;
     line-height: 1.2;

@@ -133,7 +133,9 @@
   .solid-wifi-svg {
     display: block;
     flex-shrink: 0;
-    transition: all 0.2s ease;
+    transition:
+      transform 0.2s ease,
+      opacity 0.2s ease;
   }
 
   .solid-airplane-svg {

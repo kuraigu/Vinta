@@ -50,10 +50,7 @@
   flex-shrink: 0;
   cursor: pointer;
   padding: 0;
-  transition:
-    background-color 0.16s ease,
-    color 0.16s ease,
-    transform 0.16s ease;
+  transition: transform 0.16s ease;
 }
 
 .banner-fold-btn:hover {
@@ -256,7 +253,9 @@ h3 {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .dismiss-item-btn:hover {
@@ -283,7 +282,9 @@ h3 {
   justify-content: center;
   flex-shrink: 0;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   line-height: 1;
 }
 
@@ -375,7 +376,9 @@ h3 {
   border: 1px solid var(--vinta-border);
   position: relative;
   cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   border-radius: 14px;
 }
 
@@ -466,7 +469,9 @@ h3 {
   width: 100%;
   margin-bottom: 0;
   box-sizing: border-box;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .notif-group:not(.is-expanded) {
@@ -513,7 +518,9 @@ h3 {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
   padding: 0;
   box-sizing: border-box;
@@ -705,11 +712,7 @@ h3 {
   cursor: pointer;
   opacity: 0;
   pointer-events: none;
-  transition:
-    opacity 0.15s ease,
-    background-color 0.15s ease,
-    color 0.15s ease,
-    border-color 0.15s ease;
+  transition: opacity 0.15s ease;
   user-select: none;
 }
 
@@ -747,7 +750,9 @@ h3 {
   border-radius: 14px;
   position: relative;
   overflow: hidden;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .notif-group.unified-card:hover {
@@ -798,7 +803,6 @@ h3 {
   border-radius: 0;
   padding: 10px 12px;
   box-shadow: none;
-  transition: background-color 0.2s ease;
 }
 
 .notif-item.nested .notif-item-title-row {

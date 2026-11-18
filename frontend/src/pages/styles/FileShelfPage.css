@@ -37,9 +37,6 @@
   border: 1px dashed var(--vinta-accent-primary);
   border-radius: var(--vinta-radius-pill);
   padding: 0 12px;
-  transition:
-    background-color 0.16s ease,
-    border-color 0.16s ease;
 }
 
 .shelf-inline-bar.is-dragging-banner.is-cancel-hover {
@@ -96,10 +93,6 @@
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
-  transition:
-    background-color 0.15s ease,
-    border-color 0.15s ease,
-    color 0.15s ease;
 }
 
 .select-toggle-pill:hover {
@@ -149,8 +142,6 @@
   cursor: pointer;
   white-space: nowrap;
   transition:
-    background-color 0.15s ease,
-    border-color 0.15s ease,
     opacity 0.15s ease,
     transform 0.15s ease;
 }
@@ -189,11 +180,7 @@
   color: var(--vinta-text-secondary);
   cursor: pointer;
   flex-shrink: 0;
-  transition:
-    background-color 0.15s ease,
-    border-color 0.15s ease,
-    color 0.15s ease,
-    transform 0.15s ease;
+  transition: transform 0.15s ease;
 }
 
 .inline-icon-btn:hover:not(:disabled) {
@@ -340,10 +327,7 @@
   user-select: none;
   -webkit-user-select: none;
   pointer-events: none;
-  transition:
-    transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1),
-    border-color 0.2s ease,
-    background-color 0.2s ease;
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .shelf-tile:hover .tile-stage {
@@ -448,9 +432,7 @@
   pointer-events: none;
   transition:
     opacity 0.15s ease,
-    transform 0.15s ease,
-    background-color 0.15s ease,
-    border-color 0.15s ease;
+    transform 0.15s ease;
   z-index: 2;
 }
 
@@ -499,10 +481,7 @@
   pointer-events: auto;
   transition:
     opacity 0.15s ease,
-    transform 0.15s ease,
-    background-color 0.15s ease,
-    color 0.15s ease,
-    border-color 0.15s ease;
+    transform 0.15s ease;
 }
 
 .shelf-tile:hover .tile-remove-badge {
@@ -590,11 +569,7 @@
   color: var(--vinta-text-secondary);
   cursor: pointer;
   padding: 0;
-  transition:
-    background-color 0.15s ease,
-    color 0.15s ease,
-    border-color 0.15s ease,
-    transform 0.15s ease;
+  transition: transform 0.15s ease;
 }
 
 .header-icon-btn:hover {

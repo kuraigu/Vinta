@@ -469,7 +469,9 @@
     font-weight: 500;
     cursor: pointer;
     outline: none;
-    transition: all 0.16s ease;
+    transition:
+      transform 0.16s ease,
+      opacity 0.16s ease;
     box-sizing: border-box;
   }
 
@@ -575,7 +577,9 @@
     font-size: 11px;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition:
+      transform 0.15s ease,
+      opacity 0.15s ease;
   }
 
   .header-toggle-btn:hover {
@@ -610,7 +614,9 @@
     border: 1px solid var(--vinta-border, rgba(255, 255, 255, 0.08));
     color: var(--vinta-text-secondary, #b0b0b0);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition:
+      transform 0.15s ease,
+      opacity 0.15s ease;
   }
 
   .popover-nav-btn:hover {
@@ -651,7 +657,9 @@
     font-size: 11px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.12s ease;
+    transition:
+      transform 0.12s ease,
+      opacity 0.12s ease;
     padding: 0;
   }
 
@@ -693,7 +701,9 @@
     font-size: 11px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition:
+      transform 0.15s ease,
+      opacity 0.15s ease;
   }
 
   .month-item-btn:hover {
@@ -744,7 +754,9 @@
     font-size: 10px;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition:
+      transform 0.15s ease,
+      opacity 0.15s ease;
   }
 
   .decade-jump-btn:hover {
@@ -768,7 +780,9 @@
     font-size: 11px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition:
+      transform 0.15s ease,
+      opacity 0.15s ease;
   }
 
   .decade-item-btn:hover {
@@ -806,7 +820,9 @@
     border: 1px solid rgba(56, 189, 248, 0.25);
     color: var(--vinta-primary, #38bdf8);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition:
+      transform 0.15s ease,
+      opacity 0.15s ease;
   }
 
   .popover-today-btn:hover {
@@ -823,7 +839,9 @@
     border: none;
     color: var(--vinta-text-secondary, #a1a1aa);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition:
+      transform 0.15s ease,
+      opacity 0.15s ease;
   }
 
   .popover-back-btn:hover {

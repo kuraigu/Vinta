@@ -45,9 +45,7 @@
 .scroll-view:not(.hide-scrollbar)::-webkit-scrollbar-thumb {
   background: var(--vinta-scrollbar-thumb, rgba(255, 255, 255, 0.22));
   border-radius: 5px;
-  transition:
-    background 0.2s ease,
-    width 0.2s ease;
+  transition: width 0.2s ease;
 }
 
 .scroll-view:not(.hide-scrollbar):hover::-webkit-scrollbar-thumb {

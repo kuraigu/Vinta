@@ -38,14 +38,16 @@
   flex-shrink: 0;
   position: relative;
   overflow: hidden;
+  will-change: transform;
+  contain: strict;
 }
 
 .vinyl-disc.spinning {
-  animation: spinVinyl 6s linear infinite;
+  animation: spinVinyl 6s steps(90, end) infinite;
 }
 
 .vinyl-disc.paused {
-  animation: spinVinyl 6s linear infinite;
+  animation: spinVinyl 6s steps(90, end) infinite;
   animation-play-state: paused;
 }
 
@@ -215,10 +217,7 @@
   color: var(--vinta-bg);
   box-shadow: var(--vinta-island-hover-shadow);
   cursor: pointer;
-  transition:
-    transform 0.15s ease,
-    box-shadow 0.15s ease,
-    filter 0.15s ease;
+  transition: transform 0.15s ease;
 }
 
 .minimal-glance-play:hover {
@@ -301,6 +300,7 @@
   top: 0;
   bottom: 0;
   left: 0;
+  width: 100%;
   height: 100%;
   background: var(
     --vinta-media-seek-gradient,
@@ -316,7 +316,10 @@
   box-shadow:
     0 0 8px var(--vinta-accent-muted, rgba(255, 107, 0, 0.4)),
     0 0 14px var(--vinta-accent-purple, rgba(192, 132, 252, 0.35));
-  transition: width 0.25s linear;
+  transform: scaleX(0);
+  transform-origin: left center;
+  will-change: transform;
+  transition: transform 1s linear;
 }
 
 .card-bg-wrapper {
@@ -329,7 +332,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.4s ease;
 }
 
 .card-bg-image {
@@ -343,9 +345,7 @@
   opacity: 0.72;
   filter: contrast(1.04) saturate(1.08);
   position: relative;
-  transition:
-    opacity 0.3s ease,
-    filter 0.3s ease;
+  transition: opacity 0.3s ease;
   -webkit-user-drag: none;
   user-select: none;
   pointer-events: none;
@@ -377,9 +377,7 @@
   mix-blend-mode: color;
   opacity: 0.28;
   pointer-events: none;
-  transition:
-    background 0.4s ease,
-    opacity 0.4s ease;
+  transition: opacity 0.4s ease;
   z-index: 1;
 }
 
@@ -407,7 +405,6 @@
       rgba(10, 11, 16, 0.28) 100%
     );
   pointer-events: none;
-  transition: background 0.4s ease;
 }
 
 .expanded-card {
@@ -473,7 +470,6 @@
   opacity: 0.85;
   filter: brightness(0.65);
   z-index: 0;
-  transition: background 0.4s ease;
   overflow: hidden;
 }
 
@@ -510,8 +506,8 @@
   padding: 0 8px;
   border-radius: 8px;
   background-color: rgba(255, 255, 255, 0.12);
-  -webkit-backdrop-filter: blur(8px) !important;
-  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   contain: layout style;
   font-size: 0.64rem;
   font-weight: 600;
@@ -536,7 +532,9 @@
   border: 1px solid rgba(255, 255, 255, 0.12);
   color: inherit;
   font-family: inherit;
-  transition: all 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+  transition:
+    transform 0.2s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.2s ease;
 }
 
 .device-badge.clickable:hover {
@@ -656,7 +654,9 @@
   box-shadow:
     0 4px 16px rgba(0, 0, 0, 0.45),
     0 0 12px rgba(255, 255, 255, 0.35);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.2s ease;
   flex-shrink: 0;
 }
 
@@ -809,7 +809,9 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease;
   box-sizing: border-box;
 }
 
@@ -896,9 +898,7 @@
   overflow: hidden;
   display: flex;
   align-items: center;
-  transition:
-    height 0.18s cubic-bezier(0.2, 0.8, 0.2, 1),
-    background-color 0.18s ease;
+  transition: height 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .vol-slider-wrapper:hover,
@@ -916,7 +916,6 @@
   box-shadow: 0 0 6px rgba(255, 255, 255, 0.5);
   border-radius: 9999px;
   pointer-events: none;
-  transition: box-shadow 0.18s ease;
 }
 
 .vol-slider-wrapper:hover .vol-fill,

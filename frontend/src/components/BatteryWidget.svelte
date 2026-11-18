@@ -110,9 +110,7 @@
     top: 0;
     bottom: 0;
     opacity: 1;
-    transition:
-      width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1),
-      background-color 0.3s ease;
+    transition: width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 
   .battery-pill-content {

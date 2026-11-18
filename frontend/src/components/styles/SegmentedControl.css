@@ -42,10 +42,6 @@
   white-space: normal;
   text-align: center;
   line-height: 1.2;
-  transition:
-    background-color 0.16s ease,
-    color 0.16s ease,
-    box-shadow 0.16s ease;
 }
 
 .vinta-segmented-control.size-sm .vinta-segment-btn {

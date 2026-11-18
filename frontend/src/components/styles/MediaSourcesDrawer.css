@@ -30,7 +30,9 @@
   background: var(--vinta-item-bg);
   color: var(--vinta-text-primary);
   cursor: pointer;
-  transition: all 0.18s ease;
+  transition:
+    transform 0.18s ease,
+    opacity 0.18s ease;
   text-align: left;
   width: 100%;
   outline: none;
@@ -63,7 +65,9 @@
   background: var(--vinta-icon-badge-bg);
   border: 1px solid var(--vinta-icon-badge-border);
   color: var(--vinta-text-secondary);
-  transition: all 0.18s ease;
+  transition:
+    transform 0.18s ease,
+    opacity 0.18s ease;
 }
 
 .session-app-img {
@@ -153,7 +157,9 @@
   background: transparent;
   color: var(--vinta-text-secondary);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease;
   flex-shrink: 0;
   margin-left: 2px;
 }

@@ -45,10 +45,7 @@
   opacity: 0;
   pointer-events: none;
   cursor: pointer;
-  transition:
-    opacity 0.15s ease,
-    color 0.15s ease,
-    background-color 0.15s ease;
+  transition: opacity 0.15s ease;
 }
 
 .vinta-widget-frame:hover .widget-menu-trigger,

@@ -496,7 +496,6 @@
     pointer-events: auto;
     transition:
       width 0.3s cubic-bezier(0.22, 1, 0.36, 1),
-      background-color 0.3s ease,
       opacity 0.3s ease;
   }
 
