@@ -30,6 +30,7 @@
   import CustomContextMenu, {
     type ContextMenuItem
   } from '../components/CustomContextMenu.svelte'
+  import IslandPage from '../components/IslandPage.svelte'
   import ScrollView from '../components/ScrollView.svelte'
   import CalendarPage, { config as calendarConfig } from './CalendarPage.svelte'
   import SettingsPage, { config as settingsConfig } from './SettingsPage.svelte'
@@ -391,27 +392,30 @@
 </script>
 
 <div data-vinta="home-page" class="page-container">
-  {#if !expanded}
-    <div class="minimal-view">
-      <div class="minimal-slot">
-        <DeviceStatusWidget />
+  <IslandPage {expanded}>
+    {#snippet minimal()}
+      <div class="minimal-view">
+        <div class="minimal-slot">
+          <DeviceStatusWidget />
+        </div>
+        {#if $homeWidgetsVisibilityStore.weather}
+          <div class="minimal-slot">
+            <Weather expanded={false} />
+          </div>
+        {/if}
+        {#if $homeWidgetsVisibilityStore.calendar}
+          <div class="minimal-slot">
+            <Calendar expanded={false} />
+          </div>
+        {/if}
       </div>
-      {#if $homeWidgetsVisibilityStore.weather}
-        <div class="minimal-slot">
-          <Weather expanded={false} />
-        </div>
-      {/if}
-      {#if $homeWidgetsVisibilityStore.calendar}
-        <div class="minimal-slot">
-          <Calendar expanded={false} />
-        </div>
-      {/if}
-    </div>
-  {:else}
-    <div
-      class="expanded-view"
-      class:has-hero-weather={$homeWidgetsVisibilityStore.weather}
-    >
+    {/snippet}
+
+    {#snippet expandedContent()}
+      <div
+        class="expanded-view"
+        class:has-hero-weather={$homeWidgetsVisibilityStore.weather}
+      >
       <ScrollView
         class="home-feed-scroll"
         showScrollIndicators={true}
@@ -502,6 +506,7 @@
             {#if $homeWidgetsVisibilityStore.systemStats}
               <SystemStatsWidget
                 size={getWidgetSize('systemStats')}
+                active={expanded}
                 showMenuButton={$homeWidgetMenuEnabledStore}
                 oncontextmenu={(e) => handleWidgetContextMenu(e, 'systemStats')}
               />
@@ -516,7 +521,8 @@
         </div>
       </ScrollView>
     </div>
-  {/if}
+    {/snippet}
+  </IslandPage>
 
   {#if ctxOpen}
     <CustomContextMenu

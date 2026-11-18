@@ -28,8 +28,8 @@ export function createBakedLoop(opts: BakedLoopOptions): BakedLoopController {
   const fps = Math.max(1, opts.fps ?? 18)
   const frameIntervalMs = 1000 / fps
   let rafId = 0
+  let timerId = 0
   let startTime = 0
-  let lastFrameTime = 0
   let disposed = false
 
   function shouldRun(): boolean {
@@ -42,20 +42,25 @@ export function createBakedLoop(opts: BakedLoopOptions): BakedLoopController {
     if (!shouldRun()) return
 
     if (!startTime) startTime = now
-    if (now - lastFrameTime >= frameIntervalMs) {
-      lastFrameTime = now
-      opts.onFrame((now - startTime) / 1000)
-    }
-    rafId = requestAnimationFrame(tick)
+    opts.onFrame((now - startTime) / 1000)
+    timerId = window.setTimeout(() => {
+      timerId = 0
+      if (shouldRun() && !rafId) {
+        rafId = requestAnimationFrame(tick)
+      }
+    }, frameIntervalMs)
   }
 
   function start() {
-    if (disposed || rafId || !shouldRun()) return
-    lastFrameTime = 0
+    if (disposed || rafId || timerId || !shouldRun()) return
     rafId = requestAnimationFrame(tick)
   }
 
   function stop() {
+    if (timerId) {
+      clearTimeout(timerId)
+      timerId = 0
+    }
     if (rafId) {
       cancelAnimationFrame(rafId)
       rafId = 0

@@ -33,6 +33,7 @@
     X
   } from 'lucide-svelte'
   import BackButton from '../components/BackButton.svelte'
+  import IslandPage from '../components/IslandPage.svelte'
   import PageHeader from '../components/PageHeader.svelte'
   import DotPattern from '../components/patterns/DotPattern.svelte'
   import HorizontalTabSelection, {
@@ -404,8 +405,9 @@
   class:minimal-mode={!expanded}
   class:expanded-mode={expanded}
 >
-  {#if !expanded}
-    {#if $timerAppStore.ringingAlarm}
+  <IslandPage {expanded}>
+    {#snippet minimal()}
+      {#if $timerAppStore.ringingAlarm}
       <div class="timer-minimal ringing-capsule">
         <div class="minimal-ringing-pulse" aria-hidden="true"></div>
 
@@ -501,7 +503,9 @@
         </div>
       </div>
     {/if}
-  {:else}
+    {/snippet}
+
+    {#snippet expandedContent()}
     <div class="timer-expanded">
       <DotPattern
         variant="corner-tr"
@@ -656,7 +660,8 @@
         onCancel={cancelAlarmForm}
       />
     </div>
-  {/if}
+    {/snippet}
+  </IslandPage>
 </div>
 
 <style src="./styles/TimerPage.css"></style>

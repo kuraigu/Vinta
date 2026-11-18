@@ -35,6 +35,9 @@ export class WindowBoundsManager {
   private idleWatchdogTimer: number | undefined
   private lastHitRectsSignature: string = ''
   private lastHitRects: HitRect[] = []
+  private syncedMicrotaskNode: HTMLElement | null | undefined = undefined
+  private syncedMicrotaskHidden: boolean | undefined = undefined
+  private syncedMicrotaskQueued: boolean = false
 
   public currentOSBounds: WindowBounds = { w: 0, h: 0, r: 0 }
   public targetPendingBounds: WindowBounds = { w: 0, h: 0, r: 0 }
@@ -234,6 +237,25 @@ export class WindowBoundsManager {
     isHidden: boolean = false,
     force: boolean = false
   ): void {
+    const targetNode = islandNode ?? this.activeIslandNode ?? null
+    if (
+      !force &&
+      this.syncedMicrotaskQueued &&
+      this.syncedMicrotaskNode === targetNode &&
+      this.syncedMicrotaskHidden === isHidden
+    ) {
+      return
+    }
+    this.syncedMicrotaskNode = targetNode
+    this.syncedMicrotaskHidden = isHidden
+    if (!this.syncedMicrotaskQueued) {
+      this.syncedMicrotaskQueued = true
+      queueMicrotask(() => {
+        this.syncedMicrotaskQueued = false
+        this.syncedMicrotaskNode = undefined
+        this.syncedMicrotaskHidden = undefined
+      })
+    }
     const { hitRects, hiddenSig } = this.measureHitRects(islandNode, isHidden)
     this.dispatchHitRects(hitRects, force, hiddenSig)
   }
@@ -592,27 +614,6 @@ export class WindowBoundsManager {
   private trimTimer: number | undefined
 
   /**
-   * Compatibility adapter delegating to consolidated syncBounds and scheduling memory trims on idle/collapsed state changes.
-   */
-  public syncOnStateChange(
-    target: WindowBounds,
-    _wasExpanded: boolean,
-    expanded: boolean,
-    _wasHidden: boolean,
-    isHidden: boolean,
-    isDragging: boolean,
-    offset: number,
-    islandNode: HTMLElement | null
-  ): void {
-    this.syncBounds(target, offset, islandNode, isDragging, isHidden)
-    if (expanded && !isHidden) {
-      this.cancelScheduledTrimMemory()
-    } else if (!isDragging) {
-      this.scheduleTrimMemory(isHidden ? 800 : 900)
-    }
-  }
-
-  /**
    * Cancels any pending scheduled memory trim.
    */
   public cancelScheduledTrimMemory(): void {
@@ -673,21 +674,33 @@ export class WindowBoundsManager {
 
     const reconcileNow = () => {
       if (
-        !this.getIsDragging() &&
-        !getIsHidden() &&
-        this.transitionTimer === undefined
+        this.getIsDragging() ||
+        getIsHidden() ||
+        this.transitionTimer !== undefined
       ) {
-        const node = getIslandNode()
-        if (node) {
-          this.activeIslandNode = node
-          this.currentOSBounds = { ...getTargetBounds() }
-          this.syncPillBounds(node, false, false)
-        }
+        return
+      }
+      const node = getIslandNode()
+      if (node && !node.classList.contains('is-transitioning')) {
+        this.activeIslandNode = node
+        this.currentOSBounds = { ...getTargetBounds() }
+        this.syncPillBounds(node, false, false)
       }
     }
 
     const reconcile = () => {
-      if (reconcileRaf !== undefined) return
+      if (
+        reconcileRaf !== undefined ||
+        this.getIsDragging() ||
+        getIsHidden() ||
+        this.transitionTimer !== undefined
+      ) {
+        return
+      }
+      const node = getIslandNode()
+      if (node?.classList.contains('is-transitioning')) {
+        return
+      }
       reconcileRaf = requestAnimationFrame(() => {
         reconcileRaf = undefined
         reconcileNow()

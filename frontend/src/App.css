@@ -68,6 +68,10 @@
   justify-content: center;
   pointer-events: none;
   contain: layout style;
+  /* Keeps the island on its own compositor layer so drag and glide only move a
+     cached texture. Do not remove or toggle it: dropping the layer forces a full
+     repaint (backdrop blur included) and spikes WebView2 CPU when movement ends. */
+  will-change: transform;
 }
 
 .island-scale-box {
@@ -88,4 +92,20 @@
   backdrop-filter: blur(12px);
   isolation: isolate;
   contain: layout style;
+}
+
+/* Pause backdrop blur while the island morphs width/height so Chromium does not
+   re-blur the transparent surface on every transition frame. */
+:global(.island.is-transitioning .vinta-glass) {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* Stop 60fps CSS animations (vinyl spin, marquee, pulses) from compositing while hidden. */
+:global(.island.is-hidden .content) {
+  visibility: hidden;
+}
+
+:global(.island.is-hidden *) {
+  animation-play-state: paused !important;
 }

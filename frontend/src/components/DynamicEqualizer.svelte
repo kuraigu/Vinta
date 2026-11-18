@@ -65,16 +65,27 @@
     }
   }
 
+  let animTimer = 0
+  const FRAME_INTERVAL_MS = 45 // ~22 FPS to match 20Hz WASAPI peak updates
+
+  function stopLoop() {
+    if (animTimer) {
+      clearTimeout(animTimer)
+      animTimer = 0
+    }
+    if (animFrame) {
+      cancelAnimationFrame(animFrame)
+      animFrame = 0
+    }
+  }
+
   function handlePlayStateEffect() {
     if (isPlaying && !$isIslandHiddenStore) {
-      if (!animFrame) {
+      if (!animFrame && !animTimer) {
         animFrame = requestAnimationFrame(renderLoop)
       }
     } else {
-      if (animFrame) {
-        cancelAnimationFrame(animFrame)
-        animFrame = 0
-      }
+      stopLoop()
       renderStatic()
     }
   }
@@ -90,24 +101,21 @@
 
   $effect(handleProgressChangeEffect)
 
-  let lastFrameTime = 0
-  const FRAME_INTERVAL_MS = 45 // ~22 FPS to match 20Hz WASAPI peak updates
-
   function renderLoop(time: number) {
+    animFrame = 0
     if (!canvasRef) return
     if ($isIslandHiddenStore || document.hidden) {
-      if (animFrame) {
-        cancelAnimationFrame(animFrame)
-        animFrame = 0
-      }
+      stopLoop()
       return
     }
-    if (time - lastFrameTime >= FRAME_INTERVAL_MS) {
-      lastFrameTime = time
-      drawFrame(time)
-    }
+    drawFrame(time)
     if (isPlaying && !$isIslandHiddenStore) {
-      animFrame = requestAnimationFrame(renderLoop)
+      animTimer = window.setTimeout(() => {
+        animTimer = 0
+        if (isPlaying && !$isIslandHiddenStore && !document.hidden && !animFrame) {
+          animFrame = requestAnimationFrame(renderLoop)
+        }
+      }, FRAME_INTERVAL_MS)
     }
   }
 
@@ -243,7 +251,13 @@
   }
 
   function handleVisibilityChange() {
-    if (!document.hidden && isPlaying && !$isIslandHiddenStore && !animFrame) {
+    if (
+      !document.hidden &&
+      isPlaying &&
+      !$isIslandHiddenStore &&
+      !animFrame &&
+      !animTimer
+    ) {
       animFrame = requestAnimationFrame(renderLoop)
     }
   }
@@ -265,10 +279,7 @@
 
   onDestroy(() => {
     document.removeEventListener('visibilitychange', handleVisibilityChange)
-    if (animFrame) {
-      cancelAnimationFrame(animFrame)
-      animFrame = 0
-    }
+    stopLoop()
     if (resizeObserver) {
       resizeObserver.disconnect()
       resizeObserver = null

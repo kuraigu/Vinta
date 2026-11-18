@@ -280,6 +280,7 @@
   })
 
   let currentLiveOffsetX = $state(0)
+  let liveGlideOffsetX: number | null = null
   let isDisplayLayoutReady = $state(false)
   let lastSyncedAlignment: HiddenPillPosition | null = null
   let extraDropdownW = $state(0)
@@ -1095,6 +1096,10 @@
   }
 
   function finishDragGesture() {
+    if (liveGlideOffsetX !== null) {
+      currentLiveOffsetX = liveGlideOffsetX
+      liveGlideOffsetX = null
+    }
     const wasInRunway = isGestureBusy()
     gestures.finishDrag(undefined, () => {
       const baseCenter = displayLayout.virtualLeft + displayLayout.primaryCenter
@@ -1134,6 +1139,9 @@
 
       if (wasInRunway) {
         if (!needsSettle) {
+          if (islandWrapperNode) {
+            islandWrapperNode.style.transform = `translateX(${resting}px)`
+          }
           gestures.finishSettling()
           bounds.cancelPendingTransition()
           bounds.recoverRestingBounds(target, resting, islandNode, isHidden)
@@ -2238,19 +2246,22 @@
           bounds.syncGlideCorridor(islandNode, isHidden, start, target)
         }}
         onGlideStep={(live) => {
-          currentLiveOffsetX = live
-          // Apply transform directly during drag/glide to avoid Svelte microtask frame jitter.
+          liveGlideOffsetX = live
+          // Apply transform directly during glide to avoid Svelte reactive updates every frame.
           if (islandWrapperNode) {
             islandWrapperNode.style.transform = `translateX(${live}px)`
           }
           bounds.syncDragOffset(live)
         }}
         onUpdateOffset={(next) => {
+          liveGlideOffsetX = null
           currentLiveOffsetX = next
           if (islandWrapperNode) {
             islandWrapperNode.style.transform = `translateX(${next}px)`
           }
-          bounds.syncDragOffset(next)
+          if (gestures.isDragging || gestures.isInertia) {
+            bounds.syncDragOffset(next)
+          }
         }}
         onFinishDrag={finishDragGesture}
         onExpand={handleExpand}
