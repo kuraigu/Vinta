@@ -8,7 +8,6 @@
     FileText,
     Music,
     Bell,
-    AlertCircle,
     SlidersHorizontal,
     Calculator,
     Timer,
@@ -21,16 +20,21 @@
     Clock,
     Battery,
     Wifi,
-    MoreHorizontal
+    MoreHorizontal,
+    RotateCcw
   } from 'lucide-svelte'
   import BentoCard from '../../BentoCard.svelte'
   import ToggleSwitch from '../../ToggleSwitch.svelte'
   import SettingItem from '../SettingItem.svelte'
   import {
     pageVisibilityStore,
+    defaultPageVisibility,
     homeWidgetsVisibilityStore,
+    defaultHomeWidgetsVisibility,
+    homeWidgetSizesStore,
     homeWidgetMenuEnabledStore,
     dockPinnedAppsStore,
+    defaultDockPinnedApps,
     batteryDataStore,
     tStore,
     type HomeWidgetsVisibility,
@@ -38,52 +42,62 @@
     type DockPinnedApps
   } from '../../../store'
 
-  let shakeKey = $state<string | null>(null)
-  let shakeTimeout: ReturnType<typeof setTimeout> | null = null
+  let hasBattery = $derived($batteryDataStore.hasBattery)
 
-  function triggerShake(key: string) {
-    shakeKey = key
-    if (shakeTimeout) clearTimeout(shakeTimeout)
-    shakeTimeout = setTimeout(() => {
-      shakeKey = null
-    }, 600)
+  function isRecordEqual<T extends object>(a: T, b: T): boolean {
+    const keys = new Set([...Object.keys(a), ...Object.keys(b)]) as Set<keyof T>
+    for (const k of keys) {
+      if (a[k] !== b[k]) return false
+    }
+    return true
   }
 
-  let hasBattery = $derived($batteryDataStore.hasBattery)
-  let isBatteryActive = $derived(
-    $homeWidgetsVisibilityStore.battery && hasBattery
+  let isPagesDefault = $derived(
+    isRecordEqual($pageVisibilityStore, defaultPageVisibility)
   )
 
-  let activeHomeCount = $derived(
-    ($homeWidgetsVisibilityStore.clock ? 1 : 0) +
-      ($homeWidgetsVisibilityStore.calendar ? 1 : 0) +
-      ($homeWidgetsVisibilityStore.weather ? 1 : 0) +
-      ($homeWidgetsVisibilityStore.wireless ? 1 : 0) +
-      (isBatteryActive ? 1 : 0)
+  let isHomeWidgetsDefault = $derived(
+    isRecordEqual($homeWidgetsVisibilityStore, defaultHomeWidgetsVisibility) &&
+      $homeWidgetMenuEnabledStore === homeWidgetMenuEnabledStore.defaultValue
   )
 
-  let isClockLocked = $derived(
-    $homeWidgetsVisibilityStore.clock && activeHomeCount <= 1
+  let isDockPinnedDefault = $derived(
+    isRecordEqual($dockPinnedAppsStore, defaultDockPinnedApps)
   )
-  let isCalLocked = $derived(
-    $homeWidgetsVisibilityStore.calendar && activeHomeCount <= 1
+
+  let isAllDefault = $derived(
+    isPagesDefault && isHomeWidgetsDefault && isDockPinnedDefault
   )
-  let isWeatherLocked = $derived(
-    $homeWidgetsVisibilityStore.weather && activeHomeCount <= 1
-  )
-  let isWirelessLocked = $derived(
-    $homeWidgetsVisibilityStore.wireless && activeHomeCount <= 1
-  )
-  let isBatteryLocked = $derived(
-    hasBattery && $homeWidgetsVisibilityStore.battery && activeHomeCount <= 1
-  )
+
+  function resetPages() {
+    pageVisibilityStore.reset()
+  }
+
+  function resetHomeWidgets() {
+    homeWidgetsVisibilityStore.reset()
+    homeWidgetSizesStore.reset()
+    homeWidgetMenuEnabledStore.reset()
+  }
+
+  function resetDockPinned() {
+    dockPinnedAppsStore.reset()
+  }
+
+  function resetAllAppsAndWidgets() {
+    resetPages()
+    resetHomeWidgets()
+    resetDockPinned()
+  }
 
   function toggleHomeWidget(key: keyof HomeWidgetsVisibility) {
-    const isCurrentlyActive = $homeWidgetsVisibilityStore[key]
-    if (isCurrentlyActive && activeHomeCount <= 1) {
-      triggerShake(key)
-      return
-    }
+    const raw = $homeWidgetsVisibilityStore[key]
+    const isCurrentlyActive =
+      key === 'spotlight' ||
+      key === 'announcements' ||
+      key === 'media' ||
+      key === 'notifications'
+        ? raw !== false
+        : Boolean(raw)
     $homeWidgetsVisibilityStore = {
       ...$homeWidgetsVisibilityStore,
       [key]: !isCurrentlyActive
@@ -91,9 +105,12 @@
   }
 
   function togglePage(key: keyof PageVisibility) {
+    const raw = $pageVisibilityStore[key]
+    const isCurrentlyActive =
+      key === 'calendar' || key === 'performance' ? raw !== false : Boolean(raw)
     $pageVisibilityStore = {
       ...$pageVisibilityStore,
-      [key]: !$pageVisibilityStore[key]
+      [key]: !isCurrentlyActive
     }
   }
 
@@ -106,6 +123,16 @@
 </script>
 
 <div class="apps-modules-tab setting-group">
+  <div class="setting-section-header section-header-row">
+    <span>{$tStore('settings.modules_pages_features')}</span>
+    {#if !isPagesDefault}
+      <button type="button" class="section-reset-link" onclick={resetPages}>
+        <RotateCcw size={11} strokeWidth={2.2} />
+        <span>{$tStore('common.reset')}</span>
+      </button>
+    {/if}
+  </div>
+
   <BentoCard variant="group">
     <SettingItem
       label={$tStore('apps.actioncenter_name')}
@@ -198,160 +225,71 @@
     </SettingItem>
   </BentoCard>
 
-  <div class="setting-section-header">
+  <div class="setting-section-header section-header-row">
     <span>{$tStore('settings.modules_home_widgets')}</span>
+    {#if !isHomeWidgetsDefault}
+      <button
+        type="button"
+        class="section-reset-link"
+        onclick={resetHomeWidgets}
+      >
+        <RotateCcw size={11} strokeWidth={2.2} />
+        <span>{$tStore('common.reset')}</span>
+      </button>
+    {/if}
   </div>
 
   <BentoCard variant="group">
-    <!-- Clock Widget -->
-    <div class="item-wrapper" class:shake={shakeKey === 'clock'}>
-      <SettingItem label={$tStore('settings.modules_clock_time')} icon={Clock}>
-        <div
-          class="toggle-container"
-          class:locked={isClockLocked}
-          role="button"
-          tabindex="0"
-          onclick={() => isClockLocked && triggerShake('clock')}
-          onkeydown={(e) =>
-            e.key === 'Enter' && isClockLocked && triggerShake('clock')}
-        >
-          <ToggleSwitch
-            checked={$homeWidgetsVisibilityStore.clock}
-            disabled={isClockLocked}
-            onchange={() => toggleHomeWidget('clock')}
-            ariaLabel={$tStore('settings.modules_clock_time')}
-          />
-        </div>
-      </SettingItem>
-      {#if isClockLocked && shakeKey === 'clock'}
-        <div class="locked-warning">
-          <AlertCircle size={12} />
-          <span>{$tStore('settings.modules_one_widget_required')}</span>
-        </div>
-      {/if}
-    </div>
+    <SettingItem label={$tStore('settings.modules_clock_time')} icon={Clock}>
+      <ToggleSwitch
+        checked={$homeWidgetsVisibilityStore.clock}
+        onchange={() => toggleHomeWidget('clock')}
+        ariaLabel={$tStore('settings.modules_clock_time')}
+      />
+    </SettingItem>
 
-    <!-- Calendar Widget -->
-    <div class="item-wrapper" class:shake={shakeKey === 'calendar'}>
-      <SettingItem
-        label={$tStore('settings.modules_calendar_date')}
-        icon={Calendar}
-      >
-        <div
-          class="toggle-container"
-          class:locked={isCalLocked}
-          role="button"
-          tabindex="0"
-          onclick={() => isCalLocked && triggerShake('calendar')}
-          onkeydown={(e) =>
-            e.key === 'Enter' && isCalLocked && triggerShake('calendar')}
-        >
-          <ToggleSwitch
-            checked={$homeWidgetsVisibilityStore.calendar}
-            disabled={isCalLocked}
-            onchange={() => toggleHomeWidget('calendar')}
-            ariaLabel={$tStore('settings.modules_calendar_date')}
-          />
-        </div>
-      </SettingItem>
-      {#if isCalLocked && shakeKey === 'calendar'}
-        <div class="locked-warning">
-          <AlertCircle size={12} />
-          <span>{$tStore('settings.modules_one_widget_required')}</span>
-        </div>
-      {/if}
-    </div>
+    <SettingItem
+      label={$tStore('settings.modules_calendar_date')}
+      icon={Calendar}
+    >
+      <ToggleSwitch
+        checked={$homeWidgetsVisibilityStore.calendar}
+        onchange={() => toggleHomeWidget('calendar')}
+        ariaLabel={$tStore('settings.modules_calendar_date')}
+      />
+    </SettingItem>
 
-    <!-- Weather Widget -->
-    <div class="item-wrapper" class:shake={shakeKey === 'weather'}>
-      <SettingItem
-        label={$tStore('settings.modules_weather_forecast')}
-        icon={CloudSun}
-      >
-        <div
-          class="toggle-container"
-          class:locked={isWeatherLocked}
-          role="button"
-          tabindex="0"
-          onclick={() => isWeatherLocked && triggerShake('weather')}
-          onkeydown={(e) =>
-            e.key === 'Enter' && isWeatherLocked && triggerShake('weather')}
-        >
-          <ToggleSwitch
-            checked={$homeWidgetsVisibilityStore.weather}
-            disabled={isWeatherLocked}
-            onchange={() => toggleHomeWidget('weather')}
-            ariaLabel={$tStore('settings.modules_weather_forecast')}
-          />
-        </div>
-      </SettingItem>
-      {#if isWeatherLocked && shakeKey === 'weather'}
-        <div class="locked-warning">
-          <AlertCircle size={12} />
-          <span>{$tStore('settings.modules_one_widget_required')}</span>
-        </div>
-      {/if}
-    </div>
+    <SettingItem
+      label={$tStore('settings.modules_weather_forecast')}
+      icon={CloudSun}
+    >
+      <ToggleSwitch
+        checked={$homeWidgetsVisibilityStore.weather}
+        onchange={() => toggleHomeWidget('weather')}
+        ariaLabel={$tStore('settings.modules_weather_forecast')}
+      />
+    </SettingItem>
 
-    <!-- Battery Widget -->
-    <div class="item-wrapper" class:shake={shakeKey === 'battery'}>
-      <SettingItem
-        label={$tStore('settings.modules_battery_power')}
-        icon={Battery}
+    <SettingItem
+      label={$tStore('settings.modules_battery_power')}
+      icon={Battery}
+      disabled={!hasBattery}
+    >
+      <ToggleSwitch
+        checked={hasBattery && $homeWidgetsVisibilityStore.battery}
         disabled={!hasBattery}
-      >
-        <div
-          class="toggle-container"
-          class:locked={isBatteryLocked || !hasBattery}
-          role="button"
-          tabindex="0"
-          onclick={() => isBatteryLocked && triggerShake('battery')}
-          onkeydown={(e) =>
-            e.key === 'Enter' && isBatteryLocked && triggerShake('battery')}
-        >
-          <ToggleSwitch
-            checked={hasBattery && $homeWidgetsVisibilityStore.battery}
-            disabled={isBatteryLocked || !hasBattery}
-            onchange={() => toggleHomeWidget('battery')}
-            ariaLabel={$tStore('settings.modules_battery_power')}
-          />
-        </div>
-      </SettingItem>
-      {#if isBatteryLocked && shakeKey === 'battery'}
-        <div class="locked-warning">
-          <AlertCircle size={12} />
-          <span>{$tStore('settings.modules_one_widget_required')}</span>
-        </div>
-      {/if}
-    </div>
+        onchange={() => toggleHomeWidget('battery')}
+        ariaLabel={$tStore('settings.modules_battery_power')}
+      />
+    </SettingItem>
 
-    <!-- Wireless & Connectivity Widget -->
-    <div class="item-wrapper" class:shake={shakeKey === 'wireless'}>
-      <SettingItem label={$tStore('settings.modules_wireless')} icon={Wifi}>
-        <div
-          class="toggle-container"
-          class:locked={isWirelessLocked}
-          role="button"
-          tabindex="0"
-          onclick={() => isWirelessLocked && triggerShake('wireless')}
-          onkeydown={(e) =>
-            e.key === 'Enter' && isWirelessLocked && triggerShake('wireless')}
-        >
-          <ToggleSwitch
-            checked={$homeWidgetsVisibilityStore.wireless}
-            disabled={isWirelessLocked}
-            onchange={() => toggleHomeWidget('wireless')}
-            ariaLabel={$tStore('settings.modules_wireless')}
-          />
-        </div>
-      </SettingItem>
-      {#if isWirelessLocked && shakeKey === 'wireless'}
-        <div class="locked-warning">
-          <AlertCircle size={12} />
-          <span>{$tStore('settings.modules_one_widget_required')}</span>
-        </div>
-      {/if}
-    </div>
+    <SettingItem label={$tStore('settings.modules_wireless')} icon={Wifi}>
+      <ToggleSwitch
+        checked={$homeWidgetsVisibilityStore.wireless}
+        onchange={() => toggleHomeWidget('wireless')}
+        ariaLabel={$tStore('settings.modules_wireless')}
+      />
+    </SettingItem>
 
     <SettingItem
       label={$tStore('settings.modules_action_glance')}
@@ -395,6 +333,17 @@
     </SettingItem>
 
     <SettingItem
+      label={$tStore('settings.modules_notifications_glance')}
+      icon={Bell}
+    >
+      <ToggleSwitch
+        checked={$homeWidgetsVisibilityStore.notifications !== false}
+        onchange={() => toggleHomeWidget('notifications')}
+        ariaLabel={$tStore('settings.modules_notifications_glance')}
+      />
+    </SettingItem>
+
+    <SettingItem
       label={$tStore('settings.widgets_media_label')}
       description={$tStore('settings.widgets_media_desc')}
       icon={Music}
@@ -424,8 +373,18 @@
     </SettingItem>
   </BentoCard>
 
-  <div class="setting-section-header">
+  <div class="setting-section-header section-header-row">
     <span>{$tStore('settings.modules_dock_pinned')}</span>
+    {#if !isDockPinnedDefault}
+      <button
+        type="button"
+        class="section-reset-link"
+        onclick={resetDockPinned}
+      >
+        <RotateCcw size={11} strokeWidth={2.2} />
+        <span>{$tStore('common.reset')}</span>
+      </button>
+    {/if}
   </div>
 
   <BentoCard variant="group">
@@ -476,6 +435,20 @@
         onchange={() => toggleDockPinned('fileshelf')}
         ariaLabel={$tStore('settings.modules_pin_fileshelf')}
       />
+    </SettingItem>
+  </BentoCard>
+
+  <BentoCard variant="group">
+    <SettingItem label={$tStore('settings.modules_reset_all')} icon={RotateCcw}>
+      <button
+        type="button"
+        class="reset-all-btn"
+        disabled={isAllDefault}
+        onclick={resetAllAppsAndWidgets}
+      >
+        <RotateCcw size={12} strokeWidth={2.2} />
+        <span>{$tStore('common.reset')}</span>
+      </button>
     </SettingItem>
   </BentoCard>
 </div>

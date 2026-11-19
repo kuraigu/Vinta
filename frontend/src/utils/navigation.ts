@@ -6,6 +6,7 @@
  */
 
 import { Events } from '$lib/events'
+import { syncSettingsToDisk } from '../store'
 import HomePage, { config as homeConfig } from '../pages/HomePage.svelte'
 import SettingsPage, {
   config as settingsConfig
@@ -190,6 +191,7 @@ export const AppControls = {
 
   doQuit: (e?: Event) => {
     if (e) e.stopPropagation()
+    syncSettingsToDisk(true)
     Events.Emit('vinta:quit')
   }
 }

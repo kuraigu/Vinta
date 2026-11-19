@@ -25,6 +25,8 @@
    */
 
   import { onMount, onDestroy, getContext } from 'svelte'
+  import { SlidersHorizontal } from 'lucide-svelte'
+  import BentoCard from '../components/BentoCard.svelte'
   import Calendar from '../components/Calendar.svelte'
   import Weather from '../components/Weather.svelte'
   import DeviceStatusWidget from '../components/DeviceStatusWidget.svelte'
@@ -56,6 +58,7 @@
     getCachedDateTimeFormat,
     updateInfoStore,
     appInfoStore,
+    batteryDataStore,
     notifData,
     activeSettingsTabStore,
     tStore,
@@ -120,6 +123,42 @@
       navigate(SettingsPage, settingsConfig, true)
     }
   }
+
+  /**
+   * Navigates the island viewport to the Apps & Widgets tab within Settings.
+   */
+  function openModulesTab() {
+    if (navigate) {
+      $activeSettingsTabStore = 'modules'
+      navigate(SettingsPage, settingsConfig, true)
+    }
+  }
+
+  let hasMinimalStatusSlot = $derived(
+    $homeWidgetsVisibilityStore.clock ||
+      $homeWidgetsVisibilityStore.wireless ||
+      ($homeWidgetsVisibilityStore.battery && $batteryDataStore.hasBattery)
+  )
+
+  let allMinimalWidgetsDisabled = $derived(
+    !hasMinimalStatusSlot &&
+      !$homeWidgetsVisibilityStore.weather &&
+      !$homeWidgetsVisibilityStore.calendar
+  )
+
+  let allHomeWidgetsDisabled = $derived(
+    !$homeWidgetsVisibilityStore.clock &&
+      !$homeWidgetsVisibilityStore.calendar &&
+      !$homeWidgetsVisibilityStore.weather &&
+      !$homeWidgetsVisibilityStore.battery &&
+      !$homeWidgetsVisibilityStore.wireless &&
+      !$homeWidgetsVisibilityStore.actionCenter &&
+      !$homeWidgetsVisibilityStore.systemStats &&
+      $homeWidgetsVisibilityStore.spotlight === false &&
+      $homeWidgetsVisibilityStore.announcements === false &&
+      $homeWidgetsVisibilityStore.notifications === false &&
+      $homeWidgetsVisibilityStore.media === false
+  )
 
   const openOverlay =
     getContext<
@@ -409,18 +448,27 @@
   <IslandPage {expanded}>
     {#snippet minimal()}
       <div class="minimal-view">
-        <div class="minimal-slot">
-          <DeviceStatusWidget />
-        </div>
-        {#if $homeWidgetsVisibilityStore.weather}
-          <div class="minimal-slot">
-            <Weather expanded={false} />
+        {#if allMinimalWidgetsDisabled}
+          <div class="minimal-slot minimal-empty-brand">
+            <span class="minimal-empty-dot" aria-hidden="true"></span>
+            <span>Vinta</span>
           </div>
-        {/if}
-        {#if $homeWidgetsVisibilityStore.calendar}
-          <div class="minimal-slot">
-            <Calendar expanded={false} />
-          </div>
+        {:else}
+          {#if hasMinimalStatusSlot}
+            <div class="minimal-slot">
+              <DeviceStatusWidget />
+            </div>
+          {/if}
+          {#if $homeWidgetsVisibilityStore.weather}
+            <div class="minimal-slot">
+              <Weather expanded={false} />
+            </div>
+          {/if}
+          {#if $homeWidgetsVisibilityStore.calendar}
+            <div class="minimal-slot">
+              <Calendar expanded={false} />
+            </div>
+          {/if}
         {/if}
       </div>
     {/snippet}
@@ -487,47 +535,75 @@
             {/if}
 
             <!-- Modular Bento Widget Grid -->
-            <div class="home-widgets-bento">
-              {#if $homeWidgetsVisibilityStore.media !== false}
-                <MediaGlanceWidget
-                  size={getWidgetSize('media')}
-                  active={expanded}
-                  showMenuButton={$homeWidgetMenuEnabledStore}
-                  oncontextmenu={(e) => handleWidgetContextMenu(e, 'media')}
-                />
-              {/if}
+            {#if allHomeWidgetsDisabled}
+              <BentoCard variant="bento" class="home-empty-widgets-card">
+                <div class="home-empty-widgets-body">
+                  <div class="home-empty-widgets-icon" aria-hidden="true">
+                    <SlidersHorizontal size={18} strokeWidth={2} />
+                  </div>
+                  <div class="home-empty-widgets-copy">
+                    <h2 class="home-empty-widgets-title">
+                      {$tStore('home.widgets_empty_title')}
+                    </h2>
+                    <p class="home-empty-widgets-desc">
+                      {$tStore('home.widgets_empty_desc')}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  class="home-empty-widgets-cta"
+                  onclick={openModulesTab}
+                >
+                  {$tStore('home.widgets_empty_cta')}
+                </button>
+              </BentoCard>
+            {:else}
+              <div class="home-widgets-bento">
+                {#if $homeWidgetsVisibilityStore.media !== false}
+                  <MediaGlanceWidget
+                    size={getWidgetSize('media')}
+                    active={expanded}
+                    showMenuButton={$homeWidgetMenuEnabledStore}
+                    oncontextmenu={(e) => handleWidgetContextMenu(e, 'media')}
+                  />
+                {/if}
 
-              <BriefFeedWidget
-                showAnnouncements={$homeWidgetsVisibilityStore.announcements !==
-                  false}
-                showNotifications={hasStandardNotifications}
-                showCalendar={$homeWidgetsVisibilityStore.calendar}
-                size={getWidgetSize('brief')}
-                showMenuButton={$homeWidgetMenuEnabledStore}
-                onOpenAnnouncements={openAnnouncementsPage}
-                onOpenCalendar={openCalendar}
-                oncontextmenu={(e) => handleWidgetContextMenu(e, 'brief')}
-              />
+                {#if $homeWidgetsVisibilityStore.announcements !== false || $homeWidgetsVisibilityStore.calendar || ($homeWidgetsVisibilityStore.notifications !== false && hasStandardNotifications)}
+                  <BriefFeedWidget
+                    showAnnouncements={$homeWidgetsVisibilityStore.announcements !==
+                      false}
+                    showNotifications={$homeWidgetsVisibilityStore.notifications !==
+                      false && hasStandardNotifications}
+                    showCalendar={$homeWidgetsVisibilityStore.calendar}
+                    size={getWidgetSize('brief')}
+                    showMenuButton={$homeWidgetMenuEnabledStore}
+                    onOpenAnnouncements={openAnnouncementsPage}
+                    onOpenCalendar={openCalendar}
+                    oncontextmenu={(e) => handleWidgetContextMenu(e, 'brief')}
+                  />
+                {/if}
 
-              {#if $homeWidgetsVisibilityStore.actionCenter}
-                <ActionCenterWidget
-                  size={getWidgetSize('actionCenter')}
-                  showMenuButton={$homeWidgetMenuEnabledStore}
-                  oncontextmenu={(e) =>
-                    handleWidgetContextMenu(e, 'actionCenter')}
-                />
-              {/if}
+                {#if $homeWidgetsVisibilityStore.actionCenter}
+                  <ActionCenterWidget
+                    size={getWidgetSize('actionCenter')}
+                    showMenuButton={$homeWidgetMenuEnabledStore}
+                    oncontextmenu={(e) =>
+                      handleWidgetContextMenu(e, 'actionCenter')}
+                  />
+                {/if}
 
-              {#if $homeWidgetsVisibilityStore.systemStats}
-                <SystemStatsWidget
-                  size={getWidgetSize('systemStats')}
-                  active={expanded}
-                  showMenuButton={$homeWidgetMenuEnabledStore}
-                  oncontextmenu={(e) =>
-                    handleWidgetContextMenu(e, 'systemStats')}
-                />
-              {/if}
-            </div>
+                {#if $homeWidgetsVisibilityStore.systemStats}
+                  <SystemStatsWidget
+                    size={getWidgetSize('systemStats')}
+                    active={expanded}
+                    showMenuButton={$homeWidgetMenuEnabledStore}
+                    oncontextmenu={(e) =>
+                      handleWidgetContextMenu(e, 'systemStats')}
+                  />
+                {/if}
+              </div>
+            {/if}
 
             <!-- Studio Branding Footer -->
             <footer class="home-brand-footer">
