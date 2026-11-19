@@ -182,6 +182,18 @@ tasks:
     cmds:
       - cmd.exe /c "scripts.bat check-transitions {{.CLI_ARGS}}"
 
+  check-settings:
+    desc: Validate persistent setting keys, defaults, and localStorage usage
+    aliases: [settings:check]
+    cmds:
+      - cmd.exe /c "scripts.bat check-settings {{.CLI_ARGS}}"
+
+  check-settings:defaults:
+    desc: Print all persistent setting keys and their default values
+    aliases: [check-settings:default]
+    cmds:
+      - cmd.exe /c "scripts.bat check-settings defaults"
+
   resource-profile:
     desc: Monitor live unscaled CPU% and RAM across Vinta's process tree
     cmds:

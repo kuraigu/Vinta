@@ -248,6 +248,8 @@ if "%~1"=="lint" (
     if errorlevel 1 exit /b !ERRORLEVEL!
     node "%~dp0scripts\check-locales.js"
     if errorlevel 1 exit /b !ERRORLEVEL!
+    node "%~dp0scripts\check-settings.js"
+    if errorlevel 1 exit /b !ERRORLEVEL!
     node "%~dp0scripts\check-transitions.js"
     if errorlevel 1 exit /b !ERRORLEVEL!
     exit /b 0
@@ -270,6 +272,11 @@ if "%~1"=="check-locales" (
 
 if "%~1"=="check-transitions" (
     node "%~dp0scripts\check-transitions.js" %2
+    exit /b !ERRORLEVEL!
+)
+
+if "%~1"=="check-settings" (
+    node "%~dp0scripts\check-settings.js" %2
     exit /b !ERRORLEVEL!
 )
 
@@ -335,6 +342,7 @@ echo   syso                     Generates Windows syso resource file
 echo   installer                Builds standalone production binary and Windows NSIS installer
 echo   pack-theme ^<path^>        Packages a theme directory into a .vintatheme bundle
 echo   check-locales            Validates key parity and schema across all locale catalogs
+echo   check-settings [defaults] Validates setting keys, defaults, and localStorage usage
 echo   sync-locales [--prune]   Propagates new keys from en.json to all other locale catalogs
 echo   lint [ci^|native]         Runs Go, C++, Frontend, Theme, and Locale linters
 echo   contributor ^<args^>       Adds a contributor via scripts\add_contributor.ps1
@@ -391,6 +399,7 @@ exit /b !ERRORLEVEL!
 
 :do_build
 set "IS_DEV=%~1"
+for /f "usebackq delims=" %%T in (`powershell.exe -NoProfile -Command "[int64]([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())"`) do set "BUILD_START_MS=%%T"
 call :kill_app
 call :build_native
 if errorlevel 1 exit /b !ERRORLEVEL!
@@ -412,6 +421,11 @@ if "!IS_DEV!"=="1" (
 )
 set "BUILD_ERR=!ERRORLEVEL!"
 if exist "wails_windows_amd64.syso" del /f /q "wails_windows_amd64.syso"
+if "!BUILD_ERR!"=="0" (
+    for /f "usebackq delims=" %%E in (`powershell.exe -NoProfile -Command "$elapsed = (([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()) - !BUILD_START_MS!) / 1000.0; $now = Get-Date -Format 'HH:mm:ss'; ('{0:N2}s at {1}' -f $elapsed, $now)"`) do (
+        echo Build completed in %%E.
+    )
+)
 exit /b !BUILD_ERR!
 
 :lint_native

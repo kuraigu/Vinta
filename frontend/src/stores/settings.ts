@@ -77,6 +77,7 @@ export interface HomeWidgetsVisibility {
   systemStats?: boolean
   spotlight?: boolean
   announcements?: boolean
+  notifications?: boolean
 }
 
 export const defaultHomeWidgetsVisibility: HomeWidgetsVisibility = {
@@ -89,7 +90,8 @@ export const defaultHomeWidgetsVisibility: HomeWidgetsVisibility = {
   media: true,
   systemStats: false,
   spotlight: true,
-  announcements: true
+  announcements: true,
+  notifications: true
 }
 
 export type WidgetSizePreset = '1x1' | '2x1' | '2x2'
@@ -468,6 +470,14 @@ if (typeof window !== 'undefined') {
       isInitialDiskLoadComplete = true
     }
   }, 0)
+
+  const flushPendingSettings = () => {
+    if (isInitialDiskLoadComplete && !get(devTestingStore)) {
+      syncSettingsToDisk(true)
+    }
+  }
+  window.addEventListener('pagehide', flushPendingSettings)
+  window.addEventListener('beforeunload', flushPendingSettings)
 }
 
 export function getInitialTimezone(): string {
