@@ -32,12 +32,13 @@
 }
 
 .overlay-page-header {
+  container-type: inline-size;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px 10px;
-  padding: 10px 14px 8px;
+  flex-wrap: nowrap;
+  gap: 8px;
+  padding: 10px 12px 8px;
   border-bottom: 1px solid var(--vinta-border);
   flex-shrink: 0;
 }
@@ -47,7 +48,7 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
-  flex: 1 1 auto;
+  flex: 1 1 0%;
   overflow-x: auto;
   overflow-y: visible;
   scrollbar-width: none;
@@ -55,6 +56,23 @@
 
 .overlay-header-left::-webkit-scrollbar {
   display: none;
+}
+
+.overlay-header-left :global(.tab-btn) {
+  padding: 0 7px;
+  gap: 4px;
+  font-size: 11px;
+}
+
+@container (max-width: 460px) {
+  .overlay-header-left :global(.tab-btn) {
+    padding: 0 8px;
+    font-size: 11px;
+  }
+
+  .overlay-header-left :global(.tab-btn svg) {
+    display: none;
+  }
 }
 
 .overlay-title {
@@ -68,7 +86,7 @@
 .overlay-header-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   flex-shrink: 0;
   margin-left: auto;
   padding: 2px 0;

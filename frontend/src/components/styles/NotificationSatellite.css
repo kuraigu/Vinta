@@ -1,41 +1,137 @@
 .notification-satellite {
   display: flex;
   align-items: center;
-  width: 100%;
-  height: 100%;
-  padding: 0 10px 0 12px;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
   box-sizing: border-box;
-  background: var(--vinta-dock-popover-bg);
+  background: transparent;
   border: none;
-  border-top-left-radius: 0 !important;
-  border-top-right-radius: 0 !important;
-  border-bottom-left-radius: 16px;
-  border-bottom-right-radius: 16px;
-  box-shadow:
-    inset 1px 0 0 0 rgba(255, 255, 255, 0.09),
-    inset -1px 0 0 0 rgba(255, 255, 255, 0.09),
-    inset 0 -1px 0 0 rgba(255, 255, 255, 0.09),
-    0 2px 7px rgba(0, 0, 0, 0.32);
+  border-radius: 50%;
   cursor: pointer;
   user-select: none;
-  gap: 10px;
-  overflow: hidden;
+  overflow: visible;
   position: relative;
   transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .notification-satellite:hover {
+  transform: scale(1.06);
+}
+
+.notification-satellite:active {
+  transform: scale(0.94);
+}
+
+.satellite-core {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
   background: var(--vinta-dock-popover-bg);
-  box-shadow:
-    inset 1px 0 0 0 rgba(255, 255, 255, 0.15),
-    inset -1px 0 0 0 rgba(255, 255, 255, 0.15),
-    inset 0 -1px 0 0 rgba(255, 255, 255, 0.15),
-    0 3px 9px rgba(0, 0, 0, 0.38);
+  border: 1px solid var(--vinta-border);
+  box-shadow: 0 0 8px 1px
+    var(--vinta-island-glow-notification, rgba(56, 189, 248, 0.35));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 1;
+}
+
+.satellite-arrival-pulse {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1.5px solid var(--vinta-island-glow-notification, #38bdf8);
+  pointer-events: none;
+  z-index: 0;
+  animation: satelliteArrivalPulse 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes satelliteArrivalPulse {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.75;
+  }
+  100% {
+    transform: scale(1.22);
+    opacity: 0;
+  }
+}
+
+@property --sat-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 360deg;
+}
+
+.satellite-timer-ring {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 36px;
+  height: 36px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 2.5px solid transparent;
+  background: conic-gradient(
+    from 0deg,
+    var(--vinta-island-glow-notification, #38bdf8) 0deg,
+    var(--vinta-island-border-notification, var(--vinta-accent-primary, #f59e0b))
+      calc(var(--sat-angle) * 0.65),
+    var(--vinta-island-glow-notification, #38bdf8) var(--sat-angle),
+    transparent var(--sat-angle)
+  );
+  background-clip: border-area;
+  background-origin: border-box;
+  animation: circularSatelliteTimer linear forwards;
+  pointer-events: none;
+  z-index: 2;
+}
+
+@supports not (background-clip: border-area) {
+  .satellite-timer-ring {
+    border: 0;
+    -webkit-mask: radial-gradient(
+      farthest-side,
+      transparent calc(100% - 2.6px),
+      #000 calc(100% - 1.8px)
+    );
+    mask: radial-gradient(
+      farthest-side,
+      transparent calc(100% - 2.6px),
+      #000 calc(100% - 1.8px)
+    );
+  }
+}
+
+.notification-satellite:hover .satellite-timer-ring {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .satellite-arrival-pulse,
+  .satellite-timer-ring,
+  .satellite-avatar-wrap {
+    animation: none;
+  }
+}
+
+@keyframes circularSatelliteTimer {
+  from {
+    --sat-angle: 360deg;
+  }
+  to {
+    --sat-angle: 0deg;
+  }
 }
 
 .satellite-avatar-wrap {
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   flex-shrink: 0;
   display: flex;
@@ -43,11 +139,40 @@
   justify-content: center;
   overflow: hidden;
   background: var(--vinta-surface-card);
-  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  z-index: 1;
+  transform-origin: 50% 20%;
+  animation: satelliteBellRing 1.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) 0.1s infinite;
 }
 
 .notification-satellite:hover .satellite-avatar-wrap {
-  transform: scale(1.06);
+  animation-play-state: paused;
+}
+
+@keyframes satelliteBellRing {
+  0%,
+  56%,
+  100% {
+    transform: translateX(0) rotate(0deg) scale(1);
+  }
+  8% {
+    transform: translateX(-1.5px) rotate(-18deg) scale(1.06);
+  }
+  16% {
+    transform: translateX(1.5px) rotate(16deg) scale(1.06);
+  }
+  24% {
+    transform: translateX(-1.5px) rotate(-14deg) scale(1.04);
+  }
+  32% {
+    transform: translateX(1.5px) rotate(12deg) scale(1.03);
+  }
+  40% {
+    transform: translateX(-1px) rotate(-8deg) scale(1.02);
+  }
+  48% {
+    transform: translateX(0.5px) rotate(4deg) scale(1);
+  }
 }
 
 .satellite-icon-img {
@@ -64,116 +189,53 @@
   color: var(--vinta-text-secondary);
 }
 
-.satellite-content {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  flex: 1;
-  min-width: 0;
-  gap: 2px;
-}
-
-.satellite-header {
-  font-family: var(--vinta-font-family);
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--vinta-text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.2;
-}
-
-.satellite-snippet {
-  font-family: var(--vinta-font-family);
-  font-size: 10.5px;
-  font-weight: 400;
-  color: var(--vinta-text-secondary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.2;
+.satellite-mini-app-badge {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--vinta-dock-popover-bg);
+  border: 1.5px solid var(--vinta-dock-popover-bg);
+  z-index: 3;
+  pointer-events: none;
 }
 
 .satellite-dismiss-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
+  width: 15px;
+  height: 15px;
   border-radius: 50%;
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--vinta-text-secondary);
+  border: 1.5px solid var(--vinta-dock-popover-bg);
+  background: var(--vinta-surface-elevated, var(--vinta-dock-popover-bg));
+  color: var(--vinta-text-primary);
   cursor: pointer;
-  flex-shrink: 0;
   padding: 0;
-  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 4;
+  opacity: 0;
+  transform: scale(0.8);
+  transition:
+    opacity 0.15s ease,
+    transform 0.16s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.notification-satellite:hover .satellite-dismiss-btn,
+.satellite-dismiss-btn:focus-visible {
+  opacity: 1;
+  transform: scale(1);
 }
 
 .satellite-dismiss-btn:hover {
-  background: var(--vinta-hover);
-  border-color: var(--vinta-border);
-  color: var(--vinta-text-primary);
-  transform: scale(1.14);
+  transform: scale(1.12);
 }
 
 .satellite-dismiss-btn:active {
-  transform: scale(0.92);
-}
-
-.satellite-timeout-bar {
-  position: absolute;
-  top: 2px;
-  left: 50%;
-  transform: translateX(-50%);
-  height: 2px;
-  border-radius: 9999px;
-  background-color: var(--vinta-island-glow-notification, #38bdf8);
-  box-shadow:
-    0 0 6px 1px var(--vinta-island-glow-notification, #38bdf8),
-    0 0 12px 2px var(--vinta-island-glow-notification, #38bdf8);
-  mask-image: linear-gradient(
-    to right,
-    transparent 0%,
-    black 14%,
-    black 86%,
-    transparent 100%
-  );
-  -webkit-mask-image: linear-gradient(
-    to right,
-    transparent 0%,
-    black 14%,
-    black 86%,
-    transparent 100%
-  );
-  animation: shrinkSatelliteBar linear forwards;
-  z-index: 20;
-  pointer-events: none;
-  width: 50%;
-  transform: translateX(-50%) scaleX(1);
-  transform-origin: center;
-  will-change: transform, opacity;
-}
-
-.notification-satellite:hover .satellite-timeout-bar {
-  animation-play-state: paused;
-}
-
-@keyframes shrinkSatelliteBar {
-  0% {
-    transform: translateX(-50%) scaleX(1);
-    opacity: 0;
-  }
-  6% {
-    opacity: 0.85;
-  }
-  85% {
-    transform: translateX(-50%) scaleX(0.16);
-    opacity: 0.85;
-  }
-  100% {
-    transform: translateX(-50%) scaleX(0);
-    opacity: 0;
-  }
+  transform: scale(0.9);
 }

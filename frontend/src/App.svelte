@@ -2289,6 +2289,8 @@
             getWindowDpr()}
           activeMonitorWidth={activeMonitor.width / getWindowDpr()}
           islandWidth={currentIslandW}
+          {expanded}
+          minimalHeight={islandConfig.minimal.h}
           uiScale={effectiveUiScale}
         />
         <ControlsSatellite
