@@ -23,6 +23,7 @@ export const notificationsOverlayTabStore =
 export const feedbackOverlayKindStore = writable<FeedbackOverlayKind>('bug')
 export const hiddenPillOffsetXStore = writable<number>(0)
 export const isIslandHiddenStore = writable<boolean>(false)
+export const overlayPinnedStore = writable<boolean>(false)
 export const isMediaDrawerOpenStore = writable<boolean>(false)
 
 export const simulateOfflineStore = writable<boolean>(false)

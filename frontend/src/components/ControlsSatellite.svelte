@@ -9,6 +9,7 @@
   import { Events } from '$lib/events'
   import SatelliteHost from './SatelliteHost.svelte'
   import FloatingControls from './FloatingControls.svelte'
+  import { clickOutsideMinimizeStore } from '../store'
   import type { FourPartRadii, FourPartGaps } from '../stores/satellites'
 
   /**
@@ -118,10 +119,14 @@
    * Computes layout dimensions, 4-part gaps, and corner radii for the controls satellite.
    */
   function computeSatelliteBounds() {
-    const centerOffsetY = Math.max(0, Math.round((expandedHeight - 95) / 2))
+    const dockHeight = $clickOutsideMinimizeStore ? 124 : 95
+    const centerOffsetY = Math.max(
+      0,
+      Math.round((expandedHeight - dockHeight) / 2)
+    )
     return {
       width: 32,
-      height: 95,
+      height: dockHeight,
       radius: 12,
       radii: EXPANDED_RADII,
       gap: 6,

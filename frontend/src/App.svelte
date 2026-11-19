@@ -57,7 +57,7 @@
   import VirtualCursor from './devtest/VirtualCursor.svelte'
 
   // Services & Utils
-  import { getFallbackPage } from './utils/navigation'
+  import { AppControls, getFallbackPage } from './utils/navigation'
   import { initIslandEvents } from './services/islandEvents'
   import { WindowBoundsManager } from './services/windowBounds'
   import {
@@ -140,6 +140,8 @@
     devPinnedStore,
     activePageIdStore,
     activeOverlayStore,
+    clickOutsideMinimizeStore,
+    overlayPinnedStore,
     notificationsOverlayTabStore,
     feedbackOverlayKindStore,
     type OverlayPageId,
@@ -759,8 +761,117 @@
     }, delaySeconds * 1000)
   }
 
+  let clickOutsideBlurTimeout: number | undefined
+
+  function clearClickOutsideBlur() {
+    if (clickOutsideBlurTimeout !== undefined) {
+      clearTimeout(clickOutsideBlurTimeout)
+      clickOutsideBlurTimeout = undefined
+    }
+  }
+
+  function hasProtectedInteractionOpen(): boolean {
+    if (typeof document === 'undefined') return false
+    const active = document.activeElement as HTMLElement | null
+    if (
+      active &&
+      (active.tagName === 'INPUT' ||
+        active.tagName === 'TEXTAREA' ||
+        active.tagName === 'SELECT' ||
+        active.isContentEditable)
+    ) {
+      return true
+    }
+    return Boolean(
+      document.querySelector(
+        '.context-menu, .editor-modal, .drawer-panel, [role="menu"]'
+      )
+    )
+  }
+
+  function collapseForOutsideClick() {
+    if ($activeOverlayStore !== null) {
+      activeOverlayStore.set(null)
+    }
+    AppControls.doMinimize(navigateTo, undefined, activePage)
+  }
+
+  function handleOutsideClick() {
+    clearClickOutsideBlur()
+    if (
+      !expanded ||
+      isHidden ||
+      isQuitting ||
+      !$clickOutsideMinimizeStore ||
+      $overlayPinnedStore ||
+      $devPinnedStore ||
+      hasProtectedInteractionOpen()
+    ) {
+      return
+    }
+    collapseForOutsideClick()
+  }
+
+  function handleWindowBlur() {
+    clearClickOutsideBlur()
+    if (
+      !expanded ||
+      isHidden ||
+      isQuitting ||
+      !$clickOutsideMinimizeStore ||
+      $overlayPinnedStore ||
+      $devPinnedStore ||
+      hasProtectedInteractionOpen()
+    ) {
+      return
+    }
+
+    clickOutsideBlurTimeout = window.setTimeout(() => {
+      clickOutsideBlurTimeout = undefined
+      if (
+        !expanded ||
+        isHidden ||
+        isQuitting ||
+        !$clickOutsideMinimizeStore ||
+        $overlayPinnedStore ||
+        $devPinnedStore ||
+        isHovering ||
+        isSatelliteHovering ||
+        document.hasFocus() ||
+        hasProtectedInteractionOpen()
+      ) {
+        return
+      }
+      collapseForOutsideClick()
+    }, 120)
+  }
+
+  let autoPinnedForShelf = false
+
+  /**
+   * Automatically pins the island while File Shelf is expanded so users can
+   * click outside to grab files for drag-and-drop without collapsing the shelf.
+   */
+  $effect(function syncFileShelfAutoPin() {
+    const isShelfExpanded =
+      expanded && activePage === FileShelfPage && $clickOutsideMinimizeStore
+
+    if (isShelfExpanded) {
+      if (!get(overlayPinnedStore)) {
+        overlayPinnedStore.set(true)
+        autoPinnedForShelf = true
+      }
+    } else if (autoPinnedForShelf) {
+      autoPinnedForShelf = false
+      if (get(overlayPinnedStore)) {
+        overlayPinnedStore.set(false)
+      }
+    }
+  })
+
   function handleMouseEnter() {
     clearHoverGrace()
+    clearClickOutsideBlur()
     isHovering = true
     isSatelliteHovering = false
     clearTimeout(hideTimeout)
@@ -783,6 +894,7 @@
 
   function handleSatelliteMouseEnter() {
     clearHoverGrace()
+    clearClickOutsideBlur()
     isSatelliteHovering = true
     isHovering = false
     clearTimeout(hideTimeout)
@@ -2039,6 +2151,10 @@
       'vinta:switch-monitor',
       handleSwitchMonitor
     )
+    const unsubClickOutside = Events.OnGlobal(
+      'vinta:click-outside',
+      handleOutsideClick
+    )
     window.addEventListener('resize', handleResize)
     window.addEventListener('blur', handleGlobalDragFailsafe)
     window.addEventListener('pointercancel', handleGlobalDragFailsafe)
@@ -2157,6 +2273,8 @@
       unsubResyncBounds()
       unsubApplyAlignment()
       unsubSwitchMonitor()
+      unsubClickOutside()
+      clearClickOutsideBlur()
       window.removeEventListener('resize', handleResize)
       window.removeEventListener('blur', handleGlobalDragFailsafe)
       window.removeEventListener('pointercancel', handleGlobalDragFailsafe)
@@ -2273,6 +2391,7 @@
         onHideWidget={hideWidget}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
+        onWindowBlur={handleWindowBlur}
         onRecoverBounds={recoverBoundsIfIdle}
         onAnimationDone={recoverBoundsIfIdle}
       />

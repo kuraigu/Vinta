@@ -7,6 +7,9 @@
   import {
     Layout,
     EyeOff,
+    Home,
+    Music,
+    MousePointerClick,
     Timer,
     MousePointer,
     RotateCcw,
@@ -27,6 +30,7 @@
   import {
     homeAutoHideStore,
     mediaAutoHideStore,
+    clickOutsideMinimizeStore,
     autoHideDelayStore,
     autoHideDisplayStore,
     wakeMethodStore,
@@ -87,7 +91,7 @@
   <BentoCard variant="group">
     <SettingItem
       label={$tStore('settings.autohide_home_label')}
-      icon={EyeOff}
+      icon={Home}
       isDefault={$homeAutoHideStore === homeAutoHideStore.defaultValue}
       onReset={() => homeAutoHideStore.reset()}
     >
@@ -99,13 +103,27 @@
 
     <SettingItem
       label={$tStore('settings.autohide_media_label')}
-      icon={EyeOff}
+      icon={Music}
       isDefault={$mediaAutoHideStore === mediaAutoHideStore.defaultValue}
       onReset={() => mediaAutoHideStore.reset()}
     >
       <ToggleSwitch
         bind:checked={$mediaAutoHideStore}
         ariaLabel={$tStore('settings.autohide_media_label')}
+      />
+    </SettingItem>
+
+    <SettingItem
+      label={$tStore('settings.click_outside_minimize_label')}
+      description={$tStore('settings.click_outside_minimize_desc')}
+      icon={MousePointerClick}
+      isDefault={$clickOutsideMinimizeStore ===
+        clickOutsideMinimizeStore.defaultValue}
+      onReset={() => clickOutsideMinimizeStore.reset()}
+    >
+      <ToggleSwitch
+        bind:checked={$clickOutsideMinimizeStore}
+        ariaLabel={$tStore('settings.click_outside_minimize_label')}
       />
     </SettingItem>
 

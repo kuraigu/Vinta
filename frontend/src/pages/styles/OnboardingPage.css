@@ -107,7 +107,14 @@
   border-radius: var(--vinta-radius-pill, 9999px);
   background: var(--vinta-contrast-hover);
   cursor: pointer;
-  transition: width 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  transition:
+    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.22s ease;
+}
+
+.step-progress-pill:focus-visible {
+  outline: 2px solid var(--vinta-accent-primary);
+  outline-offset: 2px;
 }
 
 .step-progress-pill.completed {
@@ -127,6 +134,7 @@
   justify-content: flex-start;
   gap: 8px;
   overflow: hidden;
+  view-transition-name: onboarding-step;
 }
 
 :global(.onboarding-scroll) {
@@ -142,19 +150,93 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  animation: vintaOnboardingStepFadeIn
-    calc(0.28s * max(0.01, var(--vinta-anim-scale, 1)))
-    cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-@keyframes vintaOnboardingStepFadeIn {
+@supports not (view-transition-name: onboarding-step) {
+  @media (prefers-reduced-motion: no-preference) {
+    .onboarding-step-transition[data-direction='forward'] {
+      animation: vintaOnboardingStepFromRight
+        calc(0.24s * max(0.01, var(--vinta-anim-scale, 1)))
+        cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    .onboarding-step-transition[data-direction='backward'] {
+      animation: vintaOnboardingStepFromLeft
+        calc(0.24s * max(0.01, var(--vinta-anim-scale, 1)))
+        cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+  }
+}
+
+:global(::view-transition-group(onboarding-step)) {
+  animation-duration: calc(0.24s * max(0.01, var(--vinta-anim-scale, 1)));
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  overflow: clip;
+}
+
+:global(
+  html:active-view-transition-type(forward)::view-transition-old(
+      onboarding-step
+    )
+) {
+  animation-name: vintaOnboardingStepToLeft;
+}
+
+:global(
+  html:active-view-transition-type(forward)::view-transition-new(
+      onboarding-step
+    )
+) {
+  animation-name: vintaOnboardingStepFromRight;
+}
+
+:global(
+  html:active-view-transition-type(backward)::view-transition-old(
+      onboarding-step
+    )
+) {
+  animation-name: vintaOnboardingStepToRight;
+}
+
+:global(
+  html:active-view-transition-type(backward)::view-transition-new(
+      onboarding-step
+    )
+) {
+  animation-name: vintaOnboardingStepFromLeft;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :global(::view-transition-group(onboarding-step)) {
+    animation: none !important;
+  }
+}
+
+@keyframes vintaOnboardingStepToLeft {
+  to {
+    opacity: 0;
+    transform: translateX(-18px);
+  }
+}
+
+@keyframes vintaOnboardingStepFromRight {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateX(18px);
   }
+}
+
+@keyframes vintaOnboardingStepToRight {
   to {
-    opacity: 1;
-    transform: translateY(0);
+    opacity: 0;
+    transform: translateX(18px);
+  }
+}
+
+@keyframes vintaOnboardingStepFromLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-18px);
   }
 }
 
@@ -287,6 +369,13 @@
   transition:
     transform 0.16s ease,
     opacity 0.16s ease;
+}
+
+.theme-preview-card:focus-visible,
+.onboarding-skip-link:focus-visible,
+.onboarding-nav-btn:focus-visible {
+  outline: 2px solid var(--vinta-accent-primary);
+  outline-offset: 2px;
 }
 
 .theme-preview-card:hover {

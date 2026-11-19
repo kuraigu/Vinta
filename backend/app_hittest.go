@@ -4,6 +4,8 @@ package backend
 import (
 	"time"
 	"unsafe"
+
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 // HitRect defines a physical client rectangle for hit testing.
@@ -228,6 +230,7 @@ func (a *App) startHitTestingLoop(hwnd uintptr) {
 
 		missCount := 0
 		forceOutsideCount := 0
+		wasButtonDown := false
 		var rects []pillHitBounds
 		lastRectsVersion := ^uint64(0)
 
@@ -257,9 +260,9 @@ func (a *App) startHitTestingLoop(hwnd uintptr) {
 			lastRectsVersion = rectsVer
 
 			isHit := false
+			cursorInAnyRect := false
+			cursorHidden := false
 			if !outbound {
-				cursorInAnyRect := false
-				cursorHidden := false
 				if len(rects) > 0 || force {
 					var ci struct {
 						cbSize      uint32
@@ -337,6 +340,16 @@ func (a *App) startHitTestingLoop(hwnd uintptr) {
 			}
 
 			a.setClickThrough(hwnd, !isHit)
+
+			lmbState, _, _ := procGetAsyncKeyState.Call(0x01)
+			rmbState, _, _ := procGetAsyncKeyState.Call(0x02)
+			isButtonDown := (lmbState&0x8000) != 0 || (rmbState&0x8000) != 0
+			if isButtonDown && !wasButtonDown && !outbound && !cursorHidden && !force && !cursorInAnyRect && len(rects) > 0 {
+				if wailsApp := application.Get(); wailsApp != nil {
+					wailsApp.Event.Emit("vinta:click-outside")
+				}
+			}
+			wasButtonDown = isButtonDown
 
 			a.pillHitMu.Lock()
 			a.isCurrentlyInteractive = isHit
