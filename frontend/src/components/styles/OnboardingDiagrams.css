@@ -23,6 +23,7 @@
   width: 100%;
   height: 62px;
   overflow: hidden;
+  contain: layout style paint;
 }
 
 .welcome-feature-slide {
@@ -195,10 +196,65 @@
   background: var(--vinta-accent-primary);
 }
 
+.welcome-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .welcome-progress-dots {
+  flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+.states-diagram-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.states-diagram-segmented {
+  flex: 1;
+  min-width: 0;
+}
+
+.diagram-motion-toggle {
+  min-width: 28px;
+  min-height: 28px;
+  height: 28px;
+  padding: 0 6px;
+  border-radius: 8px;
+  border: 1px solid var(--vinta-border);
+  background: var(--vinta-contrast-bg);
+  color: var(--vinta-text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    transform 0.16s ease,
+    opacity 0.16s ease;
+}
+
+.diagram-motion-toggle:hover {
+  background: var(--vinta-contrast-hover);
+  color: var(--vinta-text-primary);
+}
+
+.diagram-motion-toggle:focus-visible,
+.welcome-dot-btn:focus-visible {
+  outline: 2px solid var(--vinta-accent-primary);
+  outline-offset: 2px;
+}
+
+.welcome-feature-stage.user-paused *,
+.welcome-progress-dots.user-paused *,
+.states-stage.user-paused * {
+  animation-play-state: paused !important;
 }
 
 .welcome-dot-btn {
@@ -216,7 +272,8 @@
   width: 100%;
   height: 3px;
   border-radius: 9999px;
-  background: var(--vinta-contrast-bg);
+  background: var(--vinta-accent-primary);
+  opacity: 0.22;
   animation: vintaWelcomeDot7 21s linear infinite;
   transition: transform 0.15s ease;
 }
@@ -228,10 +285,12 @@
 .welcome-progress-dots.animations-paused .welcome-dot-bar {
   animation: none;
   background: var(--vinta-contrast-bg);
+  opacity: 1;
 }
 
 .welcome-progress-dots.animations-paused .welcome-dot-bar.is-static-active {
   background: var(--vinta-accent-primary);
+  opacity: 1;
 }
 
 @keyframes vintaWelcomeSlide7 {
@@ -254,11 +313,11 @@
 @keyframes vintaWelcomeDot7 {
   0%,
   14.2% {
-    background: var(--vinta-accent-primary);
+    opacity: 1;
   }
   14.3%,
   100% {
-    background: var(--vinta-contrast-bg);
+    opacity: 0.22;
   }
 }
 
@@ -299,6 +358,7 @@
     var(--vinta-contrast-bg);
   border: 1px solid var(--vinta-border);
   overflow: hidden;
+  contain: layout style paint;
   box-sizing: border-box;
   user-select: none;
 }
@@ -526,12 +586,12 @@
   90%,
   100% {
     opacity: 0.65;
-    width: 26px;
+    transform: scaleX(1);
   }
   20%,
   84% {
     opacity: 1;
-    width: 36px;
+    transform: scaleX(1.38);
   }
 }
 
@@ -710,26 +770,26 @@
 .morph-satellite-dock {
   position: absolute;
   left: calc(100% + 7px);
-  top: 14px;
-  width: 24px;
-  padding: 4px 0;
-  border-radius: 9px;
+  top: 5px;
+  width: 22px;
+  padding: 3px 0;
+  border-radius: 8px;
   background: var(--vinta-surface-elevated);
   border: 1px solid var(--vinta-border-accent);
   box-shadow: 0 6px 14px rgba(0, 0, 0, 0.35);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   transition:
     opacity calc(0.22s * var(--vinta-anim-scale, 1)) ease,
     transform calc(0.22s * var(--vinta-anim-scale, 1)) ease;
 }
 
 .morph-sat-btn {
-  width: 16px;
-  height: 16px;
-  border-radius: 5px;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -805,60 +865,168 @@
   pointer-events: none;
 }
 
+.cursor-click-badge {
+  position: absolute;
+  left: 50%;
+  top: 20px;
+  padding: 2px 6px;
+  border-radius: 9999px;
+  font-size: 0.56rem;
+  font-weight: 700;
+  line-height: 1.1;
+  white-space: nowrap;
+  background: var(--vinta-surface-elevated);
+  border: 1px solid var(--vinta-border-accent);
+  color: var(--vinta-text-primary);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.32);
+  opacity: 0;
+  transform: translateX(-50%) translateY(2px) scale(0.92);
+  pointer-events: none;
+}
+
+.cursor-click-badge.cursor-click-right {
+  border-color: var(--vinta-accent-primary);
+  color: var(--vinta-accent-primary);
+}
+
 .states-stage.mode-loop .morph-state-cursor {
-  animation: vintaMorphLoopCursor 9s ease-in-out infinite;
+  animation: vintaMorphLoopCursor 13.5s ease-in-out infinite;
+}
+
+.states-stage.mode-loop .morph-state-cursor.wake-hover {
+  animation: vintaMorphLoopCursorHover 13.5s ease-in-out infinite;
+}
+
+.states-stage.mode-loop.click-outside-enabled .morph-state-cursor {
+  animation: vintaMorphLoopCursorOutside 13.5s ease-in-out infinite;
+}
+
+.states-stage.mode-loop.click-outside-enabled .morph-state-cursor.wake-hover {
+  animation: vintaMorphLoopCursorOutsideHover 13.5s ease-in-out infinite;
 }
 
 .states-stage.mode-loop .cursor-click-ring {
-  animation: vintaMorphLoopClickRing 9s ease-out infinite;
+  animation: vintaMorphLoopClickRing 13.5s ease-out infinite;
+}
+
+.states-stage.mode-loop .morph-state-cursor.wake-hover .cursor-click-ring {
+  animation: vintaMorphLoopClickRingHover 13.5s ease-out infinite;
+}
+
+.states-stage.mode-loop .cursor-click-left {
+  animation: vintaLoopLeftBadge 13.5s ease-out infinite;
+}
+
+.states-stage.mode-loop .morph-state-cursor.wake-hover .cursor-click-left {
+  animation: vintaLoopLeftBadgeHover 13.5s ease-out infinite;
+}
+
+.states-stage.mode-loop .cursor-click-right {
+  animation: vintaLoopRightBadge 13.5s ease-out infinite;
 }
 
 .states-stage.mode-expanded .morph-state-cursor {
-  animation: vintaStaticExpandedCursor 2.4s ease-in-out infinite;
+  animation: vintaExpandedCollapseCursor 5.2s ease-in-out infinite;
+}
+
+.states-stage.mode-expanded.click-outside-enabled .morph-state-cursor {
+  animation: vintaExpandedCollapseCursorOutside 5.2s ease-in-out infinite;
+}
+
+.states-stage.mode-expanded .cursor-click-ring {
+  animation: vintaHiddenWakeClickRing 5.2s ease-out infinite;
+}
+
+.states-stage.mode-expanded .cursor-click-left {
+  animation: vintaWakeClickBadge 5.2s ease-out infinite;
+}
+
+.states-stage.mode-expanded .morph-island-shell {
+  animation: vintaExpandedCollapseShell 5.2s cubic-bezier(0.22, 1, 0.36, 1)
+    infinite;
+}
+
+.states-stage.mode-expanded .slot-expanded,
+.states-stage.mode-expanded .morph-satellite-dock {
+  animation: vintaExpandedCollapseSlotExpanded 5.2s ease-in-out infinite;
+}
+
+.states-stage.mode-expanded .slot-compact {
+  animation: vintaExpandedCollapseSlotCompact 5.2s ease-in-out infinite;
+}
+
+.states-stage.mode-expanded .morph-timeout-track {
+  display: none;
 }
 
 .states-stage.mode-compact .morph-state-cursor {
-  animation: vintaStaticCompactCursor 2.4s ease-in-out infinite;
+  animation: vintaCompactExpandCursor 5.2s ease-in-out infinite;
+}
+
+.states-stage.mode-compact .cursor-click-ring {
+  animation: vintaHiddenWakeClickRing 5.2s ease-out infinite;
+}
+
+.states-stage.mode-compact .cursor-click-left {
+  animation: vintaWakeClickBadge 5.2s ease-out infinite;
+}
+
+.states-stage.mode-compact .morph-island-shell {
+  animation: vintaCompactExpandShell 5.2s cubic-bezier(0.22, 1, 0.36, 1)
+    infinite;
+}
+
+.states-stage.mode-compact .slot-compact {
+  animation: vintaCompactExpandSlotCompact 5.2s ease-in-out infinite;
+}
+
+.states-stage.mode-compact .slot-expanded,
+.states-stage.mode-compact .morph-satellite-dock {
+  animation: vintaCompactExpandSlotExpanded 5.2s ease-in-out infinite;
+}
+
+.states-stage.mode-compact .morph-timeout-track {
+  display: none;
 }
 
 .states-stage.mode-hidden .morph-state-cursor {
-  animation: vintaStaticHiddenClickCursor 3.6s ease-in-out infinite;
-}
-
-.states-stage.mode-expanded .cursor-click-ring,
-.states-stage.mode-compact .cursor-click-ring {
-  animation: vintaStaticClickRing 2.4s ease-out infinite;
+  animation: vintaStaticHiddenClickCursor 5.2s ease-in-out infinite;
 }
 
 .states-stage.mode-hidden .cursor-click-ring {
-  animation: vintaHiddenWakeClickRing 3.6s ease-out infinite;
+  animation: vintaHiddenWakeClickRing 5.2s ease-out infinite;
+}
+
+.states-stage.mode-hidden .cursor-click-left {
+  animation: vintaWakeClickBadge 5.2s ease-out infinite;
 }
 
 .states-stage.mode-hidden .morph-state-cursor.wake-hover {
-  animation: vintaStaticHiddenHoverCursor 3.6s ease-in-out infinite;
+  animation: vintaStaticHiddenHoverCursor 5.2s ease-in-out infinite;
 }
 
-.states-stage.mode-hidden .morph-state-cursor.wake-hover .cursor-click-ring {
+.states-stage.mode-hidden .morph-state-cursor.wake-hover .cursor-click-ring,
+.states-stage.mode-hidden .morph-state-cursor.wake-hover .cursor-click-left {
   animation: none;
   opacity: 0;
 }
 
 .states-stage.mode-hidden.hidden-dash .morph-island-shell {
-  animation: vintaHiddenWakeShellDash 3.6s cubic-bezier(0.22, 1, 0.36, 1)
+  animation: vintaHiddenWakeShellDash 5.2s cubic-bezier(0.22, 1, 0.36, 1)
     infinite;
 }
 
 .states-stage.mode-hidden.hidden-clock .morph-island-shell {
-  animation: vintaHiddenWakeShellClock 3.6s cubic-bezier(0.22, 1, 0.36, 1)
+  animation: vintaHiddenWakeShellClock 5.2s cubic-bezier(0.22, 1, 0.36, 1)
     infinite;
 }
 
 .states-stage.mode-hidden .slot-hidden {
-  animation: vintaHiddenWakeSlotHidden 3.6s ease-in-out infinite;
+  animation: vintaHiddenWakeSlotHidden 5.2s ease-in-out infinite;
 }
 
 .states-stage.mode-hidden .slot-compact {
-  animation: vintaHiddenWakeSlotCompact 3.6s ease-in-out infinite;
+  animation: vintaHiddenWakeSlotCompact 5.2s ease-in-out infinite;
 }
 
 /* Static State Overrides */
@@ -886,13 +1054,10 @@
   border-radius: 0 0 12px 12px;
 }
 
-.states-stage.mode-expanded .slot-compact,
 .states-stage.mode-expanded .slot-hidden,
 .states-stage.mode-expanded .hints-compact,
 .states-stage.mode-expanded .hints-hidden,
-.states-stage.mode-compact .slot-expanded,
 .states-stage.mode-compact .slot-hidden,
-.states-stage.mode-compact .morph-satellite-dock,
 .states-stage.mode-compact .hints-expanded,
 .states-stage.mode-compact .hints-hidden,
 .states-stage.mode-hidden .slot-expanded,
@@ -903,34 +1068,55 @@
   pointer-events: none;
 }
 
-.states-stage.mode-compact .morph-satellite-dock,
 .states-stage.mode-hidden .morph-satellite-dock {
   transform: scale(0.84);
 }
 
-/* Continuous Pure-CSS Auto Loop (9s Cycle, Clean Non-Overlapping Fades) */
+/* Continuous Pure-CSS Auto Loop (13.5s Cycle, Clean Non-Overlapping Fades) */
 .states-stage.mode-loop.hidden-dash .morph-island-shell {
-  animation: vintaShellMorphDash 9s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  animation: vintaShellMorphDash 13.5s cubic-bezier(0.22, 1, 0.36, 1) infinite;
 }
 
 .states-stage.mode-loop.hidden-clock .morph-island-shell {
-  animation: vintaShellMorphClock 9s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  animation: vintaShellMorphClock 13.5s cubic-bezier(0.22, 1, 0.36, 1) infinite;
 }
 
 .states-stage.mode-loop .slot-expanded,
 .states-stage.mode-loop .morph-satellite-dock,
 .states-stage.mode-loop .hints-expanded {
-  animation: vintaSlotExpanded 9s ease-in-out infinite;
+  animation: vintaSlotExpanded 13.5s ease-in-out infinite;
 }
 
 .states-stage.mode-loop .slot-compact,
 .states-stage.mode-loop .hints-compact {
-  animation: vintaSlotCompact 9s ease-in-out infinite;
+  animation: vintaSlotCompact 13.5s ease-in-out infinite;
 }
 
 .states-stage.mode-loop .slot-hidden,
 .states-stage.mode-loop .hints-hidden {
-  animation: vintaSlotHidden 9s ease-in-out infinite;
+  animation: vintaSlotHidden 13.5s ease-in-out infinite;
+}
+
+.states-stage.mode-loop .morph-sat-pin {
+  animation: vintaPinPulse 13.5s ease-in-out infinite;
+}
+
+@keyframes vintaPinPulse {
+  0%,
+  12%,
+  28%,
+  100% {
+    transform: scale(1);
+    opacity: 0.78;
+  }
+  18% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+  23% {
+    transform: scale(1.06);
+    opacity: 1;
+  }
 }
 
 @keyframes vintaMorphLoopCursor {
@@ -939,19 +1125,19 @@
     opacity: 0;
   }
   8% {
-    transform: translate(98px, 24px) scale(1);
+    transform: translate(96px, 15px) scale(1);
     opacity: 1;
   }
   18% {
-    transform: translate(98px, 24px) scale(1);
+    transform: translate(96px, 15px) scale(1);
     opacity: 1;
   }
   23% {
-    transform: translate(98px, 24px) scale(0.82);
+    transform: translate(96px, 15px) scale(0.82);
     opacity: 1;
   }
   27% {
-    transform: translate(98px, 24px) scale(1);
+    transform: translate(96px, 15px) scale(1);
     opacity: 0.9;
   }
   35% {
@@ -997,6 +1183,190 @@
   }
 }
 
+@keyframes vintaMorphLoopCursorOutside {
+  0% {
+    transform: translate(-65px, 60px) scale(1);
+    opacity: 0;
+  }
+  8% {
+    transform: translate(-112px, 72px) scale(1);
+    opacity: 1;
+  }
+  18% {
+    transform: translate(-112px, 72px) scale(1);
+    opacity: 1;
+  }
+  23% {
+    transform: translate(-112px, 72px) scale(0.82);
+    opacity: 1;
+  }
+  27% {
+    transform: translate(-112px, 72px) scale(1);
+    opacity: 0.9;
+  }
+  35% {
+    transform: translate(-42px, 44px) scale(1);
+    opacity: 0.7;
+  }
+  44% {
+    transform: translate(0px, 18px) scale(1);
+    opacity: 1;
+  }
+  53% {
+    transform: translate(0px, 18px) scale(1);
+    opacity: 1;
+  }
+  58% {
+    transform: translate(0px, 18px) scale(0.82);
+    opacity: 1;
+  }
+  62% {
+    transform: translate(0px, 18px) scale(1);
+    opacity: 0.9;
+  }
+  70% {
+    transform: translate(0px, 42px) scale(1);
+    opacity: 0.8;
+  }
+  78%,
+  85% {
+    transform: translate(0px, 14px) scale(1);
+    opacity: 1;
+  }
+  89% {
+    transform: translate(0px, 14px) scale(0.82);
+    opacity: 1;
+  }
+  94% {
+    transform: translate(0px, 24px) scale(1);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-65px, 60px) scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes vintaMorphLoopCursorHover {
+  0% {
+    transform: translate(60px, 56px) scale(1);
+    opacity: 0;
+  }
+  8% {
+    transform: translate(96px, 15px) scale(1);
+    opacity: 1;
+  }
+  18% {
+    transform: translate(96px, 15px) scale(1);
+    opacity: 1;
+  }
+  23% {
+    transform: translate(96px, 15px) scale(0.82);
+    opacity: 1;
+  }
+  27% {
+    transform: translate(96px, 15px) scale(1);
+    opacity: 0.9;
+  }
+  35% {
+    transform: translate(24px, 38px) scale(1);
+    opacity: 0.7;
+  }
+  44% {
+    transform: translate(0px, 18px) scale(1);
+    opacity: 1;
+  }
+  53% {
+    transform: translate(0px, 18px) scale(1);
+    opacity: 1;
+  }
+  58% {
+    transform: translate(0px, 18px) scale(0.82);
+    opacity: 1;
+  }
+  62% {
+    transform: translate(0px, 18px) scale(1);
+    opacity: 0.9;
+  }
+  70% {
+    transform: translate(0px, 42px) scale(1);
+    opacity: 0.8;
+  }
+  78%,
+  90% {
+    transform: translate(0px, 14px) scale(1);
+    opacity: 1;
+  }
+  94% {
+    transform: translate(0px, 24px) scale(1);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(60px, 56px) scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes vintaMorphLoopCursorOutsideHover {
+  0% {
+    transform: translate(-65px, 60px) scale(1);
+    opacity: 0;
+  }
+  8% {
+    transform: translate(-112px, 72px) scale(1);
+    opacity: 1;
+  }
+  18% {
+    transform: translate(-112px, 72px) scale(1);
+    opacity: 1;
+  }
+  23% {
+    transform: translate(-112px, 72px) scale(0.82);
+    opacity: 1;
+  }
+  27% {
+    transform: translate(-112px, 72px) scale(1);
+    opacity: 0.9;
+  }
+  35% {
+    transform: translate(-42px, 44px) scale(1);
+    opacity: 0.7;
+  }
+  44% {
+    transform: translate(0px, 18px) scale(1);
+    opacity: 1;
+  }
+  53% {
+    transform: translate(0px, 18px) scale(1);
+    opacity: 1;
+  }
+  58% {
+    transform: translate(0px, 18px) scale(0.82);
+    opacity: 1;
+  }
+  62% {
+    transform: translate(0px, 18px) scale(1);
+    opacity: 0.9;
+  }
+  70% {
+    transform: translate(0px, 42px) scale(1);
+    opacity: 0.8;
+  }
+  78%,
+  90% {
+    transform: translate(0px, 14px) scale(1);
+    opacity: 1;
+  }
+  94% {
+    transform: translate(0px, 24px) scale(1);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(-65px, 60px) scale(1);
+    opacity: 0;
+  }
+}
+
 @keyframes vintaStaticExpandedCursor {
   0% {
     transform: translate(62px, 56px) scale(1);
@@ -1021,6 +1391,34 @@
   92%,
   100% {
     transform: translate(98px, 24px) scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes vintaStaticExpandedCursorWithPin {
+  0% {
+    transform: translate(62px, 74px) scale(1);
+    opacity: 0;
+  }
+  22% {
+    transform: translate(98px, 44px) scale(1);
+    opacity: 1;
+  }
+  45% {
+    transform: translate(98px, 44px) scale(1);
+    opacity: 1;
+  }
+  58% {
+    transform: translate(98px, 44px) scale(0.82);
+    opacity: 1;
+  }
+  72% {
+    transform: translate(98px, 44px) scale(1);
+    opacity: 1;
+  }
+  92%,
+  100% {
+    transform: translate(98px, 44px) scale(1);
     opacity: 0;
   }
 }
@@ -1163,14 +1561,14 @@
 
 @keyframes vintaHiddenWakeSlotHidden {
   0%,
-  38% {
+  37% {
     opacity: 1;
   }
-  44%,
-  86% {
+  39%,
+  91% {
     opacity: 0;
   }
-  92%,
+  94%,
   100% {
     opacity: 1;
   }
@@ -1178,14 +1576,14 @@
 
 @keyframes vintaHiddenWakeSlotCompact {
   0%,
-  42% {
+  47% {
     opacity: 0;
   }
-  48%,
-  80% {
+  50%,
+  79% {
     opacity: 1;
   }
-  86%,
+  81%,
   100% {
     opacity: 0;
   }
@@ -1248,8 +1646,8 @@
   26% {
     opacity: 1;
   }
-  29%,
-  96% {
+  28%,
+  98% {
     opacity: 0;
   }
   100% {
@@ -1259,14 +1657,14 @@
 
 @keyframes vintaSlotCompact {
   0%,
-  31% {
+  33% {
     opacity: 0;
   }
-  35%,
+  36%,
   59% {
     opacity: 1;
   }
-  62%,
+  61%,
   100% {
     opacity: 0;
   }
@@ -1274,14 +1672,14 @@
 
 @keyframes vintaSlotHidden {
   0%,
-  64% {
+  67% {
     opacity: 0;
   }
-  68%,
-  92% {
+  70%,
+  91% {
     opacity: 1;
   }
-  95%,
+  93%,
   100% {
     opacity: 0;
   }
@@ -1328,6 +1726,293 @@
   }
 }
 
+@keyframes vintaMorphLoopClickRingHover {
+  0%,
+  20%,
+  30%,
+  55%,
+  65%,
+  100% {
+    opacity: 0;
+    transform: scale(0.35);
+  }
+  23%,
+  58% {
+    opacity: 0.95;
+    transform: scale(0.75);
+  }
+  28%,
+  63% {
+    opacity: 0;
+    transform: scale(1.85);
+  }
+}
+
+@keyframes vintaExpandedCollapseCursor {
+  0% {
+    transform: translate(62px, 50px) scale(1);
+    opacity: 0;
+  }
+  20% {
+    transform: translate(96px, 15px) scale(1);
+    opacity: 1;
+  }
+  34% {
+    transform: translate(96px, 15px) scale(1);
+    opacity: 1;
+  }
+  40% {
+    transform: translate(96px, 15px) scale(0.82);
+    opacity: 1;
+  }
+  48% {
+    transform: translate(96px, 19px) scale(1);
+    opacity: 0.9;
+  }
+  72%,
+  100% {
+    transform: translate(62px, 50px) scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes vintaExpandedCollapseCursorOutside {
+  0% {
+    transform: translate(-65px, 58px) scale(1);
+    opacity: 0;
+  }
+  20% {
+    transform: translate(-112px, 72px) scale(1);
+    opacity: 1;
+  }
+  34% {
+    transform: translate(-112px, 72px) scale(1);
+    opacity: 1;
+  }
+  40% {
+    transform: translate(-112px, 72px) scale(0.82);
+    opacity: 1;
+  }
+  48% {
+    transform: translate(-112px, 72px) scale(1);
+    opacity: 0.9;
+  }
+  72%,
+  100% {
+    transform: translate(-65px, 58px) scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes vintaExpandedCollapseShell {
+  0%,
+  38% {
+    width: 170px;
+    height: 82px;
+    border-radius: 0 0 18px 18px;
+  }
+  48%,
+  80% {
+    width: 148px;
+    height: 30px;
+    border-radius: 0 0 15px 15px;
+  }
+  92%,
+  100% {
+    width: 170px;
+    height: 82px;
+    border-radius: 0 0 18px 18px;
+  }
+}
+
+@keyframes vintaExpandedCollapseSlotExpanded {
+  0%,
+  37% {
+    opacity: 1;
+  }
+  39%,
+  91% {
+    opacity: 0;
+  }
+  94%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes vintaExpandedCollapseSlotCompact {
+  0%,
+  47% {
+    opacity: 0;
+  }
+  50%,
+  79% {
+    opacity: 1;
+  }
+  81%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes vintaCompactExpandCursor {
+  0% {
+    transform: translate(18px, 48px) scale(1);
+    opacity: 0;
+  }
+  20% {
+    transform: translate(0px, 16px) scale(1);
+    opacity: 1;
+  }
+  34% {
+    transform: translate(0px, 16px) scale(1);
+    opacity: 1;
+  }
+  40% {
+    transform: translate(0px, 16px) scale(0.82);
+    opacity: 1;
+  }
+  48% {
+    transform: translate(0px, 20px) scale(1);
+    opacity: 0.9;
+  }
+  72%,
+  100% {
+    transform: translate(18px, 48px) scale(1);
+    opacity: 0;
+  }
+}
+
+@keyframes vintaCompactExpandShell {
+  0%,
+  38% {
+    width: 148px;
+    height: 30px;
+    border-radius: 0 0 15px 15px;
+  }
+  48%,
+  80% {
+    width: 170px;
+    height: 82px;
+    border-radius: 0 0 18px 18px;
+  }
+  92%,
+  100% {
+    width: 148px;
+    height: 30px;
+    border-radius: 0 0 15px 15px;
+  }
+}
+
+@keyframes vintaCompactExpandSlotCompact {
+  0%,
+  37% {
+    opacity: 1;
+  }
+  39%,
+  91% {
+    opacity: 0;
+  }
+  94%,
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes vintaCompactExpandSlotExpanded {
+  0%,
+  47% {
+    opacity: 0;
+  }
+  50%,
+  79% {
+    opacity: 1;
+  }
+  81%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes vintaLoopLeftBadge {
+  0%,
+  19%,
+  31%,
+  85%,
+  96%,
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(2px) scale(0.92);
+  }
+  22%,
+  28%,
+  88%,
+  93% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+@keyframes vintaLoopLeftBadgeHover {
+  0%,
+  19%,
+  31%,
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(2px) scale(0.92);
+  }
+  22%,
+  28% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+@keyframes vintaLoopRightBadge {
+  0%,
+  54%,
+  66%,
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(2px) scale(0.92);
+  }
+  57%,
+  63% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+@keyframes vintaStaticClickBadge {
+  0%,
+  52%,
+  76%,
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(2px) scale(0.92);
+  }
+  57%,
+  71% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+@keyframes vintaWakeClickBadge {
+  0%,
+  35%,
+  56%,
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(2px) scale(0.92);
+  }
+  39%,
+  51% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
 @keyframes vintaStaticClickRing {
   0%,
   54%,
@@ -1356,6 +2041,16 @@
   .mini-drag-bar,
   .morph-state-cursor,
   .cursor-click-ring,
+  .cursor-click-badge,
+  .states-stage.mode-expanded .morph-island-shell,
+  .states-stage.mode-expanded .slot-expanded,
+  .states-stage.mode-expanded .slot-compact,
+  .states-stage.mode-expanded .morph-satellite-dock,
+  .states-stage.mode-compact .morph-island-shell,
+  .states-stage.mode-compact .slot-compact,
+  .states-stage.mode-compact .slot-expanded,
+  .states-stage.mode-compact .morph-satellite-dock,
+  .states-stage.mode-loop .morph-sat-pin,
   .states-stage.mode-hidden .morph-island-shell,
   .states-stage.mode-hidden .slot-hidden,
   .states-stage.mode-hidden .slot-compact,
@@ -1363,11 +2058,35 @@
   .states-stage.mode-loop .slot-expanded,
   .states-stage.mode-loop .morph-satellite-dock,
   .states-stage.mode-loop .hints-expanded,
+  .states-stage.mode-expanded .slot-compact,
   .states-stage.mode-loop .slot-compact,
   .states-stage.mode-loop .hints-compact,
   .states-stage.mode-loop .slot-hidden,
   .states-stage.mode-loop .hints-hidden,
   .morph-timeout-track {
     animation: none !important;
+  }
+
+  .welcome-feature-slide.is-static-active {
+    opacity: 1;
+  }
+
+  .welcome-dot-bar.is-static-active {
+    background: var(--vinta-accent-primary);
+  }
+
+  .diagram-motion-toggle {
+    display: none;
+  }
+
+  .states-stage.mode-expanded .slot-compact,
+  .states-stage.mode-loop .slot-compact,
+  .states-stage.mode-loop .slot-hidden,
+  .states-stage.mode-loop .hints-compact,
+  .states-stage.mode-loop .hints-hidden,
+  .states-stage.mode-compact .slot-expanded,
+  .states-stage.mode-compact .morph-satellite-dock,
+  .states-stage.mode-hidden .slot-compact {
+    opacity: 0;
   }
 }

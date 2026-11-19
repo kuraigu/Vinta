@@ -82,6 +82,7 @@
     onHideWidget?: () => void
     onMouseEnter?: () => void
     onMouseLeave?: () => void
+    onWindowBlur?: () => void
     onRecoverBounds?: () => void
     onAnimationDone?: () => void
   }
@@ -127,6 +128,7 @@
     onHideWidget,
     onMouseEnter,
     onMouseLeave,
+    onWindowBlur,
     onRecoverBounds,
     onAnimationDone
   }: Props = $props()
@@ -405,9 +407,13 @@
     }
 
     const handleWindowBlur = () => {
+      const wasHoldingFiles = isHoldingFilesOverIsland
       stopFileHoldTimer()
       if (onMouseLeave) {
         onMouseLeave()
+      }
+      if (!wasHoldingFiles) {
+        onWindowBlur?.()
       }
     }
 

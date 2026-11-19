@@ -16,18 +16,24 @@
     StickyNote,
     FolderInput,
     Play,
+    Pause,
     SkipForward,
     Plus,
     Archive,
     Calendar,
     Bell,
     Check,
-    SlidersHorizontal
+    SlidersHorizontal,
+    Pin
   } from 'lucide-svelte'
   import IconBadge from '../../components/IconBadge.svelte'
   import BentoCard from '../../components/BentoCard.svelte'
   import SegmentedControl from '../../components/SegmentedControl.svelte'
-  import { tStore, animScaleStore } from '../../store'
+  import {
+    tStore,
+    animScaleStore,
+    clickOutsideMinimizeStore
+  } from '../../store'
 
   export type StatePreviewMode = 'loop' | 'expanded' | 'compact' | 'hidden'
 
@@ -42,6 +48,8 @@
   let selectedStatePreview = $state<StatePreviewMode>('loop')
   let welcomeStartIndex = $state(0)
   let welcomeCycleKey = $state(0)
+  let isWelcomePaused = $state(false)
+  let isStatesPaused = $state(false)
 
   function handleSelectWelcomeSlide(idx: number) {
     welcomeStartIndex = idx
@@ -77,14 +85,14 @@
       <div
         class="welcome-feature-stage"
         class:animations-paused={$animScaleStore <= 0}
+        class:user-paused={isWelcomePaused}
         role="region"
         aria-label={$tStore('onboarding.step_welcome_title')}
       >
         <!-- Slide 1: Media Controls -->
         <div
           class="welcome-feature-slide"
-          class:is-static-active={$animScaleStore <= 0 &&
-            welcomeStartIndex === 0}
+          class:is-static-active={welcomeStartIndex === 0}
           style:animation-delay={welcomeDelay(0)}
         >
           <div class="welcome-slide-left">
@@ -114,8 +122,7 @@
         <!-- Slide 2: Timer & Focus -->
         <div
           class="welcome-feature-slide"
-          class:is-static-active={$animScaleStore <= 0 &&
-            welcomeStartIndex === 1}
+          class:is-static-active={welcomeStartIndex === 1}
           style:animation-delay={welcomeDelay(1)}
         >
           <div class="welcome-slide-left">
@@ -140,8 +147,7 @@
         <!-- Slide 3: Quick Notes -->
         <div
           class="welcome-feature-slide"
-          class:is-static-active={$animScaleStore <= 0 &&
-            welcomeStartIndex === 2}
+          class:is-static-active={welcomeStartIndex === 2}
           style:animation-delay={welcomeDelay(2)}
         >
           <div class="welcome-slide-left">
@@ -168,8 +174,7 @@
         <!-- Slide 4: File Shelf -->
         <div
           class="welcome-feature-slide"
-          class:is-static-active={$animScaleStore <= 0 &&
-            welcomeStartIndex === 3}
+          class:is-static-active={welcomeStartIndex === 3}
           style:animation-delay={welcomeDelay(3)}
         >
           <div class="welcome-slide-left">
@@ -194,8 +199,7 @@
         <!-- Slide 5: Calendar & Agenda -->
         <div
           class="welcome-feature-slide"
-          class:is-static-active={$animScaleStore <= 0 &&
-            welcomeStartIndex === 4}
+          class:is-static-active={welcomeStartIndex === 4}
           style:animation-delay={welcomeDelay(4)}
         >
           <div class="welcome-slide-left">
@@ -220,8 +224,7 @@
         <!-- Slide 6: Notifications -->
         <div
           class="welcome-feature-slide"
-          class:is-static-active={$animScaleStore <= 0 &&
-            welcomeStartIndex === 5}
+          class:is-static-active={welcomeStartIndex === 5}
           style:animation-delay={welcomeDelay(5)}
         >
           <div class="welcome-slide-left">
@@ -247,8 +250,7 @@
         <!-- Slide 7: Customize & Settings -->
         <div
           class="welcome-feature-slide"
-          class:is-static-active={$animScaleStore <= 0 &&
-            welcomeStartIndex === 6}
+          class:is-static-active={welcomeStartIndex === 6}
           style:animation-delay={welcomeDelay(6)}
         >
           <div class="welcome-slide-left">
@@ -273,27 +275,46 @@
         </div>
       </div>
 
-      <div
-        class="welcome-progress-dots"
-        class:animations-paused={$animScaleStore <= 0}
-        role="tablist"
-      >
-        {#each ['onboarding.welcome_feat_media_title', 'onboarding.welcome_feat_timer_title', 'onboarding.welcome_feat_notes_title', 'onboarding.welcome_feat_shelf_title', 'onboarding.welcome_feat_calendar_title', 'onboarding.welcome_feat_notif_title', 'onboarding.welcome_feat_customize_title'] as labelKey, idx (labelKey)}
+      <div class="welcome-controls-row">
+        <div
+          class="welcome-progress-dots"
+          class:animations-paused={$animScaleStore <= 0}
+          class:user-paused={isWelcomePaused}
+          role="group"
+          aria-label={$tStore('onboarding.welcome_slides_aria')}
+        >
+          {#each ['onboarding.welcome_feat_media_title', 'onboarding.welcome_feat_timer_title', 'onboarding.welcome_feat_notes_title', 'onboarding.welcome_feat_shelf_title', 'onboarding.welcome_feat_calendar_title', 'onboarding.welcome_feat_notif_title', 'onboarding.welcome_feat_customize_title'] as labelKey, idx (labelKey)}
+            <button
+              type="button"
+              class="welcome-dot-btn"
+              aria-label={$tStore(labelKey)}
+              aria-current={welcomeStartIndex === idx ? 'true' : undefined}
+              onclick={() => handleSelectWelcomeSlide(idx)}
+            >
+              <span
+                class="welcome-dot-bar"
+                class:is-static-active={welcomeStartIndex === idx}
+                style:animation-delay={welcomeDelay(idx)}
+              ></span>
+            </button>
+          {/each}
+        </div>
+        {#if $animScaleStore > 0}
           <button
             type="button"
-            role="tab"
-            class="welcome-dot-btn"
-            aria-label={$tStore(labelKey)}
-            onclick={() => handleSelectWelcomeSlide(idx)}
+            class="diagram-motion-toggle"
+            aria-label={isWelcomePaused
+              ? $tStore('onboarding.diagram_play')
+              : $tStore('onboarding.diagram_pause')}
+            onclick={() => (isWelcomePaused = !isWelcomePaused)}
           >
-            <span
-              class="welcome-dot-bar"
-              class:is-static-active={$animScaleStore <= 0 &&
-                welcomeStartIndex === idx}
-              style:animation-delay={welcomeDelay(idx)}
-            ></span>
+            {#if isWelcomePaused}
+              <Play size={11} strokeWidth={2.3} />
+            {:else}
+              <Pause size={11} strokeWidth={2.3} />
+            {/if}
           </button>
-        {/each}
+        {/if}
       </div>
     {/key}
   </BentoCard>
@@ -355,130 +376,169 @@
   </BentoCard>
 {:else}
   <BentoCard variant="bento" class="onboarding-diagram-card">
-    <SegmentedControl
-      size="sm"
-      fullWidth={true}
-      options={stateOptions}
-      value={effectiveStateMode}
-      onchange={(val) => (selectedStatePreview = val as StatePreviewMode)}
-    />
-
-    <div
-      class="mini-desktop-screen states-stage mode-{effectiveStateMode} hidden-{hiddenDisplay}"
-      role="region"
-      aria-label={$tStore('onboarding.step_states_title')}
-    >
-      <div class="mini-bg-window" aria-hidden="true">
-        <div class="mini-bg-dots">
-          <span></span><span></span><span></span>
-        </div>
-        <div class="mini-bg-lines">
-          <span></span><span></span>
-        </div>
+    <div class="states-diagram-toolbar">
+      <div class="states-diagram-segmented">
+        <SegmentedControl
+          size="sm"
+          fullWidth={true}
+          options={stateOptions}
+          value={effectiveStateMode}
+          onchange={(val) => (selectedStatePreview = val as StatePreviewMode)}
+        />
       </div>
-
-      <div class="morph-stage-center">
-        <div class="morph-island-cluster">
-          <!-- Single Morphing Island Container -->
-          <div class="morph-island-shell">
-            <!-- Expanded View Layer -->
-            <div class="morph-layer-slot slot-expanded">
-              <div class="morph-expanded-inner">
-                <div class="morph-drag-handle"></div>
-                <div class="morph-bento-pair">
-                  <div class="morph-bento-tile">
-                    <span class="morph-tile-title">9:41</span>
-                    <span class="morph-tile-sub">24°</span>
-                  </div>
-                  <div class="morph-bento-tile">
-                    <span class="morph-tile-title">
-                      <Music size={10} strokeWidth={2.2} />
-                    </span>
-                    <span class="morph-tile-sub">Playing</span>
-                  </div>
-                </div>
-                <div class="morph-dock-strip">
-                  <span></span><span></span><span></span><span></span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Compact Pill View Layer -->
-            <div class="morph-layer-slot slot-compact">
-              <div class="morph-compact-row">
-                <span>9:41</span>
-                <span class="morph-compact-right">
-                  <Sun size={10} strokeWidth={2.3} />
-                  <span>24°</span>
-                </span>
-              </div>
-              <div class="morph-timeout-track"></div>
-            </div>
-
-            <!-- Hidden Edge View Layer -->
-            <div class="morph-layer-slot slot-hidden">
-              {#if hiddenDisplay === 'clock'}
-                <div class="morph-hidden-clock">
-                  <span>9:41</span>
-                  <span class="morph-hidden-clock-dot"></span>
-                </div>
-              {:else}
-                <div class="morph-hidden-dash"></div>
-              {/if}
-            </div>
-          </div>
-
-          <!-- Floating Right Control Satellite -->
-          <div class="morph-satellite-dock" aria-hidden="true">
-            <span class="morph-sat-btn highlight">
-              <Minimize2 size={9} strokeWidth={2.4} />
-            </span>
-            <span class="morph-sat-btn highlight">
-              <EyeOff size={9} strokeWidth={2.4} />
-            </span>
-            <span class="morph-sat-divider"></span>
-            <span class="morph-sat-btn danger">
-              <Power size={9} strokeWidth={2.4} />
-            </span>
-          </div>
-        </div>
-
-        <!-- Animated White Pointer Cursor across States -->
-        <div class="morph-state-cursor wake-{wakeMethod}" aria-hidden="true">
-          <span class="cursor-click-ring"></span>
-          <svg viewBox="0 0 18 22" width="15" height="18">
-            <path
-              d="M2 1.5L15.5 11.2L9.4 12.1L12.6 18.6L10.2 19.7L7 13.2L2.5 16.8Z"
-              fill="#ffffff"
-              stroke="rgba(15, 23, 42, 0.78)"
-              stroke-width="1.5"
-              stroke-linejoin="round"
-            />
-          </svg>
-        </div>
-
-        <!-- Single-Line Bottom Hint Zone (Consistent Styling) -->
-        <div class="morph-stage-hints hints-expanded">
-          <span class="stage-hint-chip">
-            {$tStore('onboarding.diag_expanded_hint')}
-          </span>
-        </div>
-
-        <div class="morph-stage-hints hints-compact">
-          <span class="stage-hint-chip">
-            {$tStore('onboarding.diag_compact_hint')}
-          </span>
-        </div>
-
-        <div class="morph-stage-hints hints-hidden">
-          <span class="stage-hint-chip">
-            {wakeMethod === 'hover'
-              ? $tStore('onboarding.diag_wake_hover')
-              : $tStore('onboarding.diag_wake_click')}
-          </span>
-        </div>
-      </div>
+      {#if effectiveStateMode === 'loop' && $animScaleStore > 0}
+        <button
+          type="button"
+          class="diagram-motion-toggle"
+          aria-label={isStatesPaused
+            ? $tStore('onboarding.diagram_play')
+            : $tStore('onboarding.diagram_pause')}
+          onclick={() => (isStatesPaused = !isStatesPaused)}
+        >
+          {#if isStatesPaused}
+            <Play size={11} strokeWidth={2.3} />
+          {:else}
+            <Pause size={11} strokeWidth={2.3} />
+          {/if}
+        </button>
+      {/if}
     </div>
+
+    {#key `${effectiveStateMode}-${hiddenDisplay}-${wakeMethod}-${$clickOutsideMinimizeStore}`}
+      <div
+        class="mini-desktop-screen states-stage mode-{effectiveStateMode} hidden-{hiddenDisplay}"
+        class:click-outside-enabled={$clickOutsideMinimizeStore}
+        class:user-paused={isStatesPaused}
+        role="region"
+        aria-label={$tStore('onboarding.step_states_title')}
+      >
+        <div class="mini-bg-window" aria-hidden="true">
+          <div class="mini-bg-dots">
+            <span></span><span></span><span></span>
+          </div>
+          <div class="mini-bg-lines">
+            <span></span><span></span>
+          </div>
+        </div>
+
+        <div class="morph-stage-center">
+          <div class="morph-island-cluster">
+            <!-- Single Morphing Island Container -->
+            <div class="morph-island-shell">
+              <!-- Expanded View Layer -->
+              <div class="morph-layer-slot slot-expanded">
+                <div class="morph-expanded-inner">
+                  <div class="morph-drag-handle"></div>
+                  <div class="morph-bento-pair">
+                    <div class="morph-bento-tile">
+                      <span class="morph-tile-title">9:41</span>
+                      <span class="morph-tile-sub">24°</span>
+                    </div>
+                    <div class="morph-bento-tile">
+                      <span class="morph-tile-title">
+                        <Music size={10} strokeWidth={2.2} />
+                      </span>
+                      <span class="morph-tile-sub"
+                        >{$tStore('onboarding.diag_playing')}</span
+                      >
+                    </div>
+                  </div>
+                  <div class="morph-dock-strip">
+                    <span></span><span></span><span></span><span></span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Compact Pill View Layer -->
+              <div class="morph-layer-slot slot-compact">
+                <div class="morph-compact-row">
+                  <span>9:41</span>
+                  <span class="morph-compact-right">
+                    <Sun size={10} strokeWidth={2.3} />
+                    <span>24°</span>
+                  </span>
+                </div>
+                <div class="morph-timeout-track"></div>
+              </div>
+
+              <!-- Hidden Edge View Layer -->
+              <div class="morph-layer-slot slot-hidden">
+                {#if hiddenDisplay === 'clock'}
+                  <div class="morph-hidden-clock">
+                    <span>9:41</span>
+                    <span class="morph-hidden-clock-dot"></span>
+                  </div>
+                {:else}
+                  <div class="morph-hidden-dash"></div>
+                {/if}
+              </div>
+            </div>
+
+            <!-- Floating Right Control Satellite -->
+            <div class="morph-satellite-dock" aria-hidden="true">
+              {#if $clickOutsideMinimizeStore}
+                <span class="morph-sat-btn highlight morph-sat-pin">
+                  <Pin size={9} strokeWidth={2.4} />
+                </span>
+              {/if}
+              <span class="morph-sat-btn highlight">
+                <Minimize2 size={9} strokeWidth={2.4} />
+              </span>
+              <span class="morph-sat-btn highlight">
+                <EyeOff size={9} strokeWidth={2.4} />
+              </span>
+              <span class="morph-sat-divider"></span>
+              <span class="morph-sat-btn danger">
+                <Power size={9} strokeWidth={2.4} />
+              </span>
+            </div>
+          </div>
+
+          <!-- Animated White Pointer Cursor across States -->
+          <div class="morph-state-cursor wake-{wakeMethod}" aria-hidden="true">
+            <span class="cursor-click-ring"></span>
+            <span class="cursor-click-badge cursor-click-left">
+              {$tStore('onboarding.diag_click_left')}
+            </span>
+            <span class="cursor-click-badge cursor-click-right">
+              {$tStore('onboarding.diag_click_right')}
+            </span>
+            <svg viewBox="0 0 18 22" width="15" height="18">
+              <path
+                d="M2 1.5L15.5 11.2L9.4 12.1L12.6 18.6L10.2 19.7L7 13.2L2.5 16.8Z"
+                fill="#ffffff"
+                stroke="rgba(15, 23, 42, 0.78)"
+                stroke-width="1.5"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </div>
+
+          <!-- Single-Line Bottom Hint Zone (Consistent Styling) -->
+          <div class="morph-stage-hints hints-expanded">
+            <span class="stage-hint-chip">
+              {$clickOutsideMinimizeStore
+                ? $tStore('onboarding.diag_expanded_hint_outside')
+                : $tStore('onboarding.diag_expanded_hint')}
+            </span>
+          </div>
+
+          <div class="morph-stage-hints hints-compact">
+            <span class="stage-hint-chip">
+              {$tStore('onboarding.diag_compact_hint')}
+            </span>
+          </div>
+
+          <div class="morph-stage-hints hints-hidden">
+            <span class="stage-hint-chip">
+              {wakeMethod === 'hover'
+                ? $tStore('onboarding.diag_wake_hover')
+                : $tStore('onboarding.diag_wake_click')}
+            </span>
+          </div>
+        </div>
+      </div>
+    {/key}
   </BentoCard>
 {/if}
 

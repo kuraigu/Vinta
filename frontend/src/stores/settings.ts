@@ -571,6 +571,10 @@ export const mediaAutoHideStore = persistentWritable<boolean>(
   'vinta_media_autohide',
   true
 )
+export const clickOutsideMinimizeStore = persistentWritable<boolean>(
+  'vinta_click_outside_minimize',
+  true
+)
 export const autoHideDelayStore = persistentWritable<number>(
   'vinta_autohide_delay',
   10

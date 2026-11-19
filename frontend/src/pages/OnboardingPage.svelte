@@ -26,12 +26,11 @@
 </script>
 
 <script lang="ts">
-  import { getContext } from 'svelte'
+  import { flushSync, getContext } from 'svelte'
   import {
     Hand,
     Move,
     Minimize2,
-    Sparkles,
     Keyboard,
     Palette,
     Layers,
@@ -70,6 +69,7 @@
     autoHideDisplayStore,
     wakeMethodStore,
     homeAutoHideStore,
+    clickOutsideMinimizeStore,
     autoHideDelayStore,
     globalHotkeyStore,
     modeSwitchHotkeyStore,
@@ -154,7 +154,7 @@
       titleKey: 'onboarding.step_behaviors_title',
       pose: 'theme',
       badgeColor: 'emerald',
-      icon: Sparkles
+      icon: SlidersHorizontal
     },
     {
       id: 'shortcuts',
@@ -185,9 +185,57 @@
     }))
   )
 
+  let navDirection = $state<'forward' | 'backward'>('forward')
+
+  /**
+   * Transitions to the target onboarding step with directional View Transitions when supported.
+   */
+  function navigateToStep(nextIdx: number) {
+    if (nextIdx === currentStep || nextIdx < 0 || nextIdx >= steps.length) {
+      return
+    }
+    const direction: 'forward' | 'backward' =
+      nextIdx > currentStep ? 'forward' : 'backward'
+    navDirection = direction
+
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    const startViewTransition =
+      typeof document !== 'undefined'
+        ? (
+            document as Document & {
+              startViewTransition?: (options: {
+                update: () => void
+                types?: string[]
+              }) => unknown
+            }
+          ).startViewTransition
+        : undefined
+
+    if (
+      typeof startViewTransition === 'function' &&
+      !prefersReducedMotion &&
+      $animScaleStore > 0
+    ) {
+      startViewTransition.call(document, {
+        update: () => {
+          flushSync(() => {
+            currentStep = nextIdx
+          })
+        },
+        types: [direction]
+      })
+      return
+    }
+
+    currentStep = nextIdx
+  }
+
   function handleSelectStepId(id: string) {
     const idx = steps.findIndex((s) => s.id === id)
-    if (idx !== -1) currentStep = idx
+    if (idx !== -1) navigateToStep(idx)
   }
 
   let localeOptions = $derived(
@@ -415,7 +463,7 @@
    */
   function handleNext() {
     if (currentStep < steps.length - 1) {
-      currentStep++
+      navigateToStep(currentStep + 1)
     } else {
       handleComplete()
     }
@@ -426,7 +474,7 @@
    */
   function handlePrev() {
     if (currentStep > 0) {
-      currentStep--
+      navigateToStep(currentStep - 1)
     }
   }
 
@@ -525,11 +573,11 @@
       <section class="onboarding-main-pane">
         <header class="pane-header">
           <div class="pane-header-top">
-            <h2 class="pane-title">{$tStore(stepData.titleKey)}</h2>
+            <h1 class="pane-title">{$tStore(stepData.titleKey)}</h1>
             <div
               class="pane-step-pills"
-              role="tablist"
-              aria-label="Onboarding progress"
+              role="group"
+              aria-label={$tStore('onboarding.progress_aria')}
             >
               {#each steps as s, idx (s.id)}
                 <button
@@ -537,7 +585,8 @@
                   class="step-progress-pill"
                   class:active={currentStep === idx}
                   class:completed={idx < currentStep}
-                  onclick={() => (currentStep = idx)}
+                  aria-current={currentStep === idx ? 'step' : undefined}
+                  onclick={() => navigateToStep(idx)}
                   aria-label={$tStore(s.navKey)}
                 ></button>
               {/each}
@@ -548,7 +597,10 @@
         <div class="pane-body">
           <ScrollView class="onboarding-scroll">
             {#key currentStep}
-              <div class="onboarding-step-transition">
+              <div
+                class="onboarding-step-transition"
+                data-direction={navDirection}
+              >
                 {#if currentStep === 0}
                   <!-- Step 1: Welcome, Language & Profile -->
                   <div class="onboarding-inputs-grid">
@@ -576,6 +628,7 @@
                           id="onboarding-name-input"
                           type="text"
                           class="onboarding-name-field"
+                          autocomplete="name"
                           placeholder={$tStore('onboarding.name_placeholder')}
                           maxlength="20"
                           bind:value={$userNameStore}
@@ -688,21 +741,6 @@
 
                   <BentoCard variant="group">
                     <SettingItem
-                      icon={SlidersHorizontal}
-                      badgeColor="purple"
-                      label={$tStore('onboarding.states_satellite_title')}
-                      description={$tStore('onboarding.states_satellite_desc')}
-                    />
-                    <SettingItem
-                      icon={MousePointerClick}
-                      badgeColor="blue"
-                      label={$tStore('onboarding.states_gestures_title')}
-                      description={$tStore('onboarding.states_gestures_desc')}
-                    />
-                  </BentoCard>
-
-                  <BentoCard variant="group">
-                    <SettingItem
                       icon={EyeOff}
                       badgeColor="cyan"
                       label={$tStore('onboarding.states_hidden_style')}
@@ -753,6 +791,37 @@
                         bind:value={$wakeMethodStore}
                       />
                     </SettingItem>
+
+                    <SettingItem
+                      icon={MousePointerClick}
+                      badgeColor="indigo"
+                      label={$tStore('settings.click_outside_minimize_label')}
+                      description={$tStore(
+                        'settings.click_outside_minimize_desc'
+                      )}
+                    >
+                      <ToggleSwitch
+                        bind:checked={$clickOutsideMinimizeStore}
+                        ariaLabel={$tStore(
+                          'settings.click_outside_minimize_label'
+                        )}
+                      />
+                    </SettingItem>
+                  </BentoCard>
+
+                  <BentoCard variant="group">
+                    <SettingItem
+                      icon={SlidersHorizontal}
+                      badgeColor="purple"
+                      label={$tStore('onboarding.states_satellite_title')}
+                      description={$tStore('onboarding.states_satellite_desc')}
+                    />
+                    <SettingItem
+                      icon={MousePointerClick}
+                      badgeColor="blue"
+                      label={$tStore('onboarding.states_gestures_title')}
+                      description={$tStore('onboarding.states_gestures_desc')}
+                    />
                   </BentoCard>
                 {:else if currentStep === 3}
                   <!-- Step 4: How It Behaves -->

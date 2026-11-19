@@ -5,12 +5,14 @@
 -->
 <script lang="ts">
   import { getContext } from 'svelte'
-  import { EyeOff, Minimize2, Power } from 'lucide-svelte'
+  import { EyeOff, Minimize2, Pin, Power } from 'lucide-svelte'
   import { AppControls } from '../utils/AppControls.svelte'
   import DockButton from './DockButton.svelte'
   import {
     wakeMethodStore,
     globalHotkeyStore,
+    clickOutsideMinimizeStore,
+    overlayPinnedStore,
     tStore,
     type IslandConfig
   } from '../store'
@@ -43,6 +45,24 @@
   aria-label={$tStore('controls.window_controls')}
   tabindex="-1"
 >
+  {#if $clickOutsideMinimizeStore}
+    <div class="button-wrapper">
+      <DockButton
+        shape="rounded"
+        active={$overlayPinnedStore}
+        tooltip={$overlayPinnedStore
+          ? $tStore('controls.unpin')
+          : $tStore('controls.pin')}
+        tooltipPosition={expandedTooltipSide}
+        onclick={() => {
+          overlayPinnedStore.update((pinned) => !pinned)
+        }}
+      >
+        <Pin size={13.5} strokeWidth={2.2} />
+      </DockButton>
+    </div>
+  {/if}
+
   <div class="button-wrapper">
     <DockButton
       shape="rounded"

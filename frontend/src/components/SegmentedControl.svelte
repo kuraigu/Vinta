@@ -48,7 +48,7 @@
       class:active={value === option.value}
       onclick={() => selectOption(option.value)}
     >
-      {option.label}
+      <span class="vinta-segment-label">{option.label}</span>
     </button>
   {/each}
 </div>
