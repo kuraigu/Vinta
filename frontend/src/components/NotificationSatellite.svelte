@@ -182,7 +182,9 @@
   let resolvedAppBadge = $derived.by(resolveAppBadge)
   let resolvedIcon = $derived.by(resolvePrimaryIcon)
   let showMiniAppBadge = $derived(
-    Boolean(resolvedAppBadge && resolvedIcon && resolvedAppBadge !== resolvedIcon)
+    Boolean(
+      resolvedAppBadge && resolvedIcon && resolvedAppBadge !== resolvedIcon
+    )
   )
 
   let displayTitle = $derived.by(() => {
@@ -278,9 +280,7 @@
     }}
     style="
       transform: translateX({swipeOffsetX}px);
-      opacity: {isSwiping
-      ? Math.max(0.2, 1 - Math.abs(swipeOffsetX) / 90)
-      : 1};
+      opacity: {isSwiping ? Math.max(0.2, 1 - Math.abs(swipeOffsetX) / 90) : 1};
       transition: {isSwiping
       ? 'none'
       : 'transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease'};
