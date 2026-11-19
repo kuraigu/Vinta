@@ -7,11 +7,11 @@
 <svelte:options />
 
 <script module lang="ts">
-  import type { IslandConfig } from '../store'
+  import { ISLAND_WIDTH_TIERS, type IslandConfig } from '../store'
 
   export const config: IslandConfig = {
     minimal: { w: 320, h: 42, r: 16 },
-    expanded: { w: 420, h: 405, r: 28 },
+    expanded: { w: ISLAND_WIDTH_TIERS.standard, h: 405, r: 28 },
     borderColor: 'var(--vinta-island-border-idle)',
     glowColor: 'var(--vinta-island-glow-idle)'
   }

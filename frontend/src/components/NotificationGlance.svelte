@@ -41,8 +41,6 @@
     return {}
   }
 
-  const persistentSenderAvatars = loadSenderAvatars()
-
   let notifications = $derived(
     $notifData.filter(
       (n) =>
@@ -142,7 +140,7 @@
       return null
     }
 
-    if (notif.icon && notif.icon.length > 0 && notif.icon !== notif.heroImage) {
+    if (notif.icon && notif.icon.length > 0) {
       if (!appLogo || notif.icon !== appLogo) {
         return notif.icon
       }
@@ -161,8 +159,11 @@
     }
 
     const sKey = getSenderKey(notif)
-    if (sKey && persistentSenderAvatars[sKey]) {
-      return persistentSenderAvatars[sKey]
+    if (sKey) {
+      const savedAvatars = loadSenderAvatars()
+      if (savedAvatars[sKey]) {
+        return savedAvatars[sKey]
+      }
     }
 
     return null

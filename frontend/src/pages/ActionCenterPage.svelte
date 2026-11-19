@@ -1,9 +1,9 @@
 <script lang="ts" module>
-  import type { IslandConfig } from '../store'
+  import { ISLAND_WIDTH_TIERS, type IslandConfig } from '../store'
 
   export const config: IslandConfig = {
     minimal: { w: 10, h: 10, r: 5 },
-    expanded: { w: 440, h: 380, r: 28 },
+    expanded: { w: ISLAND_WIDTH_TIERS.standard, h: 380, r: 28 },
     borderColor: 'var(--vinta-border)',
     glowColor: 'transparent'
   }

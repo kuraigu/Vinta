@@ -1,9 +1,9 @@
 <script lang="ts" module>
-  import type { IslandConfig } from '../store'
+  import { ISLAND_WIDTH_TIERS, type IslandConfig } from '../store'
 
   export const config: IslandConfig = {
     minimal: { w: 220, h: 36, r: 16 },
-    expanded: { w: 340, h: 434, r: 28 }
+    expanded: { w: ISLAND_WIDTH_TIERS.compact, h: 434, r: 28 }
   }
 </script>
 

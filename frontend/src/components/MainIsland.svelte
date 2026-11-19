@@ -27,6 +27,7 @@
     autoHideDelayStore,
     pageVisibilityStore,
     animScaleStore,
+    ISLAND_WIDTH_TIERS,
     type IslandConfig
   } from '../store'
   import type { IslandGestureController } from '../services/islandGestures'
@@ -183,7 +184,7 @@
     Math.min(
       expanded
         ? activeOverlay !== null
-          ? Math.max(islandConfig.expanded.w, 460)
+          ? Math.max(islandConfig.expanded.w, ISLAND_WIDTH_TIERS.standard)
           : islandConfig.expanded.w
         : currentMinimalW,
       activeMonitorWidth ? activeMonitorWidth - 24 : 1920

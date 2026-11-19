@@ -7,11 +7,17 @@
   SegmentedControl primitives.
 -->
 <script module lang="ts">
-  import type { IslandConfig } from '../store'
+  import { ISLAND_WIDTH_TIERS, type IslandConfig } from '../store'
 
   export const config: IslandConfig = {
     minimal: { w: 320, h: 36, r: 18 },
-    expanded: { w: 590, h: 480, r: 30, minH: 440, maxH: 520 },
+    expanded: {
+      w: ISLAND_WIDTH_TIERS.wide,
+      h: 495,
+      r: 30,
+      minH: 440,
+      maxH: 520
+    },
     borderColor: 'var(--vinta-border)',
     glowColor: 'transparent'
   }

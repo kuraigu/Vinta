@@ -1,8 +1,8 @@
 <!--
   @component NotificationSatellite
-  @description Floating toast notification pill. Slides in beside the island when a
-  system notification arrives, shows app icon and preview text, pauses dismiss countdown
-  on mouse hover, and opens the notification on click.
+  @description Compact circular floating notification satellite. Docks beside the
+  island when a notification arrives, displays the app icon or avatar with a small
+  app badge and circular countdown ring, pauses on hover, and opens Notifications on click.
 -->
 <script lang="ts">
   import { getContext } from 'svelte'
@@ -36,6 +36,8 @@
     monitorLeft?: number
     activeMonitorWidth?: number
     islandWidth?: number
+    expanded?: boolean
+    minimalHeight?: number
     uiScale?: number
   }
 
@@ -46,6 +48,8 @@
     monitorLeft = 0,
     activeMonitorWidth = 1920,
     islandWidth = 368,
+    expanded = false,
+    minimalHeight = 36,
     uiScale = 1
   }: Props = $props()
 
@@ -58,7 +62,7 @@
   let nativeIcons = $derived($nativeIconsStore)
 
   /**
-   * Computes the auto-hide timeout duration in seconds for the satellite bar.
+   * Computes the auto-hide timeout duration in seconds for the circular ring.
    */
   function computeDurationSeconds(): number {
     if (typeof $autoHideDelayStore === 'number' && $autoHideDelayStore > 0) {
@@ -72,22 +76,22 @@
   let swipeOffsetX = $state(0)
   let isSwiping = $state(false)
 
-  const satelliteWidth = 236
-  const satelliteHeight = 44
-  const satelliteRadii: FourPartRadii = [0, 0, 16, 16]
-  const satelliteGaps: FourPartGaps = [0, 12, 0, 12]
+  const satelliteSize = 40
+  const satelliteRadii: FourPartRadii = [20, 20, 20, 20]
+  const satelliteGaps: FourPartGaps = [0, 10, 0, 10]
+  let verticalOffsetY = $derived(
+    expanded ? 0 : Math.round((minimalHeight - satelliteSize) / 2)
+  )
 
   /**
    * Computes whether the satellite should dock to the left or right flank of the island.
-   * If the island is pushed to the far left of the monitor such that the left flank
-   * would clip off-screen, dynamically switch anchoring to the right flank.
    */
   function computeSatelliteAnchor(): 'left' | 'right' {
     const islandCenterOnScreen = primaryCenter + clampedOffsetX - monitorLeft
     const scale = uiScale > 0 ? uiScale : 1
     const halfIslandW = (islandWidth / 2) * scale
     const scaledGap = 12 * scale
-    const scaledSatW = satelliteWidth * scale
+    const scaledSatW = satelliteSize * scale
     const leftEdge = islandCenterOnScreen - halfIslandW
     const leftClearance = leftEdge - scaledGap - scaledSatW
     const rightEdge = islandCenterOnScreen + halfIslandW
@@ -125,9 +129,9 @@
   }
 
   /**
-   * Resolves the primary visual icon or contact avatar for the alert.
+   * Resolves the native or bundled app logo for the notification.
    */
-  function resolveIcon(): string | null {
+  function resolveAppBadge(): string | null {
     if (!currentNotif) return null
 
     const rawInput = currentNotif.appName || currentNotif.aumid || ''
@@ -136,11 +140,7 @@
       (currentNotif.title || '').toLowerCase().includes('vinta')
 
     if (isVinta) {
-      return currentNotif.icon || currentNotif.appLogo || appIcon
-    }
-
-    if (currentNotif.icon && isImageUrl(currentNotif.icon)) {
-      return currentNotif.icon
+      return currentNotif.appLogo || appIcon
     }
 
     if (currentNotif.appLogo && isImageUrl(currentNotif.appLogo)) {
@@ -152,9 +152,7 @@
     const searchAumid = (currentNotif.aumid || '').trim()
     const iconKey = `${searchApp.toLowerCase()}|${searchAumid.toLowerCase()}`
 
-    if (nativeIcons[iconKey]) {
-      return nativeIcons[iconKey]
-    }
+    if (nativeIcons[iconKey]) return nativeIcons[iconKey]
     if (currentNotif.aumid && nativeIcons[currentNotif.aumid]) {
       return nativeIcons[currentNotif.aumid]
     }
@@ -170,7 +168,24 @@
     return null
   }
 
-  let resolvedIcon = $derived(resolveIcon())
+  /**
+   * Resolves the primary visual avatar or app icon for the circle.
+   */
+  function resolvePrimaryIcon(): string | null {
+    if (!currentNotif) return null
+    if (currentNotif.icon && isImageUrl(currentNotif.icon)) {
+      return currentNotif.icon
+    }
+    return resolveAppBadge()
+  }
+
+  let resolvedAppBadge = $derived.by(resolveAppBadge)
+  let resolvedIcon = $derived.by(resolvePrimaryIcon)
+  let showMiniAppBadge = $derived(
+    Boolean(
+      resolvedAppBadge && resolvedIcon && resolvedAppBadge !== resolvedIcon
+    )
+  )
 
   let displayTitle = $derived.by(() => {
     if (!currentNotif) return ''
@@ -186,21 +201,10 @@
     return 'Notification'
   })
 
-  let displayMessage = $derived.by(() => {
-    if (!currentNotif) return ''
-    if (currentNotif.message && currentNotif.message.trim()) {
-      return currentNotif.message.trim()
-    }
-    if (currentNotif.appName && currentNotif.appName !== displayTitle) {
-      return currentNotif.appName
-    }
-    return ''
-  })
-
   /**
-   * Navigates to the Notification Center page and dismisses the satellite capsule.
+   * Navigates to the Notification Center and dismisses the satellite circle.
    */
-  function handleCapsuleClick() {
+  function handleCircleClick() {
     if (navigate) {
       navigate(Notification, notifConfig, true)
     }
@@ -208,9 +212,18 @@
   }
 
   /**
-   * Explicitly closes the notification alert.
+   * Explicitly closes the notification satellite without opening Notifications.
    */
   function handleDismissClick(e: MouseEvent) {
+    e.stopPropagation()
+    dismissSatelliteNotification()
+  }
+
+  /**
+   * Dismisses the notification satellite on right-click.
+   */
+  function handleContextDismiss(e: MouseEvent) {
+    e.preventDefault()
     e.stopPropagation()
     dismissSatelliteNotification()
   }
@@ -225,10 +238,11 @@
 <SatelliteHost
   id="notification"
   {anchor}
-  width={satelliteWidth}
-  height={satelliteHeight}
+  width={satelliteSize}
+  height={satelliteSize}
   radius={satelliteRadii}
   gap={satelliteGaps}
+  offsetY={verticalOffsetY}
   active={active && currentNotif !== null && $notifSatelliteEnabledStore}
   onmouseenter={pauseSatelliteTimer}
   onmouseleave={resumeSatelliteTimer}
@@ -239,11 +253,13 @@
     class="notification-satellite"
     role="button"
     tabindex="0"
-    onclick={handleCapsuleClick}
+    aria-label={displayTitle || 'Notification'}
+    onclick={handleCircleClick}
+    oncontextmenu={handleContextDismiss}
     use:swipe={{
       axis: 'x',
       enableSwipe: true,
-      threshold: 30,
+      threshold: 24,
       ignoreSelector: '.satellite-dismiss-btn',
       onDragStart: () => {
         isSwiping = true
@@ -264,9 +280,7 @@
     }}
     style="
       transform: translateX({swipeOffsetX}px);
-      opacity: {isSwiping
-      ? Math.max(0.2, 1 - Math.abs(swipeOffsetX) / 140)
-      : 1};
+      opacity: {isSwiping ? Math.max(0.2, 1 - Math.abs(swipeOffsetX) / 90) : 1};
       transition: {isSwiping
       ? 'none'
       : 'transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease'};
@@ -274,44 +288,52 @@
   >
     {#if currentNotif}
       {#key currentNotif}
+        <div class="satellite-arrival-pulse" aria-hidden="true"></div>
         <div
-          class="satellite-timeout-bar"
+          class="satellite-timer-ring"
           style="animation-duration: {durationSeconds}s;"
+          aria-hidden="true"
         ></div>
       {/key}
     {/if}
 
-    <div class="satellite-avatar-wrap">
-      {#if resolvedIcon}
-        <img
-          src={resolvedIcon}
-          alt=""
-          class="satellite-icon-img"
-          onerror={(e) => {
-            const target = e.currentTarget as HTMLImageElement
-            target.style.display = 'none'
-            const fallback = target.nextElementSibling as HTMLElement
-            if (fallback) fallback.style.display = 'flex'
-          }}
-        />
-        <div class="satellite-icon-fallback" style="display: none;">
-          <Bell size={12} />
+    {#key currentNotif}
+      <div class="satellite-core">
+        <div class="satellite-avatar-wrap">
+          {#if resolvedIcon}
+            <img
+              src={resolvedIcon}
+              alt=""
+              class="satellite-icon-img"
+              onerror={(e) => {
+                const target = e.currentTarget as HTMLImageElement
+                target.style.display = 'none'
+                const fallback = target.nextElementSibling as HTMLElement
+                if (fallback) fallback.style.display = 'flex'
+              }}
+            />
+            <div class="satellite-icon-fallback" style="display: none;">
+              <Bell size={13} />
+            </div>
+          {:else}
+            <div class="satellite-icon-fallback">
+              <Bell size={13} />
+            </div>
+          {/if}
         </div>
-      {:else}
-        <div class="satellite-icon-fallback">
-          <Bell size={12} />
-        </div>
-      {/if}
-    </div>
+      </div>
+    {/key}
 
-    <div class="satellite-content">
-      <span class="satellite-header" title={displayTitle}>{displayTitle}</span>
-      {#if displayMessage}
-        <span class="satellite-snippet" title={displayMessage}
-          >{displayMessage}</span
-        >
-      {/if}
-    </div>
+    {#if showMiniAppBadge && resolvedAppBadge}
+      <img
+        src={resolvedAppBadge}
+        alt=""
+        class="satellite-mini-app-badge"
+        onerror={(e) => {
+          ;(e.currentTarget as HTMLImageElement).style.display = 'none'
+        }}
+      />
+    {/if}
 
     <button
       type="button"
@@ -319,7 +341,7 @@
       onclick={handleDismissClick}
       aria-label="Dismiss notification"
     >
-      <X size={12} />
+      <X size={10} strokeWidth={2.5} />
     </button>
   </div>
 </SatelliteHost>

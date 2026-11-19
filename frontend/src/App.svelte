@@ -118,6 +118,7 @@
     notifVolumeStore,
     glowIntensityStore,
     globalMediaStore,
+    ISLAND_WIDTH_TIERS,
     type IslandConfig,
     homeWidgetsVisibilityStore,
     hasCompletedOnboardingStore,
@@ -412,7 +413,7 @@
       : Math.min(
           expanded
             ? $activeOverlayStore !== null
-              ? Math.max(islandConfig.expanded.w, 440)
+              ? Math.max(islandConfig.expanded.w, ISLAND_WIDTH_TIERS.standard)
               : islandConfig.expanded.w
             : currentMinimalW,
           activeMonitor.width ? activeMonitor.width - 24 : 1920
@@ -629,7 +630,7 @@
 
     const baseW =
       !isHid && isExp && $activeOverlayStore !== null
-        ? Math.max(rawBaseW, 460)
+        ? Math.max(rawBaseW, ISLAND_WIDTH_TIERS.standard)
         : rawBaseW
 
     const rawBaseH = isHid
@@ -656,7 +657,7 @@
 
     const baseH =
       !isHid && isExp && $activeOverlayStore !== null
-        ? Math.max(rawBaseH, 410)
+        ? Math.max(rawBaseH, 380)
         : rawBaseH
 
     const maxMonW = activeMonitor?.width ? activeMonitor.width - 24 : 1920
@@ -2288,6 +2289,8 @@
             getWindowDpr()}
           activeMonitorWidth={activeMonitor.width / getWindowDpr()}
           islandWidth={currentIslandW}
+          {expanded}
+          minimalHeight={islandConfig.minimal.h}
           uiScale={effectiveUiScale}
         />
         <ControlsSatellite

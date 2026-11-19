@@ -171,6 +171,11 @@
   width: 100%;
 }
 
+:global(.overlay-feed-card:nth-child(n + 3)) {
+  content-visibility: auto;
+  contain-intrinsic-size: auto none auto 160px;
+}
+
 :global(.overlay-feed-card.is-unread) {
   border-color: var(
     --vinta-border-accent,

@@ -46,8 +46,11 @@
 
   let { onClose }: Props = $props()
 
+  const MAX_ANNOUNCEMENTS = 10
+
   const cached = getCachedAnnouncements()
   let announcements = $state<AnnouncementItem[]>(cached?.items || [])
+  let visibleAnnouncements = $derived(announcements.slice(0, MAX_ANNOUNCEMENTS))
   let hasUnread = $state<boolean>(cached?.hasUnread || false)
   let isLoadingAnnouncements = $state<boolean>(!cached)
   let releaseNotes = $state<string>('')
@@ -245,7 +248,7 @@
               />
             {:else}
               <div class="overlay-feed-list">
-                {#each announcements as item (item.id)}
+                {#each visibleAnnouncements as item (item.id)}
                   <BentoCard
                     variant="bento"
                     class="overlay-feed-card {item.isUnread ? 'is-unread' : ''}"
