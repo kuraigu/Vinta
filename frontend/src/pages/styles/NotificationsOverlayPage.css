@@ -272,6 +272,7 @@
   line-height: 1.3;
   text-align: left;
   width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .feed-card-markdown {
@@ -279,6 +280,7 @@
   text-align: left;
   font-size: 0.78rem;
   color: var(--vinta-text-secondary);
+  overflow-wrap: anywhere;
 }
 
 .card-item-link {
