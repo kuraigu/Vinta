@@ -39,7 +39,7 @@
     <div class="indicator-progress-track">
       <div
         class="indicator-progress-fill"
-        style="width: {Math.min(100, Math.max(0, progress))}%;"
+        style="transform: scaleX({Math.min(1, Math.max(0, progress / 100))});"
       ></div>
     </div>
   </div>

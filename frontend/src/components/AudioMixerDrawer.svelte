@@ -241,9 +241,9 @@
                   <div class="session-peak-bar">
                     <div
                       class="session-peak-fill"
-                      style="height: {s.isMuted
+                      style="transform: scaleY({s.isMuted
                         ? 0
-                        : Math.min(100, Math.round(s.peak * 100))}%;"
+                        : Math.min(1, Math.max(0, s.peak))});"
                     ></div>
                   </div>
 

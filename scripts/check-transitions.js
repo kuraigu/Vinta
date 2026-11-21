@@ -58,8 +58,10 @@ function run() {
   const strict = process.argv.includes('--strict')
   const files = walk(SRC_DIR)
   const warnings = []
+  const reducedMotionWarnings = []
 
   const transitionDeclRegex = /transition(?:-property)?\s*:\s*([^;}{]+);/gi
+  const keyframeRegex = /@keyframes\s+[A-Za-z0-9_-]+/g
 
   for (const file of files) {
     const text = fs.readFileSync(file, 'utf8')
@@ -84,6 +86,14 @@ function run() {
         })
       }
     }
+
+    if (
+      !rel.startsWith(`frontend${path.sep}src${path.sep}devtest${path.sep}`) &&
+      keyframeRegex.test(text) &&
+      !/prefers-reduced-motion\s*:/.test(text)
+    ) {
+      reducedMotionWarnings.push(rel)
+    }
   }
 
   if (warnings.length > 0) {
@@ -97,11 +107,25 @@ function run() {
       console.warn(`  ... and ${warnings.length - 25} more`)
     }
     console.warn('')
-    if (strict) process.exit(1)
-    return
+  } else {
+    console.log('✔ All CSS transitions use compositor-safe properties')
   }
 
-  console.log('✔ All CSS transitions use compositor-safe properties')
+  if (reducedMotionWarnings.length > 0) {
+    console.warn(
+      `⚠ Found ${reducedMotionWarnings.length} file(s) with @keyframes missing prefers-reduced-motion:`
+    )
+    for (const f of reducedMotionWarnings) {
+      console.warn(`  ${f}`)
+    }
+    console.warn('')
+  } else {
+    console.log('✔ All production @keyframes files include prefers-reduced-motion')
+  }
+
+  if (strict && (warnings.length > 0 || reducedMotionWarnings.length > 0)) {
+    process.exit(1)
+  }
 }
 
 run()

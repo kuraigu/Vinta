@@ -60,7 +60,8 @@
 >
   <div
     class="battery-pill-fill"
-    style="width: {fillPercentage}%; background: {batteryFillColor}; border-radius: {fillPercentage >=
+    style="transform: scaleX({fillPercentage /
+      100}); background: {batteryFillColor}; border-radius: {fillPercentage >=
     92
       ? '9999px'
       : '9999px 0 0 9999px'};"
@@ -109,8 +110,10 @@
     left: 0;
     top: 0;
     bottom: 0;
+    width: 100%;
     opacity: 1;
-    transition: width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transform-origin: left center;
+    transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
   }
 
   .battery-pill-content {

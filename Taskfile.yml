@@ -177,8 +177,8 @@ tasks:
       - cmd.exe /c "scripts.bat check-locales"
 
   check-transitions:
-    desc: Audit frontend CSS transitions for non-composited properties
-    aliases: [transitions:check]
+    desc: Audit frontend CSS transitions and reduced-motion coverage
+    aliases: [transitions:check, check-motion]
     cmds:
       - cmd.exe /c "scripts.bat check-transitions {{.CLI_ARGS}}"
 
