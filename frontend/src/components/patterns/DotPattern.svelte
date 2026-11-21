@@ -35,6 +35,8 @@
   .vinta-dot-pattern {
     position: absolute;
     pointer-events: none;
+    contain: strict;
+    transform: translateZ(0);
     background-image: radial-gradient(
       circle,
       currentColor var(--dot-size, 1.2px),

@@ -10,16 +10,18 @@
     userName?: string
     timeText?: string
     amPmText?: string
+    paused?: boolean
   }
 
   let {
     salutation = '',
     userName = '',
     timeText = '',
-    amPmText = ''
+    amPmText = '',
+    paused = false
   }: Props = $props()
 </script>
 
 <div data-vinta-widget="weather">
-  <WeatherGlance {salutation} {userName} {timeText} {amPmText} />
+  <WeatherGlance {salutation} {userName} {timeText} {amPmText} {paused} />
 </div>

@@ -301,7 +301,11 @@
     class:variant-page={isPage}
     onclick={() => (!isPage ? (isForecastOpen = !isForecastOpen) : null)}
   >
-    <WeatherAtmosphere condition={illustrationType} seamless={false} />
+    <WeatherAtmosphere
+      condition={illustrationType}
+      seamless={false}
+      paused={!expanded}
+    />
 
     {#if loading && !weather}
       <div class="banner-loading">
@@ -382,7 +386,11 @@
           {/if}
 
           <div class="weather-art-wrap">
-            <WeatherArt type={illustrationType} variant="hero" />
+            <WeatherArt
+              type={illustrationType}
+              variant="hero"
+              paused={!expanded}
+            />
           </div>
         </div>
       </div>

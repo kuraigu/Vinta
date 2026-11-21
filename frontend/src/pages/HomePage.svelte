@@ -496,6 +496,7 @@
                   ? `${formattedHours}:${timeParts.m}`
                   : ''}
                 amPmText={$homeWidgetsVisibilityStore.clock ? amPm : ''}
+                paused={!expanded}
               />
             {:else}
               <!-- Social Feed Header Bar (Fallback when weather hero is disabled) -->
