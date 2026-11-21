@@ -1,7 +1,7 @@
 /* ============================================================================
    WeatherAtmosphere Shared Stylesheet
-   Provides condition gradients, animated waves/particles, and the Screenshot 1
-   atmospheric filter + vertical alpha mask + --vinta-bg color-wash scrim.
+   Provides condition gradients, GPU-composited waves/particles, and the
+   atmospheric vertical alpha mask + --vinta-bg color-wash scrim.
    ============================================================================ */
 
 .weather-card-aura-bg {
@@ -16,6 +16,10 @@
   contain: layout style paint;
 }
 
+.weather-card-aura-bg.is-paused * {
+  animation-play-state: paused !important;
+}
+
 .weather-atmosphere-canvas {
   position: absolute;
   inset: 0;
@@ -25,7 +29,7 @@
   overflow: hidden;
 }
 
-/* Screenshot 1 Vertical Alpha Mask for Seamless Page Blending */
+/* Vertical Alpha Mask for Seamless Page Blending */
 .weather-card-aura-bg.is-seamless .weather-atmosphere-canvas {
   mask-image: linear-gradient(
     180deg,
@@ -48,6 +52,7 @@
   inset: 0;
   pointer-events: none;
   z-index: 1;
+  transform: translateZ(0);
   background:
     radial-gradient(
       125% 95% at 18% 92%,
@@ -61,6 +66,229 @@
       color-mix(in srgb, var(--vinta-bg) 50%, transparent) 75%,
       var(--vinta-bg) 100%
     );
+}
+
+/* Static Promoted Layer for CapsulePattern Mosaic */
+.weather-capsule-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  transform: translateZ(0);
+  contain: strict;
+}
+
+/* GPU-Composited Wave Layers */
+.weather-wave-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  transform-origin: 50% 100%;
+  will-change: transform;
+}
+
+.weather-wave-svg.wave-back {
+  animation: weatherWaveBack 11s ease-in-out infinite;
+}
+
+.weather-wave-svg.wave-mid {
+  animation: weatherWaveMid 8.5s ease-in-out -1.6s infinite;
+}
+
+.weather-wave-svg.wave-front {
+  animation: weatherWaveFront 6.5s ease-in-out -2.5s infinite;
+}
+
+@keyframes weatherWaveBack {
+  0%,
+  100% {
+    transform: translate3d(-18px, 3px, 0) scaleY(0.96);
+  }
+  50% {
+    transform: translate3d(18px, -3px, 0) scaleY(1.04);
+  }
+}
+
+@keyframes weatherWaveMid {
+  0%,
+  100% {
+    transform: translate3d(18px, -4px, 0) scaleY(0.96);
+  }
+  50% {
+    transform: translate3d(-18px, 4px, 0) scaleY(1.04);
+  }
+}
+
+@keyframes weatherWaveFront {
+  0%,
+  100% {
+    transform: translate3d(-15px, 4px, 0) scaleY(0.95);
+  }
+  50% {
+    transform: translate3d(15px, -4px, 0) scaleY(1.05);
+  }
+}
+
+/* GPU-Composited Sunny & Night Halos */
+.weather-halo-ring {
+  position: absolute;
+  top: 20px;
+  right: 25px;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(
+    circle,
+    rgba(254, 240, 138, 0.18) 0%,
+    rgba(254, 240, 138, 0.06) 65%,
+    rgba(254, 240, 138, 0) 100%
+  );
+  border: 1px solid rgba(254, 240, 138, 0.25);
+  will-change: transform, opacity;
+  animation: weatherHaloPulse 5.5s ease-in-out infinite;
+}
+
+.weather-halo-ring.is-night {
+  background: radial-gradient(
+    circle,
+    rgba(199, 210, 254, 0.18) 0%,
+    rgba(199, 210, 254, 0.06) 65%,
+    rgba(199, 210, 254, 0) 100%
+  );
+  border-color: rgba(199, 210, 254, 0.17);
+  animation-name: weatherHaloPulseNight;
+}
+
+@keyframes weatherHaloPulse {
+  0%,
+  100% {
+    transform: translate3d(50%, -50%, 0) scale(0.85);
+    opacity: 0.35;
+  }
+  50% {
+    transform: translate3d(50%, -50%, 0) scale(1.05);
+    opacity: 1;
+  }
+}
+
+@keyframes weatherHaloPulseNight {
+  0%,
+  100% {
+    transform: translate3d(50%, -50%, 0) scale(0.85);
+    opacity: 0.23;
+  }
+  50% {
+    transform: translate3d(50%, -50%, 0) scale(1.05);
+    opacity: 0.65;
+  }
+}
+
+/* Night Stars */
+.weather-star {
+  position: absolute;
+  border-radius: 50%;
+  background: rgb(224, 231, 255);
+  transform: translate3d(-50%, -50%, 0);
+  pointer-events: none;
+  will-change: opacity;
+  animation: weatherStarTwinkle 2.5s ease-in-out infinite;
+}
+
+@keyframes weatherStarTwinkle {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+/* Rain & Thunder Streaks */
+.weather-rain-track {
+  position: absolute;
+  top: -16px;
+  height: calc(100% + 32px);
+  width: 4px;
+  pointer-events: none;
+  will-change: transform;
+  animation: weatherRainFall 0.87s linear infinite;
+}
+
+.weather-rain-drop {
+  width: 1.2px;
+  height: 12px;
+  border-radius: 1px;
+  background: rgba(186, 230, 253, 0.35);
+  transform: rotate(14deg);
+}
+
+@keyframes weatherRainFall {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-10px, 100%, 0);
+  }
+}
+
+/* Snow Flakes */
+.weather-snow-track {
+  position: absolute;
+  top: -10px;
+  height: calc(100% + 20px);
+  width: 6px;
+  pointer-events: none;
+  will-change: transform;
+  animation: weatherSnowFall 3.57s linear infinite;
+}
+
+.weather-snow-flake {
+  border-radius: 50%;
+  background: rgba(241, 245, 249, 0.65);
+}
+
+@keyframes weatherSnowFall {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  25% {
+    transform: translate3d(6px, 25%, 0);
+  }
+  50% {
+    transform: translate3d(0, 50%, 0);
+  }
+  75% {
+    transform: translate3d(-6px, 75%, 0);
+  }
+  100% {
+    transform: translate3d(0, 100%, 0);
+  }
+}
+
+/* Cloudy / Fog Soft Puffs */
+.weather-cloud-puff {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  will-change: transform;
+  animation: weatherCloudDrift 12s ease-in-out infinite;
+}
+
+@keyframes weatherCloudDrift {
+  0%,
+  100% {
+    transform: translate3d(-50%, -50%, 0) translateX(-18px);
+  }
+  50% {
+    transform: translate3d(-50%, -50%, 0) translateX(18px);
+  }
 }
 
 /* Condition Base Gradients */

@@ -4,6 +4,7 @@
 -->
 <script lang="ts">
   import { onMount, getContext } from 'svelte'
+  import { get } from 'svelte/store'
   import { MapPin } from 'lucide-svelte'
   import {
     weatherLocationStore,
@@ -15,6 +16,7 @@
   } from '../store'
   import {
     fetchWeatherData,
+    getCachedWeatherData,
     convertTemp,
     getWmoConditionKey,
     type WeatherData
@@ -36,16 +38,23 @@
     salutation = '',
     userName = '',
     timeText = '',
-    amPmText = ''
+    amPmText = '',
+    paused = false
   }: {
     salutation?: string
     userName?: string
     timeText?: string
     amPmText?: string
+    paused?: boolean
   } = $props()
 
-  let weather = $state<WeatherData | null>(null)
-  let _loading = $state<boolean>(true)
+  const initialLoc = get(weatherLocationStore)
+  const initialMock = get(simulateWeatherStore)
+  const initialCache =
+    initialMock ?? getCachedWeatherData(initialLoc.lat, initialLoc.lon, true)
+
+  let weather = $state<WeatherData | null>(initialCache)
+  let _loading = $state<boolean>(!initialCache)
   let _error = $state<boolean>(false)
   let lastFetchKey = ''
 
@@ -172,7 +181,7 @@
 </script>
 
 <div class="weather-glance-hero {illustrationType}">
-  <WeatherAtmosphere condition={illustrationType} seamless={true} />
+  <WeatherAtmosphere condition={illustrationType} seamless={true} {paused} />
 
   <div class="home-hero-layout">
     <div class="home-hero-left">
@@ -229,7 +238,7 @@
             }
           }}
         >
-          <WeatherArt type={illustrationType} variant="hero" />
+          <WeatherArt type={illustrationType} variant="hero" {paused} />
         </div>
       </div>
     </div>
