@@ -7,9 +7,11 @@
  *  - Hardcoded English UI strings in attributes (aria-label, placeholder, label, description)
  *
  * Exits 0 with warnings by default. Pass --strict to exit 1 on any finding,
- * or --all to print every match instead of a truncated preview.
+ * --all to print every match instead of a truncated preview, --changed to scan
+ * only modified/untracked files against origin/main, or explicit file/dir paths.
  */
 
+const { execSync } = require('child_process')
 const fs = require('fs')
 const path = require('path')
 
@@ -19,8 +21,11 @@ const TARGET_DIRS = [
   path.join(ROOT_DIR, 'frontend/src/pages')
 ]
 
-const STRICT = process.argv.includes('--strict')
-const SHOW_ALL = process.argv.includes('--all')
+const ARGS = process.argv.slice(2)
+const STRICT = ARGS.includes('--strict')
+const SHOW_ALL = ARGS.includes('--all')
+const CHANGED_ONLY = ARGS.includes('--changed')
+const PATH_ARGS = ARGS.filter((a) => !a.startsWith('--'))
 
 function walkDir(dir, exts, out = []) {
   if (!fs.existsSync(dir)) return out
@@ -143,10 +148,70 @@ function printGroup(title, items, formatItem) {
   }
 }
 
-function main() {
+function isTargetFile(rel) {
+  return (
+    (rel.startsWith('frontend/src/components/') || rel.startsWith('frontend/src/pages/')) &&
+    !rel.includes('/devtest/') &&
+    (rel.endsWith('.css') || rel.endsWith('.svelte'))
+  )
+}
+
+function runGitLines(cmd) {
+  try {
+    return execSync(cmd, { cwd: ROOT_DIR, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
+      .split(/\r?\n/)
+      .map((l) => l.trim().replace(/\\/g, '/'))
+      .filter(Boolean)
+  } catch {
+    return []
+  }
+}
+
+function getChangedFiles() {
+  const candidates = new Set([
+    ...runGitLines('git diff --name-only --diff-filter=ACMRTUXB origin/main...HEAD'),
+    ...runGitLines('git diff --name-only --diff-filter=ACMRTUXB'),
+    ...runGitLines('git diff --cached --name-only --diff-filter=ACMRTUXB'),
+    ...runGitLines('git ls-files --others --exclude-standard')
+  ])
+
+  return [...candidates]
+    .filter(isTargetFile)
+    .map((rel) => path.join(ROOT_DIR, rel))
+    .filter((full) => fs.existsSync(full))
+}
+
+function getExplicitFiles() {
   const files = []
-  for (const dir of TARGET_DIRS) {
-    walkDir(dir, ['.css', '.svelte'], files)
+  for (const rawArg of PATH_ARGS) {
+    const resolved = fs.existsSync(path.resolve(process.cwd(), rawArg))
+      ? path.resolve(process.cwd(), rawArg)
+      : path.resolve(ROOT_DIR, rawArg)
+    if (!fs.existsSync(resolved)) continue
+    const stat = fs.statSync(resolved)
+    if (stat.isDirectory()) {
+      walkDir(resolved, ['.css', '.svelte'], files)
+    } else if (resolved.endsWith('.css') || resolved.endsWith('.svelte')) {
+      files.push(resolved)
+    }
+  }
+  return [...new Set(files)]
+}
+
+function main() {
+  let files = []
+  if (PATH_ARGS.length > 0) {
+    files = getExplicitFiles()
+  } else if (CHANGED_ONLY) {
+    files = getChangedFiles()
+    if (files.length === 0) {
+      console.log('✔ No changed UI component/page files to check.')
+      return
+    }
+  } else {
+    for (const dir of TARGET_DIRS) {
+      walkDir(dir, ['.css', '.svelte'], files)
+    }
   }
 
   const findings = {
