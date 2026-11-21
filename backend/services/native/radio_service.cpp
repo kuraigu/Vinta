@@ -23,8 +23,9 @@ using namespace Windows::Networking::Connectivity;
 static std::atomic<bool> g_explicitAirplaneMode{false};
 static std::atomic<bool> g_radioAccessGranted{false};
 
-static const GUID CLSID_RadioManagementAPI = { 0x581333f6, 0x28db, 0x41be, { 0xbc, 0x7a, 0xff, 0x20, 0x1f, 0x12, 0xf3, 0xf6 } };
-static const GUID IID_IRadioManager = { 0xdb3afbfb, 0x08e6, 0x46c6, { 0xaa, 0x70, 0xbf, 0x9a, 0x34, 0xc3, 0x0a, 0xb7 } };
+static const GUID CLSID_RadioManagementAPI = {
+    0x581333f6, 0x28db, 0x41be, {0xbc, 0x7a, 0xff, 0x20, 0x1f, 0x12, 0xf3, 0xf6}};
+static const GUID IID_IRadioManager = {0xdb3afbfb, 0x08e6, 0x46c6, {0xaa, 0x70, 0xbf, 0x9a, 0x34, 0xc3, 0x0a, 0xb7}};
 
 /**
  * @struct IRadioManager
@@ -45,12 +46,10 @@ struct IRadioManager : public IUnknown {
  */
 static bool AccessSystemAirplaneMode(bool setMode, bool enableAirplane, bool& isAirplaneOut) {
     IRadioManager* pMgr = nullptr;
-    HRESULT hr = CoCreateInstance(
-        CLSID_RadioManagementAPI, nullptr,
-        CLSCTX_INPROC_SERVER | CLSCTX_LOCAL_SERVER,
-        IID_IRadioManager, reinterpret_cast<void**>(&pMgr)
-    );
-    if (FAILED(hr) || !pMgr) return false;
+    HRESULT hr = CoCreateInstance(CLSID_RadioManagementAPI, nullptr, CLSCTX_INPROC_SERVER | CLSCTX_LOCAL_SERVER,
+                                  IID_IRadioManager, reinterpret_cast<void**>(&pMgr));
+    if (FAILED(hr) || !pMgr)
+        return false;
 
     if (setMode) {
         hr = pMgr->SetSystemRadioState(enableAirplane ? FALSE : TRUE);
@@ -97,12 +96,17 @@ int SetRadioState(int radioKind, int targetState) {
                     auto kind = radio.Kind();
                     if (enableAirplane || kind == RadioKind::WiFi || kind == RadioKind::Bluetooth) {
                         try {
-                            pendingOps.push_back(radio.SetStateAsync(enableAirplane ? RadioState::Off : RadioState::On));
-                        } catch (...) {}
+                            pendingOps.push_back(
+                                radio.SetStateAsync(enableAirplane ? RadioState::Off : RadioState::On));
+                        } catch (...) {
+                        }
                     }
                 }
                 for (auto& op : pendingOps) {
-                    try { op.get(); } catch (...) {}
+                    try {
+                        op.get();
+                    } catch (...) {
+                    }
                 }
             }
             return 1;
@@ -113,7 +117,8 @@ int SetRadioState(int radioKind, int targetState) {
             AccessSystemAirplaneMode(true, false, unused);
         }
 
-        if (!EnsureRadioAccess()) return 0;
+        if (!EnsureRadioAccess())
+            return 0;
 
         auto radios = Radio::GetRadiosAsync().get();
         RadioState desired = (targetState == 1) ? RadioState::On : RadioState::Off;
@@ -123,11 +128,15 @@ int SetRadioState(int radioKind, int targetState) {
             if (static_cast<int>(radio.Kind()) == radioKind) {
                 try {
                     pendingOps.push_back(radio.SetStateAsync(desired));
-                } catch (...) {}
+                } catch (...) {
+                }
             }
         }
         for (auto& op : pendingOps) {
-            try { op.get(); } catch (...) {}
+            try {
+                op.get();
+            } catch (...) {
+            }
         }
         return !pendingOps.empty() ? 1 : 0;
     } catch (...) {
@@ -136,10 +145,12 @@ int SetRadioState(int radioKind, int targetState) {
 }
 
 int GetRadiosStateJson(char* outBuf, int maxBufLen) {
-    if (!outBuf || maxBufLen <= 0) return 0;
+    if (!outBuf || maxBufLen <= 0)
+        return 0;
     try {
         ApartmentScope apt;
-        if (!EnsureRadioAccess()) return 0;
+        if (!EnsureRadioAccess())
+            return 0;
 
         bool hasWifi = false, wifiEnabled = false, hasBt = false, btEnabled = false;
         for (auto&& radio : Radio::GetRadiosAsync().get()) {
@@ -173,7 +184,8 @@ int GetRadiosStateJson(char* outBuf, int maxBufLen) {
                     auto bars = profile.GetSignalBars();
                     wifiSignal = bars ? static_cast<int>(bars.Value()) * 20 : 80;
                 }
-            } catch (...) {}
+            } catch (...) {
+            }
         }
 
         bool isAirplane = false;
@@ -187,19 +199,13 @@ int GetRadiosStateJson(char* outBuf, int maxBufLen) {
         }
 
         std::string escapedSsid = EscapeJsonString(wifiSsid);
-        int written = std::snprintf(
-            outBuf, static_cast<size_t>(maxBufLen),
-            "{\"hasWifi\":%s,\"wifiEnabled\":%s,\"wifiConnected\":%s,\"wifiSsid\":\"%s\","
-            "\"wifiSignal\":%d,\"hasBluetooth\":%s,\"bluetoothEnabled\":%s,\"airplaneMode\":%s}",
-            hasWifi ? "true" : "false",
-            wifiEnabled ? "true" : "false",
-            wifiConnected ? "true" : "false",
-            escapedSsid.c_str(),
-            wifiSignal,
-            hasBt ? "true" : "false",
-            btEnabled ? "true" : "false",
-            isAirplane ? "true" : "false"
-        );
+        int written =
+            std::snprintf(outBuf, static_cast<size_t>(maxBufLen),
+                          "{\"hasWifi\":%s,\"wifiEnabled\":%s,\"wifiConnected\":%s,\"wifiSsid\":\"%s\","
+                          "\"wifiSignal\":%d,\"hasBluetooth\":%s,\"bluetoothEnabled\":%s,\"airplaneMode\":%s}",
+                          hasWifi ? "true" : "false", wifiEnabled ? "true" : "false", wifiConnected ? "true" : "false",
+                          escapedSsid.c_str(), wifiSignal, hasBt ? "true" : "false", btEnabled ? "true" : "false",
+                          isAirplane ? "true" : "false");
 
         return (written > 0 && written < maxBufLen) ? 1 : 0;
     } catch (...) {

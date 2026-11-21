@@ -1,7 +1,21 @@
 # Vinta Developer Environment Setup Script
 param(
-    [switch]$InstallTools
+    [switch]$InstallTools,
+    [switch]$SkipTools,
+    [switch]$Yes,
+    [switch]$Help
 )
+
+if ($Help) {
+    Write-Host "Usage: scripts.bat setup [--install-tools] [--skip-tools] [--yes] [--help]"
+    Write-Host ""
+    Write-Host "Options:"
+    Write-Host "  --install-tools, -InstallTools  Install missing required and optional toolchains via winget"
+    Write-Host "  --skip-tools, -SkipTools        Skip optional tool installation prompts"
+    Write-Host "  --yes, -Yes                     Auto-accept optional tool installation prompts"
+    Write-Host "  --help, -h                      Show this help message"
+    exit 0
+}
 
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "       Vinta Developer Setup            " -ForegroundColor Cyan
@@ -11,7 +25,6 @@ Write-Host ""
 # 1. Ensure Taskfile CLI (task) is installed
 $taskCmd = Get-Command "task" -ErrorAction SilentlyContinue
 if (-not $taskCmd) {
-    # Check if task exists in GOPATH/bin
     $goPath = (go env GOPATH 2>$null)
     if ($goPath -and (Test-Path (Join-Path $goPath "bin\task.exe"))) {
         $taskCmd = (Join-Path $goPath "bin\task.exe")
@@ -23,9 +36,9 @@ if (-not $taskCmd) {
     go install github.com/go-task/task/v3/cmd/task@latest
 }
 
-# 2. Check & Install System Tools if requested
+# 2. Check & Install Required System Tools if requested
 if ($InstallTools) {
-    Write-Host "Installing missing system toolchains via winget..." -ForegroundColor Yellow
+    Write-Host "Installing missing required system toolchains via winget..." -ForegroundColor Yellow
 
     if (-not (Get-Command "go" -ErrorAction SilentlyContinue)) {
         Write-Host "Installing Go..." -ForegroundColor Cyan
@@ -47,9 +60,38 @@ if ($InstallTools) {
         Write-Host "Installing Wails v3 CLI..." -ForegroundColor Cyan
         go install github.com/wailsapp/wails/v3/cmd/wails3@latest
     }
-    if (-not (Get-Command "makensis" -ErrorAction SilentlyContinue)) {
-        Write-Host "Installing NSIS..." -ForegroundColor Cyan
-        winget install NSIS.NSIS --accept-source-agreements --accept-package-agreements
+}
+
+# 2b. Optional Tools: Prompt (or auto-install with --install-tools / --yes)
+if (-not $SkipTools) {
+    $hasNsis = (Get-Command "makensis" -ErrorAction SilentlyContinue) -or
+               (Test-Path "C:\Program Files (x86)\NSIS\makensis.exe") -or
+               (Test-Path "C:\Program Files\NSIS\makensis.exe")
+    if (-not $hasNsis) {
+        $installNsis = $InstallTools -or $Yes
+        if (-not $installNsis -and [Environment]::UserInteractive -and -not [Console]::IsInputRedirected) {
+            $reply = Read-Host "Optional tool 'NSIS' (installer packaging) is missing. Install via winget? [y/N]"
+            $installNsis = $reply -match '^(y|yes)$'
+        }
+        if ($installNsis) {
+            Write-Host "Installing NSIS..." -ForegroundColor Cyan
+            winget install NSIS.NSIS --accept-source-agreements --accept-package-agreements
+        }
+    }
+
+    $hasClangFormat = (Get-Command "clang-format" -ErrorAction SilentlyContinue) -or
+                      (Test-Path "C:\Program Files\LLVM\bin\clang-format.exe") -or
+                      (Test-Path "C:\Program Files (x86)\LLVM\bin\clang-format.exe")
+    if (-not $hasClangFormat) {
+        $installLlvm = $InstallTools -or $Yes
+        if (-not $installLlvm -and [Environment]::UserInteractive -and -not [Console]::IsInputRedirected) {
+            $reply = Read-Host "Optional tool 'LLVM (clang-format)' (C++ formatting) is missing. Install via winget? [y/N]"
+            $installLlvm = $reply -match '^(y|yes)$'
+        }
+        if ($installLlvm) {
+            Write-Host "Installing LLVM (clang-format)..." -ForegroundColor Cyan
+            winget install LLVM.LLVM --accept-source-agreements --accept-package-agreements
+        }
     }
 }
 
@@ -78,6 +120,6 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host ""
-Write-Host "Setup complete! You can now run './scripts.bat dev' or 'task dev' to start developing." -ForegroundColor Green
-Write-Host "Note: If 'task' is not recognized in your current terminal, please restart your terminal or use './scripts.bat'." -ForegroundColor Gray
+Write-Host "Setup complete! You can now run '.\scripts.bat dev' or 'task dev' to start developing." -ForegroundColor Green
+Write-Host "Note: If 'task' is not recognized in your current terminal, please restart your terminal or use '.\scripts.bat'." -ForegroundColor Gray
 Write-Host ""

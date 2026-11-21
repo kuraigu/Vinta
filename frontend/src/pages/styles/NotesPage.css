@@ -498,7 +498,7 @@
   opacity: 0;
   transition:
     opacity 0.15s ease,
-    right 0.16s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transform 0.16s cubic-bezier(0.2, 0.8, 0.2, 1);
   z-index: 5;
 }
 
@@ -511,7 +511,7 @@
 }
 
 .note-card:hover .note-card-pin-btn.is-pinned {
-  right: 40px;
+  transform: translateX(-32px);
 }
 
 .note-card:hover .note-card-pin-btn {
@@ -572,7 +572,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.25;
-  transition: padding-right 0.16s ease;
 }
 
 .note-card:hover .note-card-title {

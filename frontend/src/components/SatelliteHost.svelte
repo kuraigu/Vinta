@@ -397,6 +397,7 @@
     cursor: default;
     border-radius: var(--sat-radius-tl) var(--sat-radius-tr)
       var(--sat-radius-br) var(--sat-radius-bl);
+    /* vinta-ignore: transition (intentional satellite container bounds morph) */
     transition:
       height 0.22s cubic-bezier(0.16, 1, 0.3, 1),
       top 0.32s cubic-bezier(0.2, 0.8, 0.2, 1),

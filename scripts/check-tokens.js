@@ -10,21 +10,22 @@
 
 const fs = require('fs')
 const path = require('path')
+const { walkFiles, printHelpIfRequested } = require('./lib/lint-utils')
+
+printHelpIfRequested(
+  [
+    'Usage: node scripts/check-tokens.js [--help]',
+    '',
+    'Scans frontend/src for var(--vinta-*) usages and verifies every token is defined.'
+  ].join('\n')
+)
 
 const SRC_DIR = path.resolve(__dirname, '../frontend/src')
 const EXTENSIONS = new Set(['.css', '.svelte', '.ts'])
 const SKIP_DIRS = new Set(['bindings', 'node_modules'])
 
 function walk(dir, out = []) {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (entry.isDirectory()) {
-      if (SKIP_DIRS.has(entry.name)) continue
-      walk(path.join(dir, entry.name), out)
-    } else if (EXTENSIONS.has(path.extname(entry.name))) {
-      out.push(path.join(dir, entry.name))
-    }
-  }
-  return out
+  return walkFiles(dir, { extensions: EXTENSIONS, skipDirs: SKIP_DIRS }, out)
 }
 
 function run() {

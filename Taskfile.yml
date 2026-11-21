@@ -10,20 +10,22 @@ version: "3"
 
 tasks:
   default:
-    desc: List all available development and build tasks
+    desc: Show available tasks and help tips
     cmds:
-      - task --list
+      - task: help
+    silent: true
 
   help:
-    desc: Show help and list available tasks
+    desc: Show available tasks and help tips (pass `-- <command>` for command help)
+    aliases: [list, ls]
     cmds:
-      - task --list
+      - '{{if .CLI_ARGS}}cmd.exe /c "scripts.bat help {{.CLI_ARGS}}"{{else}}task --list && echo "" && echo "Help tips:" && echo "  task --help                Show global Taskfile CLI help" && echo "  .\\scripts.bat --help       Show global scripts.bat usage and commands" && echo "  task <task> -- --help      Show command flags via scripts.bat (e.g. task lint -- --help)" && echo "  task help -- <command>     Defer directly to scripts.bat help (e.g. task help -- lint)"{{end}}'
     silent: true
 
   doctor:
     desc: Check development environment toolchains, SDKs, and dependencies
     cmds:
-      - cmd.exe /c "scripts.bat doctor"
+      - cmd.exe /c "scripts.bat doctor {{.CLI_ARGS}}"
     silent: true
 
   setup:
@@ -37,6 +39,21 @@ tasks:
       - cmd.exe /c "scripts.bat kill"
     silent: true
 
+  dev:
+    desc: Start live development server (supports --no-build, --profile, --frontend)
+    cmds:
+      - cmd.exe /c "scripts.bat dev {{.CLI_ARGS}}"
+
+  showcase:
+    desc: Start live development server with in-app Showcase Studio enabled
+    cmds:
+      - cmd.exe /c "scripts.bat showcase"
+
+  build:
+    desc: Build application binary (supports --dev)
+    cmds:
+      - '{{if eq .DEV "true"}}cmd.exe /c "scripts.bat build --dev"{{else}}cmd.exe /c "scripts.bat build {{.CLI_ARGS}}"{{end}}'
+
   build:native:
     desc: Build native C++/WinRT bridge DLL using CMake and MSVC
     sources:
@@ -48,30 +65,25 @@ tasks:
     cmds:
       - cmd.exe /c "scripts.bat build-native"
 
-  dev:
-    desc: Start live development server (Vite + Wails) with DevTest panel enabled
+  build:frontend:
+    desc: Build frontend production bundle using Vite
     cmds:
-      - cmd.exe /c "scripts.bat dev"
+      - cmd.exe /c "scripts.bat build-frontend"
 
-  showcase:
-    desc: Start live development server with in-app Showcase Studio enabled
+  run:
+    desc: Compile and run standalone binary (supports --no-build, --debug)
     cmds:
-      - cmd.exe /c "scripts.bat showcase"
+      - cmd.exe /c "scripts.bat run {{.CLI_ARGS}}"
 
-  dev:frontend:
-    desc: Start Vite dev server for Wails v3 dev mode
+  test:
+    desc: Build and launch test suite binary with DevTest panel (supports --no-build)
     cmds:
-      - cmd.exe /c "scripts.bat dev frontend"
+      - cmd.exe /c "scripts.bat test {{.CLI_ARGS}}"
 
-  dev:nobuild:
-    desc: Start live development server without rebuilding native C++ DLL
+  lint:
+    desc: Run Go, C++, Frontend, Theme, and Locale linters (supports --ci, --native, --all, --strict)
     cmds:
-      - cmd.exe /c "scripts.bat dev no_build"
-
-  dev:profile:
-    desc: Start live development server with WebView2 remote debugging enabled (port 9222)
-    cmds:
-      - cmd.exe /c "scripts.bat dev profile"
+      - cmd.exe /c "scripts.bat lint {{.CLI_ARGS}}"
 
   icon:
     desc: Generate multi-resolution build/windows/icon.ico from build/appicon.png
@@ -93,11 +105,6 @@ tasks:
     cmds:
       - cmd.exe /c "scripts.bat bindings"
 
-  build:frontend:
-    desc: Build frontend production bundle using Vite
-    cmds:
-      - cmd.exe /c "scripts.bat build-frontend"
-
   generate:syso:
     desc: Generate Windows syso resource file
     sources:
@@ -109,105 +116,55 @@ tasks:
     cmds:
       - cmd.exe /c "scripts.bat syso"
 
-  build:
-    desc: Build application binary (production by default, dev with DEV=true)
-    cmds:
-      - '{{if eq .DEV "true"}}cmd.exe /c "scripts.bat build dev"{{else}}cmd.exe /c "scripts.bat build"{{end}}'
-
   package:installer:
     desc: Build standalone production binary and Windows NSIS installer
     cmds:
       - cmd.exe /c "scripts.bat installer"
 
   theme:pack:
-    desc: Validate and package a theme directory into a distributable .vintatheme bundle
+    desc: Validate and package a theme directory into a .vintatheme bundle
     cmds:
       - cmd.exe /c "scripts.bat pack-theme {{.CLI_ARGS}}"
 
-  run:
-    desc: Compile and run standalone binary
-    cmds:
-      - cmd.exe /c "scripts.bat run"
-
-  run:debug:
-    desc: Compile and run standalone binary with debug flags
-    cmds:
-      - cmd.exe /c "scripts.bat run debug"
-
-  run:nobuild:
-    desc: Launch pre-built binary directly without rebuilding
-    cmds:
-      - cmd.exe /c "scripts.bat run no_build"
-
-  run:nobuild:debug:
-    desc: Launch pre-built binary directly with debug flags
-    cmds:
-      - cmd.exe /c "scripts.bat run no_build debug"
-
-  test:
-    desc: Build and launch test suite binary with DevTest panel
-    cmds:
-      - cmd.exe /c "scripts.bat test"
-
-  lint:native:
-    desc: Run clang-format on native C++ services
-    cmds:
-      - cmd.exe /c "scripts.bat lint native"
-
-  lint:
-    desc: Run Go, C++, Frontend (TypeScript/ESLint/Prettier/AppIcons), Theme, and Locale checks
-    cmds:
-      - cmd.exe /c "scripts.bat lint"
-
-  lint:ci:
-    desc: Run all project linters in non-mutating CI check mode
-    cmds:
-      - cmd.exe /c "scripts.bat lint ci"
-
-  check-themes:
+  check:themes:
     desc: Audit theme presets and validate --vinta-* CSS token references
-    aliases: [themes:check]
+    aliases: [check-themes]
     cmds:
-      - cmd.exe /c "scripts.bat check-themes"
+      - cmd.exe /c "scripts.bat check-themes {{.CLI_ARGS}}"
 
-  check-locales:
+  check:locales:
     desc: Check translation key parity and schema across all locale catalogs
-    aliases: [check-locals, locales:check]
+    aliases: [check-locales, check-locals]
     cmds:
-      - cmd.exe /c "scripts.bat check-locales"
+      - cmd.exe /c "scripts.bat check-locales {{.CLI_ARGS}}"
 
-  check-transitions:
-    desc: Audit frontend CSS transitions and reduced-motion coverage
-    aliases: [transitions:check, check-motion]
+  check:transitions:
+    desc: Audit frontend CSS transitions and reduced-motion coverage (supports --all, --strict)
+    aliases: [check-transitions, check-motion]
     cmds:
       - cmd.exe /c "scripts.bat check-transitions {{.CLI_ARGS}}"
 
-  check-settings:
-    desc: Validate persistent setting keys, defaults, and localStorage usage
-    aliases: [settings:check]
+  check:settings:
+    desc: Validate persistent setting keys, defaults, and localStorage usage (supports --defaults)
+    aliases: [check-settings]
     cmds:
       - cmd.exe /c "scripts.bat check-settings {{.CLI_ARGS}}"
 
-  check-settings:defaults:
-    desc: Print all persistent setting keys and their default values
-    aliases: [check-settings:default]
-    cmds:
-      - cmd.exe /c "scripts.bat check-settings defaults"
-
-  check-hardcoded-ui:
-    desc: Audit components and pages for hardcoded colors, strings, and native controls
-    aliases: [hardcoded-ui:check]
+  check:hardcoded-ui:
+    desc: Audit components and pages for hardcoded colors, strings, and native controls (supports --all, --changed, --strict)
+    aliases: [check-hardcoded-ui]
     cmds:
       - cmd.exe /c "scripts.bat check-hardcoded-ui {{.CLI_ARGS}}"
 
-  resource-profile:
+  profile:resources:
     desc: Monitor live unscaled CPU% and RAM across Vinta's process tree
+    aliases: [resource-profile]
     cmds:
       - cmd.exe /c "scripts.bat resource-profile {{.CLI_ARGS}}"
 
-  sync-locales:
-    desc: Propagate new English keys from en.json to all other locale catalogs
-    aliases: [sync-locals, locales:sync]
+  sync:locales:
+    desc: Propagate new English keys from en.json to all other locale catalogs (supports --prune)
+    aliases: [sync-locales, sync-locals]
     cmds:
       - cmd.exe /c "scripts.bat sync-locales {{.CLI_ARGS}}"
 

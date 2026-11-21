@@ -38,7 +38,8 @@ public:
     ULONG STDMETHODCALLTYPE Release() override { return 1; }
 
     HRESULT STDMETHODCALLTYPE QueryInterface(REFIID riid, VOID** ppvInterface) override {
-        if (!ppvInterface) return E_POINTER;
+        if (!ppvInterface)
+            return E_POINTER;
         if (riid == __uuidof(IUnknown) || riid == __uuidof(IMMNotificationClient)) {
             *ppvInterface = static_cast<IMMNotificationClient*>(this);
             return S_OK;
@@ -75,7 +76,8 @@ public:
  */
 static inline void EmitPeakValue(float value) {
     NativeAudioPeakCallback cb = g_peakCb.load(std::memory_order_acquire);
-    if (!cb) return;
+    if (!cb)
+        return;
     uint32_t bits = 0;
     std::memcpy(&bits, &value, sizeof(bits));
     cb(bits);
@@ -88,9 +90,8 @@ static inline void EmitPeakValue(float value) {
  */
 static bool WaitInterruptible(int ms) {
     std::unique_lock<std::mutex> lock(g_sleepMutex);
-    return !g_sleepCv.wait_for(lock, std::chrono::milliseconds(ms), [] {
-        return !g_peakRunning.load(std::memory_order_acquire);
-    });
+    return !g_sleepCv.wait_for(lock, std::chrono::milliseconds(ms),
+                               [] { return !g_peakRunning.load(std::memory_order_acquire); });
 }
 
 /**
@@ -100,13 +101,8 @@ static void AudioPeakWorker() {
     ComInitScope com;
 
     IMMDeviceEnumerator* pEnumerator = nullptr;
-    HRESULT hr = CoCreateInstance(
-        __uuidof(MMDeviceEnumerator),
-        nullptr,
-        CLSCTX_INPROC_SERVER,
-        __uuidof(IMMDeviceEnumerator),
-        reinterpret_cast<void**>(&pEnumerator)
-    );
+    HRESULT hr = CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_INPROC_SERVER,
+                                  __uuidof(IMMDeviceEnumerator), reinterpret_cast<void**>(&pEnumerator));
     if (FAILED(hr) || !pEnumerator) {
         return;
     }
@@ -136,22 +132,21 @@ static void AudioPeakWorker() {
                 wasPlaying = false;
                 EmitPeakValue(0.0f);
             }
-            if (!WaitInterruptible(250)) break;
+            if (!WaitInterruptible(250))
+                break;
             continue;
         }
         wasPlaying = true;
 
-        if (!WaitInterruptible(50)) break; // 20 FPS peak polling when playing media
+        if (!WaitInterruptible(50))
+            break; // 20 FPS peak polling when playing media
 
         if (g_deviceDirty.exchange(false, std::memory_order_acq_rel) || !pDefaultMeter) {
             releaseMeter();
-            if (SUCCEEDED(pEnumerator->GetDefaultAudioEndpoint(eRender, eMultimedia, &pDefaultDevice)) && pDefaultDevice) {
-                pDefaultDevice->Activate(
-                    __uuidof(IAudioMeterInformation),
-                    CLSCTX_INPROC_SERVER,
-                    nullptr,
-                    reinterpret_cast<void**>(&pDefaultMeter)
-                );
+            if (SUCCEEDED(pEnumerator->GetDefaultAudioEndpoint(eRender, eMultimedia, &pDefaultDevice)) &&
+                pDefaultDevice) {
+                pDefaultDevice->Activate(__uuidof(IAudioMeterInformation), CLSCTX_INPROC_SERVER, nullptr,
+                                         reinterpret_cast<void**>(&pDefaultMeter));
             }
         }
 

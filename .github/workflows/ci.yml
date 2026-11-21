@@ -48,7 +48,7 @@ jobs:
           npm ci
 
       - name: Run Full Lint Suite (Go, C++, Frontend, Themes, Locales)
-        run: .\scripts.bat lint ci
+        run: .\scripts.bat lint --ci
 
       - name: Build Application Verification
         run: .\scripts.bat build

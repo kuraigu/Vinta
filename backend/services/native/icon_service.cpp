@@ -43,9 +43,7 @@ struct ScopedIcon {
 
 struct ScopedComApartment {
     HRESULT hr;
-    ScopedComApartment() {
-        hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
-    }
+    ScopedComApartment() { hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED); }
     ~ScopedComApartment() {
         if (hr == S_OK || hr == S_FALSE) {
             CoUninitialize();
@@ -54,10 +52,12 @@ struct ScopedComApartment {
 };
 
 HBITMAP HIconToHBitmap(HICON hIcon, int width, int height) {
-    if (!hIcon || width <= 0 || height <= 0) return nullptr;
+    if (!hIcon || width <= 0 || height <= 0)
+        return nullptr;
 
     HDC hdcScreen = GetDC(NULL);
-    if (!hdcScreen) return nullptr;
+    if (!hdcScreen)
+        return nullptr;
 
     HDC hdcMem = CreateCompatibleDC(hdcScreen);
     if (!hdcMem) {
@@ -86,82 +86,89 @@ HBITMAP HIconToHBitmap(HICON hIcon, int width, int height) {
     return hBitmap;
 }
 
-static bool SaveWicSourceToPngFile(IWICBitmapSource* pSource, IWICImagingFactory* pWicFactory, const wchar_t* destFilePath) {
-    if (!pSource || !pWicFactory || !destFilePath) return false;
+static bool SaveWicSourceToPngFile(IWICBitmapSource* pSource, IWICImagingFactory* pWicFactory,
+                                   const wchar_t* destFilePath) {
+    if (!pSource || !pWicFactory || !destFilePath)
+        return false;
 
     winrt::com_ptr<IWICStream> pStream;
     HRESULT hr = pWicFactory->CreateStream(pStream.put());
-    if (FAILED(hr) || !pStream) return false;
+    if (FAILED(hr) || !pStream)
+        return false;
 
     hr = pStream->InitializeFromFilename(destFilePath, GENERIC_WRITE);
-    if (FAILED(hr)) return false;
+    if (FAILED(hr))
+        return false;
 
     winrt::com_ptr<IWICBitmapEncoder> pEncoder;
     hr = pWicFactory->CreateEncoder(GUID_ContainerFormatPng, NULL, pEncoder.put());
-    if (FAILED(hr) || !pEncoder) return false;
+    if (FAILED(hr) || !pEncoder)
+        return false;
 
     hr = pEncoder->Initialize(pStream.get(), WICBitmapEncoderNoCache);
-    if (FAILED(hr)) return false;
+    if (FAILED(hr))
+        return false;
 
     winrt::com_ptr<IWICBitmapFrameEncode> pFrame;
     hr = pEncoder->CreateNewFrame(pFrame.put(), NULL);
-    if (FAILED(hr) || !pFrame) return false;
+    if (FAILED(hr) || !pFrame)
+        return false;
 
     hr = pFrame->Initialize(NULL);
-    if (FAILED(hr)) return false;
+    if (FAILED(hr))
+        return false;
 
     UINT width = 0, height = 0;
     pSource->GetSize(&width, &height);
     hr = pFrame->SetSize(width, height);
-    if (FAILED(hr)) return false;
+    if (FAILED(hr))
+        return false;
 
     WICPixelFormatGUID pixelFormat = GUID_WICPixelFormat32bppBGRA;
     hr = pFrame->SetPixelFormat(&pixelFormat);
-    if (FAILED(hr)) return false;
+    if (FAILED(hr))
+        return false;
 
     hr = pFrame->WriteSource(pSource, NULL);
-    if (FAILED(hr)) return false;
+    if (FAILED(hr))
+        return false;
 
     hr = pFrame->Commit();
-    if (FAILED(hr)) return false;
+    if (FAILED(hr))
+        return false;
 
     hr = pEncoder->Commit();
     return SUCCEEDED(hr);
 }
 
 bool SaveBitmapToPngFile(HBITMAP hBitmap, const wchar_t* destFilePath) {
-    if (!hBitmap || !destFilePath) return false;
+    if (!hBitmap || !destFilePath)
+        return false;
 
     winrt::com_ptr<IWICImagingFactory> pWicFactory;
-    HRESULT hr = CoCreateInstance(
-        CLSID_WICImagingFactory,
-        NULL,
-        CLSCTX_INPROC_SERVER,
-        IID_PPV_ARGS(pWicFactory.put())
-    );
-    if (FAILED(hr) || !pWicFactory) return false;
+    HRESULT hr = CoCreateInstance(CLSID_WICImagingFactory, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(pWicFactory.put()));
+    if (FAILED(hr) || !pWicFactory)
+        return false;
 
     winrt::com_ptr<IWICBitmap> pWicBitmap;
     hr = pWicFactory->CreateBitmapFromHBITMAP(hBitmap, NULL, WICBitmapUseAlpha, pWicBitmap.put());
     if (FAILED(hr) || !pWicBitmap) {
         hr = pWicFactory->CreateBitmapFromHBITMAP(hBitmap, NULL, WICBitmapIgnoreAlpha, pWicBitmap.put());
-        if (FAILED(hr) || !pWicBitmap) return false;
+        if (FAILED(hr) || !pWicBitmap)
+            return false;
     }
 
     return SaveWicSourceToPngFile(pWicBitmap.get(), pWicFactory.get(), destFilePath);
 }
 
 bool SaveIconToPngFile(HICON hIcon, int targetSize, const wchar_t* destFilePath) {
-    if (!hIcon || !destFilePath) return false;
-    if (targetSize <= 0) targetSize = 128;
+    if (!hIcon || !destFilePath)
+        return false;
+    if (targetSize <= 0)
+        targetSize = 128;
 
     winrt::com_ptr<IWICImagingFactory> pWicFactory;
-    HRESULT hr = CoCreateInstance(
-        CLSID_WICImagingFactory,
-        NULL,
-        CLSCTX_INPROC_SERVER,
-        IID_PPV_ARGS(pWicFactory.put())
-    );
+    HRESULT hr = CoCreateInstance(CLSID_WICImagingFactory, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(pWicFactory.put()));
     if (SUCCEEDED(hr) && pWicFactory) {
         winrt::com_ptr<IWICBitmap> pWicBitmap;
         hr = pWicFactory->CreateBitmapFromHICON(hIcon, pWicBitmap.put());
@@ -181,9 +188,11 @@ bool SaveIconToPngFile(HICON hIcon, int targetSize, const wchar_t* destFilePath)
 }
 
 static std::wstring CleanIconPath(const std::wstring& raw) {
-    if (raw.empty()) return L"";
+    if (raw.empty())
+        return L"";
     std::wstring s = raw;
-    if (s.front() == L'@') s = s.substr(1);
+    if (s.front() == L'@')
+        s = s.substr(1);
     if (s.front() == L'"') {
         size_t quoteEnd = s.find(L'"', 1);
         if (quoteEnd != std::wstring::npos) {
@@ -201,8 +210,10 @@ static std::wstring CleanIconPath(const std::wstring& raw) {
 }
 
 static std::string ReadFileAsPngDataUri(const std::wstring& filePath) {
-    HANDLE hFile = CreateFileW(filePath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-    if (hFile == INVALID_HANDLE_VALUE) return "";
+    HANDLE hFile =
+        CreateFileW(filePath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (hFile == INVALID_HANDLE_VALUE)
+        return "";
     LARGE_INTEGER fsize;
     if (!GetFileSizeEx(hFile, &fsize) || fsize.QuadPart <= 0 || fsize.QuadPart > 10 * 1024 * 1024) {
         CloseHandle(hFile);
@@ -218,42 +229,54 @@ static std::string ReadFileAsPngDataUri(const std::wstring& filePath) {
     return "";
 }
 
-static bool SaveWicSourceToPngMemory(IWICBitmapSource* pSource, IWICImagingFactory* pWicFactory, std::string& outDataUri) {
-    if (!pSource || !pWicFactory) return false;
+static bool SaveWicSourceToPngMemory(IWICBitmapSource* pSource, IWICImagingFactory* pWicFactory,
+                                     std::string& outDataUri) {
+    if (!pSource || !pWicFactory)
+        return false;
 
     winrt::com_ptr<IStream> pStream;
     HRESULT hr = CreateStreamOnHGlobal(NULL, TRUE, pStream.put());
-    if (FAILED(hr) || !pStream) return false;
+    if (FAILED(hr) || !pStream)
+        return false;
 
     winrt::com_ptr<IWICBitmapEncoder> pEncoder;
     hr = pWicFactory->CreateEncoder(GUID_ContainerFormatPng, NULL, pEncoder.put());
-    if (FAILED(hr) || !pEncoder) return false;
+    if (FAILED(hr) || !pEncoder)
+        return false;
 
     hr = pEncoder->Initialize(pStream.get(), WICBitmapEncoderNoCache);
-    if (FAILED(hr)) return false;
+    if (FAILED(hr))
+        return false;
 
     winrt::com_ptr<IWICBitmapFrameEncode> pFrame;
     hr = pEncoder->CreateNewFrame(pFrame.put(), NULL);
-    if (FAILED(hr) || !pFrame) return false;
+    if (FAILED(hr) || !pFrame)
+        return false;
 
     hr = pFrame->Initialize(NULL);
-    if (FAILED(hr)) return false;
+    if (FAILED(hr))
+        return false;
 
     hr = pFrame->WriteSource(pSource, NULL);
-    if (FAILED(hr)) return false;
+    if (FAILED(hr))
+        return false;
 
     hr = pFrame->Commit();
-    if (FAILED(hr)) return false;
+    if (FAILED(hr))
+        return false;
 
     hr = pEncoder->Commit();
-    if (FAILED(hr)) return false;
+    if (FAILED(hr))
+        return false;
 
     HGLOBAL hGlobal = NULL;
     hr = GetHGlobalFromStream(pStream.get(), &hGlobal);
-    if (FAILED(hr) || !hGlobal) return false;
+    if (FAILED(hr) || !hGlobal)
+        return false;
 
     void* pData = GlobalLock(hGlobal);
-    if (!pData) return false;
+    if (!pData)
+        return false;
 
     size_t dataLen = GlobalSize(hGlobal);
     std::string b64 = Base64Encode(reinterpret_cast<const unsigned char*>(pData), dataLen);
@@ -264,38 +287,33 @@ static bool SaveWicSourceToPngMemory(IWICBitmapSource* pSource, IWICImagingFacto
 }
 
 static bool SaveBitmapToPngMemory(HBITMAP hBitmap, std::string& outDataUri) {
-    if (!hBitmap) return false;
+    if (!hBitmap)
+        return false;
 
     winrt::com_ptr<IWICImagingFactory> pWicFactory;
-    HRESULT hr = CoCreateInstance(
-        CLSID_WICImagingFactory,
-        NULL,
-        CLSCTX_INPROC_SERVER,
-        IID_PPV_ARGS(pWicFactory.put())
-    );
-    if (FAILED(hr) || !pWicFactory) return false;
+    HRESULT hr = CoCreateInstance(CLSID_WICImagingFactory, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(pWicFactory.put()));
+    if (FAILED(hr) || !pWicFactory)
+        return false;
 
     winrt::com_ptr<IWICBitmap> pWicBitmap;
     hr = pWicFactory->CreateBitmapFromHBITMAP(hBitmap, NULL, WICBitmapUseAlpha, pWicBitmap.put());
     if (FAILED(hr) || !pWicBitmap) {
         hr = pWicFactory->CreateBitmapFromHBITMAP(hBitmap, NULL, WICBitmapIgnoreAlpha, pWicBitmap.put());
-        if (FAILED(hr) || !pWicBitmap) return false;
+        if (FAILED(hr) || !pWicBitmap)
+            return false;
     }
 
     return SaveWicSourceToPngMemory(pWicBitmap.get(), pWicFactory.get(), outDataUri);
 }
 
 static bool SaveIconToPngMemory(HICON hIcon, int targetSize, std::string& outDataUri) {
-    if (!hIcon) return false;
-    if (targetSize <= 0) targetSize = 48;
+    if (!hIcon)
+        return false;
+    if (targetSize <= 0)
+        targetSize = 48;
 
     winrt::com_ptr<IWICImagingFactory> pWicFactory;
-    HRESULT hr = CoCreateInstance(
-        CLSID_WICImagingFactory,
-        NULL,
-        CLSCTX_INPROC_SERVER,
-        IID_PPV_ARGS(pWicFactory.put())
-    );
+    HRESULT hr = CoCreateInstance(CLSID_WICImagingFactory, NULL, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(pWicFactory.put()));
     if (SUCCEEDED(hr) && pWicFactory) {
         winrt::com_ptr<IWICBitmap> pWicBitmap;
         hr = pWicFactory->CreateBitmapFromHICON(hIcon, pWicBitmap.put());
@@ -315,13 +333,18 @@ static bool SaveIconToPngMemory(HICON hIcon, int targetSize, std::string& outDat
 }
 
 static bool MatchProcessName(const std::wstring& runningExe, const std::wstring& target) {
-    if (runningExe.empty() || target.empty()) return false;
+    if (runningExe.empty() || target.empty())
+        return false;
     std::wstring r = runningExe;
-    if (r.size() > 4 && r.substr(r.size() - 4) == L".exe") r = r.substr(0, r.size() - 4);
+    if (r.size() > 4 && r.substr(r.size() - 4) == L".exe")
+        r = r.substr(0, r.size() - 4);
     std::wstring t = target;
-    if (t.size() > 4 && t.substr(t.size() - 4) == L".exe") t = t.substr(0, t.size() - 4);
-    if (r.empty() || t.empty()) return false;
-    if (r == t) return true;
+    if (t.size() > 4 && t.substr(t.size() - 4) == L".exe")
+        t = t.substr(0, t.size() - 4);
+    if (r.empty() || t.empty())
+        return false;
+    if (r == t)
+        return true;
     if (t.size() >= 4 && (r.find(t) != std::wstring::npos || t.find(r) != std::wstring::npos)) {
         if (t == L"system" || t == L"service" || t == L"helper" || t == L"host" || t == L"app") {
             return false;
@@ -333,7 +356,8 @@ static bool MatchProcessName(const std::wstring& runningExe, const std::wstring&
 
 // Universally parses Windows SourceAppUserModelId (AUMID) or process strings into clean executable base
 static std::wstring ParseAumidToExecutableBase(const std::wstring& raw) {
-    if (raw.empty()) return L"";
+    if (raw.empty())
+        return L"";
 
     std::wstring s = raw;
 
@@ -385,14 +409,17 @@ static std::wstring ParseAumidToExecutableBase(const std::wstring& raw) {
 }
 
 static std::wstring SearchDirectoryForLnk(const std::wstring& dir, const std::vector<std::wstring>& candidates) {
-    if (dir.empty()) return L"";
+    if (dir.empty())
+        return L"";
     std::wstring searchPattern = dir + L"\\*";
     WIN32_FIND_DATAW ffd;
     HANDLE hFind = FindFirstFileW(searchPattern.c_str(), &ffd);
-    if (hFind == INVALID_HANDLE_VALUE) return L"";
+    if (hFind == INVALID_HANDLE_VALUE)
+        return L"";
 
     do {
-        if (wcscmp(ffd.cFileName, L".") == 0 || wcscmp(ffd.cFileName, L"..") == 0) continue;
+        if (wcscmp(ffd.cFileName, L".") == 0 || wcscmp(ffd.cFileName, L"..") == 0)
+            continue;
         std::wstring fullPath = dir + L"\\" + ffd.cFileName;
         if (ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
             std::wstring found = SearchDirectoryForLnk(fullPath, candidates);
@@ -424,7 +451,8 @@ static std::wstring SearchDirectoryForLnk(const std::wstring& dir, const std::ve
 }
 
 std::wstring FindProcessExecutablePath(const std::wstring& targetExe) {
-    if (targetExe.empty()) return L"";
+    if (targetExe.empty())
+        return L"";
 
     // 1. If direct path exists on disk, use it immediately
     DWORD attr = GetFileAttributesW(targetExe.c_str());
@@ -460,7 +488,7 @@ std::wstring FindProcessExecutablePath(const std::wstring& targetExe) {
         }
 
         // Prefix swaps: "windows" <-> "win" (e.g. windowsmemorycleaner <-> winmemorycleaner)
-        for (const auto& base : { parsedBase, stripped }) {
+        for (const auto& base : {parsedBase, stripped}) {
             if (base.rfind(L"windows", 0) == 0) {
                 candidates.push_back(L"win" + base.substr(7) + L".exe");
             } else if (base.rfind(L"win", 0) == 0) {
@@ -473,8 +501,8 @@ std::wstring FindProcessExecutablePath(const std::wstring& targetExe) {
         if (lastSpace != std::wstring::npos && lastSpace + 1 < parsedBase.size()) {
             std::wstring lastWord = parsedBase.substr(lastSpace + 1);
             if (!lastWord.empty() && lastWord != parsedBase) {
-                if (lastWord != L"system" && lastWord != L"service" && lastWord != L"helper" &&
-                    lastWord != L"host" && lastWord != L"app") {
+                if (lastWord != L"system" && lastWord != L"service" && lastWord != L"helper" && lastWord != L"host" &&
+                    lastWord != L"app") {
                     candidates.push_back(lastWord + L".exe");
                 }
             }
@@ -528,7 +556,7 @@ std::wstring FindProcessExecutablePath(const std::wstring& targetExe) {
     }
 
     // 4. Search Registry App Paths: HKLM & HKCU Software\Microsoft\Windows\CurrentVersion\App Paths
-    const HKEY roots[] = { HKEY_LOCAL_MACHINE, HKEY_CURRENT_USER };
+    const HKEY roots[] = {HKEY_LOCAL_MACHINE, HKEY_CURRENT_USER};
     for (const auto& cand : candidates) {
         for (HKEY root : roots) {
             std::wstring subKey = L"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\App Paths\\" + cand;
@@ -537,7 +565,8 @@ std::wstring FindProcessExecutablePath(const std::wstring& targetExe) {
                 WCHAR regPath[MAX_PATH] = {0};
                 DWORD regSize = sizeof(regPath);
                 DWORD type = REG_SZ;
-                if (RegQueryValueExW(hKey, NULL, NULL, &type, reinterpret_cast<LPBYTE>(regPath), &regSize) == ERROR_SUCCESS) {
+                if (RegQueryValueExW(hKey, NULL, NULL, &type, reinterpret_cast<LPBYTE>(regPath), &regSize) ==
+                    ERROR_SUCCESS) {
                     RegCloseKey(hKey);
                     std::wstring resolved(regPath);
                     if (!resolved.empty() && resolved.front() == L'"' && resolved.back() == L'"') {
@@ -555,13 +584,15 @@ std::wstring FindProcessExecutablePath(const std::wstring& targetExe) {
     if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_Programs, 0, NULL, &userPrograms)) && userPrograms) {
         std::wstring found = SearchDirectoryForLnk(userPrograms, candidates);
         CoTaskMemFree(userPrograms);
-        if (!found.empty()) return found;
+        if (!found.empty())
+            return found;
     }
     PWSTR commonPrograms = nullptr;
     if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_CommonPrograms, 0, NULL, &commonPrograms)) && commonPrograms) {
         std::wstring found = SearchDirectoryForLnk(commonPrograms, candidates);
         CoTaskMemFree(commonPrograms);
-        if (!found.empty()) return found;
+        if (!found.empty())
+            return found;
     }
 
     return L"";
@@ -570,7 +601,8 @@ std::wstring FindProcessExecutablePath(const std::wstring& targetExe) {
 } // namespace
 
 bool QueryAppUserModelIdRegistry(const std::string& aumid, std::string& outDisplayName, std::string& outIconUri) {
-    if (aumid.empty()) return false;
+    if (aumid.empty())
+        return false;
     std::wstring subKey = L"Software\\Classes\\AppUserModelId\\" + Utf8ToUtf16(aumid);
     HKEY hKey = nullptr;
     if (RegOpenKeyExW(HKEY_CURRENT_USER, subKey.c_str(), 0, KEY_READ, &hKey) != ERROR_SUCCESS) {
@@ -584,13 +616,16 @@ bool QueryAppUserModelIdRegistry(const std::string& aumid, std::string& outDispl
     DWORD type = REG_SZ;
 
     if (outDisplayName.empty()) {
-        if (RegQueryValueExW(hKey, L"DisplayName", NULL, &type, reinterpret_cast<LPBYTE>(valBuf), &valSize) == ERROR_SUCCESS && valBuf[0]) {
+        if (RegQueryValueExW(hKey, L"DisplayName", NULL, &type, reinterpret_cast<LPBYTE>(valBuf), &valSize) ==
+                ERROR_SUCCESS &&
+            valBuf[0]) {
             outDisplayName = Utf16ToUtf8(valBuf);
         }
     }
 
     valSize = sizeof(valBuf);
-    if (RegQueryValueExW(hKey, L"IconUri", NULL, &type, reinterpret_cast<LPBYTE>(valBuf), &valSize) == ERROR_SUCCESS && valBuf[0]) {
+    if (RegQueryValueExW(hKey, L"IconUri", NULL, &type, reinterpret_cast<LPBYTE>(valBuf), &valSize) == ERROR_SUCCESS &&
+        valBuf[0]) {
         outIconUri = Utf16ToUtf8(valBuf);
     }
 
@@ -598,14 +633,12 @@ bool QueryAppUserModelIdRegistry(const std::string& aumid, std::string& outDispl
     return !outDisplayName.empty() || !outIconUri.empty();
 }
 
-extern "C" int ExtractAppIconNativeToFile(
-    const char* sourceApp,
-    const char* aumid,
-    const wchar_t* destFilePath,
-    int targetSize
-) {
-    if (!destFilePath) return 0;
-    if (targetSize <= 0) targetSize = 128;
+extern "C" int ExtractAppIconNativeToFile(const char* sourceApp, const char* aumid, const wchar_t* destFilePath,
+                                          int targetSize) {
+    if (!destFilePath)
+        return 0;
+    if (targetSize <= 0)
+        targetSize = 128;
 
     ScopedComApartment comScope;
 
@@ -642,10 +675,11 @@ extern "C" int ExtractAppIconNativeToFile(
                 winrt::com_ptr<IShellItemImageFactory> pImageFactory;
                 if (SUCCEEDED(pItem->QueryInterface(IID_PPV_ARGS(pImageFactory.put()))) && pImageFactory) {
                     HBITMAP hBmp = nullptr;
-                    SIZE sz = { targetSize, targetSize };
+                    SIZE sz = {targetSize, targetSize};
                     if (SUCCEEDED(pImageFactory->GetImage(sz, SIIGBF_ICONONLY | SIIGBF_BIGGERSIZEOK, &hBmp)) && hBmp) {
                         ScopedGdiObject gdi(hBmp);
-                        if (SaveBitmapToPngFile(hBmp, destFilePath)) return 1;
+                        if (SaveBitmapToPngFile(hBmp, destFilePath))
+                            return 1;
                     }
                 }
             }
@@ -653,9 +687,12 @@ extern "C" int ExtractAppIconNativeToFile(
 
         // 2. Win32 Executable Resolution (Target application's actual executable)
         std::vector<std::string> searchTargets;
-        if (!regName.empty()) searchTargets.push_back(regName);
-        if (!sApp.empty() && sApp != regName) searchTargets.push_back(sApp);
-        if (!sAumid.empty() && sAumid != regName && sAumid != sApp && sAumid.find("NotifyIconGeneratedAumid") == std::string::npos) {
+        if (!regName.empty())
+            searchTargets.push_back(regName);
+        if (!sApp.empty() && sApp != regName)
+            searchTargets.push_back(sApp);
+        if (!sAumid.empty() && sAumid != regName && sAumid != sApp &&
+            sAumid.find("NotifyIconGeneratedAumid") == std::string::npos) {
             searchTargets.push_back(sAumid);
         }
 
@@ -664,30 +701,37 @@ extern "C" int ExtractAppIconNativeToFile(
             if (!resolvedExe.empty()) {
                 // Priority 2A: Direct resource icon extraction from PE file
                 HICON hIcon = nullptr;
-                if (PrivateExtractIconsW(resolvedExe.c_str(), 0, targetSize, targetSize, &hIcon, nullptr, 1, 0) > 0 && hIcon) {
+                if (PrivateExtractIconsW(resolvedExe.c_str(), 0, targetSize, targetSize, &hIcon, nullptr, 1, 0) > 0 &&
+                    hIcon) {
                     ScopedIcon iconScope(hIcon);
-                    if (SaveIconToPngFile(hIcon, targetSize, destFilePath)) return 1;
+                    if (SaveIconToPngFile(hIcon, targetSize, destFilePath))
+                        return 1;
                 }
 
                 // Priority 2B: Shell Item Image Factory
                 winrt::com_ptr<IShellItem> pItem;
-                if (SUCCEEDED(SHCreateItemFromParsingName(resolvedExe.c_str(), NULL, IID_PPV_ARGS(pItem.put()))) && pItem) {
+                if (SUCCEEDED(SHCreateItemFromParsingName(resolvedExe.c_str(), NULL, IID_PPV_ARGS(pItem.put()))) &&
+                    pItem) {
                     winrt::com_ptr<IShellItemImageFactory> pImageFactory;
                     if (SUCCEEDED(pItem->QueryInterface(IID_PPV_ARGS(pImageFactory.put()))) && pImageFactory) {
                         HBITMAP hBmp = nullptr;
-                        SIZE sz = { targetSize, targetSize };
-                        if (SUCCEEDED(pImageFactory->GetImage(sz, SIIGBF_ICONONLY | SIIGBF_BIGGERSIZEOK, &hBmp)) && hBmp) {
+                        SIZE sz = {targetSize, targetSize};
+                        if (SUCCEEDED(pImageFactory->GetImage(sz, SIIGBF_ICONONLY | SIIGBF_BIGGERSIZEOK, &hBmp)) &&
+                            hBmp) {
                             ScopedGdiObject gdi(hBmp);
-                            if (SaveBitmapToPngFile(hBmp, destFilePath)) return 1;
+                            if (SaveBitmapToPngFile(hBmp, destFilePath))
+                                return 1;
                         }
                     }
                 }
 
                 // Priority 2C: SHGetFileInfoW
                 SHFILEINFOW sfi = {0};
-                if (SHGetFileInfoW(resolvedExe.c_str(), 0, &sfi, sizeof(sfi), SHGFI_ICON | SHGFI_LARGEICON) != 0 && sfi.hIcon) {
+                if (SHGetFileInfoW(resolvedExe.c_str(), 0, &sfi, sizeof(sfi), SHGFI_ICON | SHGFI_LARGEICON) != 0 &&
+                    sfi.hIcon) {
                     ScopedIcon iconScope(sfi.hIcon);
-                    if (SaveIconToPngFile(sfi.hIcon, targetSize, destFilePath)) return 1;
+                    if (SaveIconToPngFile(sfi.hIcon, targetSize, destFilePath))
+                        return 1;
                 }
             }
         }
@@ -706,20 +750,24 @@ extern "C" int ExtractAppIconNativeToFile(
                         }
                     }
                     HICON hIcon = nullptr;
-                    if (PrivateExtractIconsW(clean.c_str(), 0, targetSize, targetSize, &hIcon, nullptr, 1, 0) > 0 && hIcon) {
+                    if (PrivateExtractIconsW(clean.c_str(), 0, targetSize, targetSize, &hIcon, nullptr, 1, 0) > 0 &&
+                        hIcon) {
                         ScopedIcon iconScope(hIcon);
-                        if (SaveIconToPngFile(hIcon, targetSize, destFilePath)) return 1;
+                        if (SaveIconToPngFile(hIcon, targetSize, destFilePath))
+                            return 1;
                     }
                 }
             }
         }
-    } catch (...) {}
+    } catch (...) {
+    }
 
     return 0;
 }
 
 std::string ExtractAppIconAsDataUri(const char* sourceApp, const char* aumid, int targetSize) {
-    if (targetSize <= 0) targetSize = 48;
+    if (targetSize <= 0)
+        targetSize = 48;
     ComInitScope comScope;
 
     try {
@@ -754,11 +802,12 @@ std::string ExtractAppIconAsDataUri(const char* sourceApp, const char* aumid, in
                 winrt::com_ptr<IShellItemImageFactory> pImageFactory;
                 if (SUCCEEDED(pItem->QueryInterface(IID_PPV_ARGS(pImageFactory.put()))) && pImageFactory) {
                     HBITMAP hBmp = nullptr;
-                    SIZE sz = { targetSize, targetSize };
+                    SIZE sz = {targetSize, targetSize};
                     if (SUCCEEDED(pImageFactory->GetImage(sz, SIIGBF_ICONONLY | SIIGBF_BIGGERSIZEOK, &hBmp)) && hBmp) {
                         ScopedGdiObject gdi(hBmp);
                         std::string outUri;
-                        if (SaveBitmapToPngMemory(hBmp, outUri)) return outUri;
+                        if (SaveBitmapToPngMemory(hBmp, outUri))
+                            return outUri;
                     }
                 }
             }
@@ -766,9 +815,12 @@ std::string ExtractAppIconAsDataUri(const char* sourceApp, const char* aumid, in
 
         // 2. Win32 Executable Resolution (Target application's actual executable)
         std::vector<std::string> searchTargets;
-        if (!regName.empty()) searchTargets.push_back(regName);
-        if (!sApp.empty() && sApp != regName) searchTargets.push_back(sApp);
-        if (!sAumid.empty() && sAumid != regName && sAumid != sApp && sAumid.find("NotifyIconGeneratedAumid") == std::string::npos) {
+        if (!regName.empty())
+            searchTargets.push_back(regName);
+        if (!sApp.empty() && sApp != regName)
+            searchTargets.push_back(sApp);
+        if (!sAumid.empty() && sAumid != regName && sAumid != sApp &&
+            sAumid.find("NotifyIconGeneratedAumid") == std::string::npos) {
             searchTargets.push_back(sAumid);
         }
 
@@ -777,33 +829,40 @@ std::string ExtractAppIconAsDataUri(const char* sourceApp, const char* aumid, in
             if (!resolvedExe.empty()) {
                 // Priority 2A: Direct resource icon extraction from PE file
                 HICON hIcon = nullptr;
-                if (PrivateExtractIconsW(resolvedExe.c_str(), 0, targetSize, targetSize, &hIcon, nullptr, 1, 0) > 0 && hIcon) {
+                if (PrivateExtractIconsW(resolvedExe.c_str(), 0, targetSize, targetSize, &hIcon, nullptr, 1, 0) > 0 &&
+                    hIcon) {
                     ScopedIcon iconScope(hIcon);
                     std::string outUri;
-                    if (SaveIconToPngMemory(hIcon, targetSize, outUri)) return outUri;
+                    if (SaveIconToPngMemory(hIcon, targetSize, outUri))
+                        return outUri;
                 }
 
                 // Priority 2B: Shell Item Image Factory
                 winrt::com_ptr<IShellItem> pItem;
-                if (SUCCEEDED(SHCreateItemFromParsingName(resolvedExe.c_str(), NULL, IID_PPV_ARGS(pItem.put()))) && pItem) {
+                if (SUCCEEDED(SHCreateItemFromParsingName(resolvedExe.c_str(), NULL, IID_PPV_ARGS(pItem.put()))) &&
+                    pItem) {
                     winrt::com_ptr<IShellItemImageFactory> pImageFactory;
                     if (SUCCEEDED(pItem->QueryInterface(IID_PPV_ARGS(pImageFactory.put()))) && pImageFactory) {
                         HBITMAP hBmp = nullptr;
-                        SIZE sz = { targetSize, targetSize };
-                        if (SUCCEEDED(pImageFactory->GetImage(sz, SIIGBF_ICONONLY | SIIGBF_BIGGERSIZEOK, &hBmp)) && hBmp) {
+                        SIZE sz = {targetSize, targetSize};
+                        if (SUCCEEDED(pImageFactory->GetImage(sz, SIIGBF_ICONONLY | SIIGBF_BIGGERSIZEOK, &hBmp)) &&
+                            hBmp) {
                             ScopedGdiObject gdi(hBmp);
                             std::string outUri;
-                            if (SaveBitmapToPngMemory(hBmp, outUri)) return outUri;
+                            if (SaveBitmapToPngMemory(hBmp, outUri))
+                                return outUri;
                         }
                     }
                 }
 
                 // Priority 2C: SHGetFileInfoW
                 SHFILEINFOW sfi = {0};
-                if (SHGetFileInfoW(resolvedExe.c_str(), 0, &sfi, sizeof(sfi), SHGFI_ICON | SHGFI_LARGEICON) != 0 && sfi.hIcon) {
+                if (SHGetFileInfoW(resolvedExe.c_str(), 0, &sfi, sizeof(sfi), SHGFI_ICON | SHGFI_LARGEICON) != 0 &&
+                    sfi.hIcon) {
                     ScopedIcon iconScope(sfi.hIcon);
                     std::string outUri;
-                    if (SaveIconToPngMemory(sfi.hIcon, targetSize, outUri)) return outUri;
+                    if (SaveIconToPngMemory(sfi.hIcon, targetSize, outUri))
+                        return outUri;
                 }
             }
         }
@@ -818,18 +877,22 @@ std::string ExtractAppIconAsDataUri(const char* sourceApp, const char* aumid, in
                     std::transform(lowerClean.begin(), lowerClean.end(), lowerClean.begin(), ::towlower);
                     if (lowerClean.size() > 4 && lowerClean.substr(lowerClean.size() - 4) == L".png") {
                         std::string dataUri = ReadFileAsPngDataUri(clean);
-                        if (!dataUri.empty()) return dataUri;
+                        if (!dataUri.empty())
+                            return dataUri;
                     }
                     HICON hIcon = nullptr;
-                    if (PrivateExtractIconsW(clean.c_str(), 0, targetSize, targetSize, &hIcon, nullptr, 1, 0) > 0 && hIcon) {
+                    if (PrivateExtractIconsW(clean.c_str(), 0, targetSize, targetSize, &hIcon, nullptr, 1, 0) > 0 &&
+                        hIcon) {
                         ScopedIcon iconScope(hIcon);
                         std::string outUri;
-                        if (SaveIconToPngMemory(hIcon, targetSize, outUri)) return outUri;
+                        if (SaveIconToPngMemory(hIcon, targetSize, outUri))
+                            return outUri;
                     }
                 }
             }
         }
-    } catch (...) {}
+    } catch (...) {
+    }
 
     return "";
 }

@@ -14,6 +14,19 @@
 const { execSync } = require('child_process')
 const fs = require('fs')
 const path = require('path')
+const { walkFiles, hasFlag, printHelpIfRequested } = require('./lib/lint-utils')
+
+printHelpIfRequested(
+  [
+    'Usage: node scripts/check-hardcoded-ui.js [options] [paths...]',
+    '',
+    'Options:',
+    '  --all      Print every finding instead of a truncated preview',
+    '  --changed  Scan only modified/untracked files against origin/main',
+    '  --strict   Exit with code 1 if any findings are reported',
+    '  --help     Show this help message'
+  ].join('\n')
+)
 
 const ROOT_DIR = path.resolve(__dirname, '..')
 const TARGET_DIRS = [
@@ -22,23 +35,21 @@ const TARGET_DIRS = [
 ]
 
 const ARGS = process.argv.slice(2)
-const STRICT = ARGS.includes('--strict')
-const SHOW_ALL = ARGS.includes('--all')
-const CHANGED_ONLY = ARGS.includes('--changed')
-const PATH_ARGS = ARGS.filter((a) => !a.startsWith('--'))
+const STRICT = hasFlag('--strict')
+const SHOW_ALL = hasFlag('--all')
+const CHANGED_ONLY = hasFlag('--changed')
+const PATH_ARGS = ARGS.filter((a) => !a.startsWith('-'))
 
 function walkDir(dir, exts, out = []) {
   if (!fs.existsSync(dir)) return out
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name)
-    if (entry.isDirectory()) {
-      if (entry.name === 'node_modules' || entry.name === 'devtest') continue
-      walkDir(full, exts, out)
-    } else if (exts.some((ext) => entry.name.endsWith(ext))) {
-      out.push(full)
-    }
-  }
-  return out
+  return walkFiles(
+    dir,
+    {
+      extensions: new Set(exts),
+      skipDirs: new Set(['node_modules', 'devtest'])
+    },
+    out
+  )
 }
 
 function stripCssComments(text) {
