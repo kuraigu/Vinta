@@ -34,11 +34,11 @@
 #include <vector>
 
 #ifndef PKEY_Device_FriendlyName
-DEFINE_PROPERTYKEY(PKEY_Device_FriendlyName, 0xa45c254e, 0xdf1c, 0x4efd, 0x80, 0x20, 0x67, 0xd1, 0x46, 0xa8, 0x50, 0xe0, 14);
+DEFINE_PROPERTYKEY(PKEY_Device_FriendlyName, 0xa45c254e, 0xdf1c, 0x4efd, 0x80, 0x20, 0x67, 0xd1, 0x46, 0xa8, 0x50, 0xe0,
+                   14);
 #endif
 
-interface DECLSPEC_UUID("f8679f50-850a-41cf-9c72-430f290290c8")
-IPolicyConfig : public IUnknown {
+interface DECLSPEC_UUID("f8679f50-850a-41cf-9c72-430f290290c8") IPolicyConfig : public IUnknown {
 public:
     virtual HRESULT STDMETHODCALLTYPE GetMixFormat(PCWSTR, WAVEFORMATEX**) = 0;
     virtual HRESULT STDMETHODCALLTYPE GetDeviceFormat(PCWSTR, INT, WAVEFORMATEX**) = 0;
@@ -142,22 +142,23 @@ static void TrimString(std::string& s) {
  */
 static bool SleepInterruptible(int ms) {
     std::unique_lock<std::mutex> lock(g_mediaStopMutex);
-    return !g_mediaStopCv.wait_for(lock, std::chrono::milliseconds(ms), [] {
-        return !g_mediaRunning.load(std::memory_order_acquire);
-    });
+    return !g_mediaStopCv.wait_for(lock, std::chrono::milliseconds(ms),
+                                   [] { return !g_mediaRunning.load(std::memory_order_acquire); });
 }
 
 /**
  * @brief Resolves and caches the full executable path for a process ID.
  */
 static std::string GetCachedProcessPath(DWORD pid) {
-    if (pid == 0) return "";
+    if (pid == 0)
+        return "";
     auto now = std::chrono::steady_clock::now();
     {
         std::lock_guard<std::mutex> lock(g_pidPathMutex);
         if (std::chrono::duration_cast<std::chrono::seconds>(now - g_pidCacheClearTime).count() < 30) {
             auto it = g_pidPathCache.find(pid);
-            if (it != g_pidPathCache.end()) return it->second;
+            if (it != g_pidPathCache.end())
+                return it->second;
         }
     }
 
@@ -174,7 +175,8 @@ static std::string GetCachedProcessPath(DWORD pid) {
 
     if (!result.empty()) {
         std::lock_guard<std::mutex> lock(g_pidPathMutex);
-        if (std::chrono::duration_cast<std::chrono::seconds>(now - g_pidCacheClearTime).count() >= 30 || g_pidPathCache.size() > 256) {
+        if (std::chrono::duration_cast<std::chrono::seconds>(now - g_pidCacheClearTime).count() >= 30 ||
+            g_pidPathCache.size() > 256) {
             g_pidPathCache.clear();
             g_pidCacheClearTime = now;
         }
@@ -222,10 +224,8 @@ void RequeryMediaArtwork() {
         std::lock_guard<std::mutex> artLock(g_artCacheMutex);
         if (!g_currentTrackKey.empty()) {
             g_trackArtMap.erase(g_currentTrackKey);
-            g_trackArtOrder.erase(
-                std::remove(g_trackArtOrder.begin(), g_trackArtOrder.end(), g_currentTrackKey),
-                g_trackArtOrder.end()
-            );
+            g_trackArtOrder.erase(std::remove(g_trackArtOrder.begin(), g_trackArtOrder.end(), g_currentTrackKey),
+                                  g_trackArtOrder.end());
         }
         g_previousTrackArt.clear();
     }
@@ -239,19 +239,23 @@ void ForceEmitMediaState() {
 
 static std::string TryExtractThumbnail(
     winrt_media::GlobalSystemMediaTransportControlsSessionMediaProperties const& props,
-    const std::string& staleArt = "",
-    bool allowStale = false
-) {
-    if (!props) return "";
+    const std::string& staleArt = "", bool allowStale = false) {
+    if (!props)
+        return "";
     try {
         auto thumbRef = props.Thumbnail();
-        if (!thumbRef) return "";
+        if (!thumbRef)
+            return "";
         winrt_storage::IRandomAccessStreamWithContentType stream{nullptr};
         try {
             stream = thumbRef.OpenReadAsync().get();
         } catch (...) {
-            if (!SleepInterruptible(50)) return "";
-            try { stream = thumbRef.OpenReadAsync().get(); } catch (...) {}
+            if (!SleepInterruptible(50))
+                return "";
+            try {
+                stream = thumbRef.OpenReadAsync().get();
+            } catch (...) {
+            }
         }
         if (stream) {
             std::string fetched = StreamToBase64(stream);
@@ -259,7 +263,8 @@ static std::string TryExtractThumbnail(
                 return fetched;
             }
         }
-    } catch (...) {}
+    } catch (...) {
+    }
     return "";
 }
 
@@ -306,30 +311,36 @@ int FocusApp(const char* sourceApp, const char* aumid) {
 
     WindowFocusData data{needle, aumidToken, nullptr};
 
-    EnumWindows([](HWND hwnd, LPARAM lParam) -> BOOL {
-        if (!IsWindowVisible(hwnd) || (GetWindowLongW(hwnd, GWL_EXSTYLE) & WS_EX_TOOLWINDOW)) {
+    EnumWindows(
+        [](HWND hwnd, LPARAM lParam) -> BOOL {
+            if (!IsWindowVisible(hwnd) || (GetWindowLongW(hwnd, GWL_EXSTYLE) & WS_EX_TOOLWINDOW)) {
+                return TRUE;
+            }
+            if (GetWindowTextLengthW(hwnd) <= 0)
+                return TRUE;
+
+            DWORD pid = 0;
+            GetWindowThreadProcessId(hwnd, &pid);
+            std::string exePath = ToLowerStr(GetCachedProcessPath(pid));
+            if (exePath.empty())
+                return TRUE;
+
+            auto* d = reinterpret_cast<WindowFocusData*>(lParam);
+            bool match =
+                (!d->needle.empty() && exePath.find(d->needle) != std::string::npos) ||
+                (!d->needleAumid.empty() && exePath.find(d->needleAumid) != std::string::npos) ||
+                (d->needle.find("spotify") != std::string::npos && exePath.find("spotify") != std::string::npos);
+            if (match) {
+                d->foundHwnd = hwnd;
+                return FALSE;
+            }
             return TRUE;
-        }
-        if (GetWindowTextLengthW(hwnd) <= 0) return TRUE;
-
-        DWORD pid = 0;
-        GetWindowThreadProcessId(hwnd, &pid);
-        std::string exePath = ToLowerStr(GetCachedProcessPath(pid));
-        if (exePath.empty()) return TRUE;
-
-        auto* d = reinterpret_cast<WindowFocusData*>(lParam);
-        bool match = (!d->needle.empty() && exePath.find(d->needle) != std::string::npos) ||
-                     (!d->needleAumid.empty() && exePath.find(d->needleAumid) != std::string::npos) ||
-                     (d->needle.find("spotify") != std::string::npos && exePath.find("spotify") != std::string::npos);
-        if (match) {
-            d->foundHwnd = hwnd;
-            return FALSE;
-        }
-        return TRUE;
-    }, reinterpret_cast<LPARAM>(&data));
+        },
+        reinterpret_cast<LPARAM>(&data));
 
     if (data.foundHwnd) {
-        if (IsIconic(data.foundHwnd)) ShowWindow(data.foundHwnd, SW_RESTORE);
+        if (IsIconic(data.foundHwnd))
+            ShowWindow(data.foundHwnd, SW_RESTORE);
         DWORD foreThread = GetWindowThreadProcessId(GetForegroundWindow(), nullptr);
         DWORD appThread = GetCurrentThreadId();
         if (foreThread != appThread) {
@@ -346,7 +357,8 @@ int FocusApp(const char* sourceApp, const char* aumid) {
 
     if (!rawAumid.empty()) {
         std::wstring target = L"shell:AppsFolder\\" + Utf8ToUtf16(rawAumid);
-        if (reinterpret_cast<INT_PTR>(ShellExecuteW(nullptr, L"open", target.c_str(), nullptr, nullptr, SW_SHOWNORMAL)) > 32) {
+        if (reinterpret_cast<INT_PTR>(
+                ShellExecuteW(nullptr, L"open", target.c_str(), nullptr, nullptr, SW_SHOWNORMAL)) > 32) {
             return 1;
         }
     }
@@ -383,30 +395,35 @@ static void ScheduleEmit() {
 static bool IsValidMediaSession(
     winrt_media::GlobalSystemMediaTransportControlsSession const& session,
     winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackInfo const* prefetchedInfo = nullptr,
-    winrt_media::GlobalSystemMediaTransportControlsSessionMediaProperties const* prefetchedProps = nullptr
-) {
-    if (!session) return false;
+    winrt_media::GlobalSystemMediaTransportControlsSessionMediaProperties const* prefetchedProps = nullptr) {
+    if (!session)
+        return false;
     try {
         auto info = (prefetchedInfo && *prefetchedInfo) ? *prefetchedInfo : session.GetPlaybackInfo();
-        if (!info || info.PlaybackStatus() == winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Closed) {
+        if (!info ||
+            info.PlaybackStatus() == winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Closed) {
             return false;
         }
 
         auto controls = info.Controls();
-        if (!controls) return false;
+        if (!controls)
+            return false;
         if (!(controls.IsPlayEnabled() || controls.IsPauseEnabled() || controls.IsPlayPauseToggleEnabled() ||
               controls.IsStopEnabled() || controls.IsNextEnabled() || controls.IsPreviousEnabled())) {
             return false;
         }
 
-        auto props = (prefetchedProps && *prefetchedProps) ? *prefetchedProps : session.TryGetMediaPropertiesAsync().get();
-        if (!props) return false;
+        auto props =
+            (prefetchedProps && *prefetchedProps) ? *prefetchedProps : session.TryGetMediaPropertiesAsync().get();
+        if (!props)
+            return false;
 
         std::string title = Utf16ToUtf8(props.Title().c_str());
         std::string artist = Utf16ToUtf8(props.Artist().c_str());
         TrimString(title);
         TrimString(artist);
-        if (title.empty() && artist.empty()) return false;
+        if (title.empty() && artist.empty())
+            return false;
 
         bool hasAlbumArt = (props.Thumbnail() != nullptr);
         bool hasPrevNext = (controls.IsNextEnabled() || controls.IsPreviousEnabled());
@@ -416,9 +433,14 @@ static bool IsValidMediaSession(
 
         if (artist.empty()) {
             std::string appName;
-            try { appName = Utf16ToUtf8(session.SourceAppUserModelId().c_str()); } catch (...) {}
-            if (size_t slash = appName.find_last_of("\\/"); slash != std::string::npos) appName = appName.substr(slash + 1);
-            if (size_t dot = appName.rfind('.'); dot != std::string::npos) appName = appName.substr(0, dot);
+            try {
+                appName = Utf16ToUtf8(session.SourceAppUserModelId().c_str());
+            } catch (...) {
+            }
+            if (size_t slash = appName.find_last_of("\\/"); slash != std::string::npos)
+                appName = appName.substr(slash + 1);
+            if (size_t dot = appName.rfind('.'); dot != std::string::npos)
+                appName = appName.substr(0, dot);
             if (!appName.empty() && ToLowerStr(title) == ToLowerStr(appName)) {
                 return false;
             }
@@ -432,24 +454,31 @@ static bool IsValidMediaSession(
 static bool IsSessionAliveAndValid(
     winrt_media::GlobalSystemMediaTransportControlsSession const& session,
     winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackInfo const* prefetchedInfo = nullptr,
-    winrt_media::GlobalSystemMediaTransportControlsSessionMediaProperties const* prefetchedProps = nullptr
-) {
-    if (!session) return false;
+    winrt_media::GlobalSystemMediaTransportControlsSessionMediaProperties const* prefetchedProps = nullptr) {
+    if (!session)
+        return false;
     try {
         auto info = (prefetchedInfo && *prefetchedInfo) ? *prefetchedInfo : session.GetPlaybackInfo();
-        if (!info || info.PlaybackStatus() == winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Closed) {
+        if (!info ||
+            info.PlaybackStatus() == winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Closed) {
             return false;
         }
-        if (IsValidMediaSession(session, &info, prefetchedProps)) return true;
+        if (IsValidMediaSession(session, &info, prefetchedProps))
+            return true;
 
         std::lock_guard<std::mutex> snapLock(g_validSnapshotMutex);
         if (g_lastValidTrackSnapshot.hasValue) {
             std::string sApp;
-            try { sApp = Utf16ToUtf8(session.SourceAppUserModelId().c_str()); } catch (...) {}
+            try {
+                sApp = Utf16ToUtf8(session.SourceAppUserModelId().c_str());
+            } catch (...) {
+            }
             if (sApp == g_lastValidTrackSnapshot.sourceApp) {
-                auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
-                    std::chrono::steady_clock::now() - g_lastValidTrackSnapshot.timestamp).count();
-                if (elapsed < 15) return true;
+                auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() -
+                                                                                g_lastValidTrackSnapshot.timestamp)
+                                   .count();
+                if (elapsed < 15)
+                    return true;
             }
         }
         return false;
@@ -459,10 +488,12 @@ static bool IsSessionAliveAndValid(
 }
 
 static void UpdateCurrentSession() {
-    if (!g_mediaRunning.load(std::memory_order_acquire)) return;
+    if (!g_mediaRunning.load(std::memory_order_acquire))
+        return;
     ApartmentScope apt;
     std::lock_guard<std::recursive_mutex> lock(g_sessionMutex);
-    if (!g_sessionManager) return;
+    if (!g_sessionManager)
+        return;
 
     try {
         std::string selectedId;
@@ -488,11 +519,13 @@ static void UpdateCurrentSession() {
                             TrimString(sArtist);
                         }
                         std::string uniqueId = ComputeSessionUniqueId(sId, sTitle, sArtist);
-                        if (selectedId == uniqueId || (!sTitle.empty() && selectedId.find(sTitle) != std::string::npos)) {
+                        if (selectedId == uniqueId ||
+                            (!sTitle.empty() && selectedId.find(sTitle) != std::string::npos)) {
                             chosenSession = s;
                             break;
                         }
-                    } catch (...) {}
+                    } catch (...) {
+                    }
                 }
                 if (!chosenSession) {
                     for (auto const& s : sessions) {
@@ -502,10 +535,12 @@ static void UpdateCurrentSession() {
                                 chosenSession = s;
                                 break;
                             }
-                        } catch (...) {}
+                        } catch (...) {
+                        }
                     }
                 }
-            } catch (...) {}
+            } catch (...) {
+            }
         }
 
         if (chosenSession && IsSessionAliveAndValid(chosenSession)) {
@@ -520,8 +555,11 @@ static void UpdateCurrentSession() {
             if (g_currentSession && IsValidMediaSession(g_currentSession)) {
                 try {
                     auto curInfo = g_currentSession.GetPlaybackInfo();
-                    currentIsPlaying = (curInfo && curInfo.PlaybackStatus() == winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing);
-                } catch (...) {}
+                    currentIsPlaying =
+                        (curInfo && curInfo.PlaybackStatus() ==
+                                        winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing);
+                } catch (...) {
+                }
             }
 
             winrt_media::GlobalSystemMediaTransportControlsSession focusedPlaying{nullptr};
@@ -529,14 +567,17 @@ static void UpdateCurrentSession() {
                 auto focused = g_sessionManager.GetCurrentSession();
                 if (focused && IsValidMediaSession(focused)) {
                     auto info = focused.GetPlaybackInfo();
-                    if (info && info.PlaybackStatus() == winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing) {
+                    if (info && info.PlaybackStatus() ==
+                                    winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing) {
                         focusedPlaying = focused;
                     }
                 }
-            } catch (...) {}
+            } catch (...) {
+            }
 
             if (currentIsPlaying) {
-                targetSession = (focusedPlaying && focusedPlaying != g_currentSession) ? focusedPlaying : g_currentSession;
+                targetSession =
+                    (focusedPlaying && focusedPlaying != g_currentSession) ? focusedPlaying : g_currentSession;
             } else if (focusedPlaying) {
                 targetSession = focusedPlaying;
             }
@@ -546,14 +587,18 @@ static void UpdateCurrentSession() {
                     for (auto const& s : g_sessionManager.GetSessions()) {
                         try {
                             auto info = s.GetPlaybackInfo();
-                            if (info && info.PlaybackStatus() == winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing &&
+                            if (info &&
+                                info.PlaybackStatus() ==
+                                    winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing &&
                                 IsValidMediaSession(s, &info)) {
                                 targetSession = s;
                                 break;
                             }
-                        } catch (...) {}
+                        } catch (...) {
+                        }
                     }
-                } catch (...) {}
+                } catch (...) {
+                }
             }
 
             if (!targetSession) {
@@ -562,8 +607,10 @@ static void UpdateCurrentSession() {
                 } else {
                     try {
                         auto focused = g_sessionManager.GetCurrentSession();
-                        if (focused && IsValidMediaSession(focused)) targetSession = focused;
-                    } catch (...) {}
+                        if (focused && IsValidMediaSession(focused))
+                            targetSession = focused;
+                    } catch (...) {
+                    }
 
                     if (!targetSession) {
                         try {
@@ -573,7 +620,8 @@ static void UpdateCurrentSession() {
                                     break;
                                 }
                             }
-                        } catch (...) {}
+                        } catch (...) {
+                        }
                     }
                 }
             }
@@ -587,9 +635,18 @@ static void UpdateCurrentSession() {
             ++g_artCorrectionGeneration;
             g_mediaPropsDirty.store(true);
             if (g_currentSession) {
-                try { g_currentSession.MediaPropertiesChanged(g_mediaPropsChangedToken); } catch (...) {}
-                try { g_currentSession.PlaybackInfoChanged(g_playbackInfoChangedToken); } catch (...) {}
-                try { g_currentSession.TimelinePropertiesChanged(g_timelinePropsChangedToken); } catch (...) {}
+                try {
+                    g_currentSession.MediaPropertiesChanged(g_mediaPropsChangedToken);
+                } catch (...) {
+                }
+                try {
+                    g_currentSession.PlaybackInfoChanged(g_playbackInfoChangedToken);
+                } catch (...) {
+                }
+                try {
+                    g_currentSession.TimelinePropertiesChanged(g_timelinePropsChangedToken);
+                } catch (...) {
+                }
             }
 
             g_currentSession = targetSession;
@@ -600,12 +657,16 @@ static void UpdateCurrentSession() {
                         g_mediaPropsDirty.store(true);
                         ScheduleEmit();
                     });
-                    g_playbackInfoChangedToken = g_currentSession.PlaybackInfoChanged([](auto const&, auto const&) { ScheduleEmit(); });
-                    g_timelinePropsChangedToken = g_currentSession.TimelinePropertiesChanged([](auto const&, auto const&) { ScheduleEmit(); });
-                } catch (...) {}
+                    g_playbackInfoChangedToken =
+                        g_currentSession.PlaybackInfoChanged([](auto const&, auto const&) { ScheduleEmit(); });
+                    g_timelinePropsChangedToken =
+                        g_currentSession.TimelinePropertiesChanged([](auto const&, auto const&) { ScheduleEmit(); });
+                } catch (...) {
+                }
             }
         }
-    } catch (...) {}
+    } catch (...) {
+    }
 
     EmitMediaState(true);
 }
@@ -613,7 +674,8 @@ static void UpdateCurrentSession() {
 static void EmitMediaState(bool includeVolume) {
     (void)includeVolume;
     NativeMediaCallback cb = g_mediaCb.load(std::memory_order_acquire);
-    if (!cb || !g_mediaRunning.load(std::memory_order_acquire)) return;
+    if (!cb || !g_mediaRunning.load(std::memory_order_acquire))
+        return;
 
     std::string sourceApp, title, artist, album, albumArt;
     bool isPlaying = false, canGoNext = true, canGoPrev = true, canPause = true, canPlay = true;
@@ -630,18 +692,27 @@ static void EmitMediaState(bool includeVolume) {
     winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackInfo prefetchInfo{nullptr};
     winrt_media::GlobalSystemMediaTransportControlsSessionMediaProperties prefetchProps{nullptr};
     if (session) {
-        try { prefetchInfo = session.GetPlaybackInfo(); } catch (...) {}
-        try { prefetchProps = session.TryGetMediaPropertiesAsync().get(); } catch (...) {}
+        try {
+            prefetchInfo = session.GetPlaybackInfo();
+        } catch (...) {
+        }
+        try {
+            prefetchProps = session.TryGetMediaPropertiesAsync().get();
+        } catch (...) {
+        }
     }
 
     bool useSnapshot = false;
     if (!session || !IsValidMediaSession(session, &prefetchInfo, &prefetchProps)) {
         std::lock_guard<std::mutex> snapLock(g_validSnapshotMutex);
         if (session && g_lastValidTrackSnapshot.hasValue && prefetchInfo &&
-            prefetchInfo.PlaybackStatus() != winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Closed) {
-            auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(
-                std::chrono::steady_clock::now() - g_lastValidTrackSnapshot.timestamp).count();
-            if (elapsed < 15) useSnapshot = true;
+            prefetchInfo.PlaybackStatus() !=
+                winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Closed) {
+            auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() -
+                                                                            g_lastValidTrackSnapshot.timestamp)
+                               .count();
+            if (elapsed < 15)
+                useSnapshot = true;
         }
 
         if (!useSnapshot) {
@@ -671,14 +742,18 @@ static void EmitMediaState(bool includeVolume) {
         isRepeatEnabled = snap.isRepeatEnabled;
 
         if (isPlaying) {
-            double elapsedMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - snap.timestamp).count();
+            double elapsedMs =
+                std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - snap.timestamp).count();
             posMs = (durMs > 0.0) ? std::min(durMs, snap.posMs + elapsedMs) : (snap.posMs + elapsedMs);
         } else {
             posMs = snap.posMs;
         }
         g_isMediaPlaying.store(isPlaying, std::memory_order_release);
     } else {
-        try { sourceApp = Utf16ToUtf8(session.SourceAppUserModelId().c_str()); } catch (...) {}
+        try {
+            sourceApp = Utf16ToUtf8(session.SourceAppUserModelId().c_str());
+        } catch (...) {
+        }
 
         if (prefetchProps) {
             title = Utf16ToUtf8(prefetchProps.Title().c_str());
@@ -709,16 +784,19 @@ static void EmitMediaState(bool includeVolume) {
                     g_currentTrackKey = trackKey;
                     g_trackStartTime = now;
                     ++g_artCorrectionGeneration;
-                } else if (std::chrono::duration_cast<std::chrono::milliseconds>(now - g_trackStartTime).count() > 1000) {
+                } else if (std::chrono::duration_cast<std::chrono::milliseconds>(now - g_trackStartTime).count() >
+                           1000) {
                     g_previousTrackArt.clear();
                 }
                 staleArt = g_previousTrackArt;
 
                 auto it = g_trackArtMap.find(trackKey);
-                if (it != g_trackArtMap.end()) albumArt = it->second;
+                if (it != g_trackArtMap.end())
+                    albumArt = it->second;
             }
 
-            bool allowStale = (std::chrono::duration_cast<std::chrono::milliseconds>(now - g_trackStartTime).count() >= 400);
+            bool allowStale =
+                (std::chrono::duration_cast<std::chrono::milliseconds>(now - g_trackStartTime).count() >= 400);
             bool propsDirty = g_mediaPropsDirty.exchange(false);
 
             if ((albumArt.empty() || propsDirty) && prefetchProps.Thumbnail() != nullptr) {
@@ -730,7 +808,8 @@ static void EmitMediaState(bool includeVolume) {
                     while (g_trackArtMap.size() > 30 && !g_trackArtOrder.empty()) {
                         std::string oldest = g_trackArtOrder.front();
                         g_trackArtOrder.erase(g_trackArtOrder.begin());
-                        if (oldest != trackKey) g_trackArtMap.erase(oldest);
+                        if (oldest != trackKey)
+                            g_trackArtMap.erase(oldest);
                     }
                     albumArt = fetchedArt;
                 }
@@ -754,7 +833,8 @@ static void EmitMediaState(bool includeVolume) {
                         while (g_trackArtMap.size() > 30 && !g_trackArtOrder.empty()) {
                             std::string oldest = g_trackArtOrder.front();
                             g_trackArtOrder.erase(g_trackArtOrder.begin());
-                            if (oldest != trackKey) g_trackArtMap.erase(oldest);
+                            if (oldest != trackKey)
+                                g_trackArtMap.erase(oldest);
                         }
                         albumArt = freshArt;
                     }
@@ -773,25 +853,29 @@ static void EmitMediaState(bool includeVolume) {
                 g_activeBgTasks.fetch_add(1, std::memory_order_acq_rel);
                 std::thread([curGen, trackKey, currentDeliveredArt]() mutable {
                     ApartmentScope apt;
-                    const int delaysMs[] = { 300, 600, 1000, 1500, 2200, 3200, 4500 };
+                    const int delaysMs[] = {300, 600, 1000, 1500, 2200, 3200, 4500};
 
                     for (int delay : delaysMs) {
-                        if (!SleepInterruptible(delay) || g_artCorrectionGeneration.load() != curGen) break;
+                        if (!SleepInterruptible(delay) || g_artCorrectionGeneration.load() != curGen)
+                            break;
                         try {
                             winrt_media::GlobalSystemMediaTransportControlsSession curSession{nullptr};
                             {
                                 std::lock_guard<std::recursive_mutex> lock(g_sessionMutex);
                                 curSession = g_currentSession;
                             }
-                            if (!curSession) break;
+                            if (!curSession)
+                                break;
                             auto p = curSession.TryGetMediaPropertiesAsync().get();
-                            if (!p) continue;
+                            if (!p)
+                                continue;
 
                             std::string pTitle = Utf16ToUtf8(p.Title().c_str());
                             std::string pArtist = Utf16ToUtf8(p.Artist().c_str());
                             TrimString(pTitle);
                             TrimString(pArtist);
-                            if ((pTitle + "_" + pArtist) != trackKey) break;
+                            if ((pTitle + "_" + pArtist) != trackKey)
+                                break;
 
                             std::string newArt = TryExtractThumbnail(p, "", delay >= 500);
                             if (!newArt.empty() && newArt != currentDeliveredArt) {
@@ -807,10 +891,12 @@ static void EmitMediaState(bool includeVolume) {
                                 if (changed) {
                                     currentDeliveredArt = newArt;
                                     ScheduleEmit();
-                                    if (newArt.size() > 10000) break;
+                                    if (newArt.size() > 10000)
+                                        break;
                                 }
                             }
-                        } catch (...) {}
+                        } catch (...) {
+                        }
                     }
                     g_activeBgTasks.fetch_sub(1, std::memory_order_acq_rel);
                 }).detach();
@@ -818,15 +904,20 @@ static void EmitMediaState(bool includeVolume) {
         }
 
         if (prefetchInfo) {
-            isPlaying = (prefetchInfo.PlaybackStatus() == winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing);
+            isPlaying = (prefetchInfo.PlaybackStatus() ==
+                         winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing);
             g_isMediaPlaying.store(isPlaying, std::memory_order_release);
 
-            if (auto shuffleRef = prefetchInfo.IsShuffleActive()) isShuffleActive = shuffleRef.Value();
+            if (auto shuffleRef = prefetchInfo.IsShuffleActive())
+                isShuffleActive = shuffleRef.Value();
             if (auto repeatRef = prefetchInfo.AutoRepeatMode()) {
                 auto mode = repeatRef.Value();
-                if (mode == winrt::Windows::Media::MediaPlaybackAutoRepeatMode::Track) autoRepeatMode = 1;
-                else if (mode == winrt::Windows::Media::MediaPlaybackAutoRepeatMode::List) autoRepeatMode = 2;
-                else autoRepeatMode = 0;
+                if (mode == winrt::Windows::Media::MediaPlaybackAutoRepeatMode::Track)
+                    autoRepeatMode = 1;
+                else if (mode == winrt::Windows::Media::MediaPlaybackAutoRepeatMode::List)
+                    autoRepeatMode = 2;
+                else
+                    autoRepeatMode = 0;
             }
             if (auto controls = prefetchInfo.Controls()) {
                 canGoNext = controls.IsNextEnabled();
@@ -834,8 +925,10 @@ static void EmitMediaState(bool includeVolume) {
                 canPause = controls.IsPauseEnabled();
                 canPlay = controls.IsPlayEnabled();
                 if (controls.IsPlayPauseToggleEnabled()) {
-                    if (isPlaying) canPause = true;
-                    else canPlay = true;
+                    if (isPlaying)
+                        canPause = true;
+                    else
+                        canPlay = true;
                 }
                 isShuffleEnabled = controls.IsShuffleEnabled();
                 isRepeatEnabled = controls.IsRepeatEnabled();
@@ -866,16 +959,19 @@ static void EmitMediaState(bool includeVolume) {
                     posMs = rawPosMs;
                 }
             }
-        } catch (...) {}
+        } catch (...) {
+        }
 
         // Apply optimistic seek lock if the user recently scrubbed the timeline and SMTC hasn't caught up yet.
         {
             std::lock_guard<std::mutex> skLock(g_seekMutex);
             if (g_seekTargetMs >= 0.0) {
-                double seekElapsed = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - g_seekTime).count();
+                double seekElapsed =
+                    std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - g_seekTime).count();
                 if (seekElapsed < 1200.0) {
                     double expectedPos = isPlaying ? (g_seekTargetMs + seekElapsed) : g_seekTargetMs;
-                    if (durMs > 0.0 && expectedPos > durMs) expectedPos = durMs;
+                    if (durMs > 0.0 && expectedPos > durMs)
+                        expectedPos = durMs;
                     if (std::fabs(posMs - expectedPos) > 1500.0) {
                         posMs = expectedPos;
                     } else {
@@ -889,12 +985,24 @@ static void EmitMediaState(bool includeVolume) {
 
         if (!title.empty() && (!artist.empty() || !albumArt.empty())) {
             std::lock_guard<std::mutex> snapLock(g_validSnapshotMutex);
-            g_lastValidTrackSnapshot = ValidTrackSnapshot{
-                sourceApp, title, artist, album, albumArt, posMs, durMs,
-                isPlaying, canGoNext, canGoPrev, canPause, canPlay,
-                isShuffleActive, isShuffleEnabled, isRepeatEnabled, autoRepeatMode,
-                std::chrono::steady_clock::now(), true
-            };
+            g_lastValidTrackSnapshot = ValidTrackSnapshot{sourceApp,
+                                                          title,
+                                                          artist,
+                                                          album,
+                                                          albumArt,
+                                                          posMs,
+                                                          durMs,
+                                                          isPlaying,
+                                                          canGoNext,
+                                                          canGoPrev,
+                                                          canPause,
+                                                          canPlay,
+                                                          isShuffleActive,
+                                                          isShuffleEnabled,
+                                                          isRepeatEnabled,
+                                                          autoRepeatMode,
+                                                          std::chrono::steady_clock::now(),
+                                                          true};
         }
     }
 
@@ -904,7 +1012,8 @@ static void EmitMediaState(bool includeVolume) {
         if (g_sessionManager) {
             auto now = std::chrono::steady_clock::now();
             std::lock_guard<std::mutex> sLock(g_sessionsJsonMutex);
-            auto elapsedMs = std::chrono::duration_cast<std::chrono::milliseconds>(now - g_lastSessionsFetchTime).count();
+            auto elapsedMs =
+                std::chrono::duration_cast<std::chrono::milliseconds>(now - g_lastSessionsFetchTime).count();
 
             if (elapsedMs < 1500 && g_cachedSessionsJson != "[]") {
                 sessionsJson = g_cachedSessionsJson;
@@ -915,41 +1024,51 @@ static void EmitMediaState(bool includeVolume) {
                 std::unordered_set<std::string> seenUniqueIds;
 
                 for (auto const& s : g_sessionManager.GetSessions()) {
-                    if (!s) continue;
+                    if (!s)
+                        continue;
                     try {
                         auto pInfo = s.GetPlaybackInfo();
-                        if (!pInfo || pInfo.PlaybackStatus() == winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Closed) {
+                        if (!pInfo ||
+                            pInfo.PlaybackStatus() ==
+                                winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Closed) {
                             continue;
                         }
-                        auto props = (s == session && prefetchProps) ? prefetchProps : s.TryGetMediaPropertiesAsync().get();
-                        if (!props || !IsValidMediaSession(s, &pInfo, &props)) continue;
+                        auto props =
+                            (s == session && prefetchProps) ? prefetchProps : s.TryGetMediaPropertiesAsync().get();
+                        if (!props || !IsValidMediaSession(s, &pInfo, &props))
+                            continue;
 
                         std::string sId = Utf16ToUtf8(s.SourceAppUserModelId().c_str());
                         std::string sApp = sId;
-                        if (size_t slash = sApp.find_last_of("\\/"); slash != std::string::npos) sApp = sApp.substr(slash + 1);
+                        if (size_t slash = sApp.find_last_of("\\/"); slash != std::string::npos)
+                            sApp = sApp.substr(slash + 1);
 
                         std::string sTitle = Utf16ToUtf8(props.Title().c_str());
                         std::string sArtist = Utf16ToUtf8(props.Artist().c_str());
                         TrimString(sTitle);
                         TrimString(sArtist);
-                        if (sTitle.empty() && sArtist.empty()) continue;
+                        if (sTitle.empty() && sArtist.empty())
+                            continue;
 
                         std::string uniqueId = ComputeSessionUniqueId(sId, sTitle, sArtist);
-                        if (!seenUniqueIds.insert(uniqueId).second) continue;
+                        if (!seenUniqueIds.insert(uniqueId).second)
+                            continue;
 
                         if (s == session || (sId == sourceApp && sTitle == title && sArtist == artist)) {
                             activeSessionId = uniqueId;
                         }
 
-                        bool sPlaying = (pInfo.PlaybackStatus() == winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing);
-                        if (!first) sJson << ",";
+                        bool sPlaying = (pInfo.PlaybackStatus() ==
+                                         winrt_media::GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing);
+                        if (!first)
+                            sJson << ",";
                         first = false;
-                        sJson << "{\"id\":\"" << EscapeJsonString(uniqueId)
-                              << "\",\"sourceApp\":\"" << EscapeJsonString(sApp)
-                              << "\",\"title\":\"" << EscapeJsonString(sTitle)
+                        sJson << "{\"id\":\"" << EscapeJsonString(uniqueId) << "\",\"sourceApp\":\""
+                              << EscapeJsonString(sApp) << "\",\"title\":\"" << EscapeJsonString(sTitle)
                               << "\",\"artist\":\"" << EscapeJsonString(sArtist)
                               << "\",\"isPlaying\":" << (sPlaying ? "true" : "false") << "}";
-                    } catch (...) {}
+                    } catch (...) {
+                    }
                 }
                 sJson << "]";
                 g_cachedSessionsJson = sJson.str();
@@ -957,7 +1076,8 @@ static void EmitMediaState(bool includeVolume) {
                 sessionsJson = g_cachedSessionsJson;
             }
         }
-    } catch (...) {}
+    } catch (...) {
+    }
 
     auto [volume, isMuted] = GetMediaAudioVolumeAndMute(sourceApp);
 
@@ -995,18 +1115,23 @@ static void EmitMediaState(bool includeVolume) {
  */
 static IAudioSessionEnumerator* AcquireAudioSessionEnumerator() {
     IMMDeviceEnumerator* pEnumerator = nullptr;
-    if (FAILED(CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_INPROC_SERVER, __uuidof(IMMDeviceEnumerator), reinterpret_cast<void**>(&pEnumerator))) || !pEnumerator) {
+    if (FAILED(CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_INPROC_SERVER,
+                                __uuidof(IMMDeviceEnumerator), reinterpret_cast<void**>(&pEnumerator))) ||
+        !pEnumerator) {
         return nullptr;
     }
     IMMDevice* pDevice = nullptr;
     HRESULT hr = pEnumerator->GetDefaultAudioEndpoint(eRender, eMultimedia, &pDevice);
     pEnumerator->Release();
-    if (FAILED(hr) || !pDevice) return nullptr;
+    if (FAILED(hr) || !pDevice)
+        return nullptr;
 
     IAudioSessionManager2* pSessionMgr = nullptr;
-    hr = pDevice->Activate(__uuidof(IAudioSessionManager2), CLSCTX_INPROC_SERVER, nullptr, reinterpret_cast<void**>(&pSessionMgr));
+    hr = pDevice->Activate(__uuidof(IAudioSessionManager2), CLSCTX_INPROC_SERVER, nullptr,
+                           reinterpret_cast<void**>(&pSessionMgr));
     pDevice->Release();
-    if (FAILED(hr) || !pSessionMgr) return nullptr;
+    if (FAILED(hr) || !pSessionMgr)
+        return nullptr;
 
     IAudioSessionEnumerator* pSessionEnum = nullptr;
     pSessionMgr->GetSessionEnumerator(&pSessionEnum);
@@ -1019,34 +1144,48 @@ static IAudioSessionEnumerator* AcquireAudioSessionEnumerator() {
  */
 static IAudioEndpointVolume* AcquireMasterEndpointVolume() {
     IMMDeviceEnumerator* pEnumerator = nullptr;
-    if (FAILED(CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_INPROC_SERVER, __uuidof(IMMDeviceEnumerator), reinterpret_cast<void**>(&pEnumerator))) || !pEnumerator) {
+    if (FAILED(CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_INPROC_SERVER,
+                                __uuidof(IMMDeviceEnumerator), reinterpret_cast<void**>(&pEnumerator))) ||
+        !pEnumerator) {
         return nullptr;
     }
     IMMDevice* pDevice = nullptr;
     HRESULT hr = pEnumerator->GetDefaultAudioEndpoint(eRender, eMultimedia, &pDevice);
     pEnumerator->Release();
-    if (FAILED(hr) || !pDevice) return nullptr;
+    if (FAILED(hr) || !pDevice)
+        return nullptr;
 
     IAudioEndpointVolume* pEndVol = nullptr;
-    pDevice->Activate(__uuidof(IAudioEndpointVolume), CLSCTX_INPROC_SERVER, nullptr, reinterpret_cast<void**>(&pEndVol));
+    pDevice->Activate(__uuidof(IAudioEndpointVolume), CLSCTX_INPROC_SERVER, nullptr,
+                      reinterpret_cast<void**>(&pEndVol));
     pDevice->Release();
     return pEndVol;
 }
 
 static std::vector<std::string> ExtractAppTokens(const std::string& sourceApp) {
     std::vector<std::string> tokens;
-    if (sourceApp.empty()) return tokens;
+    if (sourceApp.empty())
+        return tokens;
 
     std::string s = ToLowerStr(sourceApp);
-    const std::pair<const char*, const char*> aliases[] = {
-        {"308046b0af4a39cb", "firefox"}, {"firefox", "firefox"}, {"spotify", "spotify"},
-        {"apple", "applemusic"}, {"apple", "apple"}, {"chrome", "chrome"},
-        {"edge", "msedge"}, {"edge", "edge"}, {"vlc", "vlc"},
-        {"zune", "zune"}, {"zune", "wmplayer"}, {"zune", "media"},
-        {"tidal", "tidal"}, {"brave", "brave"}, {"opera", "opera"}
-    };
+    const std::pair<const char*, const char*> aliases[] = {{"308046b0af4a39cb", "firefox"},
+                                                           {"firefox", "firefox"},
+                                                           {"spotify", "spotify"},
+                                                           {"apple", "applemusic"},
+                                                           {"apple", "apple"},
+                                                           {"chrome", "chrome"},
+                                                           {"edge", "msedge"},
+                                                           {"edge", "edge"},
+                                                           {"vlc", "vlc"},
+                                                           {"zune", "zune"},
+                                                           {"zune", "wmplayer"},
+                                                           {"zune", "media"},
+                                                           {"tidal", "tidal"},
+                                                           {"brave", "brave"},
+                                                           {"opera", "opera"}};
     for (const auto& kv : aliases) {
-        if (s.find(kv.first) != std::string::npos) tokens.push_back(kv.second);
+        if (s.find(kv.first) != std::string::npos)
+            tokens.push_back(kv.second);
     }
 
     std::string cur;
@@ -1057,15 +1196,19 @@ static std::vector<std::string> ExtractAppTokens(const std::string& sourceApp) {
         cur.clear();
     };
     for (char c : s) {
-        if (std::isalnum(static_cast<unsigned char>(c))) cur += c;
-        else flushToken();
+        if (std::isalnum(static_cast<unsigned char>(c)))
+            cur += c;
+        else
+            flushToken();
     }
     flushToken();
 
     size_t lastSlash = s.find_last_of("\\/");
     std::string base = (lastSlash != std::string::npos) ? s.substr(lastSlash + 1) : s;
-    if (size_t pExe = base.find(".exe"); pExe != std::string::npos) base.resize(pExe);
-    if (base.length() > 2) tokens.push_back(base);
+    if (size_t pExe = base.find(".exe"); pExe != std::string::npos)
+        base.resize(pExe);
+    if (base.length() > 2)
+        tokens.push_back(base);
 
     return tokens;
 }
@@ -1077,12 +1220,15 @@ struct SessionMatch {
     bool isActive = false;
 };
 
-static bool GetAllAppSessionVolumes(const std::string& sourceApp, std::vector<ISimpleAudioVolume*>& outVolumes, ISimpleAudioVolume** ppPrimaryVolume) {
-    if (ppPrimaryVolume) *ppPrimaryVolume = nullptr;
+static bool GetAllAppSessionVolumes(const std::string& sourceApp, std::vector<ISimpleAudioVolume*>& outVolumes,
+                                    ISimpleAudioVolume** ppPrimaryVolume) {
+    if (ppPrimaryVolume)
+        *ppPrimaryVolume = nullptr;
     outVolumes.clear();
 
     IAudioSessionEnumerator* pSessionEnum = AcquireAudioSessionEnumerator();
-    if (!pSessionEnum) return false;
+    if (!pSessionEnum)
+        return false;
 
     int count = 0;
     if (FAILED(pSessionEnum->GetCount(&count))) {
@@ -1097,17 +1243,22 @@ static bool GetAllAppSessionVolumes(const std::string& sourceApp, std::vector<IS
 
     for (int i = 0; i < count; ++i) {
         IAudioSessionControl* pControl = nullptr;
-        if (FAILED(pSessionEnum->GetSession(i, &pControl)) || !pControl) continue;
+        if (FAILED(pSessionEnum->GetSession(i, &pControl)) || !pControl)
+            continue;
 
         IAudioSessionControl2* pControl2 = nullptr;
-        if (SUCCEEDED(pControl->QueryInterface(__uuidof(IAudioSessionControl2), reinterpret_cast<void**>(&pControl2))) && pControl2) {
+        if (SUCCEEDED(
+                pControl->QueryInterface(__uuidof(IAudioSessionControl2), reinterpret_cast<void**>(&pControl2))) &&
+            pControl2) {
             AudioSessionState state = AudioSessionStateInactive;
             pControl2->GetState(&state);
             if (pControl2->IsSystemSoundsSession() != S_OK && state != AudioSessionStateExpired) {
                 bool isActive = (state == AudioSessionStateActive);
                 float peak = 0.0f;
                 IAudioMeterInformation* pMeter = nullptr;
-                if (SUCCEEDED(pControl->QueryInterface(__uuidof(IAudioMeterInformation), reinterpret_cast<void**>(&pMeter))) && pMeter) {
+                if (SUCCEEDED(pControl->QueryInterface(__uuidof(IAudioMeterInformation),
+                                                       reinterpret_cast<void**>(&pMeter))) &&
+                    pMeter) {
                     pMeter->GetPeakValue(&peak);
                     pMeter->Release();
                 }
@@ -1127,21 +1278,33 @@ static bool GetAllAppSessionVolumes(const std::string& sourceApp, std::vector<IS
                 pControl2->GetProcessId(&pid);
                 std::string procPath = ToLowerStr(GetCachedProcessPath(pid));
                 std::string procName = procPath;
-                if (size_t slash = procName.find_last_of("\\/"); slash != std::string::npos) procName = procName.substr(slash + 1);
-                if (size_t pExe = procName.find(".exe"); pExe != std::string::npos) procName.resize(pExe);
+                if (size_t slash = procName.find_last_of("\\/"); slash != std::string::npos)
+                    procName = procName.substr(slash + 1);
+                if (size_t pExe = procName.find(".exe"); pExe != std::string::npos)
+                    procName.resize(pExe);
 
                 int appScore = 0;
                 if (!appLower.empty()) {
-                    if (!procName.empty() && (appLower.find(procName) != std::string::npos || procName.find(appLower) != std::string::npos)) appScore += 100;
-                    if (!sessId.empty() && sessId.find(appLower) != std::string::npos) appScore += 80;
-                    if (!dispName.empty() && (appLower.find(dispName) != std::string::npos || dispName.find(appLower) != std::string::npos)) appScore += 70;
+                    if (!procName.empty() &&
+                        (appLower.find(procName) != std::string::npos || procName.find(appLower) != std::string::npos))
+                        appScore += 100;
+                    if (!sessId.empty() && sessId.find(appLower) != std::string::npos)
+                        appScore += 80;
+                    if (!dispName.empty() &&
+                        (appLower.find(dispName) != std::string::npos || dispName.find(appLower) != std::string::npos))
+                        appScore += 70;
                 }
                 for (const auto& token : tokens) {
-                    if (token.empty()) continue;
-                    if (!procName.empty() && procName.find(token) != std::string::npos) appScore += 60;
-                    if (!procPath.empty() && procPath.find(token) != std::string::npos) appScore += 40;
-                    if (!sessId.empty() && sessId.find(token) != std::string::npos) appScore += 40;
-                    if (!dispName.empty() && dispName.find(token) != std::string::npos) appScore += 30;
+                    if (token.empty())
+                        continue;
+                    if (!procName.empty() && procName.find(token) != std::string::npos)
+                        appScore += 60;
+                    if (!procPath.empty() && procPath.find(token) != std::string::npos)
+                        appScore += 40;
+                    if (!sessId.empty() && sessId.find(token) != std::string::npos)
+                        appScore += 40;
+                    if (!dispName.empty() && dispName.find(token) != std::string::npos)
+                        appScore += 30;
                 }
 
                 int score = appScore + (isActive ? 40 : 0) + (peak > 0.001f ? 20 : 0);
@@ -1155,7 +1318,8 @@ static bool GetAllAppSessionVolumes(const std::string& sourceApp, std::vector<IS
                     } else {
                         int fbScore = (isActive ? 20 : 0) + (peak > 0.001f ? 50 : 0);
                         if (fbScore > bestFallback.score || (!bestFallback.pVol && isActive)) {
-                            if (bestFallback.pVol) bestFallback.pVol->Release();
+                            if (bestFallback.pVol)
+                                bestFallback.pVol->Release();
                             bestFallback = {pVol, fbScore, peak, isActive};
                         } else {
                             pVol->Release();
@@ -1170,19 +1334,23 @@ static bool GetAllAppSessionVolumes(const std::string& sourceApp, std::vector<IS
     pSessionEnum->Release();
 
     if (!matches.empty()) {
-        if (bestFallback.pVol) bestFallback.pVol->Release();
+        if (bestFallback.pVol)
+            bestFallback.pVol->Release();
         std::stable_sort(matches.begin(), matches.end(), [](const SessionMatch& a, const SessionMatch& b) {
             return (a.score != b.score) ? (a.score > b.score) : (a.peak > b.peak);
         });
-        for (const auto& m : matches) outVolumes.push_back(m.pVol);
-        if (ppPrimaryVolume) *ppPrimaryVolume = outVolumes[0];
+        for (const auto& m : matches)
+            outVolumes.push_back(m.pVol);
+        if (ppPrimaryVolume)
+            *ppPrimaryVolume = outVolumes[0];
         return true;
     }
 
     if (bestFallback.pVol) {
         if (appLower.empty()) {
             outVolumes.push_back(bestFallback.pVol);
-            if (ppPrimaryVolume) *ppPrimaryVolume = bestFallback.pVol;
+            if (ppPrimaryVolume)
+                *ppPrimaryVolume = bestFallback.pVol;
             return true;
         }
         bestFallback.pVol->Release();
@@ -1212,7 +1380,9 @@ static std::pair<float, bool> GetMediaAudioVolumeAndMute(const std::string& sour
         BOOL muted = FALSE;
         pPrimary->GetMasterVolume(&vol);
         pPrimary->GetMute(&muted);
-        for (auto* v : volumes) if (v) v->Release();
+        for (auto* v : volumes)
+            if (v)
+                v->Release();
 
         float volPercent = vol * 100.0f;
         std::lock_guard<std::mutex> stLock(g_mediaVolStateMutex);
@@ -1278,8 +1448,10 @@ static void ToggleMediaAudioMute(const std::string& sourceApp) {
 }
 
 void StartMediaService(NativeMediaCallback cb) {
-    if (g_mediaRunning.exchange(true, std::memory_order_acq_rel)) return;
-    if (g_mediaSessionPollThread.joinable()) g_mediaSessionPollThread.join();
+    if (g_mediaRunning.exchange(true, std::memory_order_acq_rel))
+        return;
+    if (g_mediaSessionPollThread.joinable())
+        g_mediaSessionPollThread.join();
     g_mediaCb.store(cb, std::memory_order_release);
 
     g_mediaSessionPollThread = std::thread([]() {
@@ -1287,9 +1459,8 @@ void StartMediaService(NativeMediaCallback cb) {
         try {
             g_sessionManager = winrt_media::GlobalSystemMediaTransportControlsSessionManager::RequestAsync().get();
             if (g_sessionManager) {
-                g_currentSessionChangedToken = g_sessionManager.CurrentSessionChanged([](auto const&, auto const&) {
-                    ScheduleEmit();
-                });
+                g_currentSessionChangedToken =
+                    g_sessionManager.CurrentSessionChanged([](auto const&, auto const&) { ScheduleEmit(); });
                 g_sessionsChangedToken = g_sessionManager.SessionsChanged([](auto const&, auto const&) {
                     {
                         std::lock_guard<std::mutex> sLock(g_sessionsJsonMutex);
@@ -1298,12 +1469,14 @@ void StartMediaService(NativeMediaCallback cb) {
                     ScheduleEmit();
                 });
             }
-        } catch (...) {}
+        } catch (...) {
+        }
 
         UpdateCurrentSession();
 
         while (g_mediaRunning.load(std::memory_order_acquire)) {
-            if (!SleepInterruptible(3000)) break;
+            if (!SleepInterruptible(3000))
+                break;
             if (g_mediaRunning.load(std::memory_order_acquire)) {
                 UpdateCurrentSession();
             }
@@ -1314,33 +1487,51 @@ void StartMediaService(NativeMediaCallback cb) {
 void StopMediaService() {
     {
         std::lock_guard<std::mutex> stopLock(g_mediaStopMutex);
-        if (!g_mediaRunning.exchange(false, std::memory_order_acq_rel)) return;
+        if (!g_mediaRunning.exchange(false, std::memory_order_acq_rel))
+            return;
     }
     g_mediaCb.store(nullptr, std::memory_order_release);
     ++g_artCorrectionGeneration;
     g_mediaStopCv.notify_all();
 
-    if (g_mediaSessionPollThread.joinable()) g_mediaSessionPollThread.join();
+    if (g_mediaSessionPollThread.joinable())
+        g_mediaSessionPollThread.join();
     while (g_activeBgTasks.load(std::memory_order_acquire) > 0) {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
     std::lock_guard<std::recursive_mutex> lock(g_sessionMutex);
     if (g_sessionManager) {
-        try { g_sessionManager.CurrentSessionChanged(g_currentSessionChangedToken); } catch (...) {}
-        try { g_sessionManager.SessionsChanged(g_sessionsChangedToken); } catch (...) {}
+        try {
+            g_sessionManager.CurrentSessionChanged(g_currentSessionChangedToken);
+        } catch (...) {
+        }
+        try {
+            g_sessionManager.SessionsChanged(g_sessionsChangedToken);
+        } catch (...) {
+        }
     }
     if (g_currentSession) {
-        try { g_currentSession.MediaPropertiesChanged(g_mediaPropsChangedToken); } catch (...) {}
-        try { g_currentSession.PlaybackInfoChanged(g_playbackInfoChangedToken); } catch (...) {}
-        try { g_currentSession.TimelinePropertiesChanged(g_timelinePropsChangedToken); } catch (...) {}
+        try {
+            g_currentSession.MediaPropertiesChanged(g_mediaPropsChangedToken);
+        } catch (...) {
+        }
+        try {
+            g_currentSession.PlaybackInfoChanged(g_playbackInfoChangedToken);
+        } catch (...) {
+        }
+        try {
+            g_currentSession.TimelinePropertiesChanged(g_timelinePropsChangedToken);
+        } catch (...) {
+        }
         g_currentSession = nullptr;
     }
     g_sessionManager = nullptr;
 }
 
 int ExecuteMediaCommand(const char* command) {
-    if (!command) return 0;
+    if (!command)
+        return 0;
     ApartmentScope apt;
     std::string cmd(command);
 
@@ -1348,7 +1539,10 @@ int ExecuteMediaCommand(const char* command) {
     {
         std::lock_guard<std::recursive_mutex> lock(g_sessionMutex);
         if (g_currentSession) {
-            try { sourceApp = Utf16ToUtf8(g_currentSession.SourceAppUserModelId().c_str()); } catch (...) {}
+            try {
+                sourceApp = Utf16ToUtf8(g_currentSession.SourceAppUserModelId().c_str());
+            } catch (...) {
+            }
         }
     }
 
@@ -1356,7 +1550,8 @@ int ExecuteMediaCommand(const char* command) {
         std::string payload = cmd.substr(11);
         size_t colon = payload.find(':');
         float vol = std::stof(colon != std::string::npos ? payload.substr(0, colon) : payload);
-        if (colon != std::string::npos && colon + 1 < payload.size()) sourceApp = payload.substr(colon + 1);
+        if (colon != std::string::npos && colon + 1 < payload.size())
+            sourceApp = payload.substr(colon + 1);
         SetMediaAudioVolume(sourceApp, vol);
         EmitMediaState(true);
         return 1;
@@ -1368,7 +1563,8 @@ int ExecuteMediaCommand(const char* command) {
         return 1;
     }
     if (cmd.rfind("toggle_mute:", 0) == 0) {
-        if (cmd.size() > 12) sourceApp = cmd.substr(12);
+        if (cmd.size() > 12)
+            sourceApp = cmd.substr(12);
         ToggleMediaAudioMute(sourceApp);
         EmitMediaState(true);
         return 1;
@@ -1393,7 +1589,8 @@ int ExecuteMediaCommand(const char* command) {
         if (!explicitTarget.empty() && mgr) {
             try {
                 for (auto const& s : mgr.GetSessions()) {
-                    if (!s) continue;
+                    if (!s)
+                        continue;
                     try {
                         std::string sId = Utf16ToUtf8(s.SourceAppUserModelId().c_str());
                         std::string sTitle, sArtist;
@@ -1409,9 +1606,11 @@ int ExecuteMediaCommand(const char* command) {
                             session = s;
                             break;
                         }
-                    } catch (...) {}
+                    } catch (...) {
+                    }
                 }
-            } catch (...) {}
+            } catch (...) {
+            }
         }
         if (!session) {
             std::lock_guard<std::recursive_mutex> lock(g_sessionMutex);
@@ -1419,7 +1618,8 @@ int ExecuteMediaCommand(const char* command) {
         }
 
         if (session) {
-            // Lock in the optimistic seek position before calling into WinRT so concurrent ticks never emit the old position.
+            // Lock in the optimistic seek position before calling into WinRT so concurrent ticks never emit the old
+            // position.
             auto now = std::chrono::steady_clock::now();
             uint64_t seekGen = g_seekGeneration.fetch_add(1, std::memory_order_acq_rel) + 1;
             {
@@ -1439,7 +1639,8 @@ int ExecuteMediaCommand(const char* command) {
                 if (auto asyncOp = session.TryChangePlaybackPositionAsync(static_cast<int64_t>(posMs * 10000.0))) {
                     asyncOp.get();
                 }
-            } catch (...) {}
+            } catch (...) {
+            }
 
             EmitMediaState(true);
 
@@ -1454,9 +1655,11 @@ int ExecuteMediaCommand(const char* command) {
                     try {
                         if (auto tl = session.GetTimelineProperties()) {
                             double cur = std::chrono::duration<double, std::milli>(tl.Position()).count();
-                            if (std::fabs(cur - posMs) < 1500.0) break;
+                            if (std::fabs(cur - posMs) < 1500.0)
+                                break;
                         }
-                    } catch (...) {}
+                    } catch (...) {
+                    }
                 }
                 if (g_seekGeneration.load(std::memory_order_acquire) == seekGen) {
                     UpdateCurrentSession();
@@ -1478,11 +1681,16 @@ int ExecuteMediaCommand(const char* command) {
 
     if (session) {
         try {
-            if (cmd == "play_pause") session.TryTogglePlayPauseAsync();
-            else if (cmd == "play") session.TryPlayAsync();
-            else if (cmd == "pause") session.TryPauseAsync();
-            else if (cmd == "next") session.TrySkipNextAsync();
-            else if (cmd == "previous" || cmd == "prev") session.TrySkipPreviousAsync();
+            if (cmd == "play_pause")
+                session.TryTogglePlayPauseAsync();
+            else if (cmd == "play")
+                session.TryPlayAsync();
+            else if (cmd == "pause")
+                session.TryPauseAsync();
+            else if (cmd == "next")
+                session.TrySkipNextAsync();
+            else if (cmd == "previous" || cmd == "prev")
+                session.TrySkipPreviousAsync();
             else if (cmd == "shuffle" || cmd == "toggle_shuffle") {
                 auto info = session.GetPlaybackInfo();
                 bool cur = (info && info.IsShuffleActive()) ? info.IsShuffleActive().Value() : false;
@@ -1500,14 +1708,16 @@ int ExecuteMediaCommand(const char* command) {
                 }
                 session.TryChangeAutoRepeatModeAsync(target);
             }
-        } catch (...) {}
+        } catch (...) {
+        }
 
         g_activeBgTasks.fetch_add(1, std::memory_order_acq_rel);
         std::thread([]() {
             ApartmentScope apt;
-            const int delays[] = { 40, 140, 320 };
+            const int delays[] = {40, 140, 320};
             for (int d : delays) {
-                if (!SleepInterruptible(d)) break;
+                if (!SleepInterruptible(d))
+                    break;
                 UpdateCurrentSession();
             }
             g_activeBgTasks.fetch_sub(1, std::memory_order_acq_rel);
@@ -1518,7 +1728,8 @@ int ExecuteMediaCommand(const char* command) {
 }
 
 int GetAllAudioSessionsJson(char* outBuf, int maxLen) {
-    if (!outBuf || maxLen <= 0) return 0;
+    if (!outBuf || maxLen <= 0)
+        return 0;
     ComInitScope com;
 
     IAudioSessionEnumerator* pSessionEnum = AcquireAudioSessionEnumerator();
@@ -1540,10 +1751,13 @@ int GetAllAudioSessionsJson(char* outBuf, int maxLen) {
 
     for (int i = 0; i < count; ++i) {
         IAudioSessionControl* pControl = nullptr;
-        if (FAILED(pSessionEnum->GetSession(i, &pControl)) || !pControl) continue;
+        if (FAILED(pSessionEnum->GetSession(i, &pControl)) || !pControl)
+            continue;
 
         IAudioSessionControl2* pControl2 = nullptr;
-        if (SUCCEEDED(pControl->QueryInterface(__uuidof(IAudioSessionControl2), reinterpret_cast<void**>(&pControl2))) && pControl2) {
+        if (SUCCEEDED(
+                pControl->QueryInterface(__uuidof(IAudioSessionControl2), reinterpret_cast<void**>(&pControl2))) &&
+            pControl2) {
             DWORD pid = 0;
             pControl2->GetProcessId(&pid);
             bool isSystem = (pControl2->IsSystemSoundsSession() == S_OK);
@@ -1556,7 +1770,9 @@ int GetAllAudioSessionsJson(char* outBuf, int maxLen) {
                 float volume = 100.0f;
                 bool isMuted = false;
                 ISimpleAudioVolume* pVol = nullptr;
-                if (SUCCEEDED(pControl2->QueryInterface(__uuidof(ISimpleAudioVolume), reinterpret_cast<void**>(&pVol))) && pVol) {
+                if (SUCCEEDED(
+                        pControl2->QueryInterface(__uuidof(ISimpleAudioVolume), reinterpret_cast<void**>(&pVol))) &&
+                    pVol) {
                     float v = 1.0f;
                     BOOL m = FALSE;
                     pVol->GetMasterVolume(&v);
@@ -1568,7 +1784,9 @@ int GetAllAudioSessionsJson(char* outBuf, int maxLen) {
 
                 float peak = 0.0f;
                 IAudioMeterInformation* pMeter = nullptr;
-                if (SUCCEEDED(pControl->QueryInterface(__uuidof(IAudioMeterInformation), reinterpret_cast<void**>(&pMeter))) && pMeter) {
+                if (SUCCEEDED(pControl->QueryInterface(__uuidof(IAudioMeterInformation),
+                                                       reinterpret_cast<void**>(&pMeter))) &&
+                    pMeter) {
                     pMeter->GetPeakValue(&peak);
                     pMeter->Release();
                 }
@@ -1588,7 +1806,8 @@ int GetAllAudioSessionsJson(char* outBuf, int maxLen) {
                     dispName = Utf16ToUtf8(pswDisp);
                     CoTaskMemFree(pswDisp);
                 }
-                if (dispName.empty() || dispName[0] == '@') dispName = procName;
+                if (dispName.empty() || dispName[0] == '@')
+                    dispName = procName;
 
                 LPWSTR pswInst = nullptr;
                 std::string instanceId;
@@ -1596,17 +1815,16 @@ int GetAllAudioSessionsJson(char* outBuf, int maxLen) {
                     instanceId = Utf16ToUtf8(pswInst);
                     CoTaskMemFree(pswInst);
                 }
-                if (instanceId.empty()) instanceId = std::to_string(pid) + "-" + std::to_string(i);
+                if (instanceId.empty())
+                    instanceId = std::to_string(pid) + "-" + std::to_string(i);
 
-                if (!first) json << ",";
+                if (!first)
+                    json << ",";
                 first = false;
-                json << "{\"id\":\"" << EscapeJsonString(instanceId)
-                     << "\",\"pid\":" << pid
-                     << ",\"name\":\"" << EscapeJsonString(dispName)
-                     << "\",\"processName\":\"" << EscapeJsonString(procName)
-                     << "\",\"path\":\"" << EscapeJsonString(procPath)
-                     << "\",\"volume\":" << std::fixed << std::setprecision(1) << volume
-                     << ",\"isMuted\":" << (isMuted ? "true" : "false")
+                json << "{\"id\":\"" << EscapeJsonString(instanceId) << "\",\"pid\":" << pid << ",\"name\":\""
+                     << EscapeJsonString(dispName) << "\",\"processName\":\"" << EscapeJsonString(procName)
+                     << "\",\"path\":\"" << EscapeJsonString(procPath) << "\",\"volume\":" << std::fixed
+                     << std::setprecision(1) << volume << ",\"isMuted\":" << (isMuted ? "true" : "false")
                      << ",\"peak\":" << std::fixed << std::setprecision(3) << peak
                      << ",\"isActive\":" << (isActive ? "true" : "false") << "}";
             }
@@ -1619,7 +1837,8 @@ int GetAllAudioSessionsJson(char* outBuf, int maxLen) {
     json << "]";
 
     std::string out = json.str();
-    if (out.length() >= static_cast<size_t>(maxLen)) out.resize(maxLen - 1);
+    if (out.length() >= static_cast<size_t>(maxLen))
+        out.resize(maxLen - 1);
     strncpy_s(outBuf, maxLen, out.c_str(), _TRUNCATE);
     return static_cast<int>(out.length());
 }
@@ -1630,7 +1849,8 @@ int GetAllAudioSessionsJson(char* outBuf, int maxLen) {
 static int ModifyAudioSessionByPID(uint32_t pid, bool setVolume, int volumePercent, bool mute) {
     ComInitScope com;
     IAudioSessionEnumerator* pSessionEnum = AcquireAudioSessionEnumerator();
-    if (!pSessionEnum) return 0;
+    if (!pSessionEnum)
+        return 0;
 
     int count = 0;
     if (FAILED(pSessionEnum->GetCount(&count))) {
@@ -1643,17 +1863,24 @@ static int ModifyAudioSessionByPID(uint32_t pid, bool setVolume, int volumePerce
 
     for (int i = 0; i < count; ++i) {
         IAudioSessionControl* pControl = nullptr;
-        if (FAILED(pSessionEnum->GetSession(i, &pControl)) || !pControl) continue;
+        if (FAILED(pSessionEnum->GetSession(i, &pControl)) || !pControl)
+            continue;
 
         IAudioSessionControl2* pControl2 = nullptr;
-        if (SUCCEEDED(pControl->QueryInterface(__uuidof(IAudioSessionControl2), reinterpret_cast<void**>(&pControl2))) && pControl2) {
+        if (SUCCEEDED(
+                pControl->QueryInterface(__uuidof(IAudioSessionControl2), reinterpret_cast<void**>(&pControl2))) &&
+            pControl2) {
             DWORD sPid = 0;
             pControl2->GetProcessId(&sPid);
             if (sPid == pid || (pid == 0 && pControl2->IsSystemSoundsSession() == S_OK)) {
                 ISimpleAudioVolume* pVol = nullptr;
-                if (SUCCEEDED(pControl2->QueryInterface(__uuidof(ISimpleAudioVolume), reinterpret_cast<void**>(&pVol))) && pVol) {
-                    if (setVolume) pVol->SetMasterVolume(clamped, nullptr);
-                    else pVol->SetMute(mute ? TRUE : FALSE, nullptr);
+                if (SUCCEEDED(
+                        pControl2->QueryInterface(__uuidof(ISimpleAudioVolume), reinterpret_cast<void**>(&pVol))) &&
+                    pVol) {
+                    if (setVolume)
+                        pVol->SetMasterVolume(clamped, nullptr);
+                    else
+                        pVol->SetMute(mute ? TRUE : FALSE, nullptr);
                     pVol->Release();
                     applied++;
                 }
@@ -1676,11 +1903,14 @@ int SetAppAudioMuteByPID(uint32_t pid, bool mute) {
 }
 
 int GetAudioEndpointsJson(char* outBuf, int maxLen) {
-    if (!outBuf || maxLen <= 0) return 0;
+    if (!outBuf || maxLen <= 0)
+        return 0;
     ComInitScope com;
 
     IMMDeviceEnumerator* pEnumerator = nullptr;
-    if (FAILED(CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_INPROC_SERVER, __uuidof(IMMDeviceEnumerator), reinterpret_cast<void**>(&pEnumerator))) || !pEnumerator) {
+    if (FAILED(CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_INPROC_SERVER,
+                                __uuidof(IMMDeviceEnumerator), reinterpret_cast<void**>(&pEnumerator))) ||
+        !pEnumerator) {
         std::snprintf(outBuf, maxLen, "[]");
         return 0;
     }
@@ -1727,20 +1957,21 @@ int GetAudioEndpointsJson(char* outBuf, int maxLen) {
             if (SUCCEEDED(pEndpoint->OpenPropertyStore(STGM_READ, &pProps)) && pProps) {
                 PROPVARIANT varName;
                 PropVariantInit(&varName);
-                if (SUCCEEDED(pProps->GetValue(PKEY_Device_FriendlyName, &varName)) && varName.vt == VT_LPWSTR && varName.pwszVal) {
+                if (SUCCEEDED(pProps->GetValue(PKEY_Device_FriendlyName, &varName)) && varName.vt == VT_LPWSTR &&
+                    varName.pwszVal) {
                     friendlyName = Utf16ToUtf8(varName.pwszVal);
                 }
                 PropVariantClear(&varName);
                 pProps->Release();
             }
-            if (friendlyName.empty()) friendlyName = "Audio Output Device";
+            if (friendlyName.empty())
+                friendlyName = "Audio Output Device";
 
-            if (!first) json << ",";
+            if (!first)
+                json << ",";
             first = false;
-            json << "{\"id\":\"" << EscapeJsonString(idStr)
-                 << "\",\"name\":\"" << EscapeJsonString(friendlyName)
-                 << "\",\"isDefault\":" << (isDef ? "true" : "false")
-                 << ",\"flow\":\"render\"}";
+            json << "{\"id\":\"" << EscapeJsonString(idStr) << "\",\"name\":\"" << EscapeJsonString(friendlyName)
+                 << "\",\"isDefault\":" << (isDef ? "true" : "false") << ",\"flow\":\"render\"}";
             pEndpoint->Release();
         }
     }
@@ -1750,16 +1981,20 @@ int GetAudioEndpointsJson(char* outBuf, int maxLen) {
     json << "]";
 
     std::string out = json.str();
-    if (out.length() >= static_cast<size_t>(maxLen)) out.resize(maxLen - 1);
+    if (out.length() >= static_cast<size_t>(maxLen))
+        out.resize(maxLen - 1);
     strncpy_s(outBuf, maxLen, out.c_str(), _TRUNCATE);
     return static_cast<int>(out.length());
 }
 
 int SetDefaultAudioEndpoint(const wchar_t* endpointId) {
-    if (!endpointId || !*endpointId) return 0;
+    if (!endpointId || !*endpointId)
+        return 0;
     ComInitScope com;
     IPolicyConfig* pPolicyConfig = nullptr;
-    if (SUCCEEDED(CoCreateInstance(__uuidof(CPolicyConfigClient), nullptr, CLSCTX_ALL, __uuidof(IPolicyConfig), reinterpret_cast<void**>(&pPolicyConfig))) && pPolicyConfig) {
+    if (SUCCEEDED(CoCreateInstance(__uuidof(CPolicyConfigClient), nullptr, CLSCTX_ALL, __uuidof(IPolicyConfig),
+                                   reinterpret_cast<void**>(&pPolicyConfig))) &&
+        pPolicyConfig) {
         pPolicyConfig->SetDefaultEndpoint(endpointId, eConsole);
         pPolicyConfig->SetDefaultEndpoint(endpointId, eMultimedia);
         pPolicyConfig->SetDefaultEndpoint(endpointId, eCommunications);

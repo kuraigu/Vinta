@@ -622,6 +622,7 @@
   border-top: none;
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.38);
   overflow: hidden;
+  /* vinta-ignore: transition (intentional onboarding island preview morph) */
   transition:
     width calc(0.42s * var(--vinta-anim-scale, 1))
       cubic-bezier(0.22, 1, 0.36, 1),

@@ -38,11 +38,8 @@ typedef void (*NativeAudioPeakCallback)(uint32_t peakBits);
  * @param peakCb Callback for real-time audio output peak levels.
  * @return 1 if started, 0 if already running.
  */
-BRIDGE_API int StartNativeWinRTServices(
-    NativeMediaCallback mediaCb,
-    NativeNotificationCallback notifCb,
-    NativeAudioPeakCallback peakCb
-);
+BRIDGE_API int StartNativeWinRTServices(NativeMediaCallback mediaCb, NativeNotificationCallback notifCb,
+                                        NativeAudioPeakCallback peakCb);
 
 /**
  * @brief Stops all active native background services and joins worker threads.
@@ -68,7 +65,8 @@ BRIDGE_API int FocusNativeMediaApp(const char* sourceApp);
 BRIDGE_API int FocusNativeApp(const char* sourceApp, const char* aumid);
 
 /** @brief Extracts an application's icon and writes it as a PNG file to destFilePath. */
-BRIDGE_API int ExtractAppIconToFile(const char* sourceApp, const char* aumid, const wchar_t* destFilePath, int targetSize);
+BRIDGE_API int ExtractAppIconToFile(const char* sourceApp, const char* aumid, const wchar_t* destFilePath,
+                                    int targetSize);
 
 /** @brief Clears cached media album artwork from memory. */
 BRIDGE_API void ClearNativeMediaArtCache(void);

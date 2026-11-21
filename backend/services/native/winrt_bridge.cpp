@@ -23,8 +23,7 @@ static std::atomic<bool> g_bridgeRunning{false};
 /**
  * @brief Executes an integer-returning callable and catches any C++ exceptions at the ABI boundary.
  */
-template <typename Fn>
-static inline int SafeInvokeInt(Fn&& fn) noexcept {
+template <typename Fn> static inline int SafeInvokeInt(Fn&& fn) noexcept {
     try {
         return fn();
     } catch (...) {
@@ -35,18 +34,15 @@ static inline int SafeInvokeInt(Fn&& fn) noexcept {
 /**
  * @brief Executes a void-returning callable and catches any C++ exceptions at the ABI boundary.
  */
-template <typename Fn>
-static inline void SafeInvokeVoid(Fn&& fn) noexcept {
+template <typename Fn> static inline void SafeInvokeVoid(Fn&& fn) noexcept {
     try {
         fn();
-    } catch (...) {}
+    } catch (...) {
+    }
 }
 
-extern "C" BRIDGE_API int StartNativeWinRTServices(
-    NativeMediaCallback mediaCb,
-    NativeNotificationCallback notifCb,
-    NativeAudioPeakCallback peakCb
-) {
+extern "C" BRIDGE_API int StartNativeWinRTServices(NativeMediaCallback mediaCb, NativeNotificationCallback notifCb,
+                                                   NativeAudioPeakCallback peakCb) {
     return SafeInvokeInt([&]() {
         std::lock_guard<std::mutex> lock(g_lifecycleMutex);
         if (g_bridgeRunning.exchange(true, std::memory_order_acq_rel)) {
@@ -95,10 +91,10 @@ extern "C" BRIDGE_API int FocusNativeApp(const char* sourceApp, const char* aumi
     return SafeInvokeInt([&]() { return FocusApp(sourceApp, aumid); });
 }
 
-extern "C" BRIDGE_API int ExtractAppIconToFile(const char* sourceApp, const char* aumid, const wchar_t* destFilePath, int targetSize) {
-    return SafeInvokeInt([&]() {
-        return destFilePath ? ExtractAppIconNativeToFile(sourceApp, aumid, destFilePath, targetSize) : 0;
-    });
+extern "C" BRIDGE_API int ExtractAppIconToFile(const char* sourceApp, const char* aumid, const wchar_t* destFilePath,
+                                               int targetSize) {
+    return SafeInvokeInt(
+        [&]() { return destFilePath ? ExtractAppIconNativeToFile(sourceApp, aumid, destFilePath, targetSize) : 0; });
 }
 
 extern "C" BRIDGE_API void ClearNativeMediaArtCache(void) {

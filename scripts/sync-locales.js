@@ -11,6 +11,17 @@
 
 const fs = require('fs')
 const path = require('path')
+const { hasFlag, printHelpIfRequested } = require('./lib/lint-utils')
+
+printHelpIfRequested(
+  [
+    'Usage: node scripts/sync-locales.js [--prune] [--help]',
+    '',
+    'Options:',
+    '  --prune  Remove obsolete keys not present in en.json',
+    '  --help   Show this help message'
+  ].join('\n')
+)
 
 const LOCALES_DIR = path.resolve(__dirname, '../frontend/src/locales')
 const BASE_LOCALE = 'en.json'
@@ -72,7 +83,7 @@ function preserveExtras(result, targetObj, baseObj) {
 }
 
 function run() {
-  const prune = process.argv.includes('--prune')
+  const prune = hasFlag('--prune')
 
   if (!fs.existsSync(LOCALES_DIR)) {
     console.error(`Error: Locales directory not found at: ${LOCALES_DIR}`)

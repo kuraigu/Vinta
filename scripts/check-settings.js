@@ -13,27 +13,36 @@
 
 const fs = require('fs')
 const path = require('path')
+const { walkFiles, hasFlag, printHelpIfRequested } = require('./lib/lint-utils')
+
+printHelpIfRequested(
+  [
+    'Usage: node scripts/check-settings.js [options]',
+    '',
+    'Options:',
+    '  --defaults  Print every persistent setting key and its default value',
+    '  --help      Show this help message'
+  ].join('\n')
+)
 
 const ROOT_DIR = path.resolve(__dirname, '..')
 const SETTINGS_PATH = path.join(ROOT_DIR, 'frontend/src/stores/settings.ts')
 const SRC_DIR = path.join(ROOT_DIR, 'frontend/src')
 const SHOW_DEFAULTS =
+  hasFlag('--defaults') ||
+  hasFlag('--default') ||
   process.argv.includes('defaults') ||
-  process.argv.includes('default') ||
-  process.argv.includes('--defaults') ||
-  process.argv.includes('--default')
+  process.argv.includes('default')
 
 function walkDir(dir, exts, results = []) {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name)
-    if (entry.isDirectory()) {
-      if (entry.name === 'node_modules' || entry.name === 'bindings') continue
-      walkDir(full, exts, results)
-    } else if (exts.some((ext) => entry.name.endsWith(ext))) {
-      results.push(full)
-    }
-  }
-  return results
+  return walkFiles(
+    dir,
+    {
+      extensions: new Set(exts),
+      skipDirs: new Set(['node_modules', 'bindings'])
+    },
+    results
+  )
 }
 
 function extractBalanced(src, startIdx, openChar = '(', closeChar = ')') {

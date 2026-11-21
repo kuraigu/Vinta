@@ -44,7 +44,10 @@ struct ApartmentScope {
     }
     ~ApartmentScope() {
         if (m_initialized) {
-            try { winrt::uninit_apartment(); } catch (...) {}
+            try {
+                winrt::uninit_apartment();
+            } catch (...) {
+            }
         }
     }
     bool m_initialized{false};
@@ -52,9 +55,7 @@ struct ApartmentScope {
 
 struct ComInitScope {
     HRESULT hr;
-    ComInitScope() {
-        hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
-    }
+    ComInitScope() { hr = CoInitializeEx(NULL, COINIT_MULTITHREADED); }
     ~ComInitScope() {
         if (hr == S_OK) {
             CoUninitialize();
@@ -62,10 +63,9 @@ struct ComInitScope {
     }
 };
 
-static const std::string base64_chars =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    "abcdefghijklmnopqrstuvwxyz"
-    "0123456789+/";
+static const std::string base64_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                                        "abcdefghijklmnopqrstuvwxyz"
+                                        "0123456789+/";
 
 inline std::string Base64Encode(const unsigned char* bytes_to_encode, size_t in_len) {
     std::string ret;
@@ -110,27 +110,42 @@ inline std::string EscapeJsonString(const std::string& input) {
     std::ostringstream ss;
     for (char c : input) {
         switch (c) {
-            case '"': ss << "\\\""; break;
-            case '\\': ss << "\\\\"; break;
-            case '\b': ss << "\\b"; break;
-            case '\f': ss << "\\f"; break;
-            case '\n': ss << "\\n"; break;
-            case '\r': ss << "\\r"; break;
-            case '\t': ss << "\\t"; break;
-            default:
-                if (static_cast<unsigned char>(c) < 0x20) {
-                    ss << "\\u" << std::hex << std::setw(4) << std::setfill('0') << static_cast<int>(c);
-                } else {
-                    ss << c;
-                }
-                break;
+        case '"':
+            ss << "\\\"";
+            break;
+        case '\\':
+            ss << "\\\\";
+            break;
+        case '\b':
+            ss << "\\b";
+            break;
+        case '\f':
+            ss << "\\f";
+            break;
+        case '\n':
+            ss << "\\n";
+            break;
+        case '\r':
+            ss << "\\r";
+            break;
+        case '\t':
+            ss << "\\t";
+            break;
+        default:
+            if (static_cast<unsigned char>(c) < 0x20) {
+                ss << "\\u" << std::hex << std::setw(4) << std::setfill('0') << static_cast<int>(c);
+            } else {
+                ss << c;
+            }
+            break;
         }
     }
     return ss.str();
 }
 
 inline std::string Utf16ToUtf8(const std::wstring& wstr) {
-    if (wstr.empty()) return std::string();
+    if (wstr.empty())
+        return std::string();
     int size_needed = WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), NULL, 0, NULL, NULL);
     std::string strTo(size_needed, 0);
     WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &strTo[0], size_needed, NULL, NULL);
@@ -138,7 +153,8 @@ inline std::string Utf16ToUtf8(const std::wstring& wstr) {
 }
 
 inline std::wstring Utf8ToUtf16(const std::string& str) {
-    if (str.empty()) return std::wstring();
+    if (str.empty())
+        return std::wstring();
     int size_needed = MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), NULL, 0);
     std::wstring wstrTo(size_needed, 0);
     MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), &wstrTo[0], size_needed);
@@ -156,15 +172,18 @@ struct ProcessedImage {
      * Ratios between 0.75 and 1.33 capture both exact squares and rounded icon crops.
      */
     bool isAvatarSize() const {
-        if (dataUri.empty()) return false;
-        if (width <= 0 || height <= 0) return false;
+        if (dataUri.empty())
+            return false;
+        if (width <= 0 || height <= 0)
+            return false;
         float ratio = static_cast<float>(width) / static_cast<float>(height);
         return (ratio >= 0.75f && ratio <= 1.33f);
     }
 };
 
 inline bool GetImageDimensions(const unsigned char* data, size_t len, int& outWidth, int& outHeight) {
-    if (!data || len < 10) return false;
+    if (!data || len < 10)
+        return false;
 
     if (len >= 24 && data[0] == 0x89 && data[1] == 'P' && data[2] == 'N' && data[3] == 'G') {
         outWidth = (data[16] << 24) | (data[17] << 16) | (data[18] << 8) | data[19];
@@ -194,10 +213,13 @@ inline bool GetImageDimensions(const unsigned char* data, size_t len, int& outWi
             }
             unsigned char marker = data[pos + 1];
             pos += 2;
-            if (marker == 0xD9 || marker == 0xDA) break;
-            if (pos + 2 > len) break;
+            if (marker == 0xD9 || marker == 0xDA)
+                break;
+            if (pos + 2 > len)
+                break;
             size_t segLen = (data[pos] << 8) | data[pos + 1];
-            if ((marker >= 0xC0 && marker <= 0xC3) || (marker >= 0xC5 && marker <= 0xC7) || (marker >= 0xC9 && marker <= 0xCB) || (marker >= 0xCD && marker <= 0xCF)) {
+            if ((marker >= 0xC0 && marker <= 0xC3) || (marker >= 0xC5 && marker <= 0xC7) ||
+                (marker >= 0xC9 && marker <= 0xCB) || (marker >= 0xCD && marker <= 0xCF)) {
                 if (pos + 7 < len) {
                     outHeight = (data[pos + 3] << 8) | data[pos + 4];
                     outWidth = (data[pos + 5] << 8) | data[pos + 6];
@@ -208,8 +230,8 @@ inline bool GetImageDimensions(const unsigned char* data, size_t len, int& outWi
         }
     }
 
-    if (len >= 30 && data[0] == 'R' && data[1] == 'I' && data[2] == 'F' && data[3] == 'F' &&
-        data[8] == 'W' && data[9] == 'E' && data[10] == 'B' && data[11] == 'P') {
+    if (len >= 30 && data[0] == 'R' && data[1] == 'I' && data[2] == 'F' && data[3] == 'F' && data[8] == 'W' &&
+        data[9] == 'E' && data[10] == 'B' && data[11] == 'P') {
         if (data[12] == 'V' && data[13] == 'P' && data[14] == '8' && data[15] == ' ') {
             if (len >= 30) {
                 outWidth = (data[26] | (data[27] << 8)) & 0x3FFF;
@@ -237,7 +259,8 @@ inline bool GetImageDimensions(const unsigned char* data, size_t len, int& outWi
 
 inline ProcessedImage ReadFileToProcessedImage(const std::wstring& filePath) {
     ProcessedImage result;
-    if (filePath.empty()) return result;
+    if (filePath.empty())
+        return result;
 
     for (int attempt = 0; attempt < 5; ++attempt) {
         DWORD attrs = GetFileAttributesW(filePath.c_str());
@@ -246,15 +269,9 @@ inline ProcessedImage ReadFileToProcessedImage(const std::wstring& filePath) {
             continue;
         }
 
-        HANDLE hFile = CreateFileW(
-            filePath.c_str(),
-            GENERIC_READ,
-            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-            NULL,
-            OPEN_EXISTING,
-            FILE_ATTRIBUTE_NORMAL,
-            NULL
-        );
+        HANDLE hFile =
+            CreateFileW(filePath.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL,
+                        OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
         if (hFile == INVALID_HANDLE_VALUE) {
             std::this_thread::sleep_for(std::chrono::milliseconds(25));
             continue;
@@ -282,13 +299,20 @@ inline ProcessedImage ReadFileToProcessedImage(const std::wstring& filePath) {
         size_t dotPos = filePath.rfind(L'.');
         if (dotPos != std::wstring::npos) {
             std::wstring ext = filePath.substr(dotPos);
-            for (auto& c : ext) c = towlower(c);
-            if (ext == L".jpg" || ext == L".jpeg") mime = "image/jpeg";
-            else if (ext == L".webp") mime = "image/webp";
-            else if (ext == L".gif") mime = "image/gif";
-            else if (ext == L".bmp") mime = "image/bmp";
-            else if (ext == L".ico") mime = "image/x-icon";
-            else if (ext == L".svg") mime = "image/svg+xml";
+            for (auto& c : ext)
+                c = towlower(c);
+            if (ext == L".jpg" || ext == L".jpeg")
+                mime = "image/jpeg";
+            else if (ext == L".webp")
+                mime = "image/webp";
+            else if (ext == L".gif")
+                mime = "image/gif";
+            else if (ext == L".bmp")
+                mime = "image/bmp";
+            else if (ext == L".ico")
+                mime = "image/x-icon";
+            else if (ext == L".svg")
+                mime = "image/svg+xml";
         }
 
         result.dataUri = "data:" + mime + ";base64," + Base64Encode(buffer.data(), bytesRead);
@@ -300,7 +324,8 @@ inline ProcessedImage ReadFileToProcessedImage(const std::wstring& filePath) {
 
 inline ProcessedImage ProcessImageSource(const std::wstring& srcUri, const std::wstring& packageFamilyName = L"") {
     ProcessedImage result;
-    if (srcUri.empty()) return result;
+    if (srcUri.empty())
+        return result;
 
     if (srcUri.rfind(L"http://", 0) == 0 || srcUri.rfind(L"https://", 0) == 0 || srcUri.rfind(L"data:", 0) == 0) {
         result.dataUri = Utf16ToUtf8(srcUri);
@@ -315,13 +340,14 @@ inline ProcessedImage ProcessImageSource(const std::wstring& srcUri, const std::
     }
 
     for (auto& c : path) {
-        if (c == L'/') c = L'\\';
+        if (c == L'/')
+            c = L'\\';
     }
 
     std::wstring unescapedPath;
     for (size_t i = 0; i < path.length(); ++i) {
         if (path[i] == L'%' && i + 2 < path.length()) {
-            wchar_t hex[3] = { path[i + 1], path[i + 2], 0 };
+            wchar_t hex[3] = {path[i + 1], path[i + 2], 0};
             wchar_t* end = nullptr;
             long val = wcstol(hex, &end, 16);
             if (end == hex + 2) {
@@ -334,10 +360,12 @@ inline ProcessedImage ProcessImageSource(const std::wstring& srcUri, const std::
     }
 
     result = ReadFileToProcessedImage(unescapedPath);
-    if (!result.dataUri.empty()) return result;
+    if (!result.dataUri.empty())
+        return result;
 
     result = ReadFileToProcessedImage(path);
-    if (!result.dataUri.empty()) return result;
+    if (!result.dataUri.empty())
+        return result;
 
     if (srcUri.rfind(L"ms-appdata://", 0) == 0 && !packageFamilyName.empty()) {
         wchar_t localAppData[MAX_PATH];
@@ -347,15 +375,23 @@ inline ProcessedImage ProcessImageSource(const std::wstring& srcUri, const std::
             if (relativePath.rfind(L"/local/", 0) == 0 || relativePath.rfind(L"local/", 0) == 0) {
                 size_t offset = (relativePath[0] == L'/') ? 7 : 6;
                 std::wstring fullPath = pkgBase + L"\\LocalState\\" + relativePath.substr(offset);
-                for (auto& c : fullPath) { if (c == L'/') c = L'\\'; }
+                for (auto& c : fullPath) {
+                    if (c == L'/')
+                        c = L'\\';
+                }
                 result = ReadFileToProcessedImage(fullPath);
-                if (!result.dataUri.empty()) return result;
+                if (!result.dataUri.empty())
+                    return result;
             } else if (relativePath.rfind(L"/temp/", 0) == 0 || relativePath.rfind(L"temp/", 0) == 0) {
                 size_t offset = (relativePath[0] == L'/') ? 6 : 5;
                 std::wstring fullPath = pkgBase + L"\\TempState\\" + relativePath.substr(offset);
-                for (auto& c : fullPath) { if (c == L'/') c = L'\\'; }
+                for (auto& c : fullPath) {
+                    if (c == L'/')
+                        c = L'\\';
+                }
                 result = ReadFileToProcessedImage(fullPath);
-                if (!result.dataUri.empty()) return result;
+                if (!result.dataUri.empty())
+                    return result;
             }
         }
     }
@@ -364,21 +400,28 @@ inline ProcessedImage ProcessImageSource(const std::wstring& srcUri, const std::
     if (GetTempPathW(MAX_PATH, tempPath) > 0) {
         std::wstring candidate = std::wstring(tempPath) + unescapedPath;
         result = ReadFileToProcessedImage(candidate);
-        if (!result.dataUri.empty()) return result;
+        if (!result.dataUri.empty())
+            return result;
     }
 
     return result;
 }
 
 inline std::string StreamToBase64(winrt_storage::IRandomAccessStreamWithContentType const& stream) {
-    if (!stream) return "";
+    if (!stream)
+        return "";
     try {
         uint64_t size = stream.Size();
-        if (size == 0 || size > 5 * 1024 * 1024) return "";
+        if (size == 0 || size > 5 * 1024 * 1024)
+            return "";
 
-        try { stream.Seek(0); } catch (...) {}
+        try {
+            stream.Seek(0);
+        } catch (...) {
+        }
         winrt_storage::Buffer buffer(static_cast<uint32_t>(size));
-        auto readOp = stream.ReadAsync(buffer, static_cast<uint32_t>(size), winrt_storage::InputStreamOptions::None).get();
+        auto readOp =
+            stream.ReadAsync(buffer, static_cast<uint32_t>(size), winrt_storage::InputStreamOptions::None).get();
 
         auto dataReader = winrt_storage::DataReader::FromBuffer(readOp);
         std::vector<uint8_t> bytes(static_cast<size_t>(size));

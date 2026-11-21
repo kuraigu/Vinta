@@ -13,6 +13,15 @@
 
 const fs = require('fs')
 const path = require('path')
+const { printHelpIfRequested } = require('./lib/lint-utils')
+
+printHelpIfRequested(
+  [
+    'Usage: node scripts/check-locales.js [--help]',
+    '',
+    'Validates translation key parity, placeholder tokens, and @metadata across all locale catalogs.'
+  ].join('\n')
+)
 
 const LOCALES_DIR = path.resolve(__dirname, '../frontend/src/locales')
 const BASE_LOCALE = 'en.json'

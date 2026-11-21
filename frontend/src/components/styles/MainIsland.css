@@ -39,6 +39,7 @@
   border-top-right-radius: 0 !important;
   box-shadow: var(--island-box-shadow, var(--vinta-island-shadow));
 
+  /* vinta-ignore: transition (intentional Dynamic Island shell morph) */
   transition:
     width var(--island-anim),
     height var(--island-anim),

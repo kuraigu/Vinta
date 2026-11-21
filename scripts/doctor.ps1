@@ -3,6 +3,9 @@ Write-Host "       Vinta Environment Doctor         " -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
+# Refresh PATH from Machine + User registry so newly installed tools are detected immediately
+$env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" + [Environment]::GetEnvironmentVariable("Path", "User")
+
 $allPassed = $true
 
 function Test-Tool {
@@ -11,33 +14,38 @@ function Test-Tool {
         [string]$Command,
         [string]$VersionArg = "--version",
         [string]$InstallHint = "",
+        [string[]]$FallbackPaths = @(),
         [switch]$Optional
     )
 
     $cmd = Get-Command $Command -ErrorAction SilentlyContinue
-    if (-not $cmd) {
-        $fallbacks = @(
-            "C:\Program Files (x86)\NSIS\makensis.exe",
-            "C:\Program Files\NSIS\makensis.exe"
-        )
-        foreach ($fb in $fallbacks) {
+    if (-not $cmd -and $FallbackPaths.Count -gt 0) {
+        foreach ($fb in $FallbackPaths) {
             if ($fb -and (Test-Path $fb)) {
-                $cmd = (Get-Item $fb)
+                $cmd = Get-Item $fb
                 $Command = $fb
                 break
             }
         }
     }
+
     if ($cmd) {
+        $resolvedPath = if ($cmd.Source) { $cmd.Source } else { $cmd.FullName }
         try {
+            $global:LASTEXITCODE = 0
             $verOutput = (& $Command $VersionArg 2>&1 | Out-String).Trim()
-            $firstLine = ($verOutput -split "`n")[0].Trim()
-            Write-Host " [OK] " -ForegroundColor Green -NoNewline
-            Write-Host "${Name}: " -ForegroundColor White -NoNewline
-            Write-Host "$firstLine" -ForegroundColor Gray
+            if ($LASTEXITCODE -eq 0 -and $verOutput) {
+                $firstLine = ($verOutput -split "`r?`n")[0].Trim()
+                Write-Host " [OK] " -ForegroundColor Green -NoNewline
+                Write-Host "${Name}: " -ForegroundColor White -NoNewline
+                Write-Host "$firstLine" -ForegroundColor Gray
+            } else {
+                Write-Host " [OK] " -ForegroundColor Green -NoNewline
+                Write-Host "$Name (found at $resolvedPath)" -ForegroundColor White
+            }
         } catch {
             Write-Host " [OK] " -ForegroundColor Green -NoNewline
-            Write-Host "$Name (found at $($cmd.Source))" -ForegroundColor White
+            Write-Host "$Name (found at $resolvedPath)" -ForegroundColor White
         }
     } else {
         if ($Optional) {
@@ -63,7 +71,8 @@ Test-Tool -Name "NPM Package Manager" -Command "npm" -VersionArg "-v" -InstallHi
 Test-Tool -Name "Wails v3 CLI" -Command "wails3" -VersionArg "version" -InstallHint "go install github.com/wailsapp/wails/v3/cmd/wails3@latest"
 Test-Tool -Name "CMake" -Command "cmake" -VersionArg "--version" -InstallHint "winget install Kitware.CMake"
 Test-Tool -Name "Ninja Build" -Command "ninja" -VersionArg "--version" -InstallHint "winget install Ninja-build.Ninja"
-Test-Tool -Name "NSIS Installer Compiler" -Command "makensis" -VersionArg "/VERSION" -InstallHint "winget install NSIS.NSIS" -Optional
+Test-Tool -Name "NSIS Installer Compiler" -Command "makensis" -VersionArg "/VERSION" -FallbackPaths @("C:\Program Files (x86)\NSIS\makensis.exe", "C:\Program Files\NSIS\makensis.exe") -InstallHint "winget install NSIS.NSIS" -Optional
+Test-Tool -Name "Clang Format (LLVM)" -Command "clang-format" -VersionArg "--version" -FallbackPaths @("C:\Program Files\LLVM\bin\clang-format.exe", "C:\Program Files (x86)\LLVM\bin\clang-format.exe") -InstallHint "winget install LLVM.LLVM" -Optional
 Test-Tool -Name "Taskfile CLI (go-task)" -Command "task" -VersionArg "--version" -InstallHint "winget install Task.Task (or use ./scripts.bat)" -Optional
 
 # Check MSVC / Visual Studio C++ Build Tools
@@ -97,6 +106,6 @@ Write-Host ""
 if ($allPassed) {
     Write-Host "All required development toolchains are installed and ready." -ForegroundColor Green
 } else {
-    Write-Host "Some toolchains are missing. You can run './scripts/setup.ps1 -InstallTools' to install them automatically via winget." -ForegroundColor Yellow
+    Write-Host "Some toolchains are missing. You can run './scripts.bat setup --install-tools' to install them automatically via winget." -ForegroundColor Yellow
 }
 Write-Host ""
