@@ -269,7 +269,10 @@
                 'paused'
                   ? 'paused'
                   : ''}"
-                style="width: {$downloadProgressStore.percentage}%;"
+                style="transform: scaleX({Math.min(
+                  1,
+                  Math.max(0, $downloadProgressStore.percentage / 100)
+                )});"
               ></div>
             </div>
             <div class="progress-meta-row">

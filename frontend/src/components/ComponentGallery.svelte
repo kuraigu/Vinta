@@ -495,7 +495,7 @@
     cursor: pointer;
     pointer-events: auto;
     transition:
-      width 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
       opacity 0.3s ease;
   }
 

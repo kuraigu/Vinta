@@ -898,12 +898,12 @@
   overflow: hidden;
   display: flex;
   align-items: center;
-  transition: height 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .vol-slider-wrapper:hover,
 .volume-control:has(.vol-input:active) .vol-slider-wrapper {
-  height: 6px;
+  transform: scaleY(1.5);
   background: rgba(255, 255, 255, 0.42);
 }
 
