@@ -31,7 +31,11 @@
   letter-spacing: -0.01em;
 }
 
-.glance-header:hover .glance-title-text {
+.glance-header.is-disabled {
+  cursor: default;
+}
+
+.glance-header:not(.is-disabled):hover .glance-title-text {
   color: var(--vinta-text-primary);
 }
 

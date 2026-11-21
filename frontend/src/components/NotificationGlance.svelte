@@ -189,7 +189,9 @@
   <BentoCard
     variant="bento"
     class="notification-glance-card"
-    onclick={openNotifications}
+    onclick={$pageVisibilityStore.notifications !== false
+      ? openNotifications
+      : undefined}
   >
     <div class="glance-top-row">
       <div class="glance-brand-group">

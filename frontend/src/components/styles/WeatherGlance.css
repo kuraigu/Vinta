@@ -179,7 +179,11 @@
   outline: none;
 }
 
-.weather-art-link:hover {
+.weather-art-link.is-disabled {
+  cursor: default;
+}
+
+.weather-art-link:not(.is-disabled):hover {
   transform: scale(1.06);
 }
 

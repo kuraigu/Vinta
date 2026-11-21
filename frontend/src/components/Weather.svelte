@@ -24,6 +24,7 @@
     weatherUnitStore,
     simulateOfflineStore,
     simulateWeatherStore,
+    pageVisibilityStore,
     tStore,
     type IslandConfig
   } from '../store'
@@ -286,8 +287,11 @@
     return translate('weather.uv_low')
   }
 
+  let isWeatherPageEnabled = $derived($pageVisibilityStore.weather !== false)
+
   function openWeatherPage(e?: MouseEvent) {
     if (e) e.stopPropagation()
+    if (!isWeatherPageEnabled) return
     navigate?.(WeatherPage, weatherPageConfig, true)
   }
 </script>
@@ -366,7 +370,7 @@
         </div>
 
         <div class="banner-right-art">
-          {#if !isPage}
+          {#if !isPage && isWeatherPageEnabled}
             <button
               type="button"
               class="weather-more-btn"

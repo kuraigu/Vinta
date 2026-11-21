@@ -15,7 +15,7 @@
   import PerformancePage, {
     config as performanceConfig
   } from '../pages/PerformancePage.svelte'
-  import type { IslandConfig } from '../store'
+  import { pageVisibilityStore, type IslandConfig } from '../store'
 
   const navigate =
     getContext<
@@ -38,7 +38,12 @@
     }
   })
 
+  let isPerformancePageEnabled = $derived(
+    $pageVisibilityStore.performance !== false
+  )
+
   function handleCardClick() {
+    if (!isPerformancePageEnabled) return
     if (typeof navigate === 'function') {
       navigate(PerformancePage, performanceConfig, true)
     }
@@ -66,16 +71,18 @@
   <BentoCard
     variant="bento"
     class="system-stats-glance-card"
-    onclick={handleCardClick}
+    onclick={isPerformancePageEnabled ? handleCardClick : undefined}
   >
     <div class="glance-header">
       <div class="glance-title-group">
         <IconBadge icon={Activity} color="surface" size="sm" />
         <span>System Stats</span>
       </div>
-      <div class="glance-actions-group">
-        <ChevronRight size={14} class="glance-nav-chevron" />
-      </div>
+      {#if isPerformancePageEnabled}
+        <div class="glance-actions-group">
+          <ChevronRight size={14} class="glance-nav-chevron" />
+        </div>
+      {/if}
     </div>
 
     <div class="system-stats-rings-row">

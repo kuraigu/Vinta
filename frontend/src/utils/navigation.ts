@@ -29,6 +29,8 @@ import FileShelfPage, {
 import PerformancePage, {
   config as performanceConfig
 } from '../pages/PerformancePage.svelte'
+import WeatherPage from '../pages/WeatherPage.svelte'
+import ActionCenterPage from '../pages/ActionCenterPage.svelte'
 import OnboardingPage, {
   config as onboardingConfig
 } from '../pages/OnboardingPage.svelte'
@@ -39,9 +41,36 @@ import {
   timerAppStore,
   isAnyTimerRunning,
   hasCompletedOnboardingStore,
-  type IslandConfig
+  type IslandConfig,
+  type PageVisibility
 } from '../store'
 import { get } from 'svelte/store'
+
+const PAGE_VISIBILITY_KEYS = new Map<unknown, keyof PageVisibility>([
+  [NotesPage, 'notes'],
+  [MediaPage, 'media'],
+  [Notification, 'notifications'],
+  [ActionCenterPage, 'actioncenter'],
+  [CalculatorPage, 'calculator'],
+  [TimerPage, 'timer'],
+  [CalendarPage, 'calendar'],
+  [WeatherPage, 'weather'],
+  [FileShelfPage, 'fileshelf'],
+  [PerformancePage, 'performance']
+])
+
+/**
+ * Returns whether the given page component is enabled in `pageVisibilityStore`.
+ * Core shell pages (`HomePage`, `SettingsPage`, `OnboardingPage`) are always enabled.
+ */
+export function isPageEnabled(
+  page: unknown,
+  visibility: PageVisibility = get(pageVisibilityStore)
+): boolean {
+  const key = PAGE_VISIBILITY_KEYS.get(page)
+  if (!key) return true
+  return visibility[key] !== false
+}
 
 export type NavFn = (
   page: unknown,

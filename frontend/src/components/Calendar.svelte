@@ -33,6 +33,7 @@
   import CalendarPage, {
     config as calendarConfig
   } from '../pages/CalendarPage.svelte'
+  import { pageVisibilityStore } from '../store'
   import BackButton from './BackButton.svelte'
   import BentoCard from './BentoCard.svelte'
   import PageHeader from './PageHeader.svelte'
@@ -392,7 +393,10 @@
     setSelectedCalendarDate(dateStr)
   }
 
+  let isCalendarPageEnabled = $derived($pageVisibilityStore.calendar !== false)
+
   function handleOpenCalendarPage() {
+    if (!isCalendarPageEnabled) return
     if (onOpenCalendar) {
       onOpenCalendar()
     } else if (navigate) {
@@ -658,7 +662,7 @@
               <Plus size={12} />
               <span>Add Event</span>
             </button>
-            {#if showGoToCalendar}
+            {#if showGoToCalendar && isCalendarPageEnabled}
               <ActionCapsule
                 label="Calendar"
                 onclick={handleOpenCalendarPage}
@@ -740,7 +744,7 @@
               </button>
             </div>
 
-            {#if showGoToCalendar}
+            {#if showGoToCalendar && isCalendarPageEnabled}
               <ActionCapsule
                 label="Calendar"
                 onclick={handleOpenCalendarPage}

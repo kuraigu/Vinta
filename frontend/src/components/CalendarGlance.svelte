@@ -21,6 +21,7 @@
   import {
     dateFormatStore,
     formatUserDate,
+    pageVisibilityStore,
     tStore,
     type IslandConfig
   } from '../store'
@@ -57,7 +58,10 @@
 
   let todayDateLabel = $derived.by(computeTodayDateLabel)
 
+  let isCalendarPageEnabled = $derived($pageVisibilityStore.calendar !== false)
+
   function handleOpenCalendarPage() {
+    if (!isCalendarPageEnabled) return
     if (onOpenCalendar) {
       onOpenCalendar()
     } else if (navigate) {
@@ -66,6 +70,7 @@
   }
 
   function handleAddEvent() {
+    if (!isCalendarPageEnabled) return
     calendarPendingActionStore.set({
       action: 'add',
       date: formatDateKey(realToday)
@@ -76,12 +81,16 @@
 
 <BentoCard variant="bento" class="calendar-glance-card">
   <div class="glance-header">
+    <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
     <div
       class="glance-title-group"
-      role="button"
-      tabindex="0"
-      onclick={handleOpenCalendarPage}
-      onkeydown={(e) => e.key === 'Enter' && handleOpenCalendarPage()}
+      class:is-disabled={!isCalendarPageEnabled}
+      role={isCalendarPageEnabled ? 'button' : undefined}
+      tabindex={isCalendarPageEnabled ? 0 : undefined}
+      onclick={isCalendarPageEnabled ? handleOpenCalendarPage : undefined}
+      onkeydown={isCalendarPageEnabled
+        ? (e) => e.key === 'Enter' && handleOpenCalendarPage()
+        : undefined}
     >
       <IconBadge icon={CalendarDays} color="surface" size="sm" />
       <span class="glance-title-text">{todayDateLabel}</span>
@@ -93,25 +102,27 @@
         </span>
       {/if}
     </div>
-    <div class="glance-actions">
-      <button
-        type="button"
-        class="glance-add-btn"
-        onclick={handleAddEvent}
-        aria-label={$tStore('calendar.add_event')}
-      >
-        <Plus size={12} />
-        <span>{$tStore('calendar.add_event')}</span>
-      </button>
-      <button
-        type="button"
-        class="glance-nav-btn"
-        onclick={handleOpenCalendarPage}
-        aria-label={$tStore('calendar.open_calendar')}
-      >
-        <ChevronRight size={14} class="glance-nav-chevron" />
-      </button>
-    </div>
+    {#if isCalendarPageEnabled}
+      <div class="glance-actions">
+        <button
+          type="button"
+          class="glance-add-btn"
+          onclick={handleAddEvent}
+          aria-label={$tStore('calendar.add_event')}
+        >
+          <Plus size={12} />
+          <span>{$tStore('calendar.add_event')}</span>
+        </button>
+        <button
+          type="button"
+          class="glance-nav-btn"
+          onclick={handleOpenCalendarPage}
+          aria-label={$tStore('calendar.open_calendar')}
+        >
+          <ChevronRight size={14} class="glance-nav-chevron" />
+        </button>
+      </div>
+    {/if}
   </div>
 
   <div class="glance-agenda-container">

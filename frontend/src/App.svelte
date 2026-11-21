@@ -57,7 +57,11 @@
   import VirtualCursor from './devtest/VirtualCursor.svelte'
 
   // Services & Utils
-  import { AppControls, getFallbackPage } from './utils/navigation'
+  import {
+    AppControls,
+    getFallbackPage,
+    isPageEnabled
+  } from './utils/navigation'
   import { initIslandEvents } from './services/islandEvents'
   import { WindowBoundsManager } from './services/windowBounds'
   import {
@@ -1339,7 +1343,17 @@
     }
   }
 
-  setContext('navigate', navigateTo)
+  function navigateFromContext(
+    page: Component,
+    pageConfig: IslandConfig,
+    expand: boolean = false,
+    isBackNav: boolean = false
+  ) {
+    if (!isPageEnabled(page)) return
+    navigateTo(page, pageConfig, expand, isBackNav)
+  }
+
+  setContext('navigate', navigateFromContext)
   setContext('goBack', goBack)
   setContext('hidePill', hideWidget)
   setContext('openOverlay', openOverlay)
