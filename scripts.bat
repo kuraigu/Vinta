@@ -252,6 +252,8 @@ if "%~1"=="lint" (
     if errorlevel 1 exit /b !ERRORLEVEL!
     node "%~dp0scripts\check-transitions.js"
     if errorlevel 1 exit /b !ERRORLEVEL!
+    node "%~dp0scripts\check-hardcoded-ui.js"
+    if errorlevel 1 exit /b !ERRORLEVEL!
     exit /b 0
 )
 
@@ -277,6 +279,11 @@ if "%~1"=="check-transitions" (
 
 if "%~1"=="check-settings" (
     node "%~dp0scripts\check-settings.js" %2
+    exit /b !ERRORLEVEL!
+)
+
+if "%~1"=="check-hardcoded-ui" (
+    node "%~dp0scripts\check-hardcoded-ui.js" %2
     exit /b !ERRORLEVEL!
 )
 
@@ -342,7 +349,9 @@ echo   syso                     Generates Windows syso resource file
 echo   installer                Builds standalone production binary and Windows NSIS installer
 echo   pack-theme ^<path^>        Packages a theme directory into a .vintatheme bundle
 echo   check-locales            Validates key parity and schema across all locale catalogs
-echo   check-settings [defaults] Validates setting keys, defaults, and localStorage usage
+echo   check-settings [default] Validates setting keys, defaults, and localStorage usage
+echo   check-transitions        Audits CSS transitions and reduced-motion coverage
+echo   check-hardcoded-ui       Audits components/pages for hardcoded colors, strings, and native controls
 echo   sync-locales [--prune]   Propagates new keys from en.json to all other locale catalogs
 echo   lint [ci^|native]         Runs Go, C++, Frontend, Theme, and Locale linters
 echo   contributor ^<args^>       Adds a contributor via scripts\add_contributor.ps1
