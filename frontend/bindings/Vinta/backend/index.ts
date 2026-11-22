@@ -21,6 +21,7 @@ export {
     NoteFileInfo,
     ReleaseInfo,
     SatelliteBounds,
+    SettingsBackupInfo,
     ShelfFileItem,
     SystemDiagnostics,
     ThemeInfo,

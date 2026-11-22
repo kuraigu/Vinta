@@ -1,7 +1,7 @@
 <!--
   @component ShowcaseDevControls
   @description DevTest panel for controlling the in-app Virtual Cursor and automated showcase sequence.
-  Implements the choreographed 13-Scene Narrative Dynamic Island showcase with pre-warming and clean-up.
+  Implements the choreographed 13-Scene Narrative Adaptive Island showcase with pre-warming and clean-up.
 
   Used for promotional purposes.
 -->
@@ -936,7 +936,7 @@
     await runCursorAction({
       action: 'type',
       selector: '.editor-surface',
-      text: 'Dynamic island for Windows 10/11',
+      text: 'Adaptive island for Windows 10/11',
       duration: 0.3,
       delay: 32
     })
@@ -1615,7 +1615,7 @@
    */
   async function triggerAct12Outro() {
     activeActNumber = 12
-    statusText = '[Act 12] Dynamic Island is resting in minimized Home...'
+    statusText = '[Act 12] Adaptive Island is resting in minimized Home...'
     await sleep(200)
 
     statusText = '[Act 12] Virtual cursor glides smoothly to desktop center...'

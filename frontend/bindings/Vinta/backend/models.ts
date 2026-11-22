@@ -520,6 +520,38 @@ export class SatelliteBounds {
 }
 
 /**
+ * SettingsBackupInfo describes a rotating local settings snapshot on disk.
+ */
+export class SettingsBackupInfo {
+    "filename": string;
+    "createdAt": string;
+    "sizeBytes": number;
+
+    /** Creates a new SettingsBackupInfo instance. */
+    constructor($$source: Partial<SettingsBackupInfo> = {}) {
+        if (!("filename" in $$source)) {
+            this["filename"] = "";
+        }
+        if (!("createdAt" in $$source)) {
+            this["createdAt"] = "";
+        }
+        if (!("sizeBytes" in $$source)) {
+            this["sizeBytes"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new SettingsBackupInfo instance from a string or object.
+     */
+    static createFrom($$source: any = {}): SettingsBackupInfo {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new SettingsBackupInfo($$parsedSource as Partial<SettingsBackupInfo>);
+    }
+}
+
+/**
  * ShelfFileItem represents a local file or folder staged in the Vinta File Holding Shelf.
  */
 export class ShelfFileItem {

@@ -333,7 +333,7 @@ func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 		systray := wailsApp.SystemTray.New()
 		systray.SetIcon(a.icon)
 		systray.SetDarkModeIcon(a.icon)
-		systray.SetTooltip("Vinta Dynamic Island")
+		systray.SetTooltip("Vinta Adaptive Island")
 		systray.OnClick(func() {
 			if app := application.Get(); app != nil {
 				app.Event.Emit("show-pill")
@@ -362,7 +362,7 @@ func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 				app.Event.Emit("toggle-theme")
 			}
 		})
-		menu.Add("Run Onboarding").OnClick(func(_ *application.Context) {
+		menu.Add("Show Tutorial").OnClick(func(_ *application.Context) {
 			if app := application.Get(); app != nil {
 				app.Event.Emit("open-onboarding")
 			}

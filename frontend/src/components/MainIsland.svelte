@@ -1,6 +1,6 @@
 <!--
   @component MainIsland
-  @description Core dynamic island capsule. Handles expansion and collapse animations,
+  @description Core adaptive island capsule. Handles expansion and collapse animations,
   drag-to-reposition mechanics, island auto-hide timers, backdrop blur effects, and
   switching between the compact glance view and expanded full application pages.
 -->
@@ -11,10 +11,12 @@
     AlignCenter,
     Bell,
     BellOff,
+    BookOpen,
     Eye,
     EyeOff,
     Grid,
     Maximize2,
+    Power,
     Settings
   } from 'lucide-svelte'
   import { Events } from '$lib/events'
@@ -49,7 +51,7 @@
     type IslandConfig
   } from '../store'
   import type { IslandGestureController } from '../services/islandGestures'
-  import type { NavFn } from '../utils/navigation'
+  import { AppControls, type NavFn } from '../utils/navigation'
   import PageDeck from './PageDeck.svelte'
 
   /**
@@ -397,6 +399,18 @@
         label: $tStore('dock.settings'),
         icon: Settings,
         action: () => navigate?.(SettingsPage, settingsConfig, true)
+      },
+      {
+        label: $tStore('context_menu.show_tutorial'),
+        icon: BookOpen,
+        action: () => Events.Emit('open-onboarding')
+      },
+      { label: '', action: () => {}, divider: true },
+      {
+        label: $tStore('context_menu.exit'),
+        icon: Power,
+        danger: true,
+        action: () => AppControls.doQuit()
       }
     )
 

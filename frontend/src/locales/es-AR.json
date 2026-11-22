@@ -266,6 +266,10 @@
     "translated_by": "Traducido por {authors}",
     "startup_label": "Ejecutar al iniciar Windows",
     "hardware_accel_label": "Aceleración por hardware",
+    "hardware_accel_active_desc": "Active: GPU hardware rasterization ({renderer})",
+    "hardware_accel_software_desc": "Disabled: CPU software rendering",
+    "hardware_accel_restart_desc": "Restart required to apply hardware acceleration changes",
+    "hardware_accel_restart_btn": "Restart Now",
     "cache_label": "Limpiar caché de la aplicación",
     "cache_desc": "Tamaño calculado de caché: {size}",
     "cache_cleared": "Limpiada",
@@ -278,6 +282,11 @@
     "import_desc": "Restaurá una configuración exportada previamente con validación",
     "import_success": "Configuración importada",
     "import_btn": "Importar desde JSON",
+    "backup_restore_label": "Restore Automatic Backup",
+    "backup_restore_desc": "Latest automatic snapshot: {date}",
+    "backup_restore_empty_desc": "Automatic snapshots are saved before updates, imports, and resets",
+    "backup_restore_btn": "Restore Latest Snapshot",
+    "backup_restore_success": "Backup Restored",
     "reset_label": "Restablecer toda la configuración",
     "reset_desc": "Restaura todos los ajustes y estados de diseño",
     "reset_btn": "Restablecer todo",
@@ -643,7 +652,9 @@
     "show_island": "Show Island",
     "expand_island": "Expand Island",
     "hide_island": "Hide Island",
-    "center_island": "Center Island"
+    "center_island": "Center Island",
+    "show_tutorial": "Show Tutorial",
+    "exit": "Exit"
   },
   "timer": {
     "title": "Temporizador",

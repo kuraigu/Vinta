@@ -17,7 +17,7 @@
 
 <script lang="ts">
   /**
-   * @fileoverview Main feed view for the expanded dynamic island.
+   * @fileoverview Main feed view for the expanded adaptive island.
    *
    * Displays the current time with localized greetings, mounts glance cards for
    * weather, calendar, and system alerts, and manages the downward scroll cue when

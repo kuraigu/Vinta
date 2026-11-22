@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-Vinta is an open-source, beautifully designed Dynamic Island widget built specifically for Windows PC. Floating effortlessly at the top of your screen, Vinta turns desktop notifications, live weather updates, system statistics, and everyday widgets into an intuitive and fluid interactive experience.
+Vinta is an open-source, beautifully designed Adaptive Island widget built specifically for Windows PC. Floating effortlessly at the top of your screen, Vinta turns desktop notifications, live weather updates, system statistics, and everyday widgets into an intuitive and fluid interactive experience.
 
 ---
 

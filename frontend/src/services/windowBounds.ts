@@ -27,7 +27,7 @@ export interface WindowBounds {
 }
 
 /**
- * Coordinates dynamic island and satellite bounds synchronization with the native Go hit-testing subsystem.
+ * Coordinates adaptive island and satellite bounds synchronization with the native Go hit-testing subsystem.
  */
 export class WindowBoundsManager {
   private boundsTransitionTimeout: number | undefined

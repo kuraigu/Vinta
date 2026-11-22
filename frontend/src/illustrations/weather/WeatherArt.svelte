@@ -693,7 +693,7 @@
   </div>
 {:else}
   <!-- =========================================================================
-       COMPACT GLYPH VARIANT (Minimized Dynamic Island Capsule Pill)
+       COMPACT GLYPH VARIANT (Minimized Adaptive Island Capsule Pill)
        ========================================================================= -->
   <div
     class="weather-art-compact {className}"

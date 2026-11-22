@@ -25,7 +25,7 @@
   type Props = {
     /** Unique identifier for the satellite. */
     id: string
-    /** Anchor flank relative to the main Dynamic Island. */
+    /** Anchor flank relative to the main Adaptive Island. */
     anchor?: SatelliteAnchor
     /** Visual width of the satellite container in pixels. */
     width: number

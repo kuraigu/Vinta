@@ -10,7 +10,8 @@
     Cpu,
     Database,
     RotateCcw,
-    Check,
+    RotateCw,
+    History,
     Download,
     Upload
   } from 'lucide-svelte'
@@ -25,19 +26,103 @@
     hardwareAccelStore,
     tStore,
     notifData,
+    syncSettingsToDisk,
     exportSettingsToFile,
-    importSettingsFromFile
+    importSettingsFromFile,
+    restoreLatestSettingsBackup
   } from '../../../store'
+  import type { SettingsBackupInfo } from '../../../../bindings/Vinta/backend/models.js'
   import {
     GetAutostart,
     SetAutostart,
-    SetHardwareAcceleration,
+    GetBootHardwareAcceleration,
+    RestartApp,
     GetCacheSize,
     ClearCache,
-    ResetSettings
+    ResetSettings,
+    GetSettingsBackups
   } from '../../../../bindings/Vinta/backend/app.js'
 
+  let bootHwAccel = $state<boolean | null>(null)
+  let detectedRenderer = $state('')
+  let needsHwAccelRestart = $derived(
+    bootHwAccel !== null && $hardwareAccelStore !== bootHwAccel
+  )
+  let hardwareAccelDescription = $derived.by(() => {
+    if (needsHwAccelRestart) {
+      return $tStore('settings.hardware_accel_restart_desc')
+    }
+    if (bootHwAccel === false) {
+      return $tStore('settings.hardware_accel_software_desc')
+    }
+    if (bootHwAccel === true) {
+      return $tStore('settings.hardware_accel_active_desc', {
+        renderer: detectedRenderer || 'GPU'
+      })
+    }
+    return undefined
+  })
+  let isRestarting = $state(false)
+
+  let latestBackup = $state<SettingsBackupInfo | null>(null)
+  let restoreStatus = $state<SettingButtonStatus>('idle')
+  let restoreStatusMsg = $state('')
+  let restoreTimer: ReturnType<typeof setTimeout> | null = null
+
+  /**
+   * Queries WebGL debug renderer metadata to verify whether GPU or software rasterization is active.
+   */
+  function detectActiveRenderer(): string {
+    try {
+      const canvas = document.createElement('canvas')
+      const gl =
+        canvas.getContext('webgl2') ||
+        canvas.getContext('webgl') ||
+        canvas.getContext('experimental-webgl')
+      if (
+        !gl ||
+        !(
+          gl instanceof WebGLRenderingContext ||
+          gl instanceof WebGL2RenderingContext
+        )
+      ) {
+        return ''
+      }
+      const debugInfo = gl.getExtension('WEBGL_debug_renderer_info')
+      const raw = debugInfo
+        ? String(gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || '')
+        : String(gl.getParameter(gl.RENDERER) || '')
+      gl.getExtension('WEBGL_lose_context')?.loseContext()
+
+      if (!raw) return ''
+      const angleMatch = raw.match(/^ANGLE\s*\([^,]+,\s*([^,(]+)/i)
+      const cleaned = (angleMatch ? angleMatch[1] : raw)
+        .replace(/^ANGLE\s*\(/i, '')
+        .replace(/\s+Direct3D.*$/i, '')
+        .replace(/\)$/, '')
+        .trim()
+      return cleaned.length > 40 ? `${cleaned.slice(0, 37)}...` : cleaned
+    } catch {
+      return ''
+    }
+  }
+
+  /**
+   * Loads available automatic rotating settings snapshots from disk.
+   */
+  async function refreshBackups() {
+    if (typeof GetSettingsBackups !== 'function') return
+    try {
+      const list = await GetSettingsBackups()
+      latestBackup = Array.isArray(list) && list.length > 0 ? list[0] : null
+    } catch {
+      latestBackup = null
+    }
+  }
+
   onMount(async () => {
+    detectedRenderer = detectActiveRenderer()
+
     if (typeof GetAutostart === 'function') {
       try {
         const osEnabled = await GetAutostart()
@@ -48,7 +133,33 @@
         // Ignore if backend binding is unavailable
       }
     }
+
+    if (typeof GetBootHardwareAcceleration === 'function') {
+      try {
+        const activeAtBoot = await GetBootHardwareAcceleration()
+        if (typeof activeAtBoot === 'boolean') {
+          bootHwAccel = activeAtBoot
+        }
+      } catch {
+        // Ignore if backend binding is unavailable
+      }
+    }
+
+    await refreshBackups()
   })
+
+  /**
+   * Flushes pending settings to disk and relaunches Vinta to apply boot-time graphics flags.
+   */
+  async function handleRestartApp() {
+    isRestarting = true
+    await syncSettingsToDisk(true)
+    try {
+      await RestartApp()
+    } catch {
+      isRestarting = false
+    }
+  }
 
   /**
    * Updates Windows autostart registration and reverts the store if the registry write fails.
@@ -65,11 +176,6 @@
       }
     }
   }
-
-  function handleHardwareAccelEffect() {
-    SetHardwareAcceleration($hardwareAccelStore).catch(() => {})
-  }
-  $effect(handleHardwareAccelEffect)
 
   let cacheStatus = $state<SettingButtonStatus>('idle')
   let clearTimer: ReturnType<typeof setTimeout> | null = null
@@ -232,6 +338,7 @@
       if (res.success) {
         importStatus = 'success'
         importStatusMsg = `Imported ${res.count ?? 0} settings successfully`
+        await refreshBackups()
         if (importTimer) clearTimeout(importTimer)
         importTimer = setTimeout(() => {
           importStatus = 'idle'
@@ -250,6 +357,35 @@
       }
     } catch {
       importStatus = 'error'
+    }
+  }
+
+  /**
+   * Restores settings from the most recent automatic rotating backup snapshot.
+   */
+  async function handleRestoreBackup() {
+    restoreStatus = 'loading'
+    try {
+      const res = await restoreLatestSettingsBackup()
+      if (res.success) {
+        restoreStatus = 'success'
+        restoreStatusMsg = ''
+        await refreshBackups()
+        if (restoreTimer) clearTimeout(restoreTimer)
+        restoreTimer = setTimeout(() => {
+          restoreStatus = 'idle'
+        }, 3000)
+      } else {
+        restoreStatus = 'error'
+        restoreStatusMsg = res.error || ''
+        if (restoreTimer) clearTimeout(restoreTimer)
+        restoreTimer = setTimeout(() => {
+          restoreStatus = 'idle'
+          restoreStatusMsg = ''
+        }, 4000)
+      }
+    } catch {
+      restoreStatus = 'error'
     }
   }
 
@@ -285,6 +421,7 @@
 
     <SettingItem
       label={$tStore('settings.hardware_accel_label')}
+      description={hardwareAccelDescription}
       icon={Cpu}
       isDefault={$hardwareAccelStore === hardwareAccelStore.defaultValue}
       onReset={() => hardwareAccelStore.reset()}
@@ -294,6 +431,20 @@
         ariaLabel={$tStore('settings.hardware_accel_label')}
       />
     </SettingItem>
+
+    {#if needsHwAccelRestart}
+      <div class="hw-restart-row">
+        <SettingActionButton
+          variant="default"
+          disabled={isRestarting}
+          fullWidth={true}
+          onclick={handleRestartApp}
+        >
+          <RotateCw size={13} />
+          {$tStore('settings.hardware_accel_restart_btn')}
+        </SettingActionButton>
+      </div>
+    {/if}
   </BentoCard>
 
   <BentoCard variant="group">
@@ -347,6 +498,30 @@
       >
         <Upload size={13} />
         {$tStore('settings.import_btn')}
+      </SettingActionButton>
+    </SettingItem>
+
+    <SettingItem
+      label={$tStore('settings.backup_restore_label')}
+      description={restoreStatusMsg ||
+        (latestBackup
+          ? $tStore('settings.backup_restore_desc', {
+              date: latestBackup.createdAt
+            })
+          : $tStore('settings.backup_restore_empty_desc'))}
+      icon={History}
+      flexCol={true}
+    >
+      <SettingActionButton
+        variant="default"
+        status={restoreStatus}
+        successLabel={$tStore('settings.backup_restore_success')}
+        disabled={!latestBackup}
+        fullWidth={true}
+        onclick={handleRestoreBackup}
+      >
+        <History size={13} />
+        {$tStore('settings.backup_restore_btn')}
       </SettingActionButton>
     </SettingItem>
   </BentoCard>
