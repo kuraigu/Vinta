@@ -52,6 +52,7 @@
   } from '../PerformancePage.svelte'
   import {
     notifData,
+    activeOverlayStore,
     activeSettingsTabStore,
     pageVisibilityStore,
     updateInfoStore,
@@ -62,6 +63,7 @@
     type OverlayPageId,
     type NotificationsOverlayTab
   } from '../../store'
+  import { isEditableEventTarget } from '../../utils/keyboardGuard'
 
   interface Props {
     onClose: () => void
@@ -255,6 +257,16 @@
   })
 
   function handleAppsKeyDown(e: KeyboardEvent) {
+    if ($activeOverlayStore !== 'apps') return
+    if (
+      isEditableEventTarget(e.target) &&
+      !(
+        e.target instanceof HTMLElement &&
+        e.target.closest('[data-vinta="apps-overlay-page"]')
+      )
+    ) {
+      return
+    }
     if (e.key === 'Enter' && searchQuery.trim() && filteredApps.length > 0) {
       const first = filteredApps.find(
         (app) => !app.visibilityKey || $pageVisibilityStore[app.visibilityKey]

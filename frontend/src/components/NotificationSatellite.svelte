@@ -16,7 +16,8 @@
   } from '../stores/notificationSatellite'
   import {
     autoHideDelayStore,
-    notifSatelliteEnabledStore
+    notifSatelliteEnabledStore,
+    pageVisibilityStore
   } from '../stores/settings'
   import {
     nativeIconsStore,
@@ -205,7 +206,7 @@
    * Navigates to the Notification Center and dismisses the satellite circle.
    */
   function handleCircleClick() {
-    if (navigate) {
+    if ($pageVisibilityStore.notifications !== false && navigate) {
       navigate(Notification, notifConfig, true)
     }
     dismissSatelliteNotification()

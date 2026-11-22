@@ -107,16 +107,12 @@ func (a *App) OpenFeedbackIssue(title, describe, reproduce string) error {
 	desc := strings.TrimSpace(describe)
 	repro := strings.TrimSpace(reproduce)
 
-	var body strings.Builder
-	fmt.Fprintf(&body, "### Describe the bug\n%s\n\n### To Reproduce\n%s\n\n### Desktop\n%s", desc, repro, diag)
-
 	issueURL := fmt.Sprintf(
-		"https://github.com/kuraigu/Vinta/issues/new?template=bug_report.yml&title=%s&describe=%s&reproduce=%s&desktop=%s&body=%s",
+		"https://github.com/kuraigu/Vinta/issues/new?template=bug_report.yml&title=%s&describe=%s&reproduce=%s&desktop=%s",
 		url.QueryEscape(formatIssueTitle("[Bug]", title)),
 		url.QueryEscape(desc),
 		url.QueryEscape(repro),
 		url.QueryEscape(diag),
-		url.QueryEscape(body.String()),
 	)
 	return a.OpenURL(issueURL)
 }
@@ -126,15 +122,11 @@ func (a *App) OpenFeatureRequest(title, describe, useCase string) error {
 	desc := strings.TrimSpace(describe)
 	uc := strings.TrimSpace(useCase)
 
-	var body strings.Builder
-	fmt.Fprintf(&body, "### Describe the feature\n%s\n\n### Why it would be useful\n%s", desc, uc)
-
 	issueURL := fmt.Sprintf(
-		"https://github.com/kuraigu/Vinta/issues/new?template=feature_request.yml&title=%s&describe=%s&use_case=%s&body=%s",
+		"https://github.com/kuraigu/Vinta/issues/new?template=feature_request.yml&title=%s&describe=%s&use_case=%s",
 		url.QueryEscape(formatIssueTitle("[Enhancement]", title)),
 		url.QueryEscape(desc),
 		url.QueryEscape(uc),
-		url.QueryEscape(body.String()),
 	)
 	return a.OpenURL(issueURL)
 }

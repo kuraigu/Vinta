@@ -13,6 +13,7 @@
   } from '../../pages/MediaPage.svelte'
   import {
     globalMediaStore,
+    pageVisibilityStore,
     type IslandConfig,
     type WidgetSizePreset
   } from '../../store'
@@ -48,8 +49,11 @@
     )
   )
 
+  let isMediaEnabled = $derived($pageVisibilityStore.media !== false)
+
   function openMediaPage(e: MouseEvent) {
     e.stopPropagation()
+    if (!isMediaEnabled) return
     if (typeof navigate === 'function') {
       navigate(MediaPage, mediaConfig, true)
     }
@@ -61,7 +65,7 @@
     <BentoCard
       variant="bento"
       class="media-glance-card"
-      onclick={openMediaPage}
+      onclick={isMediaEnabled ? openMediaPage : undefined}
     >
       <MediaWidget
         expanded={false}

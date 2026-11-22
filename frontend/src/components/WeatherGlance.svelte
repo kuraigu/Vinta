@@ -11,6 +11,7 @@
     weatherUnitStore,
     simulateOfflineStore,
     simulateWeatherStore,
+    pageVisibilityStore,
     tStore,
     type IslandConfig
   } from '../store'
@@ -130,7 +131,10 @@
   }
   let unitLetter = $derived.by(computeUnitLetter)
 
+  let isWeatherEnabled = $derived($pageVisibilityStore.weather !== false)
+
   function openWeatherPage() {
+    if (!isWeatherEnabled) return
     if (navigate) {
       navigate(WeatherPage, weatherPageConfig, true)
     }
@@ -221,17 +225,21 @@
 
     <div class="home-hero-art">
       <div class="weather-art-wrap">
+        <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
         <div
           class="weather-art-link"
+          class:is-disabled={!isWeatherEnabled}
           data-weather-mascot
-          role="button"
-          tabindex="0"
-          aria-label="Open weather page"
+          role={isWeatherEnabled ? 'button' : undefined}
+          tabindex={isWeatherEnabled ? 0 : undefined}
+          aria-label={isWeatherEnabled ? 'Open weather page' : undefined}
           onclick={(e) => {
+            if (!isWeatherEnabled) return
             e.stopPropagation()
             openWeatherPage()
           }}
           onkeydown={(e) => {
+            if (!isWeatherEnabled) return
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault()
               openWeatherPage()

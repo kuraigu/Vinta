@@ -12,6 +12,14 @@
   user-select: none;
 }
 
+.glance-header.is-disabled {
+  cursor: default;
+}
+
+.glance-header.is-disabled:hover .glance-title-text {
+  color: var(--vinta-text-secondary);
+}
+
 .glance-title-group {
   display: flex;
   align-items: center;

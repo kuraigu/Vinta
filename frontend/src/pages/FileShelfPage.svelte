@@ -44,7 +44,8 @@
   import ScrollView from '../components/ScrollView.svelte'
   import { islandTooltip } from '../services/islandTooltip'
   import { hideTooltip } from '../stores/tooltip'
-  import { tStore } from '../store'
+  import { activeOverlayStore, tStore } from '../store'
+  import { isEditableEventTarget } from '../utils/keyboardGuard'
   import {
     fileShelfStore,
     removeFileFromShelf,
@@ -60,7 +61,7 @@
     type ShelfFileItem
   } from '../stores/fileShelf'
 
-  let { expanded: _expanded = false }: { expanded?: boolean } = $props()
+  let { expanded = false }: { expanded?: boolean } = $props()
 
   let isDropActive = $state(false)
   let dragDepth = 0
@@ -221,6 +222,8 @@
    * @param e - Keyboard event.
    */
   function handleWindowKeyDown(e: KeyboardEvent): void {
+    if (!expanded || $activeOverlayStore !== null) return
+    if (isEditableEventTarget(e.target)) return
     if (e.key === 'Escape') {
       if ($fileShelfStore.isDraggingOut) {
         cancelActiveDrag()

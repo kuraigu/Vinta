@@ -40,12 +40,16 @@
     return portal(node, {
       onMount: () => {
         requestAnimationFrame(() => {
-          const naturalW = node.offsetWidth || node.scrollWidth || 150
-          const naturalH = node.offsetHeight || node.scrollHeight || 160
+          const scale = getUiScale()
+          const naturalW = (node.offsetWidth || node.scrollWidth || 164) * scale
+          const naturalH =
+            (node.offsetHeight || node.scrollHeight || 160) * scale
           const clamped = clampToBounds(x, y, naturalW, naturalH)
           adjustedX = clamped.x
           adjustedY = clamped.y
-          Events.Emit('vinta:resync-bounds')
+          requestAnimationFrame(() => {
+            Events.Emit('vinta:resync-bounds')
+          })
         })
       },
       resyncBounds: true
@@ -59,14 +63,19 @@
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onclose()
     }
+    const handleBlur = () => {
+      onclose()
+    }
     setTimeout(() => {
       document.addEventListener('mousedown', handle)
       document.addEventListener('keydown', handleKey)
+      window.addEventListener('blur', handleBlur)
     }, 0)
     return {
       destroy() {
         document.removeEventListener('mousedown', handle)
         document.removeEventListener('keydown', handleKey)
+        window.removeEventListener('blur', handleBlur)
       }
     }
   }
@@ -88,6 +97,7 @@
   class="ctx-menu no-swipe"
   style="left: {adjustedX / getUiScale()}px; top: {adjustedY / getUiScale()}px;"
   transition:slide={{ duration: 100, axis: 'y' }}
+  onintroend={() => Events.Emit('vinta:resync-bounds')}
   onmousedown={stopPropagation}
   role="menu"
   tabindex="-1"

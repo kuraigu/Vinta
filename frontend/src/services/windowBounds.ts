@@ -65,6 +65,7 @@ export class WindowBoundsManager {
     const dpr = window.devicePixelRatio || 1
 
     if (isHidden) {
+      const hitRects: HitRect[] = []
       const targetNode = islandNode || this.activeIslandNode
       if (targetNode) {
         const rect = targetNode.getBoundingClientRect()
@@ -73,13 +74,34 @@ export class WindowBoundsManager {
           const t = 0
           const w = Math.round(rect.width * dpr)
           const h = Math.round((rect.bottom + 2) * dpr)
-          return {
-            hitRects: [new HitRect({ left: l, top: t, width: w, height: h })],
-            hiddenSig: `hidden:${l},${t},${w},${h}`
+          hitRects.push(new HitRect({ left: l, top: t, width: w, height: h }))
+        }
+      }
+      if (typeof document !== 'undefined') {
+        const contextMenu = document.querySelector<HTMLElement>(
+          '.ctx-menu, .context-menu'
+        )
+        if (contextMenu) {
+          const cRect = contextMenu.getBoundingClientRect()
+          if (cRect.width > 0 && cRect.height > 0) {
+            hitRects.push(
+              new HitRect({
+                left: Math.round(cRect.left * dpr),
+                top: Math.round(cRect.top * dpr),
+                width: Math.round(cRect.width * dpr),
+                height: Math.round(cRect.height * dpr)
+              })
+            )
           }
         }
       }
-      return { hitRects: [], hiddenSig: 'hidden:empty' }
+      const sig = hitRects
+        .map((r) => `${r.left},${r.top},${r.width},${r.height}`)
+        .join(';')
+      return {
+        hitRects,
+        hiddenSig: `hidden:${sig || 'empty'}`
+      }
     }
 
     const hitRects: HitRect[] = []
