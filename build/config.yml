@@ -5,9 +5,9 @@ info:
   companyName: "FreeMatrix Studios"
   productName: "Vinta"
   productIdentifier: "com.freematrixstudios.vinta"
-  description: "Dynamic Island for Windows PC"
+  description: "Adaptive Island for Windows PC"
   copyright: "Copyright © 2026 FreeMatrix Studios"
-  comments: "Dynamic Island for Windows PC"
+  comments: "Adaptive Island for Windows PC"
   version: "0.1.0"
 
 dev_mode:

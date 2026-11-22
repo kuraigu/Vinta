@@ -91,7 +91,7 @@ Open your JSON file in any text editor (such as VS Code, Notepad++, or Sublime T
    "event_count": "{count} Termine"
    ```
 
-3. **Keep Text Concise:** The Dynamic Island operates in compact screen spaces (standard width 330px to 440px). Where possible, choose short, natural phrases to avoid unnecessary text clipping.
+3. **Keep Text Concise:** The Adaptive Island operates in compact screen spaces (standard width 330px to 440px). Where possible, choose short, natural phrases to avoid unnecessary text clipping.
 
 4. **Character Encoding:** Always save your file in **UTF-8 without BOM**.
 

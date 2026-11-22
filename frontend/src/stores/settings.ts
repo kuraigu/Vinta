@@ -15,7 +15,8 @@ import {
   SetReturnOnFullscreenExit,
   ExportSettingsFileDialog,
   ImportSettingsFileDialog,
-  ApplyImportedSettings
+  ApplyImportedSettings,
+  RestoreLatestSettingsBackup
 } from '../../bindings/Vinta/backend/app.js'
 import { devTestingStore } from './appState'
 
@@ -196,17 +197,17 @@ function isDeepEqual(a: unknown, b: unknown): boolean {
 /**
  * Flushes active user overrides to the disk settings.json file.
  */
-export function syncSettingsToDisk(immediate: boolean = false) {
+export function syncSettingsToDisk(immediate: boolean = false): Promise<void> {
   if (saveSettingsTimeout) clearTimeout(saveSettingsTimeout)
   if (immediate) {
     try {
       if (typeof SaveSettings === 'function') {
-        SaveSettings(JSON.stringify(userOverridesCache)).catch(() => {})
+        return SaveSettings(JSON.stringify(userOverridesCache)).catch(() => {})
       }
     } catch {
       // Ignore disk write failure
     }
-    return
+    return Promise.resolve()
   }
   saveSettingsTimeout = setTimeout(() => {
     try {
@@ -217,6 +218,7 @@ export function syncSettingsToDisk(immediate: boolean = false) {
       // Ignore disk write failure
     }
   }, 300)
+  return Promise.resolve()
 }
 
 const registeredStores: Array<{
@@ -975,6 +977,52 @@ export async function exportSettingsToFile(): Promise<SettingsExportResult> {
   }
 }
 
+async function applySanitizedSettingsPayload(
+  rawJSON: string
+): Promise<SettingsImportResult> {
+  let parsed: Record<string, unknown>
+  try {
+    parsed = JSON.parse(rawJSON)
+  } catch {
+    return { success: false, error: 'Selected file is not valid JSON' }
+  }
+
+  const envelopeVersion =
+    typeof parsed.$schemaVersion === 'number' ? parsed.$schemaVersion : undefined
+
+  const settingsPayload =
+    parsed.settings && typeof parsed.settings === 'object' && !Array.isArray(parsed.settings)
+      ? (parsed.settings as Record<string, unknown>)
+      : parsed
+
+  const migrated = migrateSettings(settingsPayload, envelopeVersion)
+  const sanitized = sanitizeSettingsPayload(migrated.migrated)
+  const sanitizedKeys = Object.keys(sanitized).filter(
+    (k) => k !== '_sparse_migrated' && k !== '_schema_version'
+  )
+
+  if (sanitizedKeys.length === 0) {
+    return { success: false, error: 'No recognizable settings found in file' }
+  }
+
+  await ApplyImportedSettings(JSON.stringify(sanitized))
+
+  for (const key of Object.keys(userOverridesCache)) {
+    delete userOverridesCache[key]
+  }
+  Object.assign(userOverridesCache, sanitized)
+
+  for (const reg of registeredStores) {
+    if (reg.key in sanitized) {
+      reg.store.set(sanitized[reg.key])
+    } else {
+      reg.store.set(reg.initialValue)
+    }
+  }
+
+  return { success: true, count: sanitizedKeys.length }
+}
+
 /**
  * Prompts the user to pick a JSON configuration file, parses and deep-sanitizes its structure,
  * commits it atomically to disk, and updates reactive state in-place.
@@ -995,47 +1043,33 @@ export async function importSettingsFromFile(): Promise<SettingsImportResult> {
       return { success: false }
     }
 
-    let parsed: Record<string, unknown>
-    try {
-      parsed = JSON.parse(rawJSON)
-    } catch {
-      return { success: false, error: 'Selected file is not valid JSON' }
+    return await applySanitizedSettingsPayload(rawJSON)
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return { success: false, error: msg }
+  }
+}
+
+/**
+ * Restores the most recent automatic settings snapshot and updates reactive state in-place.
+ *
+ * @returns Result object with status and restored settings count.
+ */
+export async function restoreLatestSettingsBackup(): Promise<SettingsImportResult> {
+  try {
+    if (
+      typeof RestoreLatestSettingsBackup !== 'function' ||
+      typeof ApplyImportedSettings !== 'function'
+    ) {
+      return { success: false, error: 'Backup restore function not available' }
     }
 
-    const envelopeVersion =
-      typeof parsed.$schemaVersion === 'number' ? parsed.$schemaVersion : undefined
-
-    const settingsPayload =
-      parsed.settings && typeof parsed.settings === 'object' && !Array.isArray(parsed.settings)
-        ? (parsed.settings as Record<string, unknown>)
-        : parsed
-
-    const migrated = migrateSettings(settingsPayload, envelopeVersion)
-    const sanitized = sanitizeSettingsPayload(migrated.migrated)
-    const sanitizedKeys = Object.keys(sanitized).filter(
-      (k) => k !== '_sparse_migrated' && k !== '_schema_version'
-    )
-
-    if (sanitizedKeys.length === 0) {
-      return { success: false, error: 'No recognizable settings found in file' }
+    const rawJSON = await RestoreLatestSettingsBackup()
+    if (!rawJSON) {
+      return { success: false, error: 'No automatic settings backup found' }
     }
 
-    await ApplyImportedSettings(JSON.stringify(sanitized))
-
-    for (const key of Object.keys(userOverridesCache)) {
-      delete userOverridesCache[key]
-    }
-    Object.assign(userOverridesCache, sanitized)
-
-    for (const reg of registeredStores) {
-      if (reg.key in sanitized) {
-        reg.store.set(sanitized[reg.key])
-      } else {
-        reg.store.set(reg.initialValue)
-      }
-    }
-
-    return { success: true, count: sanitizedKeys.length }
+    return await applySanitizedSettingsPayload(rawJSON)
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err)
     return { success: false, error: msg }

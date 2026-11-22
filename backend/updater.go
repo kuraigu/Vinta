@@ -818,6 +818,8 @@ func (a *App) ApplyUpdate() error {
 		return fmt.Errorf("installer binary not found: %w", err)
 	}
 
+	_, _ = a.CreateSettingsBackup()
+
 	exePath, err := os.Executable()
 	if err != nil {
 		exePath = "C:\\"

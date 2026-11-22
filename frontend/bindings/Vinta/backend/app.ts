@@ -22,7 +22,7 @@ import * as application$0 from "../../github.com/wailsapp/wails/v3/pkg/applicati
 import * as $models from "./models.js";
 
 /**
- * ApplyImportedSettings validates and saves sanitized settings JSON to %APPDATA%/FreeMatrix Studios/Vinta/settings.json.
+ * ApplyImportedSettings creates a safety backup, validates, and saves sanitized settings JSON to %APPDATA%/FreeMatrix Studios/Vinta/settings.json.
  */
 export function ApplyImportedSettings(sanitizedJSON: string): $CancellablePromise<void> {
     return $Call.ByID(1795097572, sanitizedJSON);
@@ -107,6 +107,13 @@ export function ClearTooltipBounds(id: string): $CancellablePromise<void> {
  */
 export function CopyShelfPathsToClipboard(paths: string[]): $CancellablePromise<void> {
     return $Call.ByID(2662184127, paths);
+}
+
+/**
+ * CreateSettingsBackup snapshots settings.json into the rotating backups directory (retaining the newest 3 backups).
+ */
+export function CreateSettingsBackup(): $CancellablePromise<string> {
+    return $Call.ByID(1020373820);
 }
 
 /**
@@ -209,6 +216,13 @@ export function GetBatteryStatus(): $CancellablePromise<services$0.BatteryStatus
 }
 
 /**
+ * GetBootHardwareAcceleration returns whether hardware acceleration was enabled when the application booted.
+ */
+export function GetBootHardwareAcceleration(): $CancellablePromise<boolean> {
+    return $Call.ByID(1447023829);
+}
+
+/**
  * GetCacheSize computes the total byte size of disk caches and temporary sync databases.
  */
 export function GetCacheSize(): $CancellablePromise<number> {
@@ -276,7 +290,7 @@ export function GetGlobalShortcut(): $CancellablePromise<string> {
 }
 
 /**
- * GetHardwareAcceleration returns whether GPU acceleration is enabled.
+ * GetHardwareAcceleration returns whether GPU acceleration is currently configured in settings.json.
  */
 export function GetHardwareAcceleration(): $CancellablePromise<boolean> {
     return $Call.ByID(3725975885);
@@ -311,11 +325,20 @@ export function GetSettings(): $CancellablePromise<string> {
 }
 
 /**
+ * GetSettingsBackups returns up to 3 automatic settings snapshots ordered newest first.
+ */
+export function GetSettingsBackups(): $CancellablePromise<$models.SettingsBackupInfo[]> {
+    return $Call.ByID(28732699).then(($result: any) => {
+        return $$createType16($result);
+    });
+}
+
+/**
  * GetSystemDiagnostics gathers non-sensitive runtime diagnostics.
  */
 export function GetSystemDiagnostics(): $CancellablePromise<$models.SystemDiagnostics> {
     return $Call.ByID(306280716).then(($result: any) => {
-        return $$createType15($result);
+        return $$createType17($result);
     });
 }
 
@@ -324,7 +347,7 @@ export function GetSystemDiagnostics(): $CancellablePromise<$models.SystemDiagno
  */
 export function GetSystemTelemetry(): $CancellablePromise<services$0.SystemTelemetry> {
     return $Call.ByID(3760642775).then(($result: any) => {
-        return $$createType16($result);
+        return $$createType18($result);
     });
 }
 
@@ -354,7 +377,7 @@ export function GetUpdateRepo(): $CancellablePromise<string> {
  */
 export function GetWirelessStatus(): $CancellablePromise<services$0.WirelessStatus> {
     return $Call.ByID(794979391).then(($result: any) => {
-        return $$createType17($result);
+        return $$createType19($result);
     });
 }
 
@@ -377,7 +400,7 @@ export function ImportSettingsFileDialog(): $CancellablePromise<string> {
  */
 export function ImportThemeDialog(): $CancellablePromise<$models.ThemeInfo | null> {
     return $Call.ByID(1943468227).then(($result: any) => {
-        return $$createType19($result);
+        return $$createType21($result);
     });
 }
 
@@ -386,7 +409,7 @@ export function ImportThemeDialog(): $CancellablePromise<$models.ThemeInfo | nul
  */
 export function InspectShelfFiles(paths: string[]): $CancellablePromise<$models.ShelfFileItem[]> {
     return $Call.ByID(4271776190, paths).then(($result: any) => {
-        return $$createType20($result);
+        return $$createType22($result);
     });
 }
 
@@ -416,7 +439,7 @@ export function IsTestMode(): $CancellablePromise<boolean> {
  */
 export function ListNotes(): $CancellablePromise<$models.NoteFileInfo[]> {
     return $Call.ByID(2184398716).then(($result: any) => {
-        return $$createType22($result);
+        return $$createType24($result);
     });
 }
 
@@ -425,7 +448,7 @@ export function ListNotes(): $CancellablePromise<$models.NoteFileInfo[]> {
  */
 export function ListThemes(): $CancellablePromise<$models.ThemeInfo[]> {
     return $Call.ByID(44849841).then(($result: any) => {
-        return $$createType23($result);
+        return $$createType25($result);
     });
 }
 
@@ -497,7 +520,7 @@ export function PauseUpdateDownload(): $CancellablePromise<void> {
  */
 export function PromptChooseShelfFiles(): $CancellablePromise<$models.ShelfFileItem[]> {
     return $Call.ByID(2406650291).then(($result: any) => {
-        return $$createType20($result);
+        return $$createType22($result);
     });
 }
 
@@ -558,7 +581,7 @@ export function RequestMediaUpdate(): $CancellablePromise<void> {
 }
 
 /**
- * ResetSettings deletes settings.json to restore factory configuration defaults.
+ * ResetSettings creates a safety backup and deletes settings.json to restore factory configuration defaults.
  */
 export function ResetSettings(): $CancellablePromise<void> {
     return $Call.ByID(672571499);
@@ -569,6 +592,20 @@ export function ResetSettings(): $CancellablePromise<void> {
  */
 export function ResolveNativeAppIcon(sourceApp: string, aumid: string): $CancellablePromise<string> {
     return $Call.ByID(181960208, sourceApp, aumid);
+}
+
+/**
+ * RestartApp launches a fresh instance of Vinta waiting for this PID to exit, then terminates the current process.
+ */
+export function RestartApp(): $CancellablePromise<void> {
+    return $Call.ByID(944632205);
+}
+
+/**
+ * RestoreLatestSettingsBackup restores settings.json from the most recent rotating backup and returns its JSON payload.
+ */
+export function RestoreLatestSettingsBackup(): $CancellablePromise<string> {
+    return $Call.ByID(2009919739);
 }
 
 /**
@@ -747,7 +784,7 @@ export function SetForceInteractive(active: boolean): $CancellablePromise<void> 
 }
 
 /**
- * SetHardwareAcceleration persists the hardware acceleration preference to disk.
+ * SetHardwareAcceleration persists the hardware acceleration preference in settings.json and removes any legacy hw_accel.txt file.
  */
 export function SetHardwareAcceleration(enabled: boolean): $CancellablePromise<void> {
     return $Call.ByID(3309982961, enabled);
@@ -925,7 +962,7 @@ export function StopSystemTelemetry(): $CancellablePromise<boolean> {
  */
 export function StripShelfImageMetadata(paths: string[]): $CancellablePromise<$models.ShelfFileItem[]> {
     return $Call.ByID(4085277947, paths).then(($result: any) => {
-        return $$createType20($result);
+        return $$createType22($result);
     });
 }
 
@@ -991,12 +1028,14 @@ const $$createType11 = $models.MonitorInfo.createFrom;
 const $$createType12 = $Create.Map($Create.Any, $Create.Any);
 const $$createType13 = $models.AnnouncementsPayload.createFrom;
 const $$createType14 = $models.DisplayLayout.createFrom;
-const $$createType15 = $models.SystemDiagnostics.createFrom;
-const $$createType16 = services$0.SystemTelemetry.createFrom;
-const $$createType17 = services$0.WirelessStatus.createFrom;
-const $$createType18 = $models.ThemeInfo.createFrom;
-const $$createType19 = $Create.Nullable($$createType18);
-const $$createType20 = $Create.Array($$createType0);
-const $$createType21 = $models.NoteFileInfo.createFrom;
-const $$createType22 = $Create.Array($$createType21);
-const $$createType23 = $Create.Array($$createType18);
+const $$createType15 = $models.SettingsBackupInfo.createFrom;
+const $$createType16 = $Create.Array($$createType15);
+const $$createType17 = $models.SystemDiagnostics.createFrom;
+const $$createType18 = services$0.SystemTelemetry.createFrom;
+const $$createType19 = services$0.WirelessStatus.createFrom;
+const $$createType20 = $models.ThemeInfo.createFrom;
+const $$createType21 = $Create.Nullable($$createType20);
+const $$createType22 = $Create.Array($$createType0);
+const $$createType23 = $models.NoteFileInfo.createFrom;
+const $$createType24 = $Create.Array($$createType23);
+const $$createType25 = $Create.Array($$createType20);

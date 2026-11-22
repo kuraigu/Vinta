@@ -34,6 +34,7 @@ var contributorsMD string
 func main() {
 	// Ensure panic recovery is always first in the defer stack
 	defer backend.SetupPanicRecovery()
+	backend.WaitForParentExitIfRestarting()
 
 	// Windows Explorer launches Run entries with C:\Windows\System32 as the working directory.
 	if wd, wdErr := os.Getwd(); wdErr == nil {
@@ -114,16 +115,18 @@ func main() {
 		"CalculateNativeWinOcclusion",
 	}
 
+	var enabledFeatures []string
 	if hwAccel {
+		enabledFeatures = append(enabledFeatures, "CanvasOopRasterization")
 		browserArgs = append(browserArgs,
 			"--ignore-gpu-blocklist",
 			"--enable-gpu-rasterization",
 			"--enable-zero-copy",
-			"--enable-features=CanvasOopRasterization",
 		)
 	} else {
 		browserArgs = append(browserArgs,
 			"--disable-gpu",
+			"--disable-gpu-compositing",
 			"--disable-webgl",
 			"--disable-3d-apis",
 		)
@@ -131,7 +134,7 @@ func main() {
 
 	wailsApp := application.New(application.Options{
 		Name:        "Vinta",
-		Description: "Dynamic Island for Windows PC",
+		Description: "Adaptive Island for Windows PC",
 		Icon:        icon,
 		Services: []application.Service{
 			application.NewService(app),
@@ -162,6 +165,7 @@ func main() {
 		Windows: application.WindowsOptions{
 			WebviewUserDataPath:           filepath.Join(backend.GetAppDataDir(), "webview2"),
 			DisableQuitOnLastWindowClosed: false,
+			EnabledFeatures:               enabledFeatures,
 			DisabledFeatures:              disabledFeatures,
 			AdditionalBrowserArgs:         browserArgs,
 		},
