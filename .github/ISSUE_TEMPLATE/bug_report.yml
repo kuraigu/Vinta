@@ -14,9 +14,9 @@ body:
     id: reproduce
     attributes:
       label: To Reproduce
-      description: Steps to reproduce the behavior.
+      description: Optional steps to reproduce the behavior.
     validations:
-      required: true
+      required: false
   - type: textarea
     id: desktop
     attributes:

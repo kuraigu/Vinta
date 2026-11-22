@@ -48,6 +48,7 @@
   import {
     dateFormatStore,
     formatUserDate,
+    pageVisibilityStore,
     tStore,
     type IslandConfig
   } from '../store'
@@ -393,6 +394,7 @@
   }
 
   function handleOpenCalendarPage() {
+    if ($pageVisibilityStore.calendar === false) return
     if (onOpenCalendar) {
       onOpenCalendar()
     } else if (navigate) {
@@ -658,7 +660,7 @@
               <Plus size={12} />
               <span>Add Event</span>
             </button>
-            {#if showGoToCalendar}
+            {#if showGoToCalendar && $pageVisibilityStore.calendar !== false}
               <ActionCapsule
                 label="Calendar"
                 onclick={handleOpenCalendarPage}
@@ -740,7 +742,7 @@
               </button>
             </div>
 
-            {#if showGoToCalendar}
+            {#if showGoToCalendar && $pageVisibilityStore.calendar !== false}
               <ActionCapsule
                 label="Calendar"
                 onclick={handleOpenCalendarPage}

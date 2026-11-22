@@ -43,14 +43,20 @@ export function getUiScale(): number {
 }
 
 /**
- * Returns the bounding box of the `.island` container when present, or the browser viewport.
+ * Returns the bounding box of the `.island` container when large enough to hold the popover,
+ * or falls back to the browser viewport (e.g. when the island is minimized or hidden).
  */
-export function getIslandOrViewportBounds(): RectBounds {
+export function getIslandOrViewportBounds(
+  minWidth: number = 0,
+  minHeight: number = 0
+): RectBounds {
   if (typeof document !== 'undefined') {
     const islandEl = document.querySelector('.island')
     if (islandEl) {
       const r = islandEl.getBoundingClientRect()
-      return { left: r.left, top: r.top, right: r.right, bottom: r.bottom }
+      if (r.width >= minWidth + 16 && r.height >= minHeight + 16) {
+        return { left: r.left, top: r.top, right: r.right, bottom: r.bottom }
+      }
     }
   }
   if (typeof window !== 'undefined') {
@@ -72,7 +78,7 @@ export function clampToBounds(
   y: number,
   width: number,
   height: number,
-  bounds: RectBounds = getIslandOrViewportBounds(),
+  bounds: RectBounds = getIslandOrViewportBounds(width, height),
   margin: number = 8
 ): { x: number; y: number } {
   let finalX = x

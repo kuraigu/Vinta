@@ -639,7 +639,11 @@
     "copy": "Kopyahin",
     "paste": "I-paste",
     "select_all": "Piliin lahat",
-    "clear": "I-clear"
+    "clear": "I-clear",
+    "show_island": "Show Island",
+    "expand_island": "Expand Island",
+    "hide_island": "Hide Island",
+    "center_island": "Center Island"
   },
   "timer": {
     "title": "Timer",
@@ -798,6 +802,8 @@
     "feedback_use_case_placeholder": "How would this help your workflow?",
     "feedback_desktop_auto": "Desktop diagnostics will be attached automatically.",
     "feedback_attachments_hint": "Screenshots or clips can be pasted or dragged onto GitHub after clicking Continue.",
+    "feedback_duplicate_warning": "Duplicate text detected across fields. Please revise before continuing.",
+    "feedback_clear": "Clear",
     "feedback_cancel": "Cancel",
     "feedback_open_github": "Continue on GitHub",
     "run_onboarding": "Patakbuhin ang Onboarding",

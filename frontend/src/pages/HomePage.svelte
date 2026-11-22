@@ -48,6 +48,7 @@
     homeWidgetsVisibilityStore,
     homeWidgetSizesStore,
     homeWidgetMenuEnabledStore,
+    pageVisibilityStore,
     type WidgetSizePreset,
     homeMeasuredHeightStore,
     userNameStore,
@@ -109,6 +110,7 @@
    * Navigates the island viewport to the full Calendar agenda view.
    */
   function openCalendar() {
+    if ($pageVisibilityStore.calendar === false) return
     if (navigate) {
       navigate(CalendarPage, calendarConfig, true)
     }

@@ -40,8 +40,12 @@
   letter-spacing: -0.01em;
 }
 
-.glance-title-group:hover .glance-title-text {
+.glance-title-group:hover:not(.is-disabled) .glance-title-text {
   color: var(--vinta-text-primary);
+}
+
+.glance-title-group.is-disabled {
+  cursor: default;
 }
 
 .glance-event-count {

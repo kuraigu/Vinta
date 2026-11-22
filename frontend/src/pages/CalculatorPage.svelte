@@ -17,11 +17,14 @@
 
   import { Delete } from 'lucide-svelte'
   import { islandTooltip } from '../services/islandTooltip'
-  import { tStore } from '../store'
+  import { activeOverlayStore, tStore } from '../store'
+  import { isEditableEventTarget } from '../utils/keyboardGuard'
   import {
     evaluateExpression,
     isCalculationError
   } from '../utils/calculatorEngine'
+
+  let { expanded = false }: { expanded?: boolean } = $props()
 
   let expression = $state('0')
   let historyFormula = $state('')
@@ -327,6 +330,8 @@
      */
     function onKeyDown(e: KeyboardEvent) {
       if (e.defaultPrevented) return
+      if (!expanded || $activeOverlayStore !== null) return
+      if (isEditableEventTarget(e.target)) return
 
       if (e.key >= '0' && e.key <= '9') {
         e.preventDefault()

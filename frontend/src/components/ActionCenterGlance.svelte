@@ -45,8 +45,12 @@
       (page: unknown, pageConfig: IslandConfig, expand?: boolean) => void
     >('navigate')
 
+  let isActionCenterEnabled = $derived(
+    $pageVisibilityStore.actioncenter !== false
+  )
+
   function handleOpenActionCenter() {
-    if (!$pageVisibilityStore.actioncenter) return
+    if (!isActionCenterEnabled) return
     if (typeof navigate === 'function') {
       navigate(ActionCenterPage, actionCenterConfig, true)
     }
@@ -189,18 +193,23 @@
 </script>
 
 <BentoCard variant="bento" class="action-center-glance-card">
+  <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
   <div
     class="glance-header"
-    role="button"
-    tabindex="0"
-    onclick={handleOpenActionCenter}
-    onkeydown={(e) => e.key === 'Enter' && handleOpenActionCenter()}
+    class:is-disabled={!isActionCenterEnabled}
+    role={isActionCenterEnabled ? 'button' : undefined}
+    tabindex={isActionCenterEnabled ? 0 : undefined}
+    onclick={isActionCenterEnabled ? handleOpenActionCenter : undefined}
+    onkeydown={(e) =>
+      isActionCenterEnabled && e.key === 'Enter' && handleOpenActionCenter()}
   >
     <div class="glance-title-group">
       <IconBadge icon={SlidersHorizontal} color="surface" size="sm" />
       <span class="glance-title-text">{$tStore('quick_controls.title')}</span>
     </div>
-    <ChevronRight size={14} class="glance-nav-chevron" />
+    {#if isActionCenterEnabled}
+      <ChevronRight size={14} class="glance-nav-chevron" />
+    {/if}
   </div>
 
   <div class="quick-toggle-row">

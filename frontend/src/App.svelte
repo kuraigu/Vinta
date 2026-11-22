@@ -45,6 +45,8 @@
   import FileShelfPage, {
     config as fileShelfConfig
   } from './pages/FileShelfPage.svelte'
+  import ActionCenterPage from './pages/ActionCenterPage.svelte'
+  import PerformancePage from './pages/PerformancePage.svelte'
   import OnboardingPage, {
     config as onboardingConfig
   } from './pages/OnboardingPage.svelte'
@@ -121,6 +123,8 @@
     ISLAND_WIDTH_TIERS,
     type IslandConfig,
     homeWidgetsVisibilityStore,
+    pageVisibilityStore,
+    type PageVisibility,
     hasCompletedOnboardingStore,
     syncSettingsToDisk,
     homeMeasuredHeightStore,
@@ -192,7 +196,25 @@
     [CalendarPage, 'calendar'],
     [WeatherPage, 'weather'],
     [FileShelfPage, 'fileshelf'],
+    [ActionCenterPage, 'actioncenter'],
+    [PerformancePage, 'performance'],
     [OnboardingPage, 'onboarding']
+  ])
+
+  const PAGE_VISIBILITY_KEY_BY_COMPONENT = new Map<
+    Component,
+    keyof PageVisibility
+  >([
+    [MediaPage, 'media'],
+    [Notification, 'notifications'],
+    [NotesPage, 'notes'],
+    [CalculatorPage, 'calculator'],
+    [TimerPage, 'timer'],
+    [CalendarPage, 'calendar'],
+    [WeatherPage, 'weather'],
+    [FileShelfPage, 'fileshelf'],
+    [ActionCenterPage, 'actioncenter'],
+    [PerformancePage, 'performance']
   ])
 
   // DOM References
@@ -762,6 +784,7 @@
   }
 
   let clickOutsideBlurTimeout: number | undefined
+  let collapseOnOverlayClose = false
 
   function clearClickOutsideBlur() {
     if (clickOutsideBlurTimeout !== undefined) {
@@ -772,27 +795,24 @@
 
   function hasProtectedInteractionOpen(): boolean {
     if (typeof document === 'undefined') return false
-    const active = document.activeElement as HTMLElement | null
-    if (
-      active &&
-      (active.tagName === 'INPUT' ||
-        active.tagName === 'TEXTAREA' ||
-        active.tagName === 'SELECT' ||
-        active.isContentEditable)
-    ) {
-      return true
-    }
     return Boolean(
       document.querySelector(
-        '.context-menu, .editor-modal, .drawer-panel, [role="menu"]'
+        '.ctx-menu, .context-menu, .editor-modal, .drawer-panel, [role="menu"]'
       )
     )
   }
 
   function collapseForOutsideClick() {
+    if (
+      typeof document !== 'undefined' &&
+      document.activeElement instanceof HTMLElement
+    ) {
+      document.activeElement.blur()
+    }
     if ($activeOverlayStore !== null) {
       activeOverlayStore.set(null)
     }
+    collapseOnOverlayClose = false
     AppControls.doMinimize(navigateTo, undefined, activePage)
   }
 
@@ -814,6 +834,9 @@
 
   function handleWindowBlur() {
     clearClickOutsideBlur()
+    clearHoverGrace()
+    isHovering = false
+    isSatelliteHovering = false
     if (
       !expanded ||
       isHidden ||
@@ -854,7 +877,10 @@
    */
   $effect(function syncFileShelfAutoPin() {
     const isShelfExpanded =
-      expanded && activePage === FileShelfPage && $clickOutsideMinimizeStore
+      expanded &&
+      activePage === FileShelfPage &&
+      $activeOverlayStore === null &&
+      $clickOutsideMinimizeStore
 
     if (isShelfExpanded) {
       if (!get(overlayPinnedStore)) {
@@ -909,8 +935,6 @@
     }, HOVER_GRACE_MS)
   }
 
-  let collapseOnOverlayClose = false
-
   function openOverlay(
     overlay: OverlayPageId,
     options?: {
@@ -955,8 +979,11 @@
       $hiddenPillOffsetXStore = targetOffset
     }
     bounds.currentOSBounds = { ...nextBounds }
+    bounds.syncPillBounds(islandNode, false, true)
     islandAnim = formatIslandAnim(0.65)
-    bounds.startTrackingTransition(islandNode, scaleAnimMs(660), false)
+    bounds.startTrackingTransition(islandNode, scaleAnimMs(660), false, () =>
+      recoverBoundsIfIdle()
+    )
     triggerGlow()
   }
 
@@ -994,6 +1021,10 @@
     expand: boolean = false,
     isBackNav: boolean = false
   ) {
+    const visKey = PAGE_VISIBILITY_KEY_BY_COMPONENT.get(page)
+    if (visKey && $pageVisibilityStore[visKey] === false) {
+      return
+    }
     if (expand && page === Notification) {
       if ($activeOverlayStore === 'notifications') {
         closeOverlay()
@@ -2095,7 +2126,11 @@
     }
 
     const handleQuickNotesHotkey = () => {
-      if (!$hasCompletedOnboardingStore || activePage === OnboardingPage) {
+      if (
+        !$hasCompletedOnboardingStore ||
+        activePage === OnboardingPage ||
+        $pageVisibilityStore.notes === false
+      ) {
         return
       }
       if (activePage === NotesPage && expanded && !isHidden) {

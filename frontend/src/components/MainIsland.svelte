@@ -7,13 +7,29 @@
 <script lang="ts">
   import { getContext, onMount, type Component } from 'svelte'
   import { fade } from 'svelte/transition'
+  import {
+    AlignCenter,
+    Bell,
+    BellOff,
+    Eye,
+    EyeOff,
+    Grid,
+    Maximize2,
+    Settings
+  } from 'lucide-svelte'
   import { Events } from '$lib/events'
   import Clock from './Clock.svelte'
   import Dock from './Dock.svelte'
   import FileDropIndicator from './FileDropIndicator.svelte'
+  import CustomContextMenu, {
+    type ContextMenuItem
+  } from './CustomContextMenu.svelte'
   import HomePage from '../pages/HomePage.svelte'
   import MediaPage from '../pages/MediaPage.svelte'
   import TimerPage from '../pages/TimerPage.svelte'
+  import SettingsPage, {
+    config as settingsConfig
+  } from '../pages/SettingsPage.svelte'
   import FileShelfPage, {
     config as fileShelfConfig
   } from '../pages/FileShelfPage.svelte'
@@ -25,8 +41,10 @@
     type OverlayPageId,
     allowDragPositionStore,
     autoHideDelayStore,
+    dndStore,
     pageVisibilityStore,
     animScaleStore,
+    tStore,
     ISLAND_WIDTH_TIERS,
     type IslandConfig
   } from '../store'
@@ -281,6 +299,15 @@
     )
   }
 
+  let islandCtxOpen = $state(false)
+  let islandCtxCoords = $state({ x: 0, y: 0 })
+
+  $effect(function closeContextMenuOnExpand() {
+    if (expanded && islandCtxOpen) {
+      islandCtxOpen = false
+    }
+  })
+
   function handleContextMenu(e: MouseEvent) {
     if (gestures.isDragging || gestures.isInertia) {
       if (gestures.isInertia) {
@@ -295,11 +322,85 @@
 
     e.preventDefault()
     e.stopPropagation()
-    if (isHidden) {
-      onShowWidget?.()
-    } else {
-      onHideWidget?.()
+    onMouseEnter?.()
+    const rect = islandNode?.getBoundingClientRect()
+    const minY = rect ? Math.round(rect.bottom + 8) : e.clientY
+    islandCtxCoords = {
+      x: e.clientX,
+      y: Math.max(e.clientY, minY)
     }
+    islandCtxOpen = true
+  }
+
+  function getIslandContextMenuItems(): ContextMenuItem[] {
+    const items: ContextMenuItem[] = []
+    if (isHidden) {
+      items.push(
+        {
+          label: $tStore('context_menu.show_island'),
+          icon: Eye,
+          action: () => onShowWidget?.()
+        },
+        {
+          label: $tStore('context_menu.expand_island'),
+          icon: Maximize2,
+          action: () => onExpand?.()
+        }
+      )
+    } else {
+      items.push(
+        {
+          label: $tStore('context_menu.expand_island'),
+          icon: Maximize2,
+          action: () => onExpand?.()
+        },
+        {
+          label: $tStore('context_menu.hide_island'),
+          icon: EyeOff,
+          action: () => onHideWidget?.()
+        }
+      )
+    }
+
+    items.push(
+      { label: '', action: () => {}, divider: true },
+      {
+        label: $dndStore
+          ? $tStore('notification.dnd_on')
+          : $tStore('notification.dnd_off'),
+        icon: $dndStore ? BellOff : Bell,
+        action: () => dndStore.update((v) => !v)
+      }
+    )
+
+    if (Math.abs(currentLiveOffsetX) >= 3) {
+      items.push({
+        label: $tStore('context_menu.center_island'),
+        icon: AlignCenter,
+        action: () => {
+          Events.Emit('vinta:apply-alignment', {
+            alignment: 'center',
+            animate: true
+          })
+        }
+      })
+    }
+
+    items.push(
+      { label: '', action: () => {}, divider: true },
+      {
+        label: $tStore('dock.apps'),
+        icon: Grid,
+        action: () => openOverlay?.('apps')
+      },
+      {
+        label: $tStore('dock.settings'),
+        icon: Settings,
+        action: () => navigate?.(SettingsPage, settingsConfig, true)
+      }
+    )
+
+    return items
   }
 
   function handleIslandClick(e: MouseEvent) {
@@ -323,6 +424,8 @@
   }
 
   const navigate = getContext<NavFn | undefined>('navigate')
+  const openOverlay =
+    getContext<(overlay: OverlayPageId) => void>('openOverlay')
 
   const FILE_HOLD_DURATION_MS = 950
   let isHoldingFilesOverIsland = $state(false)
@@ -407,6 +510,7 @@
     }
 
     const handleWindowBlur = () => {
+      islandCtxOpen = false
       const wasHoldingFiles = isHoldingFilesOverIsland
       stopFileHoldTimer()
       if (onMouseLeave) {
@@ -586,5 +690,16 @@
     <div class="transition-glow-ring" aria-hidden="true"></div>
   {/if}
 </div>
+
+{#if islandCtxOpen && !expanded}
+  <CustomContextMenu
+    x={islandCtxCoords.x}
+    y={islandCtxCoords.y}
+    items={getIslandContextMenuItems()}
+    onclose={() => {
+      islandCtxOpen = false
+    }}
+  />
+{/if}
 
 <style src="./styles/MainIsland.css"></style>

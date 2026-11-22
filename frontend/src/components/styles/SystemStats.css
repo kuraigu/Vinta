@@ -9,6 +9,10 @@
   cursor: pointer;
 }
 
+:global(.system-stats-glance-card.is-disabled) {
+  cursor: default;
+}
+
 .glance-header {
   display: flex;
   align-items: center;

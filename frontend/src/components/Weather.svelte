@@ -24,6 +24,7 @@
     weatherUnitStore,
     simulateOfflineStore,
     simulateWeatherStore,
+    pageVisibilityStore,
     tStore,
     type IslandConfig
   } from '../store'
@@ -288,6 +289,7 @@
 
   function openWeatherPage(e?: MouseEvent) {
     if (e) e.stopPropagation()
+    if ($pageVisibilityStore.weather === false) return
     navigate?.(WeatherPage, weatherPageConfig, true)
   }
 </script>
@@ -370,7 +372,7 @@
         </div>
 
         <div class="banner-right-art">
-          {#if !isPage}
+          {#if !isPage && $pageVisibilityStore.weather !== false}
             <button
               type="button"
               class="weather-more-btn"
