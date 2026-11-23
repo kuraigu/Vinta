@@ -4,7 +4,9 @@ package backend
 import (
 	"archive/zip"
 	"bytes"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"image"
 	"image/color"
@@ -1565,4 +1567,35 @@ func (a *App) StripShelfImageMetadata(paths []string) ([]ShelfFileItem, error) {
 		return nil, fmt.Errorf("no supported JPEG or PNG images found to strip")
 	}
 	return a.InspectShelfFiles(cleanedPaths), nil
+}
+
+// ComputeFileSHA256 returns the lowercase hex SHA-256 digest of the specified file.
+func (a *App) ComputeFileSHA256(path string) (string, error) {
+	clean := filepath.Clean(strings.TrimSpace(path))
+	if clean == "" {
+		return "", fmt.Errorf("empty path")
+	}
+	f, err := os.Open(clean) // #nosec G304 -- user-selected shelf file
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = f.Close() }()
+
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+// CopyShelfTextToClipboard copies plain text (e.g. file path or SHA-256 hash) to the system clipboard.
+func (a *App) CopyShelfTextToClipboard(text string) error {
+	trimmed := strings.TrimSpace(text)
+	if trimmed == "" {
+		return fmt.Errorf("empty text")
+	}
+	if app := application.Get(); app != nil && app.Clipboard != nil {
+		app.Clipboard.SetText(trimmed)
+	}
+	return nil
 }

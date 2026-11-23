@@ -463,14 +463,14 @@
 
 .tile-remove-badge {
   position: absolute;
-  top: -4px;
-  right: -4px;
-  width: 17px;
-  height: 17px;
+  top: -5px;
+  right: -5px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
-  background: var(--vinta-surface-elevated);
-  border: 1px solid var(--vinta-border);
-  color: var(--vinta-text-secondary);
+  background: var(--vinta-dock-popover-bg);
+  border: 1px solid var(--vinta-accent-danger);
+  color: var(--vinta-accent-danger);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -479,6 +479,7 @@
   opacity: 0;
   transform: scale(0.85);
   pointer-events: auto;
+  z-index: 2;
   transition:
     opacity 0.15s ease,
     transform 0.15s ease;
@@ -490,9 +491,9 @@
 }
 
 .tile-remove-badge:hover {
-  background: var(--vinta-accent-danger-hover-bg);
+  background: var(--vinta-accent-danger);
   border-color: var(--vinta-accent-danger);
-  color: var(--vinta-accent-danger-hover-text);
+  color: #ffffff;
 }
 
 .tile-name {

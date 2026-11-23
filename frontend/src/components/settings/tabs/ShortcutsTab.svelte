@@ -14,13 +14,20 @@
     Sliders,
     ArrowLeftRight,
     CornerDownLeft,
-    Layers
+    Layers,
+    Search,
+    AppWindow
   } from 'lucide-svelte'
   import BentoCard from '../../BentoCard.svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingSectionHeader from '../SettingSectionHeader.svelte'
   import SettingBanner from '../SettingBanner.svelte'
   import { islandTooltip } from '../../../services/islandTooltip'
+  import {
+    scheduleFeedbackClear,
+    clearFeedbackTimer,
+    type FeedbackSeverity
+  } from '../../../utils/feedbackTimeout'
   import {
     RegisterNamedGlobalShortcut,
     UnregisterNamedGlobalShortcut
@@ -29,14 +36,22 @@
     globalHotkeyStore,
     quickNotesHotkeyStore,
     modeSwitchHotkeyStore,
+    appsLauncherHotkeyStore,
+    desktopAppsHotkeyStore,
     tStore
   } from '../../../store'
 
   type ShortcutDef = {
-    id: 'toggle' | 'quick_notes' | 'mode_switch'
+    id:
+      | 'toggle'
+      | 'quick_notes'
+      | 'mode_switch'
+      | 'apps_launcher'
+      | 'desktop_apps'
     label: string
     description: string
     defaultKey: string
+    isGlobal: boolean
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     icon: any
   }
@@ -47,6 +62,7 @@
       label: $tStore('settings.shortcut_toggle_label'),
       description: $tStore('settings.shortcut_toggle_desc'),
       defaultKey: 'Alt+Shift+V',
+      isGlobal: true,
       icon: Keyboard
     },
     {
@@ -54,6 +70,7 @@
       label: $tStore('settings.shortcut_notes_label'),
       description: $tStore('settings.shortcut_notes_desc'),
       defaultKey: 'Alt+Shift+N',
+      isGlobal: true,
       icon: FileText
     },
     {
@@ -61,7 +78,24 @@
       label: $tStore('settings.shortcut_mode_label'),
       description: $tStore('settings.shortcut_mode_desc'),
       defaultKey: 'Alt+Shift+D',
+      isGlobal: true,
       icon: Sliders
+    },
+    {
+      id: 'desktop_apps',
+      label: $tStore('settings.shortcut_nav_desktop_apps'),
+      description: $tStore('settings.shortcut_nav_desktop_apps_desc'),
+      defaultKey: 'Alt+Shift+K',
+      isGlobal: true,
+      icon: AppWindow
+    },
+    {
+      id: 'apps_launcher',
+      label: $tStore('settings.shortcut_nav_apps_launcher'),
+      description: $tStore('settings.shortcut_nav_apps_launcher_desc'),
+      defaultKey: 'Ctrl+K',
+      isGlobal: false,
+      icon: Search
     }
   ])
 
@@ -75,7 +109,13 @@
     'SUPER+TAB': 'Task View',
     'SUPER+X': 'Windows Power Menu',
     'SUPER+E': 'File Explorer',
-    'SUPER+R': 'Run Dialog'
+    'SUPER+R': 'Run Dialog',
+    'CTRL+C': 'Copy',
+    'CTRL+V': 'Paste',
+    'CTRL+X': 'Cut',
+    'CTRL+Z': 'Undo',
+    'CTRL+Y': 'Redo',
+    'CTRL+A': 'Select All'
   }
 
   const COMMON_APP_COLLISIONS: Record<string, string> = {
@@ -100,6 +140,37 @@
     Record<string, 'error' | 'warning' | 'success' | 'info'>
   >({})
   let savedFlashes = $state<Record<string, boolean>>({})
+  const statusTimers: Record<string, ReturnType<typeof setTimeout>> = {}
+
+  /**
+   * Updates a shortcut row's inline feedback message and optionally schedules auto-clearance
+   * using the global `feedbackTimeoutSecStore` setting.
+   *
+   * @param id - Shortcut identifier.
+   * @param message - Status message text.
+   * @param type - Severity level (`success`, `info`, `warning`, or `error`).
+   * @param autoClear - Whether to automatically clear the message after the global timeout.
+   */
+  function setShortcutStatus(
+    id: string,
+    message: string,
+    type: FeedbackSeverity,
+    autoClear = true
+  ) {
+    clearFeedbackTimer(statusTimers, id)
+    statusMessages = { ...statusMessages, [id]: message }
+    statusTypes = { ...statusTypes, [id]: type }
+    if (autoClear) {
+      scheduleFeedbackClear(
+        statusTimers,
+        id,
+        () => {
+          statusMessages = { ...statusMessages, [id]: '' }
+        },
+        type
+      )
+    }
+  }
 
   /**
    * Helper to fetch the current value of a shortcut by ID.
@@ -111,6 +182,8 @@
     if (id === 'toggle') return $globalHotkeyStore
     if (id === 'quick_notes') return $quickNotesHotkeyStore
     if (id === 'mode_switch') return $modeSwitchHotkeyStore
+    if (id === 'apps_launcher') return $appsLauncherHotkeyStore
+    if (id === 'desktop_apps') return $desktopAppsHotkeyStore
     return ''
   }
 
@@ -124,6 +197,27 @@
     if (id === 'toggle') $globalHotkeyStore = val
     else if (id === 'quick_notes') $quickNotesHotkeyStore = val
     else if (id === 'mode_switch') $modeSwitchHotkeyStore = val
+    else if (id === 'apps_launcher') $appsLauncherHotkeyStore = val
+    else if (id === 'desktop_apps') $desktopAppsHotkeyStore = val
+  }
+
+  function normalizeAccelerator(accel: string): string {
+    const parts = accel
+      .split('+')
+      .map((p) => p.trim().toUpperCase())
+      .filter(Boolean)
+    if (parts.length === 0) return ''
+    const key = parts[parts.length - 1]
+    const mods = new Set(parts.slice(0, -1))
+    const ordered: string[] = []
+    if (mods.has('CTRL') || mods.has('CONTROL')) ordered.push('CTRL')
+    if (mods.has('ALT')) ordered.push('ALT')
+    if (mods.has('SHIFT')) ordered.push('SHIFT')
+    if (mods.has('SUPER') || mods.has('META') || mods.has('WIN')) {
+      ordered.push('SUPER')
+    }
+    ordered.push(key)
+    return ordered.join('+')
   }
 
   /**
@@ -131,50 +225,53 @@
    *
    * @param accel - Tested accelerator string.
    * @param currentId - The action ID being configured.
-   * @returns Collision message or null if clear.
+   * @returns Collision descriptor or null if clear.
    */
-  function checkCollision(accel: string, currentId: string): string | null {
+  function checkCollision(
+    accel: string,
+    currentId: string
+  ): { message: string; blocking: boolean } | null {
     if (!accel.trim()) return null
-    const normalized = accel.toUpperCase()
+    const normalized = normalizeAccelerator(accel)
 
     if (SYSTEM_RESERVED_SHORTCUTS[normalized]) {
-      return $tStore('settings.shortcut_warn_windows', {
-        name: SYSTEM_RESERVED_SHORTCUTS[normalized]
-      })
+      return {
+        message: $tStore('settings.shortcut_warn_windows', {
+          name: SYSTEM_RESERVED_SHORTCUTS[normalized]
+        }),
+        blocking: true
+      }
+    }
+
+    if (normalized === 'CTRL+TAB') {
+      return {
+        message: $tStore('settings.shortcut_warn_assigned', {
+          name: $tStore('settings.shortcut_nav_launcher_tab')
+        }),
+        blocking: true
+      }
+    }
+
+    for (const def of SHORTCUT_DEFS) {
+      if (def.id === currentId) continue
+      const existing = getShortcutValue(def.id)
+      if (existing && normalizeAccelerator(existing) === normalized) {
+        return {
+          message: $tStore('settings.shortcut_warn_assigned', {
+            name: def.label
+          }),
+          blocking: true
+        }
+      }
     }
 
     if (COMMON_APP_COLLISIONS[normalized]) {
-      return $tStore('settings.shortcut_warn_app', {
-        name: COMMON_APP_COLLISIONS[normalized]
-      })
-    }
-
-    if (
-      currentId !== 'toggle' &&
-      $globalHotkeyStore &&
-      $globalHotkeyStore.toUpperCase() === normalized
-    ) {
-      return $tStore('settings.shortcut_warn_assigned', {
-        name: $tStore('settings.shortcut_toggle_label')
-      })
-    }
-    if (
-      currentId !== 'quick_notes' &&
-      $quickNotesHotkeyStore &&
-      $quickNotesHotkeyStore.toUpperCase() === normalized
-    ) {
-      return $tStore('settings.shortcut_warn_assigned', {
-        name: $tStore('settings.shortcut_notes_label')
-      })
-    }
-    if (
-      currentId !== 'mode_switch' &&
-      $modeSwitchHotkeyStore &&
-      $modeSwitchHotkeyStore.toUpperCase() === normalized
-    ) {
-      return $tStore('settings.shortcut_warn_assigned', {
-        name: $tStore('settings.shortcut_mode_label')
-      })
+      return {
+        message: $tStore('settings.shortcut_warn_app', {
+          name: COMMON_APP_COLLISIONS[normalized]
+        }),
+        blocking: false
+      }
     }
 
     return null
@@ -189,69 +286,85 @@
   async function applyShortcut(id: string, accel: string) {
     try {
       const trimmed = accel.trim()
+      const def = SHORTCUT_DEFS.find((d) => d.id === id)
+      const isGlobal = def?.isGlobal !== false
 
       if (!trimmed) {
-        if (typeof UnregisterNamedGlobalShortcut === 'function') {
+        if (isGlobal && typeof UnregisterNamedGlobalShortcut === 'function') {
           await UnregisterNamedGlobalShortcut(id)
         }
         setShortcutValue(id, '')
-        statusMessages = {
-          ...statusMessages,
-          [id]: $tStore('settings.shortcut_msg_unassigned')
-        }
-        statusTypes = { ...statusTypes, [id]: 'info' }
+        setShortcutStatus(
+          id,
+          $tStore('settings.shortcut_msg_unassigned'),
+          'info'
+        )
         return
       }
 
       // Check collision
-      const collisionWarning = checkCollision(trimmed, id)
-      if (collisionWarning) {
-        statusMessages = { ...statusMessages, [id]: collisionWarning }
-        statusTypes = { ...statusTypes, [id]: 'warning' }
+      const collision = checkCollision(trimmed, id)
+      if (collision) {
+        setShortcutStatus(
+          id,
+          collision.message,
+          collision.blocking ? 'error' : 'warning'
+        )
+        if (collision.blocking) {
+          return
+        }
       }
 
-      if (typeof RegisterNamedGlobalShortcut === 'function') {
+      if (isGlobal && typeof RegisterNamedGlobalShortcut === 'function') {
         const ok = await RegisterNamedGlobalShortcut(id, trimmed)
         if (ok) {
           setShortcutValue(id, trimmed)
           savedFlashes = { ...savedFlashes, [id]: true }
-          if (!collisionWarning) {
-            statusMessages = {
-              ...statusMessages,
-              [id]: $tStore('settings.shortcut_msg_registered')
-            }
-            statusTypes = { ...statusTypes, [id]: 'success' }
+          if (!collision) {
+            setShortcutStatus(
+              id,
+              $tStore('settings.shortcut_msg_registered'),
+              'success'
+            )
           }
           setTimeout(() => {
             savedFlashes = { ...savedFlashes, [id]: false }
           }, 1200)
         } else {
-          statusMessages = {
-            ...statusMessages,
-            [id]: $tStore('settings.shortcut_msg_rejected')
-          }
-          statusTypes = { ...statusTypes, [id]: 'error' }
+          setShortcutStatus(
+            id,
+            $tStore('settings.shortcut_msg_rejected'),
+            'error'
+          )
         }
       } else {
         setShortcutValue(id, trimmed)
+        savedFlashes = { ...savedFlashes, [id]: true }
+        if (!collision) {
+          setShortcutStatus(id, $tStore('settings.shortcut_saved'), 'success')
+        }
+        setTimeout(() => {
+          savedFlashes = { ...savedFlashes, [id]: false }
+        }, 1200)
       }
     } catch (err: unknown) {
-      statusMessages = {
-        ...statusMessages,
-        [id]: err instanceof Error ? err.message : String(err)
-      }
-      statusTypes = { ...statusTypes, [id]: 'error' }
+      setShortcutStatus(
+        id,
+        err instanceof Error ? err.message : String(err),
+        'error'
+      )
     }
   }
 
   function startListening(id: string) {
     listeningId = id
     activeModifiers = []
-    statusMessages = {
-      ...statusMessages,
-      [id]: 'Press shortcut keys (Esc to cancel, Backspace to clear)'
-    }
-    statusTypes = { ...statusTypes, [id]: 'info' }
+    setShortcutStatus(
+      id,
+      'Press shortcut keys (Esc to cancel, Backspace to clear)',
+      'info',
+      false
+    )
   }
 
   function stopListening() {
@@ -369,138 +482,145 @@
 
   <div class="divider"></div>
 
-  <!-- Global Shortcuts Section -->
+  <!-- Global Shortcuts Section (Works Without Focus) -->
   <SettingSectionHeader title={$tStore('settings.shortcut_global_section')} />
 
-  <BentoCard variant="group">
-    {#each SHORTCUT_DEFS as sc (sc.id)}
-      {@const currentVal = getShortcutValue(sc.id)}
-      {@const keyCaps =
-        currentVal && currentVal.trim() ? currentVal.split('+') : []}
-      {@const isCurrentListening = listeningId === sc.id}
-      {@const isFlash = savedFlashes[sc.id]}
-      {@const statusMsg = statusMessages[sc.id]}
-      {@const statusType = statusTypes[sc.id]}
+  {#snippet shortcutRow(sc: ShortcutDef)}
+    {@const currentVal = getShortcutValue(sc.id)}
+    {@const keyCaps =
+      currentVal && currentVal.trim() ? currentVal.split('+') : []}
+    {@const isCurrentListening = listeningId === sc.id}
+    {@const isFlash = savedFlashes[sc.id]}
+    {@const statusMsg = statusMessages[sc.id]}
+    {@const statusType = statusTypes[sc.id]}
 
-      <SettingItem
-        label={sc.label}
-        description={sc.description}
-        icon={sc.icon}
-        flexCol={true}
-      >
-        <div class="keybind-control-row">
+    <SettingItem
+      label={sc.label}
+      description={sc.description}
+      icon={sc.icon}
+      flexCol={true}
+    >
+      <div class="keybind-control-row">
+        <button
+          type="button"
+          class="keybind-binder-btn"
+          class:is-listening={isCurrentListening}
+          class:is-saved={isFlash}
+          onclick={() => {
+            if (isCurrentListening) {
+              stopListening()
+            } else {
+              startListening(sc.id)
+            }
+          }}
+          aria-label={$tStore('settings.shortcut_rebind_aria', {
+            label: sc.label
+          })}
+        >
+          {#if isCurrentListening}
+            <span class="listening-indicator">
+              <span class="pulse-dot"></span>
+              {#if activeModifiers.length > 0}
+                <span class="key-caps-list">
+                  {#each activeModifiers as mod, idx (mod)}
+                    <kbd class="key-cap active">{mod}</kbd>
+                    {#if idx < activeModifiers.length - 1}
+                      <span class="key-plus">+</span>
+                    {/if}
+                  {/each}
+                  <span class="key-plus">+</span>
+                  <span>{$tStore('settings.shortcut_press_key')}</span>
+                </span>
+              {:else}
+                <span>{$tStore('settings.shortcut_press_keys')}</span>
+              {/if}
+            </span>
+          {:else if isFlash}
+            <span class="listening-indicator" style="color: #4ade80;">
+              <Check size={13} />
+              <span>{$tStore('settings.shortcut_saved')}</span>
+            </span>
+          {:else if keyCaps.length > 0}
+            <span class="key-caps-list">
+              {#each keyCaps as key, idx (key)}
+                <kbd class="key-cap">{key}</kbd>
+                {#if idx < keyCaps.length - 1}
+                  <span class="key-plus">+</span>
+                {/if}
+              {/each}
+            </span>
+          {:else}
+            <span class="unassigned-label"
+              >{$tStore('settings.shortcut_not_bound')}</span
+            >
+          {/if}
+        </button>
+
+        {#if currentVal}
           <button
             type="button"
-            class="keybind-binder-btn"
-            class:is-listening={isCurrentListening}
-            class:is-saved={isFlash}
-            onclick={() => {
-              if (isCurrentListening) {
-                stopListening()
-              } else {
-                startListening(sc.id)
-              }
+            class="keybind-action-btn danger"
+            use:islandTooltip={{
+              text: $tStore('settings.shortcut_unbind'),
+              position: 'top'
             }}
-            aria-label={$tStore('settings.shortcut_rebind_aria', {
+            onclick={() => void applyShortcut(sc.id, '')}
+            aria-label={$tStore('settings.shortcut_unbind_aria', {
               label: sc.label
             })}
           >
-            {#if isCurrentListening}
-              <span class="listening-indicator">
-                <span class="pulse-dot"></span>
-                {#if activeModifiers.length > 0}
-                  <span class="key-caps-list">
-                    {#each activeModifiers as mod, idx (mod)}
-                      <kbd class="key-cap active">{mod}</kbd>
-                      {#if idx < activeModifiers.length - 1}
-                        <span class="key-plus">+</span>
-                      {/if}
-                    {/each}
-                    <span class="key-plus">+</span>
-                    <span>{$tStore('settings.shortcut_press_key')}</span>
-                  </span>
-                {:else}
-                  <span>{$tStore('settings.shortcut_press_keys')}</span>
-                {/if}
-              </span>
-            {:else if isFlash}
-              <span class="listening-indicator" style="color: #4ade80;">
-                <Check size={13} />
-                <span>{$tStore('settings.shortcut_saved')}</span>
-              </span>
-            {:else if keyCaps.length > 0}
-              <span class="key-caps-list">
-                {#each keyCaps as key, idx (key)}
-                  <kbd class="key-cap">{key}</kbd>
-                  {#if idx < keyCaps.length - 1}
-                    <span class="key-plus">+</span>
-                  {/if}
-                {/each}
-              </span>
-            {:else}
-              <span class="unassigned-label"
-                >{$tStore('settings.shortcut_not_bound')}</span
-              >
-            {/if}
+            <X size={14} />
           </button>
-
-          {#if currentVal}
-            <button
-              type="button"
-              class="keybind-action-btn danger"
-              use:islandTooltip={{
-                text: $tStore('settings.shortcut_unbind'),
-                position: 'top'
-              }}
-              onclick={() => void applyShortcut(sc.id, '')}
-              aria-label={$tStore('settings.shortcut_unbind_aria', {
-                label: sc.label
-              })}
-            >
-              <X size={14} />
-            </button>
-          {/if}
-
-          {#if currentVal !== sc.defaultKey}
-            <button
-              type="button"
-              class="keybind-action-btn"
-              use:islandTooltip={{
-                text: $tStore('settings.shortcut_reset_to', {
-                  key: sc.defaultKey
-                }),
-                position: 'top'
-              }}
-              onclick={() => void applyShortcut(sc.id, sc.defaultKey)}
-              aria-label={$tStore('settings.shortcut_reset_aria', {
-                label: sc.label
-              })}
-            >
-              <RotateCcw size={13} />
-            </button>
-          {/if}
-        </div>
-
-        {#if statusMsg}
-          <div
-            class="status-message"
-            class:is-error={statusType === 'error'}
-            class:is-warning={statusType === 'warning'}
-            class:is-success={statusType === 'success'}
-          >
-            {statusMsg}
-          </div>
         {/if}
-      </SettingItem>
+
+        {#if currentVal !== sc.defaultKey}
+          <button
+            type="button"
+            class="keybind-action-btn"
+            use:islandTooltip={{
+              text: $tStore('settings.shortcut_reset_to', {
+                key: sc.defaultKey
+              }),
+              position: 'top'
+            }}
+            onclick={() => void applyShortcut(sc.id, sc.defaultKey)}
+            aria-label={$tStore('settings.shortcut_reset_aria', {
+              label: sc.label
+            })}
+          >
+            <RotateCcw size={13} />
+          </button>
+        {/if}
+      </div>
+
+      {#if statusMsg}
+        <div
+          class="status-message"
+          class:is-error={statusType === 'error'}
+          class:is-warning={statusType === 'warning'}
+          class:is-success={statusType === 'success'}
+        >
+          {statusMsg}
+        </div>
+      {/if}
+    </SettingItem>
+  {/snippet}
+
+  <BentoCard variant="group">
+    {#each SHORTCUT_DEFS.filter((d) => d.isGlobal) as sc (sc.id)}
+      {@render shortcutRow(sc)}
     {/each}
   </BentoCard>
 
   <div class="divider"></div>
 
-  <!-- Island Navigation Section -->
+  <!-- In-App Shortcuts Section (Requires Island Focus) -->
   <SettingSectionHeader title={$tStore('settings.shortcut_nav_section')} />
 
   <BentoCard variant="group">
+    {#each SHORTCUT_DEFS.filter((d) => !d.isGlobal) as sc (sc.id)}
+      {@render shortcutRow(sc)}
+    {/each}
     <SettingItem
       label={$tStore('settings.shortcut_nav_dismiss')}
       description={$tStore('settings.shortcut_nav_dismiss_desc')}
@@ -544,6 +664,17 @@
       <div class="shortcut-keys">
         <kbd class="key-badge">←</kbd>
         <kbd class="key-badge">→</kbd>
+      </div>
+    </SettingItem>
+
+    <SettingItem
+      label={$tStore('settings.shortcut_nav_launcher_tab')}
+      description={$tStore('settings.shortcut_nav_launcher_tab_desc')}
+      icon={ArrowLeftRight}
+    >
+      <div class="shortcut-keys">
+        <kbd class="key-badge">Ctrl</kbd>
+        <kbd class="key-badge">Tab</kbd>
       </div>
     </SettingItem>
   </BentoCard>

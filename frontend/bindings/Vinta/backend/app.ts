@@ -103,10 +103,24 @@ export function ClearTooltipBounds(id: string): $CancellablePromise<void> {
 }
 
 /**
+ * ComputeFileSHA256 returns the lowercase hex SHA-256 digest of the specified file.
+ */
+export function ComputeFileSHA256(path: string): $CancellablePromise<string> {
+    return $Call.ByID(3322770937, path);
+}
+
+/**
  * CopyShelfPathsToClipboard copies the files to the system clipboard both as text and as native CF_HDROP file objects.
  */
 export function CopyShelfPathsToClipboard(paths: string[]): $CancellablePromise<void> {
     return $Call.ByID(2662184127, paths);
+}
+
+/**
+ * CopyShelfTextToClipboard copies plain text (e.g. file path or SHA-256 hash) to the system clipboard.
+ */
+export function CopyShelfTextToClipboard(text: string): $CancellablePromise<void> {
+    return $Call.ByID(2398805978, text);
 }
 
 /**
@@ -297,6 +311,15 @@ export function GetHardwareAcceleration(): $CancellablePromise<boolean> {
 }
 
 /**
+ * GetInstalledWindowsApps discovers Start Menu .lnk shortcuts and UWP apps lazily, caching in memory.
+ */
+export function GetInstalledWindowsApps(forceRefresh: boolean): $CancellablePromise<$models.WindowsAppItem[]> {
+    return $Call.ByID(38193654, forceRefresh).then(($result: any) => {
+        return $$createType16($result);
+    });
+}
+
+/**
  * GetNamedGlobalShortcut returns the currently registered accelerator string for a specific action.
  */
 export function GetNamedGlobalShortcut(name: string): $CancellablePromise<string> {
@@ -329,7 +352,7 @@ export function GetSettings(): $CancellablePromise<string> {
  */
 export function GetSettingsBackups(): $CancellablePromise<$models.SettingsBackupInfo[]> {
     return $Call.ByID(28732699).then(($result: any) => {
-        return $$createType16($result);
+        return $$createType18($result);
     });
 }
 
@@ -338,7 +361,7 @@ export function GetSettingsBackups(): $CancellablePromise<$models.SettingsBackup
  */
 export function GetSystemDiagnostics(): $CancellablePromise<$models.SystemDiagnostics> {
     return $Call.ByID(306280716).then(($result: any) => {
-        return $$createType17($result);
+        return $$createType19($result);
     });
 }
 
@@ -347,7 +370,7 @@ export function GetSystemDiagnostics(): $CancellablePromise<$models.SystemDiagno
  */
 export function GetSystemTelemetry(): $CancellablePromise<services$0.SystemTelemetry> {
     return $Call.ByID(3760642775).then(($result: any) => {
-        return $$createType18($result);
+        return $$createType20($result);
     });
 }
 
@@ -377,7 +400,7 @@ export function GetUpdateRepo(): $CancellablePromise<string> {
  */
 export function GetWirelessStatus(): $CancellablePromise<services$0.WirelessStatus> {
     return $Call.ByID(794979391).then(($result: any) => {
-        return $$createType19($result);
+        return $$createType21($result);
     });
 }
 
@@ -400,7 +423,7 @@ export function ImportSettingsFileDialog(): $CancellablePromise<string> {
  */
 export function ImportThemeDialog(): $CancellablePromise<$models.ThemeInfo | null> {
     return $Call.ByID(1943468227).then(($result: any) => {
-        return $$createType21($result);
+        return $$createType23($result);
     });
 }
 
@@ -409,7 +432,7 @@ export function ImportThemeDialog(): $CancellablePromise<$models.ThemeInfo | nul
  */
 export function InspectShelfFiles(paths: string[]): $CancellablePromise<$models.ShelfFileItem[]> {
     return $Call.ByID(4271776190, paths).then(($result: any) => {
-        return $$createType22($result);
+        return $$createType24($result);
     });
 }
 
@@ -443,11 +466,18 @@ export function IsTestMode(): $CancellablePromise<boolean> {
 }
 
 /**
+ * LaunchWindowsApp starts a discovered Start Menu shortcut or shell:AppsFolder target.
+ */
+export function LaunchWindowsApp(target: string): $CancellablePromise<void> {
+    return $Call.ByID(3764420612, target);
+}
+
+/**
  * ListNotes scans the notes storage directory, runs migration if necessary, and returns all note metadata.
  */
 export function ListNotes(): $CancellablePromise<$models.NoteFileInfo[]> {
     return $Call.ByID(2184398716).then(($result: any) => {
-        return $$createType24($result);
+        return $$createType26($result);
     });
 }
 
@@ -456,7 +486,7 @@ export function ListNotes(): $CancellablePromise<$models.NoteFileInfo[]> {
  */
 export function ListThemes(): $CancellablePromise<$models.ThemeInfo[]> {
     return $Call.ByID(44849841).then(($result: any) => {
-        return $$createType25($result);
+        return $$createType27($result);
     });
 }
 
@@ -528,7 +558,7 @@ export function PauseUpdateDownload(): $CancellablePromise<void> {
  */
 export function PromptChooseShelfFiles(): $CancellablePromise<$models.ShelfFileItem[]> {
     return $Call.ByID(2406650291).then(($result: any) => {
-        return $$createType22($result);
+        return $$createType24($result);
     });
 }
 
@@ -970,7 +1000,7 @@ export function StopSystemTelemetry(): $CancellablePromise<boolean> {
  */
 export function StripShelfImageMetadata(paths: string[]): $CancellablePromise<$models.ShelfFileItem[]> {
     return $Call.ByID(4085277947, paths).then(($result: any) => {
-        return $$createType22($result);
+        return $$createType24($result);
     });
 }
 
@@ -1036,14 +1066,16 @@ const $$createType11 = $models.MonitorInfo.createFrom;
 const $$createType12 = $Create.Map($Create.Any, $Create.Any);
 const $$createType13 = $models.AnnouncementsPayload.createFrom;
 const $$createType14 = $models.DisplayLayout.createFrom;
-const $$createType15 = $models.SettingsBackupInfo.createFrom;
+const $$createType15 = $models.WindowsAppItem.createFrom;
 const $$createType16 = $Create.Array($$createType15);
-const $$createType17 = $models.SystemDiagnostics.createFrom;
-const $$createType18 = services$0.SystemTelemetry.createFrom;
-const $$createType19 = services$0.WirelessStatus.createFrom;
-const $$createType20 = $models.ThemeInfo.createFrom;
-const $$createType21 = $Create.Nullable($$createType20);
-const $$createType22 = $Create.Array($$createType0);
-const $$createType23 = $models.NoteFileInfo.createFrom;
-const $$createType24 = $Create.Array($$createType23);
-const $$createType25 = $Create.Array($$createType20);
+const $$createType17 = $models.SettingsBackupInfo.createFrom;
+const $$createType18 = $Create.Array($$createType17);
+const $$createType19 = $models.SystemDiagnostics.createFrom;
+const $$createType20 = services$0.SystemTelemetry.createFrom;
+const $$createType21 = services$0.WirelessStatus.createFrom;
+const $$createType22 = $models.ThemeInfo.createFrom;
+const $$createType23 = $Create.Nullable($$createType22);
+const $$createType24 = $Create.Array($$createType0);
+const $$createType25 = $models.NoteFileInfo.createFrom;
+const $$createType26 = $Create.Array($$createType25);
+const $$createType27 = $Create.Array($$createType22);

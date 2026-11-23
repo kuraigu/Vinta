@@ -19,12 +19,18 @@
 
   import { onMount } from 'svelte'
   import { Events } from '$lib/events'
-  import { CancelNativeFileDrag } from '../../bindings/Vinta/backend/app'
+  import {
+    CancelNativeFileDrag,
+    ComputeFileSHA256,
+    CopyShelfTextToClipboard
+  } from '../../bindings/Vinta/backend/app'
   import {
     FolderDown,
     Plus,
     Trash2,
     Copy,
+    Hash,
+    Link2,
     X,
     Check,
     FileArchive,
@@ -39,6 +45,9 @@
     File
   } from 'lucide-svelte'
   import PageHeader from '../components/PageHeader.svelte'
+  import CustomContextMenu, {
+    type ContextMenuItem
+  } from '../components/CustomContextMenu.svelte'
   import EmptyState from '../components/EmptyState.svelte'
   import ScrollView from '../components/ScrollView.svelte'
   import { islandTooltip } from '../services/islandTooltip'
@@ -63,6 +72,84 @@
   let { expanded = false }: { expanded?: boolean } = $props()
 
   let isDropActive = $state(false)
+  let ctxOpen = $state(false)
+  let ctxCoords = $state({ x: 0, y: 0 })
+  let ctxItem = $state<ShelfFileItem | null>(null)
+
+  function handleTileContextMenu(e: MouseEvent, item: ShelfFileItem) {
+    e.preventDefault()
+    e.stopPropagation()
+    ctxItem = item
+    ctxCoords = { x: e.clientX, y: e.clientY }
+    ctxOpen = true
+  }
+
+  async function handleCopyPlainPath(path: string) {
+    try {
+      await CopyShelfTextToClipboard(path)
+    } catch {
+      void navigator.clipboard?.writeText(path)
+    }
+  }
+
+  async function handleCopySha256(path: string) {
+    try {
+      const digest = await ComputeFileSHA256(path)
+      if (digest) {
+        await CopyShelfTextToClipboard(digest)
+      }
+    } catch {
+      // Ignore hash errors on inaccessible files
+    }
+  }
+
+  function getShelfTileMenuItems(): ContextMenuItem[] {
+    const item = ctxItem
+    if (!item) return []
+    const zipTargets =
+      selectedPaths.length > 0 && selectedPaths.includes(item.path)
+        ? [...selectedPaths]
+        : [item.path]
+    const menu: ContextMenuItem[] = [
+      {
+        label: $tStore('fileshelf.copy_file'),
+        icon: Copy,
+        action: () => void copyShelfPaths([item.path])
+      },
+      {
+        label: $tStore('fileshelf.copy_path'),
+        icon: Link2,
+        action: () => void handleCopyPlainPath(item.path)
+      }
+    ]
+    if (!item.isDir) {
+      menu.push({
+        label: $tStore('fileshelf.copy_sha256'),
+        icon: Hash,
+        action: () => void handleCopySha256(item.path)
+      })
+    }
+    menu.push(
+      {
+        label: $tStore('fileshelf.bundle_zip'),
+        icon: FileArchive,
+        action: () => void bundleShelfToZip(zipTargets)
+      },
+      {
+        label: $tStore('fileshelf.reveal_explorer'),
+        icon: FolderOpen,
+        action: () => void revealShelfFileInExplorer(item.path)
+      },
+      { label: '', action: () => {}, divider: true },
+      {
+        label: $tStore('fileshelf.remove_from_shelf'),
+        icon: Trash2,
+        danger: true,
+        action: () => removeFileFromShelf(item.path)
+      }
+    )
+    return menu
+  }
   let dragDepth = 0
   let rawSelectedPaths = $state<string[]>([])
 
@@ -527,6 +614,7 @@
             role="listitem"
             use:islandTooltip={{ text: formatTileTooltip(item), align: 'left' }}
             onmousedown={(e) => handleTileMouseDown(e, item)}
+            oncontextmenu={(e) => handleTileContextMenu(e, item)}
             ondragstart={(e) => e.preventDefault()}
             ondblclick={() => void revealShelfFileInExplorer(item.path)}
           >
@@ -635,5 +723,16 @@
     {/snippet}
   </PageHeader>
 </div>
+
+{#if ctxOpen}
+  <CustomContextMenu
+    x={ctxCoords.x}
+    y={ctxCoords.y}
+    items={getShelfTileMenuItems()}
+    onclose={() => {
+      ctxOpen = false
+    }}
+  />
+{/if}
 
 <style src="./styles/FileShelfPage.css"></style>

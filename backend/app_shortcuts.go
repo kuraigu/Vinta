@@ -46,6 +46,8 @@ func (a *App) RegisterNamedGlobalShortcut(name string, accelerator string) (bool
 		eventName = "hotkey-quick-notes"
 	case "mode_switch":
 		eventName = "hotkey-mode-switch"
+	case "desktop_apps":
+		eventName = "hotkey-desktop-apps"
 	default:
 		eventName = "hotkey-toggle-island"
 	}

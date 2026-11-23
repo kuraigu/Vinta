@@ -868,6 +868,50 @@ export class VintaThemeManifest {
     }
 }
 
+/**
+ * WindowsAppItem describes a discovered Start Menu shortcut or UWP application.
+ */
+export class WindowsAppItem {
+    "id": string;
+    "name": string;
+    "target": string;
+    "appId": string;
+    "sourceApp": string;
+    "kind": string;
+
+    /** Creates a new WindowsAppItem instance. */
+    constructor($$source: Partial<WindowsAppItem> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("target" in $$source)) {
+            this["target"] = "";
+        }
+        if (!("appId" in $$source)) {
+            this["appId"] = "";
+        }
+        if (!("sourceApp" in $$source)) {
+            this["sourceApp"] = "";
+        }
+        if (!("kind" in $$source)) {
+            this["kind"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new WindowsAppItem instance from a string or object.
+     */
+    static createFrom($$source: any = {}): WindowsAppItem {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new WindowsAppItem($$parsedSource as Partial<WindowsAppItem>);
+    }
+}
+
 // Private type creation functions
 const $$createType0 = AnnouncementItem.createFrom;
 const $$createType1 = $Create.Array($$createType0);

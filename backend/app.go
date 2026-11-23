@@ -309,6 +309,7 @@ func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 		toggleHk := "Alt+Shift+V"
 		quickNotesHk := "Alt+Shift+N"
 		modeSwitchHk := "Alt+Shift+D"
+		desktopAppsHk := "Alt+Shift+K"
 
 		if settingsJSON, err := a.GetSettings(); err == nil && settingsJSON != "" && settingsJSON != "{}" {
 			var m map[string]any
@@ -322,11 +323,15 @@ func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 				if hk, ok := m["vinta_hotkey_mode_switch"].(string); ok && strings.TrimSpace(hk) != "" {
 					modeSwitchHk = strings.TrimSpace(hk)
 				}
+				if hk, ok := m["vinta_hotkey_desktop_apps"].(string); ok && strings.TrimSpace(hk) != "" {
+					desktopAppsHk = strings.TrimSpace(hk)
+				}
 			}
 		}
 		_, _ = a.RegisterNamedGlobalShortcut("toggle", toggleHk)
 		_, _ = a.RegisterNamedGlobalShortcut("quick_notes", quickNotesHk)
 		_, _ = a.RegisterNamedGlobalShortcut("mode_switch", modeSwitchHk)
+		_, _ = a.RegisterNamedGlobalShortcut("desktop_apps", desktopAppsHk)
 	}()
 
 	if wailsApp != nil {
@@ -384,6 +389,10 @@ func (a *App) Setup(wailsApp *application.App, win *application.WebviewWindow) {
 // Startup satisfies legacy startup calls if invoked.
 func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
+	go func() {
+		time.Sleep(2 * time.Second)
+		_, _ = a.GetInstalledWindowsApps(false)
+	}()
 }
 
 // Shutdown stops native background listeners.

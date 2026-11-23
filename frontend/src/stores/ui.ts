@@ -10,6 +10,7 @@ import type { WeatherData } from '../services/weatherService'
 
 export type OverlayPageId = 'notifications' | 'apps' | 'feedback' | null
 export type FeedbackOverlayKind = 'bug' | 'feature'
+export type AppsOverlayTab = 'island' | 'desktop'
 export type NotificationsOverlayTab =
   | 'notifications'
   | 'announcements'
@@ -41,6 +42,7 @@ export function clearFeedbackDraft(kind: FeedbackOverlayKind): void {
 export const activeSettingsTabStore = writable<string>('appearance')
 export const activePageIdStore = writable<string>('home')
 export const activeOverlayStore = writable<OverlayPageId>(null)
+export const appsOverlayTabStore = writable<AppsOverlayTab>('island')
 export const notificationsOverlayTabStore =
   writable<NotificationsOverlayTab>('notifications')
 export const feedbackOverlayKindStore = writable<FeedbackOverlayKind>('bug')

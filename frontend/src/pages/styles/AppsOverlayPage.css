@@ -297,6 +297,138 @@
   color: var(--vinta-text-primary);
 }
 
+.launcher-section-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--vinta-text-muted);
+  padding: 6px 6px 4px;
+  text-align: left;
+}
+
+.desktop-icon-box {
+  background: var(--vinta-surface-card);
+  border: 1px solid var(--vinta-border);
+}
+
+.desktop-app-img {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  border-radius: 6px;
+}
+
+:global(.desktop-app-fallback) {
+  color: var(--vinta-text-secondary);
+}
+
+.launcher-rescan-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: var(--vinta-radius-pill, 9999px);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--vinta-text-secondary);
+  cursor: pointer;
+}
+
+.launcher-rescan-btn:hover:not(:disabled) {
+  background: var(--vinta-contrast-hover);
+  border-color: var(--vinta-border);
+  color: var(--vinta-text-primary);
+}
+
+.launcher-rescan-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.launcher-rescan-btn.is-spinning :global(svg) {
+  animation: launcher-spin 0.8s linear infinite;
+}
+
+@keyframes launcher-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.omni-command-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 2px 10px;
+}
+
+.omni-action-card {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  border-radius: 12px;
+  border: 1px solid var(--vinta-border);
+  background: var(--vinta-surface-card);
+  color: var(--vinta-text-primary);
+  cursor: pointer;
+  text-align: left;
+  box-sizing: border-box;
+  transition: transform 0.14s ease;
+}
+
+.omni-action-card:hover,
+.omni-action-card.is-selected {
+  background: var(--vinta-contrast-hover);
+  border-color: var(--vinta-accent-primary);
+}
+
+.omni-action-card:active {
+  transform: scale(0.99);
+}
+
+.omni-action-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--vinta-accent-muted);
+  color: var(--vinta-accent-primary);
+  flex-shrink: 0;
+}
+
+.omni-action-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.omni-action-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--vinta-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.omni-action-sub {
+  font-size: 11px;
+  color: var(--vinta-text-muted);
+}
+
 .empty-desc {
   font-size: 11px;
   color: var(--vinta-text-muted);
