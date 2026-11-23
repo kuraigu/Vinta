@@ -12,9 +12,12 @@
     AlarmClock,
     Play,
     TimerReset,
-    Orbit
+    Orbit,
+    Shield,
+    EyeOff
   } from 'lucide-svelte'
   import BentoCard from '../../BentoCard.svelte'
+  import SegmentedControl from '../../SegmentedControl.svelte'
   import ToggleSwitch from '../../ToggleSwitch.svelte'
   import SettingItem from '../SettingItem.svelte'
   import SettingSectionHeader from '../SettingSectionHeader.svelte'
@@ -27,6 +30,9 @@
     notifVolumeStore,
     notifAutoWakeStore,
     notifSatelliteEnabledStore,
+    notifMinimalStyleStore,
+    privacyModeStore,
+    autoPrivacyModeStore,
     alarmSoundPresetStore,
     alarmVolumeStore,
     alarmSnoozeMinutesStore,
@@ -145,6 +151,54 @@
       <ToggleSwitch
         bind:checked={$notifSatelliteEnabledStore}
         ariaLabel={$tStore('settings.notif_satellite_label')}
+      />
+    </SettingItem>
+
+    <SettingItem
+      label={$tStore('settings.notif_minimal_style_label')}
+      description={$tStore('settings.notif_minimal_style_desc')}
+      icon={EyeOff}
+      flexCol={true}
+      isDefault={$notifMinimalStyleStore ===
+        notifMinimalStyleStore.defaultValue}
+      onReset={() => notifMinimalStyleStore.reset()}
+    >
+      <SegmentedControl
+        fullWidth={true}
+        options={[
+          { value: 'banner', label: $tStore('settings.notif_minimal_banner') },
+          {
+            value: 'icon_only',
+            label: $tStore('settings.notif_minimal_icon_only')
+          }
+        ]}
+        bind:value={$notifMinimalStyleStore}
+      />
+    </SettingItem>
+
+    <SettingItem
+      label={$tStore('settings.notif_privacy_mode_label')}
+      description={$tStore('settings.notif_privacy_mode_desc')}
+      icon={Shield}
+      isDefault={$privacyModeStore === privacyModeStore.defaultValue}
+      onReset={() => privacyModeStore.reset()}
+    >
+      <ToggleSwitch
+        bind:checked={$privacyModeStore}
+        ariaLabel={$tStore('settings.notif_privacy_mode_label')}
+      />
+    </SettingItem>
+
+    <SettingItem
+      label={$tStore('settings.notif_auto_privacy_label')}
+      description={$tStore('settings.notif_auto_privacy_desc')}
+      icon={Shield}
+      isDefault={$autoPrivacyModeStore === autoPrivacyModeStore.defaultValue}
+      onReset={() => autoPrivacyModeStore.reset()}
+    >
+      <ToggleSwitch
+        bind:checked={$autoPrivacyModeStore}
+        ariaLabel={$tStore('settings.notif_auto_privacy_label')}
       />
     </SettingItem>
   </BentoCard>

@@ -24,6 +24,7 @@
   import ScrollView from '../../components/ScrollView.svelte'
   import MarkdownViewer from '../../components/MarkdownViewer.svelte'
   import { islandTooltip } from '../../services/islandTooltip'
+  import appIcon from '@appicon'
   import {
     getCachedAnnouncements,
     getDeveloperAnnouncements,
@@ -39,6 +40,7 @@
     tStore,
     type NotificationsOverlayTab
   } from '../../store'
+  import { nativeIconsStore, parseAumid } from '../../services/iconService'
 
   interface Props {
     onClose: () => void
@@ -59,6 +61,72 @@
   let failedAvatars = new SvelteSet<string>()
   let isConfirmingClear = $state(false)
   let clearConfirmTimeout: number | undefined
+  let selectedAppFilter = $state<string | null>(null)
+  let failedFilterIcons = new SvelteSet<string>()
+  let filterBarEl = $state<HTMLDivElement | null>(null)
+
+  const isImageSrc = (src: string | undefined): src is string =>
+    Boolean(
+      src &&
+      (src.startsWith('data:image/') ||
+        src.startsWith('http://') ||
+        src.startsWith('https://') ||
+        src.startsWith('/') ||
+        src.startsWith('blob:'))
+    )
+
+  const getNotifAppKey = (n: { aumid?: string; appName?: string }) =>
+    (n.aumid || n.appName || 'other').trim().toLowerCase()
+
+  const appFilterEntries = $derived.by(() => {
+    const map: Record<string, { key: string; label: string; icon: string }> = {}
+    for (const n of $notifData) {
+      const key = getNotifAppKey(n)
+      if (!map[key]) {
+        const parsed = n.aumid ? parseAumid(n.aumid) : null
+        const label =
+          n.appName || parsed?.displayName || $tStore('notification.title')
+        const isVinta =
+          (n.aumid || '').toLowerCase().includes('freematrixstudios.vinta') ||
+          (n.appName || '').toLowerCase().startsWith('vinta')
+        const rawIcon = isVinta
+          ? appIcon
+          : [
+              n.appLogo,
+              n.icon,
+              n.aumid ? $nativeIconsStore[n.aumid] : '',
+              n.appName ? $nativeIconsStore[n.appName] : ''
+            ].find((c) => isImageSrc(c)) || ''
+        map[key] = { key, label, icon: rawIcon }
+      }
+    }
+    return Object.values(map)
+  })
+
+  function handleFilterBarWheel(e: WheelEvent) {
+    if (!filterBarEl || filterBarEl.scrollWidth <= filterBarEl.clientWidth) {
+      return
+    }
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+      e.preventDefault()
+      filterBarEl.scrollLeft += e.deltaY
+    }
+  }
+
+  const filteredNotifications = $derived(
+    selectedAppFilter
+      ? $notifData.filter((n) => getNotifAppKey(n) === selectedAppFilter)
+      : $notifData
+  )
+
+  $effect(function resetEmptyAppFilter() {
+    if (
+      selectedAppFilter &&
+      !appFilterEntries.some((entry) => entry.key === selectedAppFilter)
+    ) {
+      selectedAppFilter = null
+    }
+  })
 
   function handleClearAll() {
     if ($notifData.length <= 2 || isConfirmingClear) {
@@ -229,10 +297,53 @@
     {#key $notificationsOverlayTabStore}
       <div class="notif-overlay-tab-pane">
         {#if $notificationsOverlayTabStore === 'notifications'}
+          {#if appFilterEntries.length > 0}
+            <div
+              bind:this={filterBarEl}
+              class="app-filter-bar"
+              role="tablist"
+              aria-label={$tStore('notification.filter_all')}
+              onwheel={handleFilterBarWheel}
+            >
+              <button
+                type="button"
+                class="app-filter-pill app-filter-all"
+                class:is-active={selectedAppFilter === null}
+                onclick={() => (selectedAppFilter = null)}
+              >
+                <span>{$tStore('notification.filter_all')}</span>
+              </button>
+              {#each appFilterEntries as entry (entry.key)}
+                <button
+                  type="button"
+                  class="app-filter-pill app-filter-circle"
+                  class:is-active={selectedAppFilter === entry.key}
+                  use:islandTooltip={{ text: entry.label, position: 'bottom' }}
+                  aria-label={entry.label}
+                  onclick={() =>
+                    (selectedAppFilter =
+                      selectedAppFilter === entry.key ? null : entry.key)}
+                >
+                  {#if isImageSrc(entry.icon) && !failedFilterIcons.has(entry.icon)}
+                    <img
+                      src={entry.icon}
+                      alt=""
+                      class="app-filter-icon"
+                      onerror={() => {
+                        if (entry.icon) failedFilterIcons.add(entry.icon)
+                      }}
+                    />
+                  {:else}
+                    <Bell size={16} />
+                  {/if}
+                </button>
+              {/each}
+            </div>
+          {/if}
           <Notification
             expanded={true}
             inOverlay={true}
-            notifications={$notifData}
+            notifications={filteredNotifications}
           />
         {:else if $notificationsOverlayTabStore === 'announcements'}
           <ScrollView class="notif-overlay-scroll">

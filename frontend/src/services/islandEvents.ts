@@ -12,7 +12,8 @@ import {
   GetBatteryStatus,
   GetWirelessStatus,
   CheckPostUpdateInstalled,
-  RequestMediaUpdate
+  RequestMediaUpdate,
+  IsPrivacySensitiveDisplayActive
 } from '../../bindings/Vinta/backend/app.js'
 import HomePage from '../pages/HomePage.svelte'
 import MediaPage, { config as mediaConfig } from '../pages/MediaPage.svelte'
@@ -40,6 +41,9 @@ import {
   dndStore,
   notifAutoWakeStore,
   notifSatelliteEnabledStore,
+  autoPrivacyModeStore,
+  mutedNotifAppsStore,
+  screenShareDetectedStore,
   pageVisibilityStore,
   homeWidgetsVisibilityStore,
   activeSettingsTabStore,
@@ -411,6 +415,27 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
       const aumid = p.aumid || ''
       const title = p.title || ''
       const message = p.message || ''
+
+      const mutedList = get(mutedNotifAppsStore) || []
+      const appKey = (aumid || appName).trim().toLowerCase()
+      const nameKey = appName.trim().toLowerCase()
+      if (
+        !p.isShowcase &&
+        mutedList.some((m) => {
+          const mk = m.trim().toLowerCase()
+          return mk && (mk === appKey || mk === nameKey)
+        })
+      ) {
+        return
+      }
+
+      if (get(autoPrivacyModeStore)) {
+        IsPrivacySensitiveDisplayActive()
+          .then((active) => {
+            screenShareDetectedStore.set(Boolean(active))
+          })
+          .catch(() => {})
+      }
 
       const newNotif = {
         id: Date.now() + Math.floor(Math.random() * 1000),

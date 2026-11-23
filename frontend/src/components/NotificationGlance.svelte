@@ -7,6 +7,9 @@
   import { Bell, X } from 'lucide-svelte'
   import {
     notifData,
+    privacyModeStore,
+    autoPrivacyModeStore,
+    screenShareDetectedStore,
     pageVisibilityStore,
     tStore,
     type IslandConfig
@@ -171,6 +174,9 @@
 
   let resolvedAppLogo = $derived(resolveAppIcon(latestNotif))
   let resolvedAvatar = $derived(resolveAvatarIcon(latestNotif, resolvedAppLogo))
+  let isPrivacyActive = $derived(
+    $privacyModeStore || ($autoPrivacyModeStore && $screenShareDetectedStore)
+  )
 
   let topRowIcon = $derived(resolvedAppLogo || resolvedAvatar)
   let bodyAvatar = $derived(
@@ -252,11 +258,18 @@
         </div>
       {/if}
       <div class="glance-text-col">
-        {#if latestNotif.title}
-          <h4 class="glance-title">{latestNotif.title}</h4>
-        {/if}
-        {#if latestNotif.message}
-          <p class="glance-message">{latestNotif.message}</p>
+        {#if isPrivacyActive}
+          <h4 class="glance-title">{appDisplayName}</h4>
+          <p class="glance-message">
+            {$tStore('notification.privacy_hidden_preview')}
+          </p>
+        {:else}
+          {#if latestNotif.title}
+            <h4 class="glance-title">{latestNotif.title}</h4>
+          {/if}
+          {#if latestNotif.message}
+            <p class="glance-message">{latestNotif.message}</p>
+          {/if}
         {/if}
       </div>
     </div>

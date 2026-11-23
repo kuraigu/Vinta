@@ -341,6 +341,10 @@ const legacyV1Defaults: Record<string, unknown> = {
   vinta_media_autowake: true,
   vinta_notif_sound: true,
   vinta_notif_volume: 0.8,
+  vinta_notif_minimal_style: 'banner',
+  vinta_privacy_mode: false,
+  vinta_auto_privacy_mode: true,
+  vinta_muted_notif_apps: [] as string[],
   vinta_time_format: '12h',
   vinta_date_format: 'default',
   vinta_weather_unit: 'celsius',
@@ -639,8 +643,14 @@ export const dndStore = persistentWritable<boolean>('vinta_dnd', false)
 export const notifAutoWakeStore = persistentWritable<boolean>('vinta_notif_autowake', true)
 export const notifSatelliteEnabledStore = persistentWritable<boolean>('vinta_notif_satellite_enabled', true)
 export const mediaAutoWakeStore = persistentWritable<boolean>('vinta_media_autowake', true)
+export type NotifMinimalStyle = 'banner' | 'icon_only'
+
 export const notifSoundStore = persistentWritable<boolean>('vinta_notif_sound', true)
 export const notifVolumeStore = persistentWritable<number>('vinta_notif_volume', 0.8)
+export const notifMinimalStyleStore = persistentWritable<NotifMinimalStyle>('vinta_notif_minimal_style', 'banner')
+export const privacyModeStore = persistentWritable<boolean>('vinta_privacy_mode', false)
+export const autoPrivacyModeStore = persistentWritable<boolean>('vinta_auto_privacy_mode', true)
+export const mutedNotifAppsStore = persistentWritable<string[]>('vinta_muted_notif_apps', [])
 
 // Alarms & Reminders Audio Settings
 export type { AlarmSoundPreset } from '../services/audioService'
@@ -1005,6 +1015,11 @@ function sanitizeSettingsPayload(raw: Record<string, unknown>): Record<string, u
           } else if (
             key === 'vinta_weather_unit' &&
             (val === 'celsius' || val === 'fahrenheit' || val === 'kelvin')
+          ) {
+            sanitized[key] = val
+          } else if (
+            key === 'vinta_notif_minimal_style' &&
+            (val === 'banner' || val === 'icon_only')
           ) {
             sanitized[key] = val
           } else if (

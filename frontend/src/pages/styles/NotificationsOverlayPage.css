@@ -32,6 +32,68 @@
   padding: 2px 2px 0;
 }
 
+.app-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 4px 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  flex-shrink: 0;
+}
+
+.app-filter-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.app-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  border-radius: var(--vinta-radius-pill, 9999px);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--vinta-text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: transform 0.16s ease;
+}
+
+.app-filter-all {
+  padding: 0 14px;
+}
+
+.app-filter-circle {
+  width: 36px;
+  padding: 0;
+}
+
+.app-filter-pill:hover {
+  background: var(--vinta-contrast-hover);
+  border-color: var(--vinta-border);
+  color: var(--vinta-text-primary);
+}
+
+.app-filter-pill.is-active {
+  background: var(--vinta-accent-muted);
+  border-color: transparent;
+  color: var(--vinta-accent-primary);
+}
+
+.app-filter-pill:active {
+  transform: scale(0.95);
+}
+
+.app-filter-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  object-fit: contain;
+}
+
 .notif-overlay-scroll {
   flex: 1;
   min-height: 0;

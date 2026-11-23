@@ -191,7 +191,10 @@
     "time_seconds_ago": "{count}s nakalipas",
     "time_minutes_ago": "{count}m nakalipas",
     "time_hours_ago": "{count}h nakalipas",
-    "time_days_ago": "{count}d nakalipas"
+    "time_days_ago": "{count}d nakalipas",
+    "filter_all": "All",
+    "mute_app": "Mute {app}",
+    "privacy_hidden_preview": "Hidden in Privacy Mode"
   },
   "calendar": {
     "title": "Kalendaryo",
@@ -359,6 +362,14 @@
     "notif_dnd_desc": "I-mute ang mga pop-up alert at tunog",
     "notif_satellite_label": "Lumulutang na Notification",
     "notif_satellite_desc": "Magpakita ng maikling pop-up kapag may bagong notification",
+    "notif_minimal_style_label": "Minimal Pill Style",
+    "notif_minimal_style_desc": "Choose between full text banner or icon-only pill",
+    "notif_minimal_banner": "Banner",
+    "notif_minimal_icon_only": "Icon Only",
+    "notif_privacy_mode_label": "Privacy Mode",
+    "notif_privacy_mode_desc": "Hide notification previews on the minimal pill and Home",
+    "notif_auto_privacy_label": "Auto Privacy on Screen Share",
+    "notif_auto_privacy_desc": "Automatically enable Privacy Mode during screen sharing or presentations",
     "notif_autowake_label": "Auto-Wake sa Mahalagang Alert",
     "notif_autowake_desc": "Pansamantalang palakihin ang island para sa mahahalagang alert",
     "notif_sound_label": "Tunog ng Notification",
@@ -673,6 +684,8 @@
     "hide_island": "Hide Island",
     "center_island": "Center Island",
     "show_tutorial": "Show Tutorial",
+    "privacy_on": "Privacy Mode: On",
+    "privacy_off": "Privacy Mode",
     "exit": "Exit"
   },
   "timer": {

@@ -17,7 +17,9 @@
     Grid,
     Maximize2,
     Power,
-    Settings
+    Settings,
+    Shield,
+    ShieldOff
   } from 'lucide-svelte'
   import { Events } from '$lib/events'
   import Clock from './Clock.svelte'
@@ -44,6 +46,7 @@
     allowDragPositionStore,
     autoHideDelayStore,
     dndStore,
+    privacyModeStore,
     pageVisibilityStore,
     animScaleStore,
     tStore,
@@ -428,6 +431,13 @@
           : $tStore('notification.dnd_off'),
         icon: $dndStore ? BellOff : Bell,
         action: () => dndStore.update((v) => !v)
+      },
+      {
+        label: $privacyModeStore
+          ? $tStore('context_menu.privacy_on')
+          : $tStore('context_menu.privacy_off'),
+        icon: $privacyModeStore ? Shield : ShieldOff,
+        action: () => privacyModeStore.update((v) => !v)
       }
     )
 

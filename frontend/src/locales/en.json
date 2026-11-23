@@ -191,7 +191,10 @@
     "time_seconds_ago": "{count}s ago",
     "time_minutes_ago": "{count}m ago",
     "time_hours_ago": "{count}h ago",
-    "time_days_ago": "{count}d ago"
+    "time_days_ago": "{count}d ago",
+    "filter_all": "All",
+    "mute_app": "Mute {app}",
+    "privacy_hidden_preview": "Hidden in Privacy Mode"
   },
   "calendar": {
     "title": "Calendar",
@@ -359,6 +362,14 @@
     "notif_dnd_desc": "Silence pop-up alerts and chime sounds",
     "notif_satellite_label": "Floating Notification Pill",
     "notif_satellite_desc": "Show brief pop-up pill on screen when new notifications arrive",
+    "notif_minimal_style_label": "Minimal Pill Style",
+    "notif_minimal_style_desc": "Choose between full text banner or icon-only pill",
+    "notif_minimal_banner": "Banner",
+    "notif_minimal_icon_only": "Icon Only",
+    "notif_privacy_mode_label": "Privacy Mode",
+    "notif_privacy_mode_desc": "Hide notification previews on the minimal pill and Home",
+    "notif_auto_privacy_label": "Auto Privacy on Screen Share",
+    "notif_auto_privacy_desc": "Automatically enable Privacy Mode during screen sharing or presentations",
     "notif_autowake_label": "Auto-Wake on High Priority",
     "notif_autowake_desc": "Temporarily expand the island for urgent alerts",
     "notif_sound_label": "Notification Chime",
@@ -673,6 +684,8 @@
     "hide_island": "Hide Island",
     "center_island": "Center Island",
     "show_tutorial": "Show Tutorial",
+    "privacy_on": "Privacy Mode: On",
+    "privacy_off": "Privacy Mode",
     "exit": "Exit"
   },
   "timer": {
