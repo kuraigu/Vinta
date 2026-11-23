@@ -353,6 +353,8 @@
     "weather_unit_desc": "Yunit para sa sukat ng temperatura",
     "weather_unit_c": "°C (Celsius)",
     "weather_unit_f": "°F (Fahrenheit)",
+    "weather_animations_label": "Weather Animations",
+    "weather_animations_desc": "Animate background weather effects and VintaBot",
     "notif_dnd_label": "Huwag Istorbohin",
     "notif_dnd_desc": "I-mute ang mga pop-up alert at tunog",
     "notif_satellite_label": "Lumulutang na Notification",

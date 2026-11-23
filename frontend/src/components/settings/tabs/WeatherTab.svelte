@@ -6,14 +6,16 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { SvelteSet } from 'svelte/reactivity'
-  import { MapPin, Thermometer } from 'lucide-svelte'
+  import { MapPin, Thermometer, Sparkles } from 'lucide-svelte'
   import BentoCard from '../../BentoCard.svelte'
   import SegmentedControl from '../../SegmentedControl.svelte'
+  import ToggleSwitch from '../../ToggleSwitch.svelte'
   import SettingItem from '../SettingItem.svelte'
   import CustomSelect from '../../CustomSelect.svelte'
   import {
     weatherLocationStore,
     weatherUnitStore,
+    weatherAnimationsStore,
     tStore
   } from '../../../store'
   import {
@@ -209,6 +211,20 @@
           { value: 'fahrenheit', label: $tStore('settings.weather_unit_f') }
         ]}
         bind:value={$weatherUnitStore}
+      />
+    </SettingItem>
+
+    <SettingItem
+      label={$tStore('settings.weather_animations_label')}
+      description={$tStore('settings.weather_animations_desc')}
+      icon={Sparkles}
+      isDefault={$weatherAnimationsStore ===
+        weatherAnimationsStore.defaultValue}
+      onReset={() => weatherAnimationsStore.reset()}
+    >
+      <ToggleSwitch
+        bind:checked={$weatherAnimationsStore}
+        ariaLabel={$tStore('settings.weather_animations_label')}
       />
     </SettingItem>
   </BentoCard>
