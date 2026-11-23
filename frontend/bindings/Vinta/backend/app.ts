@@ -428,6 +428,14 @@ export function IsPortableMode(): $CancellablePromise<boolean> {
 }
 
 /**
+ * IsPrivacySensitiveDisplayActive reports whether Windows is in presentation/busy mode
+ * or a known screen-sharing toolbar (Teams/Zoom) is currently visible.
+ */
+export function IsPrivacySensitiveDisplayActive(): $CancellablePromise<boolean> {
+    return $Call.ByID(2084859841);
+}
+
+/**
  * IsTestMode returns true if the application was compiled with the devtest tag.
  */
 export function IsTestMode(): $CancellablePromise<boolean> {

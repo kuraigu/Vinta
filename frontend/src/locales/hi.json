@@ -191,7 +191,10 @@
     "time_seconds_ago": "{count}से पहले",
     "time_minutes_ago": "{count}मि पहले",
     "time_hours_ago": "{count}घं पहले",
-    "time_days_ago": "{count}दि पहले"
+    "time_days_ago": "{count}दि पहले",
+    "filter_all": "All",
+    "mute_app": "Mute {app}",
+    "privacy_hidden_preview": "Hidden in Privacy Mode"
   },
   "calendar": {
     "title": "कैलेंडर",
@@ -359,6 +362,14 @@
     "notif_dnd_desc": "पॉप-अप अलर्ट और ध्वनि बंद करें",
     "notif_satellite_label": "फ़्लोटिंग सूचना पिल",
     "notif_satellite_desc": "नई सूचनाएं आने पर स्क्रीन पर संक्षिप्त पिल दिखाएं",
+    "notif_minimal_style_label": "Minimal Pill Style",
+    "notif_minimal_style_desc": "Choose between full text banner or icon-only pill",
+    "notif_minimal_banner": "Banner",
+    "notif_minimal_icon_only": "Icon Only",
+    "notif_privacy_mode_label": "Privacy Mode",
+    "notif_privacy_mode_desc": "Hide notification previews on the minimal pill and Home",
+    "notif_auto_privacy_label": "Auto Privacy on Screen Share",
+    "notif_auto_privacy_desc": "Automatically enable Privacy Mode during screen sharing or presentations",
     "notif_autowake_label": "उच्च प्राथमिकता पर अपने आप जागें",
     "notif_autowake_desc": "अत्यावश्यक अलर्ट के लिए आइलैंड अस्थायी रूप से फैलाएं",
     "notif_sound_label": "सूचना ध्वनि",
@@ -673,6 +684,8 @@
     "hide_island": "Hide Island",
     "center_island": "Center Island",
     "show_tutorial": "Show Tutorial",
+    "privacy_on": "Privacy Mode: On",
+    "privacy_off": "Privacy Mode",
     "exit": "Exit"
   },
   "timer": {

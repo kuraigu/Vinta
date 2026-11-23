@@ -22,6 +22,7 @@
   import { Events } from '$lib/events'
   import {
     Bell,
+    BellOff,
     MessageSquareDot,
     Trash2,
     X,
@@ -40,6 +41,11 @@
     notifData,
     notificationPermissionDenied,
     dndStore,
+    notifMinimalStyleStore,
+    privacyModeStore,
+    autoPrivacyModeStore,
+    screenShareDetectedStore,
+    mutedNotifAppsStore,
     isIslandHiddenStore,
     tStore,
     t
@@ -557,11 +563,10 @@
       (notif.title || '').toLowerCase().includes('vinta')
 
     if (isVinta) {
-      const vintaIcon = notif.icon || appIcon
       return {
         name: 'Vinta',
-        icon: vintaIcon,
-        appIcon: notif.appLogo || appIcon,
+        icon: appIcon,
+        appIcon: appIcon,
         category: 'system'
       }
     }
@@ -653,12 +658,20 @@
           </div>
           <div class="banner-content">
             <span class="banner-app">{brand.name}</span>
-            <span class="banner-title">{latest.title}</span>
-            {#if latest.message}
-              <span class="banner-message">{latest.message}</span>
+            {#if $notifMinimalStyleStore === 'icon_only' || $privacyModeStore || ($autoPrivacyModeStore && $screenShareDetectedStore)}
+              <span class="banner-message">
+                {notifications.length > 1
+                  ? `${notifications.length} ${$tStore('notification.page_title').toLowerCase()}`
+                  : $tStore('notification.privacy_hidden_preview')}
+              </span>
+            {:else}
+              <span class="banner-title">{latest.title}</span>
+              {#if latest.message}
+                <span class="banner-message">{latest.message}</span>
+              {/if}
             {/if}
           </div>
-          {#if canRenderImage(latest.heroImage) && latest.heroImage !== brand.icon && latest.heroImage !== brand.appIcon}
+          {#if !($notifMinimalStyleStore === 'icon_only' || $privacyModeStore || ($autoPrivacyModeStore && $screenShareDetectedStore)) && canRenderImage(latest.heroImage) && latest.heroImage !== brand.icon && latest.heroImage !== brand.appIcon}
             <div class="banner-hero-thumb-wrapper">
               <img
                 src={latest.heroImage}
@@ -1055,6 +1068,34 @@
                         >
                       {/if}
                       <div class="notif-actions">
+                        <button
+                          type="button"
+                          class="expand-indicator-btn"
+                          onclick={(e) => {
+                            e.stopPropagation()
+                            const key = (
+                              group.items[0]?.aumid ||
+                              group.items[0]?.appName ||
+                              group.brandName
+                            )
+                              .trim()
+                              .toLowerCase()
+                            if (key) {
+                              mutedNotifAppsStore.update((prev) =>
+                                prev.includes(key) ? prev : [...prev, key]
+                              )
+                            }
+                            dismissGroup(group.groupKey)
+                          }}
+                          use:islandTooltip={$tStore('notification.mute_app', {
+                            app: group.brandName
+                          })}
+                          aria-label={$tStore('notification.mute_app', {
+                            app: group.brandName
+                          })}
+                        >
+                          <BellOff size={13} />
+                        </button>
                         <button
                           type="button"
                           class="expand-indicator-btn"

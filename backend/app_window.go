@@ -1695,3 +1695,41 @@ func (a *App) SetDevPillBounds(width, height, extraH int, scale float64) {
 	}
 	a.updateWindowRegion()
 }
+
+// IsPrivacySensitiveDisplayActive reports whether Windows is in presentation/busy mode
+// or a known screen-sharing toolbar (Teams/Zoom) is currently visible.
+func (a *App) IsPrivacySensitiveDisplayActive() bool {
+	var qState uint32
+	goruntime.LockOSThread()
+	coRes, _, _ := procCoInitializeEx.Call(0, 0)
+	ret, _, _ := procSHQueryUserNotificationState.Call(uintptr(unsafe.Pointer(&qState)))
+	if coRes == 0 || coRes == 1 {
+		_, _, _ = procCoUninitialize.Call()
+	}
+	goruntime.UnlockOSThread()
+
+	if ret == 0 && (qState == QUNS_PRESENTATION_MODE || qState == QUNS_BUSY) {
+		return true
+	}
+
+	foundShareToolbar := false
+	cb := syscall.NewCallback(func(hwnd uintptr, _ uintptr) uintptr {
+		vis, _, _ := procIsWindowVisible.Call(hwnd)
+		if vis == 0 {
+			return 1
+		}
+		var clsBuf [128]uint16
+		n, _, _ := procGetClassName.Call(hwnd, uintptr(unsafe.Pointer(&clsBuf[0])), uintptr(len(clsBuf)))
+		if n == 0 {
+			return 1
+		}
+		cls := syscall.UTF16ToString(clsBuf[:n])
+		if cls == "ScreenSharingToolbar" || cls == "ZPFloatToolbarClass" || cls == "ZPToolBarParentWndClass" {
+			foundShareToolbar = true
+			return 0
+		}
+		return 1
+	})
+	_, _, _ = procEnumWindows.Call(cb, 0)
+	return foundShareToolbar
+}

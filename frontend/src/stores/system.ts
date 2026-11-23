@@ -35,6 +35,7 @@ export const MAX_NOTIFICATIONS = 999
 export const notifData = writable<AppNotification[]>([])
 export const notificationPermissionDenied = writable<boolean>(false)
 export const suppressExternalNotifications = writable<boolean>(false)
+export const screenShareDetectedStore = writable<boolean>(false)
 
 /**
  * Optional simulated clock override for promotional showcases and automated scenes.
