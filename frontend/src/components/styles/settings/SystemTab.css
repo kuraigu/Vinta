@@ -1,7 +1,5 @@
-.setting-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.hw-restart-row {
+  padding: 0 12px 10px;
 }
 
 .hw-restart-row {

@@ -1,13 +1,13 @@
 <!--
   @component MediaGlanceWidget
-  @description Compact Home widget reusing MediaWidget in minimal glance mode.
+  @description Compact Home widget reusing MediaPlayer in minimal glance mode.
   Clicking the card opens MediaPage.
 -->
 <script lang="ts">
   import { getContext } from 'svelte'
   import WidgetFrame from './WidgetFrame.svelte'
   import BentoCard from '../BentoCard.svelte'
-  import MediaWidget from '../MediaWidget.svelte'
+  import MediaPlayer from '../MediaPlayer.svelte'
   import MediaPage, {
     config as mediaConfig
   } from '../../pages/MediaPage.svelte'
@@ -22,6 +22,7 @@
     size?: WidgetSizePreset
     active?: boolean
     showMenuButton?: boolean
+    onreorder?: (sourceId: string, targetId: string) => void
     oncontextmenu?: (e: MouseEvent) => void
   }
 
@@ -29,6 +30,7 @@
     size = '2x1',
     active = true,
     showMenuButton = false,
+    onreorder = undefined,
     oncontextmenu = undefined
   }: Props = $props()
 
@@ -61,13 +63,13 @@
 </script>
 
 {#if hasMedia}
-  <WidgetFrame id="media" {size} {showMenuButton} {oncontextmenu}>
+  <WidgetFrame id="media" {size} {showMenuButton} {onreorder} {oncontextmenu}>
     <BentoCard
       variant="bento"
       class="media-glance-card"
       onclick={isMediaEnabled ? openMediaPage : undefined}
     >
-      <MediaWidget
+      <MediaPlayer
         expanded={false}
         glanceMode={true}
         {active}

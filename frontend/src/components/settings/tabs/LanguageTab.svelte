@@ -110,10 +110,4 @@
   </BentoCard>
 </div>
 
-<style>
-  .locale-authors-caption {
-    margin: 6px 0 0;
-    font-size: 11px;
-    color: var(--vinta-text-secondary);
-  }
-</style>
+<style src="../../styles/settings/LanguageTab.css"></style>

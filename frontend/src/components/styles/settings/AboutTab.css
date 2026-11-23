@@ -139,20 +139,6 @@
   white-space: nowrap;
 }
 
-.about-section-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  padding: 4px 2px 0 2px;
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--vinta-text-secondary);
-  letter-spacing: -0.01em;
-  text-align: left;
-}
-
 .contributor-row {
   display: flex;
   align-items: center;

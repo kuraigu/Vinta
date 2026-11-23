@@ -1086,7 +1086,6 @@
 
       <div class="board-header">
         <div class="board-header-left">
-          <BackButton title={$tStore('notes.back_to_apps')} />
           <span class="board-title">{$tStore('notes.title')}</span>
           {#if notes.length > 0}
             <span class="board-count-pill">{notes.length}</span>

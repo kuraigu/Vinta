@@ -13,10 +13,10 @@
   /**
    * @fileoverview Page container hosting the full-page Media Player and Soundscapes view.
    *
-   * Sets up island sizing and mounts the comprehensive MediaWidget component.
+   * Sets up island sizing and mounts the comprehensive MediaPlayer component.
    */
 
-  import MediaWidget from '../components/MediaWidget.svelte'
+  import MediaPlayer from '../components/MediaPlayer.svelte'
 
   let { expanded = false }: { expanded?: boolean } = $props()
 </script>
@@ -27,7 +27,7 @@
   class:expanded
   class:minimal={!expanded}
 >
-  <MediaWidget {expanded} />
+  <MediaPlayer {expanded} />
 </div>
 
 <style src="./styles/MediaPage.css"></style>

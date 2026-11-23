@@ -97,6 +97,13 @@ export const defaultHomeWidgetsVisibility: HomeWidgetsVisibility = {
 
 export type WidgetSizePreset = '1x1' | '2x1' | '2x2'
 
+export const defaultHomeWidgetsOrder: string[] = [
+  'media',
+  'brief',
+  'actionCenter',
+  'systemStats'
+]
+
 export const defaultHomeWidgetSizes: Record<string, WidgetSizePreset> = {
   weather: '2x1',
   media: '2x1',
@@ -660,8 +667,77 @@ export const weatherUnitStore = persistentWritable<TemperatureUnit>('vinta_weath
 // 6. Home & Page Visibility
 // ============================================================================
 export const homeWidgetsVisibilityStore = persistentWritable<HomeWidgetsVisibility>('vinta_home_widgets_visibility', defaultHomeWidgetsVisibility)
+export const homeWidgetsOrderStore = persistentWritable<string[]>(
+  'vinta_home_widgets_order',
+  defaultHomeWidgetsOrder
+)
 export const homeWidgetSizesStore = persistentWritable<Record<string, WidgetSizePreset>>('vinta_home_widget_sizes', defaultHomeWidgetSizes)
 export const homeWidgetMenuEnabledStore = persistentWritable<boolean>('vinta_home_widget_menu_enabled', true)
+
+/**
+ * Normalizes a persisted Home widget order array against known default widget IDs.
+ */
+export function normalizeHomeWidgetsOrder(order?: string[] | null): string[] {
+  const seen = new Set<string>()
+  const result: string[] = []
+  if (Array.isArray(order)) {
+    for (const id of order) {
+      if (defaultHomeWidgetsOrder.includes(id) && !seen.has(id)) {
+        seen.add(id)
+        result.push(id)
+      }
+    }
+  }
+  for (const id of defaultHomeWidgetsOrder) {
+    if (!seen.has(id)) {
+      seen.add(id)
+      result.push(id)
+    }
+  }
+  return result
+}
+
+/**
+ * Moves a modular Home Bento widget up, down, or to the top of the Bento grid.
+ */
+export function moveHomeWidget(
+  widgetId: string,
+  direction: 'up' | 'down' | 'top'
+): void {
+  homeWidgetsOrderStore.update((prev) => {
+    const order = normalizeHomeWidgetsOrder(prev)
+    const idx = order.indexOf(widgetId)
+    if (idx < 0) return order
+    const next = [...order]
+    if (direction === 'top') {
+      if (idx === 0) return order
+      next.splice(idx, 1)
+      next.unshift(widgetId)
+      return next
+    }
+    const targetIdx = direction === 'up' ? idx - 1 : idx + 1
+    if (targetIdx < 0 || targetIdx >= next.length) return order
+    ;[next[idx], next[targetIdx]] = [next[targetIdx], next[idx]]
+    return next
+  })
+}
+
+/**
+ * Reorders a dragged Home Bento widget before or after a target widget ID.
+ */
+export function reorderHomeWidgets(sourceId: string, targetId: string): void {
+  if (!sourceId || !targetId || sourceId === targetId) return
+  homeWidgetsOrderStore.update((prev) => {
+    const order = normalizeHomeWidgetsOrder(prev)
+    const fromIdx = order.indexOf(sourceId)
+    const toIdx = order.indexOf(targetId)
+    if (fromIdx < 0 || toIdx < 0) return order
+    const next = [...order]
+    const [moved] = next.splice(fromIdx, 1)
+    next.splice(toIdx, 0, moved)
+    return next
+  })
+}
 export const pageVisibilityStore = persistentWritable<PageVisibility>('vinta_page_visibility', defaultPageVisibility)
 export const dockPinnedAppsStore = persistentWritable<DockPinnedApps>('vinta_dock_pinned_apps', defaultDockPinnedApps)
 export const pinnedMediaSourceStore = persistentWritable<string | null>('vinta_pinned_media_source', null)
@@ -850,6 +926,13 @@ function sanitizeSettingsPayload(raw: Record<string, unknown>): Record<string, u
     if (key in raw) {
       const val = raw[key]
       const defaultVal = reg.initialValue
+
+      if (key === 'vinta_home_widgets_order') {
+        sanitized[key] = Array.isArray(val)
+          ? normalizeHomeWidgetsOrder(val.filter((x): x is string => typeof x === 'string'))
+          : defaultHomeWidgetsOrder
+        continue
+      }
 
       if (key === 'vinta_pinned_media_source') {
         sanitized[key] = typeof val === 'string' && val.trim() ? val.trim() : null

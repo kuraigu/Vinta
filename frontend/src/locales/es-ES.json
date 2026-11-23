@@ -142,7 +142,12 @@
     "widget_size_2x2": "Grande (2×2)",
     "widget_hide": "Ocultar widget",
     "widget_options": "Opciones del widget",
-    "widget_disable_menu": "Desactivar menú de widgets"
+    "widget_disable_menu": "Desactivar menú de widgets",
+    "widget_brief_label": "Brief Feed",
+    "widget_brief_desc": "Calendar, announcements & notifications",
+    "widget_move_top": "Move to Top",
+    "widget_move_up": "Move Up",
+    "widget_move_down": "Move Down"
   },
   "announcements": {
     "title": "Anuncio",
@@ -190,6 +195,7 @@
   },
   "calendar": {
     "title": "Calendario",
+    "agenda_tab": "Agenda",
     "event_single": "{count} evento",
     "event_plural": "{count} eventos",
     "no_events_today": "No hay eventos programados para hoy",
@@ -389,6 +395,8 @@
     "modules_spotlight": "Carrusel destacado",
     "modules_announcements": "Canal de anuncios",
     "modules_notifications_glance": "Notification Glance",
+    "modules_widget_order": "Home Widget Order",
+    "modules_arrangeable_cards": "Home Grid Cards (Drag to reorder)",
     "modules_one_widget_required": "Al menos un widget debe permanecer visible en la isla",
     "modules_dock_pinned": "Favoritos fijados en el dock",
     "modules_pin_calendar": "Fijar Calendario",
@@ -501,6 +509,7 @@
     "window_controls": "Controles de ventana"
   },
   "dock": {
+    "back": "Back",
     "apps": "Apps",
     "home": "Inicio",
     "calendar": "Calendario",
@@ -513,7 +522,13 @@
     "system_stats": "Sistema",
     "settings": "Ajustes",
     "more": "Más en el dock",
-    "dock_aria": "Dock de acceso rápido"
+    "dock_aria": "Dock de acceso rápido",
+    "open_audio_mixer": "Open Audio Mixer",
+    "pause_timer": "Pause Timer",
+    "resume_timer": "Resume Timer",
+    "pin_to_dock": "Pin to Dock",
+    "unpin_from_dock": "Unpin from Dock",
+    "hide_module": "Hide Module"
   },
   "apps": {
     "title": "Apps",
@@ -538,6 +553,8 @@
     "home_desc": "Widgets y reloj",
     "media_name": "Multimedia",
     "media_desc": "Reproducción actual",
+    "audio_mixer_name": "Audio Mixer",
+    "audio_mixer_desc": "App volumes & soundscapes",
     "notifs_name": "Notificaciones",
     "notifs_desc": "Notificaciones",
     "notes_name": "Notas rápidas",

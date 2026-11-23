@@ -501,6 +501,11 @@
   box-sizing: border-box;
 }
 
+:global(.calendar-card.variant-page) .calendar-agenda-tray {
+  min-height: 128px;
+  flex: 1;
+}
+
 .agenda-tray-header {
   display: flex;
   align-items: center;

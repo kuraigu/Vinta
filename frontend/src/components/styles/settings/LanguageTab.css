@@ -2,10 +2,10 @@
    LanguageTab Stylesheet
    ============================================================================ */
 
-.setting-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+.locale-authors-caption {
+  margin: 6px 0 0;
+  font-size: 11px;
+  color: var(--vinta-text-secondary);
 }
 
 .actions-stack {

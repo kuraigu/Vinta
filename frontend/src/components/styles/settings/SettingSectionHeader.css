@@ -1,0 +1,33 @@
+.setting-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 2px 2px 2px;
+  text-align: left;
+}
+
+.setting-section-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--vinta-text-secondary);
+}
+
+.setting-section-title :global(svg) {
+  color: var(--vinta-accent-primary);
+  flex-shrink: 0;
+}
+
+.setting-section-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}

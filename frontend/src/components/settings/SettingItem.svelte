@@ -23,6 +23,7 @@
     isDefault?: boolean
     onReset?: () => void
     children?: Snippet
+    nested?: Snippet
   }
 
   let {
@@ -35,7 +36,8 @@
     disabled = false,
     isDefault = true,
     onReset,
-    children
+    children,
+    nested
   }: Props = $props()
 
   const getSearchQuery = getContext<(() => string) | undefined>(
@@ -53,46 +55,59 @@
 </script>
 
 {#if matchesSearch}
-  <BentoCard variant="setting" {flexCol} {disabled}>
-    <div class="setting-label-group">
-      {#if IconComponent}
-        <div class="setting-icon-wrap">
-          <IconBadge icon={IconComponent} color={badgeColor} size="md" />
+  {#snippet cardContent()}
+    <BentoCard variant="setting" {flexCol} {disabled}>
+      <div class="setting-label-group">
+        {#if IconComponent}
+          <div class="setting-icon-wrap">
+            <IconBadge icon={IconComponent} color={badgeColor} size="md" />
+          </div>
+        {/if}
+        <div class="setting-text-col">
+          <div class="setting-label">
+            <span>{label}</span>
+            {#if badge}
+              <span class="setting-badge">{badge}</span>
+            {/if}
+            {#if onReset && !isDefault && !disabled}
+              <button
+                type="button"
+                class="setting-reset-btn"
+                onclick={(e) => {
+                  e.stopPropagation()
+                  onReset()
+                }}
+                use:islandTooltip={$tStore('common.reset')}
+                aria-label={$tStore('common.reset')}
+              >
+                <RotateCcw size={11} strokeWidth={2.2} />
+              </button>
+            {/if}
+          </div>
+          {#if description}
+            <span class="setting-description">{description}</span>
+          {/if}
+        </div>
+      </div>
+
+      {#if children}
+        <div class="setting-control">
+          {@render children()}
         </div>
       {/if}
-      <div class="setting-text-col">
-        <div class="setting-label">
-          <span>{label}</span>
-          {#if badge}
-            <span class="setting-badge">{badge}</span>
-          {/if}
-          {#if onReset && !isDefault && !disabled}
-            <button
-              type="button"
-              class="setting-reset-btn"
-              onclick={(e) => {
-                e.stopPropagation()
-                onReset()
-              }}
-              use:islandTooltip={$tStore('common.reset')}
-              aria-label={$tStore('common.reset')}
-            >
-              <RotateCcw size={11} strokeWidth={2.2} />
-            </button>
-          {/if}
-        </div>
-        {#if description}
-          <span class="setting-description">{description}</span>
-        {/if}
+    </BentoCard>
+  {/snippet}
+
+  {#if nested}
+    <div class="setting-item-wrap">
+      {@render cardContent()}
+      <div class="setting-nested-group">
+        {@render nested()}
       </div>
     </div>
-
-    {#if children}
-      <div class="setting-control">
-        {@render children()}
-      </div>
-    {/if}
-  </BentoCard>
+  {:else}
+    {@render cardContent()}
+  {/if}
 {/if}
 
 <style src="../styles/settings/SettingItem.css"></style>

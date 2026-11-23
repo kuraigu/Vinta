@@ -142,7 +142,12 @@
     "widget_size_2x2": "Large (2×2)",
     "widget_hide": "Hide Widget",
     "widget_options": "Widget options",
-    "widget_disable_menu": "Disable Widget Menu"
+    "widget_disable_menu": "Disable Widget Menu",
+    "widget_brief_label": "Brief Feed",
+    "widget_brief_desc": "Calendar, announcements & notifications",
+    "widget_move_top": "Move to Top",
+    "widget_move_up": "Move Up",
+    "widget_move_down": "Move Down"
   },
   "announcements": {
     "title": "Announcement",
@@ -190,6 +195,7 @@
   },
   "calendar": {
     "title": "Calendar",
+    "agenda_tab": "Agenda",
     "event_single": "{count} event",
     "event_plural": "{count} events",
     "no_events_today": "No events scheduled for today",
@@ -389,6 +395,8 @@
     "modules_spotlight": "Spotlight Carousel",
     "modules_announcements": "Announcements Feed",
     "modules_notifications_glance": "Notification Glance",
+    "modules_widget_order": "Home Widget Order",
+    "modules_arrangeable_cards": "Home Grid Cards (Drag to reorder)",
     "modules_one_widget_required": "At least one widget must remain visible on the home island",
     "modules_dock_pinned": "Dock Pinned Favorites",
     "modules_pin_calendar": "Pin Calendar",
@@ -501,6 +509,7 @@
     "window_controls": "Window controls"
   },
   "dock": {
+    "back": "Back",
     "apps": "Apps",
     "home": "Home",
     "calendar": "Calendar",
@@ -513,7 +522,13 @@
     "system_stats": "System Stats",
     "settings": "Settings",
     "more": "More in Dock",
-    "dock_aria": "Quick Access Dock"
+    "dock_aria": "Quick Access Dock",
+    "open_audio_mixer": "Open Audio Mixer",
+    "pause_timer": "Pause Timer",
+    "resume_timer": "Resume Timer",
+    "pin_to_dock": "Pin to Dock",
+    "unpin_from_dock": "Unpin from Dock",
+    "hide_module": "Hide Module"
   },
   "apps": {
     "title": "Apps",
@@ -538,6 +553,8 @@
     "home_desc": "Widgets & clock",
     "media_name": "Media",
     "media_desc": "Now playing",
+    "audio_mixer_name": "Audio Mixer",
+    "audio_mixer_desc": "App volumes & soundscapes",
     "notifs_name": "Notifications",
     "notifs_desc": "Notifications",
     "notes_name": "Quick Notes",

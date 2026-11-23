@@ -1,12 +1,12 @@
 <!--
   @component Dock
-  @description Bottom or top launcher bar. Displays pinned application icons with
-  smooth hover magnification, active dot indicators for running background tasks,
-  and quick navigation clicks to switch island pages.
+  @description Top launcher bar with fixed Core/Settings anchors, a scrollable middle track
+  with edge fades, active capsule indicators, and right-click quick actions.
 -->
 <script lang="ts">
   import { getContext, onMount } from 'svelte'
   import {
+    ArrowLeft,
     Grid,
     House,
     Calendar,
@@ -15,13 +15,25 @@
     Timer,
     Music,
     Bell,
+    BellOff,
     Settings,
-    Folder,
     FolderDown,
-    Activity
+    Activity,
+    Pin,
+    PinOff,
+    EyeOff,
+    Play,
+    Pause,
+    SlidersHorizontal,
+    Trash2
   } from 'lucide-svelte'
+  import { Events } from '$lib/events'
+  import { SendMediaControl } from '../../bindings/Vinta/backend/app.js'
   import { AppControls } from '../utils/AppControls.svelte'
   import DockButton from './DockButton.svelte'
+  import CustomContextMenu, {
+    type ContextMenuItem
+  } from './CustomContextMenu.svelte'
   import HomePage from '../pages/HomePage.svelte'
   import CalendarPage from '../pages/CalendarPage.svelte'
   import NotesPage from '../pages/NotesPage.svelte'
@@ -33,16 +45,25 @@
   import PerformancePage from '../pages/PerformancePage.svelte'
   import FileShelfPage from '../pages/FileShelfPage.svelte'
   import { fileShelfStore } from '../stores/fileShelf'
-  import type { IslandConfig } from '../store'
   import {
     notifData,
+    dndStore,
     activeOverlayStore,
     pageVisibilityStore,
     dockPinnedAppsStore,
     globalMediaStore,
     timerAppStore,
     isAnyTimerRunning,
-    tStore
+    pauseCountdown,
+    startCountdown,
+    pauseStopwatch,
+    startStopwatch,
+    pauseFocus,
+    startFocus,
+    tStore,
+    type IslandConfig,
+    type DockPinnedApps,
+    type PageVisibility
   } from '../store'
 
   const navigate =
@@ -58,8 +79,14 @@
 
   let {
     activePage,
-    islandConfig
-  }: { activePage: unknown; islandConfig?: IslandConfig } = $props()
+    canGoBack = false,
+    onGoBack
+  }: {
+    activePage: unknown
+    islandConfig?: IslandConfig
+    canGoBack?: boolean
+    onGoBack?: () => void
+  } = $props()
 
   interface DockItem {
     id: string
@@ -69,75 +96,61 @@
     active: boolean
     badge?: number
     group: 'pinned' | 'dynamic'
+    pinKey?: keyof DockPinnedApps
+    visibilityKey?: keyof PageVisibility
     onclick: (e: MouseEvent) => void
   }
 
-  let isFolderOpen = $state(false)
-  let folderWrapperRef = $state<HTMLDivElement | null>(null)
+  let dockEl = $state<HTMLDivElement | null>(null)
+  let dockWidth = $state(480)
+  let overflowOpen = $state(false)
+  let overflowWrapEl = $state<HTMLDivElement | null>(null)
+  let ctxOpen = $state(false)
+  let ctxCoords = $state({ x: 0, y: 0 })
+  let ctxItem = $state<DockItem | null>(null)
 
-  /**
-   * Evaluates if any timer, stopwatch, or focus session is currently running.
-   */
   const checkTimerRunning = () => isAnyTimerRunning($timerAppStore)
   const isTimerRunning = $derived.by(checkTimerRunning)
 
-  /**
-   * Evaluates whether the timer widget should appear dynamically when unpinned.
-   */
-  const checkShowTimerDynamic = () =>
+  const showTimerDynamic = $derived(
     Boolean(
       !$dockPinnedAppsStore.timer &&
       $pageVisibilityStore.timer !== false &&
       (isTimerRunning || activePage === TimerPage)
     )
-  const showTimerDynamic = $derived.by(checkShowTimerDynamic)
+  )
 
-  /**
-   * Evaluates whether the now-playing media widget should appear dynamically.
-   */
-  const checkShowMedia = () =>
+  const showMedia = $derived(
     Boolean(
       $pageVisibilityStore.media !== false &&
       (Boolean($globalMediaStore?.isPlaying) || activePage === MediaPage)
     )
-  const showMedia = $derived.by(checkShowMedia)
+  )
 
-  /**
-   * Evaluates whether the notifications widget should appear dynamically.
-   */
-  const checkShowNotifs = () =>
+  const showNotifs = $derived(
     Boolean(
       $pageVisibilityStore.notifications !== false &&
       ($notifData.length > 0 ||
         activePage === Notification ||
         $activeOverlayStore === 'notifications')
     )
-  const showNotifs = $derived.by(checkShowNotifs)
+  )
 
-  /**
-   * Evaluates whether the File Shelf should appear dynamically when unpinned and holding items.
-   */
-  const checkShowFileShelfDynamic = () =>
+  const showFileShelfDynamic = $derived(
     Boolean(
       !$dockPinnedAppsStore.fileshelf &&
       $pageVisibilityStore.fileshelf !== false &&
       ($fileShelfStore.items.length > 0 || activePage === FileShelfPage)
     )
-  const showFileShelfDynamic = $derived.by(checkShowFileShelfDynamic)
+  )
 
-  /**
-   * Evaluates whether the Performance monitor should appear dynamically when active.
-   */
-  const checkShowPerformanceDynamic = () =>
+  const showPerformanceDynamic = $derived(
     Boolean(
       $pageVisibilityStore.performance !== false &&
       activePage === PerformancePage
     )
-  const showPerformanceDynamic = $derived.by(checkShowPerformanceDynamic)
+  )
 
-  /**
-   * Builds the list of middle dock items (pinned favorites and dynamic tasks).
-   */
   function computeMiddleItems(): DockItem[] {
     const items: DockItem[] = []
 
@@ -151,6 +164,8 @@
         icon: Calendar,
         active: activePage === CalendarPage,
         group: 'pinned',
+        pinKey: 'calendar',
+        visibilityKey: 'calendar',
         onclick: (e: MouseEvent) => AppControls.goCalendar(navigate, e)
       })
     }
@@ -162,6 +177,8 @@
         icon: FileText,
         active: activePage === NotesPage,
         group: 'pinned',
+        pinKey: 'notes',
+        visibilityKey: 'notes',
         onclick: (e: MouseEvent) => AppControls.goNotes(navigate, e)
       })
     }
@@ -176,6 +193,8 @@
         icon: Calculator,
         active: activePage === CalculatorPage,
         group: 'pinned',
+        pinKey: 'calculator',
+        visibilityKey: 'calculator',
         onclick: (e: MouseEvent) => AppControls.goCalculator(navigate, e)
       })
     }
@@ -187,6 +206,8 @@
         icon: Timer,
         active: activePage === TimerPage,
         group: 'pinned',
+        pinKey: 'timer',
+        visibilityKey: 'timer',
         onclick: (e: MouseEvent) => AppControls.goTimer(navigate, e)
       })
     }
@@ -205,6 +226,8 @@
             ? $fileShelfStore.items.length
             : undefined,
         group: 'pinned',
+        pinKey: 'fileshelf',
+        visibilityKey: 'fileshelf',
         onclick: (e: MouseEvent) => AppControls.goFileShelf(navigate, e)
       })
     }
@@ -216,6 +239,8 @@
         icon: Timer,
         active: activePage === TimerPage,
         group: 'dynamic',
+        pinKey: 'timer',
+        visibilityKey: 'timer',
         onclick: (e: MouseEvent) => AppControls.goTimer(navigate, e)
       })
     }
@@ -231,6 +256,8 @@
             ? $fileShelfStore.items.length
             : undefined,
         group: 'dynamic',
+        pinKey: 'fileshelf',
+        visibilityKey: 'fileshelf',
         onclick: (e: MouseEvent) => AppControls.goFileShelf(navigate, e)
       })
     }
@@ -242,6 +269,7 @@
         icon: Music,
         active: activePage === MediaPage,
         group: 'dynamic',
+        visibilityKey: 'media',
         onclick: (e: MouseEvent) => AppControls.goMedia(navigate, e)
       })
     }
@@ -256,6 +284,7 @@
           $activeOverlayStore === 'notifications',
         badge: $notifData.length > 0 ? $notifData.length : undefined,
         group: 'dynamic',
+        visibilityKey: 'notifications',
         onclick: (e: MouseEvent) => AppControls.goNotif(navigate, e)
       })
     }
@@ -267,107 +296,274 @@
         icon: Activity,
         active: activePage === PerformancePage,
         group: 'dynamic',
+        visibilityKey: 'performance',
         onclick: (e: MouseEvent) => AppControls.goPerformance(navigate, e)
       })
     }
 
     return items
   }
+
   const middleItems = $derived.by(computeMiddleItems)
 
-  /**
-   * Computes which items fit inline on the dock and which fold into the Dock Folder
-   * when the current page's expanded width is smaller than the total dock width.
-   */
-  function computeDockLayout(): {
-    visibleItems: DockItem[]
-    folderItems: DockItem[]
-  } {
-    const pageW = islandConfig?.expanded?.w ?? 420
-    const availableW = pageW - 36
-    const totalCount = 3 + middleItems.length
-    const hasDyn = middleItems.some((i) => i.group === 'dynamic')
-    const dividerAllowance = hasDyn ? 22 : 0
-    const requiredFullW = totalCount * 36 + 16 + dividerAllowance
+  const partitionedMiddle = $derived.by(() => {
+    const fixedButtons = (canGoBack ? 3 : 2) + 1
+    const fixedW = fixedButtons * 38 + 32
+    const availableMiddleW = Math.max(0, dockWidth - fixedW)
+    const rawMaxMiddle = Math.max(1, Math.floor((availableMiddleW + 4) / 38))
 
-    if (requiredFullW <= availableW) {
-      return { visibleItems: middleItems, folderItems: [] }
+    if (middleItems.length <= rawMaxMiddle) {
+      return { visible: middleItems, overflow: [] as DockItem[] }
     }
 
-    // Reserve space for 3 anchor buttons (Apps, Home, Settings) + 1 Folder button = 4 slots
-    const maxTotalButtons = Math.max(4, Math.floor((availableW - 16) / 36))
-    const maxVisibleMiddle = Math.max(0, maxTotalButtons - 4)
+    const maxVisible = Math.max(1, Math.floor((availableMiddleW - 44 + 4) / 38))
+    const chosenIds: Record<string, boolean> = {}
+    let chosenCount = 0
 
-    // Prioritize keeping the currently active page visible on the dock bar if possible
-    const activeIdx = middleItems.findIndex((i) => i.active)
-    if (activeIdx >= maxVisibleMiddle && maxVisibleMiddle > 0) {
-      const reordered = [...middleItems]
-      const [activeItem] = reordered.splice(activeIdx, 1)
-      reordered.splice(maxVisibleMiddle - 1, 0, activeItem)
-      return {
-        visibleItems: reordered.slice(0, maxVisibleMiddle),
-        folderItems: reordered.slice(maxVisibleMiddle)
+    const pickItem = (id: string) => {
+      if (chosenIds[id]) return
+      chosenIds[id] = true
+      chosenCount++
+    }
+
+    for (const item of middleItems) {
+      if (chosenCount >= maxVisible) break
+      if (item.active) pickItem(item.id)
+    }
+    for (const item of middleItems) {
+      if (chosenCount >= maxVisible) break
+      if (item.group === 'dynamic') pickItem(item.id)
+    }
+    for (const item of middleItems) {
+      if (chosenCount >= maxVisible) break
+      pickItem(item.id)
+    }
+
+    const visible: DockItem[] = []
+    const overflow: DockItem[] = []
+    for (const item of middleItems) {
+      if (chosenIds[item.id]) {
+        visible.push(item)
+      } else {
+        overflow.push(item)
+      }
+    }
+    return { visible, overflow }
+  })
+
+  const visiblePinnedItems = $derived(
+    partitionedMiddle.visible.filter((i) => i.group === 'pinned')
+  )
+  const visibleDynamicItems = $derived(
+    partitionedMiddle.visible.filter((i) => i.group === 'dynamic')
+  )
+  const overflowItems = $derived(partitionedMiddle.overflow)
+  const overflowHasActive = $derived(overflowItems.some((i) => i.active))
+
+  $effect(function closeOverflowWhenEmpty() {
+    if (overflowItems.length === 0 && overflowOpen) {
+      overflowOpen = false
+    }
+  })
+
+  function handleDockItemContextMenu(e: MouseEvent, item: DockItem) {
+    e.preventDefault()
+    e.stopPropagation()
+    ctxItem = item
+    ctxCoords = { x: e.clientX, y: e.clientY }
+    ctxOpen = true
+  }
+
+  function toggleTimerQuickState() {
+    const state = $timerAppStore
+    if (state.focus.isRunning) {
+      pauseFocus()
+      return
+    }
+    if (state.timer.isRunning) {
+      pauseCountdown()
+      return
+    }
+    if (state.stopwatch.isRunning) {
+      pauseStopwatch()
+      return
+    }
+    if (state.activeTab === 'focus') {
+      startFocus()
+    } else if (state.activeTab === 'stopwatch') {
+      startStopwatch()
+    } else {
+      startCountdown()
+    }
+  }
+
+  function getDockContextMenuItems(): ContextMenuItem[] {
+    const item = ctxItem
+    if (!item) return []
+    const menu: ContextMenuItem[] = []
+
+    if (item.id === 'media') {
+      const playing = Boolean($globalMediaStore?.isPlaying)
+      menu.push(
+        {
+          label: playing ? $tStore('media.pause') : $tStore('media.play'),
+          icon: playing ? Pause : Play,
+          action: () => {
+            SendMediaControl(playing ? 'pause' : 'play').catch(() => {})
+          }
+        },
+        {
+          label: $tStore('dock.open_audio_mixer'),
+          icon: SlidersHorizontal,
+          action: () => {
+            AppControls.goMedia(navigate)
+            setTimeout(() => Events.Emit('vinta:open-audio-mixer'), 60)
+          }
+        }
+      )
+    } else if (item.id === 'timer' || item.id === 'timer-dynamic') {
+      menu.push({
+        label: isTimerRunning
+          ? $tStore('dock.pause_timer')
+          : $tStore('dock.resume_timer'),
+        icon: isTimerRunning ? Pause : Play,
+        action: toggleTimerQuickState
+      })
+    } else if (item.id === 'notifications') {
+      menu.push({
+        label: $dndStore
+          ? $tStore('notification.dnd_on')
+          : $tStore('notification.dnd_off'),
+        icon: $dndStore ? BellOff : Bell,
+        action: () => dndStore.update((v) => !v)
+      })
+      if ($notifData.length > 0) {
+        menu.push({
+          label: $tStore('notification.clear_all'),
+          icon: Trash2,
+          danger: true,
+          action: () => notifData.set([])
+        })
       }
     }
 
-    return {
-      visibleItems: middleItems.slice(0, maxVisibleMiddle),
-      folderItems: middleItems.slice(maxVisibleMiddle)
+    if (item.pinKey) {
+      if (menu.length > 0) {
+        menu.push({ label: '', action: () => {}, divider: true })
+      }
+      const key = item.pinKey
+      const isPinned = Boolean($dockPinnedAppsStore[key])
+      menu.push({
+        label: isPinned
+          ? $tStore('dock.unpin_from_dock')
+          : $tStore('dock.pin_to_dock'),
+        icon: isPinned ? PinOff : Pin,
+        action: () => {
+          dockPinnedAppsStore.update((prev) => ({
+            ...prev,
+            [key]: !isPinned
+          }))
+        }
+      })
     }
-  }
-  const dockLayout = $derived.by(computeDockLayout)
-  const visiblePinned = $derived.by(() =>
-    dockLayout.visibleItems.filter((i) => i.group === 'pinned')
-  )
-  const visibleDynamic = $derived.by(() =>
-    dockLayout.visibleItems.filter((i) => i.group === 'dynamic')
-  )
-  const folderItems = $derived.by(() => dockLayout.folderItems)
-  const hasFolderActive = $derived.by(() =>
-    folderItems.some((item) => item.active)
-  )
-  const folderBadgeTotal = $derived.by(() =>
-    folderItems.reduce((sum, item) => sum + (item.badge || 0), 0)
-  )
 
-  function syncFolderState(): void {
-    if (folderItems.length === 0 && isFolderOpen) {
-      isFolderOpen = false
+    if (item.visibilityKey) {
+      const visKey = item.visibilityKey
+      menu.push({
+        label: $tStore('dock.hide_module'),
+        icon: EyeOff,
+        action: () => {
+          pageVisibilityStore.update((prev) => ({
+            ...prev,
+            [visKey]: false
+          }))
+        }
+      })
     }
-  }
-  $effect(syncFolderState)
 
-  function toggleFolder(e: MouseEvent): void {
-    e.stopPropagation()
-    isFolderOpen = !isFolderOpen
-  }
-
-  function handleFolderItemClick(item: DockItem, e: MouseEvent): void {
-    isFolderOpen = false
-    item.onclick(e)
+    return menu
   }
 
   onMount(() => {
-    function handleOutsideClick(e: MouseEvent) {
-      if (
-        isFolderOpen &&
-        folderWrapperRef &&
-        !folderWrapperRef.contains(e.target as Node)
-      ) {
-        isFolderOpen = false
+    let ro: ResizeObserver | null = null
+    if (dockEl && typeof ResizeObserver !== 'undefined') {
+      dockWidth = dockEl.clientWidth || 480
+      ro = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          dockWidth = entry.contentRect.width
+        }
+      })
+      ro.observe(dockEl)
+    }
+
+    const handleDocPointerDown = (e: PointerEvent) => {
+      if (!overflowOpen) return
+      const target = e.target as Node | null
+      if (target && overflowWrapEl?.contains(target)) return
+      if (target instanceof HTMLElement && target.closest('.ctx-menu')) return
+      overflowOpen = false
+    }
+
+    const handleDocKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && overflowOpen) {
+        e.preventDefault()
+        overflowOpen = false
       }
     }
-    document.addEventListener('mousedown', handleOutsideClick)
+
+    document.addEventListener('pointerdown', handleDocPointerDown)
+    document.addEventListener('keydown', handleDocKeyDown)
+
+    const unsubJump = Events.OnGlobal('vinta:dock-jump', (ev: unknown) => {
+      const data = ((ev as { data?: unknown })?.data ?? ev) as
+        { index?: number } | undefined
+      const idx = data?.index
+      if (typeof idx !== 'number' || idx < 0) return
+
+      const targets: Array<() => void> = [
+        () =>
+          $activeOverlayStore === 'apps'
+            ? closeOverlay?.()
+            : openOverlay?.('apps'),
+        () => AppControls.goHome(navigate),
+        ...middleItems.map(
+          (item) => () => item.onclick(new MouseEvent('click'))
+        ),
+        () => AppControls.goSettings(navigate)
+      ]
+      targets[idx]?.()
+    })
     return () => {
-      document.removeEventListener('mousedown', handleOutsideClick)
+      ro?.disconnect()
+      document.removeEventListener('pointerdown', handleDocPointerDown)
+      document.removeEventListener('keydown', handleDocKeyDown)
+      unsubJump()
     }
   })
 </script>
 
 <div class="dock-container" class:is-media={activePage === MediaPage}>
-  <div class="dock" role="toolbar" aria-label={$tStore('dock.dock_aria')}>
+  <div
+    bind:this={dockEl}
+    class="dock"
+    role="toolbar"
+    aria-label={$tStore('dock.dock_aria')}
+  >
     <!-- Core Anchors -->
     <div class="dock-group core-group">
+      {#if canGoBack}
+        <DockButton
+          tooltip={$tStore('dock.back')}
+          tooltipPosition="bottom"
+          onclick={(e: MouseEvent) => {
+            e.stopPropagation()
+            onGoBack?.()
+          }}
+        >
+          <ArrowLeft size={18} />
+        </DockButton>
+      {/if}
+
       <DockButton
         tooltip={$tStore('dock.apps')}
         tooltipPosition="bottom"
@@ -394,79 +590,91 @@
       </DockButton>
     </div>
 
-    <!-- Pinned Favorites -->
-    {#if visiblePinned.length > 0}
-      <div class="dock-group pinned-group">
-        {#each visiblePinned as item (item.id)}
-          {@const Icon = item.icon}
-          <DockButton
-            tooltip={item.tooltip}
-            tooltipPosition="bottom"
-            active={item.active}
-            badge={item.badge}
-            onclick={item.onclick}
-          >
-            <Icon size={18} />
-          </DockButton>
-        {/each}
-      </div>
-    {/if}
-
-    <!-- Dynamic Activity Section -->
-    {#if visibleDynamic.length > 0}
-      <div class="dock-divider" aria-hidden="true"></div>
-
-      <div class="dock-group dynamic-group">
-        {#each visibleDynamic as item (item.id)}
-          {@const Icon = item.icon}
-          <DockButton
-            tooltip={item.tooltip}
-            tooltipPosition="bottom"
-            active={item.active}
-            badge={item.badge}
-            onclick={item.onclick}
-          >
-            <Icon size={18} />
-          </DockButton>
-        {/each}
-      </div>
-
-      <div class="dock-divider" aria-hidden="true"></div>
-    {/if}
-
-    <!-- Overflow Dock Folder -->
-    {#if folderItems.length > 0}
-      <div class="dock-folder-wrapper" bind:this={folderWrapperRef}>
-        <DockButton
-          tooltip={$tStore('dock.more')}
-          tooltipPosition="bottom"
-          active={isFolderOpen || hasFolderActive}
-          badge={!isFolderOpen && folderBadgeTotal > 0
-            ? folderBadgeTotal
-            : undefined}
-          onclick={toggleFolder}
-        >
-          <Folder size={17} />
-        </DockButton>
-
-        {#if isFolderOpen}
-          <div
-            class="dock-folder-popover"
-            role="menu"
-            aria-label="Overflow dock items"
-          >
-            {#each folderItems as item (item.id)}
+    <!-- Middle Items + Labeled Overflow Pill -->
+    {#if middleItems.length > 0}
+      <div class="dock-middle">
+        {#if visiblePinnedItems.length > 0}
+          <div class="dock-group pinned-group">
+            {#each visiblePinnedItems as item (item.id)}
               {@const Icon = item.icon}
               <DockButton
                 tooltip={item.tooltip}
                 tooltipPosition="bottom"
                 active={item.active}
                 badge={item.badge}
-                onclick={(e: MouseEvent) => handleFolderItemClick(item, e)}
+                onclick={item.onclick}
+                oncontextmenu={(e) => handleDockItemContextMenu(e, item)}
               >
                 <Icon size={18} />
               </DockButton>
             {/each}
+          </div>
+        {/if}
+
+        {#if visiblePinnedItems.length > 0 && visibleDynamicItems.length > 0}
+          <div class="dock-divider" aria-hidden="true"></div>
+        {/if}
+
+        {#if visibleDynamicItems.length > 0}
+          <div class="dock-group dynamic-group">
+            {#each visibleDynamicItems as item (item.id)}
+              {@const Icon = item.icon}
+              <DockButton
+                tooltip={item.tooltip}
+                tooltipPosition="bottom"
+                active={item.active}
+                badge={item.badge}
+                onclick={item.onclick}
+                oncontextmenu={(e) => handleDockItemContextMenu(e, item)}
+              >
+                <Icon size={18} />
+              </DockButton>
+            {/each}
+          </div>
+        {/if}
+
+        {#if overflowItems.length > 0}
+          <div class="dock-overflow-wrap" bind:this={overflowWrapEl}>
+            <button
+              type="button"
+              class="dock-overflow-pill"
+              class:active={overflowOpen || overflowHasActive}
+              aria-expanded={overflowOpen}
+              aria-label={$tStore('dock.more')}
+              onclick={(e: MouseEvent) => {
+                e.stopPropagation()
+                overflowOpen = !overflowOpen
+              }}
+            >
+              <span>+{overflowItems.length}</span>
+            </button>
+
+            {#if overflowOpen}
+              <div class="dock-overflow-popover" role="menu">
+                {#each overflowItems as item (item.id)}
+                  {@const Icon = item.icon}
+                  <button
+                    type="button"
+                    class="dock-overflow-item"
+                    class:active={item.active}
+                    role="menuitem"
+                    onclick={(e: MouseEvent) => {
+                      overflowOpen = false
+                      item.onclick(e)
+                    }}
+                    oncontextmenu={(e) => handleDockItemContextMenu(e, item)}
+                  >
+                    <Icon size={15} />
+                    <span class="dock-overflow-label">{item.tooltip}</span>
+                    {#if item.badge && item.badge > 0}
+                      <span class="dock-overflow-badge">
+                        {item.badge > 99 ? '99+' : item.badge}
+                      </span>
+                    {/if}
+                  </button>
+                {/each}
+              </div>
+            {/if}
           </div>
         {/if}
       </div>
@@ -486,93 +694,15 @@
   </div>
 </div>
 
-<style>
-  .dock-container {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    padding-top: 10px;
-    padding-bottom: 14px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 100;
-    pointer-events: none;
-    background: linear-gradient(
-      to bottom,
-      var(--vinta-bg) 0%,
-      transparent 100%
-    );
-  }
+{#if ctxOpen}
+  <CustomContextMenu
+    x={ctxCoords.x}
+    y={ctxCoords.y}
+    items={getDockContextMenuItems()}
+    onclose={() => {
+      ctxOpen = false
+    }}
+  />
+{/if}
 
-  .dock-container.is-media {
-    background: linear-gradient(
-      to bottom,
-      rgba(10, 11, 16, 0.52) 0%,
-      rgba(10, 11, 16, 0.28) 45%,
-      transparent 100%
-    );
-  }
-
-  .dock {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 2px 6px;
-    pointer-events: auto;
-  }
-
-  .dock-group {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-
-  .dock-divider {
-    width: 1px;
-    height: 18px;
-    background: rgba(255, 255, 255, 0.07);
-    margin: 0 2px;
-    flex-shrink: 0;
-    opacity: 1;
-    box-shadow: none;
-  }
-
-  .dock-folder-wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
-  }
-
-  .dock-folder-popover {
-    position: absolute;
-    top: calc(100% + 8px);
-    right: -12px;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 6px 8px;
-    border-radius: 14px;
-    background: var(--vinta-dock-popover-bg, #141d2c);
-    border: 1px solid
-      var(--vinta-dock-popover-border, rgba(255, 255, 255, 0.14));
-    box-shadow: var(
-      --vinta-dock-popover-shadow,
-      0 10px 30px rgba(0, 0, 0, 0.65)
-    );
-    z-index: 220;
-    animation: folder-popover-in 0.16s cubic-bezier(0.2, 0.8, 0.2, 1);
-  }
-
-  @keyframes folder-popover-in {
-    from {
-      opacity: 0;
-      transform: translateY(-4px) scale(0.96);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
-  }
-</style>
+<style src="./styles/Dock.css"></style>

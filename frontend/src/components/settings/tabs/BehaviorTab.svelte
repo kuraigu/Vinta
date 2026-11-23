@@ -21,6 +21,7 @@
   import ToggleSwitch from '../../ToggleSwitch.svelte'
   import SegmentedControl from '../../SegmentedControl.svelte'
   import SettingItem from '../SettingItem.svelte'
+  import SettingSectionHeader from '../SettingSectionHeader.svelte'
   import SettingSlider from '../SettingSlider.svelte'
   import SettingActionButton, {
     type SettingButtonStatus
@@ -212,9 +213,7 @@
   </BentoCard>
 
   {#if $displayLayoutStore.monitors && $displayLayoutStore.monitors.length > 1}
-    <div class="setting-section-header">
-      <span>{$tStore('settings.section_display')}</span>
-    </div>
+    <SettingSectionHeader title={$tStore('settings.section_display')} />
 
     <BentoCard variant="group">
       <SettingItem
@@ -243,9 +242,7 @@
     </BentoCard>
   {/if}
 
-  <div class="setting-section-header">
-    <span>{$tStore('settings.section_fullscreen')}</span>
-  </div>
+  <SettingSectionHeader title={$tStore('settings.section_fullscreen')} />
 
   <BentoCard variant="group">
     <SettingItem
