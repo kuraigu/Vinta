@@ -353,6 +353,8 @@
     "weather_unit_desc": "तापमान मापने की इकाई",
     "weather_unit_c": "°C (सेल्सियस)",
     "weather_unit_f": "°F (फ़ारेनहाइट)",
+    "weather_animations_label": "Weather Animations",
+    "weather_animations_desc": "Animate background weather effects and VintaBot",
     "notif_dnd_label": "परेशान न करें",
     "notif_dnd_desc": "पॉप-अप अलर्ट और ध्वनि बंद करें",
     "notif_satellite_label": "फ़्लोटिंग सूचना पिल",

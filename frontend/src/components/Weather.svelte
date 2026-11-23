@@ -22,6 +22,7 @@
   import {
     weatherLocationStore,
     weatherUnitStore,
+    weatherAnimationsStore,
     simulateOfflineStore,
     simulateWeatherStore,
     pageVisibilityStore,
@@ -305,7 +306,7 @@
     <WeatherAtmosphere
       condition={illustrationType}
       seamless={false}
-      paused={!expanded}
+      paused={!expanded || !$weatherAnimationsStore}
     />
 
     {#if loading && !weather}
@@ -398,7 +399,7 @@
             <WeatherArt
               type={illustrationType}
               variant="hero"
-              paused={!expanded}
+              paused={!expanded || !$weatherAnimationsStore}
             />
           </div>
         </div>

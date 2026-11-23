@@ -212,6 +212,7 @@
     'vinta_date_format',
     'vinta_weather_location',
     'vinta_weather_unit',
+    'vinta_weather_animations',
     'vinta_home_widgets_visibility',
     'vinta_home_widgets_order',
     'vinta_home_widget_sizes',

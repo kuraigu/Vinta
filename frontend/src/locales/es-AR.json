@@ -353,6 +353,8 @@
     "weather_unit_desc": "Unidad de medida para temperaturas",
     "weather_unit_c": "°C (Celsius)",
     "weather_unit_f": "°F (Fahrenheit)",
+    "weather_animations_label": "Weather Animations",
+    "weather_animations_desc": "Animate background weather effects and VintaBot",
     "notif_dnd_label": "No molestar",
     "notif_dnd_desc": "Silencia alertas emergentes y sonidos",
     "notif_satellite_label": "Píldora flotante de notificación",

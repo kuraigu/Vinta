@@ -9,6 +9,7 @@
   import {
     weatherLocationStore,
     weatherUnitStore,
+    weatherAnimationsStore,
     simulateOfflineStore,
     simulateWeatherStore,
     pageVisibilityStore,
@@ -185,7 +186,11 @@
 </script>
 
 <div class="weather-glance-hero {illustrationType}">
-  <WeatherAtmosphere condition={illustrationType} seamless={true} {paused} />
+  <WeatherAtmosphere
+    condition={illustrationType}
+    seamless={true}
+    paused={paused || !$weatherAnimationsStore}
+  />
 
   <div class="home-hero-layout">
     <div class="home-hero-left">
@@ -246,7 +251,11 @@
             }
           }}
         >
-          <WeatherArt type={illustrationType} variant="hero" {paused} />
+          <WeatherArt
+            type={illustrationType}
+            variant="hero"
+            paused={paused || !$weatherAnimationsStore}
+          />
         </div>
       </div>
     </div>

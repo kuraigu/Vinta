@@ -344,6 +344,7 @@ const legacyV1Defaults: Record<string, unknown> = {
   vinta_time_format: '12h',
   vinta_date_format: 'default',
   vinta_weather_unit: 'celsius',
+  vinta_weather_animations: true,
   vinta_autostart: false,
   vinta_hardware_accel: true,
   autoCheckUpdates: true,
@@ -662,6 +663,7 @@ export const autoDiscardPastEventsStore = persistentWritable<boolean>('vinta_aut
 // ============================================================================
 export const weatherLocationStore = persistentWritable<WeatherLocation>('vinta_weather_location', { name: 'Manila, Philippines', lat: 14.5995, lon: 120.9842 })
 export const weatherUnitStore = persistentWritable<TemperatureUnit>('vinta_weather_unit', inferDefaultTemperatureUnit())
+export const weatherAnimationsStore = persistentWritable<boolean>('vinta_weather_animations', true)
 
 // ============================================================================
 // 6. Home & Page Visibility
