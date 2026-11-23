@@ -113,3 +113,39 @@
 :global(.vinta-bento-card.variant-setting.flex-col) .setting-control {
   max-width: 100%;
 }
+
+.setting-item-wrap > :global(.vinta-bento-card) {
+  border-radius: 0 !important;
+  border: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  margin: 0 !important;
+}
+
+.setting-nested-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 14px 10px 16px;
+  padding: 6px 10px;
+  border-left: 2px solid var(--vinta-border);
+  border-radius: 0 8px 8px 0;
+  background: var(--vinta-contrast-bg);
+}
+
+.setting-nested-group :global(.setting-nested-row) {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 30px;
+}
+
+.setting-nested-group :global(.setting-nested-label) {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--vinta-text-secondary);
+}

@@ -26,11 +26,15 @@
   import BentoCard from '../../BentoCard.svelte'
   import ToggleSwitch from '../../ToggleSwitch.svelte'
   import SettingItem from '../SettingItem.svelte'
+  import SettingSectionHeader from '../SettingSectionHeader.svelte'
   import {
     pageVisibilityStore,
     defaultPageVisibility,
     homeWidgetsVisibilityStore,
     defaultHomeWidgetsVisibility,
+    homeWidgetsOrderStore,
+    defaultHomeWidgetsOrder,
+    normalizeHomeWidgetsOrder,
     homeWidgetSizesStore,
     homeWidgetMenuEnabledStore,
     dockPinnedAppsStore,
@@ -56,9 +60,19 @@
     isRecordEqual($pageVisibilityStore, defaultPageVisibility)
   )
 
+  let orderedHomeWidgets = $derived(
+    normalizeHomeWidgetsOrder($homeWidgetsOrderStore)
+  )
+
+  let isWidgetOrderDefault = $derived(
+    orderedHomeWidgets.length === defaultHomeWidgetsOrder.length &&
+      orderedHomeWidgets.every((id, i) => id === defaultHomeWidgetsOrder[i])
+  )
+
   let isHomeWidgetsDefault = $derived(
     isRecordEqual($homeWidgetsVisibilityStore, defaultHomeWidgetsVisibility) &&
-      $homeWidgetMenuEnabledStore === homeWidgetMenuEnabledStore.defaultValue
+      $homeWidgetMenuEnabledStore === homeWidgetMenuEnabledStore.defaultValue &&
+      isWidgetOrderDefault
   )
 
   let isDockPinnedDefault = $derived(
@@ -77,6 +91,7 @@
     homeWidgetsVisibilityStore.reset()
     homeWidgetSizesStore.reset()
     homeWidgetMenuEnabledStore.reset()
+    homeWidgetsOrderStore.reset()
   }
 
   function resetDockPinned() {
@@ -120,18 +135,200 @@
       [key]: !$dockPinnedAppsStore[key]
     }
   }
+
+  function isBriefFeedChecked(): boolean {
+    return (
+      Boolean($homeWidgetsVisibilityStore.calendar) ||
+      $homeWidgetsVisibilityStore.announcements !== false ||
+      $homeWidgetsVisibilityStore.notifications !== false
+    )
+  }
+
+  function toggleBriefFeed(): void {
+    const next = !isBriefFeedChecked()
+    $homeWidgetsVisibilityStore = {
+      ...$homeWidgetsVisibilityStore,
+      calendar: next,
+      announcements: next,
+      notifications: next
+    }
+  }
 </script>
 
 <div class="apps-modules-tab setting-group">
-  <div class="setting-section-header section-header-row">
-    <span>{$tStore('settings.modules_pages_features')}</span>
-    {#if !isPagesDefault}
-      <button type="button" class="section-reset-link" onclick={resetPages}>
-        <RotateCcw size={11} strokeWidth={2.2} />
-        <span>{$tStore('common.reset')}</span>
-      </button>
-    {/if}
-  </div>
+  <SettingSectionHeader title={$tStore('settings.modules_home_widgets')}>
+    {#snippet actions()}
+      {#if !isHomeWidgetsDefault}
+        <button
+          type="button"
+          class="section-reset-link"
+          onclick={resetHomeWidgets}
+        >
+          <RotateCcw size={11} strokeWidth={2.2} />
+          <span>{$tStore('common.reset')}</span>
+        </button>
+      {/if}
+    {/snippet}
+  </SettingSectionHeader>
+
+  <BentoCard variant="group">
+    <SettingItem
+      label={$tStore('settings.widgets_menu_label')}
+      description={$tStore('settings.widgets_menu_desc')}
+      icon={MoreHorizontal}
+      isDefault={$homeWidgetMenuEnabledStore ===
+        homeWidgetMenuEnabledStore.defaultValue}
+      onReset={() => homeWidgetMenuEnabledStore.reset()}
+    >
+      <ToggleSwitch
+        bind:checked={$homeWidgetMenuEnabledStore}
+        ariaLabel={$tStore('settings.widgets_menu_label')}
+      />
+    </SettingItem>
+
+    <SettingItem label={$tStore('settings.modules_clock_time')} icon={Clock}>
+      <ToggleSwitch
+        checked={$homeWidgetsVisibilityStore.clock}
+        onchange={() => toggleHomeWidget('clock')}
+        ariaLabel={$tStore('settings.modules_clock_time')}
+      />
+    </SettingItem>
+
+    <SettingItem
+      label={$tStore('settings.modules_weather_forecast')}
+      icon={CloudSun}
+    >
+      <ToggleSwitch
+        checked={$homeWidgetsVisibilityStore.weather}
+        onchange={() => toggleHomeWidget('weather')}
+        ariaLabel={$tStore('settings.modules_weather_forecast')}
+      />
+    </SettingItem>
+
+    <SettingItem
+      label={$tStore('settings.modules_battery_power')}
+      icon={Battery}
+      disabled={!hasBattery}
+    >
+      <ToggleSwitch
+        checked={hasBattery && $homeWidgetsVisibilityStore.battery}
+        disabled={!hasBattery}
+        onchange={() => toggleHomeWidget('battery')}
+        ariaLabel={$tStore('settings.modules_battery_power')}
+      />
+    </SettingItem>
+
+    <SettingItem label={$tStore('settings.modules_wireless')} icon={Wifi}>
+      <ToggleSwitch
+        checked={$homeWidgetsVisibilityStore.wireless}
+        onchange={() => toggleHomeWidget('wireless')}
+        ariaLabel={$tStore('settings.modules_wireless')}
+      />
+    </SettingItem>
+
+    <SettingItem label={$tStore('settings.modules_spotlight')} icon={Sparkles}>
+      <ToggleSwitch
+        checked={$homeWidgetsVisibilityStore.spotlight !== false}
+        onchange={() => toggleHomeWidget('spotlight')}
+        ariaLabel={$tStore('settings.modules_spotlight')}
+      />
+    </SettingItem>
+
+    <SettingItem
+      label={$tStore('settings.widgets_media_label')}
+      description={$tStore('settings.widgets_media_desc')}
+      icon={Music}
+      isDefault={$homeWidgetsVisibilityStore.media !== false}
+      onReset={() =>
+        homeWidgetsVisibilityStore.update((v) => ({ ...v, media: true }))}
+    >
+      <ToggleSwitch
+        checked={$homeWidgetsVisibilityStore.media !== false}
+        onchange={() => toggleHomeWidget('media')}
+        ariaLabel={$tStore('settings.widgets_media_label')}
+      />
+    </SettingItem>
+
+    <SettingItem
+      label={$tStore('home.widget_brief_label')}
+      description={$tStore('home.widget_brief_desc')}
+      icon={Calendar}
+    >
+      <ToggleSwitch
+        checked={isBriefFeedChecked()}
+        onchange={toggleBriefFeed}
+        ariaLabel={$tStore('home.widget_brief_label')}
+      />
+      {#snippet nested()}
+        <div class="setting-nested-row">
+          <span class="setting-nested-label">
+            <Calendar size={13} />
+            <span>{$tStore('settings.modules_calendar_date')}</span>
+          </span>
+          <ToggleSwitch
+            checked={$homeWidgetsVisibilityStore.calendar}
+            onchange={() => toggleHomeWidget('calendar')}
+            ariaLabel={$tStore('settings.modules_calendar_date')}
+          />
+        </div>
+        <div class="setting-nested-row">
+          <span class="setting-nested-label">
+            <Megaphone size={13} />
+            <span>{$tStore('settings.modules_announcements')}</span>
+          </span>
+          <ToggleSwitch
+            checked={$homeWidgetsVisibilityStore.announcements !== false}
+            onchange={() => toggleHomeWidget('announcements')}
+            ariaLabel={$tStore('settings.modules_announcements')}
+          />
+        </div>
+        <div class="setting-nested-row">
+          <span class="setting-nested-label">
+            <Bell size={13} />
+            <span>{$tStore('settings.modules_notifications_glance')}</span>
+          </span>
+          <ToggleSwitch
+            checked={$homeWidgetsVisibilityStore.notifications !== false}
+            onchange={() => toggleHomeWidget('notifications')}
+            ariaLabel={$tStore('settings.modules_notifications_glance')}
+          />
+        </div>
+      {/snippet}
+    </SettingItem>
+
+    <SettingItem
+      label={$tStore('settings.modules_action_glance')}
+      icon={SlidersHorizontal}
+    >
+      <ToggleSwitch
+        checked={$homeWidgetsVisibilityStore.actionCenter}
+        onchange={() => toggleHomeWidget('actionCenter')}
+        ariaLabel={$tStore('settings.modules_action_glance')}
+      />
+    </SettingItem>
+
+    <SettingItem
+      label={$tStore('settings.modules_stats_glance')}
+      icon={Activity}
+    >
+      <ToggleSwitch
+        checked={Boolean($homeWidgetsVisibilityStore.systemStats)}
+        onchange={() => toggleHomeWidget('systemStats')}
+        ariaLabel={$tStore('settings.modules_stats_glance')}
+      />
+    </SettingItem>
+  </BentoCard>
+
+  <SettingSectionHeader title={$tStore('settings.modules_pages_features')}>
+    {#snippet actions()}
+      {#if !isPagesDefault}
+        <button type="button" class="section-reset-link" onclick={resetPages}>
+          <RotateCcw size={11} strokeWidth={2.2} />
+          <span>{$tStore('common.reset')}</span>
+        </button>
+      {/if}
+    {/snippet}
+  </SettingSectionHeader>
 
   <BentoCard variant="group">
     <SettingItem
@@ -225,167 +422,20 @@
     </SettingItem>
   </BentoCard>
 
-  <div class="setting-section-header section-header-row">
-    <span>{$tStore('settings.modules_home_widgets')}</span>
-    {#if !isHomeWidgetsDefault}
-      <button
-        type="button"
-        class="section-reset-link"
-        onclick={resetHomeWidgets}
-      >
-        <RotateCcw size={11} strokeWidth={2.2} />
-        <span>{$tStore('common.reset')}</span>
-      </button>
-    {/if}
-  </div>
-
-  <BentoCard variant="group">
-    <SettingItem label={$tStore('settings.modules_clock_time')} icon={Clock}>
-      <ToggleSwitch
-        checked={$homeWidgetsVisibilityStore.clock}
-        onchange={() => toggleHomeWidget('clock')}
-        ariaLabel={$tStore('settings.modules_clock_time')}
-      />
-    </SettingItem>
-
-    <SettingItem
-      label={$tStore('settings.modules_calendar_date')}
-      icon={Calendar}
-    >
-      <ToggleSwitch
-        checked={$homeWidgetsVisibilityStore.calendar}
-        onchange={() => toggleHomeWidget('calendar')}
-        ariaLabel={$tStore('settings.modules_calendar_date')}
-      />
-    </SettingItem>
-
-    <SettingItem
-      label={$tStore('settings.modules_weather_forecast')}
-      icon={CloudSun}
-    >
-      <ToggleSwitch
-        checked={$homeWidgetsVisibilityStore.weather}
-        onchange={() => toggleHomeWidget('weather')}
-        ariaLabel={$tStore('settings.modules_weather_forecast')}
-      />
-    </SettingItem>
-
-    <SettingItem
-      label={$tStore('settings.modules_battery_power')}
-      icon={Battery}
-      disabled={!hasBattery}
-    >
-      <ToggleSwitch
-        checked={hasBattery && $homeWidgetsVisibilityStore.battery}
-        disabled={!hasBattery}
-        onchange={() => toggleHomeWidget('battery')}
-        ariaLabel={$tStore('settings.modules_battery_power')}
-      />
-    </SettingItem>
-
-    <SettingItem label={$tStore('settings.modules_wireless')} icon={Wifi}>
-      <ToggleSwitch
-        checked={$homeWidgetsVisibilityStore.wireless}
-        onchange={() => toggleHomeWidget('wireless')}
-        ariaLabel={$tStore('settings.modules_wireless')}
-      />
-    </SettingItem>
-
-    <SettingItem
-      label={$tStore('settings.modules_action_glance')}
-      icon={SlidersHorizontal}
-    >
-      <ToggleSwitch
-        checked={$homeWidgetsVisibilityStore.actionCenter}
-        onchange={() => toggleHomeWidget('actionCenter')}
-        ariaLabel={$tStore('settings.modules_action_glance')}
-      />
-    </SettingItem>
-
-    <SettingItem
-      label={$tStore('settings.modules_stats_glance')}
-      icon={Activity}
-    >
-      <ToggleSwitch
-        checked={Boolean($homeWidgetsVisibilityStore.systemStats)}
-        onchange={() => toggleHomeWidget('systemStats')}
-        ariaLabel={$tStore('settings.modules_stats_glance')}
-      />
-    </SettingItem>
-
-    <SettingItem label={$tStore('settings.modules_spotlight')} icon={Sparkles}>
-      <ToggleSwitch
-        checked={$homeWidgetsVisibilityStore.spotlight !== false}
-        onchange={() => toggleHomeWidget('spotlight')}
-        ariaLabel={$tStore('settings.modules_spotlight')}
-      />
-    </SettingItem>
-
-    <SettingItem
-      label={$tStore('settings.modules_announcements')}
-      icon={Megaphone}
-    >
-      <ToggleSwitch
-        checked={$homeWidgetsVisibilityStore.announcements !== false}
-        onchange={() => toggleHomeWidget('announcements')}
-        ariaLabel={$tStore('settings.modules_announcements')}
-      />
-    </SettingItem>
-
-    <SettingItem
-      label={$tStore('settings.modules_notifications_glance')}
-      icon={Bell}
-    >
-      <ToggleSwitch
-        checked={$homeWidgetsVisibilityStore.notifications !== false}
-        onchange={() => toggleHomeWidget('notifications')}
-        ariaLabel={$tStore('settings.modules_notifications_glance')}
-      />
-    </SettingItem>
-
-    <SettingItem
-      label={$tStore('settings.widgets_media_label')}
-      description={$tStore('settings.widgets_media_desc')}
-      icon={Music}
-      isDefault={$homeWidgetsVisibilityStore.media !== false}
-      onReset={() =>
-        homeWidgetsVisibilityStore.update((v) => ({ ...v, media: true }))}
-    >
-      <ToggleSwitch
-        checked={$homeWidgetsVisibilityStore.media !== false}
-        onchange={() => toggleHomeWidget('media')}
-        ariaLabel={$tStore('settings.widgets_media_label')}
-      />
-    </SettingItem>
-
-    <SettingItem
-      label={$tStore('settings.widgets_menu_label')}
-      description={$tStore('settings.widgets_menu_desc')}
-      icon={MoreHorizontal}
-      isDefault={$homeWidgetMenuEnabledStore ===
-        homeWidgetMenuEnabledStore.defaultValue}
-      onReset={() => homeWidgetMenuEnabledStore.reset()}
-    >
-      <ToggleSwitch
-        bind:checked={$homeWidgetMenuEnabledStore}
-        ariaLabel={$tStore('settings.widgets_menu_label')}
-      />
-    </SettingItem>
-  </BentoCard>
-
-  <div class="setting-section-header section-header-row">
-    <span>{$tStore('settings.modules_dock_pinned')}</span>
-    {#if !isDockPinnedDefault}
-      <button
-        type="button"
-        class="section-reset-link"
-        onclick={resetDockPinned}
-      >
-        <RotateCcw size={11} strokeWidth={2.2} />
-        <span>{$tStore('common.reset')}</span>
-      </button>
-    {/if}
-  </div>
+  <SettingSectionHeader title={$tStore('settings.modules_dock_pinned')}>
+    {#snippet actions()}
+      {#if !isDockPinnedDefault}
+        <button
+          type="button"
+          class="section-reset-link"
+          onclick={resetDockPinned}
+        >
+          <RotateCcw size={11} strokeWidth={2.2} />
+          <span>{$tStore('common.reset')}</span>
+        </button>
+      {/if}
+    {/snippet}
+  </SettingSectionHeader>
 
   <BentoCard variant="group">
     <SettingItem

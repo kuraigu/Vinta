@@ -142,7 +142,12 @@
     "widget_size_2x2": "Malaki (2×2)",
     "widget_hide": "Itago ang Widget",
     "widget_options": "Mga opsyon ng widget",
-    "widget_disable_menu": "I-disable ang Widget Menu"
+    "widget_disable_menu": "I-disable ang Widget Menu",
+    "widget_brief_label": "Brief Feed",
+    "widget_brief_desc": "Calendar, announcements & notifications",
+    "widget_move_top": "Move to Top",
+    "widget_move_up": "Move Up",
+    "widget_move_down": "Move Down"
   },
   "announcements": {
     "title": "Announcement",
@@ -190,6 +195,7 @@
   },
   "calendar": {
     "title": "Kalendaryo",
+    "agenda_tab": "Agenda",
     "event_single": "{count} event",
     "event_plural": "{count} events",
     "no_events_today": "Walang naka-schedule para sa araw na ito",
@@ -389,6 +395,8 @@
     "modules_spotlight": "Spotlight Carousel",
     "modules_announcements": "Mga Anunsyo",
     "modules_notifications_glance": "Notification Glance",
+    "modules_widget_order": "Home Widget Order",
+    "modules_arrangeable_cards": "Home Grid Cards (Drag to reorder)",
     "modules_one_widget_required": "Kailangan may kahit isang widget na nakikita sa home island",
     "modules_dock_pinned": "Mga Naka-pin sa Dock",
     "modules_pin_calendar": "I-pin ang Kalendaryo",
@@ -501,6 +509,7 @@
     "window_controls": "Mga kontrol sa window"
   },
   "dock": {
+    "back": "Back",
     "apps": "Mga App",
     "home": "Home",
     "calendar": "Kalendaryo",
@@ -513,7 +522,13 @@
     "system_stats": "System Stats",
     "settings": "Settings",
     "more": "Higit pa sa Dock",
-    "dock_aria": "Quick Access Dock"
+    "dock_aria": "Quick Access Dock",
+    "open_audio_mixer": "Open Audio Mixer",
+    "pause_timer": "Pause Timer",
+    "resume_timer": "Resume Timer",
+    "pin_to_dock": "Pin to Dock",
+    "unpin_from_dock": "Unpin from Dock",
+    "hide_module": "Hide Module"
   },
   "apps": {
     "title": "Mga App",
@@ -538,6 +553,8 @@
     "home_desc": "Mga widget at orasan",
     "media_name": "Media",
     "media_desc": "Kasalukuyang tumutugtog",
+    "audio_mixer_name": "Audio Mixer",
+    "audio_mixer_desc": "App volumes & soundscapes",
     "notifs_name": "Notifications",
     "notifs_desc": "Mga notification",
     "notes_name": "Quick Notes",

@@ -1,20 +1,3 @@
-.setting-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.setting-section-header {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 2px 2px 2px;
-  font-size: 12.5px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  color: var(--vinta-text-secondary);
-}
-
 .sound-select-row {
   display: flex;
   align-items: center;

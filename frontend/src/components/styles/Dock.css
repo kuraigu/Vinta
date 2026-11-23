@@ -1,0 +1,165 @@
+.dock-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding-top: 10px;
+  padding-bottom: 14px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  pointer-events: none;
+  background: linear-gradient(to bottom, var(--vinta-bg) 0%, transparent 100%);
+}
+
+.dock-container.is-media {
+  background: linear-gradient(
+    to bottom,
+    rgba(10, 11, 16, 0.52) 0%,
+    rgba(10, 11, 16, 0.28) 45%,
+    transparent 100%
+  );
+}
+
+.dock {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  width: calc(100% - 20px);
+  justify-content: center;
+  padding: 2px 6px;
+  pointer-events: auto;
+  box-sizing: border-box;
+}
+
+.dock-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.dock-middle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.dock-divider {
+  width: 1px;
+  height: 18px;
+  background: var(--vinta-border);
+  margin: 0 2px;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.dock-overflow-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.dock-overflow-pill {
+  height: 28px;
+  min-width: 34px;
+  padding: 0 9px;
+  border-radius: 9px;
+  border: 1px solid var(--vinta-border);
+  background: var(--vinta-contrast-bg);
+  color: var(--vinta-text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.16s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.dock-overflow-pill:hover,
+.dock-overflow-pill.active {
+  background: var(--vinta-contrast-hover);
+  color: var(--vinta-text-primary);
+  border-color: var(--vinta-accent-primary);
+}
+
+.dock-overflow-pill:active {
+  transform: scale(0.95);
+}
+
+.dock-overflow-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 172px;
+  max-width: 220px;
+  padding: 6px;
+  border-radius: 12px;
+  background: var(--vinta-dock-popover-bg);
+  border: 1px solid var(--vinta-border);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.36);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  z-index: 220;
+}
+
+.dock-overflow-item {
+  width: 100%;
+  height: 32px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--vinta-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  text-align: left;
+  box-sizing: border-box;
+  transition: transform 0.14s ease;
+}
+
+.dock-overflow-item:hover,
+.dock-overflow-item.active {
+  background: var(--vinta-contrast-hover);
+  color: var(--vinta-text-primary);
+}
+
+.dock-overflow-item.active {
+  font-weight: 600;
+}
+
+.dock-overflow-item:active {
+  transform: scale(0.98);
+}
+
+.dock-overflow-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dock-overflow-badge {
+  min-width: 18px;
+  height: 16px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--vinta-accent-primary);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}

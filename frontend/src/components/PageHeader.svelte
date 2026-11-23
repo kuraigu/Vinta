@@ -12,6 +12,7 @@
     showBackButton?: boolean
     onback?: () => void
     position?: 'top' | 'bottom'
+    leading?: Snippet
     center?: Snippet
     actions?: Snippet
     children?: Snippet
@@ -20,9 +21,10 @@
 
   let {
     title,
-    showBackButton = true,
+    showBackButton = false,
     onback,
     position = 'top',
+    leading,
     center,
     actions,
     children,
@@ -34,6 +36,9 @@
   <div class="header-leading">
     {#if showBackButton}
       <BackButton {onback} />
+    {/if}
+    {#if leading}
+      {@render leading()}
     {/if}
     {#if title}
       <span class="header-title">{title}</span>

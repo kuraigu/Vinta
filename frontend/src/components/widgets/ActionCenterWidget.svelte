@@ -10,16 +10,24 @@
   interface Props {
     size?: WidgetSizePreset
     showMenuButton?: boolean
+    onreorder?: (sourceId: string, targetId: string) => void
     oncontextmenu?: (e: MouseEvent) => void
   }
 
   let {
     size = '2x1',
     showMenuButton = false,
+    onreorder = undefined,
     oncontextmenu = undefined
   }: Props = $props()
 </script>
 
-<WidgetFrame id="actionCenter" {size} {showMenuButton} {oncontextmenu}>
+<WidgetFrame
+  id="actionCenter"
+  {size}
+  {showMenuButton}
+  {onreorder}
+  {oncontextmenu}
+>
   <ActionCenterGlance />
 </WidgetFrame>

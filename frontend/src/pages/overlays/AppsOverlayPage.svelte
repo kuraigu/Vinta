@@ -3,7 +3,8 @@
   without resetting underlying workspace state.
 -->
 <script lang="ts">
-  import { getContext } from 'svelte'
+  import { getContext, onMount } from 'svelte'
+  import { Events } from '$lib/events'
   import {
     House,
     Bell,
@@ -90,6 +91,23 @@
   }
 
   let searchQuery = $state('')
+  let selectedIndex = $state(0)
+  let gridEl = $state<HTMLDivElement | null>(null)
+  let searchInputRef = $state<{ focus: () => void } | null>(null)
+
+  onMount(() => {
+    const focusSearch = () => {
+      selectedIndex = 0
+      requestAnimationFrame(() => {
+        searchInputRef?.focus()
+      })
+    }
+    focusSearch()
+    const unsubFocus = Events.OnGlobal('vinta:focus-apps-search', focusSearch)
+    return () => {
+      unsubFocus()
+    }
+  })
 
   interface AppItemDef {
     id: string
@@ -175,6 +193,17 @@
       action: () => openWorkspace(MediaPage, mediaConfig)
     },
     {
+      id: 'audio-mixer',
+      nameKey: 'apps.audio_mixer_name',
+      descKey: 'apps.audio_mixer_desc',
+      icon: SlidersHorizontal,
+      visibilityKey: 'media',
+      action: () => {
+        openWorkspace(MediaPage, mediaConfig)
+        setTimeout(() => Events.Emit('vinta:open-audio-mixer'), 60)
+      }
+    },
+    {
       id: 'notes',
       nameKey: 'apps.notes_name',
       descKey: 'apps.notes_desc',
@@ -256,6 +285,17 @@
     )
   })
 
+  $effect(function resetAppsSelectionOnFilterChange() {
+    void filteredApps
+    selectedIndex = 0
+  })
+
+  function scrollSelectedTileIntoView() {
+    if (!gridEl) return
+    const tiles = gridEl.querySelectorAll<HTMLElement>('.app-tile')
+    tiles[selectedIndex]?.scrollIntoView({ block: 'nearest' })
+  }
+
   function handleAppsKeyDown(e: KeyboardEvent) {
     if ($activeOverlayStore !== 'apps') return
     if (
@@ -267,13 +307,41 @@
     ) {
       return
     }
-    if (e.key === 'Enter' && searchQuery.trim() && filteredApps.length > 0) {
-      const first = filteredApps.find(
-        (app) => !app.visibilityKey || $pageVisibilityStore[app.visibilityKey]
-      )
-      if (first) {
+    const len = filteredApps.length
+    if (len === 0) return
+
+    if (e.key === 'ArrowRight') {
+      e.preventDefault()
+      selectedIndex = (selectedIndex + 1) % len
+      requestAnimationFrame(scrollSelectedTileIntoView)
+      return
+    }
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault()
+      selectedIndex = (selectedIndex - 1 + len) % len
+      requestAnimationFrame(scrollSelectedTileIntoView)
+      return
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      selectedIndex = Math.min(len - 1, selectedIndex + 4)
+      requestAnimationFrame(scrollSelectedTileIntoView)
+      return
+    }
+    if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      selectedIndex = Math.max(0, selectedIndex - 4)
+      requestAnimationFrame(scrollSelectedTileIntoView)
+      return
+    }
+    if (e.key === 'Enter') {
+      const chosen = filteredApps[selectedIndex] ?? filteredApps[0]
+      if (
+        chosen &&
+        (!chosen.visibilityKey || $pageVisibilityStore[chosen.visibilityKey])
+      ) {
         e.preventDefault()
-        first.action()
+        chosen.action()
       }
     }
   }
@@ -288,6 +356,7 @@
 >
   {#snippet headerActions()}
     <SearchInput
+      bind:this={searchInputRef}
       bind:value={searchQuery}
       placeholder={$tStore('apps.search_placeholder')}
       maxWidth="175px"
@@ -305,13 +374,14 @@
           >
         </div>
       {:else}
-        <div class="apps-grid">
-          {#each filteredApps as app (app.id)}
+        <div class="apps-grid" bind:this={gridEl}>
+          {#each filteredApps as app, i (app.id)}
             {@const isEnabled =
               !app.visibilityKey || $pageVisibilityStore[app.visibilityKey]}
             <button
               class="app-tile app-{app.id}"
               class:is-disabled={!isEnabled}
+              class:is-selected={i === selectedIndex}
               use:islandTooltip={{
                 text: isEnabled
                   ? ''

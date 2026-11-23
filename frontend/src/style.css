@@ -35,7 +35,7 @@ body {
 
 #app {
   height: 100vh;
-  text-align: center;
+  text-align: left;
   pointer-events: none;
 }
 

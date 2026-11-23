@@ -49,7 +49,8 @@
     SkipBack,
     SkipForward
   } from 'lucide-svelte'
-  import { untrack } from 'svelte'
+  import { untrack, onMount } from 'svelte'
+  import { Events } from '$lib/events'
 
   import { islandTooltip } from '../services/islandTooltip'
   import { resolveAppBrand, nativeIconsStore } from '../services/iconService'
@@ -204,6 +205,18 @@
     }
   }
   $effect(handleMediaDrawerStateEffect)
+
+  onMount(() => {
+    const unsubMixer = Events.OnGlobal('vinta:open-audio-mixer', () => {
+      if (!glanceMode) {
+        isAudioMixerOpen = true
+        isSessionMenuOpen = false
+      }
+    })
+    return () => {
+      unsubMixer()
+    }
+  })
 
   function handlePinnedSourcePrioritizationEffect() {
     const pinned = $pinnedMediaSourceStore
@@ -1540,4 +1553,4 @@
   {/if}
 </div>
 
-<style src="./styles/MediaWidget.css"></style>
+<style src="./styles/MediaPlayer.css"></style>

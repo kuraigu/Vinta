@@ -18,6 +18,7 @@
   } from 'lucide-svelte'
   import BentoCard from '../../BentoCard.svelte'
   import SettingItem from '../SettingItem.svelte'
+  import SettingSectionHeader from '../SettingSectionHeader.svelte'
   import SettingBanner from '../SettingBanner.svelte'
   import { islandTooltip } from '../../../services/islandTooltip'
   import {
@@ -369,11 +370,7 @@
   <div class="divider"></div>
 
   <!-- Global Shortcuts Section -->
-  <div class="section-header">
-    <div class="section-title">
-      <span>{$tStore('settings.shortcut_global_section')}</span>
-    </div>
-  </div>
+  <SettingSectionHeader title={$tStore('settings.shortcut_global_section')} />
 
   <BentoCard variant="group">
     {#each SHORTCUT_DEFS as sc (sc.id)}
@@ -501,11 +498,7 @@
   <div class="divider"></div>
 
   <!-- Island Navigation Section -->
-  <div class="section-header">
-    <div class="section-title">
-      <span>{$tStore('settings.shortcut_nav_section')}</span>
-    </div>
-  </div>
+  <SettingSectionHeader title={$tStore('settings.shortcut_nav_section')} />
 
   <BentoCard variant="group">
     <SettingItem

@@ -2,8 +2,4 @@
    WeatherTab Stylesheet
    ============================================================================ */
 
-.setting-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
+/* WeatherTab uses shared .setting-group layout from SettingsPage.css */

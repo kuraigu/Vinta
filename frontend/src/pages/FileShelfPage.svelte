@@ -38,7 +38,6 @@
     FolderOpen,
     File
   } from 'lucide-svelte'
-  import BackButton from '../components/BackButton.svelte'
   import PageHeader from '../components/PageHeader.svelte'
   import EmptyState from '../components/EmptyState.svelte'
   import ScrollView from '../components/ScrollView.svelte'

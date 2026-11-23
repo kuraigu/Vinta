@@ -40,7 +40,6 @@
     config as weatherPageConfig
   } from '../pages/WeatherPage.svelte'
   import BentoCard from './BentoCard.svelte'
-  import PageHeader from './PageHeader.svelte'
   import RefreshButton from './RefreshButton.svelte'
   import ScrollView from './ScrollView.svelte'
   import WeatherAtmosphere from './WeatherAtmosphere.svelte'
@@ -372,7 +371,15 @@
         </div>
 
         <div class="banner-right-art">
-          {#if !isPage && $pageVisibilityStore.weather !== false}
+          {#if isPage}
+            <div class="weather-page-refresh-wrap">
+              <RefreshButton
+                {loading}
+                onclick={() => handleRetry()}
+                title={$tStore('common.retry')}
+              />
+            </div>
+          {:else if $pageVisibilityStore.weather !== false}
             <button
               type="button"
               class="weather-more-btn"
@@ -602,16 +609,6 @@
           </div>
         </div>
       </ScrollView>
-
-      <PageHeader position="bottom" title={$tStore('apps.weather_name')}>
-        {#snippet actions()}
-          <RefreshButton
-            {loading}
-            onclick={() => handleRetry()}
-            title={$tStore('common.retry')}
-          />
-        {/snippet}
-      </PageHeader>
     {/if}
   </div>
 {:else}

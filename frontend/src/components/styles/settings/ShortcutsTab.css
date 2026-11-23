@@ -5,41 +5,11 @@
   text-align: left;
 }
 
-.section-header {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  text-align: left;
-  gap: 3px;
-  margin-bottom: 2px;
-}
-
-.section-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--vinta-text-primary);
-  text-align: left;
-  letter-spacing: -0.01em;
-}
-
-.section-title :global(svg) {
-  color: var(--vinta-primary);
-}
-
 .divider {
   height: 1px;
   background: var(--vinta-border);
   margin: 6px 0;
   opacity: 0.6;
-}
-
-.setting-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
 }
 
 /* Gaming Keybind Control */

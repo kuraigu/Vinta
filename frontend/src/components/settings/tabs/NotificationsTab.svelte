@@ -17,6 +17,7 @@
   import BentoCard from '../../BentoCard.svelte'
   import ToggleSwitch from '../../ToggleSwitch.svelte'
   import SettingItem from '../SettingItem.svelte'
+  import SettingSectionHeader from '../SettingSectionHeader.svelte'
   import SettingSlider from '../SettingSlider.svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
   import CustomSelect from '../../CustomSelect.svelte'
@@ -148,9 +149,7 @@
     </SettingItem>
   </BentoCard>
 
-  <div class="setting-section-header">
-    <span>{$tStore('settings.notif_alarms_section')}</span>
-  </div>
+  <SettingSectionHeader title={$tStore('settings.notif_alarms_section')} />
 
   <BentoCard variant="group">
     <SettingItem

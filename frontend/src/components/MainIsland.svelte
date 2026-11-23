@@ -105,6 +105,9 @@
     onWindowBlur?: () => void
     onRecoverBounds?: () => void
     onAnimationDone?: () => void
+    onCycleMinimalMode?: (direction: 1 | -1) => void
+    canGoBack?: boolean
+    onGoBack?: () => void
   }
 
   let {
@@ -150,7 +153,10 @@
     onMouseLeave,
     onWindowBlur,
     onRecoverBounds,
-    onAnimationDone
+    onAnimationDone,
+    onCycleMinimalMode,
+    canGoBack = false,
+    onGoBack
   }: Props = $props()
 
   let isMorphing = $state(false)
@@ -239,13 +245,63 @@
     }
   }
 
+  let lastMinimalWheelSwitchAt = 0
+  let minimalSwipeStart: { x: number; y: number } | null = null
+  let suppressNextSwipeClick = false
+
+  function handleMinimalWheel(e: WheelEvent) {
+    if (
+      expanded ||
+      isHidden ||
+      gestures.isDragging ||
+      gestures.isInertia ||
+      activeOverlay !== null
+    ) {
+      return
+    }
+    const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY
+    if (Math.abs(delta) < 4) return
+    e.preventDefault()
+    const now = Date.now()
+    if (now - lastMinimalWheelSwitchAt < 220) return
+    lastMinimalWheelSwitchAt = now
+    onCycleMinimalMode?.(delta > 0 ? 1 : -1)
+  }
+
   function handlePointerDown(e: PointerEvent) {
     if (gestures.isInertia) {
       gestures.interruptInertia()
       onFinishDrag?.()
     }
 
-    if (!gestures.canInitiateDrag(e, $allowDragPositionStore, expanded)) return
+    if (!gestures.canInitiateDrag(e, $allowDragPositionStore, expanded)) {
+      if (!expanded && !isHidden && activeOverlay === null && e.button === 0) {
+        minimalSwipeStart = { x: e.clientX, y: e.clientY }
+        const onSwipeEnd = (ev: PointerEvent) => {
+          window.removeEventListener('pointerup', onSwipeEnd)
+          window.removeEventListener('pointercancel', onSwipeCancel)
+          if (!minimalSwipeStart) return
+          const dx = ev.clientX - minimalSwipeStart.x
+          const dy = ev.clientY - minimalSwipeStart.y
+          minimalSwipeStart = null
+          if (Math.abs(dx) >= 32 && Math.abs(dx) > Math.abs(dy) * 1.4) {
+            suppressNextSwipeClick = true
+            setTimeout(() => {
+              suppressNextSwipeClick = false
+            }, 150)
+            onCycleMinimalMode?.(dx < 0 ? 1 : -1)
+          }
+        }
+        const onSwipeCancel = () => {
+          minimalSwipeStart = null
+          window.removeEventListener('pointerup', onSwipeEnd)
+          window.removeEventListener('pointercancel', onSwipeCancel)
+        }
+        window.addEventListener('pointerup', onSwipeEnd)
+        window.addEventListener('pointercancel', onSwipeCancel)
+      }
+      return
+    }
 
     gestures.startDrag(
       e,
@@ -418,7 +474,8 @@
   }
 
   function handleIslandClick(e: MouseEvent) {
-    if (gestures.dragMovedDistance > 4) {
+    if (gestures.dragMovedDistance > 4 || suppressNextSwipeClick) {
+      suppressNextSwipeClick = false
       e.preventDefault()
       e.stopPropagation()
       return
@@ -578,6 +635,7 @@
   onmouseenter={onMouseEnter}
   onmouseleave={onMouseLeave}
   onpointerdown={handlePointerDown}
+  onwheel={handleMinimalWheel}
   oncontextmenu={handleContextMenu}
   onclick={handleIslandClick}
   ondragenter={handleIslandDragEnter}
@@ -656,16 +714,18 @@
 
   <div
     class="content"
-    style="opacity: {isHidden || isBlinking ? 0 : 1}; pointer-events: {isHidden
+    style="opacity: {isHidden ? 0 : 1}; pointer-events: {isHidden
       ? 'none'
-      : 'auto'}; transition: opacity {isBlinking
-      ? '0s'
-      : 'calc(0.42s * var(--vinta-anim-scale, 1)) cubic-bezier(0.18, 0.9, 0.32, 1)'};"
+      : 'auto'}; transition: opacity calc(0.42s * var(--vinta-anim-scale, 1)) cubic-bezier(0.18, 0.9, 0.32, 1);"
   >
     {#if !isPageDormant}
       <div
         class="view"
-        style="width: {targetViewW}px; height: {targetViewH}px;"
+        style="width: {targetViewW}px; height: {targetViewH}px; opacity: {isBlinking
+          ? 0
+          : 1}; transition: opacity {isBlinking
+          ? '0s'
+          : 'calc(0.42s * var(--vinta-anim-scale, 1)) cubic-bezier(0.18, 0.9, 0.32, 1)'};"
       >
         <PageDeck activePage={activePage ?? undefined} {expanded} />
       </div>
@@ -685,7 +745,7 @@
         class:is-visible={expanded && isDockVisible}
         aria-hidden={!(expanded && isDockVisible)}
       >
-        <Dock {activePage} {islandConfig} />
+        <Dock {activePage} {islandConfig} {canGoBack} {onGoBack} />
       </div>
     {/if}
   </div>

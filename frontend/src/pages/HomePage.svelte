@@ -25,7 +25,12 @@
    */
 
   import { onMount, onDestroy, getContext } from 'svelte'
-  import { SlidersHorizontal } from 'lucide-svelte'
+  import {
+    SlidersHorizontal,
+    ArrowUp,
+    ArrowDown,
+    ArrowUpToLine
+  } from 'lucide-svelte'
   import BentoCard from '../components/BentoCard.svelte'
   import Calendar from '../components/Calendar.svelte'
   import Weather from '../components/Weather.svelte'
@@ -46,6 +51,10 @@
   import SettingsPage, { config as settingsConfig } from './SettingsPage.svelte'
   import {
     homeWidgetsVisibilityStore,
+    homeWidgetsOrderStore,
+    normalizeHomeWidgetsOrder,
+    moveHomeWidget,
+    reorderHomeWidgets,
     homeWidgetSizesStore,
     homeWidgetMenuEnabledStore,
     pageVisibilityStore,
@@ -219,6 +228,10 @@
     ctxOpen = true
   }
 
+  let orderedWidgetIds = $derived(
+    normalizeHomeWidgetsOrder($homeWidgetsOrderStore)
+  )
+
   function getWidgetContextMenuItems(): ContextMenuItem[] {
     const id = ctxWidgetId
     if (!id) return []
@@ -233,6 +246,32 @@
       label: `${currentSize === sz ? '• ' : ''}${sizeLabels[sz]}`,
       action: () => setWidgetSize(id, sz)
     }))
+
+    const idx = orderedWidgetIds.indexOf(id)
+    if (idx >= 0) {
+      items.push(
+        { label: '', action: () => {}, divider: true },
+        {
+          label: $tStore('home.widget_move_top'),
+          icon: ArrowUpToLine,
+          disabled: idx === 0,
+          action: () => moveHomeWidget(id, 'top')
+        },
+        {
+          label: $tStore('home.widget_move_up'),
+          icon: ArrowUp,
+          disabled: idx === 0,
+          action: () => moveHomeWidget(id, 'up')
+        },
+        {
+          label: $tStore('home.widget_move_down'),
+          icon: ArrowDown,
+          disabled: idx === orderedWidgetIds.length - 1,
+          action: () => moveHomeWidget(id, 'down')
+        }
+      )
+    }
+
     if (id !== 'brief') {
       items.push(
         { label: '', action: () => {}, divider: true },
@@ -563,48 +602,48 @@
               </BentoCard>
             {:else}
               <div class="home-widgets-bento">
-                {#if $homeWidgetsVisibilityStore.media !== false}
-                  <MediaGlanceWidget
-                    size={getWidgetSize('media')}
-                    active={expanded}
-                    showMenuButton={$homeWidgetMenuEnabledStore}
-                    oncontextmenu={(e) => handleWidgetContextMenu(e, 'media')}
-                  />
-                {/if}
-
-                {#if $homeWidgetsVisibilityStore.announcements !== false || $homeWidgetsVisibilityStore.calendar || ($homeWidgetsVisibilityStore.notifications !== false && hasStandardNotifications)}
-                  <BriefFeedWidget
-                    showAnnouncements={$homeWidgetsVisibilityStore.announcements !==
-                      false}
-                    showNotifications={$homeWidgetsVisibilityStore.notifications !==
-                      false && hasStandardNotifications}
-                    showCalendar={$homeWidgetsVisibilityStore.calendar}
-                    size={getWidgetSize('brief')}
-                    showMenuButton={$homeWidgetMenuEnabledStore}
-                    onOpenAnnouncements={openAnnouncementsPage}
-                    onOpenCalendar={openCalendar}
-                    oncontextmenu={(e) => handleWidgetContextMenu(e, 'brief')}
-                  />
-                {/if}
-
-                {#if $homeWidgetsVisibilityStore.actionCenter}
-                  <ActionCenterWidget
-                    size={getWidgetSize('actionCenter')}
-                    showMenuButton={$homeWidgetMenuEnabledStore}
-                    oncontextmenu={(e) =>
-                      handleWidgetContextMenu(e, 'actionCenter')}
-                  />
-                {/if}
-
-                {#if $homeWidgetsVisibilityStore.systemStats}
-                  <SystemStatsWidget
-                    size={getWidgetSize('systemStats')}
-                    active={expanded}
-                    showMenuButton={$homeWidgetMenuEnabledStore}
-                    oncontextmenu={(e) =>
-                      handleWidgetContextMenu(e, 'systemStats')}
-                  />
-                {/if}
+                {#each orderedWidgetIds as widgetId (widgetId)}
+                  {#if widgetId === 'media' && $homeWidgetsVisibilityStore.media !== false}
+                    <MediaGlanceWidget
+                      size={getWidgetSize('media')}
+                      active={expanded}
+                      showMenuButton={$homeWidgetMenuEnabledStore}
+                      onreorder={reorderHomeWidgets}
+                      oncontextmenu={(e) => handleWidgetContextMenu(e, 'media')}
+                    />
+                  {:else if widgetId === 'brief' && ($homeWidgetsVisibilityStore.announcements !== false || $homeWidgetsVisibilityStore.calendar || ($homeWidgetsVisibilityStore.notifications !== false && hasStandardNotifications))}
+                    <BriefFeedWidget
+                      showAnnouncements={$homeWidgetsVisibilityStore.announcements !==
+                        false}
+                      showNotifications={$homeWidgetsVisibilityStore.notifications !==
+                        false && hasStandardNotifications}
+                      showCalendar={$homeWidgetsVisibilityStore.calendar}
+                      size={getWidgetSize('brief')}
+                      showMenuButton={$homeWidgetMenuEnabledStore}
+                      onOpenAnnouncements={openAnnouncementsPage}
+                      onOpenCalendar={openCalendar}
+                      onreorder={reorderHomeWidgets}
+                      oncontextmenu={(e) => handleWidgetContextMenu(e, 'brief')}
+                    />
+                  {:else if widgetId === 'actionCenter' && $homeWidgetsVisibilityStore.actionCenter}
+                    <ActionCenterWidget
+                      size={getWidgetSize('actionCenter')}
+                      showMenuButton={$homeWidgetMenuEnabledStore}
+                      onreorder={reorderHomeWidgets}
+                      oncontextmenu={(e) =>
+                        handleWidgetContextMenu(e, 'actionCenter')}
+                    />
+                  {:else if widgetId === 'systemStats' && $homeWidgetsVisibilityStore.systemStats}
+                    <SystemStatsWidget
+                      size={getWidgetSize('systemStats')}
+                      active={expanded}
+                      showMenuButton={$homeWidgetMenuEnabledStore}
+                      onreorder={reorderHomeWidgets}
+                      oncontextmenu={(e) =>
+                        handleWidgetContextMenu(e, 'systemStats')}
+                    />
+                  {/if}
+                {/each}
               </div>
             {/if}
 

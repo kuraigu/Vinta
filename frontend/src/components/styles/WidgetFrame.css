@@ -9,9 +9,15 @@
   contain: layout style;
 }
 
-.vinta-widget-frame > :global(:not(.widget-menu-trigger)) {
+.vinta-widget-frame
+  > :global(:not(.widget-menu-trigger):not(.widget-drag-trigger)) {
   flex: 1;
   min-height: 0;
+}
+
+.vinta-widget-frame.has-drag-handle
+  > :global(:not(.widget-menu-trigger):not(.widget-drag-trigger)) {
+  padding-left: 22px !important;
 }
 
 .vinta-widget-frame.span-1x1 {
@@ -25,6 +31,31 @@
 .vinta-widget-frame.span-2x2 {
   grid-column: span 2;
   min-height: 144px;
+}
+
+.widget-drag-trigger {
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 4px;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--vinta-text-muted, rgba(255, 255, 255, 0.55));
+  opacity: 0.65;
+  pointer-events: auto;
+  cursor: grab;
+  transition:
+    opacity 0.15s ease,
+    transform 0.15s ease;
+}
+
+.widget-drag-trigger:active {
+  cursor: grabbing;
 }
 
 .widget-menu-trigger {
@@ -49,13 +80,30 @@
 }
 
 .vinta-widget-frame:hover .widget-menu-trigger,
-.vinta-widget-frame:focus-within .widget-menu-trigger {
-  opacity: 0.9;
+.widget-menu-trigger:focus-visible {
+  opacity: 0.95;
   pointer-events: auto;
+}
+
+.widget-drag-trigger:hover {
+  opacity: 1;
+  color: var(--vinta-text-primary);
+  background: var(--vinta-contrast-hover);
 }
 
 .widget-menu-trigger:hover {
   opacity: 1 !important;
   color: var(--vinta-text-primary);
   background: var(--vinta-contrast-hover);
+}
+
+.vinta-widget-frame.is-dragging {
+  opacity: 0.55;
+  transform: scale(0.98);
+}
+
+.vinta-widget-frame.is-drop-target {
+  outline: 2px dashed var(--vinta-accent-primary);
+  outline-offset: 2px;
+  border-radius: var(--vinta-radius-card, 14px);
 }

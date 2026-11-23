@@ -213,6 +213,7 @@
     'vinta_weather_location',
     'vinta_weather_unit',
     'vinta_home_widgets_visibility',
+    'vinta_home_widgets_order',
     'vinta_home_widget_sizes',
     'vinta_home_widget_menu_enabled',
     'vinta_page_visibility',

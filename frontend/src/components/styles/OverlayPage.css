@@ -69,10 +69,6 @@
     padding: 0 8px;
     font-size: 11px;
   }
-
-  .overlay-header-left :global(.tab-btn svg) {
-    display: none;
-  }
 }
 
 .overlay-title {

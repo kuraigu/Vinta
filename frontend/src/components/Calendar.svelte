@@ -33,7 +33,6 @@
   import CalendarPage, {
     config as calendarConfig
   } from '../pages/CalendarPage.svelte'
-  import BackButton from './BackButton.svelte'
   import BentoCard from './BentoCard.svelte'
   import PageHeader from './PageHeader.svelte'
   import ScrollView from './ScrollView.svelte'
@@ -90,20 +89,20 @@
   let formLocation = $state('')
   let formDescription = $state('')
 
-  const CALENDAR_TABS: TabItem<'calendar' | 'agenda'>[] = [
+  let calendarTabs: TabItem<'calendar' | 'agenda'>[] = $derived([
     {
       id: 'calendar',
-      label: 'Calendar',
+      label: $tStore('calendar.title'),
       icon: CalendarDays,
-      tooltip: '' // Do not add tooltip, not necessary and ugly
+      tooltip: ''
     },
     {
       id: 'agenda',
-      label: 'Agenda',
+      label: $tStore('calendar.agenda_tab'),
       icon: ListFilter,
-      tooltip: '' // Do not add tooltip, not necessary and ugly
+      tooltip: ''
     }
-  ]
+  ])
 
   let agendaFilterTabs: TabItem<'all' | 'today' | 'upcoming'>[] = $derived([
     { id: 'all', label: $tStore('calendar.filter_all'), tooltip: '' },
@@ -548,14 +547,67 @@
   {:else}
     <!-- EXPANDED VIEWS -->
     {#if variant === 'page'}
-      <!-- Standardized Page Header with Centered View Tabs -->
+      <!-- Standardized Page Header with Month Nav + Centered View Tabs -->
       <PageHeader>
+        {#snippet leading()}
+          {#if activeTab === 'calendar'}
+            <div class="month-nav-left">
+              <button
+                type="button"
+                class="header-title-btn"
+                onclick={cycleViewMode}
+              >
+                {#if viewMode === 'month'}
+                  <span class="header-month-name"
+                    >{viewDate.toLocaleDateString(undefined, {
+                      month: 'long'
+                    })}</span
+                  >
+                  <span class="header-year-num">{viewYear}</span>
+                {:else}
+                  <span class="header-month-name">{headerTitle}</span>
+                {/if}
+                <ChevronDown size={13} class="header-chevron" />
+              </button>
+            </div>
+          {/if}
+        {/snippet}
         {#snippet center()}
           <HorizontalTabSelection
-            tabs={CALENDAR_TABS}
+            tabs={calendarTabs}
             bind:value={activeTab}
             ariaLabel="Calendar views"
           />
+        {/snippet}
+        {#snippet actions()}
+          {#if activeTab === 'calendar'}
+            <div class="month-nav-right">
+              <button type="button" class="today-btn" onclick={jumpToToday}>
+                {$tStore('calendar.today')}
+              </button>
+
+              <div class="month-stepper-pills">
+                <button
+                  type="button"
+                  class="icon-nav-btn"
+                  onclick={handlePrev}
+                  aria-label="Previous interval"
+                  use:islandTooltip={'Previous'}
+                >
+                  <ChevronLeft size={13} />
+                </button>
+                <button
+                  type="button"
+                  class="icon-nav-btn"
+                  onclick={handleNext}
+                  aria-label="Next interval"
+                  use:islandTooltip={'Next'}
+                >
+                  <ChevronRight size={13} />
+                </button>
+              </div>
+            </div>
+          {/if}
         {/snippet}
       </PageHeader>
 
@@ -694,63 +746,65 @@
     {#snippet monthGridView()}
       <!-- MONTH GRID VIEW (Shared by Widget and Page Calendar Tab) -->
       <div class="grid-section">
-        <!-- Navigation Header -->
-        <div class="month-nav">
-          <div class="month-nav-left">
-            <button
-              type="button"
-              class="header-title-btn"
-              onclick={cycleViewMode}
-            >
-              {#if viewMode === 'month'}
-                <span class="header-month-name"
-                  >{viewDate.toLocaleDateString(undefined, {
-                    month: 'long'
-                  })}</span
-                >
-                <span class="header-year-num">{viewYear}</span>
-              {:else}
-                <span class="header-month-name">{headerTitle}</span>
-              {/if}
-              <ChevronDown size={13} class="header-chevron" />
-            </button>
-          </div>
-
-          <div class="month-nav-right">
-            <button type="button" class="today-btn" onclick={jumpToToday}>
-              {$tStore('calendar.today')}
-            </button>
-
-            <div class="month-stepper-pills">
+        {#if variant !== 'page'}
+          <!-- Navigation Header -->
+          <div class="month-nav">
+            <div class="month-nav-left">
               <button
                 type="button"
-                class="icon-nav-btn"
-                onclick={handlePrev}
-                aria-label="Previous interval"
-                use:islandTooltip={'Previous'}
+                class="header-title-btn"
+                onclick={cycleViewMode}
               >
-                <ChevronLeft size={13} />
-              </button>
-              <button
-                type="button"
-                class="icon-nav-btn"
-                onclick={handleNext}
-                aria-label="Next interval"
-                use:islandTooltip={'Next'}
-              >
-                <ChevronRight size={13} />
+                {#if viewMode === 'month'}
+                  <span class="header-month-name"
+                    >{viewDate.toLocaleDateString(undefined, {
+                      month: 'long'
+                    })}</span
+                  >
+                  <span class="header-year-num">{viewYear}</span>
+                {:else}
+                  <span class="header-month-name">{headerTitle}</span>
+                {/if}
+                <ChevronDown size={13} class="header-chevron" />
               </button>
             </div>
 
-            {#if showGoToCalendar && $pageVisibilityStore.calendar !== false}
-              <ActionCapsule
-                label="Calendar"
-                onclick={handleOpenCalendarPage}
-                tooltip="Open full Calendar page"
-              />
-            {/if}
+            <div class="month-nav-right">
+              <button type="button" class="today-btn" onclick={jumpToToday}>
+                {$tStore('calendar.today')}
+              </button>
+
+              <div class="month-stepper-pills">
+                <button
+                  type="button"
+                  class="icon-nav-btn"
+                  onclick={handlePrev}
+                  aria-label="Previous interval"
+                  use:islandTooltip={'Previous'}
+                >
+                  <ChevronLeft size={13} />
+                </button>
+                <button
+                  type="button"
+                  class="icon-nav-btn"
+                  onclick={handleNext}
+                  aria-label="Next interval"
+                  use:islandTooltip={'Next'}
+                >
+                  <ChevronRight size={13} />
+                </button>
+              </div>
+
+              {#if showGoToCalendar && $pageVisibilityStore.calendar !== false}
+                <ActionCapsule
+                  label="Calendar"
+                  onclick={handleOpenCalendarPage}
+                  tooltip="Open full Calendar page"
+                />
+              {/if}
+            </div>
           </div>
-        </div>
+        {/if}
 
         {#if viewMode === 'month'}
           <!-- Weekdays Header -->

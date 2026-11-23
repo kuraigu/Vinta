@@ -19,6 +19,7 @@
     showMenuButton?: boolean
     onOpenAnnouncements?: () => void
     onOpenCalendar?: () => void
+    onreorder?: (sourceId: string, targetId: string) => void
     oncontextmenu?: (e: MouseEvent) => void
   }
 
@@ -30,12 +31,13 @@
     showMenuButton = false,
     onOpenAnnouncements = undefined,
     onOpenCalendar = undefined,
+    onreorder = undefined,
     oncontextmenu = undefined
   }: Props = $props()
 </script>
 
 {#if showAnnouncements || showNotifications || showCalendar}
-  <WidgetFrame id="brief" {size} {showMenuButton} {oncontextmenu}>
+  <WidgetFrame id="brief" {size} {showMenuButton} {onreorder} {oncontextmenu}>
     <BentoCard variant="group" class="home-feed-group">
       {#if showAnnouncements}
         <section class="announcements-card-feed">

@@ -4,12 +4,6 @@
   gap: 12px;
 }
 
-.setting-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
 /* Update Available Master Card (BentoCard announcement) */
 :global(.update-card) {
   position: relative;

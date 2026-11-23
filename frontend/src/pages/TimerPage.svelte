@@ -32,7 +32,6 @@
     Plus,
     X
   } from 'lucide-svelte'
-  import BackButton from '../components/BackButton.svelte'
   import IslandPage from '../components/IslandPage.svelte'
   import PageHeader from '../components/PageHeader.svelte'
   import DotPattern from '../components/patterns/DotPattern.svelte'

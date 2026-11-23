@@ -14,7 +14,7 @@
     Lightbulb
   } from 'lucide-svelte'
   import BentoCard from '../../BentoCard.svelte'
-  import SettingItem from '../SettingItem.svelte'
+  import SettingSectionHeader from '../SettingSectionHeader.svelte'
   import SettingActionButton from '../SettingActionButton.svelte'
   import appIcon from '@appicon-svg'
   import {
@@ -178,56 +178,55 @@
   </BentoCard>
 
   <!-- Project Links Bento -->
-  <BentoCard variant="group">
-    <SettingItem
-      label={$tStore('about.project_resources')}
-      icon={Globe}
-      flexCol={true}
-    >
-      <div class="about-links-stack">
+  <SettingSectionHeader
+    title={$tStore('about.project_resources')}
+    icon={Globe}
+  />
+  <BentoCard variant="bento" class="about-links-card">
+    <div class="about-links-stack">
+      <SettingActionButton
+        href={appInfo.repoUrl}
+        target="_blank"
+        rel="noreferrer"
+        fullWidth={true}
+      >
+        <ArrowUpRight size={13} strokeWidth={2} />
+        <span>{$tStore('about.repository')}</span>
+      </SettingActionButton>
+      <div class="about-links-row">
         <SettingActionButton
-          href={appInfo.repoUrl}
-          target="_blank"
-          rel="noreferrer"
+          onclick={() => openFeedbackModal('bug')}
           fullWidth={true}
         >
-          <ArrowUpRight size={13} strokeWidth={2} />
-          <span>{$tStore('about.repository')}</span>
+          <Bug size={13} strokeWidth={2} />
+          <span>{$tStore('about.report_issue')}</span>
         </SettingActionButton>
-        <div class="about-links-row">
-          <SettingActionButton
-            onclick={() => openFeedbackModal('bug')}
-            fullWidth={true}
-          >
-            <Bug size={13} strokeWidth={2} />
-            <span>{$tStore('about.report_issue')}</span>
-          </SettingActionButton>
-          <SettingActionButton
-            onclick={() => openFeedbackModal('feature')}
-            fullWidth={true}
-          >
-            <Lightbulb size={13} strokeWidth={2} />
-            <span>{$tStore('about.request_feature')}</span>
-          </SettingActionButton>
-        </div>
+        <SettingActionButton
+          onclick={() => openFeedbackModal('feature')}
+          fullWidth={true}
+        >
+          <Lightbulb size={13} strokeWidth={2} />
+          <span>{$tStore('about.request_feature')}</span>
+        </SettingActionButton>
       </div>
-    </SettingItem>
+    </div>
   </BentoCard>
 
   <!-- Maintainers and Contributors -->
   {#if maintainers.length > 0 || generalContributors.length > 0}
-    <div class="about-section-header">
-      <span>{$tStore('about.project_credits')}</span>
-      <a
-        href={`${appInfo.repoUrl}/blob/main/docs/CONTRIBUTORS.md`}
-        target="_blank"
-        rel="noreferrer"
-        class="contributor-full-link"
-      >
-        <span>{$tStore('about.view_full_roster')}</span>
-        <ArrowUpRight size={11} />
-      </a>
-    </div>
+    <SettingSectionHeader title={$tStore('about.project_credits')}>
+      {#snippet actions()}
+        <a
+          href={`${appInfo.repoUrl}/blob/main/docs/CONTRIBUTORS.md`}
+          target="_blank"
+          rel="noreferrer"
+          class="contributor-full-link"
+        >
+          <span>{$tStore('about.view_full_roster')}</span>
+          <ArrowUpRight size={11} />
+        </a>
+      {/snippet}
+    </SettingSectionHeader>
 
     <BentoCard variant="group" class="contributors-card">
       {#each [...maintainers, ...generalContributors] as c (c.handle)}

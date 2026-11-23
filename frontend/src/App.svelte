@@ -268,7 +268,8 @@
     page: Component
     config: IslandConfig
   }
-  let navHistory: NavHistoryItem[] = []
+  let navHistory = $state<NavHistoryItem[]>([])
+  let navForwardHistory: NavHistoryItem[] = []
 
   // Memoized booleans so 1-second timer ticks don't re-trigger auto-hide or MainIsland effects
   let isTimerActive = $derived(isAnyTimerRunning($timerAppStore))
@@ -1062,6 +1063,7 @@
       if (navHistory.length > 20) {
         navHistory.shift()
       }
+      navForwardHistory = []
     }
 
     gestures.finishSettling()
@@ -1143,11 +1145,59 @@
     while (navHistory.length > 0) {
       const prev = navHistory.pop()
       if (prev && prev.page !== activePage) {
+        if (activePage) {
+          navForwardHistory.push({
+            page: activePage as Component,
+            config: islandConfig
+          })
+          if (navForwardHistory.length > 20) {
+            navForwardHistory.shift()
+          }
+        }
         navigateTo(prev.page, prev.config, true, true)
         return
       }
     }
     openOverlay('apps')
+  }
+
+  function goForward(): void {
+    while (navForwardHistory.length > 0) {
+      const next = navForwardHistory.pop()
+      if (next && next.page !== activePage) {
+        if (activePage) {
+          navHistory.push({
+            page: activePage as Component,
+            config: islandConfig
+          })
+          if (navHistory.length > 20) {
+            navHistory.shift()
+          }
+        }
+        navigateTo(next.page, next.config, true, true)
+        return
+      }
+    }
+  }
+
+  function cycleMinimalMode(direction: 1 | -1): void {
+    const modes: NavHistoryItem[] = [
+      { page: HomePage, config: homeConfig },
+      ...(isMediaActive && $pageVisibilityStore.media !== false
+        ? [{ page: MediaPage, config: mediaConfig }]
+        : []),
+      ...(isTimerActive && $pageVisibilityStore.timer !== false
+        ? [{ page: TimerPage, config: timerConfig }]
+        : [])
+    ]
+    if (modes.length <= 1) return
+    const currentIdx = modes.findIndex((m) => m.page === activePage)
+    const nextIdx =
+      currentIdx === -1
+        ? 0
+        : (currentIdx + direction + modes.length) % modes.length
+    const target = modes[nextIdx]
+    navigateTo(target.page, target.config, false, true)
   }
 
   function showWidget() {
@@ -2061,7 +2111,49 @@
 
     const handleWindowKeydownFailsafe = (e: KeyboardEvent) => {
       if (e.defaultPrevented) return
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        !e.altKey &&
+        e.key.toLowerCase() === 'k'
+      ) {
+        e.preventDefault()
+        if (isHidden) showWidget()
+        if ($activeOverlayStore === 'apps') {
+          Events.Emit('vinta:focus-apps-search')
+        } else {
+          openOverlay('apps')
+        }
+        return
+      }
+      if (e.altKey && !e.ctrlKey && !e.metaKey && e.key === 'ArrowLeft') {
+        if (expanded && !isHidden && $activeOverlayStore === null) {
+          e.preventDefault()
+          goBack()
+        }
+        return
+      }
+      if (e.altKey && !e.ctrlKey && !e.metaKey && e.key === 'ArrowRight') {
+        if (expanded && !isHidden && $activeOverlayStore === null) {
+          e.preventDefault()
+          goForward()
+        }
+        return
+      }
+      if (
+        e.altKey &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        e.key >= '1' &&
+        e.key <= '9'
+      ) {
+        e.preventDefault()
+        Events.Emit('vinta:dock-jump', { index: Number(e.key) - 1 })
+        return
+      }
       if (e.key === 'Escape') {
+        if (document.querySelector('.ctx-menu, .context-menu')) {
+          return
+        }
         if (gestures.isDragging || gestures.isInertia) {
           finishDragGesture()
           return
@@ -2190,10 +2282,22 @@
       'vinta:click-outside',
       handleOutsideClick
     )
+    const handleWindowMouseUp = (e: MouseEvent) => {
+      if (!expanded || isHidden || $activeOverlayStore !== null) return
+      if (e.button === 3) {
+        e.preventDefault()
+        goBack()
+      } else if (e.button === 4) {
+        e.preventDefault()
+        goForward()
+      }
+    }
+
     window.addEventListener('resize', handleResize)
     window.addEventListener('blur', handleGlobalDragFailsafe)
     window.addEventListener('pointercancel', handleGlobalDragFailsafe)
     window.addEventListener('keydown', handleWindowKeydownFailsafe)
+    window.addEventListener('mouseup', handleWindowMouseUp)
     window.addEventListener('focus', handleWindowFocus)
 
     const stopIdleReconciler = bounds.startIdleReconciler(
@@ -2314,6 +2418,7 @@
       window.removeEventListener('blur', handleGlobalDragFailsafe)
       window.removeEventListener('pointercancel', handleGlobalDragFailsafe)
       window.removeEventListener('keydown', handleWindowKeydownFailsafe)
+      window.removeEventListener('mouseup', handleWindowMouseUp)
       window.removeEventListener('focus', handleWindowFocus)
     }
   })
@@ -2429,6 +2534,9 @@
         onWindowBlur={handleWindowBlur}
         onRecoverBounds={recoverBoundsIfIdle}
         onAnimationDone={recoverBoundsIfIdle}
+        onCycleMinimalMode={cycleMinimalMode}
+        canGoBack={navHistory.length > 0}
+        onGoBack={goBack}
       />
 
       {#if !isQuitting && !isHidden}

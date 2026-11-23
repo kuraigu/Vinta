@@ -77,7 +77,8 @@
   contain: layout style;
 }
 
-.app-tile:hover:not(.is-disabled) {
+.app-tile:hover:not(.is-disabled),
+.app-tile.is-selected:not(.is-disabled) {
   background: var(--vinta-contrast-hover);
   border-color: var(--vinta-border);
 }
@@ -131,16 +132,19 @@
   transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.app-tile:hover:not(.is-disabled) .tile-icon-box {
+.app-tile:hover:not(.is-disabled) .tile-icon-box,
+.app-tile.is-selected:not(.is-disabled) .tile-icon-box {
   transform: translateY(-1.5px);
   border-color: rgba(255, 255, 255, 0.32);
 }
 
-.app-tile:hover:not(.is-disabled) .tile-icon-box::after {
+.app-tile:hover:not(.is-disabled) .tile-icon-box::after,
+.app-tile.is-selected:not(.is-disabled) .tile-icon-box::after {
   opacity: 1;
 }
 
-.app-tile:hover :global(.tile-icon) {
+.app-tile:hover :global(.tile-icon),
+.app-tile.is-selected:not(.is-disabled) :global(.tile-icon) {
   transform: scale(1.06);
 }
 

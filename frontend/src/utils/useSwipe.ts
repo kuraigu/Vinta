@@ -98,7 +98,7 @@ export function swipe(node: HTMLElement, options: SwipeOptions = {}) {
 
     // Do not initiate drag on interactive inputs or sliders
     const formInputs =
-      'input, select, textarea, range, .custom-select-trigger, .custom-select-options, .custom-select-option, .no-swipe, .no-drag'
+      'input, select, textarea, range, .custom-select-trigger, .custom-select-options, .custom-select-option, .no-swipe, .no-drag, [draggable="true"]'
     const fullIgnoreSelector = opts.ignoreSelector
       ? `${formInputs}, ${opts.ignoreSelector}`
       : formInputs

@@ -11,6 +11,7 @@
     size?: WidgetSizePreset
     active?: boolean
     showMenuButton?: boolean
+    onreorder?: (sourceId: string, targetId: string) => void
     oncontextmenu?: (e: MouseEvent) => void
   }
 
@@ -18,10 +19,17 @@
     size = '2x1',
     active = true,
     showMenuButton = false,
+    onreorder = undefined,
     oncontextmenu = undefined
   }: Props = $props()
 </script>
 
-<WidgetFrame id="systemStats" {size} {showMenuButton} {oncontextmenu}>
+<WidgetFrame
+  id="systemStats"
+  {size}
+  {showMenuButton}
+  {onreorder}
+  {oncontextmenu}
+>
   <SystemStats expanded={active} />
 </WidgetFrame>
