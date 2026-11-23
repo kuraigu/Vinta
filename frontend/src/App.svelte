@@ -144,11 +144,14 @@
     devPinnedStore,
     activePageIdStore,
     activeOverlayStore,
+    appsOverlayTabStore,
+    appsLauncherHotkeyStore,
     clickOutsideMinimizeStore,
     overlayPinnedStore,
     notificationsOverlayTabStore,
     feedbackOverlayKindStore,
     type OverlayPageId,
+    type AppsOverlayTab,
     type NotificationsOverlayTab,
     type FeedbackOverlayKind,
     isMediaDrawerOpenStore,
@@ -940,6 +943,7 @@
     overlay: OverlayPageId,
     options?: {
       tab?: NotificationsOverlayTab
+      appsTab?: AppsOverlayTab
       feedbackKind?: FeedbackOverlayKind
       collapseOnClose?: boolean
     }
@@ -950,6 +954,9 @@
     }
     if (options?.tab) {
       $notificationsOverlayTabStore = options.tab
+    }
+    if (options?.appsTab) {
+      $appsOverlayTabStore = options.appsTab
     }
     if (options?.feedbackKind) {
       $feedbackOverlayKindStore = options.feedbackKind
@@ -2109,19 +2116,42 @@
       if (gestures.isDragging) finishDragGesture()
     }
 
+    const matchesAccelerator = (e: KeyboardEvent, accel: string): boolean => {
+      const trimmed = accel.trim()
+      if (!trimmed) return false
+      const parts = trimmed.split('+').map((p) => p.trim().toUpperCase())
+      const keyPart = parts.pop()
+      if (!keyPart) return false
+      const needCtrl = parts.includes('CTRL') || parts.includes('CONTROL')
+      const needAlt = parts.includes('ALT')
+      const needShift = parts.includes('SHIFT')
+      const needMeta = parts.includes('SUPER') || parts.includes('META')
+      if (
+        (e.ctrlKey || e.metaKey) !== (needCtrl || needMeta) ||
+        e.altKey !== needAlt ||
+        e.shiftKey !== needShift
+      ) {
+        return false
+      }
+      const pressed =
+        e.key === ' '
+          ? 'SPACE'
+          : e.key.length === 1
+            ? e.key.toUpperCase()
+            : e.key.toUpperCase()
+      return pressed === keyPart
+    }
+
     const handleWindowKeydownFailsafe = (e: KeyboardEvent) => {
       if (e.defaultPrevented) return
-      if (
-        (e.ctrlKey || e.metaKey) &&
-        !e.altKey &&
-        e.key.toLowerCase() === 'k'
-      ) {
+      if (matchesAccelerator(e, $appsLauncherHotkeyStore)) {
         e.preventDefault()
         if (isHidden) showWidget()
         if ($activeOverlayStore === 'apps') {
+          $appsOverlayTabStore = 'island'
           Events.Emit('vinta:focus-apps-search')
         } else {
-          openOverlay('apps')
+          openOverlay('apps', { appsTab: 'island' })
         }
         return
       }
@@ -2198,6 +2228,7 @@
       if (!$hasCompletedOnboardingStore || activePage === OnboardingPage) {
         if (isHidden) {
           showWidget()
+          FocusWindow().catch(() => {})
         } else {
           hideWidget()
         }
@@ -2214,6 +2245,7 @@
       } else {
         const fallback = getFallbackPage()
         navigateTo(fallback.page as Component, fallback.config, true)
+        FocusWindow().catch(() => {})
       }
     }
 
@@ -2230,12 +2262,34 @@
         navigateTo(fallback.page as Component, fallback.config, false)
       } else {
         navigateTo(NotesPage, notesConfig, true)
+        FocusWindow().catch(() => {})
       }
+    }
+
+    const handleDesktopAppsHotkey = () => {
+      if (!$hasCompletedOnboardingStore || activePage === OnboardingPage) {
+        return
+      }
+      if (
+        expanded &&
+        !isHidden &&
+        $activeOverlayStore === 'apps' &&
+        $appsOverlayTabStore === 'desktop'
+      ) {
+        closeOverlay()
+        return
+      }
+      if (isHidden) {
+        showWidget()
+      }
+      openOverlay('apps', { appsTab: 'desktop' })
+      FocusWindow().catch(() => {})
     }
 
     const handleModeSwitchHotkey = () => {
       if (isHidden) {
         showWidget()
+        FocusWindow().catch(() => {})
         return
       }
       if (expanded) {
@@ -2261,6 +2315,7 @@
       } else {
         const fallback = getFallbackPage()
         navigateTo(fallback.page as Component, fallback.config, true)
+        FocusWindow().catch(() => {})
       }
     }
 
@@ -2314,6 +2369,10 @@
         bounds.scheduleTrimMemory(isHidden ? 20000 : 180000)
       }
     })
+    const unsubCollapseIsland = Events.OnGlobal(
+      'vinta:collapse-island',
+      collapseForOutsideClick
+    )
 
     const cleanupEvents = initIslandEvents({
       showWidget,
@@ -2366,7 +2425,8 @@
       },
       onHotkeyToggle: handleHotkeyToggle,
       onQuickNotesHotkey: handleQuickNotesHotkey,
-      onModeSwitchHotkey: handleModeSwitchHotkey
+      onModeSwitchHotkey: handleModeSwitchHotkey,
+      onDesktopAppsHotkey: handleDesktopAppsHotkey
     })
 
     try {
@@ -2413,6 +2473,7 @@
       unsubApplyAlignment()
       unsubSwitchMonitor()
       unsubClickOutside()
+      unsubCollapseIsland()
       clearClickOutsideBlur()
       window.removeEventListener('resize', handleResize)
       window.removeEventListener('blur', handleGlobalDragFailsafe)

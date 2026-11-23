@@ -345,6 +345,8 @@ const legacyV1Defaults: Record<string, unknown> = {
   vinta_privacy_mode: false,
   vinta_auto_privacy_mode: true,
   vinta_muted_notif_apps: [] as string[],
+  vinta_launcher_usage: {} as Record<string, { count: number; lastUsedAt: number }>,
+  vinta_launcher_pinned: [] as string[],
   vinta_time_format: '12h',
   vinta_date_format: 'default',
   vinta_weather_unit: 'celsius',
@@ -651,6 +653,18 @@ export const notifMinimalStyleStore = persistentWritable<NotifMinimalStyle>('vin
 export const privacyModeStore = persistentWritable<boolean>('vinta_privacy_mode', false)
 export const autoPrivacyModeStore = persistentWritable<boolean>('vinta_auto_privacy_mode', true)
 export const mutedNotifAppsStore = persistentWritable<string[]>('vinta_muted_notif_apps', [])
+export interface LauncherUsageEntry {
+  count: number
+  lastUsedAt: number
+}
+export const launcherUsageStore = persistentWritable<Record<string, LauncherUsageEntry>>(
+  'vinta_launcher_usage',
+  {}
+)
+export const launcherPinnedIdsStore = persistentWritable<string[]>(
+  'vinta_launcher_pinned',
+  []
+)
 
 // Alarms & Reminders Audio Settings
 export type { AlarmSoundPreset } from '../services/audioService'
@@ -753,9 +767,15 @@ export function reorderHomeWidgets(sourceId: string, targetId: string): void {
 export const pageVisibilityStore = persistentWritable<PageVisibility>('vinta_page_visibility', defaultPageVisibility)
 export const dockPinnedAppsStore = persistentWritable<DockPinnedApps>('vinta_dock_pinned_apps', defaultDockPinnedApps)
 export const pinnedMediaSourceStore = persistentWritable<string | null>('vinta_pinned_media_source', null)
+/**
+ * Global duration (in seconds) before inline confirmation/status feedback messages auto-clear.
+ */
+export const feedbackTimeoutSecStore = persistentWritable<number>('vinta_feedback_timeout_sec', 2.5)
 export const globalHotkeyStore = persistentWritable<string>('vinta_global_hotkey', 'Alt+Shift+V')
 export const quickNotesHotkeyStore = persistentWritable<string>('vinta_hotkey_quick_notes', 'Alt+Shift+N')
 export const modeSwitchHotkeyStore = persistentWritable<string>('vinta_hotkey_mode_switch', 'Alt+Shift+D')
+export const appsLauncherHotkeyStore = persistentWritable<string>('vinta_hotkey_apps_launcher', 'Ctrl+K')
+export const desktopAppsHotkeyStore = persistentWritable<string>('vinta_hotkey_desktop_apps', 'Alt+Shift+K')
 
 // ============================================================================
 // 7. System Integration & Updates

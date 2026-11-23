@@ -93,6 +93,7 @@ export interface IslandEventCallbacks {
   onHotkeyToggle?: () => void
   onQuickNotesHotkey?: () => void
   onModeSwitchHotkey?: () => void
+  onDesktopAppsHotkey?: () => void
 }
 
 /**
@@ -171,6 +172,10 @@ export function initIslandEvents(callbacks: IslandEventCallbacks): () => void {
 
   onEvent('hotkey-mode-switch', () => {
     callbacks.onModeSwitchHotkey?.()
+  })
+
+  onEvent('hotkey-desktop-apps', () => {
+    callbacks.onDesktopAppsHotkey?.()
   })
 
   // Track last auto-hide notification timestamp per application to prevent spamming

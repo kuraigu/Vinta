@@ -33,6 +33,7 @@
     mediaAutoHideStore,
     clickOutsideMinimizeStore,
     autoHideDelayStore,
+    feedbackTimeoutSecStore,
     autoHideDisplayStore,
     wakeMethodStore,
     hiddenPillOffsetXStore,
@@ -143,6 +144,25 @@
         unit="s"
         defaultValue={autoHideDelayStore.defaultValue}
         bind:value={$autoHideDelayStore}
+      />
+    </SettingItem>
+
+    <SettingItem
+      label={$tStore('settings.feedback_timeout_label')}
+      description={$tStore('settings.feedback_timeout_desc')}
+      icon={Timer}
+      flexCol={true}
+      isDefault={$feedbackTimeoutSecStore ===
+        feedbackTimeoutSecStore.defaultValue}
+      onReset={() => feedbackTimeoutSecStore.reset()}
+    >
+      <SettingSlider
+        min={1}
+        max={10}
+        step={0.5}
+        unit="s"
+        defaultValue={feedbackTimeoutSecStore.defaultValue}
+        bind:value={$feedbackTimeoutSecStore}
       />
     </SettingItem>
 

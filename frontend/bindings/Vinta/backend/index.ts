@@ -27,5 +27,6 @@ export {
     ThemeInfo,
     TooltipBounds,
     UpdateCheckResult,
-    VintaThemeManifest
+    VintaThemeManifest,
+    WindowsAppItem
 } from "./models.js";
