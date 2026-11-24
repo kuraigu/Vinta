@@ -140,6 +140,7 @@ export interface PageVisibility {
   performance?: boolean
   flashcards?: boolean
   habits?: boolean
+  devhub?: boolean
 }
 
 export const defaultPageVisibility: PageVisibility = {
@@ -155,7 +156,8 @@ export const defaultPageVisibility: PageVisibility = {
   fileshelf: true,
   performance: true,
   flashcards: true,
-  habits: true
+  habits: true,
+  devhub: true
 }
 
 export interface DockPinnedApps {

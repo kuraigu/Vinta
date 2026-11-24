@@ -30,6 +30,7 @@
   import ClockTab from '../components/settings/tabs/ClockTab.svelte'
   import WeatherTab from '../components/settings/tabs/WeatherTab.svelte'
   import LanguageTab from '../components/settings/tabs/LanguageTab.svelte'
+  import AccountTab from '../components/settings/tabs/AccountTab.svelte'
   import SystemTab from '../components/settings/tabs/SystemTab.svelte'
   import UpdatesTab from '../components/settings/tabs/UpdatesTab.svelte'
   import AboutTab from '../components/settings/tabs/AboutTab.svelte'
@@ -89,6 +90,7 @@
             <ClockTab />
             <WeatherTab />
             <LanguageTab />
+            <AccountTab />
             <SystemTab />
             <UpdatesTab />
           </div>
@@ -116,6 +118,8 @@
                 <WeatherTab />
               {:else if activeTab === 'language'}
                 <LanguageTab />
+              {:else if activeTab === 'account'}
+                <AccountTab />
               {:else if activeTab === 'system'}
                 <SystemTab />
               {:else if activeTab === 'updates'}

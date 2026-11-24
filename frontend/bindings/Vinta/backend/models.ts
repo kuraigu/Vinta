@@ -6,6 +6,78 @@
 import { Create as $Create } from "@wailsio/runtime";
 
 /**
+ * AIKeysStatus exposes presence flags for DPAPI-stored AI provider keys without leaking secrets.
+ */
+export class AIKeysStatus {
+    "hasClaude": boolean;
+    "hasOpenAI": boolean;
+
+    /** Creates a new AIKeysStatus instance. */
+    constructor($$source: Partial<AIKeysStatus> = {}) {
+        if (!("hasClaude" in $$source)) {
+            this["hasClaude"] = false;
+        }
+        if (!("hasOpenAI" in $$source)) {
+            this["hasOpenAI"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new AIKeysStatus instance from a string or object.
+     */
+    static createFrom($$source: any = {}): AIKeysStatus {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new AIKeysStatus($$parsedSource as Partial<AIKeysStatus>);
+    }
+}
+
+/**
+ * AIProviderUsage reports configuration and health status for an AI coding/model provider.
+ */
+export class AIProviderUsage {
+    "id": string;
+    "name": string;
+    "configured": boolean;
+    "status": string;
+    "detail": string;
+    "dashboardUrl": string;
+
+    /** Creates a new AIProviderUsage instance. */
+    constructor($$source: Partial<AIProviderUsage> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("configured" in $$source)) {
+            this["configured"] = false;
+        }
+        if (!("status" in $$source)) {
+            this["status"] = "";
+        }
+        if (!("detail" in $$source)) {
+            this["detail"] = "";
+        }
+        if (!("dashboardUrl" in $$source)) {
+            this["dashboardUrl"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new AIProviderUsage instance from a string or object.
+     */
+    static createFrom($$source: any = {}): AIProviderUsage {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new AIProviderUsage($$parsedSource as Partial<AIProviderUsage>);
+    }
+}
+
+/**
  * AnnouncementItem represents a developer announcement or major release highlight.
  */
 export class AnnouncementItem {
@@ -154,6 +226,42 @@ export class AppInfo {
 }
 
 /**
+ * CloudSyncResult reports the outcome of a Firestore push or pull operation.
+ */
+export class CloudSyncResult {
+    "syncedAt": number;
+    "files": string[];
+    "message": string;
+
+    /** Creates a new CloudSyncResult instance. */
+    constructor($$source: Partial<CloudSyncResult> = {}) {
+        if (!("syncedAt" in $$source)) {
+            this["syncedAt"] = 0;
+        }
+        if (!("files" in $$source)) {
+            this["files"] = [];
+        }
+        if (!("message" in $$source)) {
+            this["message"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new CloudSyncResult instance from a string or object.
+     */
+    static createFrom($$source: any = {}): CloudSyncResult {
+        const $$createField1_0 = $$createType2;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("files" in $$parsedSource) {
+            $$parsedSource["files"] = $$createField1_0($$parsedSource["files"]);
+        }
+        return new CloudSyncResult($$parsedSource as Partial<CloudSyncResult>);
+    }
+}
+
+/**
  * Contributor represents a project contributor parsed dynamically from docs/CONTRIBUTORS.md.
  */
 export class Contributor {
@@ -236,8 +344,8 @@ export class DisplayLayout {
      * Creates a new DisplayLayout instance from a string or object.
      */
     static createFrom($$source: any = {}): DisplayLayout {
-        const $$createField5_0 = $$createType2;
-        const $$createField6_0 = $$createType3;
+        const $$createField5_0 = $$createType3;
+        const $$createField6_0 = $$createType4;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("currentMonitor" in $$parsedSource) {
             $$parsedSource["currentMonitor"] = $$createField5_0($$parsedSource["currentMonitor"]);
@@ -246,6 +354,290 @@ export class DisplayLayout {
             $$parsedSource["monitors"] = $$createField6_0($$parsedSource["monitors"]);
         }
         return new DisplayLayout($$parsedSource as Partial<DisplayLayout>);
+    }
+}
+
+/**
+ * GitHubContributionDay represents a single day cell in the contribution heatmap.
+ */
+export class GitHubContributionDay {
+    "date": string;
+    "count": number;
+    "level": number;
+
+    /** Creates a new GitHubContributionDay instance. */
+    constructor($$source: Partial<GitHubContributionDay> = {}) {
+        if (!("date" in $$source)) {
+            this["date"] = "";
+        }
+        if (!("count" in $$source)) {
+            this["count"] = 0;
+        }
+        if (!("level" in $$source)) {
+            this["level"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new GitHubContributionDay instance from a string or object.
+     */
+    static createFrom($$source: any = {}): GitHubContributionDay {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new GitHubContributionDay($$parsedSource as Partial<GitHubContributionDay>);
+    }
+}
+
+/**
+ * GitHubDashboard aggregates developer activity for the Developer Hub page and minimal pill.
+ */
+export class GitHubDashboard {
+    "username": string;
+    "avatarUrl": string;
+    "currentStreak": number;
+    "totalRecent": number;
+    "unreadCount": number;
+    "contributions": GitHubContributionDay[];
+    "notifications": GitHubItem[];
+    "pullRequests": GitHubItem[];
+    "assignedIssues": GitHubItem[];
+    "fetchedAt": number;
+
+    /** Creates a new GitHubDashboard instance. */
+    constructor($$source: Partial<GitHubDashboard> = {}) {
+        if (!("username" in $$source)) {
+            this["username"] = "";
+        }
+        if (!("avatarUrl" in $$source)) {
+            this["avatarUrl"] = "";
+        }
+        if (!("currentStreak" in $$source)) {
+            this["currentStreak"] = 0;
+        }
+        if (!("totalRecent" in $$source)) {
+            this["totalRecent"] = 0;
+        }
+        if (!("unreadCount" in $$source)) {
+            this["unreadCount"] = 0;
+        }
+        if (!("contributions" in $$source)) {
+            this["contributions"] = [];
+        }
+        if (!("notifications" in $$source)) {
+            this["notifications"] = [];
+        }
+        if (!("pullRequests" in $$source)) {
+            this["pullRequests"] = [];
+        }
+        if (!("assignedIssues" in $$source)) {
+            this["assignedIssues"] = [];
+        }
+        if (!("fetchedAt" in $$source)) {
+            this["fetchedAt"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new GitHubDashboard instance from a string or object.
+     */
+    static createFrom($$source: any = {}): GitHubDashboard {
+        const $$createField5_0 = $$createType6;
+        const $$createField6_0 = $$createType8;
+        const $$createField7_0 = $$createType8;
+        const $$createField8_0 = $$createType8;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("contributions" in $$parsedSource) {
+            $$parsedSource["contributions"] = $$createField5_0($$parsedSource["contributions"]);
+        }
+        if ("notifications" in $$parsedSource) {
+            $$parsedSource["notifications"] = $$createField6_0($$parsedSource["notifications"]);
+        }
+        if ("pullRequests" in $$parsedSource) {
+            $$parsedSource["pullRequests"] = $$createField7_0($$parsedSource["pullRequests"]);
+        }
+        if ("assignedIssues" in $$parsedSource) {
+            $$parsedSource["assignedIssues"] = $$createField8_0($$parsedSource["assignedIssues"]);
+        }
+        return new GitHubDashboard($$parsedSource as Partial<GitHubDashboard>);
+    }
+}
+
+/**
+ * GitHubDeviceCodeInfo contains the user code and verification URL for GitHub OAuth Device Flow.
+ */
+export class GitHubDeviceCodeInfo {
+    "deviceCode": string;
+    "userCode": string;
+    "verificationUri": string;
+    "expiresIn": number;
+    "interval": number;
+
+    /** Creates a new GitHubDeviceCodeInfo instance. */
+    constructor($$source: Partial<GitHubDeviceCodeInfo> = {}) {
+        if (!("deviceCode" in $$source)) {
+            this["deviceCode"] = "";
+        }
+        if (!("userCode" in $$source)) {
+            this["userCode"] = "";
+        }
+        if (!("verificationUri" in $$source)) {
+            this["verificationUri"] = "";
+        }
+        if (!("expiresIn" in $$source)) {
+            this["expiresIn"] = 0;
+        }
+        if (!("interval" in $$source)) {
+            this["interval"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new GitHubDeviceCodeInfo instance from a string or object.
+     */
+    static createFrom($$source: any = {}): GitHubDeviceCodeInfo {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new GitHubDeviceCodeInfo($$parsedSource as Partial<GitHubDeviceCodeInfo>);
+    }
+}
+
+/**
+ * GitHubItem represents a GitHub PR, issue, or notification item.
+ */
+export class GitHubItem {
+    "id": string;
+    "title": string;
+    "repo": string;
+    "url": string;
+    "kind": string;
+    "updatedAt": string;
+    "state": string;
+
+    /** Creates a new GitHubItem instance. */
+    constructor($$source: Partial<GitHubItem> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("title" in $$source)) {
+            this["title"] = "";
+        }
+        if (!("repo" in $$source)) {
+            this["repo"] = "";
+        }
+        if (!("url" in $$source)) {
+            this["url"] = "";
+        }
+        if (!("kind" in $$source)) {
+            this["kind"] = "";
+        }
+        if (!("updatedAt" in $$source)) {
+            this["updatedAt"] = "";
+        }
+        if (!("state" in $$source)) {
+            this["state"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new GitHubItem instance from a string or object.
+     */
+    static createFrom($$source: any = {}): GitHubItem {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new GitHubItem($$parsedSource as Partial<GitHubItem>);
+    }
+}
+
+/**
+ * GitHubStatus reports the current GitHub authentication state.
+ */
+export class GitHubStatus {
+    "connected": boolean;
+    "username": string;
+    "avatarUrl": string;
+    "hasOAuthClientId": boolean;
+
+    /** Creates a new GitHubStatus instance. */
+    constructor($$source: Partial<GitHubStatus> = {}) {
+        if (!("connected" in $$source)) {
+            this["connected"] = false;
+        }
+        if (!("username" in $$source)) {
+            this["username"] = "";
+        }
+        if (!("avatarUrl" in $$source)) {
+            this["avatarUrl"] = "";
+        }
+        if (!("hasOAuthClientId" in $$source)) {
+            this["hasOAuthClientId"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new GitHubStatus instance from a string or object.
+     */
+    static createFrom($$source: any = {}): GitHubStatus {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new GitHubStatus($$parsedSource as Partial<GitHubStatus>);
+    }
+}
+
+/**
+ * GoogleAccountStatus reports the active Google Sign-In and Firebase Cloud Sync state.
+ */
+export class GoogleAccountStatus {
+    "connected": boolean;
+    "email": string;
+    "name": string;
+    "picture": string;
+    "hasGoogleClientId": boolean;
+    "firebaseEnabled": boolean;
+    "cloudSyncReady": boolean;
+    "lastCloudSyncAt": number;
+
+    /** Creates a new GoogleAccountStatus instance. */
+    constructor($$source: Partial<GoogleAccountStatus> = {}) {
+        if (!("connected" in $$source)) {
+            this["connected"] = false;
+        }
+        if (!("email" in $$source)) {
+            this["email"] = "";
+        }
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("picture" in $$source)) {
+            this["picture"] = "";
+        }
+        if (!("hasGoogleClientId" in $$source)) {
+            this["hasGoogleClientId"] = false;
+        }
+        if (!("firebaseEnabled" in $$source)) {
+            this["firebaseEnabled"] = false;
+        }
+        if (!("cloudSyncReady" in $$source)) {
+            this["cloudSyncReady"] = false;
+        }
+        if (!("lastCloudSyncAt" in $$source)) {
+            this["lastCloudSyncAt"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new GoogleAccountStatus instance from a string or object.
+     */
+    static createFrom($$source: any = {}): GoogleAccountStatus {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new GoogleAccountStatus($$parsedSource as Partial<GoogleAccountStatus>);
     }
 }
 
@@ -414,6 +806,38 @@ export class HolidayCountry {
 }
 
 /**
+ * IntegrationCapabilities reports which optional OAuth and cloud backends are configured.
+ */
+export class IntegrationCapabilities {
+    "hasGoogleOAuth": boolean;
+    "hasFirebase": boolean;
+    "hasGitHubOAuth": boolean;
+
+    /** Creates a new IntegrationCapabilities instance. */
+    constructor($$source: Partial<IntegrationCapabilities> = {}) {
+        if (!("hasGoogleOAuth" in $$source)) {
+            this["hasGoogleOAuth"] = false;
+        }
+        if (!("hasFirebase" in $$source)) {
+            this["hasFirebase"] = false;
+        }
+        if (!("hasGitHubOAuth" in $$source)) {
+            this["hasGitHubOAuth"] = false;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new IntegrationCapabilities instance from a string or object.
+     */
+    static createFrom($$source: any = {}): IntegrationCapabilities {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new IntegrationCapabilities($$parsedSource as Partial<IntegrationCapabilities>);
+    }
+}
+
+/**
  * MonitorInfo holds physical display bounds, orientation flags, and Windows DPI scale.
  */
 export class MonitorInfo {
@@ -552,7 +976,7 @@ export class PublicHoliday {
      * Creates a new PublicHoliday instance from a string or object.
      */
     static createFrom($$source: any = {}): PublicHoliday {
-        const $$createField6_0 = $$createType4;
+        const $$createField6_0 = $$createType2;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("types" in $$parsedSource) {
             $$parsedSource["types"] = $$createField6_0($$parsedSource["types"]);
@@ -871,7 +1295,7 @@ export class ThemeInfo {
      * Creates a new ThemeInfo instance from a string or object.
      */
     static createFrom($$source: any = {}): ThemeInfo {
-        const $$createField0_0 = $$createType5;
+        const $$createField0_0 = $$createType9;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("manifest" in $$parsedSource) {
             $$parsedSource["manifest"] = $$createField0_0($$parsedSource["manifest"]);
@@ -986,7 +1410,7 @@ export class UpdateCheckResult {
      * Creates a new UpdateCheckResult instance from a string or object.
      */
     static createFrom($$source: any = {}): UpdateCheckResult {
-        const $$createField4_0 = $$createType6;
+        const $$createField4_0 = $$createType10;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("release" in $$parsedSource) {
             $$parsedSource["release"] = $$createField4_0($$parsedSource["release"]);
@@ -1039,7 +1463,7 @@ export class VintaThemeManifest {
      * Creates a new VintaThemeManifest instance from a string or object.
      */
     static createFrom($$source: any = {}): VintaThemeManifest {
-        const $$createField10_0 = $$createType7;
+        const $$createField10_0 = $$createType11;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("meta" in $$parsedSource) {
             $$parsedSource["meta"] = $$createField10_0($$parsedSource["meta"]);
@@ -1095,9 +1519,13 @@ export class WindowsAppItem {
 // Private type creation functions
 const $$createType0 = AnnouncementItem.createFrom;
 const $$createType1 = $Create.Array($$createType0);
-const $$createType2 = MonitorInfo.createFrom;
-const $$createType3 = $Create.Array($$createType2);
-const $$createType4 = $Create.Array($Create.Any);
-const $$createType5 = VintaThemeManifest.createFrom;
-const $$createType6 = ReleaseInfo.createFrom;
-const $$createType7 = $Create.Map($Create.Any, $Create.Any);
+const $$createType2 = $Create.Array($Create.Any);
+const $$createType3 = MonitorInfo.createFrom;
+const $$createType4 = $Create.Array($$createType3);
+const $$createType5 = GitHubContributionDay.createFrom;
+const $$createType6 = $Create.Array($$createType5);
+const $$createType7 = GitHubItem.createFrom;
+const $$createType8 = $Create.Array($$createType7);
+const $$createType9 = VintaThemeManifest.createFrom;
+const $$createType10 = ReleaseInfo.createFrom;
+const $$createType11 = $Create.Map($Create.Any, $Create.Any);
