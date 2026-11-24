@@ -110,6 +110,15 @@ export function ComputeFileSHA256(path: string): $CancellablePromise<string> {
 }
 
 /**
+ * ConnectGoogleCalendar initiates an RFC 8252 loopback OAuth 2.0 PKCE flow in the system browser.
+ */
+export function ConnectGoogleCalendar(clientID: string): $CancellablePromise<$models.GoogleCalendarStatus> {
+    return $Call.ByID(1311984234, clientID).then(($result: any) => {
+        return $$createType3($result);
+    });
+}
+
+/**
  * CopyShelfPathsToClipboard copies the files to the system clipboard both as text and as native CF_HDROP file objects.
  */
 export function CopyShelfPathsToClipboard(paths: string[]): $CancellablePromise<void> {
@@ -138,6 +147,13 @@ export function DeleteNote(fileName: string): $CancellablePromise<void> {
 }
 
 /**
+ * DisconnectGoogleCalendar removes the DPAPI-encrypted Google Calendar token vault.
+ */
+export function DisconnectGoogleCalendar(): $CancellablePromise<void> {
+    return $Call.ByID(3199322424);
+}
+
+/**
  * DownloadAndInstallUpdate downloads the installer executable for the update and executes it.
  */
 export function DownloadAndInstallUpdate(downloadURL: string): $CancellablePromise<void> {
@@ -156,6 +172,15 @@ export function DownloadUpdate(downloadURL: string, checksumsURL: string): $Canc
  */
 export function ExportSettingsFileDialog(defaultName: string): $CancellablePromise<string> {
     return $Call.ByID(969537782, defaultName);
+}
+
+/**
+ * FetchGoogleCalendarEvents retrieves upcoming events from the user's Google Calendar list.
+ */
+export function FetchGoogleCalendarEvents(daysAhead: number): $CancellablePromise<$models.GoogleCalendarEventDTO[]> {
+    return $Call.ByID(339571877, daysAhead).then(($result: any) => {
+        return $$createType5($result);
+    });
 }
 
 /**
@@ -184,7 +209,7 @@ export function FocusWindow(): $CancellablePromise<void> {
  */
 export function GetAppAudioSessions(): $CancellablePromise<services$0.AppAudioSession[]> {
     return $Call.ByID(2457103343).then(($result: any) => {
-        return $$createType4($result);
+        return $$createType7($result);
     });
 }
 
@@ -200,7 +225,7 @@ export function GetAppIcon(sourceApp: string, aumid: string): $CancellablePromis
  */
 export function GetAppInfo(): $CancellablePromise<$models.AppInfo> {
     return $Call.ByID(3850092932).then(($result: any) => {
-        return $$createType5($result);
+        return $$createType8($result);
     });
 }
 
@@ -209,7 +234,7 @@ export function GetAppInfo(): $CancellablePromise<$models.AppInfo> {
  */
 export function GetAudioEndpoints(): $CancellablePromise<services$0.AudioEndpoint[]> {
     return $Call.ByID(3602306085).then(($result: any) => {
-        return $$createType7($result);
+        return $$createType10($result);
     });
 }
 
@@ -221,11 +246,21 @@ export function GetAutostart(): $CancellablePromise<boolean> {
 }
 
 /**
+ * GetAvailableHolidayCountries returns supported countries for Nager.Date public holidays,
+ * cached for 30 days under %APPDATA%/FreeMatrix Studios/Vinta/cache.
+ */
+export function GetAvailableHolidayCountries(): $CancellablePromise<$models.HolidayCountry[]> {
+    return $Call.ByID(996283026).then(($result: any) => {
+        return $$createType12($result);
+    });
+}
+
+/**
  * GetBatteryStatus returns current system power status from the services layer.
  */
 export function GetBatteryStatus(): $CancellablePromise<services$0.BatteryStatus> {
     return $Call.ByID(1722351164).then(($result: any) => {
-        return $$createType8($result);
+        return $$createType13($result);
     });
 }
 
@@ -255,7 +290,7 @@ export function GetCalendarData(): $CancellablePromise<string> {
  */
 export function GetContributors(): $CancellablePromise<$models.Contributor[]> {
     return $Call.ByID(3055720143).then(($result: any) => {
-        return $$createType10($result);
+        return $$createType15($result);
     });
 }
 
@@ -264,7 +299,7 @@ export function GetContributors(): $CancellablePromise<$models.Contributor[]> {
  */
 export function GetCurrentMonitor(): $CancellablePromise<$models.MonitorInfo> {
     return $Call.ByID(3990780328).then(($result: any) => {
-        return $$createType11($result);
+        return $$createType16($result);
     });
 }
 
@@ -274,7 +309,7 @@ export function GetCurrentMonitor(): $CancellablePromise<$models.MonitorInfo> {
  */
 export function GetCustomLocales(): $CancellablePromise<{ [_ in string]?: string }> {
     return $Call.ByID(3983095557).then(($result: any) => {
-        return $$createType12($result);
+        return $$createType17($result);
     });
 }
 
@@ -283,7 +318,7 @@ export function GetCustomLocales(): $CancellablePromise<{ [_ in string]?: string
  */
 export function GetDeveloperAnnouncements(): $CancellablePromise<$models.AnnouncementsPayload> {
     return $Call.ByID(3040284799).then(($result: any) => {
-        return $$createType13($result);
+        return $$createType18($result);
     });
 }
 
@@ -292,7 +327,7 @@ export function GetDeveloperAnnouncements(): $CancellablePromise<$models.Announc
  */
 export function GetDisplayLayout(): $CancellablePromise<$models.DisplayLayout> {
     return $Call.ByID(2439750779).then(($result: any) => {
-        return $$createType14($result);
+        return $$createType19($result);
     });
 }
 
@@ -308,6 +343,15 @@ export function GetFlashcardsData(): $CancellablePromise<string> {
  */
 export function GetGlobalShortcut(): $CancellablePromise<string> {
     return $Call.ByID(500280652);
+}
+
+/**
+ * GetGoogleCalendarStatus returns whether Google Calendar is connected via DPAPI tokens.
+ */
+export function GetGoogleCalendarStatus(): $CancellablePromise<$models.GoogleCalendarStatus> {
+    return $Call.ByID(304707814).then(($result: any) => {
+        return $$createType3($result);
+    });
 }
 
 /**
@@ -329,7 +373,7 @@ export function GetHardwareAcceleration(): $CancellablePromise<boolean> {
  */
 export function GetInstalledWindowsApps(forceRefresh: boolean): $CancellablePromise<$models.WindowsAppItem[]> {
     return $Call.ByID(38193654, forceRefresh).then(($result: any) => {
-        return $$createType16($result);
+        return $$createType21($result);
     });
 }
 
@@ -345,6 +389,16 @@ export function GetNamedGlobalShortcut(name: string): $CancellablePromise<string
  */
 export function GetNotifications(): $CancellablePromise<string> {
     return $Call.ByID(1044629443);
+}
+
+/**
+ * GetPublicHolidays fetches public holidays for the specified year and ISO country code,
+ * using an annual disk cache under %APPDATA%/FreeMatrix Studios/Vinta/cache.
+ */
+export function GetPublicHolidays(year: number, countryCode: string): $CancellablePromise<$models.PublicHoliday[]> {
+    return $Call.ByID(1953954609, year, countryCode).then(($result: any) => {
+        return $$createType23($result);
+    });
 }
 
 /**
@@ -366,7 +420,7 @@ export function GetSettings(): $CancellablePromise<string> {
  */
 export function GetSettingsBackups(): $CancellablePromise<$models.SettingsBackupInfo[]> {
     return $Call.ByID(28732699).then(($result: any) => {
-        return $$createType18($result);
+        return $$createType25($result);
     });
 }
 
@@ -375,7 +429,7 @@ export function GetSettingsBackups(): $CancellablePromise<$models.SettingsBackup
  */
 export function GetSystemDiagnostics(): $CancellablePromise<$models.SystemDiagnostics> {
     return $Call.ByID(306280716).then(($result: any) => {
-        return $$createType19($result);
+        return $$createType26($result);
     });
 }
 
@@ -384,7 +438,7 @@ export function GetSystemDiagnostics(): $CancellablePromise<$models.SystemDiagno
  */
 export function GetSystemTelemetry(): $CancellablePromise<services$0.SystemTelemetry> {
     return $Call.ByID(3760642775).then(($result: any) => {
-        return $$createType20($result);
+        return $$createType27($result);
     });
 }
 
@@ -414,7 +468,7 @@ export function GetUpdateRepo(): $CancellablePromise<string> {
  */
 export function GetWirelessStatus(): $CancellablePromise<services$0.WirelessStatus> {
     return $Call.ByID(794979391).then(($result: any) => {
-        return $$createType21($result);
+        return $$createType28($result);
     });
 }
 
@@ -437,7 +491,7 @@ export function ImportSettingsFileDialog(): $CancellablePromise<string> {
  */
 export function ImportThemeDialog(): $CancellablePromise<$models.ThemeInfo | null> {
     return $Call.ByID(1943468227).then(($result: any) => {
-        return $$createType23($result);
+        return $$createType30($result);
     });
 }
 
@@ -446,7 +500,7 @@ export function ImportThemeDialog(): $CancellablePromise<$models.ThemeInfo | nul
  */
 export function InspectShelfFiles(paths: string[]): $CancellablePromise<$models.ShelfFileItem[]> {
     return $Call.ByID(4271776190, paths).then(($result: any) => {
-        return $$createType24($result);
+        return $$createType31($result);
     });
 }
 
@@ -491,7 +545,7 @@ export function LaunchWindowsApp(target: string): $CancellablePromise<void> {
  */
 export function ListNotes(): $CancellablePromise<$models.NoteFileInfo[]> {
     return $Call.ByID(2184398716).then(($result: any) => {
-        return $$createType26($result);
+        return $$createType33($result);
     });
 }
 
@@ -500,7 +554,7 @@ export function ListNotes(): $CancellablePromise<$models.NoteFileInfo[]> {
  */
 export function ListThemes(): $CancellablePromise<$models.ThemeInfo[]> {
     return $Call.ByID(44849841).then(($result: any) => {
-        return $$createType27($result);
+        return $$createType34($result);
     });
 }
 
@@ -572,7 +626,7 @@ export function PauseUpdateDownload(): $CancellablePromise<void> {
  */
 export function PromptChooseShelfFiles(): $CancellablePromise<$models.ShelfFileItem[]> {
     return $Call.ByID(2406650291).then(($result: any) => {
-        return $$createType24($result);
+        return $$createType31($result);
     });
 }
 
@@ -1028,7 +1082,7 @@ export function StopSystemTelemetry(): $CancellablePromise<boolean> {
  */
 export function StripShelfImageMetadata(paths: string[]): $CancellablePromise<$models.ShelfFileItem[]> {
     return $Call.ByID(4085277947, paths).then(($result: any) => {
-        return $$createType24($result);
+        return $$createType31($result);
     });
 }
 
@@ -1082,28 +1136,35 @@ export function UpdateIslandRect(x: number, y: number, w: number, h: number): $C
 const $$createType0 = $models.ShelfFileItem.createFrom;
 const $$createType1 = $models.UpdateCheckResult.createFrom;
 const $$createType2 = $Create.Nullable($$createType1);
-const $$createType3 = services$0.AppAudioSession.createFrom;
-const $$createType4 = $Create.Array($$createType3);
-const $$createType5 = $models.AppInfo.createFrom;
-const $$createType6 = services$0.AudioEndpoint.createFrom;
+const $$createType3 = $models.GoogleCalendarStatus.createFrom;
+const $$createType4 = $models.GoogleCalendarEventDTO.createFrom;
+const $$createType5 = $Create.Array($$createType4);
+const $$createType6 = services$0.AppAudioSession.createFrom;
 const $$createType7 = $Create.Array($$createType6);
-const $$createType8 = services$0.BatteryStatus.createFrom;
-const $$createType9 = $models.Contributor.createFrom;
+const $$createType8 = $models.AppInfo.createFrom;
+const $$createType9 = services$0.AudioEndpoint.createFrom;
 const $$createType10 = $Create.Array($$createType9);
-const $$createType11 = $models.MonitorInfo.createFrom;
-const $$createType12 = $Create.Map($Create.Any, $Create.Any);
-const $$createType13 = $models.AnnouncementsPayload.createFrom;
-const $$createType14 = $models.DisplayLayout.createFrom;
-const $$createType15 = $models.WindowsAppItem.createFrom;
-const $$createType16 = $Create.Array($$createType15);
-const $$createType17 = $models.SettingsBackupInfo.createFrom;
-const $$createType18 = $Create.Array($$createType17);
-const $$createType19 = $models.SystemDiagnostics.createFrom;
-const $$createType20 = services$0.SystemTelemetry.createFrom;
-const $$createType21 = services$0.WirelessStatus.createFrom;
-const $$createType22 = $models.ThemeInfo.createFrom;
-const $$createType23 = $Create.Nullable($$createType22);
-const $$createType24 = $Create.Array($$createType0);
-const $$createType25 = $models.NoteFileInfo.createFrom;
-const $$createType26 = $Create.Array($$createType25);
-const $$createType27 = $Create.Array($$createType22);
+const $$createType11 = $models.HolidayCountry.createFrom;
+const $$createType12 = $Create.Array($$createType11);
+const $$createType13 = services$0.BatteryStatus.createFrom;
+const $$createType14 = $models.Contributor.createFrom;
+const $$createType15 = $Create.Array($$createType14);
+const $$createType16 = $models.MonitorInfo.createFrom;
+const $$createType17 = $Create.Map($Create.Any, $Create.Any);
+const $$createType18 = $models.AnnouncementsPayload.createFrom;
+const $$createType19 = $models.DisplayLayout.createFrom;
+const $$createType20 = $models.WindowsAppItem.createFrom;
+const $$createType21 = $Create.Array($$createType20);
+const $$createType22 = $models.PublicHoliday.createFrom;
+const $$createType23 = $Create.Array($$createType22);
+const $$createType24 = $models.SettingsBackupInfo.createFrom;
+const $$createType25 = $Create.Array($$createType24);
+const $$createType26 = $models.SystemDiagnostics.createFrom;
+const $$createType27 = services$0.SystemTelemetry.createFrom;
+const $$createType28 = services$0.WirelessStatus.createFrom;
+const $$createType29 = $models.ThemeInfo.createFrom;
+const $$createType30 = $Create.Nullable($$createType29);
+const $$createType31 = $Create.Array($$createType0);
+const $$createType32 = $models.NoteFileInfo.createFrom;
+const $$createType33 = $Create.Array($$createType32);
+const $$createType34 = $Create.Array($$createType29);

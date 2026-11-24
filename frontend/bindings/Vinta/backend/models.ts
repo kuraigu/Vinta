@@ -250,6 +250,106 @@ export class DisplayLayout {
 }
 
 /**
+ * GoogleCalendarEventDTO represents a normalized event fetched from Google Calendar API v3.
+ */
+export class GoogleCalendarEventDTO {
+    "id": string;
+    "title": string;
+    "description": string;
+    "date": string;
+    "startTime": string;
+    "endTime": string;
+    "isAllDay": boolean;
+    "location": string;
+    "hangoutLink": string;
+    "isHoliday": boolean;
+    "calendarId": string;
+
+    /** Creates a new GoogleCalendarEventDTO instance. */
+    constructor($$source: Partial<GoogleCalendarEventDTO> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("title" in $$source)) {
+            this["title"] = "";
+        }
+        if (!("description" in $$source)) {
+            this["description"] = "";
+        }
+        if (!("date" in $$source)) {
+            this["date"] = "";
+        }
+        if (!("startTime" in $$source)) {
+            this["startTime"] = "";
+        }
+        if (!("endTime" in $$source)) {
+            this["endTime"] = "";
+        }
+        if (!("isAllDay" in $$source)) {
+            this["isAllDay"] = false;
+        }
+        if (!("location" in $$source)) {
+            this["location"] = "";
+        }
+        if (!("hangoutLink" in $$source)) {
+            this["hangoutLink"] = "";
+        }
+        if (!("isHoliday" in $$source)) {
+            this["isHoliday"] = false;
+        }
+        if (!("calendarId" in $$source)) {
+            this["calendarId"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new GoogleCalendarEventDTO instance from a string or object.
+     */
+    static createFrom($$source: any = {}): GoogleCalendarEventDTO {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new GoogleCalendarEventDTO($$parsedSource as Partial<GoogleCalendarEventDTO>);
+    }
+}
+
+/**
+ * GoogleCalendarStatus describes the current Google Calendar OAuth connection state.
+ */
+export class GoogleCalendarStatus {
+    "connected": boolean;
+    "email": string;
+    "hasClientId": boolean;
+    "lastSyncedAt": number;
+
+    /** Creates a new GoogleCalendarStatus instance. */
+    constructor($$source: Partial<GoogleCalendarStatus> = {}) {
+        if (!("connected" in $$source)) {
+            this["connected"] = false;
+        }
+        if (!("email" in $$source)) {
+            this["email"] = "";
+        }
+        if (!("hasClientId" in $$source)) {
+            this["hasClientId"] = false;
+        }
+        if (!("lastSyncedAt" in $$source)) {
+            this["lastSyncedAt"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new GoogleCalendarStatus instance from a string or object.
+     */
+    static createFrom($$source: any = {}): GoogleCalendarStatus {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new GoogleCalendarStatus($$parsedSource as Partial<GoogleCalendarStatus>);
+    }
+}
+
+/**
  * HitRect defines a physical client rectangle for hit testing.
  */
 export class HitRect {
@@ -282,6 +382,34 @@ export class HitRect {
     static createFrom($$source: any = {}): HitRect {
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         return new HitRect($$parsedSource as Partial<HitRect>);
+    }
+}
+
+/**
+ * HolidayCountry describes a supported country in the Nager.Date public holidays API.
+ */
+export class HolidayCountry {
+    "countryCode": string;
+    "name": string;
+
+    /** Creates a new HolidayCountry instance. */
+    constructor($$source: Partial<HolidayCountry> = {}) {
+        if (!("countryCode" in $$source)) {
+            this["countryCode"] = "";
+        }
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new HolidayCountry instance from a string or object.
+     */
+    static createFrom($$source: any = {}): HolidayCountry {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new HolidayCountry($$parsedSource as Partial<HolidayCountry>);
     }
 }
 
@@ -378,6 +506,58 @@ export class NoteFileInfo {
     static createFrom($$source: any = {}): NoteFileInfo {
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         return new NoteFileInfo($$parsedSource as Partial<NoteFileInfo>);
+    }
+}
+
+/**
+ * PublicHoliday represents a single public holiday entry from Nager.Date.
+ */
+export class PublicHoliday {
+    "date": string;
+    "localName": string;
+    "name": string;
+    "countryCode": string;
+    "fixed": boolean;
+    "global": boolean;
+    "types": string[];
+
+    /** Creates a new PublicHoliday instance. */
+    constructor($$source: Partial<PublicHoliday> = {}) {
+        if (!("date" in $$source)) {
+            this["date"] = "";
+        }
+        if (!("localName" in $$source)) {
+            this["localName"] = "";
+        }
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("countryCode" in $$source)) {
+            this["countryCode"] = "";
+        }
+        if (!("fixed" in $$source)) {
+            this["fixed"] = false;
+        }
+        if (!("global" in $$source)) {
+            this["global"] = false;
+        }
+        if (!("types" in $$source)) {
+            this["types"] = [];
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new PublicHoliday instance from a string or object.
+     */
+    static createFrom($$source: any = {}): PublicHoliday {
+        const $$createField6_0 = $$createType4;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("types" in $$parsedSource) {
+            $$parsedSource["types"] = $$createField6_0($$parsedSource["types"]);
+        }
+        return new PublicHoliday($$parsedSource as Partial<PublicHoliday>);
     }
 }
 
@@ -691,7 +871,7 @@ export class ThemeInfo {
      * Creates a new ThemeInfo instance from a string or object.
      */
     static createFrom($$source: any = {}): ThemeInfo {
-        const $$createField0_0 = $$createType4;
+        const $$createField0_0 = $$createType5;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("manifest" in $$parsedSource) {
             $$parsedSource["manifest"] = $$createField0_0($$parsedSource["manifest"]);
@@ -806,7 +986,7 @@ export class UpdateCheckResult {
      * Creates a new UpdateCheckResult instance from a string or object.
      */
     static createFrom($$source: any = {}): UpdateCheckResult {
-        const $$createField4_0 = $$createType5;
+        const $$createField4_0 = $$createType6;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("release" in $$parsedSource) {
             $$parsedSource["release"] = $$createField4_0($$parsedSource["release"]);
@@ -859,7 +1039,7 @@ export class VintaThemeManifest {
      * Creates a new VintaThemeManifest instance from a string or object.
      */
     static createFrom($$source: any = {}): VintaThemeManifest {
-        const $$createField10_0 = $$createType6;
+        const $$createField10_0 = $$createType7;
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         if ("meta" in $$parsedSource) {
             $$parsedSource["meta"] = $$createField10_0($$parsedSource["meta"]);
@@ -917,6 +1097,7 @@ const $$createType0 = AnnouncementItem.createFrom;
 const $$createType1 = $Create.Array($$createType0);
 const $$createType2 = MonitorInfo.createFrom;
 const $$createType3 = $Create.Array($$createType2);
-const $$createType4 = VintaThemeManifest.createFrom;
-const $$createType5 = ReleaseInfo.createFrom;
-const $$createType6 = $Create.Map($Create.Any, $Create.Any);
+const $$createType4 = $Create.Array($Create.Any);
+const $$createType5 = VintaThemeManifest.createFrom;
+const $$createType6 = ReleaseInfo.createFrom;
+const $$createType7 = $Create.Map($Create.Any, $Create.Any);
