@@ -16,16 +16,29 @@
     Plus,
     Trash2,
     ListFilter,
-    Calendar as CalendarIcon
+    Calendar as CalendarIcon,
+    RefreshCw,
+    SlidersHorizontal,
+    Flag
   } from 'lucide-svelte'
   import {
     calendarStore,
     calendarPendingActionStore,
+    googleCalendarStatusStore,
+    holidayCountriesStore,
     setSelectedCalendarDate,
     addCalendarEvent,
     updateCalendarEvent,
     deleteCalendarEvent,
     discardPastCalendarEvents,
+    addCalendarFeed,
+    removeCalendarFeed,
+    syncAllCalendarFeeds,
+    loadHolidayCountries,
+    syncPublicHolidays,
+    refreshGoogleCalendarStatus,
+    disconnectGoogleCalendar,
+    syncGoogleCalendar,
     isCalendarEventPast,
     formatDateKey,
     type CalendarEvent
@@ -38,8 +51,11 @@
   import ScrollView from './ScrollView.svelte'
   import ActionCapsule from './ActionCapsule.svelte'
   import EditorModal from './EditorModal.svelte'
+  import DrawerPanel from './DrawerPanel.svelte'
+  import CustomSelect from './CustomSelect.svelte'
   import CustomDatePicker from './CustomDatePicker.svelte'
   import CustomTimePicker from './CustomTimePicker.svelte'
+  import ToggleSwitch from './ToggleSwitch.svelte'
   import HorizontalTabSelection, {
     type TabItem
   } from './HorizontalTabSelection.svelte'
@@ -48,6 +64,8 @@
     dateFormatStore,
     formatUserDate,
     pageVisibilityStore,
+    holidaySourceStore,
+    holidayCountryStore,
     tStore,
     type IslandConfig
   } from '../store'
@@ -73,8 +91,23 @@
   let realToday = $state(new Date())
   let viewDate = $state(new Date())
   let viewMode = $state<'month' | 'year' | 'decade'>('month')
-  let activeTab = $state<'calendar' | 'agenda'>('calendar')
+  let activeTab = $state<'calendar' | 'agenda' | 'holidays'>('calendar')
   let agendaFilter = $state<'all' | 'today' | 'upcoming'>('all')
+  let sourceFilter = $state<'all' | 'local' | 'google' | 'ical'>('all')
+
+  // Sources & Sync drawer state
+  let showSourcesDrawer = $state(false)
+  let feedName = $state('')
+  let feedUrl = $state('')
+
+  const countryOptions = $derived(
+    $holidayCountriesStore.length > 0
+      ? $holidayCountriesStore.map((c) => ({
+          value: c.countryCode,
+          label: `${c.name} (${c.countryCode})`
+        }))
+      : [{ value: $holidayCountryStore, label: $holidayCountryStore }]
+  )
 
   // Event modal state
   let isModalOpen = $state(false)
@@ -89,20 +122,50 @@
   let formLocation = $state('')
   let formDescription = $state('')
 
-  let calendarTabs: TabItem<'calendar' | 'agenda'>[] = $derived([
-    {
-      id: 'calendar',
-      label: $tStore('calendar.title'),
-      icon: CalendarDays,
-      tooltip: ''
-    },
-    {
-      id: 'agenda',
-      label: $tStore('calendar.agenda_tab'),
-      icon: ListFilter,
-      tooltip: ''
+  let calendarTabs: TabItem<'calendar' | 'agenda' | 'holidays'>[] = $derived(
+    $holidaySourceStore !== 'off'
+      ? [
+          {
+            id: 'calendar',
+            label: $tStore('calendar.title'),
+            icon: CalendarDays,
+            tooltip: ''
+          },
+          {
+            id: 'agenda',
+            label: $tStore('calendar.agenda_tab'),
+            icon: ListFilter,
+            tooltip: ''
+          },
+          {
+            id: 'holidays',
+            label: $tStore('calendar.holidays_tab'),
+            icon: Flag,
+            tooltip: ''
+          }
+        ]
+      : [
+          {
+            id: 'calendar',
+            label: $tStore('calendar.title'),
+            icon: CalendarDays,
+            tooltip: ''
+          },
+          {
+            id: 'agenda',
+            label: $tStore('calendar.agenda_tab'),
+            icon: ListFilter,
+            tooltip: ''
+          }
+        ]
+  )
+
+  function syncActiveTabOnHolidayToggle() {
+    if ($holidaySourceStore === 'off' && activeTab === 'holidays') {
+      activeTab = 'calendar'
     }
-  ])
+  }
+  $effect(syncActiveTabOnHolidayToggle)
 
   let agendaFilterTabs: TabItem<'all' | 'today' | 'upcoming'>[] = $derived([
     { id: 'all', label: $tStore('calendar.filter_all'), tooltip: '' },
@@ -113,6 +176,13 @@
   let timer: ReturnType<typeof setInterval>
 
   onMount(() => {
+    void loadHolidayCountries()
+    void syncPublicHolidays()
+    void refreshGoogleCalendarStatus().then(() => {
+      if ($googleCalendarStatusStore.connected) {
+        void syncGoogleCalendar()
+      }
+    })
     timer = setInterval(() => {
       realToday = new Date()
     }, 60000)
@@ -280,28 +350,62 @@
   let todayDateLabel = $derived.by(computeTodayDateLabel)
 
   function computeAllAgendaEvents(): CalendarEvent[] {
-    return [...$calendarStore.events].sort((a, b) => {
-      const cmpDate = a.date.localeCompare(b.date)
-      if (cmpDate !== 0) return cmpDate
-      return (a.startTime || '').localeCompare(b.startTime || '')
-    })
+    return $calendarStore.events
+      .filter((e) => e.source !== 'holiday' && !e.isHoliday)
+      .sort((a, b) => {
+        const cmpDate = a.date.localeCompare(b.date)
+        if (cmpDate !== 0) return cmpDate
+        return (a.startTime || '').localeCompare(b.startTime || '')
+      })
   }
   let allAgendaEvents = $derived.by(computeAllAgendaEvents)
 
+  function computeHolidayEvents(): CalendarEvent[] {
+    return $calendarStore.events
+      .filter((e) => e.source === 'holiday' || e.isHoliday)
+      .sort((a, b) => a.date.localeCompare(b.date))
+  }
+  let holidayEvents = $derived.by(computeHolidayEvents)
+
+  let availableSourceFilters = $derived.by(() => {
+    const hasGoogle =
+      $googleCalendarStatusStore.connected ||
+      allAgendaEvents.some((e) => e.source === 'google')
+    const hasIcal =
+      $calendarStore.feeds.length > 0 ||
+      allAgendaEvents.some((e) => e.source === 'synced')
+    if (!hasGoogle && !hasIcal) return []
+    const items: Array<'all' | 'local' | 'google' | 'ical'> = ['all', 'local']
+    if (hasGoogle) items.push('google')
+    if (hasIcal) items.push('ical')
+    return items
+  })
+
   function computeFilteredAgendaEvents(): CalendarEvent[] {
     const todayKey = formatDateKey(new Date())
+    let base = allAgendaEvents
     if (agendaFilter === 'today') {
-      return allAgendaEvents.filter((e) => e.date === todayKey)
+      base = base.filter((e) => e.date === todayKey)
+    } else if (agendaFilter === 'upcoming') {
+      base = base.filter((e) => !isCalendarEventPast(e))
     }
-    if (agendaFilter === 'upcoming') {
-      return allAgendaEvents.filter((e) => !isCalendarEventPast(e))
+    if (sourceFilter === 'local') {
+      return base.filter((e) => e.source === 'local')
     }
-    return allAgendaEvents
+    if (sourceFilter === 'google') {
+      return base.filter((e) => e.source === 'google')
+    }
+    if (sourceFilter === 'ical') {
+      return base.filter((e) => e.source === 'synced')
+    }
+    return base
   }
   let filteredAgendaEvents = $derived.by(computeFilteredAgendaEvents)
 
   function computePastEventsCount(): number {
-    return $calendarStore.events.filter((e) => isCalendarEventPast(e)).length
+    return $calendarStore.events.filter(
+      (e) => e.source === 'local' && isCalendarEventPast(e)
+    ).length
   }
   let pastEventsCount = $derived.by(computePastEventsCount)
 
@@ -608,6 +712,18 @@
               </div>
             </div>
           {/if}
+          <button
+            type="button"
+            class="icon-nav-btn"
+            onclick={() => (showSourcesDrawer = true)}
+            aria-label={$tStore('calendar.sources_title')}
+            use:islandTooltip={{
+              text: $tStore('calendar.sources_title'),
+              position: 'bottom'
+            }}
+          >
+            <SlidersHorizontal size={13} />
+          </button>
         {/snippet}
       </PageHeader>
 
@@ -626,6 +742,20 @@
                   />
 
                   <div class="agenda-toolbar-actions">
+                    {#if availableSourceFilters.length > 0}
+                      <div class="agenda-source-pills">
+                        {#each availableSourceFilters as src (src)}
+                          <button
+                            type="button"
+                            class="agenda-source-pill"
+                            class:active={sourceFilter === src}
+                            onclick={() => (sourceFilter = src)}
+                          >
+                            {$tStore(`calendar.src_${src}`)}
+                          </button>
+                        {/each}
+                      </div>
+                    {/if}
                     {#if pastEventsCount > 0}
                       <button
                         type="button"
@@ -676,6 +806,34 @@
                           onEdit={handleOpenEditModal}
                           onDelete={deleteCalendarEvent}
                         />
+                      {/each}
+                    </div>
+                  {/if}
+                </ScrollView>
+              </div>
+            {:else if activeTab === 'holidays'}
+              <!-- PUBLIC HOLIDAYS TAB -->
+              <div class="agenda-tab-view">
+                <div class="agenda-toolbar-row">
+                  <div class="holidays-tab-meta">
+                    <Flag size={13} />
+                    <span>{$holidayCountryStore}</span>
+                    <span class="holidays-count-pill"
+                      >{holidayEvents.length}</span
+                    >
+                  </div>
+                </div>
+
+                <ScrollView class="calendar-agenda-scroll-view">
+                  {#if holidayEvents.length === 0}
+                    <div class="agenda-empty-state">
+                      <Flag size={26} />
+                      <span>{$tStore('calendar.no_holidays')}</span>
+                    </div>
+                  {:else}
+                    <div class="agenda-stream-list">
+                      {#each holidayEvents as event (event.id)}
+                        <AgendaEventCard {event} variant="detailed" />
                       {/each}
                     </div>
                   {/if}
@@ -1074,6 +1232,167 @@
         </div>
       {/snippet}
     </EditorModal>
+  {/if}
+
+  {#if showSourcesDrawer}
+    <DrawerPanel
+      variant="overlay"
+      title={$tStore('calendar.sources_title')}
+      onClose={() => (showSourcesDrawer = false)}
+    >
+      <ScrollView class="sources-scroll-area">
+        <div class="sources-drawer-body">
+          <BentoCard variant="bento" class="sources-card">
+            <h4 class="sources-heading">
+              {$tStore('calendar.holidays_heading')}
+            </h4>
+            <div class="sources-toggle-row">
+              <span class="sources-toggle-text"
+                >{$tStore('calendar.show_holidays')}</span
+              >
+              <ToggleSwitch
+                checked={$holidaySourceStore !== 'off'}
+                ariaLabel={$tStore('calendar.show_holidays')}
+                onchange={(checked) => {
+                  $holidaySourceStore = checked ? 'auto' : 'off'
+                  void syncPublicHolidays()
+                  if ($googleCalendarStatusStore.connected) {
+                    void syncGoogleCalendar()
+                  }
+                }}
+              />
+            </div>
+            {#if $holidaySourceStore !== 'off'}
+              <div class="sources-field">
+                <span class="sources-label"
+                  >{$tStore('calendar.holiday_country_label')}</span
+                >
+                <CustomSelect
+                  options={countryOptions}
+                  value={$holidayCountryStore}
+                  searchable={true}
+                  fullWidth={true}
+                  onChange={(val) => {
+                    $holidayCountryStore = val
+                    void syncPublicHolidays(new Date().getFullYear(), val)
+                  }}
+                />
+              </div>
+            {/if}
+          </BentoCard>
+
+          {#if $googleCalendarStatusStore.connected}
+            <BentoCard variant="bento" class="sources-card">
+              <div class="sources-heading-row">
+                <h4 class="sources-heading">
+                  {$tStore('calendar.google_heading')}
+                </h4>
+                <span class="sources-badge"
+                  >{$googleCalendarStatusStore.email || 'Connected'}</span
+                >
+              </div>
+              <div class="sources-btn-row">
+                <button
+                  type="button"
+                  class="sources-btn primary"
+                  disabled={$calendarStore.isSyncing}
+                  onclick={() => void syncGoogleCalendar()}
+                >
+                  <RefreshCw size={12} />
+                  <span>{$tStore('calendar.sync_now')}</span>
+                </button>
+                <button
+                  type="button"
+                  class="sources-btn danger"
+                  onclick={() => void disconnectGoogleCalendar()}
+                >
+                  <span>{$tStore('calendar.disconnect')}</span>
+                </button>
+              </div>
+            </BentoCard>
+          {/if}
+
+          <BentoCard variant="bento" class="sources-card">
+            <div class="sources-heading-row">
+              <h4 class="sources-heading">
+                {$tStore('calendar.ical_heading')}
+              </h4>
+              {#if $calendarStore.feeds.length > 0}
+                <button
+                  type="button"
+                  class="sources-link-btn"
+                  disabled={$calendarStore.isSyncing}
+                  onclick={() => void syncAllCalendarFeeds()}
+                >
+                  <RefreshCw size={11} />
+                  <span>{$tStore('calendar.sync_now')}</span>
+                </button>
+              {/if}
+            </div>
+            <div class="sources-feed-form">
+              <div class="sources-field">
+                <label class="sources-label" for="ical-feed-name"
+                  >{$tStore('calendar.feed_name_label')}</label
+                >
+                <input
+                  id="ical-feed-name"
+                  type="text"
+                  class="sources-input"
+                  placeholder={$tStore('calendar.feed_name_placeholder')}
+                  bind:value={feedName}
+                />
+              </div>
+              <div class="sources-field">
+                <label class="sources-label" for="ical-feed-url"
+                  >{$tStore('calendar.feed_url_label')}</label
+                >
+                <input
+                  id="ical-feed-url"
+                  type="url"
+                  class="sources-input"
+                  placeholder={$tStore('calendar.feed_url_placeholder')}
+                  bind:value={feedUrl}
+                />
+              </div>
+              <button
+                type="button"
+                class="sources-btn"
+                disabled={!feedName.trim() || !feedUrl.trim()}
+                onclick={() => {
+                  addCalendarFeed(feedName.trim(), feedUrl.trim())
+                  feedName = ''
+                  feedUrl = ''
+                  void syncAllCalendarFeeds()
+                }}
+              >
+                <Plus size={12} />
+                <span>{$tStore('calendar.add_feed')}</span>
+              </button>
+            </div>
+
+            {#if $calendarStore.feeds.length > 0}
+              <div class="sources-feed-list">
+                {#each $calendarStore.feeds as feed (feed.id)}
+                  <div class="sources-feed-item">
+                    <span class="sources-feed-name" title={feed.url}
+                      >{feed.name}</span
+                    >
+                    <button
+                      type="button"
+                      class="sources-icon-del"
+                      aria-label={$tStore('common.delete')}
+                      onclick={() => removeCalendarFeed(feed.id)}
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                {/each}
+              </div>
+            {/if}
+          </BentoCard>
+        </div>
+      </ScrollView>
+    </DrawerPanel>
   {/if}
 </div>
 

@@ -188,10 +188,15 @@ export function notifyPostUpdateInstalled(newVersion: string): void {
 export function notifyCalendarEvent(params: {
   title?: string
   message: string
+  meetingUrl?: string
 }): void {
+  const fullMessage = params.meetingUrl
+    ? `${params.message} • Join: ${params.meetingUrl}`
+    : params.message
   sendVintaNotification({
     title: params.title?.trim() || 'Calendar Event',
-    message: params.message
+    message: fullMessage,
+    canOpen: Boolean(params.meetingUrl)
   })
 }
 

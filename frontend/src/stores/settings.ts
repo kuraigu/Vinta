@@ -701,6 +701,66 @@ export const autoDiscardPastEventsStore = persistentWritable<boolean>('vinta_aut
 // ============================================================================
 // 5. Weather
 // ============================================================================
+const TIMEZONE_COUNTRY_MAP: Record<string, string> = {
+  'Asia/Manila': 'PH',
+  'Asia/Tokyo': 'JP',
+  'Asia/Seoul': 'KR',
+  'Asia/Singapore': 'SG',
+  'Asia/Shanghai': 'CN',
+  'Asia/Hong_Kong': 'HK',
+  'Asia/Taipei': 'TW',
+  'Asia/Bangkok': 'TH',
+  'Asia/Jakarta': 'ID',
+  'Asia/Kuala_Lumpur': 'MY',
+  'Asia/Ho_Chi_Minh': 'VN',
+  'Asia/Kolkata': 'IN',
+  'Asia/Calcutta': 'IN',
+  'Australia/Sydney': 'AU',
+  'Australia/Melbourne': 'AU',
+  'Pacific/Auckland': 'NZ',
+  'Europe/London': 'GB',
+  'Europe/Paris': 'FR',
+  'Europe/Berlin': 'DE',
+  'Europe/Madrid': 'ES',
+  'Europe/Rome': 'IT',
+  'Europe/Amsterdam': 'NL',
+  'Europe/Zurich': 'CH',
+  'Europe/Stockholm': 'SE',
+  'Europe/Oslo': 'NO',
+  'Europe/Warsaw': 'PL',
+  'America/Toronto': 'CA',
+  'America/Vancouver': 'CA',
+  'America/Mexico_City': 'MX',
+  'America/Sao_Paulo': 'BR',
+  'America/Argentina/Buenos_Aires': 'AR',
+}
+
+/**
+ * Infers the user's ISO 3166-1 alpha-2 country code from timezone and locale.
+ */
+function inferDefaultHolidayCountry(): string {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+    if (tz && TIMEZONE_COUNTRY_MAP[tz]) {
+      return TIMEZONE_COUNTRY_MAP[tz]
+    }
+    const lang = typeof navigator !== 'undefined' ? navigator.language : ''
+    const parts = lang.split(/[-_]/)
+    if (parts.length >= 2 && /^[A-Za-z]{2}$/.test(parts[1])) {
+      return parts[1].toUpperCase()
+    }
+    if (tz && tz.startsWith('America/')) {
+      return 'US'
+    }
+  } catch {
+    // Fallback to US if Intl/navigator is unavailable
+  }
+  return 'US'
+}
+
+export type HolidaySourceMode = 'auto' | 'nager' | 'google' | 'off'
+export const holidaySourceStore = persistentWritable<HolidaySourceMode>('vinta_holiday_source', 'auto')
+export const holidayCountryStore = persistentWritable<string>('vinta_holiday_country', inferDefaultHolidayCountry())
 export const weatherLocationStore = persistentWritable<WeatherLocation>('vinta_weather_location', { name: 'Manila, Philippines', lat: 14.5995, lon: 120.9842 })
 export const weatherUnitStore = persistentWritable<TemperatureUnit>('vinta_weather_unit', inferDefaultTemperatureUnit())
 export const weatherAnimationsStore = persistentWritable<boolean>('vinta_weather_animations', true)

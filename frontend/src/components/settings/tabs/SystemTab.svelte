@@ -192,6 +192,8 @@
     'vinta_home_autohide',
     'vinta_media_autohide',
     'vinta_autohide_delay',
+    'vinta_holiday_source',
+    'vinta_holiday_country',
     'vinta_autohide_display',
     'vinta_hidden_pill_position',
     'vinta_wakemethod',

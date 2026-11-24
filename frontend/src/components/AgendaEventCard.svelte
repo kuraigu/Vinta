@@ -4,11 +4,15 @@
   and relative countdown ('in 15 mins').
 -->
 <script lang="ts">
-  import { Pencil, Trash2, MapPin, BellRing } from 'lucide-svelte'
+  import { Pencil, Trash2, MapPin, BellRing, Video, Flag } from 'lucide-svelte'
   import DiamondPattern from './patterns/DiamondPattern.svelte'
   import { islandTooltip } from '../services/islandTooltip'
   import { timeFormatStore, dateFormatStore, formatUserDate } from '../store'
-  import type { CalendarEvent } from '../stores/calendarStore'
+  import {
+    extractMeetingUrl,
+    type CalendarEvent
+  } from '../stores/calendarStore'
+  import { OpenURL } from '../../bindings/Vinta/backend/app.js'
   import './styles/AgendaEventCard.css'
 
   interface Props {
@@ -41,6 +45,28 @@
     const h12 = h % 12 || 12
     return `${h12}:${mStr} ${suffix}`
   }
+
+  function getSourceLabel(evt: CalendarEvent): string {
+    if (evt.source === 'holiday' || evt.isHoliday) return 'Holiday'
+    if (evt.source === 'google') return 'Google'
+    if (evt.source === 'synced') return 'iCal'
+    return ''
+  }
+
+  function openMeeting(url: string) {
+    if (typeof OpenURL === 'function') {
+      void OpenURL(url)
+    } else {
+      window.open(url, '_blank', 'noopener,noreferrer')
+    }
+  }
+
+  let meetingUrl = $derived(event ? extractMeetingUrl(event) : null)
+  let isHoliday = $derived(
+    event ? Boolean(event.isHoliday || event.source === 'holiday') : false
+  )
+  let isReadOnly = $derived(event ? event.source !== 'local' : false)
+  let sourceLabel = $derived(event ? getSourceLabel(event) : '')
 </script>
 
 {#if isEmpty || !event}
@@ -55,15 +81,23 @@
   <div class="agenda-card card-color-{event.color}">
     <div class="agenda-card-left">
       <div class="agenda-card-title-row">
+        {#if isHoliday}
+          <span class="agenda-holiday-icon" aria-hidden="true">
+            <Flag size={14} />
+          </span>
+        {/if}
         <span class="agenda-card-title">{event.title}</span>
         <div class="agenda-card-badges">
-          {#if event.notified}
+          {#if sourceLabel}
+            <span class="tray-source-pill">{sourceLabel}</span>
+          {/if}
+          {#if event.notified && !isHoliday}
             <span
               class="agenda-card-notified-badge"
               use:islandTooltip={'Notified'}
               aria-label="Notification delivered"
             >
-              <BellRing size={9.5} />
+              <BellRing size={12} />
             </span>
           {/if}
           <span class="agenda-card-date-badge">
@@ -91,9 +125,20 @@
 
     <DiamondPattern align="center" />
 
-    {#if onEdit || onDelete}
+    {#if meetingUrl || (!isReadOnly && (onEdit || onDelete))}
       <div class="tray-card-actions">
-        {#if onEdit}
+        {#if meetingUrl}
+          <button
+            type="button"
+            class="tray-card-action-btn"
+            onclick={() => openMeeting(meetingUrl)}
+            aria-label="Join meeting"
+            use:islandTooltip={'Join meeting'}
+          >
+            <Video size={14} />
+          </button>
+        {/if}
+        {#if !isReadOnly && onEdit}
           <button
             type="button"
             class="tray-card-action-btn"
@@ -101,10 +146,10 @@
             aria-label="Edit event"
             use:islandTooltip={'Edit event'}
           >
-            <Pencil size={12} />
+            <Pencil size={14} />
           </button>
         {/if}
-        {#if onDelete}
+        {#if !isReadOnly && onDelete}
           <button
             type="button"
             class="tray-card-action-btn danger"
@@ -112,7 +157,7 @@
             aria-label="Delete event"
             use:islandTooltip={'Delete event'}
           >
-            <Trash2 size={12} />
+            <Trash2 size={14} />
           </button>
         {/if}
       </div>
@@ -133,20 +178,25 @@
             Event
           {/if}
         </span>
-        {#if event.notified}
+        {#if isHoliday}
+          <span class="agenda-holiday-icon" aria-hidden="true">
+            <Flag size={12} />
+          </span>
+        {/if}
+        {#if event.notified && !isHoliday}
           <span
             class="tray-card-notified-chip"
             use:islandTooltip={'Notified'}
             aria-label="Notification delivered"
           >
-            <BellRing size={8} />
+            <BellRing size={11} />
           </span>
         {/if}
       </div>
       <span class="tray-card-title">{event.title}</span>
       {#if event.location}
         <span class="tray-card-loc">
-          <MapPin size={9} />
+          <MapPin size={11} />
           {event.location}
         </span>
       {/if}
@@ -154,9 +204,24 @@
 
     <DiamondPattern align="right" size="compact" />
 
-    {#if onEdit || onDelete}
+    {#if sourceLabel}
+      <span class="tray-source-pill">{sourceLabel}</span>
+    {/if}
+
+    {#if meetingUrl || (!isReadOnly && (onEdit || onDelete))}
       <div class="tray-card-actions">
-        {#if onEdit}
+        {#if meetingUrl}
+          <button
+            type="button"
+            class="tray-card-action-btn"
+            onclick={() => openMeeting(meetingUrl)}
+            aria-label="Join meeting"
+            use:islandTooltip={'Join meeting'}
+          >
+            <Video size={13} />
+          </button>
+        {/if}
+        {#if !isReadOnly && onEdit}
           <button
             type="button"
             class="tray-card-action-btn"
@@ -164,10 +229,10 @@
             aria-label="Edit event"
             use:islandTooltip={'Edit event'}
           >
-            <Pencil size={11} />
+            <Pencil size={13} />
           </button>
         {/if}
-        {#if onDelete}
+        {#if !isReadOnly && onDelete}
           <button
             type="button"
             class="tray-card-action-btn danger"
@@ -175,7 +240,7 @@
             aria-label="Delete event"
             use:islandTooltip={'Delete event'}
           >
-            <Trash2 size={11} />
+            <Trash2 size={13} />
           </button>
         {/if}
       </div>

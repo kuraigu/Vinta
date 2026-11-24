@@ -8,8 +8,19 @@
 import { writable, get } from 'svelte/store'
 import {
   GetCalendarData,
-  SaveCalendarData
+  SaveCalendarData,
+  GetPublicHolidays,
+  GetAvailableHolidayCountries,
+  GetGoogleCalendarStatus,
+  ConnectGoogleCalendar,
+  DisconnectGoogleCalendar,
+  FetchGoogleCalendarEvents
 } from '../../bindings/Vinta/backend/app.js'
+import type {
+  PublicHoliday,
+  HolidayCountry,
+  GoogleCalendarStatus
+} from '../../bindings/Vinta/backend/models.js'
 import {
   notifyCalendarEvent,
   sendVintaNotification
@@ -20,6 +31,8 @@ import {
 } from './habitsStore'
 import {
   autoDiscardPastEventsStore,
+  holidaySourceStore,
+  holidayCountryStore,
   pageVisibilityStore,
   homeWidgetsVisibilityStore
 } from './settings'
@@ -35,9 +48,35 @@ export interface CalendarEvent {
   color: 'indigo' | 'emerald' | 'amber' | 'purple' | 'rose' | 'sky'
   locationUrl?: string
   location?: string
-  source: 'local' | 'synced'
+  source: 'local' | 'synced' | 'google' | 'holiday'
+  isHoliday?: boolean
   feedId?: string
   notified?: boolean
+}
+
+export const googleCalendarStatusStore = writable<GoogleCalendarStatus>({
+  connected: false,
+  email: '',
+  hasClientId: false,
+  lastSyncedAt: 0
+})
+
+export const holidayCountriesStore = writable<HolidayCountry[]>([])
+
+const MEETING_URL_REGEX =
+  /https?:\/\/(?:[\w.-]*zoom\.us\/j\/[^\s<>"]+|meet\.google\.com\/[a-z-]+|teams\.microsoft\.com\/l\/meetup-join\/[^\s<>"]+)/i
+
+/**
+ * Extracts a Zoom, Google Meet, or Microsoft Teams meeting URL from a calendar event.
+ */
+export function extractMeetingUrl(evt: CalendarEvent): string | null {
+  const candidates = [evt.locationUrl, evt.location, evt.description]
+  for (const text of candidates) {
+    if (!text) continue
+    const match = text.match(MEETING_URL_REGEX)
+    if (match?.[0]) return match[0]
+  }
+  return null
 }
 
 export interface CalendarFeed {
@@ -511,8 +550,11 @@ export async function syncAllCalendarFeeds() {
       return {
         ...s,
         feeds: updatedFeeds,
-        // Retain local events while updating synced ones
-        events: [...s.events.filter((e) => e.source === 'local'), ...mergedSynced],
+        // Retain local, google, and holiday events while updating synced iCal ones
+        events: [
+          ...s.events.filter((e) => e.source !== 'synced'),
+          ...mergedSynced
+        ],
         isSyncing: false
       }
     })
@@ -521,6 +563,211 @@ export async function syncAllCalendarFeeds() {
       ...s,
       isSyncing: false,
       lastSyncError: err instanceof Error ? err.message : 'Calendar sync failed'
+    }))
+  }
+}
+
+function normalizeHolidayKey(date: string, title: string): string {
+  const norm = title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+  return `${date}|${norm}`
+}
+
+/**
+ * Loads supported Nager.Date countries once into holidayCountriesStore.
+ */
+export async function loadHolidayCountries(): Promise<void> {
+  if (get(holidayCountriesStore).length > 0) return
+  if (typeof GetAvailableHolidayCountries !== 'function') return
+  try {
+    const list = await GetAvailableHolidayCountries()
+    if (Array.isArray(list)) {
+      holidayCountriesStore.set(list)
+    }
+  } catch {
+    // ignore offline error
+  }
+}
+
+const HOLIDAY_COLORS: CalendarEvent['color'][] = [
+  'indigo',
+  'emerald',
+  'amber',
+  'purple',
+  'rose',
+  'sky'
+]
+
+function pickHolidayColor(seed: string): CalendarEvent['color'] {
+  let hash = 0
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash * 31 + seed.charCodeAt(i)) >>> 0
+  }
+  return HOLIDAY_COLORS[hash % HOLIDAY_COLORS.length]
+}
+
+/**
+ * Syncs annual public holidays from Nager.Date and applies anti-doubling rules against Google holidays.
+ */
+export async function syncPublicHolidays(
+  year = new Date().getFullYear(),
+  countryCode = get(holidayCountryStore)
+): Promise<void> {
+  const mode = get(holidaySourceStore)
+  if (mode === 'off' || mode === 'google') {
+    calendarStore.update((s) => ({
+      ...s,
+      events: s.events.filter((e) => e.source !== 'holiday')
+    }))
+    return
+  }
+  if (typeof GetPublicHolidays !== 'function') return
+
+  try {
+    const raw: PublicHoliday[] = await GetPublicHolidays(year, countryCode)
+    if (!Array.isArray(raw)) return
+
+    calendarStore.update((s) => {
+      const googleHolidayKeys = new Set(
+        s.events
+          .filter((e) => e.source === 'google' && e.isHoliday)
+          .map((e) => normalizeHolidayKey(e.date, e.title))
+      )
+      const nonHoliday = s.events.filter((e) => e.source !== 'holiday')
+      const mapped: CalendarEvent[] = []
+      for (const h of raw) {
+        const title = (h.localName || h.name || '').trim()
+        if (!h.date || !title) continue
+        if (
+          mode === 'auto' &&
+          googleHolidayKeys.has(normalizeHolidayKey(h.date, title))
+        ) {
+          continue
+        }
+        mapped.push({
+          id: `holiday-${h.countryCode}-${h.date}-${title.toLowerCase().replace(/\s+/g, '-')}`,
+          title,
+          description: h.name && h.name !== title ? h.name : 'Public Holiday',
+          date: h.date,
+          startTime: '',
+          isAllDay: true,
+          color: pickHolidayColor(`${h.date}|${title}`),
+          source: 'holiday',
+          isHoliday: true,
+          notified: true
+        })
+      }
+      return {
+        ...s,
+        events: [...nonHoliday, ...mapped]
+      }
+    })
+  } catch {
+    // ignore offline error
+  }
+}
+
+/**
+ * Refreshes Google Calendar OAuth connection status from the DPAPI vault.
+ */
+export async function refreshGoogleCalendarStatus(): Promise<void> {
+  if (typeof GetGoogleCalendarStatus !== 'function') return
+  try {
+    const status = await GetGoogleCalendarStatus()
+    if (status) googleCalendarStatusStore.set(status)
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Runs RFC 8252 loopback PKCE Google Calendar connection and immediately syncs events.
+ */
+export async function connectGoogleCalendar(clientId = ''): Promise<void> {
+  if (typeof ConnectGoogleCalendar !== 'function') return
+  calendarStore.update((s) => ({ ...s, isSyncing: true, lastSyncError: '' }))
+  try {
+    const status = await ConnectGoogleCalendar(clientId)
+    if (status) googleCalendarStatusStore.set(status)
+    await syncGoogleCalendar()
+  } catch (err) {
+    calendarStore.update((s) => ({
+      ...s,
+      isSyncing: false,
+      lastSyncError:
+        err instanceof Error
+          ? err.message
+          : typeof err === 'string' && err.trim()
+            ? err
+            : 'Google Calendar connection failed'
+    }))
+  }
+}
+
+/**
+ * Disconnects Google Calendar and removes synced Google events.
+ */
+export async function disconnectGoogleCalendar(): Promise<void> {
+  if (typeof DisconnectGoogleCalendar === 'function') {
+    await DisconnectGoogleCalendar()
+  }
+  googleCalendarStatusStore.set({
+    connected: false,
+    email: '',
+    hasClientId: false,
+    lastSyncedAt: 0
+  })
+  calendarStore.update((s) => ({
+    ...s,
+    events: s.events.filter((e) => e.source !== 'google')
+  }))
+  await syncPublicHolidays()
+}
+
+/**
+ * Fetches Google Calendar events and applies holiday anti-doubling rules.
+ */
+export async function syncGoogleCalendar(daysAhead = 60): Promise<void> {
+  if (typeof FetchGoogleCalendarEvents !== 'function') return
+  calendarStore.update((s) => ({ ...s, isSyncing: true, lastSyncError: '' }))
+  try {
+    const raw = await FetchGoogleCalendarEvents(daysAhead)
+    const mode = get(holidaySourceStore)
+    const googleEvents: CalendarEvent[] = (raw || [])
+      .filter((ev) => {
+        if (!ev.isHoliday) return true
+        return mode !== 'off' && mode !== 'nager'
+      })
+      .map((ev) => ({
+        id: `gcal-${ev.calendarId}-${ev.id}`,
+        title: ev.title || 'Untitled Event',
+        description: ev.description || '',
+        date: ev.date,
+        startTime: ev.startTime || '',
+        endTime: ev.endTime || '',
+        isAllDay: ev.isAllDay,
+        location: ev.location || '',
+        locationUrl: ev.hangoutLink || undefined,
+        color: ev.isHoliday ? 'emerald' : 'sky',
+        source: 'google',
+        isHoliday: ev.isHoliday
+      }))
+
+    calendarStore.update((s) => ({
+      ...s,
+      events: [...s.events.filter((e) => e.source !== 'google'), ...googleEvents],
+      isSyncing: false
+    }))
+    await refreshGoogleCalendarStatus()
+    await syncPublicHolidays()
+  } catch (err) {
+    calendarStore.update((s) => ({
+      ...s,
+      isSyncing: false,
+      lastSyncError:
+        err instanceof Error ? err.message : 'Google Calendar sync failed'
     }))
   }
 }
@@ -622,9 +869,11 @@ export function checkCalendarEventReminders(): void {
 
     const message = parts.join(' • ')
 
+    const meetingUrl = extractMeetingUrl(event)
     notifyCalendarEvent({
       title: event.title,
-      message
+      message,
+      meetingUrl: meetingUrl ?? undefined
     })
   }
 
