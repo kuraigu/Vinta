@@ -50,6 +50,10 @@
   import OnboardingPage, {
     config as onboardingConfig
   } from './pages/OnboardingPage.svelte'
+  import FlashcardsPage, {
+    config as flashcardsConfig
+  } from './pages/FlashcardsPage.svelte'
+  import HabitsPage, { config as habitsConfig } from './pages/HabitsPage.svelte'
 
   // Components & Overlays
   import MainIsland from './components/MainIsland.svelte'
@@ -185,7 +189,9 @@
     timer: { page: TimerPage, config: timerConfig },
     calendar: { page: CalendarPage, config: calendarConfig },
     weather: { page: WeatherPage, config: weatherConfig },
-    fileshelf: { page: FileShelfPage, config: fileShelfConfig }
+    fileshelf: { page: FileShelfPage, config: fileShelfConfig },
+    flashcards: { page: FlashcardsPage, config: flashcardsConfig },
+    habits: { page: HabitsPage, config: habitsConfig }
   }
 
   const PAGE_ID_BY_COMPONENT = new Map<Component, string>([
@@ -199,6 +205,8 @@
     [CalendarPage, 'calendar'],
     [WeatherPage, 'weather'],
     [FileShelfPage, 'fileshelf'],
+    [FlashcardsPage, 'flashcards'],
+    [HabitsPage, 'habits'],
     [ActionCenterPage, 'actioncenter'],
     [PerformancePage, 'performance'],
     [OnboardingPage, 'onboarding']
@@ -216,6 +224,8 @@
     [CalendarPage, 'calendar'],
     [WeatherPage, 'weather'],
     [FileShelfPage, 'fileshelf'],
+    [FlashcardsPage, 'flashcards'],
+    [HabitsPage, 'habits'],
     [ActionCenterPage, 'actioncenter'],
     [PerformancePage, 'performance']
   ])

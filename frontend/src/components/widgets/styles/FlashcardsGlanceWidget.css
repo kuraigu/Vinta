@@ -1,0 +1,69 @@
+:global(.fc-glance-card) {
+  gap: 10px;
+  padding: 12px 14px 14px 14px;
+  cursor: pointer;
+}
+
+.glance-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  user-select: none;
+}
+
+.glance-title-group {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.glance-title-text {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--vinta-text-secondary);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+:global(.fc-glance-card:hover) .glance-title-text {
+  color: var(--vinta-text-primary);
+}
+
+:global(.glance-nav-chevron) {
+  color: var(--vinta-text-muted);
+  opacity: 0.6;
+  flex-shrink: 0;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease;
+}
+
+:global(.fc-glance-card:hover) :global(.glance-nav-chevron) {
+  opacity: 1;
+  transform: translateX(2px);
+  color: var(--vinta-text-primary);
+}
+
+.fc-glance-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.fc-glance-count {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--vinta-text-primary);
+}
+
+.fc-glance-deck {
+  font-size: 11px;
+  color: var(--vinta-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

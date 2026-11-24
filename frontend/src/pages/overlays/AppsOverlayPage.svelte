@@ -37,7 +37,9 @@
     FolderOpen,
     Copy,
     Trash2,
-    ExternalLink
+    ExternalLink,
+    GraduationCap,
+    ListChecks
   } from 'lucide-svelte'
   import OverlayPage from '../../components/OverlayPage.svelte'
   import HorizontalTabSelection, {
@@ -86,6 +88,10 @@
   import PerformancePage, {
     config as performanceConfig
   } from '../PerformancePage.svelte'
+  import FlashcardsPage, {
+    config as flashcardsConfig
+  } from '../FlashcardsPage.svelte'
+  import HabitsPage, { config as habitsConfig } from '../HabitsPage.svelte'
   import {
     notifData,
     activeOverlayStore,
@@ -365,6 +371,22 @@
       icon: CloudSun,
       visibilityKey: 'weather',
       action: () => openWorkspace(WeatherPage, weatherConfig)
+    },
+    {
+      id: 'flashcards',
+      nameKey: 'flashcards.title',
+      descKey: 'flashcards.desc',
+      icon: GraduationCap,
+      visibilityKey: 'flashcards',
+      action: () => openWorkspace(FlashcardsPage, flashcardsConfig)
+    },
+    {
+      id: 'habits',
+      nameKey: 'habits.title',
+      descKey: 'habits.desc',
+      icon: ListChecks,
+      visibilityKey: 'habits',
+      action: () => openWorkspace(HabitsPage, habitsConfig)
     }
   ]
 

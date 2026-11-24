@@ -43,6 +43,7 @@
     Underline,
     Strikethrough,
     Pin,
+    CheckSquare,
     Pencil,
     Copy,
     CopyPlus,
@@ -58,7 +59,7 @@
   } from '../components/CustomContextMenu.svelte'
   import { buildTextEditMenuItems } from '../utils/textContextMenu'
   import { islandTooltip } from '../services/islandTooltip'
-  import { tStore } from '../store'
+  import { tStore, pinnedHomeNoteFileStore } from '../store'
   import {
     ListNotes,
     ReadNote,
@@ -368,6 +369,36 @@
     editorRef.focus()
     document.execCommand(command, false)
     triggerAutoSave()
+  }
+
+  /**
+   * Inserts an interactive checklist row into the active note editor.
+   */
+  function insertChecklistItem() {
+    if (!editorRef) return
+    editorRef.focus()
+    const html =
+      '<div class="vinta-check-item"><input type="checkbox" class="vinta-note-checkbox" contenteditable="false" /> <span></span></div>'
+    document.execCommand('insertHTML', false, html)
+    triggerAutoSave()
+  }
+
+  /**
+   * Syncs checkbox checked attribute into DOM markup so innerHTML saves toggle state.
+   */
+  function handleEditorClick(e: MouseEvent) {
+    const target = e.target
+    if (
+      target instanceof HTMLInputElement &&
+      target.classList.contains('vinta-note-checkbox')
+    ) {
+      if (target.checked) {
+        target.setAttribute('checked', 'checked')
+      } else {
+        target.removeAttribute('checked')
+      }
+      triggerAutoSave()
+    }
   }
 
   /**
@@ -812,6 +843,19 @@
         }
       },
       {
+        label:
+          $pinnedHomeNoteFileStore === target.fileName
+            ? $tStore('notes.unpin_home')
+            : $tStore('notes.pin_home'),
+        icon: Pin,
+        action: () => {
+          $pinnedHomeNoteFileStore =
+            $pinnedHomeNoteFileStore === target.fileName
+              ? null
+              : target.fileName
+        }
+      },
+      {
         label: $tStore('notes.rename'),
         icon: Pencil,
         action: () => void renameNoteByIndex(idx)
@@ -1131,6 +1175,7 @@
           class="editor-surface"
           data-placeholder={$tStore('notes.editor_placeholder')}
           contenteditable="true"
+          onclick={handleEditorClick}
           oninput={triggerAutoSave}
           onpaste={handlePaste}
           onkeydown={handleKeyDown}
@@ -1197,6 +1242,17 @@
           onclick={() => applyFormat('insertUnorderedList')}
         >
           <List size={14} />
+        </button>
+
+        <button
+          class="tool-action-btn"
+          use:islandTooltip={{
+            text: $tStore('notes.format_checklist'),
+            position: 'top'
+          }}
+          onclick={insertChecklistItem}
+        >
+          <CheckSquare size={14} />
         </button>
 
         <button
