@@ -162,12 +162,45 @@ export default defineConfig({
           if (normalized.includes('node_modules/svelte')) return 'vendor-svelte'
           if (normalized.includes('node_modules/@wailsio'))
             return 'vendor-wails'
+          if (normalized.includes('node_modules/lucide-svelte'))
+            return 'vendor-icons'
+          if (normalized.includes('src/locales/')) return 'locales'
+          if (normalized.includes('src/devtest/ShowcaseDevControls'))
+            return 'devtest-showcase'
+          if (normalized.includes('src/devtest/VirtualCursor'))
+            return 'devtest-cursor'
           if (normalized.includes('src/devtest/')) return 'devtest'
           if (
             normalized.includes('src/pages/SettingsPage') ||
             normalized.includes('src/components/settings/')
           ) {
             return 'page-settings'
+          }
+          if (
+            normalized.includes('src/pages/CalendarPage') ||
+            normalized.includes('src/components/Calendar') ||
+            normalized.includes('src/components/AgendaEventCard')
+          ) {
+            return 'page-calendar'
+          }
+          if (
+            normalized.includes('src/pages/DevHubPage') ||
+            normalized.includes('src/pages/FlashcardsPage') ||
+            normalized.includes('src/pages/HabitsPage') ||
+            normalized.includes('src/pages/NotesPage') ||
+            normalized.includes('src/pages/TimerPage') ||
+            normalized.includes('src/components/timer/')
+          ) {
+            return 'page-productivity'
+          }
+          if (
+            normalized.includes('src/pages/WeatherPage') ||
+            normalized.includes('src/pages/MediaPage') ||
+            normalized.includes('src/pages/PerformancePage') ||
+            normalized.includes('src/pages/FileShelfPage') ||
+            normalized.includes('src/pages/CalculatorPage')
+          ) {
+            return 'page-utilities'
           }
         }
       }

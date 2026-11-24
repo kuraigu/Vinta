@@ -234,7 +234,13 @@ func (a *App) startHitTestingLoop(hwnd uintptr) {
 		var rects []pillHitBounds
 		lastRectsVersion := ^uint64(0)
 
-		for range ticker.C {
+		stopCtx := a.lifecycleContext()
+		for {
+			select {
+			case <-stopCtx.Done():
+				return
+			case <-ticker.C:
+			}
 			if hwnd == 0 {
 				continue
 			}

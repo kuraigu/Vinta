@@ -1286,10 +1286,16 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 	}
 
 	go func() {
+		stopCtx := a.lifecycleContext()
 		ticker := time.NewTicker(600 * time.Millisecond)
 		defer ticker.Stop()
-		for range ticker.C {
-			evaluateForegroundState()
+		for {
+			select {
+			case <-stopCtx.Done():
+				return
+			case <-ticker.C:
+				evaluateForegroundState()
+			}
 		}
 	}()
 
