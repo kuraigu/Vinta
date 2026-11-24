@@ -92,6 +92,7 @@
     config as flashcardsConfig
   } from '../FlashcardsPage.svelte'
   import HabitsPage, { config as habitsConfig } from '../HabitsPage.svelte'
+  import DevHubPage, { config as devhubConfig } from '../DevHubPage.svelte'
   import {
     notifData,
     activeOverlayStore,
@@ -387,6 +388,14 @@
       icon: ListChecks,
       visibilityKey: 'habits',
       action: () => openWorkspace(HabitsPage, habitsConfig)
+    },
+    {
+      id: 'devhub',
+      nameKey: 'devhub.title',
+      descKey: 'devhub.desc',
+      icon: Terminal,
+      visibilityKey: 'devhub',
+      action: () => openWorkspace(DevHubPage, devhubConfig)
     }
   ]
 

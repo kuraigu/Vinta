@@ -96,7 +96,7 @@ func resolveGoogleClientID(override string) string {
 	if trimmed := strings.TrimSpace(override); trimmed != "" {
 		return trimmed
 	}
-	if env := strings.TrimSpace(os.Getenv("VINTA_GOOGLE_CLIENT_ID")); env != "" {
+	if env := GetEnvConfig("VINTA_GOOGLE_CLIENT_ID"); env != "" {
 		return env
 	}
 	if vault, err := loadGoogleTokenVault(); err == nil && strings.TrimSpace(vault.ClientID) != "" {

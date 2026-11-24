@@ -1,0 +1,376 @@
+<!--
+  @fileoverview Developer Hub page surfacing GitHub contributions, PRs, issues,
+  notifications, and AI provider telemetry (Claude, OpenAI, Gemini, Antigravity).
+-->
+<script lang="ts" module>
+  import { ISLAND_WIDTH_TIERS, type IslandConfig } from '../store'
+
+  export const config: IslandConfig = {
+    minimal: { w: 230, h: 42, r: 16 },
+    expanded: { w: ISLAND_WIDTH_TIERS.wide, h: 495, r: 28 },
+    borderColor: 'var(--vinta-border)',
+    glowColor: 'transparent'
+  }
+</script>
+
+<script lang="ts">
+  import { onMount, getContext } from 'svelte'
+  import {
+    Bell,
+    Cpu,
+    ExternalLink,
+    Flame,
+    GitPullRequest,
+    CircleDot,
+    RefreshCw,
+    Settings,
+    Terminal
+  } from 'lucide-svelte'
+  import IslandPage from '../components/IslandPage.svelte'
+  import PageHeader from '../components/PageHeader.svelte'
+  import BentoCard from '../components/BentoCard.svelte'
+  import ScrollView from '../components/ScrollView.svelte'
+  import HorizontalTabSelection, {
+    type TabItem
+  } from '../components/HorizontalTabSelection.svelte'
+  import SettingsPage, { config as settingsConfig } from './SettingsPage.svelte'
+  import BrandLogo from '../components/BrandLogo.svelte'
+  import { activeSettingsTabStore, tStore } from '../store'
+  import {
+    githubStatusStore,
+    githubDashboardStore,
+    aiUsageStore,
+    initDevIntegrations,
+    startGitHubDeviceAuth,
+    completeGitHubDeviceAuth,
+    refreshGitHubDashboard,
+    refreshAIUsage
+  } from '../stores/devIntegrationsStore'
+  import { OpenURL } from '../../bindings/Vinta/backend/app.js'
+
+  let { expanded = false }: { expanded?: boolean } = $props()
+
+  const navigate = getContext<
+    | ((page: unknown, pageConfig: IslandConfig, expand?: boolean) => void)
+    | undefined
+  >('navigate')
+
+  let activeTab = $state<'github' | 'ai'>('github')
+  let ghSubTab = $state<'prs' | 'issues' | 'notifications'>('prs')
+  let isRefreshing = $state(false)
+  let isSigningIn = $state(false)
+  let deviceUserCode = $state('')
+  let signInError = $state('')
+
+  const mainTabs: TabItem<'github' | 'ai'>[] = $derived([
+    {
+      id: 'github',
+      label: $tStore('devhub.tab_github'),
+      icon: Terminal,
+      tooltip: ''
+    },
+    { id: 'ai', label: $tStore('devhub.tab_ai'), icon: Cpu, tooltip: '' }
+  ])
+
+  const ghSubTabs: TabItem<'prs' | 'issues' | 'notifications'>[] = $derived([
+    {
+      id: 'prs',
+      label: $tStore('devhub.sub_prs'),
+      badge: $githubDashboardStore?.pullRequests.length || undefined,
+      tooltip: ''
+    },
+    {
+      id: 'issues',
+      label: $tStore('devhub.sub_issues'),
+      badge: $githubDashboardStore?.assignedIssues.length || undefined,
+      tooltip: ''
+    },
+    {
+      id: 'notifications',
+      label: $tStore('devhub.sub_notifications'),
+      badge: $githubDashboardStore?.unreadCount || undefined,
+      tooltip: ''
+    }
+  ])
+
+  const activeItems = $derived.by(() => {
+    const dash = $githubDashboardStore
+    if (!dash) return []
+    if (ghSubTab === 'prs') return dash.pullRequests
+    if (ghSubTab === 'issues') return dash.assignedIssues
+    return dash.notifications
+  })
+
+  onMount(() => {
+    void initDevIntegrations()
+  })
+
+  function openAccountSettings() {
+    $activeSettingsTabStore = 'account'
+    if (navigate) {
+      navigate(SettingsPage, settingsConfig, true)
+    }
+  }
+
+  function openExternal(url: string) {
+    if (!url) return
+    if (typeof OpenURL === 'function') {
+      void OpenURL(url)
+    } else {
+      window.open(url, '_blank', 'noopener,noreferrer')
+    }
+  }
+
+  async function handleRefresh() {
+    isRefreshing = true
+    await Promise.all([refreshGitHubDashboard(true), refreshAIUsage(true)])
+    isRefreshing = false
+  }
+
+  async function handleQuickGitHubSignIn() {
+    isSigningIn = true
+    signInError = ''
+    deviceUserCode = ''
+    const start = await startGitHubDeviceAuth()
+    if (!start.ok || !start.info) {
+      isSigningIn = false
+      signInError = start.error || $tStore('account.github_failed')
+      return
+    }
+    deviceUserCode = start.info.userCode
+    const done = await completeGitHubDeviceAuth(
+      start.info.deviceCode,
+      start.info.interval
+    )
+    isSigningIn = false
+    deviceUserCode = ''
+    if (!done.ok && done.error) {
+      signInError = done.error
+    }
+  }
+</script>
+
+<IslandPage {expanded}>
+  {#snippet minimal()}
+    <div class="devhub-minimal-pill">
+      <BrandLogo name="github" size={15} />
+      {#if $githubStatusStore.connected && $githubDashboardStore}
+        <span class="devhub-min-metric">
+          <Flame size={12} />
+          <span>{$githubDashboardStore.currentStreak}d</span>
+        </span>
+        <span class="devhub-min-sep">·</span>
+        <span class="devhub-min-metric">
+          <GitPullRequest size={12} />
+          <span>{$githubDashboardStore.pullRequests.length}</span>
+        </span>
+        {#if $githubDashboardStore.unreadCount > 0}
+          <span class="devhub-min-badge"
+            >{$githubDashboardStore.unreadCount}</span
+          >
+        {/if}
+      {:else}
+        <span class="devhub-min-label">{$tStore('devhub.title')}</span>
+      {/if}
+    </div>
+  {/snippet}
+
+  {#snippet expandedContent()}
+    <div class="devhub-page" data-vinta="devhub-page">
+      <PageHeader title={$tStore('devhub.title')}>
+        {#snippet center()}
+          <HorizontalTabSelection
+            tabs={mainTabs}
+            bind:value={activeTab}
+            ariaLabel={$tStore('devhub.title')}
+          />
+        {/snippet}
+        {#snippet actions()}
+          <button
+            type="button"
+            class="devhub-icon-btn"
+            disabled={isRefreshing}
+            aria-label={$tStore('devhub.refresh')}
+            onclick={handleRefresh}
+          >
+            <RefreshCw size={13} />
+          </button>
+          <button
+            type="button"
+            class="devhub-icon-btn"
+            aria-label={$tStore('settings.tabs.account')}
+            onclick={openAccountSettings}
+          >
+            <Settings size={13} />
+          </button>
+        {/snippet}
+      </PageHeader>
+
+      <ScrollView class="devhub-scroll">
+        {#if activeTab === 'github'}
+          {#if !$githubStatusStore.connected}
+            <BentoCard variant="bento" class="devhub-empty-card">
+              <article class="devhub-empty-article">
+                <header class="devhub-empty-header">
+                  <BrandLogo name="github" size={24} />
+                  <h3 class="devhub-empty-title">
+                    {$tStore('devhub.connect_title')}
+                  </h3>
+                </header>
+                <p class="devhub-empty-desc">
+                  {$tStore('devhub.connect_desc')}
+                </p>
+                <footer class="devhub-empty-actions">
+                  <button
+                    type="button"
+                    class="devhub-gh-btn"
+                    disabled={isSigningIn}
+                    onclick={handleQuickGitHubSignIn}
+                  >
+                    <BrandLogo name="github" size={16} />
+                    <span>
+                      {isSigningIn
+                        ? $tStore('account.waiting_github')
+                        : $tStore('account.sign_in_github')}
+                    </span>
+                  </button>
+                </footer>
+                {#if deviceUserCode}
+                  <p class="devhub-code-hint">
+                    {$tStore('account.device_code_label')}:
+                    <code>{deviceUserCode}</code>
+                  </p>
+                {/if}
+                {#if signInError}
+                  <p class="devhub-error" role="alert">{signInError}</p>
+                {/if}
+              </article>
+            </BentoCard>
+          {:else if $githubDashboardStore}
+            <div class="devhub-stack">
+              <BentoCard variant="bento" class="devhub-stats-card">
+                <div class="devhub-stats-header">
+                  <span class="devhub-user"
+                    >@{$githubDashboardStore.username}</span
+                  >
+                  <div class="devhub-kpis">
+                    <span class="devhub-kpi">
+                      <Flame size={12} />
+                      {$githubDashboardStore.currentStreak}d
+                    </span>
+                    <span class="devhub-kpi">
+                      <Bell size={12} />
+                      {$githubDashboardStore.unreadCount}
+                    </span>
+                  </div>
+                </div>
+                {#if $githubDashboardStore.contributions.length > 0}
+                  <div
+                    class="devhub-heatmap"
+                    aria-label={$tStore('devhub.heatmap_label')}
+                  >
+                    {#each $githubDashboardStore.contributions as day (day.date)}
+                      <span
+                        class="heatmap-cell level-{day.level}"
+                        aria-label="{day.date}: {day.count}"
+                      ></span>
+                    {/each}
+                  </div>
+                {/if}
+              </BentoCard>
+
+              <HorizontalTabSelection
+                tabs={ghSubTabs}
+                bind:value={ghSubTab}
+                colorVariant="primary"
+                ariaLabel={$tStore('devhub.tab_github')}
+              />
+
+              {#if activeItems.length === 0}
+                <BentoCard variant="bento" class="devhub-list-empty">
+                  <span>{$tStore('devhub.empty_list')}</span>
+                </BentoCard>
+              {:else}
+                <div class="devhub-item-list">
+                  {#each activeItems as item (item.id)}
+                    <button
+                      type="button"
+                      class="devhub-item-row"
+                      onclick={() => openExternal(item.url)}
+                    >
+                      <span class="devhub-item-icon">
+                        {#if ghSubTab === 'prs'}
+                          <GitPullRequest size={14} />
+                        {:else if ghSubTab === 'issues'}
+                          <CircleDot size={14} />
+                        {:else}
+                          <Bell size={14} />
+                        {/if}
+                      </span>
+                      <span class="devhub-item-body">
+                        <span class="devhub-item-title">{item.title}</span>
+                        <span class="devhub-item-repo">{item.repo}</span>
+                      </span>
+                      <ExternalLink size={12} class="devhub-ext-icon" />
+                    </button>
+                  {/each}
+                </div>
+              {/if}
+            </div>
+          {:else}
+            <BentoCard variant="bento" class="devhub-list-empty">
+              <span>{$tStore('devhub.loading')}</span>
+            </BentoCard>
+          {/if}
+        {:else}
+          <BentoCard variant="group" class="devhub-ai-list">
+            {#each $aiUsageStore as provider (provider.id)}
+              <div class="devhub-ai-row">
+                <div class="devhub-ai-left">
+                  <span
+                    class="devhub-ai-dot"
+                    class:connected={provider.configured}
+                    aria-hidden="true"
+                  ></span>
+                  <div class="devhub-ai-meta">
+                    <span class="devhub-ai-name">{provider.name}</span>
+                    <span class="devhub-ai-host">{provider.detail}</span>
+                  </div>
+                </div>
+                <div class="devhub-ai-right">
+                  <span
+                    class="devhub-ai-state"
+                    class:connected={provider.configured}
+                  >
+                    {provider.status}
+                  </span>
+                  {#if !provider.configured}
+                    <button
+                      type="button"
+                      class="devhub-ai-btn"
+                      onclick={openAccountSettings}
+                    >
+                      {$tStore('devhub.add_key')}
+                    </button>
+                  {/if}
+                  <button
+                    type="button"
+                    class="devhub-ai-icon-btn"
+                    aria-label="{$tStore(
+                      'devhub.open_usage'
+                    )} ({provider.name})"
+                    onclick={() => openExternal(provider.dashboardUrl)}
+                  >
+                    <ExternalLink size={13} />
+                  </button>
+                </div>
+              </div>
+            {/each}
+          </BentoCard>
+        {/if}
+      </ScrollView>
+    </div>
+  {/snippet}
+</IslandPage>
+
+<style src="./styles/DevHubPage.css"></style>

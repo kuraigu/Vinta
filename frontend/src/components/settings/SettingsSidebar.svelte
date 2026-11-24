@@ -14,6 +14,7 @@
     CloudSun,
     Languages,
     Cpu,
+    Cloud,
     Download,
     Info
   } from 'lucide-svelte'
@@ -34,6 +35,7 @@
     { id: 'clock', icon: Clock, badge: 'amber' },
     { id: 'weather', icon: CloudSun, badge: 'cyan' },
     { id: 'language', icon: Languages, badge: 'purple' },
+    { id: 'account', icon: Cloud, badge: 'blue' },
     { id: 'system', icon: Cpu, badge: 'emerald' },
     { id: 'about', icon: Info, badge: 'blue' },
     { id: 'updates', icon: Download, badge: 'amber' }
