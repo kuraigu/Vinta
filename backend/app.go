@@ -23,6 +23,8 @@ var screenWidth, screenHeight int
 // App represents the primary application orchestrator and Wails v3 service bridge.
 type App struct {
 	ctx                      context.Context
+	stopCtx                  context.Context
+	stopCancel               context.CancelFunc
 	wailsApp                 *application.App
 	window                   *application.WebviewWindow
 	devWindow                *application.WebviewWindow
@@ -89,7 +91,11 @@ func NewApp(icon []byte) *App {
 	screenWidth = sw
 	screenHeight = sh
 
+	stopCtx, stopCancel := context.WithCancel(context.Background())
+
 	return &App{
+		stopCtx:                stopCtx,
+		stopCancel:             stopCancel,
 		icon:                   icon,
 		pillW:                  340,
 		pillH:                  34,
@@ -396,7 +402,18 @@ func (a *App) Startup(ctx context.Context) {
 }
 
 // Shutdown stops native background listeners.
+func (a *App) lifecycleContext() context.Context {
+	if a.stopCtx != nil {
+		return a.stopCtx
+	}
+	return context.Background()
+}
+
+// Shutdown cancels background goroutines and stops native service listeners on exit.
 func (a *App) Shutdown(_ context.Context) {
+	if a.stopCancel != nil {
+		a.stopCancel()
+	}
 	services.StopServicesListener()
 }
 
@@ -407,6 +424,9 @@ func (a *App) SetDevWindow(win *application.WebviewWindow) {
 
 // Quit terminates the application and all child windows.
 func (a *App) Quit() {
+	if a.stopCancel != nil {
+		a.stopCancel()
+	}
 	services.StopServicesListener()
 
 	go func() {

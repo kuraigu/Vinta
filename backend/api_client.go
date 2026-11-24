@@ -2,6 +2,7 @@
 package backend
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
@@ -61,6 +62,11 @@ var (
 		Timeout: 15 * time.Second,
 	}
 	sharedAPISingleflight singleflightGroup
+	apiBodyBufPool        = sync.Pool{
+		New: func() any {
+			return bytes.NewBuffer(make([]byte, 0, 16*1024))
+		},
+	}
 )
 
 func getAPICachePath(cacheKey string) string {
@@ -129,7 +135,14 @@ func cachedHTTPDo(
 		}
 		defer func() { _ = resp.Body.Close() }()
 
-		body, err := io.ReadAll(io.LimitReader(resp.Body, 4*1024*1024))
+		buf := apiBodyBufPool.Get().(*bytes.Buffer)
+		buf.Reset()
+		_, err = io.Copy(buf, io.LimitReader(resp.Body, 4*1024*1024))
+		body := append([]byte(nil), buf.Bytes()...)
+		if buf.Cap() <= 512*1024 {
+			buf.Reset()
+			apiBodyBufPool.Put(buf)
+		}
 		if err != nil {
 			return nil, err
 		}

@@ -545,8 +545,15 @@ func (a *App) StartBackgroundUpdateChecker() {
 	}
 
 	go func() {
+		stopCtx := a.lifecycleContext()
 		// Wait 10 seconds after app startup before first check
-		time.Sleep(10 * time.Second)
+		startupTimer := time.NewTimer(10 * time.Second)
+		select {
+		case <-stopCtx.Done():
+			startupTimer.Stop()
+			return
+		case <-startupTimer.C:
+		}
 
 		shouldCheck := func() bool {
 			settingsPath := filepath.Join(GetAppDataDir(), "settings.json")
@@ -573,11 +580,16 @@ func (a *App) StartBackgroundUpdateChecker() {
 		ticker := time.NewTicker(6 * time.Hour)
 		defer ticker.Stop()
 
-		for range ticker.C {
-			if shouldCheck() {
-				if res, err := a.CheckForUpdates(false); err == nil && res.UpdateAvailable {
-					if app := application.Get(); app != nil {
-						app.Event.Emit("update:available", res)
+		for {
+			select {
+			case <-stopCtx.Done():
+				return
+			case <-ticker.C:
+				if shouldCheck() {
+					if res, err := a.CheckForUpdates(false); err == nil && res.UpdateAvailable {
+						if app := application.Get(); app != nil {
+							app.Event.Emit("update:available", res)
+						}
 					}
 				}
 			}

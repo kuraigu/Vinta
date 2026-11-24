@@ -1115,7 +1115,7 @@ export function Setup(wailsApp: application$0.App | null, win: application$0.Web
 }
 
 /**
- * Shutdown stops native background listeners.
+ * Shutdown cancels background goroutines and stops native service listeners on exit.
  */
 export function Shutdown(): $CancellablePromise<void> {
     return $Call.ByID(2578565653);
