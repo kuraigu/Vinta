@@ -79,6 +79,9 @@ export interface HomeWidgetsVisibility {
   spotlight?: boolean
   announcements?: boolean
   notifications?: boolean
+  flashcards?: boolean
+  habits?: boolean
+  pinnedNote?: boolean
 }
 
 export const defaultHomeWidgetsVisibility: HomeWidgetsVisibility = {
@@ -92,7 +95,10 @@ export const defaultHomeWidgetsVisibility: HomeWidgetsVisibility = {
   systemStats: false,
   spotlight: true,
   announcements: true,
-  notifications: true
+  notifications: true,
+  flashcards: true,
+  habits: true,
+  pinnedNote: true
 }
 
 export type WidgetSizePreset = '1x1' | '2x1' | '2x2'
@@ -101,6 +107,9 @@ export const defaultHomeWidgetsOrder: string[] = [
   'media',
   'brief',
   'actionCenter',
+  'flashcards',
+  'habits',
+  'pinnedNote',
   'systemStats'
 ]
 
@@ -111,6 +120,9 @@ export const defaultHomeWidgetSizes: Record<string, WidgetSizePreset> = {
   notifications: '2x1',
   calendar: '2x1',
   actionCenter: '2x1',
+  flashcards: '1x1',
+  habits: '1x1',
+  pinnedNote: '2x1',
   systemStats: '2x1'
 }
 
@@ -126,6 +138,8 @@ export interface PageVisibility {
   weather: boolean
   fileshelf: boolean
   performance?: boolean
+  flashcards?: boolean
+  habits?: boolean
 }
 
 export const defaultPageVisibility: PageVisibility = {
@@ -139,7 +153,9 @@ export const defaultPageVisibility: PageVisibility = {
   calendar: true,
   weather: true,
   fileshelf: true,
-  performance: true
+  performance: true,
+  flashcards: true,
+  habits: true
 }
 
 export interface DockPinnedApps {
@@ -767,6 +783,7 @@ export function reorderHomeWidgets(sourceId: string, targetId: string): void {
 export const pageVisibilityStore = persistentWritable<PageVisibility>('vinta_page_visibility', defaultPageVisibility)
 export const dockPinnedAppsStore = persistentWritable<DockPinnedApps>('vinta_dock_pinned_apps', defaultDockPinnedApps)
 export const pinnedMediaSourceStore = persistentWritable<string | null>('vinta_pinned_media_source', null)
+export const pinnedHomeNoteFileStore = persistentWritable<string | null>('vinta_pinned_home_note', null)
 /**
  * Global duration (in seconds) before inline confirmation/status feedback messages auto-clear.
  */

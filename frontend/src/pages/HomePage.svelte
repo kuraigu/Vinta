@@ -42,6 +42,9 @@
   import BriefFeedWidget from '../components/widgets/BriefFeedWidget.svelte'
   import SystemStatsWidget from '../components/widgets/SystemStatsWidget.svelte'
   import ActionCenterWidget from '../components/widgets/ActionCenterWidget.svelte'
+  import FlashcardsGlanceWidget from '../components/widgets/FlashcardsGlanceWidget.svelte'
+  import HabitsGlanceWidget from '../components/widgets/HabitsGlanceWidget.svelte'
+  import PinnedNoteWidget from '../components/widgets/PinnedNoteWidget.svelte'
   import CustomContextMenu, {
     type ContextMenuItem
   } from '../components/CustomContextMenu.svelte'
@@ -168,7 +171,10 @@
       $homeWidgetsVisibilityStore.spotlight === false &&
       $homeWidgetsVisibilityStore.announcements === false &&
       $homeWidgetsVisibilityStore.notifications === false &&
-      $homeWidgetsVisibilityStore.media === false
+      $homeWidgetsVisibilityStore.media === false &&
+      $homeWidgetsVisibilityStore.flashcards === false &&
+      $homeWidgetsVisibilityStore.habits === false &&
+      $homeWidgetsVisibilityStore.pinnedNote === false
   )
 
   const openOverlay =
@@ -192,6 +198,9 @@
     brief: ['2x1', '2x2'],
     media: ['1x1', '2x1', '2x2'],
     actionCenter: ['1x1', '2x1'],
+    flashcards: ['1x1', '2x1'],
+    habits: ['1x1', '2x1'],
+    pinnedNote: ['1x1', '2x1'],
     systemStats: ['1x1', '2x1', '2x2']
   }
 
@@ -632,6 +641,30 @@
                       onreorder={reorderHomeWidgets}
                       oncontextmenu={(e) =>
                         handleWidgetContextMenu(e, 'actionCenter')}
+                    />
+                  {:else if widgetId === 'flashcards' && $homeWidgetsVisibilityStore.flashcards !== false}
+                    <FlashcardsGlanceWidget
+                      size={getWidgetSize('flashcards')}
+                      showMenuButton={$homeWidgetMenuEnabledStore}
+                      onreorder={reorderHomeWidgets}
+                      oncontextmenu={(e) =>
+                        handleWidgetContextMenu(e, 'flashcards')}
+                    />
+                  {:else if widgetId === 'habits' && $homeWidgetsVisibilityStore.habits !== false}
+                    <HabitsGlanceWidget
+                      size={getWidgetSize('habits')}
+                      showMenuButton={$homeWidgetMenuEnabledStore}
+                      onreorder={reorderHomeWidgets}
+                      oncontextmenu={(e) =>
+                        handleWidgetContextMenu(e, 'habits')}
+                    />
+                  {:else if widgetId === 'pinnedNote' && $homeWidgetsVisibilityStore.pinnedNote !== false}
+                    <PinnedNoteWidget
+                      size={getWidgetSize('pinnedNote')}
+                      showMenuButton={$homeWidgetMenuEnabledStore}
+                      onreorder={reorderHomeWidgets}
+                      oncontextmenu={(e) =>
+                        handleWidgetContextMenu(e, 'pinnedNote')}
                     />
                   {:else if widgetId === 'systemStats' && $homeWidgetsVisibilityStore.systemStats}
                     <SystemStatsWidget

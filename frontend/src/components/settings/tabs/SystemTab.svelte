@@ -204,6 +204,7 @@
     'vinta_hotkey_apps_launcher',
     'vinta_hotkey_desktop_apps',
     'vinta_pinned_media_source',
+    'vinta_pinned_home_note',
     'vinta_dnd',
     'vinta_notif_autowake',
     'vinta_notif_satellite_enabled',

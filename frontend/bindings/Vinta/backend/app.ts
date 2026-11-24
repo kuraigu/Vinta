@@ -297,10 +297,24 @@ export function GetDisplayLayout(): $CancellablePromise<$models.DisplayLayout> {
 }
 
 /**
+ * GetFlashcardsData reads flashcards.json from %APPDATA%/FreeMatrix Studios/Vinta.
+ */
+export function GetFlashcardsData(): $CancellablePromise<string> {
+    return $Call.ByID(2256312556);
+}
+
+/**
  * GetGlobalShortcut returns the main toggle shortcut accelerator string.
  */
 export function GetGlobalShortcut(): $CancellablePromise<string> {
     return $Call.ByID(500280652);
+}
+
+/**
+ * GetHabitsData reads habits.json from %APPDATA%/FreeMatrix Studios/Vinta.
+ */
+export function GetHabitsData(): $CancellablePromise<string> {
+    return $Call.ByID(2158908214);
 }
 
 /**
@@ -665,6 +679,20 @@ export function RevealShelfFileInExplorer(path: string): $CancellablePromise<voi
  */
 export function SaveCalendarData(calendarJSON: string): $CancellablePromise<void> {
     return $Call.ByID(978427236, calendarJSON);
+}
+
+/**
+ * SaveFlashcardsData writes flashcards.json to %APPDATA%/FreeMatrix Studios/Vinta.
+ */
+export function SaveFlashcardsData(flashcardsJSON: string): $CancellablePromise<void> {
+    return $Call.ByID(2549210527, flashcardsJSON);
+}
+
+/**
+ * SaveHabitsData writes habits.json to %APPDATA%/FreeMatrix Studios/Vinta.
+ */
+export function SaveHabitsData(habitsJSON: string): $CancellablePromise<void> {
+    return $Call.ByID(3309657177, habitsJSON);
 }
 
 /**

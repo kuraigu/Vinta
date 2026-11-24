@@ -1,0 +1,91 @@
+:global(.hb-glance-card) {
+  gap: 10px;
+  padding: 12px 14px 14px 14px;
+  cursor: pointer;
+}
+
+.glance-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  user-select: none;
+}
+
+.glance-title-group {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.glance-title-text {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--vinta-text-secondary);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+:global(.hb-glance-card:hover) .glance-title-text {
+  color: var(--vinta-text-primary);
+}
+
+:global(.glance-nav-chevron) {
+  color: var(--vinta-text-muted);
+  opacity: 0.6;
+  flex-shrink: 0;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease;
+}
+
+:global(.hb-glance-card:hover) :global(.glance-nav-chevron) {
+  opacity: 1;
+  transform: translateX(2px);
+  color: var(--vinta-text-primary);
+}
+
+.hb-glance-quick {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 9px;
+  border: 1px solid var(--vinta-border);
+  background: var(--vinta-contrast-hover);
+  color: var(--vinta-text-primary);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+
+.hb-glance-habit {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hb-glance-count {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--vinta-text-muted);
+  flex-shrink: 0;
+}
+
+:global(.hb-glance-check) {
+  color: var(--vinta-text-muted);
+  flex-shrink: 0;
+}
+
+:global(.hb-glance-check.done) {
+  color: var(--vinta-accent-primary);
+}

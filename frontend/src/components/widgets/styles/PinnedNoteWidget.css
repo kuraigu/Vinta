@@ -1,0 +1,61 @@
+:global(.pn-glance-card) {
+  gap: 8px;
+  padding: 12px 14px 14px 14px;
+  cursor: pointer;
+}
+
+.glance-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  user-select: none;
+}
+
+.glance-title-group {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.glance-title-text {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--vinta-text-secondary);
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+:global(.pn-glance-card:hover) .glance-title-text {
+  color: var(--vinta-text-primary);
+}
+
+:global(.glance-nav-chevron) {
+  color: var(--vinta-text-muted);
+  opacity: 0.6;
+  flex-shrink: 0;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease;
+}
+
+:global(.pn-glance-card:hover) :global(.glance-nav-chevron) {
+  opacity: 1;
+  transform: translateX(2px);
+  color: var(--vinta-text-primary);
+}
+
+.pn-preview {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--vinta-text-primary);
+  display: -webkit-box;
+  line-clamp: 2;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

@@ -10,7 +10,14 @@ import {
   GetCalendarData,
   SaveCalendarData
 } from '../../bindings/Vinta/backend/app.js'
-import { notifyCalendarEvent } from '../services/vintaNotification'
+import {
+  notifyCalendarEvent,
+  sendVintaNotification
+} from '../services/vintaNotification'
+import {
+  collectDueHabitReminders,
+  initHabitsStore
+} from './habitsStore'
 import {
   autoDiscardPastEventsStore,
   pageVisibilityStore,
@@ -529,7 +536,21 @@ let reminderWatcherInterval: ReturnType<typeof setInterval> | null = null
  * after scheduled events have already started.
  * Do not gate on calendar UI visibility: hiding the tab or widget must not silence reminders.
  */
+let lastHabitReminderCheckAt = 0
+
 export function checkCalendarEventReminders(): void {
+  const nowMs = Date.now()
+  if (nowMs - lastHabitReminderCheckAt >= 60000) {
+    lastHabitReminderCheckAt = nowMs
+    for (const habit of collectDueHabitReminders(nowMs)) {
+      sendVintaNotification({
+        title: habit.title,
+        message: 'Daily habit reminder',
+        dedupeKey: `habit-reminder:${habit.id}`
+      })
+    }
+  }
+
   const state = get(calendarStore)
   if (!state.events || state.events.length === 0) return
 
@@ -627,6 +648,7 @@ export function checkCalendarEventReminders(): void {
  */
 export function startCalendarReminderWatcher(): void {
   if (reminderWatcherInterval) return
+  void initHabitsStore()
   checkCalendarEventReminders()
   reminderWatcherInterval = setInterval(checkCalendarEventReminders, 15000)
 }

@@ -21,7 +21,10 @@
     Battery,
     Wifi,
     MoreHorizontal,
-    RotateCcw
+    RotateCcw,
+    GraduationCap,
+    ListChecks,
+    Pin
   } from 'lucide-svelte'
   import BentoCard from '../../BentoCard.svelte'
   import ToggleSwitch from '../../ToggleSwitch.svelte'
@@ -317,6 +320,30 @@
         ariaLabel={$tStore('settings.modules_stats_glance')}
       />
     </SettingItem>
+
+    <SettingItem label={$tStore('flashcards.title')} icon={GraduationCap}>
+      <ToggleSwitch
+        checked={$homeWidgetsVisibilityStore.flashcards !== false}
+        onchange={() => toggleHomeWidget('flashcards')}
+        ariaLabel={$tStore('flashcards.title')}
+      />
+    </SettingItem>
+
+    <SettingItem label={$tStore('habits.title')} icon={ListChecks}>
+      <ToggleSwitch
+        checked={$homeWidgetsVisibilityStore.habits !== false}
+        onchange={() => toggleHomeWidget('habits')}
+        ariaLabel={$tStore('habits.title')}
+      />
+    </SettingItem>
+
+    <SettingItem label={$tStore('notes.pinned_home_title')} icon={Pin}>
+      <ToggleSwitch
+        checked={$homeWidgetsVisibilityStore.pinnedNote !== false}
+        onchange={() => toggleHomeWidget('pinnedNote')}
+        ariaLabel={$tStore('notes.pinned_home_title')}
+      />
+    </SettingItem>
   </BentoCard>
 
   <SettingSectionHeader title={$tStore('settings.modules_pages_features')}>
@@ -418,6 +445,22 @@
         checked={$pageVisibilityStore.performance !== false}
         onchange={() => togglePage('performance')}
         ariaLabel={$tStore('apps.performance_name')}
+      />
+    </SettingItem>
+
+    <SettingItem label={$tStore('flashcards.title')} icon={GraduationCap}>
+      <ToggleSwitch
+        checked={$pageVisibilityStore.flashcards !== false}
+        onchange={() => togglePage('flashcards')}
+        ariaLabel={$tStore('flashcards.title')}
+      />
+    </SettingItem>
+
+    <SettingItem label={$tStore('habits.title')} icon={ListChecks}>
+      <ToggleSwitch
+        checked={$pageVisibilityStore.habits !== false}
+        onchange={() => togglePage('habits')}
+        ariaLabel={$tStore('habits.title')}
       />
     </SettingItem>
   </BentoCard>

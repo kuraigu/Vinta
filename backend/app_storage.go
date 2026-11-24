@@ -9,44 +9,62 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-// GetCalendarData reads calendar.json from %APPDATA%/FreeMatrix Studios/Vinta.
-func (a *App) GetCalendarData() (string, error) {
-	filePath := filepath.Join(GetAppDataDir(), "calendar.json")
+func readAppDataJSON(filename string) (string, error) {
+	filePath := filepath.Join(GetAppDataDir(), filename)
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return "{}", nil
 	}
 	return string(data), nil
+}
+
+func writeAppDataJSON(filename string, content string) error {
+	dir := GetAppDataDir()
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return err
+	}
+	filePath := filepath.Join(dir, filename)
+	return os.WriteFile(filePath, []byte(content), 0644)
+}
+
+// GetCalendarData reads calendar.json from %APPDATA%/FreeMatrix Studios/Vinta.
+func (a *App) GetCalendarData() (string, error) {
+	return readAppDataJSON("calendar.json")
 }
 
 // SaveCalendarData writes calendar.json to %APPDATA%/FreeMatrix Studios/Vinta.
 func (a *App) SaveCalendarData(calendarJSON string) error {
-	dir := GetAppDataDir()
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return err
-	}
-	filePath := filepath.Join(dir, "calendar.json")
-	return os.WriteFile(filePath, []byte(calendarJSON), 0644)
+	return writeAppDataJSON("calendar.json", calendarJSON)
 }
 
 // GetTimerData reads timer.json from %APPDATA%/FreeMatrix Studios/Vinta.
 func (a *App) GetTimerData() (string, error) {
-	filePath := filepath.Join(GetAppDataDir(), "timer.json")
-	data, err := os.ReadFile(filePath)
-	if err != nil {
-		return "{}", nil
-	}
-	return string(data), nil
+	return readAppDataJSON("timer.json")
 }
 
 // SaveTimerData writes timer.json to %APPDATA%/FreeMatrix Studios/Vinta.
 func (a *App) SaveTimerData(timerJSON string) error {
-	dir := GetAppDataDir()
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return err
-	}
-	filePath := filepath.Join(dir, "timer.json")
-	return os.WriteFile(filePath, []byte(timerJSON), 0644)
+	return writeAppDataJSON("timer.json", timerJSON)
+}
+
+// GetFlashcardsData reads flashcards.json from %APPDATA%/FreeMatrix Studios/Vinta.
+func (a *App) GetFlashcardsData() (string, error) {
+	return readAppDataJSON("flashcards.json")
+}
+
+// SaveFlashcardsData writes flashcards.json to %APPDATA%/FreeMatrix Studios/Vinta.
+func (a *App) SaveFlashcardsData(flashcardsJSON string) error {
+	return writeAppDataJSON("flashcards.json", flashcardsJSON)
+}
+
+// GetHabitsData reads habits.json from %APPDATA%/FreeMatrix Studios/Vinta.
+func (a *App) GetHabitsData() (string, error) {
+	return readAppDataJSON("habits.json")
+}
+
+// SaveHabitsData writes habits.json to %APPDATA%/FreeMatrix Studios/Vinta.
+func (a *App) SaveHabitsData(habitsJSON string) error {
+	return writeAppDataJSON("habits.json", habitsJSON)
 }
 
 var dpapiNotificationHeader = []byte("VNDP")
