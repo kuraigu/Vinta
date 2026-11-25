@@ -457,7 +457,7 @@
         >
           {#if $fileShelfStore.isOverShelf}
             <span class="cancel-banner-icon">
-              <X size={11} strokeWidth={3} />
+              <X size={12} strokeWidth={3} />
             </span>
             <span class="dragging-live-text cancel-text">
               Release to cancel drag
@@ -481,7 +481,7 @@
         >
           <span class="select-check-dot">
             {#if selectedPaths.length > 0}
-              <Check size={10} strokeWidth={3} />
+              <Check size={12} strokeWidth={3} />
             {/if}
           </span>
           <span>
@@ -499,7 +499,7 @@
               disabled={$fileShelfStore.busyAction !== null}
               onclick={() => void copyShelfPaths([...selectedPaths])}
             >
-              <Copy size={11} />
+              <Copy size={12} />
               <span>Copy</span>
             </button>
 
@@ -556,7 +556,7 @@
               disabled={$fileShelfStore.busyAction !== null}
               onclick={() => void bundleShelfToZip(targetPaths)}
             >
-              <FileArchive size={11} />
+              <FileArchive size={12} />
               <span>
                 {$fileShelfStore.busyAction === 'zip'
                   ? 'Bundling...'
@@ -657,7 +657,7 @@
                 aria-hidden="true"
               >
                 {#if isSelected}
-                  <Check size={10} strokeWidth={3} />
+                  <Check size={12} strokeWidth={3} />
                 {/if}
               </button>
 
@@ -674,7 +674,7 @@
                   removeFileFromShelf(item.path)
                 }}
               >
-                <X size={10} strokeWidth={2.5} />
+                <X size={12} strokeWidth={2.5} />
               </button>
             </div>
 
@@ -717,7 +717,7 @@
           }}
           aria-label={$tStore('fileshelf.clear_tooltip')}
         >
-          <Trash2 size={13} />
+          <Trash2 size={14} />
         </button>
       {/if}
     {/snippet}

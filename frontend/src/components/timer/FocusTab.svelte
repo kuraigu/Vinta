@@ -184,7 +184,7 @@
         onclick={resetFocus}
         use:islandTooltip={'Reset session'}
       >
-        <RotateCcw size={15} />
+        <RotateCcw size={16} />
       </button>
 
       <button
@@ -207,7 +207,7 @@
         onclick={skipFocusSession}
         use:islandTooltip={'Next cycle'}
       >
-        <SkipForward size={15} />
+        <SkipForward size={16} />
       </button>
     </div>
   </div>

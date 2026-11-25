@@ -395,3 +395,45 @@
     transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
     opacity 0.35s ease !important;
 }
+
+.minimal-pill-dots {
+  position: absolute;
+  top: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px 6px;
+  border-radius: var(--vinta-radius-pill, 9999px);
+  z-index: 30;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.16s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.island:hover .minimal-pill-dots,
+.minimal-pill-dots:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.minimal-pill-dot {
+  inline-size: 6px;
+  block-size: 2.5px;
+  padding: 0;
+  border: none;
+  border-radius: var(--vinta-radius-pill, 9999px);
+  background: var(--vinta-text-muted);
+  opacity: 0.55;
+  cursor: pointer;
+  transition:
+    transform 0.16s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.16s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.minimal-pill-dot.active {
+  inline-size: 12px;
+  background: var(--vinta-accent-primary);
+  opacity: 1;
+}

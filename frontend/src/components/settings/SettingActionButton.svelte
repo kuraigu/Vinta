@@ -77,21 +77,21 @@
     class:left-aligned={leftAligned}
   >
     {#if status === 'loading'}
-      <Loader2 size={13} class="setting-btn-spin" />
+      <Loader2 size={14} class="setting-btn-spin" />
       {#if loadingLabel}
         <span>{loadingLabel}</span>
       {:else if children}
         {@render children()}
       {/if}
     {:else if status === 'success'}
-      <Check size={13} />
+      <Check size={14} />
       {#if successLabel}
         <span>{successLabel}</span>
       {:else if children}
         {@render children()}
       {/if}
     {:else if status === 'error'}
-      <AlertCircle size={13} />
+      <AlertCircle size={14} />
       {#if errorLabel}
         <span>{errorLabel}</span>
       {:else if children}

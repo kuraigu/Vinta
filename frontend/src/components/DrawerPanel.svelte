@@ -7,7 +7,6 @@
   import type { Snippet } from 'svelte'
   import { X } from 'lucide-svelte'
   import { islandTooltip } from '../services/islandTooltip'
-  import './styles/DrawerPanel.css'
 
   interface Props {
     title: string
@@ -52,7 +51,7 @@
         onClose()
       }}
     >
-      <X size={13} />
+      <X size={14} />
     </button>
   </header>
 
@@ -62,3 +61,5 @@
     {/if}
   </div>
 </div>
+
+<style src="./styles/DrawerPanel.css"></style>

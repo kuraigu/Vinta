@@ -623,7 +623,7 @@
                         {$tStore('onboarding.name_prompt')}
                       </label>
                       <div class="onboarding-input-wrapper">
-                        <User size={13} class="input-leading-icon" />
+                        <User size={14} class="input-leading-icon" />
                         <input
                           id="onboarding-name-input"
                           type="text"

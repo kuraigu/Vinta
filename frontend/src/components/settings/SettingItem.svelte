@@ -80,7 +80,7 @@
                 use:islandTooltip={$tStore('common.reset')}
                 aria-label={$tStore('common.reset')}
               >
-                <RotateCcw size={11} strokeWidth={2.2} />
+                <RotateCcw size={12} strokeWidth={2.2} />
               </button>
             {/if}
           </div>

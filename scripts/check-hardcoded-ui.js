@@ -132,7 +132,7 @@ function scanSvelteTemplate(rel, text, findings) {
     }
   })
 
-  // Check JS CSS imports in script block
+  // Check JS CSS imports and banned Sparkle/Sparkles icon imports in script blocks
   const scriptMatches = text.match(/<script[\s\S]*?<\/script>/gi) || []
   for (const block of scriptMatches) {
     const importRe = /import\s+['"][^'"]+\.css['"]/g
@@ -144,7 +144,38 @@ function scanSvelteTemplate(rel, text, findings) {
         kind: 'JS CSS import (use <style src="...">)'
       })
     }
+    const sparkleRe = /import\s+\{[^}]*\bSparkles?\b[^}]*\}\s+from\s+['"]lucide-svelte['"]/g
+    if (sparkleRe.test(block)) {
+      const lineNum = text.slice(0, text.indexOf(block)).split(/\r?\n/).length
+      findings.nativeControls.push({
+        file: rel,
+        line: lineNum,
+        kind: 'Banned Sparkle/Sparkles icon from lucide-svelte'
+      })
+    }
   }
+
+  // Check icon size hygiene (even >= 12px, respecting <!-- vinta-ignore icon-size -->)
+  const rawLines = text.split(/\r?\n/)
+  const iconSizeRe = /<[A-Z][A-Za-z0-9_]*\b[^>]*\bsize=\{(\d+(?:\.\d+)?)\}/g
+  rawLines.forEach((rawLine, idx) => {
+    const prevLine = idx > 0 ? rawLines[idx - 1] : ''
+    if (rawLine.includes('vinta-ignore icon-size') || prevLine.includes('vinta-ignore icon-size')) {
+      return
+    }
+    iconSizeRe.lastIndex = 0
+    let match
+    while ((match = iconSizeRe.exec(rawLine)) !== null) {
+      const n = Number(match[1])
+      if (Number.isFinite(n) && (n < 12 || n % 2 !== 0)) {
+        findings.nativeControls.push({
+          file: rel,
+          line: idx + 1,
+          kind: `Icon size={${match[1]}} must be even and >= 12px`
+        })
+      }
+    }
+  })
 }
 
 function printGroup(title, items, formatItem) {

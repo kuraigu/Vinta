@@ -50,13 +50,18 @@
 
 .empty-state-action {
   margin-top: 14px;
-  height: 32px;
+  min-block-size: 32px;
+  block-size: 32px;
   padding: 0 14px;
   border-radius: 16px;
   background: var(--vinta-primary);
   color: var(--vinta-contrast-text, #ffffff);
   font-size: 12px;
   font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-inline-size: 100%;
   border: none;
   cursor: pointer;
   transition:

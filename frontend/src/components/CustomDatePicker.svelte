@@ -271,10 +271,10 @@
     aria-expanded={isOpen}
   >
     <div class="trigger-label-group">
-      <CalendarIcon size={13} class="trigger-icon" />
+      <CalendarIcon size={14} class="trigger-icon" />
       <span class="trigger-text">{displayLabel}</span>
     </div>
-    <ChevronDown size={13} class={`chevron-icon ${isOpen ? 'rotate' : ''}`} />
+    <ChevronDown size={14} class={`chevron-icon ${isOpen ? 'rotate' : ''}`} />
   </button>
 
   {#if isOpen}
@@ -292,7 +292,7 @@
           onclick={handlePrev}
           aria-label="Previous"
         >
-          <ChevronLeft size={13} />
+          <ChevronLeft size={14} />
         </button>
 
         <!-- Dynamic Header Switchers based on View Mode -->
@@ -305,7 +305,7 @@
               aria-label="Change month"
             >
               <span>{MONTH_NAMES[viewMonth]}</span>
-              <ChevronDown size={10} class="small-chevron" />
+              <ChevronDown size={12} class="small-chevron" />
             </button>
 
             <button
@@ -315,7 +315,7 @@
               aria-label="Change year"
             >
               <span>{viewYear}</span>
-              <ChevronDown size={10} class="small-chevron" />
+              <ChevronDown size={12} class="small-chevron" />
             </button>
           {:else if viewMode === 'months'}
             <button
@@ -325,7 +325,7 @@
               aria-label="Change decade"
             >
               <span>{viewYear}</span>
-              <ChevronDown size={10} class="small-chevron" />
+              <ChevronDown size={12} class="small-chevron" />
             </button>
           {:else}
             <span class="decade-header-label">{decadeTitle}</span>
@@ -338,7 +338,7 @@
           onclick={handleNext}
           aria-label="Next"
         >
-          <ChevronRight size={13} />
+          <ChevronRight size={14} />
         </button>
       </div>
 

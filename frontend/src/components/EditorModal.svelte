@@ -7,7 +7,6 @@
   import type { Snippet } from 'svelte'
   import { X } from 'lucide-svelte'
   import { islandTooltip } from '../services/islandTooltip'
-  import './styles/EditorModal.css'
 
   interface Props {
     isOpen: boolean
@@ -68,7 +67,7 @@
           use:islandTooltip={'Close'}
           aria-label="Close dialog"
         >
-          <X size={15} />
+          <X size={16} />
         </button>
       </header>
 
@@ -86,3 +85,5 @@
     </div>
   </div>
 {/if}
+
+<style src="./styles/EditorModal.css"></style>

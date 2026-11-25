@@ -174,11 +174,11 @@
                   aria-label="Toggle Master Mute"
                 >
                   {#if masterMuted}
-                    <VolumeX size={13} />
+                    <VolumeX size={14} />
                   {:else if masterVol > 50}
-                    <Volume2 size={13} />
+                    <Volume2 size={14} />
                   {:else}
-                    <Volume1 size={13} />
+                    <Volume1 size={14} />
                   {/if}
                 </button>
                 <span class="master-title">Master</span>
@@ -384,13 +384,13 @@
                   >
                     <div class="endpoint-left-meta">
                       <div class="endpoint-icon-wrap">
-                        <Speaker size={13} class="endpoint-icon" />
+                        <Speaker size={14} class="endpoint-icon" />
                       </div>
                       <span class="endpoint-name">{ep.name}</span>
                     </div>
                     {#if ep.isDefault}
                       <span class="endpoint-badge">
-                        <Check size={11} class="endpoint-badge-icon" />
+                        <Check size={12} class="endpoint-badge-icon" />
                         <span>Default</span>
                       </span>
                     {/if}

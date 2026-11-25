@@ -107,7 +107,7 @@
   class="vinta-search-input variant-{variant} size-{size} {className}"
   style:max-width={maxWidth}
 >
-  <Search size={13} class="vinta-search-icon" />
+  <Search size={14} class="vinta-search-icon" />
   <input
     bind:this={inputEl}
     type="text"
@@ -124,7 +124,7 @@
       aria-label="Clear search query"
       onclick={handleClear}
     >
-      <X size={11} />
+      <X size={12} />
     </button>
   {/if}
 </div>

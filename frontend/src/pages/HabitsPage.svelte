@@ -26,6 +26,7 @@
   } from 'lucide-svelte'
   import IslandPage from '../components/IslandPage.svelte'
   import PageHeader from '../components/PageHeader.svelte'
+  import HeaderActionButton from '../components/HeaderActionButton.svelte'
   import BentoCard from '../components/BentoCard.svelte'
   import IconBadge from '../components/IconBadge.svelte'
   import ScrollView from '../components/ScrollView.svelte'
@@ -94,14 +95,13 @@
           <span class="hb-progress-pill">
             {$habitsProgress.done}/{$habitsProgress.total}
           </span>
-          <button
-            type="button"
-            class="hb-header-pill"
+          <HeaderActionButton
+            variant="pill"
             onclick={() => (showAddForm = !showAddForm)}
           >
-            <Plus size={12} />
+            <Plus size={14} />
             <span>{$tStore('habits.add_habit')}</span>
-          </button>
+          </HeaderActionButton>
         {/snippet}
       </PageHeader>
 
@@ -170,13 +170,13 @@
                     <span class="hb-row-sub">
                       {#if habit.streak > 0}
                         <span class="hb-inline-meta streak">
-                          <Flame size={10} />
+                          <Flame size={12} />
                           {habit.streak}d
                         </span>
                       {/if}
                       {#if habit.reminderMinutes > 0}
                         <span class="hb-inline-meta">
-                          <Bell size={10} />
+                          <Bell size={12} />
                           {$tStore('habits.reminder_every', {
                             mins: habit.reminderMinutes
                           })}
@@ -201,7 +201,7 @@
                     deleteHabit(habit.id)
                   }}
                 >
-                  <Trash2 size={13} />
+                  <Trash2 size={14} />
                 </button>
               </BentoCard>
             {/each}

@@ -1054,7 +1054,7 @@
                         class="note-card-has-img"
                         use:islandTooltip={$tStore('notes.contains_image')}
                       >
-                        <ImageIcon size={11} />
+                        <ImageIcon size={12} />
                       </span>
                     {/if}
                   </div>
@@ -1151,7 +1151,7 @@
             }}
             onclick={handleOpenFolder}
           >
-            <FolderOpen size={15} />
+            <FolderOpen size={16} />
           </button>
           <button
             class="board-action-btn new-note-action"
@@ -1292,7 +1292,7 @@
           }}
           onclick={handleBackToBoard}
         >
-          <List size={15} />
+          <List size={16} />
         </button>
 
         <button
@@ -1348,7 +1348,7 @@
           }}
           onclick={handleOpenFolder}
         >
-          <FolderOpen size={15} />
+          <FolderOpen size={16} />
         </button>
 
         <button
@@ -1356,7 +1356,7 @@
           use:islandTooltip={{ text: $tStore('notes.delete'), position: 'top' }}
           onclick={handleDeleteActiveNote}
         >
-          <Trash2 size={15} />
+          <Trash2 size={16} />
         </button>
       </div>
     </div>

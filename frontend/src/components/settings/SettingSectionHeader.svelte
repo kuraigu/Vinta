@@ -18,7 +18,7 @@
 <div class="setting-section-header">
   <div class="setting-section-title">
     {#if IconComponent}
-      <IconComponent size={13} strokeWidth={2.2} />
+      <IconComponent size={14} strokeWidth={2.2} />
     {/if}
     <span>{title}</span>
   </div>

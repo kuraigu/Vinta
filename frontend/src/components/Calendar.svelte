@@ -48,6 +48,7 @@
   } from '../pages/CalendarPage.svelte'
   import BentoCard from './BentoCard.svelte'
   import PageHeader from './PageHeader.svelte'
+  import HeaderActionButton from './HeaderActionButton.svelte'
   import ScrollView from './ScrollView.svelte'
   import ActionCapsule from './ActionCapsule.svelte'
   import EditorModal from './EditorModal.svelte'
@@ -56,6 +57,7 @@
   import CustomDatePicker from './CustomDatePicker.svelte'
   import CustomTimePicker from './CustomTimePicker.svelte'
   import ToggleSwitch from './ToggleSwitch.svelte'
+  import SearchInput from './SearchInput.svelte'
   import HorizontalTabSelection, {
     type TabItem
   } from './HorizontalTabSelection.svelte'
@@ -93,6 +95,9 @@
   let viewMode = $state<'month' | 'year' | 'decade'>('month')
   let activeTab = $state<'calendar' | 'agenda' | 'holidays'>('calendar')
   let agendaFilter = $state<'all' | 'today' | 'upcoming'>('all')
+  let holidayFilter = $state<'upcoming' | 'all'>('upcoming')
+  let agendaSearch = $state('')
+  let holidaySearch = $state('')
   let sourceFilter = $state<'all' | 'local' | 'google' | 'ical'>('all')
 
   // Sources & Sync drawer state
@@ -171,6 +176,11 @@
     { id: 'all', label: $tStore('calendar.filter_all'), tooltip: '' },
     { id: 'today', label: $tStore('calendar.filter_today'), tooltip: '' },
     { id: 'upcoming', label: $tStore('calendar.filter_upcoming'), tooltip: '' }
+  ])
+
+  let holidayFilterTabs: TabItem<'upcoming' | 'all'>[] = $derived([
+    { id: 'upcoming', label: $tStore('calendar.filter_upcoming'), tooltip: '' },
+    { id: 'all', label: $tStore('calendar.filter_all'), tooltip: '' }
   ])
 
   let timer: ReturnType<typeof setInterval>
@@ -360,12 +370,57 @@
   }
   let allAgendaEvents = $derived.by(computeAllAgendaEvents)
 
+  interface MonthGroup {
+    key: string
+    label: string
+    items: CalendarEvent[]
+  }
+
+  function groupEventsByMonth(items: CalendarEvent[]): MonthGroup[] {
+    const groups: MonthGroup[] = []
+    const byKey: Record<string, MonthGroup> = {}
+    for (const item of items) {
+      const monthKey = item.date.slice(0, 7)
+      let group = byKey[monthKey]
+      if (!group) {
+        const [y, m] = monthKey.split('-').map(Number)
+        const d = new Date(y || new Date().getFullYear(), (m || 1) - 1, 1)
+        const label = isNaN(d.getTime())
+          ? monthKey
+          : d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
+        group = { key: monthKey, label, items: [] }
+        byKey[monthKey] = group
+        groups.push(group)
+      }
+      group.items.push(item)
+    }
+    return groups
+  }
+
   function computeHolidayEvents(): CalendarEvent[] {
     return $calendarStore.events
       .filter((e) => e.source === 'holiday' || e.isHoliday)
       .sort((a, b) => a.date.localeCompare(b.date))
   }
   let holidayEvents = $derived.by(computeHolidayEvents)
+
+  let filteredHolidayEvents = $derived.by(() => {
+    const q = holidaySearch.trim().toLowerCase()
+    const todayKey = formatDateKey(realToday)
+    return holidayEvents.filter((e) => {
+      if (holidayFilter === 'upcoming' && e.date < todayKey) return false
+      if (!q) return true
+      return (
+        e.title.toLowerCase().includes(q) ||
+        (e.description || '').toLowerCase().includes(q) ||
+        e.date.includes(q)
+      )
+    })
+  })
+
+  let groupedHolidayEvents = $derived.by(() =>
+    groupEventsByMonth(filteredHolidayEvents)
+  )
 
   let availableSourceFilters = $derived.by(() => {
     const hasGoogle =
@@ -383,6 +438,7 @@
 
   function computeFilteredAgendaEvents(): CalendarEvent[] {
     const todayKey = formatDateKey(new Date())
+    const q = agendaSearch.trim().toLowerCase()
     let base = allAgendaEvents
     if (agendaFilter === 'today') {
       base = base.filter((e) => e.date === todayKey)
@@ -390,17 +446,24 @@
       base = base.filter((e) => !isCalendarEventPast(e))
     }
     if (sourceFilter === 'local') {
-      return base.filter((e) => e.source === 'local')
+      base = base.filter((e) => e.source === 'local')
+    } else if (sourceFilter === 'google') {
+      base = base.filter((e) => e.source === 'google')
+    } else if (sourceFilter === 'ical') {
+      base = base.filter((e) => e.source === 'synced')
     }
-    if (sourceFilter === 'google') {
-      return base.filter((e) => e.source === 'google')
-    }
-    if (sourceFilter === 'ical') {
-      return base.filter((e) => e.source === 'synced')
-    }
-    return base
+    if (!q) return base
+    return base.filter(
+      (e) =>
+        e.title.toLowerCase().includes(q) ||
+        (e.location || '').toLowerCase().includes(q) ||
+        e.date.includes(q)
+    )
   }
   let filteredAgendaEvents = $derived.by(computeFilteredAgendaEvents)
+  let groupedAgendaEvents = $derived.by(() =>
+    groupEventsByMonth(filteredAgendaEvents)
+  )
 
   function computePastEventsCount(): number {
     return $calendarStore.events.filter(
@@ -627,7 +690,7 @@
     {#if variant === 'page'}
       <div class="minimal-calendar-pill">
         <div class="pill-date-badge">
-          <CalendarIcon size={13} />
+          <CalendarIcon size={14} />
           <span>{formatUserDate(new Date(), $dateFormatStore)}</span>
         </div>
 
@@ -671,7 +734,7 @@
                 {:else}
                   <span class="header-month-name">{headerTitle}</span>
                 {/if}
-                <ChevronDown size={13} class="header-chevron" />
+                <ChevronDown size={14} class="header-chevron" />
               </button>
             </div>
           {/if}
@@ -698,7 +761,7 @@
                   aria-label="Previous interval"
                   use:islandTooltip={'Previous'}
                 >
-                  <ChevronLeft size={13} />
+                  <ChevronLeft size={14} />
                 </button>
                 <button
                   type="button"
@@ -707,23 +770,22 @@
                   aria-label="Next interval"
                   use:islandTooltip={'Next'}
                 >
-                  <ChevronRight size={13} />
+                  <ChevronRight size={14} />
                 </button>
               </div>
             </div>
           {/if}
-          <button
-            type="button"
-            class="icon-nav-btn"
+          <HeaderActionButton
+            variant="ghost"
             onclick={() => (showSourcesDrawer = true)}
-            aria-label={$tStore('calendar.sources_title')}
-            use:islandTooltip={{
+            ariaLabel={$tStore('calendar.sources_title')}
+            tooltip={{
               text: $tStore('calendar.sources_title'),
               position: 'bottom'
             }}
           >
-            <SlidersHorizontal size={13} />
-          </button>
+            <SlidersHorizontal size={16} />
+          </HeaderActionButton>
         {/snippet}
       </PageHeader>
 
@@ -785,27 +847,49 @@
                       class="agenda-primary-add-btn"
                       onclick={() => handleOpenAddModal()}
                     >
-                      <Plus size={13} />
+                      <Plus size={14} />
                       <span>{$tStore('calendar.add_event')}</span>
                     </button>
                   </div>
                 </div>
 
+                <div class="agenda-search-row">
+                  <SearchInput
+                    bind:value={agendaSearch}
+                    placeholder={$tStore('calendar.search_events')}
+                  />
+                </div>
+
                 <ScrollView class="calendar-agenda-scroll-view">
-                  {#if filteredAgendaEvents.length === 0}
+                  {#if groupedAgendaEvents.length === 0}
                     <div class="agenda-empty-state">
                       <CalendarDays size={26} />
                       <span>{$tStore('calendar.no_matching_events')}</span>
                     </div>
                   {:else}
                     <div class="agenda-stream-list">
-                      {#each filteredAgendaEvents as event (event.id)}
-                        <AgendaEventCard
-                          {event}
-                          variant="detailed"
-                          onEdit={handleOpenEditModal}
-                          onDelete={deleteCalendarEvent}
-                        />
+                      {#each groupedAgendaEvents as group (group.key)}
+                        <div class="agenda-month-group">
+                          <div class="agenda-month-header">
+                            <span>{group.label}</span>
+                            <span class="agenda-month-count"
+                              >{group.items.length}</span
+                            >
+                          </div>
+                          {#each group.items as event (event.id)}
+                            <div
+                              class="agenda-item-wrap"
+                              class:is-past={isCalendarEventPast(event)}
+                            >
+                              <AgendaEventCard
+                                {event}
+                                variant="detailed"
+                                onEdit={handleOpenEditModal}
+                                onDelete={deleteCalendarEvent}
+                              />
+                            </div>
+                          {/each}
+                        </div>
                       {/each}
                     </div>
                   {/if}
@@ -815,25 +899,54 @@
               <!-- PUBLIC HOLIDAYS TAB -->
               <div class="agenda-tab-view">
                 <div class="agenda-toolbar-row">
+                  <HorizontalTabSelection
+                    tabs={holidayFilterTabs}
+                    bind:value={holidayFilter}
+                    colorVariant="primary"
+                    ariaLabel={$tStore('calendar.holidays_tab')}
+                  />
                   <div class="holidays-tab-meta">
-                    <Flag size={13} />
+                    <Flag size={14} />
                     <span>{$holidayCountryStore}</span>
                     <span class="holidays-count-pill"
-                      >{holidayEvents.length}</span
+                      >{filteredHolidayEvents.length}</span
                     >
                   </div>
                 </div>
 
+                <div class="agenda-search-row">
+                  <SearchInput
+                    bind:value={holidaySearch}
+                    placeholder={$tStore('calendar.search_holidays')}
+                  />
+                </div>
+
                 <ScrollView class="calendar-agenda-scroll-view">
-                  {#if holidayEvents.length === 0}
+                  {#if groupedHolidayEvents.length === 0}
                     <div class="agenda-empty-state">
                       <Flag size={26} />
                       <span>{$tStore('calendar.no_holidays')}</span>
                     </div>
                   {:else}
                     <div class="agenda-stream-list">
-                      {#each holidayEvents as event (event.id)}
-                        <AgendaEventCard {event} variant="detailed" />
+                      {#each groupedHolidayEvents as group (group.key)}
+                        <div class="agenda-month-group">
+                          <div class="agenda-month-header">
+                            <span>{group.label}</span>
+                            <span class="agenda-month-count"
+                              >{group.items.length}</span
+                            >
+                          </div>
+                          {#each group.items as event (event.id)}
+                            <div
+                              class="agenda-item-wrap"
+                              class:is-past={event.date <
+                                formatDateKey(realToday)}
+                            >
+                              <AgendaEventCard {event} variant="detailed" />
+                            </div>
+                          {/each}
+                        </div>
                       {/each}
                     </div>
                   {/if}
@@ -852,7 +965,7 @@
       >
         <div class="agenda-tray-header home-agenda-header">
           <div class="agenda-tray-title">
-            <CalendarDays size={13} />
+            <CalendarDays size={14} />
             <span>{todayDateLabel}</span>
             {#if todayEvents.length > 0}
               <span class="agenda-tray-subtitle">
@@ -923,7 +1036,7 @@
                 {:else}
                   <span class="header-month-name">{headerTitle}</span>
                 {/if}
-                <ChevronDown size={13} class="header-chevron" />
+                <ChevronDown size={14} class="header-chevron" />
               </button>
             </div>
 
@@ -940,7 +1053,7 @@
                   aria-label="Previous interval"
                   use:islandTooltip={'Previous'}
                 >
-                  <ChevronLeft size={13} />
+                  <ChevronLeft size={14} />
                 </button>
                 <button
                   type="button"
@@ -949,7 +1062,7 @@
                   aria-label="Next interval"
                   use:islandTooltip={'Next'}
                 >
-                  <ChevronRight size={13} />
+                  <ChevronRight size={14} />
                 </button>
               </div>
 
@@ -1007,7 +1120,7 @@
           <div class="calendar-agenda-tray">
             <div class="agenda-tray-header">
               <div class="agenda-tray-title">
-                <Clock size={11} />
+                <Clock size={12} />
                 <span>{selectedDateLabel}</span>
                 {#if selectedDateEvents.length > 0}
                   <span class="agenda-tray-subtitle">
@@ -1204,7 +1317,7 @@
             onclick={handleDeleteEditingEvent}
             aria-label={$tStore('calendar.delete_event')}
           >
-            <Trash2 size={13} />
+            <Trash2 size={14} />
             <span>{$tStore('calendar.delete')}</span>
           </button>
         {:else}
@@ -1324,7 +1437,7 @@
                   disabled={$calendarStore.isSyncing}
                   onclick={() => void syncAllCalendarFeeds()}
                 >
-                  <RefreshCw size={11} />
+                  <RefreshCw size={12} />
                   <span>{$tStore('calendar.sync_now')}</span>
                 </button>
               {/if}

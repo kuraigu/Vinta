@@ -13,7 +13,6 @@
     type CalendarEvent
   } from '../stores/calendarStore'
   import { OpenURL } from '../../bindings/Vinta/backend/app.js'
-  import './styles/AgendaEventCard.css'
 
   interface Props {
     event?: CalendarEvent
@@ -189,14 +188,14 @@
             use:islandTooltip={'Notified'}
             aria-label="Notification delivered"
           >
-            <BellRing size={11} />
+            <BellRing size={12} />
           </span>
         {/if}
       </div>
       <span class="tray-card-title">{event.title}</span>
       {#if event.location}
         <span class="tray-card-loc">
-          <MapPin size={11} />
+          <MapPin size={12} />
           {event.location}
         </span>
       {/if}
@@ -218,7 +217,7 @@
             aria-label="Join meeting"
             use:islandTooltip={'Join meeting'}
           >
-            <Video size={13} />
+            <Video size={14} />
           </button>
         {/if}
         {#if !isReadOnly && onEdit}
@@ -229,7 +228,7 @@
             aria-label="Edit event"
             use:islandTooltip={'Edit event'}
           >
-            <Pencil size={13} />
+            <Pencil size={14} />
           </button>
         {/if}
         {#if !isReadOnly && onDelete}
@@ -240,10 +239,12 @@
             aria-label="Delete event"
             use:islandTooltip={'Delete event'}
           >
-            <Trash2 size={13} />
+            <Trash2 size={14} />
           </button>
         {/if}
       </div>
     {/if}
   </div>
 {/if}
+
+<style src="./styles/AgendaEventCard.css"></style>

@@ -114,7 +114,11 @@ func (a *App) StartGitHubDeviceFlow() (GitHubDeviceCodeInfo, error) {
 	}
 	form := url.Values{}
 	form.Set("client_id", clientID)
-	form.Set("scope", "read:user notifications repo")
+	// GitHub Apps (Iv... Client IDs) use fine-grained read-only permissions configured on the app itself.
+	// Classic OAuth Apps (Ov...) use least-privilege read:user + notifications scope.
+	if !strings.HasPrefix(clientID, "Iv") {
+		form.Set("scope", "read:user notifications")
+	}
 
 	req, err := http.NewRequest(http.MethodPost, "https://github.com/login/device/code", strings.NewReader(form.Encode()))
 	if err != nil {

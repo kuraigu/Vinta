@@ -146,7 +146,7 @@
           class="account-ghost-btn danger"
           onclick={() => void signOutGoogleAccount()}
         >
-          <LogOut size={13} />
+          <LogOut size={14} />
           <span>{$tStore('account.sign_out')}</span>
         </button>
       </SettingItem>
@@ -224,7 +224,7 @@
           class="account-ghost-btn danger"
           onclick={() => void disconnectGitHubAccount()}
         >
-          <LogOut size={13} />
+          <LogOut size={14} />
           <span>{$tStore('account.disconnect')}</span>
         </button>
       </SettingItem>

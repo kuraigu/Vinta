@@ -664,7 +664,7 @@
                     }}
                     oncontextmenu={(e) => handleDockItemContextMenu(e, item)}
                   >
-                    <Icon size={15} />
+                    <Icon size={16} />
                     <span class="dock-overflow-label">{item.tooltip}</span>
                     {#if item.badge && item.badge > 0}
                       <span class="dock-overflow-badge">

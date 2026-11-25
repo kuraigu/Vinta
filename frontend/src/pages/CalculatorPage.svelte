@@ -434,7 +434,7 @@
       onclick={handleBackspace}
       use:islandTooltip={$tStore('calculator.backspace')}
     >
-      <Delete size={17} />
+      <Delete size={16} />
     </button>
 
     <!-- Row 2: Math functions & Divide -->

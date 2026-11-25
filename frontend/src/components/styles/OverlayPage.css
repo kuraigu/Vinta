@@ -109,6 +109,10 @@
   color: var(--vinta-text-primary);
 }
 
+.overlay-close-btn:active {
+  transform: scale(0.95);
+}
+
 .overlay-page-body {
   --vinta-dock-clearance: 0px;
   display: flex;

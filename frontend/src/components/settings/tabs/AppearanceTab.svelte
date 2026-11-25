@@ -7,7 +7,7 @@
   import { onMount } from 'svelte'
   import {
     Moon,
-    Sparkles,
+    SunMedium,
     Eye,
     Maximize2,
     User,
@@ -251,11 +251,11 @@
         />
         <div class="theme-actions">
           <button type="button" class="theme-btn" onclick={handleImport}>
-            <Upload size={13} strokeWidth={2.2} />
+            <Upload size={14} strokeWidth={2.2} />
             <span>{$tStore('appearance.import_theme')}</span>
           </button>
           <button type="button" class="theme-btn" onclick={handleOpenFolder}>
-            <FolderOpen size={13} strokeWidth={2.2} />
+            <FolderOpen size={14} strokeWidth={2.2} />
             <span>{$tStore('appearance.open_folder')}</span>
           </button>
           <button
@@ -265,7 +265,7 @@
             disabled={isLoadingThemes}
           >
             <RefreshCw
-              size={13}
+              size={14}
               strokeWidth={2.2}
               class={isLoadingThemes ? 'spinning' : ''}
             />
@@ -346,7 +346,7 @@
     <SettingItem
       label={$tStore('appearance.glow_label')}
       description={$tStore('appearance.glow_desc')}
-      icon={Sparkles}
+      icon={SunMedium}
       flexCol={true}
       isDefault={$glowIntensityStore === glowIntensityStore.defaultValue}
       onReset={() => glowIntensityStore.reset()}

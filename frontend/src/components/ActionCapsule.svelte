@@ -36,72 +36,7 @@
     <IconComponent size={12} class="capsule-icon" />
   {/if}
   <span class="capsule-label">{label}</span>
-  <ChevronRight size={13} class="capsule-arrow" />
+  <ChevronRight size={14} class="capsule-arrow" />
 </button>
 
-<style>
-  .action-capsule-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 3px 9px;
-    border-radius: 999px;
-    border: none;
-    background: var(--vinta-collapse-btn-bg, rgba(255, 255, 255, 0.08));
-    color: var(--vinta-text-secondary);
-    font-size: 0.72rem;
-    font-weight: 600;
-    letter-spacing: -0.01em;
-    cursor: pointer;
-    transition:
-      transform 0.2s ease,
-      opacity 0.2s ease;
-    user-select: none;
-    -webkit-user-select: none;
-    line-height: 1.2;
-    flex-shrink: 0;
-  }
-
-  .action-capsule-btn:hover {
-    background: rgba(255, 255, 255, 0.14);
-    color: var(--vinta-text-primary);
-    border-color: rgba(255, 255, 255, 0.22);
-  }
-
-  .action-capsule-btn.variant-frosted {
-    background: rgba(255, 255, 255, 0.16);
-    color: #ffffff;
-    border: 1px solid rgba(255, 255, 255, 0.22);
-  }
-
-  .action-capsule-btn.variant-frosted:hover {
-    background: rgba(255, 255, 255, 0.24);
-    border-color: rgba(255, 255, 255, 0.35);
-    color: #ffffff;
-  }
-
-  .action-capsule-btn.variant-accent {
-    background: var(--vinta-accent-primary, #38bdf8);
-    color: var(--vinta-text-on-accent, #ffffff);
-  }
-
-  .action-capsule-btn:active {
-    transform: scale(0.96);
-  }
-
-  :global(.capsule-icon) {
-    opacity: 0.85;
-    flex-shrink: 0;
-  }
-
-  :global(.capsule-arrow) {
-    opacity: 0.7;
-    flex-shrink: 0;
-    transition: transform 0.15s ease;
-  }
-
-  .action-capsule-btn:hover :global(.capsule-arrow) {
-    opacity: 1;
-    transform: translateX(1px);
-  }
-</style>
+<style src="./styles/ActionCapsule.css"></style>

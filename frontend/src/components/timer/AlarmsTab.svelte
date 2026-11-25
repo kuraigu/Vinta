@@ -94,7 +94,7 @@
                 onclick={() => onStartEdit(alarm)}
                 use:islandTooltip={'Edit alarm'}
               >
-                <Pencil size={13} />
+                <Pencil size={14} />
               </button>
 
               <ToggleSwitch
@@ -108,7 +108,7 @@
                 onclick={() => deleteAlarm(alarm.id)}
                 use:islandTooltip={'Delete'}
               >
-                <Trash2 size={13} />
+                <Trash2 size={14} />
               </button>
             </div>
           </div>

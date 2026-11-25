@@ -200,7 +200,7 @@
         fullWidth={true}
         onclick={handleClearPast}
       >
-        <Trash2 size={13} />
+        <Trash2 size={14} />
         <span>{$tStore('settings.clock_clear_past_label')}</span>
       </SettingActionButton>
     </SettingItem>

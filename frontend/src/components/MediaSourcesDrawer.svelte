@@ -10,7 +10,6 @@
   import { pinnedMediaSourceStore } from '../store'
   import DrawerPanel from './DrawerPanel.svelte'
   import ScrollView from './ScrollView.svelte'
-  import './styles/MediaSourcesDrawer.css'
 
   interface MediaSession {
     id: string
@@ -104,7 +103,7 @@
                 }}
               />
             {:else}
-              <Music2 size={13} class="session-item-fallback-icon" />
+              <Music2 size={14} class="session-item-fallback-icon" />
             {/if}
           </div>
           <div class="session-item-info">
@@ -117,7 +116,7 @@
           </div>
           <div class="session-item-status">
             {#if isSelected}
-              <Check size={13} class="selected-check" />
+              <Check size={14} class="selected-check" />
             {:else if s.isPlaying}
               <div class="live-playing-dot" use:islandTooltip={'Playing'}></div>
             {/if}
@@ -138,10 +137,12 @@
               ? 'Unpin source'
               : 'Pin source'}
           >
-            <Pin size={11} />
+            <Pin size={12} />
           </button>
         </div>
       {/each}
     </div>
   </ScrollView>
 </DrawerPanel>
+
+<style src="./styles/MediaSourcesDrawer.css"></style>

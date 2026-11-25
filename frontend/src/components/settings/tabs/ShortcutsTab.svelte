@@ -537,7 +537,7 @@
             </span>
           {:else if isFlash}
             <span class="listening-indicator" style="color: #4ade80;">
-              <Check size={13} />
+              <Check size={14} />
               <span>{$tStore('settings.shortcut_saved')}</span>
             </span>
           {:else if keyCaps.length > 0}
@@ -588,7 +588,7 @@
               label: sc.label
             })}
           >
-            <RotateCcw size={13} />
+            <RotateCcw size={14} />
           </button>
         {/if}
       </div>

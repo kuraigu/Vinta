@@ -412,7 +412,7 @@
 
           <div class="minimal-ringing-info">
             <div class="ringing-bell-badge">
-              <Bell size={13} class="bell-shake" />
+              <Bell size={14} class="bell-shake" />
             </div>
             <div class="ringing-text-col">
               <span class="ringing-alarm-name">
@@ -448,7 +448,7 @@
               use:islandTooltip={'Dismiss alarm'}
               aria-label="Dismiss alarm"
             >
-              <X size={13} />
+              <X size={14} />
             </button>
           </div>
         </div>
@@ -487,9 +487,9 @@
               }}
             >
               {#if isMinimalActiveRunning}
-                <Pause size={13} />
+                <Pause size={14} />
               {:else}
-                <Play size={13} />
+                <Play size={14} />
               {/if}
             </button>
 
@@ -561,7 +561,7 @@
                 use:islandTooltip={$tStore('timer.new_alarm')}
                 aria-label={$tStore('timer.new_alarm')}
               >
-                <Plus size={15} />
+                <Plus size={16} />
               </button>
             {:else}
               <div class="header-spacer" aria-hidden="true"></div>

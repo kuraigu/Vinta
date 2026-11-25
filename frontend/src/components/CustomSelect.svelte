@@ -255,7 +255,7 @@
     >
       {#if searchable}
         <div class="search-input-box">
-          <Search size={13} class="search-icon" />
+          <Search size={14} class="search-icon" />
           <input
             bind:this={searchInputNode}
             type="text"

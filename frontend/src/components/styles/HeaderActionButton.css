@@ -1,0 +1,95 @@
+/* ============================================================================
+   HeaderActionButton Unified Stylesheet
+   Baseline matches NotificationsOverlayPage / OverlayPage 32x32 circular ghost
+   ============================================================================ */
+
+.vinta-header-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  min-inline-size: 32px;
+  min-block-size: 32px;
+  block-size: 32px;
+  border-radius: var(--vinta-radius-pill, 9999px);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    transform 0.16s cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 0.16s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.vinta-header-btn :global(span) {
+  text-box: trim-both cap alphabetic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vinta-header-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.vinta-header-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Tier 1: Ghost (32x32 circular icon button) */
+.vinta-header-btn.variant-ghost {
+  inline-size: 32px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--vinta-text-secondary);
+}
+
+.vinta-header-btn.variant-ghost:hover:not(:disabled) {
+  background: var(--vinta-contrast-hover);
+  border-color: var(--vinta-border);
+  color: var(--vinta-text-primary);
+}
+
+/* Tier 2: Pill (32px subtle labeled button) */
+.vinta-header-btn.variant-pill {
+  gap: 6px;
+  padding: 0 12px;
+  background: var(--vinta-surface-card);
+  border: 1px solid var(--vinta-border);
+  color: var(--vinta-text-primary);
+}
+
+.vinta-header-btn.variant-pill:hover:not(:disabled) {
+  background: var(--vinta-contrast-hover);
+}
+
+/* Tier 3: Hero (32px primary accent CTA) */
+.vinta-header-btn.variant-hero {
+  gap: 6px;
+  padding: 0 14px;
+  background: var(--vinta-accent-primary);
+  border: 1px solid transparent;
+  color: var(--vinta-text-on-accent);
+  font-weight: 700;
+}
+
+.vinta-header-btn.variant-hero:hover:not(:disabled) {
+  opacity: 0.92;
+}
+
+/* Semantic State Modifiers */
+.vinta-header-btn.state-active {
+  background: var(--vinta-accent-muted);
+  border-color: var(--vinta-accent-primary);
+  color: var(--vinta-accent-primary);
+}
+
+.vinta-header-btn.state-danger {
+  background: var(--vinta-clear-btn-hover-bg);
+  border-color: transparent;
+  color: var(--vinta-clear-btn-hover-text);
+  box-shadow: var(--vinta-clear-btn-hover-border);
+}

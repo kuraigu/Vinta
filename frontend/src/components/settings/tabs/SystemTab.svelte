@@ -194,6 +194,7 @@
     'vinta_autohide_delay',
     'vinta_holiday_source',
     'vinta_holiday_country',
+    'vinta_minimal_pill_nav',
     'vinta_autohide_display',
     'vinta_hidden_pill_position',
     'vinta_wakemethod',
@@ -454,7 +455,7 @@
           fullWidth={true}
           onclick={handleRestartApp}
         >
-          <RotateCw size={13} />
+          <RotateCw size={14} />
           {$tStore('settings.hardware_accel_restart_btn')}
         </SettingActionButton>
       </div>
@@ -492,7 +493,7 @@
         fullWidth={true}
         onclick={handleExportSettings}
       >
-        <Download size={13} />
+        <Download size={14} />
         {$tStore('settings.export_btn')}
       </SettingActionButton>
     </SettingItem>
@@ -510,7 +511,7 @@
         fullWidth={true}
         onclick={handleImportSettings}
       >
-        <Upload size={13} />
+        <Upload size={14} />
         {$tStore('settings.import_btn')}
       </SettingActionButton>
     </SettingItem>
@@ -534,7 +535,7 @@
         fullWidth={true}
         onclick={handleRestoreBackup}
       >
-        <History size={13} />
+        <History size={14} />
         {$tStore('settings.backup_restore_btn')}
       </SettingActionButton>
     </SettingItem>

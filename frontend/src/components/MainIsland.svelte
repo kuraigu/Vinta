@@ -44,6 +44,7 @@
     autoHideDisplayStore,
     type OverlayPageId,
     allowDragPositionStore,
+    minimalPillNavStore,
     autoHideDelayStore,
     dndStore,
     privacyModeStore,
@@ -109,6 +110,9 @@
     onRecoverBounds?: () => void
     onAnimationDone?: () => void
     onCycleMinimalMode?: (direction: 1 | -1) => void
+    minimalModesCount?: number
+    activeMinimalModeIndex?: number
+    onSelectMinimalMode?: (index: number) => void
     canGoBack?: boolean
     onGoBack?: () => void
   }
@@ -158,6 +162,9 @@
     onRecoverBounds,
     onAnimationDone,
     onCycleMinimalMode,
+    minimalModesCount = 1,
+    activeMinimalModeIndex = 0,
+    onSelectMinimalMode,
     canGoBack = false,
     onGoBack
   }: Props = $props()
@@ -254,6 +261,7 @@
 
   function handleMinimalWheel(e: WheelEvent) {
     if (
+      !$minimalPillNavStore ||
       expanded ||
       isHidden ||
       gestures.isDragging ||
@@ -278,7 +286,13 @@
     }
 
     if (!gestures.canInitiateDrag(e, $allowDragPositionStore, expanded)) {
-      if (!expanded && !isHidden && activeOverlay === null && e.button === 0) {
+      if (
+        $minimalPillNavStore &&
+        !expanded &&
+        !isHidden &&
+        activeOverlay === null &&
+        e.button === 0
+      ) {
         minimalSwipeStart = { x: e.clientX, y: e.clientY }
         const onSwipeEnd = (ev: PointerEvent) => {
           window.removeEventListener('pointerup', onSwipeEnd)
@@ -768,6 +782,29 @@
         style="animation-duration: {$autoHideDelayStore || 5}s;"
       ></div>
     {/key}
+  {/if}
+
+  {#if !expanded && !isHidden && $minimalPillNavStore && minimalModesCount > 1 && activeOverlay === null}
+    <div
+      class="minimal-pill-dots"
+      role="tablist"
+      aria-label={$tStore('settings.minimal_pill_nav_label')}
+    >
+      {#each Array.from({ length: minimalModesCount }, (_, idx) => idx) as idx (idx)}
+        <button
+          type="button"
+          role="tab"
+          aria-selected={idx === activeMinimalModeIndex}
+          aria-label="Minimal view {idx + 1}"
+          class="minimal-pill-dot"
+          class:active={idx === activeMinimalModeIndex}
+          onclick={(e) => {
+            e.stopPropagation()
+            onSelectMinimalMode?.(idx)
+          }}
+        ></button>
+      {/each}
+    </div>
   {/if}
 
   {#if isTransitionGlow}

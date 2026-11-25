@@ -15,7 +15,7 @@
     CloudSun,
     FolderDown,
     Activity,
-    Sparkles,
+    Compass,
     Megaphone,
     Clock,
     Battery,
@@ -167,7 +167,7 @@
           class="section-reset-link"
           onclick={resetHomeWidgets}
         >
-          <RotateCcw size={11} strokeWidth={2.2} />
+          <RotateCcw size={12} strokeWidth={2.2} />
           <span>{$tStore('common.reset')}</span>
         </button>
       {/if}
@@ -229,7 +229,7 @@
       />
     </SettingItem>
 
-    <SettingItem label={$tStore('settings.modules_spotlight')} icon={Sparkles}>
+    <SettingItem label={$tStore('settings.modules_spotlight')} icon={Compass}>
       <ToggleSwitch
         checked={$homeWidgetsVisibilityStore.spotlight !== false}
         onchange={() => toggleHomeWidget('spotlight')}
@@ -265,7 +265,7 @@
       {#snippet nested()}
         <div class="setting-nested-row">
           <span class="setting-nested-label">
-            <Calendar size={13} />
+            <Calendar size={14} />
             <span>{$tStore('settings.modules_calendar_date')}</span>
           </span>
           <ToggleSwitch
@@ -276,7 +276,7 @@
         </div>
         <div class="setting-nested-row">
           <span class="setting-nested-label">
-            <Megaphone size={13} />
+            <Megaphone size={14} />
             <span>{$tStore('settings.modules_announcements')}</span>
           </span>
           <ToggleSwitch
@@ -287,7 +287,7 @@
         </div>
         <div class="setting-nested-row">
           <span class="setting-nested-label">
-            <Bell size={13} />
+            <Bell size={14} />
             <span>{$tStore('settings.modules_notifications_glance')}</span>
           </span>
           <ToggleSwitch
@@ -350,7 +350,7 @@
     {#snippet actions()}
       {#if !isPagesDefault}
         <button type="button" class="section-reset-link" onclick={resetPages}>
-          <RotateCcw size={11} strokeWidth={2.2} />
+          <RotateCcw size={12} strokeWidth={2.2} />
           <span>{$tStore('common.reset')}</span>
         </button>
       {/if}
@@ -473,7 +473,7 @@
           class="section-reset-link"
           onclick={resetDockPinned}
         >
-          <RotateCcw size={11} strokeWidth={2.2} />
+          <RotateCcw size={12} strokeWidth={2.2} />
           <span>{$tStore('common.reset')}</span>
         </button>
       {/if}

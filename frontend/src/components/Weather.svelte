@@ -344,7 +344,7 @@
           </div>
 
           <div class="banner-location">
-            <MapPin size={11} class="loc-pin" />
+            <MapPin size={12} class="loc-pin" />
             <span>{$weatherLocationStore.name || shortCityName}</span>
           </div>
 
@@ -363,7 +363,7 @@
                   : $tStore('weather.see_forecast')}
               </span>
               <ChevronDown
-                size={13}
+                size={14}
                 strokeWidth={2.4}
                 class="chevron-icon {isForecastOpen ? 'open' : ''}"
               />
@@ -489,7 +489,7 @@
             <section class="forecast-section">
               <BentoCard variant="bento" class="forecast-bento-card">
                 <div class="forecast-bento-header">
-                  <CalendarDays size={13} />
+                  <CalendarDays size={14} />
                   <span>{$tStore('weather.forecast_7day')}</span>
                 </div>
                 <div class="forecast-days-strip">
@@ -520,7 +520,7 @@
           <div class="bento-metrics-grid">
             <BentoCard variant="bento" class="forecast-bento-card">
               <div class="tile-head">
-                <Wind size={13} class="tile-head-icon" />
+                <Wind size={14} class="tile-head-icon" />
                 <span>{$tStore('weather.wind')}</span>
               </div>
               <div class="tile-body">
@@ -534,7 +534,7 @@
 
             <BentoCard variant="bento" class="forecast-bento-card">
               <div class="tile-head">
-                <Compass size={13} class="tile-head-icon" />
+                <Compass size={14} class="tile-head-icon" />
                 <span>{$tStore('weather.uv_index')}</span>
               </div>
               <div class="tile-body">
@@ -550,7 +550,7 @@
 
             <BentoCard variant="bento" class="forecast-bento-card">
               <div class="tile-head">
-                <Droplets size={13} class="tile-head-icon" />
+                <Droplets size={14} class="tile-head-icon" />
                 <span>{$tStore('weather.humidity')}</span>
               </div>
               <div class="tile-body">
@@ -568,7 +568,7 @@
 
             <BentoCard variant="bento" class="forecast-bento-card">
               <div class="tile-head">
-                <Gauge size={13} class="tile-head-icon" />
+                <Gauge size={14} class="tile-head-icon" />
                 <span>{$tStore('weather.pressure')}</span>
               </div>
               <div class="tile-body">
@@ -580,7 +580,7 @@
 
             <BentoCard variant="bento" class="forecast-bento-card">
               <div class="tile-head">
-                <Sun size={13} class="tile-head-icon" />
+                <Sun size={14} class="tile-head-icon" />
                 <span>{$tStore('weather.sun_timing')}</span>
               </div>
               <div class="tile-body">
@@ -596,7 +596,7 @@
 
             <BentoCard variant="bento" class="forecast-bento-card">
               <div class="tile-head">
-                <CloudRain size={13} class="tile-head-icon" />
+                <CloudRain size={14} class="tile-head-icon" />
                 <span>{$tStore('weather.precipitation')}</span>
               </div>
               <div class="tile-body">

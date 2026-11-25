@@ -123,7 +123,7 @@
         onclick={resetCountdown}
         use:islandTooltip={$tStore('timer.reset')}
       >
-        <RotateCcw size={15} />
+        <RotateCcw size={16} />
       </button>
 
       <button
@@ -147,7 +147,7 @@
         onclick={handleAddMinute}
         use:islandTooltip={$tStore('timer.add_minute')}
       >
-        <Plus size={15} />
+        <Plus size={16} />
       </button>
     </div>
   </div>
