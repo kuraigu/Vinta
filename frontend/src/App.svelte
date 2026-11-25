@@ -128,6 +128,7 @@
     type IslandConfig,
     homeWidgetsVisibilityStore,
     pageVisibilityStore,
+    minimalPillNavStore,
     type PageVisibility,
     hasCompletedOnboardingStore,
     syncSettingsToDisk,
@@ -1197,16 +1198,31 @@
     }
   }
 
+  let availableMinimalModes = $derived.by((): NavHistoryItem[] => [
+    { page: HomePage, config: homeConfig },
+    ...(isMediaActive && $pageVisibilityStore.media !== false
+      ? [{ page: MediaPage, config: mediaConfig }]
+      : []),
+    ...(isTimerActive && $pageVisibilityStore.timer !== false
+      ? [{ page: TimerPage, config: timerConfig }]
+      : [])
+  ])
+
+  let activeMinimalModeIndex = $derived.by(() => {
+    const idx = availableMinimalModes.findIndex((m) => m.page === activePage)
+    return idx === -1 ? 0 : idx
+  })
+
+  function selectMinimalMode(index: number): void {
+    if (!$minimalPillNavStore) return
+    const target = availableMinimalModes[index]
+    if (!target || target.page === activePage) return
+    navigateTo(target.page, target.config, false, true)
+  }
+
   function cycleMinimalMode(direction: 1 | -1): void {
-    const modes: NavHistoryItem[] = [
-      { page: HomePage, config: homeConfig },
-      ...(isMediaActive && $pageVisibilityStore.media !== false
-        ? [{ page: MediaPage, config: mediaConfig }]
-        : []),
-      ...(isTimerActive && $pageVisibilityStore.timer !== false
-        ? [{ page: TimerPage, config: timerConfig }]
-        : [])
-    ]
+    if (!$minimalPillNavStore) return
+    const modes = availableMinimalModes
     if (modes.length <= 1) return
     const currentIdx = modes.findIndex((m) => m.page === activePage)
     const nextIdx =
@@ -2606,6 +2622,9 @@
         onRecoverBounds={recoverBoundsIfIdle}
         onAnimationDone={recoverBoundsIfIdle}
         onCycleMinimalMode={cycleMinimalMode}
+        minimalModesCount={availableMinimalModes.length}
+        {activeMinimalModeIndex}
+        onSelectMinimalMode={selectMinimalMode}
         canGoBack={navHistory.length > 0}
         onGoBack={goBack}
       />

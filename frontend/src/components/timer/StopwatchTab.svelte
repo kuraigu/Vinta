@@ -68,7 +68,7 @@
       onclick={resetStopwatch}
       use:islandTooltip={'Reset stopwatch'}
     >
-      <RotateCcw size={15} />
+      <RotateCcw size={16} />
     </button>
 
     <button class="primary-pill-btn phase-stopwatch" onclick={toggleStopwatch}>
@@ -87,7 +87,7 @@
       disabled={!$timerAppStore.stopwatch.isRunning}
       use:islandTooltip={'Record lap'}
     >
-      <Flag size={15} />
+      <Flag size={16} />
     </button>
   </div>
 </div>

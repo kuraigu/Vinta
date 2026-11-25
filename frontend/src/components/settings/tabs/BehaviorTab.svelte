@@ -38,6 +38,7 @@
     wakeMethodStore,
     hiddenPillOffsetXStore,
     allowDragPositionStore,
+    minimalPillNavStore,
     displayLayoutStore,
     autoHideBorderlessStore,
     fullscreenBehaviorStore,
@@ -182,6 +183,18 @@
         direction="auto"
       />
     </SettingItem>
+    <SettingItem
+      label={$tStore('settings.minimal_pill_nav_label')}
+      description={$tStore('settings.minimal_pill_nav_desc')}
+      icon={Layout}
+      isDefault={$minimalPillNavStore === minimalPillNavStore.defaultValue}
+      onReset={() => minimalPillNavStore.reset()}
+    >
+      <ToggleSwitch
+        bind:checked={$minimalPillNavStore}
+        ariaLabel={$tStore('settings.minimal_pill_nav_label')}
+      />
+    </SettingItem>
   </BentoCard>
 
   <BentoCard variant="group">
@@ -226,7 +239,7 @@
         fullWidth={true}
         onclick={handleResetOffset}
       >
-        <RotateCcw size={13} />
+        <RotateCcw size={14} />
         <span>{$tStore('settings.center_island_btn')}</span>
       </SettingActionButton>
     </SettingItem>

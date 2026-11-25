@@ -240,10 +240,10 @@
     aria-expanded={isOpen}
   >
     <div class="trigger-label-group">
-      <Clock size={13} class="trigger-icon" />
+      <Clock size={14} class="trigger-icon" />
       <span class="trigger-text">{displayLabel}</span>
     </div>
-    <ChevronDown size={13} class={`chevron-icon ${isOpen ? 'rotate' : ''}`} />
+    <ChevronDown size={14} class={`chevron-icon ${isOpen ? 'rotate' : ''}`} />
   </button>
 
   {#if isOpen}

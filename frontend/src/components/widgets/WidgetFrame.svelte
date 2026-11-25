@@ -123,7 +123,7 @@
         oncontextmenu(e)
       }}
     >
-      <MoreHorizontal size={13} />
+      <MoreHorizontal size={14} />
     </button>
   {/if}
 </div>

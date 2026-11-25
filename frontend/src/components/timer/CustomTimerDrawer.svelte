@@ -210,7 +210,7 @@
       </div>
 
       <button class="drawer-confirm-btn" onclick={handleApply}>
-        <Check size={15} />
+        <Check size={16} />
         <span>Set Duration</span>
       </button>
     </div>

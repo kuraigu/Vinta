@@ -314,11 +314,11 @@
               }}
             />
             <div class="satellite-icon-fallback" style="display: none;">
-              <Bell size={13} />
+              <Bell size={14} />
             </div>
           {:else}
             <div class="satellite-icon-fallback">
-              <Bell size={13} />
+              <Bell size={14} />
             </div>
           {/if}
         </div>
@@ -342,7 +342,7 @@
       onclick={handleDismissClick}
       aria-label="Dismiss notification"
     >
-      <X size={10} strokeWidth={2.5} />
+      <X size={12} strokeWidth={2.5} />
     </button>
   </div>
 </SatelliteHost>

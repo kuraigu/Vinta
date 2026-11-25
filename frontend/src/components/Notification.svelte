@@ -695,7 +695,7 @@
               }}
               aria-label={$tStore('notification.fold')}
             >
-              <ChevronUp size={15} />
+              <ChevronUp size={16} />
             </button>
           {/if}
         </div>
@@ -1094,7 +1094,7 @@
                             app: group.brandName
                           })}
                         >
-                          <BellOff size={13} />
+                          <BellOff size={14} />
                         </button>
                         <button
                           type="button"

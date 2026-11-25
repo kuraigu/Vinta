@@ -253,7 +253,7 @@
               class="spotlight-chevron"
               style="position: relative; z-index: 1;"
             >
-              <ChevronRight size={15} strokeWidth={2.4} />
+              <ChevronRight size={16} strokeWidth={2.4} />
             </div>
           </button>
         {/each}
@@ -269,7 +269,7 @@
           onclick={handlePrev}
           aria-label="Previous card"
         >
-          <ChevronLeft size={13} strokeWidth={2.4} />
+          <ChevronLeft size={14} strokeWidth={2.4} />
         </button>
 
         <div class="spotlight-dots">
@@ -294,7 +294,7 @@
           onclick={handleNext}
           aria-label="Next card"
         >
-          <ChevronRight size={13} strokeWidth={2.4} />
+          <ChevronRight size={14} strokeWidth={2.4} />
         </button>
       </div>
     {/if}

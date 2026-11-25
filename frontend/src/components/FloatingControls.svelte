@@ -58,7 +58,7 @@
           overlayPinnedStore.update((pinned) => !pinned)
         }}
       >
-        <Pin size={13.5} strokeWidth={2.2} />
+        <Pin size={14} strokeWidth={2.2} />
       </DockButton>
     </div>
   {/if}
@@ -71,7 +71,7 @@
       onclick={(e: MouseEvent) =>
         AppControls.doMinimize(navigate, e, activePage)}
     >
-      <Minimize2 size={13.5} strokeWidth={2.2} />
+      <Minimize2 size={14} strokeWidth={2.2} />
     </DockButton>
   </div>
 
@@ -83,7 +83,7 @@
       tooltipPosition={expandedTooltipSide}
       onclick={(e: MouseEvent) => AppControls.doHide(navigate, hidePill, e)}
     >
-      <EyeOff size={13.5} strokeWidth={2.2} />
+      <EyeOff size={14} strokeWidth={2.2} />
     </DockButton>
   </div>
 
@@ -97,7 +97,7 @@
       tooltipPosition={expandedTooltipSide}
       onclick={(e: MouseEvent) => AppControls.doQuit(e)}
     >
-      <Power size={13.5} strokeWidth={2.2} />
+      <Power size={14} strokeWidth={2.2} />
     </DockButton>
   </div>
 </div>

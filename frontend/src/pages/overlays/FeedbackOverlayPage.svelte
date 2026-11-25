@@ -237,20 +237,20 @@
 
           {#if hasDuplicateContent}
             <div class="feedback-warning-pill" role="alert">
-              <AlertTriangle size={13} strokeWidth={2} />
+              <AlertTriangle size={14} strokeWidth={2} />
               <span>{$tStore('about.feedback_duplicate_warning')}</span>
             </div>
           {/if}
 
           <div class="feedback-meta-stack">
             <div class="feedback-info-pill">
-              <ImagePlus size={13} strokeWidth={2} />
+              <ImagePlus size={14} strokeWidth={2} />
               <span>{$tStore('about.feedback_attachments_hint')}</span>
             </div>
 
             {#if $feedbackOverlayKindStore === 'bug'}
               <div class="feedback-info-pill">
-                <Monitor size={13} strokeWidth={2} />
+                <Monitor size={14} strokeWidth={2} />
                 <div class="feedback-info-copy">
                   <span>{$tStore('about.feedback_desktop_auto')}</span>
                   {#if diagnostics}
@@ -284,7 +284,7 @@
         <span class="feedback-submit-wrap">
           <SettingActionButton disabled={!canSubmit} onclick={handleSubmit}>
             <span>{$tStore('about.feedback_open_github')}</span>
-            <ArrowUpRight size={13} strokeWidth={2} />
+            <ArrowUpRight size={14} strokeWidth={2} />
           </SettingActionButton>
         </span>
       </div>

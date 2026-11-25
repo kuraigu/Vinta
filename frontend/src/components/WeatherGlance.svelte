@@ -212,7 +212,7 @@
         </div>
         <div class="hero-banner-loc-row">
           {#if $weatherLocationStore.name || shortCityName}
-            <MapPin size={10} class="loc-pin" />
+            <MapPin size={12} class="loc-pin" />
           {/if}
           <span>{$weatherLocationStore.name || shortCityName || '\u00A0'}</span>
         </div>

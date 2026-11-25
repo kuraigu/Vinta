@@ -250,11 +250,11 @@
       >
         {#if $dndStore}
           <div class="dnd-zzz-icon">
-            <Bell size={15} />
+            <Bell size={16} />
             <span class="zzz-badge">z<sup>Z</sup></span>
           </div>
         {:else}
-          <Bell size={15} />
+          <Bell size={16} />
         {/if}
       </button>
       {#if $notifData.length > 0}
@@ -271,7 +271,7 @@
           }}
           aria-label={$tStore('notification.clear_aria')}
         >
-          <Trash2 size={15} />
+          <Trash2 size={16} />
           {#if isConfirmingClear}
             <span>{$tStore('notification.confirm_clear')}</span>
           {/if}
@@ -288,7 +288,7 @@
         }}
         aria-label={$tStore('announcements.mark_all_read')}
       >
-        <CheckCheck size={15} />
+        <CheckCheck size={16} />
       </button>
     {/if}
   {/snippet}
@@ -379,7 +379,7 @@
                             />
                           {:else}
                             <div class="author-avatar-fallback">
-                              <User size={11} />
+                              <User size={12} />
                             </div>
                           {/if}
                         </div>
@@ -416,7 +416,7 @@
                         class="card-item-link"
                       >
                         <span>{$tStore('announcements.view_github')}</span>
-                        <ArrowUpRight size={11} />
+                        <ArrowUpRight size={12} />
                       </a>
                     {/if}
                   </BentoCard>
@@ -435,7 +435,7 @@
                 <BentoCard variant="bento" class="overlay-feed-card">
                   <div class="feed-card-top">
                     <div class="overlay-version-pill">
-                      <ScrollText size={11} />
+                      <ScrollText size={12} />
                       <span>{formatVersion($appInfoStore?.version)}</span>
                     </div>
                   </div>

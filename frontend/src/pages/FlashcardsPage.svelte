@@ -28,6 +28,7 @@
   } from 'lucide-svelte'
   import IslandPage from '../components/IslandPage.svelte'
   import PageHeader from '../components/PageHeader.svelte'
+  import HeaderActionButton from '../components/HeaderActionButton.svelte'
   import BentoCard from '../components/BentoCard.svelte'
   import IconBadge from '../components/IconBadge.svelte'
   import ScrollView from '../components/ScrollView.svelte'
@@ -193,32 +194,28 @@
             </div>
           {/if}
           {#if activeDeck}
-            <button
-              type="button"
-              class="fc-icon-btn"
-              use:islandTooltip={{
+            <HeaderActionButton
+              variant="ghost"
+              tooltip={{
                 text: $tStore('flashcards.add_card'),
                 position: 'bottom'
               }}
-              aria-label={$tStore('flashcards.add_card')}
+              ariaLabel={$tStore('flashcards.add_card')}
               onclick={() => {
                 showAddCard = !showAddCard
                 showNewDeck = false
               }}
             >
-              <Plus size={14} />
-            </button>
+              <Plus size={16} />
+            </HeaderActionButton>
           {/if}
-          <button
-            type="button"
-            class="fc-icon-btn"
-            aria-label={$tStore('common.more')}
-            aria-haspopup="menu"
-            aria-expanded={menuOpen}
+          <HeaderActionButton
+            variant="ghost"
+            ariaLabel={$tStore('common.more')}
             onclick={openDeckMenu}
           >
-            <MoreVertical size={14} />
-          </button>
+            <MoreVertical size={16} />
+          </HeaderActionButton>
         {/snippet}
       </PageHeader>
 
@@ -334,7 +331,7 @@
                     }
                   }}
                 >
-                  <X size={13} />
+                  <X size={14} />
                 </button>
               </div>
             </div>

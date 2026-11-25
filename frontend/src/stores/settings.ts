@@ -763,6 +763,7 @@ function inferDefaultHolidayCountry(): string {
 export type HolidaySourceMode = 'auto' | 'nager' | 'google' | 'off'
 export const holidaySourceStore = persistentWritable<HolidaySourceMode>('vinta_holiday_source', 'auto')
 export const holidayCountryStore = persistentWritable<string>('vinta_holiday_country', inferDefaultHolidayCountry())
+export const minimalPillNavStore = persistentWritable<boolean>('vinta_minimal_pill_nav', true)
 export const weatherLocationStore = persistentWritable<WeatherLocation>('vinta_weather_location', { name: 'Manila, Philippines', lat: 14.5995, lon: 120.9842 })
 export const weatherUnitStore = persistentWritable<TemperatureUnit>('vinta_weather_unit', inferDefaultTemperatureUnit())
 export const weatherAnimationsStore = persistentWritable<boolean>('vinta_weather_animations', true)

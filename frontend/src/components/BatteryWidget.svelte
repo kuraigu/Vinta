@@ -68,12 +68,15 @@
   ></div>
 
   <div class="battery-pill-content">
+    <!-- vinta-ignore icon-size -->
     {#if !battery.hasBattery}
       <Plug size={8.5} strokeWidth={2.8} class="battery-plug-icon" />
     {:else}
+      <!-- vinta-ignore icon-size -->
       {#if battery.isCharging}
         <Zap size={8} strokeWidth={3.2} class="battery-status-icon" />
       {:else if battery.batterySaver}
+        <!-- vinta-ignore icon-size -->
         <Leaf size={8} strokeWidth={3.2} class="battery-status-icon" />
       {/if}
       <span class="battery-percent-num">{battery.percentage}</span>

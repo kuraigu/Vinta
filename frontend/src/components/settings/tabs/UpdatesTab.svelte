@@ -204,7 +204,7 @@
         onclick={handleCheckUpdates}
       >
         <RefreshCw
-          size={13}
+          size={14}
           strokeWidth={2}
           class={$updateCheckingStore ? 'spinning' : ''}
         />
@@ -359,7 +359,7 @@
               variant="default"
               onclick={() => handleOpenURL($updateInfoStore.release.htmlUrl)}
             >
-              <ArrowUpRight size={13} strokeWidth={2} />
+              <ArrowUpRight size={14} strokeWidth={2} />
               <span>{$tStore('settings.updates_github')}</span>
             </SettingActionButton>
           {/if}

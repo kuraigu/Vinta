@@ -51,6 +51,7 @@
   align-items: center;
   justify-content: center;
   height: 36px;
+  white-space: nowrap;
   border-radius: var(--vinta-radius-pill, 9999px);
   border: 1px solid transparent;
   background: transparent;
@@ -150,6 +151,7 @@
   gap: 5px;
   font-size: 0.72rem;
   font-weight: 600;
+  white-space: nowrap;
   background: var(--vinta-accent-danger-hover-bg);
   color: var(--vinta-accent-danger);
   border-color: var(--vinta-accent-danger);

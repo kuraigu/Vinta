@@ -91,7 +91,7 @@
           fullWidth={true}
           onclick={handleOpenLocalesFolder}
         >
-          <FolderOpen size={13} />
+          <FolderOpen size={14} />
           {$tStore('settings.open_locales_folder')}
         </SettingActionButton>
 
@@ -102,7 +102,7 @@
           fullWidth={true}
           onclick={handleReloadLocales}
         >
-          <RefreshCw size={13} />
+          <RefreshCw size={14} />
           {$tStore('settings.reload_locales')}
         </SettingActionButton>
       </div>

@@ -96,7 +96,7 @@
             onClose()
           }}
         >
-          <X size={15} strokeWidth={2.2} />
+          <X size={16} strokeWidth={2.2} />
         </button>
       </div>
     </header>

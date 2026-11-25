@@ -18,7 +18,6 @@
     Calculator,
     Palette,
     Film,
-    Sparkles,
     Calendar,
     Timer,
     Bell,
@@ -1797,7 +1796,7 @@
   <div class="showcase-status-card" class:is-running={isSequenceRunning}>
     <div class="status-top-row">
       <div class="status-badge">
-        <Sparkles size={13} />
+        <Zap size={14} />
         <span
           >{isSequenceRunning ? 'Showcase Running' : 'Director Standby'}</span
         >
@@ -2171,7 +2170,7 @@
       disabled={isSequenceRunning}
       onclick={triggerAct12Outro}
     >
-      <Sparkles size={13} />
+      <Zap size={14} />
       <span>12. Outro Desktop Settle</span>
     </button>
   </div>

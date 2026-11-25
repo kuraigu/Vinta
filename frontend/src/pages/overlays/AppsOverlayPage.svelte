@@ -158,7 +158,7 @@
   }
 
   let searchQuery = $state('')
-  let selectedIndex = $state(0)
+  let selectedIndex = $state(-1)
   let desktopApps = $state<DesktopAppItem[]>([])
   let desktopLoading = $state(false)
   let copiedMathFeedback = $state(false)
@@ -203,7 +203,7 @@
 
   onMount(() => {
     const focusSearch = () => {
-      selectedIndex = 0
+      selectedIndex = -1
       requestAnimationFrame(() => {
         searchInputRef?.focus()
       })
@@ -660,9 +660,9 @@
   }
 
   $effect(function resetAppsSelectionOnFilterChange() {
-    void trimmedQuery
+    const hasQuery = trimmedQuery.length > 0
     void $appsOverlayTabStore
-    selectedIndex = 0
+    selectedIndex = hasQuery ? 0 : -1
   })
 
   function scrollSelectedTileIntoView() {
@@ -801,25 +801,27 @@
 
     if (e.key === 'ArrowRight') {
       e.preventDefault()
-      selectedIndex = (selectedIndex + 1) % len
+      selectedIndex = selectedIndex < 0 ? 0 : (selectedIndex + 1) % len
       requestAnimationFrame(scrollSelectedTileIntoView)
       return
     }
     if (e.key === 'ArrowLeft') {
       e.preventDefault()
-      selectedIndex = (selectedIndex - 1 + len) % len
+      selectedIndex =
+        selectedIndex < 0 ? len - 1 : (selectedIndex - 1 + len) % len
       requestAnimationFrame(scrollSelectedTileIntoView)
       return
     }
     if (e.key === 'ArrowDown') {
       e.preventDefault()
-      selectedIndex = Math.min(len - 1, selectedIndex + 4)
+      selectedIndex =
+        selectedIndex < 0 ? 0 : Math.min(len - 1, selectedIndex + 4)
       requestAnimationFrame(scrollSelectedTileIntoView)
       return
     }
     if (e.key === 'ArrowUp') {
       e.preventDefault()
-      selectedIndex = Math.max(0, selectedIndex - 4)
+      selectedIndex = selectedIndex < 0 ? 0 : Math.max(0, selectedIndex - 4)
       requestAnimationFrame(scrollSelectedTileIntoView)
     }
   }
@@ -911,7 +913,7 @@
               </span>
               <span class="omni-action-sub">Google</span>
             </div>
-            <ArrowUpRight size={15} />
+            <ArrowUpRight size={16} />
           </button>
         {:else}
           <div class="empty-state">
@@ -937,7 +939,7 @@
                 onclick={() => cmd.action()}
               >
                 <div class="omni-action-icon">
-                  <CmdIcon size={17} />
+                  <CmdIcon size={16} />
                 </div>
                 <div class="omni-action-copy">
                   <span class="omni-action-title">{cmd.title}</span>
@@ -1083,6 +1085,9 @@
               class:is-disabled={!isEnabled}
               class:is-selected={i === selectedIndex}
               data-omni-item
+              onpointerenter={() => {
+                if (selectedIndex !== -1) selectedIndex = -1
+              }}
               use:islandTooltip={{
                 text: isEnabled
                   ? ''

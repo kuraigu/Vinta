@@ -68,6 +68,8 @@
   background: var(--vinta-accent-muted);
   color: var(--vinta-accent-primary);
   border: 1px solid var(--vinta-border-accent);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .setting-reset-btn {

@@ -172,7 +172,7 @@
       {/if}
 
       <button class="drawer-confirm-btn" onclick={handleSave}>
-        <Check size={15} />
+        <Check size={16} />
         <span>{isEditing ? 'Save Changes' : 'Create Alarm'}</span>
       </button>
     </div>

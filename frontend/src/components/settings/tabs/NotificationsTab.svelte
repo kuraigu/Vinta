@@ -229,7 +229,7 @@
           onclick={handleAuditionAlarmSound}
           aria-label={$tStore('settings.notif_alarm_preview_aria')}
         >
-          <Play size={11} />
+          <Play size={12} />
           <span>{$tStore('settings.notif_alarm_test')}</span>
         </button>
       </div>

@@ -6,7 +6,7 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { SvelteSet } from 'svelte/reactivity'
-  import { MapPin, Thermometer, Sparkles } from 'lucide-svelte'
+  import { MapPin, Thermometer, Wind } from 'lucide-svelte'
   import BentoCard from '../../BentoCard.svelte'
   import SegmentedControl from '../../SegmentedControl.svelte'
   import ToggleSwitch from '../../ToggleSwitch.svelte'
@@ -217,7 +217,7 @@
     <SettingItem
       label={$tStore('settings.weather_animations_label')}
       description={$tStore('settings.weather_animations_desc')}
-      icon={Sparkles}
+      icon={Wind}
       isDefault={$weatherAnimationsStore ===
         weatherAnimationsStore.defaultValue}
       onReset={() => weatherAnimationsStore.reset()}

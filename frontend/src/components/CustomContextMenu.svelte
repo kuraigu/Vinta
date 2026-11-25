@@ -120,7 +120,7 @@
       >
         {#if item.icon}
           {@const IconComp = item.icon}
-          <IconComp size={13} class="ctx-item-icon" />
+          <IconComp size={14} class="ctx-item-icon" />
         {/if}
         <span>{item.label}</span>
       </button>

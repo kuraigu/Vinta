@@ -163,10 +163,10 @@
           class:dev={!appInfo.isOfficialBuild}
         >
           {#if appInfo.isOfficialBuild}
-            <ShieldCheck size={10} strokeWidth={2.3} />
+            <ShieldCheck size={12} strokeWidth={2.3} />
             <span>{$tStore('about.official')}</span>
           {:else}
-            <GitBranch size={10} strokeWidth={2.3} />
+            <GitBranch size={12} strokeWidth={2.3} />
             <span>{$tStore('about.dev')}</span>
           {/if}
         </span>
@@ -190,7 +190,7 @@
         rel="noreferrer"
         fullWidth={true}
       >
-        <ArrowUpRight size={13} strokeWidth={2} />
+        <ArrowUpRight size={14} strokeWidth={2} />
         <span>{$tStore('about.repository')}</span>
       </SettingActionButton>
       <div class="about-links-row">
@@ -198,14 +198,14 @@
           onclick={() => openFeedbackModal('bug')}
           fullWidth={true}
         >
-          <Bug size={13} strokeWidth={2} />
+          <Bug size={14} strokeWidth={2} />
           <span>{$tStore('about.report_issue')}</span>
         </SettingActionButton>
         <SettingActionButton
           onclick={() => openFeedbackModal('feature')}
           fullWidth={true}
         >
-          <Lightbulb size={13} strokeWidth={2} />
+          <Lightbulb size={14} strokeWidth={2} />
           <span>{$tStore('about.request_feature')}</span>
         </SettingActionButton>
       </div>
@@ -223,7 +223,7 @@
           class="contributor-full-link"
         >
           <span>{$tStore('about.view_full_roster')}</span>
-          <ArrowUpRight size={11} />
+          <ArrowUpRight size={12} />
         </a>
       {/snippet}
     </SettingSectionHeader>

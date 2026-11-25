@@ -143,7 +143,7 @@
 
       <span class="glance-open-cta">
         <span>{$tStore('common.view')}</span>
-        <ChevronRight size={13} />
+        <ChevronRight size={14} />
       </span>
     </div>
 

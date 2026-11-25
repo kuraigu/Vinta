@@ -1010,7 +1010,7 @@
                 aria-label={$tStore('media.shuffle_off')}
                 onclick={(e) => handleControl('shuffle', e)}
               >
-                <Shuffle size={13} />
+                <Shuffle size={14} />
               </button>
             {/if}
 
@@ -1085,9 +1085,9 @@
                 onclick={(e) => handleControl('repeat', e)}
               >
                 {#if media.autoRepeatMode === 1}
-                  <Repeat1 size={13} />
+                  <Repeat1 size={14} />
                 {:else}
-                  <Repeat size={13} />
+                  <Repeat size={14} />
                 {/if}
               </button>
             {/if}
@@ -1110,7 +1110,7 @@
                   : $tStore('media.pin_source', { name: appBrand.name })}
                 onclick={togglePinCurrentSource}
               >
-                <Pin size={13} />
+                <Pin size={14} />
               </button>
             {/if}
           </div>
@@ -1296,7 +1296,7 @@
                 aria-label="Shuffle"
                 onclick={(e) => handleControl('shuffle', e)}
               >
-                <Shuffle size={13} />
+                <Shuffle size={14} />
               </button>
             {/if}
 
@@ -1358,9 +1358,9 @@
                 onclick={(e) => handleControl('repeat', e)}
               >
                 {#if media.autoRepeatMode === 1}
-                  <Repeat1 size={13} />
+                  <Repeat1 size={14} />
                 {:else}
-                  <Repeat size={13} />
+                  <Repeat size={14} />
                 {/if}
               </button>
             {/if}
@@ -1520,7 +1520,7 @@
                   position: 'top'
                 }}
               >
-                <Pin size={10} />
+                <Pin size={12} />
               </span>
             {/if}
           </div>

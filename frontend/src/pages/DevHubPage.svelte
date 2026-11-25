@@ -17,6 +17,7 @@
   import { onMount, getContext } from 'svelte'
   import {
     Bell,
+    ChevronRight,
     Cpu,
     ExternalLink,
     Flame,
@@ -28,11 +29,13 @@
   } from 'lucide-svelte'
   import IslandPage from '../components/IslandPage.svelte'
   import PageHeader from '../components/PageHeader.svelte'
+  import HeaderActionButton from '../components/HeaderActionButton.svelte'
   import BentoCard from '../components/BentoCard.svelte'
   import ScrollView from '../components/ScrollView.svelte'
   import HorizontalTabSelection, {
     type TabItem
   } from '../components/HorizontalTabSelection.svelte'
+  import { islandTooltip } from '../services/islandTooltip'
   import SettingsPage, { config as settingsConfig } from './SettingsPage.svelte'
   import BrandLogo from '../components/BrandLogo.svelte'
   import { activeSettingsTabStore, tStore } from '../store'
@@ -101,6 +104,25 @@
     return dash.notifications
   })
 
+  const todayContributions = $derived.by(() => {
+    const days = $githubDashboardStore?.contributions
+    if (!days || days.length === 0) return 0
+    return days[days.length - 1]?.count ?? 0
+  })
+
+  function formatContributionTooltip(dateStr: string, count: number): string {
+    const parsed = new Date(`${dateStr}T00:00:00`)
+    const label = isNaN(parsed.getTime())
+      ? dateStr
+      : parsed.toLocaleDateString(undefined, {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric'
+        })
+    if (count === 0) return `${label}: ${$tStore('devhub.no_contributions')}`
+    return `${label}: ${count} ${count === 1 ? $tStore('devhub.contribution_one') : $tStore('devhub.contribution_many')}`
+  }
+
   onMount(() => {
     void initDevIntegrations()
   })
@@ -153,7 +175,7 @@
 <IslandPage {expanded}>
   {#snippet minimal()}
     <div class="devhub-minimal-pill">
-      <BrandLogo name="github" size={15} />
+      <BrandLogo name="github" size={16} />
       {#if $githubStatusStore.connected && $githubDashboardStore}
         <span class="devhub-min-metric">
           <Flame size={12} />
@@ -186,23 +208,26 @@
           />
         {/snippet}
         {#snippet actions()}
-          <button
-            type="button"
-            class="devhub-icon-btn"
+          <HeaderActionButton
+            variant="ghost"
             disabled={isRefreshing}
-            aria-label={$tStore('devhub.refresh')}
+            ariaLabel={$tStore('devhub.refresh')}
+            tooltip={{ text: $tStore('devhub.refresh'), position: 'bottom' }}
             onclick={handleRefresh}
           >
-            <RefreshCw size={13} />
-          </button>
-          <button
-            type="button"
-            class="devhub-icon-btn"
-            aria-label={$tStore('settings.tabs.account')}
+            <RefreshCw size={16} />
+          </HeaderActionButton>
+          <HeaderActionButton
+            variant="ghost"
+            ariaLabel={$tStore('settings.tabs.account')}
+            tooltip={{
+              text: $tStore('settings.tabs.account'),
+              position: 'bottom'
+            }}
             onclick={openAccountSettings}
           >
-            <Settings size={13} />
-          </button>
+            <Settings size={16} />
+          </HeaderActionButton>
         {/snippet}
       </PageHeader>
 
@@ -250,9 +275,17 @@
             <div class="devhub-stack">
               <BentoCard variant="bento" class="devhub-stats-card">
                 <div class="devhub-stats-header">
-                  <span class="devhub-user"
-                    >@{$githubDashboardStore.username}</span
-                  >
+                  <div class="devhub-user-group">
+                    <span class="devhub-user"
+                      >@{$githubDashboardStore.username}</span
+                    >
+                    <span class="devhub-user-sub">
+                      {$githubDashboardStore.totalRecent.toLocaleString()}
+                      {$tStore('devhub.contributions_year')} ·
+                      {todayContributions}
+                      {$tStore('devhub.today_short')}
+                    </span>
+                  </div>
                   <div class="devhub-kpis">
                     <span class="devhub-kpi">
                       <Flame size={12} />
@@ -272,9 +305,28 @@
                     {#each $githubDashboardStore.contributions as day (day.date)}
                       <span
                         class="heatmap-cell level-{day.level}"
-                        aria-label="{day.date}: {day.count}"
+                        use:islandTooltip={formatContributionTooltip(
+                          day.date,
+                          day.count
+                        )}
+                        aria-label={formatContributionTooltip(
+                          day.date,
+                          day.count
+                        )}
                       ></span>
                     {/each}
+                  </div>
+                  <div class="devhub-heatmap-footer">
+                    <span>{$tStore('devhub.last_12_weeks')}</span>
+                    <div class="devhub-legend" aria-hidden="true">
+                      <span>{$tStore('devhub.legend_less')}</span>
+                      <span class="heatmap-cell level-0 legend-dot"></span>
+                      <span class="heatmap-cell level-1 legend-dot"></span>
+                      <span class="heatmap-cell level-2 legend-dot"></span>
+                      <span class="heatmap-cell level-3 legend-dot"></span>
+                      <span class="heatmap-cell level-4 legend-dot"></span>
+                      <span>{$tStore('devhub.legend_more')}</span>
+                    </div>
                   </div>
                 {/if}
               </BentoCard>
@@ -311,16 +363,37 @@
                         <span class="devhub-item-title">{item.title}</span>
                         <span class="devhub-item-repo">{item.repo}</span>
                       </span>
-                      <ExternalLink size={12} class="devhub-ext-icon" />
+                      <ChevronRight size={14} class="devhub-ext-icon" />
                     </button>
                   {/each}
                 </div>
               {/if}
             </div>
           {:else}
-            <BentoCard variant="bento" class="devhub-list-empty">
-              <span>{$tStore('devhub.loading')}</span>
-            </BentoCard>
+            <div
+              class="devhub-stack"
+              aria-busy="true"
+              aria-label={$tStore('devhub.loading')}
+            >
+              <BentoCard variant="bento" class="devhub-stats-card">
+                <div class="devhub-stats-header">
+                  <span class="skeleton-bar sk-user"></span>
+                  <span class="skeleton-bar sk-kpi"></span>
+                </div>
+                <div class="skeleton-heatmap"></div>
+              </BentoCard>
+              <div class="devhub-item-list">
+                {#each [0, 1, 2] as idx (idx)}
+                  <div class="devhub-skeleton-row">
+                    <span class="skeleton-circle"></span>
+                    <div class="skeleton-lines">
+                      <span class="skeleton-bar sk-title"></span>
+                      <span class="skeleton-bar sk-sub"></span>
+                    </div>
+                  </div>
+                {/each}
+              </div>
+            </div>
           {/if}
         {:else}
           <BentoCard variant="group" class="devhub-ai-list">
@@ -361,7 +434,7 @@
                     )} ({provider.name})"
                     onclick={() => openExternal(provider.dashboardUrl)}
                   >
-                    <ExternalLink size={13} />
+                    <ExternalLink size={14} />
                   </button>
                 </div>
               </div>
