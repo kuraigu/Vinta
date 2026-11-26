@@ -6,16 +6,24 @@ The backend layer is written in Go and interfaces with Windows APIs, the Wails v
 
 ```
 backend/
+├── api_client.go      # Shared HTTP client with buffer pooling and timeout defaults
 ├── app.go             # Application struct, lifecycle hooks, and initialization
-├── app_window.go      # Win32 HWND management, foreground hooks, display metrics, and power throttling
-├── app_hittest.go     # Transparent canvas hit-testing loop and multi-rect input coordination
+├── app_window.go      # Win32 HWND management, Raw Input listener, foreground hooks, display metrics, and power throttling
+├── app_hittest.go     # Event-driven WM_INPUT hit-testing reconciliation and multi-rect input coordination
+├── app_launcher.go    # Installed desktop app discovery and launching
 ├── app_settings.go    # Settings JSON persistence and hardware acceleration configuration
 ├── app_notes.go       # Sticky note storage, legacy migration, and file system operations
 ├── app_shortcuts.go   # Global accelerator registration and hotkey dispatching
-├── app_storage.go     # Calendar, timer, and DPAPI-encrypted notification persistence
+├── app_storage.go     # Calendar, timer, flashcards, habits, and DPAPI-encrypted notification persistence
 ├── app_system.go      # Autostart registration, system settings launcher, and hardware status
 ├── app_media.go       # Media session playback, thumbnail extraction, and app focus bridge
 ├── cache.go           # File cache helpers
+├── cloud_sync.go      # Google OAuth PKCE sign-in and Firebase Cloud Sync backup/restore
+├── credentials.go     # Windows DPAPI-encrypted local credential vault
+├── dev_integrations.go # GitHub Device Flow auth, Developer Hub queries, and AI provider usage
+├── env_config.go      # Build-time and .env runtime configuration loader
+├── google_calendar.go # Google Calendar API v3 sync and token refresh
+├── holidays.go        # Public holiday fetching and regional caching
 ├── icon_manager.go    # Application icon extraction and cache indexing
 ├── logger.go          # Runtime diagnostic logger
 ├── theme.go           # Theme engine service for user-installed .vintatheme packages
@@ -27,7 +35,7 @@ backend/
 ## Key Subsystems
 
 ### 1. Transparent Canvas & Multi-Rect Hit Testing
-Vinta uses a single-window transparent architecture across multi-monitor virtual desktop coordinates. Rather than clipping physical window regions via Win32 `SetWindowRgn` (which causes clipping during animations and shadow rendering) or installing a global `WH_MOUSE_LL` hook (which sits on the OS input path and can be silently unhooked by Windows), the application operates an unclipped transparent window and reconciles `WS_EX_TRANSPARENT` at 60Hz (`SetHitRects`) based on cursor proximity to active visual elements. `setClickThrough` is the single writer of `WS_EX_TRANSPARENT` and checks the live window style on every tick without stationary-cursor shortcuts, so click-through state self-heals within 16ms and cannot drift.
+Vinta uses a single-window transparent architecture across multi-monitor virtual desktop coordinates. Rather than clipping physical window regions via Win32 `SetWindowRgn` (which clips animations and shadows) or installing a global `WH_MOUSE_LL` hook (which sits on the OS input path and can be silently unhooked by Windows), the overlay registers mouse Raw Input (`WM_INPUT` with `RIDEV_INPUTSINK`) on its hidden Win32 message window to reconcile `WS_EX_TRANSPARENT` in under 1ms whenever the cursor moves or `SetHitRects` updates. A lightweight 150ms housekeeping loop backs up Raw Input for touch/pen input, satellite gap-hold expiry, force-interactive timeouts, and HWND recovery (falling back to 16ms polling if Raw Input registration is unavailable). `setClickThrough` is the single writer of `WS_EX_TRANSPARENT` and checks the live window style so click-through state cannot drift.
 
 ### 2. Native WinRT Services Bridge (`services/`)
 The native services layer compiles to `vintaservices.dll`, an in-process C++/WinRT library that interacts directly with:

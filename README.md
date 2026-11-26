@@ -34,18 +34,16 @@ Inspired by this heritage, Vinta brings that same fluid grace to your desktop in
 
 ## Features
 
-Vinta sits at the top of your screen and stays out of your way until you need it. You can slide it horizontally with smooth inertia, or hide it completely when you're doing heavy work and want to avoid distractions.
+Vinta sits at the top edge of the screen and stays out of the way until needed. It slides horizontally with smooth inertia, switches compact modes via scroll wheel or swipe, and can hide completely along the top bezel during focused work.
 
-Inside the island, you get:
+Inside the island:
 
-- A media player that automatically pops up when supported media starts playing
-- A file shelf where you can temporarily drop files from different places before moving them all at once
-- Quick notes, a calculator, and a timer/alarm for everyday tasks
-- A calendar and agenda setup to keep track of your day
-- Incoming notifications from supported apps
-- Theme support and settings to customize how it looks and acts
-- Tells you the time, weather, and date through a glance
-- Plenty more things to discover once you use the app
+- **Media Player**: Automatically surfaces when supported media starts playing, with playback controls, source switching, and an audio mixer drawer.
+- **Dual-Tab Launcher & File Shelf**: Launch installed desktop apps or stage files from different folders to drag out, copy, hash (SHA-256), or bundle into a ZIP.
+- **Productivity & Study**: Quick notes with checklists, spaced-repetition Flashcards, Daily Habits with break reminders, a scientific calculator, and a timer/focus/alarm suite.
+- **Calendar & Holidays**: Agenda view with search, source filters, public holidays, iCal feed subscriptions, meeting links, and optional Google Calendar sync.
+- **Developer Hub & Cloud Sync**: Optional GitHub integration (contribution heatmap, streak, pull requests, issues, notifications), DPAPI-encrypted AI provider key tracking, and optional Google/Firebase Cloud Sync.
+- **System & Notifications**: Live CPU/RAM/GPU Performance Monitor, incoming Windows toast notifications with app filters and privacy mode, live weather, and customizable themes and locales.
 
 > [!NOTE]
 > **PC Gaming Note:** Vinta works best with **Fullscreen** and **Borderless** window modes rather than **Exclusive Fullscreen**. If Vinta disappears when you launch a game, switching the game's display settings to **Fullscreen** or **Borderless** usually fixes it (though a few games block floating windows completely). On multi-monitor setups, if Vinta has to hide because a game doesn't support overlays, it will automatically move to your other display.
@@ -85,6 +83,8 @@ cd Vinta
 
 # 2. First-time setup (installs Taskfile, dependencies, and configures native build)
 .\scripts.bat setup
+
+# Optional: copy .env.example to .env to configure local Google/GitHub OAuth or Firebase keys
 
 # 3. Daily development with Taskfile (recommended)
 task dev      # Run live-reloading development server with DevTest panel
