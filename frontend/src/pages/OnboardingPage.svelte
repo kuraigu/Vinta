@@ -26,7 +26,7 @@
 </script>
 
 <script lang="ts">
-  import { flushSync, getContext } from 'svelte'
+  import { flushSync, getContext, onMount } from 'svelte'
   import {
     Hand,
     Move,
@@ -50,6 +50,9 @@
     Activity,
     User,
     Monitor,
+    Cloud,
+    Terminal,
+    LogOut,
     ChevronLeft,
     ChevronRight
   } from 'lucide-svelte'
@@ -83,10 +86,22 @@
     tStore,
     type HiddenPillPosition
   } from '../store'
+  import {
+    googleAccountStore,
+    githubStatusStore,
+    initDevIntegrations,
+    signInGoogleAccount,
+    signOutGoogleAccount,
+    startGitHubDeviceAuth,
+    completeGitHubDeviceAuth,
+    disconnectGitHubAccount
+  } from '../stores/devIntegrationsStore'
   import { SetAutostart } from '../../bindings/Vinta/backend/app.js'
   import { computeAllowedOffsets } from '../services/islandGestures'
   import HomePage, { config as homeConfig } from './HomePage.svelte'
+  import IslandPage from '../components/IslandPage.svelte'
   import Clock from '../components/Clock.svelte'
+  import BrandLogo from '../components/BrandLogo.svelte'
   import SidebarLayout, {
     type SidebarNavItem
   } from '../components/SidebarLayout.svelte'
@@ -165,6 +180,14 @@
       icon: Keyboard
     },
     {
+      id: 'accounts',
+      navKey: 'onboarding.nav_accounts',
+      titleKey: 'onboarding.step_accounts_title',
+      pose: 'welcome',
+      badgeColor: 'blue',
+      icon: Cloud
+    },
+    {
       id: 'personalize',
       navKey: 'onboarding.nav_personalize',
       titleKey: 'onboarding.step_personalize_title',
@@ -173,6 +196,48 @@
       icon: Palette
     }
   ]
+
+  let isGoogleBusy = $state(false)
+  let googleError = $state('')
+  let isGitHubBusy = $state(false)
+  let githubUserCode = $state('')
+  let githubError = $state('')
+
+  onMount(() => {
+    void initDevIntegrations()
+  })
+
+  async function handleGoogleSignIn() {
+    isGoogleBusy = true
+    googleError = ''
+    const res = await signInGoogleAccount()
+    isGoogleBusy = false
+    if (!res.ok && res.error) {
+      googleError = res.error
+    }
+  }
+
+  async function handleGitHubDeviceSignIn() {
+    isGitHubBusy = true
+    githubError = ''
+    githubUserCode = ''
+    const start = await startGitHubDeviceAuth()
+    if (!start.ok || !start.info) {
+      isGitHubBusy = false
+      githubError = start.error || $tStore('account.github_failed')
+      return
+    }
+    githubUserCode = start.info.userCode
+    const done = await completeGitHubDeviceAuth(
+      start.info.deviceCode,
+      start.info.interval
+    )
+    isGitHubBusy = false
+    githubUserCode = ''
+    if (!done.ok && done.error) {
+      githubError = done.error
+    }
+  }
 
   let stepData = $derived(steps[currentStep] || steps[0])
 
@@ -541,551 +606,680 @@
 
 <svelte:window onkeydown={handleWindowKeyDown} />
 
-{#if !expanded}
-  <div class="onboarding-compact-pill">
-    <Clock expanded={false} />
-    <span class="compact-pill-divider" aria-hidden="true"></span>
-    <span class="compact-pill-text">
-      {$tStore('onboarding.compact_pill_resume', {
-        step: currentStep + 1,
-        total: steps.length
-      })}
-    </span>
-  </div>
-{:else}
-  <SidebarLayout
-    dataVinta="onboarding-page"
-    noDockClearance={true}
-    sidebarWidth="168px"
-    items={sidebarItems}
-    activeId={stepData.id}
-    onSelect={handleSelectStepId}
-  >
-    {#snippet sidebarFooter()}
-      <div class="sidebar-mascot-dock">
-        <div class="sidebar-mascot-frame">
-          <VintaMascot pose={stepData.pose} />
-        </div>
-      </div>
-    {/snippet}
+<IslandPage {expanded}>
+  {#snippet minimal()}
+    <div class="onboarding-compact-pill">
+      <Clock expanded={false} />
+      <span class="compact-pill-divider" aria-hidden="true"></span>
+      <span class="compact-pill-text">
+        {$tStore('onboarding.compact_pill_resume', {
+          step: currentStep + 1,
+          total: steps.length
+        })}
+      </span>
+    </div>
+  {/snippet}
 
-    {#snippet content()}
-      <section class="onboarding-main-pane">
-        <header class="pane-header">
-          <div class="pane-header-top">
-            <h1 class="pane-title">{$tStore(stepData.titleKey)}</h1>
-            <div
-              class="pane-step-pills"
-              role="group"
-              aria-label={$tStore('onboarding.progress_aria')}
-            >
-              {#each steps as s, idx (s.id)}
-                <button
-                  type="button"
-                  class="step-progress-pill"
-                  class:active={currentStep === idx}
-                  class:completed={idx < currentStep}
-                  aria-current={currentStep === idx ? 'step' : undefined}
-                  onclick={() => navigateToStep(idx)}
-                  aria-label={$tStore(s.navKey)}
-                ></button>
-              {/each}
-            </div>
+  {#snippet expandedContent()}
+    <SidebarLayout
+      dataVinta="onboarding-page"
+      noDockClearance={true}
+      sidebarWidth="168px"
+      items={sidebarItems}
+      activeId={stepData.id}
+      onSelect={handleSelectStepId}
+    >
+      {#snippet sidebarFooter()}
+        <div class="sidebar-mascot-dock">
+          <div class="sidebar-mascot-frame">
+            <VintaMascot pose={stepData.pose} />
           </div>
-        </header>
+        </div>
+      {/snippet}
 
-        <div class="pane-body">
-          <ScrollView class="onboarding-scroll">
-            {#key currentStep}
+      {#snippet content()}
+        <section class="onboarding-main-pane">
+          <header class="pane-header">
+            <div class="pane-header-top">
+              <h1 class="pane-title">{$tStore(stepData.titleKey)}</h1>
               <div
-                class="onboarding-step-transition"
-                data-direction={navDirection}
+                class="pane-step-pills"
+                role="group"
+                aria-label={$tStore('onboarding.progress_aria')}
               >
-                {#if currentStep === 0}
-                  <!-- Step 1: Welcome, Language & Profile -->
-                  <div class="onboarding-inputs-grid">
-                    <BentoCard variant="bento" class="onboarding-field-card">
-                      <span class="field-card-label">
-                        {$tStore('settings.language_label')}
-                      </span>
-                      <CustomSelect
-                        options={localeOptions}
-                        bind:value={$localeStore}
-                        fullWidth={true}
-                      />
-                    </BentoCard>
+                {#each steps as s, idx (s.id)}
+                  <button
+                    type="button"
+                    class="step-progress-pill"
+                    class:active={currentStep === idx}
+                    class:completed={idx < currentStep}
+                    aria-current={currentStep === idx ? 'step' : undefined}
+                    onclick={() => navigateToStep(idx)}
+                    aria-label={$tStore(s.navKey)}
+                  ></button>
+                {/each}
+              </div>
+            </div>
+          </header>
 
-                    <BentoCard variant="bento" class="onboarding-field-card">
-                      <label
-                        for="onboarding-name-input"
-                        class="field-card-label"
-                      >
-                        {$tStore('onboarding.name_prompt')}
-                      </label>
-                      <div class="onboarding-input-wrapper">
-                        <User size={14} class="input-leading-icon" />
-                        <input
-                          id="onboarding-name-input"
-                          type="text"
-                          class="onboarding-name-field"
-                          autocomplete="name"
-                          placeholder={$tStore('onboarding.name_placeholder')}
-                          maxlength="20"
-                          bind:value={$userNameStore}
-                          onblur={() => {
-                            if (!$userNameStore || !$userNameStore.trim()) {
-                              $userNameStore = 'User'
-                            } else {
-                              $userNameStore = $userNameStore.trim()
-                            }
-                          }}
+          <div class="pane-body">
+            <ScrollView class="onboarding-scroll">
+              {#key currentStep}
+                <div
+                  class="onboarding-step-transition"
+                  data-direction={navDirection}
+                >
+                  {#if currentStep === 0}
+                    <!-- Step 1: Welcome, Language & Profile -->
+                    <div class="onboarding-inputs-grid">
+                      <BentoCard variant="bento" class="onboarding-field-card">
+                        <span class="field-card-label">
+                          {$tStore('settings.language_label')}
+                        </span>
+                        <CustomSelect
+                          options={localeOptions}
+                          bind:value={$localeStore}
+                          fullWidth={true}
                         />
-                      </div>
-                    </BentoCard>
-                  </div>
+                      </BentoCard>
 
-                  <OnboardingDiagrams mode="welcome" />
+                      <BentoCard variant="bento" class="onboarding-field-card">
+                        <label
+                          for="onboarding-name-input"
+                          class="field-card-label"
+                        >
+                          {$tStore('onboarding.name_prompt')}
+                        </label>
+                        <div class="onboarding-input-wrapper">
+                          <User size={14} class="input-leading-icon" />
+                          <input
+                            id="onboarding-name-input"
+                            type="text"
+                            class="onboarding-name-field"
+                            autocomplete="name"
+                            placeholder={$tStore('onboarding.name_placeholder')}
+                            maxlength="20"
+                            bind:value={$userNameStore}
+                            onblur={() => {
+                              if (!$userNameStore || !$userNameStore.trim()) {
+                                $userNameStore = 'User'
+                              } else {
+                                $userNameStore = $userNameStore.trim()
+                              }
+                            }}
+                          />
+                        </div>
+                      </BentoCard>
+                    </div>
 
-                  <BentoCard variant="group">
-                    <SettingItem
-                      icon={Layers}
-                      badgeColor="cyan"
-                      label={$tStore('onboarding.welcome_overlay_title')}
-                      description={$tStore('onboarding.welcome_overlay_desc')}
-                    />
-                    <SettingItem
-                      icon={LayoutGrid}
-                      badgeColor="emerald"
-                      label={$tStore('onboarding.welcome_dock_title')}
-                      description={$tStore('onboarding.welcome_dock_desc')}
-                    />
-                  </BentoCard>
-                {:else if currentStep === 1}
-                  <!-- Step 2: Position & Display -->
-                  <OnboardingDiagrams mode="position" />
+                    <OnboardingDiagrams mode="welcome" />
 
-                  <BentoCard variant="group">
-                    <SettingItem
-                      icon={Move}
-                      badgeColor="cyan"
-                      label={$tStore('onboarding.resting_alignment')}
-                      description={$tStore('onboarding.resting_alignment_desc')}
-                      flexCol={true}
-                      isDefault={!positionGeometry.isCustom}
-                      onReset={() =>
-                        handleSelectAlignment($hiddenPillPositionStore)}
-                    >
-                      <SegmentedControl
-                        size="sm"
-                        fullWidth={true}
-                        options={[
-                          {
-                            value: 'top-left',
-                            label: $tStore('onboarding.align_left')
-                          },
-                          {
-                            value: 'center',
-                            label: $tStore('onboarding.align_center')
-                          },
-                          {
-                            value: 'top-right',
-                            label: $tStore('onboarding.align_right')
-                          }
-                        ]}
-                        value={$hiddenPillPositionStore}
-                        onchange={(val) =>
-                          handleSelectAlignment(val as HiddenPillPosition)}
-                      />
-                    </SettingItem>
-
-                    {#if $displayLayoutStore.monitors && $displayLayoutStore.monitors.length > 1}
+                    <BentoCard variant="group">
                       <SettingItem
-                        icon={Monitor}
-                        badgeColor="blue"
-                        label={$tStore('settings.active_display_label')}
+                        icon={Layers}
+                        badgeColor="cyan"
+                        label={$tStore('onboarding.welcome_overlay_title')}
+                        description={$tStore('onboarding.welcome_overlay_desc')}
+                      />
+                      <SettingItem
+                        icon={LayoutGrid}
+                        badgeColor="emerald"
+                        label={$tStore('onboarding.welcome_dock_title')}
+                        description={$tStore('onboarding.welcome_dock_desc')}
+                      />
+                    </BentoCard>
+                  {:else if currentStep === 1}
+                    <!-- Step 2: Position & Display -->
+                    <OnboardingDiagrams mode="position" />
+
+                    <BentoCard variant="group">
+                      <SettingItem
+                        icon={Move}
+                        badgeColor="cyan"
+                        label={$tStore('onboarding.resting_alignment')}
+                        description={$tStore(
+                          'onboarding.resting_alignment_desc'
+                        )}
+                        flexCol={true}
+                        isDefault={!positionGeometry.isCustom}
+                        onReset={() =>
+                          handleSelectAlignment($hiddenPillPositionStore)}
+                      >
+                        <SegmentedControl
+                          size="sm"
+                          fullWidth={true}
+                          options={[
+                            {
+                              value: 'top-left',
+                              label: $tStore('onboarding.align_left')
+                            },
+                            {
+                              value: 'center',
+                              label: $tStore('onboarding.align_center')
+                            },
+                            {
+                              value: 'top-right',
+                              label: $tStore('onboarding.align_right')
+                            }
+                          ]}
+                          value={$hiddenPillPositionStore}
+                          onchange={(val) =>
+                            handleSelectAlignment(val as HiddenPillPosition)}
+                        />
+                      </SettingItem>
+
+                      {#if $displayLayoutStore.monitors && $displayLayoutStore.monitors.length > 1}
+                        <SettingItem
+                          icon={Monitor}
+                          badgeColor="blue"
+                          label={$tStore('settings.active_display_label')}
+                          flexCol={true}
+                        >
+                          <SegmentedControl
+                            size="sm"
+                            fullWidth={true}
+                            options={$displayLayoutStore.monitors.map(
+                              (mon) => ({
+                                value: String(mon.id),
+                                label:
+                                  mon.name ||
+                                  $tStore('settings.display_fallback_name', {
+                                    id: mon.id
+                                  })
+                              })
+                            )}
+                            value={String(
+                              $displayLayoutStore.currentMonitor?.id ?? ''
+                            )}
+                            onchange={handleSelectMonitor}
+                          />
+                        </SettingItem>
+                      {/if}
+
+                      <SettingItem
+                        icon={Hand}
+                        badgeColor="amber"
+                        label={$tStore('onboarding.position_drag_title')}
+                        description={$tStore('onboarding.position_drag_desc')}
+                      />
+                    </BentoCard>
+                  {:else if currentStep === 2}
+                    <!-- Step 3: Expand, Collapse & Hide -->
+                    <OnboardingDiagrams
+                      mode="states"
+                      hiddenDisplay={$autoHideDisplayStore}
+                      wakeMethod={$wakeMethodStore}
+                    />
+
+                    <BentoCard variant="group">
+                      <SettingItem
+                        icon={EyeOff}
+                        badgeColor="cyan"
+                        label={$tStore('onboarding.states_hidden_style')}
+                        description={$tStore(
+                          'onboarding.states_hidden_style_desc'
+                        )}
                         flexCol={true}
                       >
                         <SegmentedControl
                           size="sm"
                           fullWidth={true}
-                          options={$displayLayoutStore.monitors.map((mon) => ({
-                            value: String(mon.id),
-                            label:
-                              mon.name ||
-                              $tStore('settings.display_fallback_name', {
-                                id: mon.id
-                              })
-                          }))}
-                          value={String(
-                            $displayLayoutStore.currentMonitor?.id ?? ''
-                          )}
-                          onchange={handleSelectMonitor}
+                          options={[
+                            {
+                              value: 'dash',
+                              label: $tStore('onboarding.hidden_style_dash')
+                            },
+                            {
+                              value: 'clock',
+                              label: $tStore('onboarding.hidden_style_clock')
+                            }
+                          ]}
+                          bind:value={$autoHideDisplayStore}
                         />
                       </SettingItem>
-                    {/if}
 
-                    <SettingItem
-                      icon={Hand}
-                      badgeColor="amber"
-                      label={$tStore('onboarding.position_drag_title')}
-                      description={$tStore('onboarding.position_drag_desc')}
-                    />
-                  </BentoCard>
-                {:else if currentStep === 2}
-                  <!-- Step 3: Expand, Collapse & Hide -->
-                  <OnboardingDiagrams
-                    mode="states"
-                    hiddenDisplay={$autoHideDisplayStore}
-                    wakeMethod={$wakeMethodStore}
-                  />
+                      <SettingItem
+                        icon={MousePointerClick}
+                        badgeColor="emerald"
+                        label={$tStore('onboarding.states_wake_method')}
+                        description={$tStore(
+                          'onboarding.states_wake_method_desc'
+                        )}
+                        flexCol={true}
+                      >
+                        <SegmentedControl
+                          size="sm"
+                          fullWidth={true}
+                          options={[
+                            {
+                              value: 'click',
+                              label: $tStore('settings.wake_method_click')
+                            },
+                            {
+                              value: 'hover',
+                              label: $tStore('settings.wake_method_hover')
+                            }
+                          ]}
+                          bind:value={$wakeMethodStore}
+                        />
+                      </SettingItem>
 
-                  <BentoCard variant="group">
-                    <SettingItem
-                      icon={EyeOff}
-                      badgeColor="cyan"
-                      label={$tStore('onboarding.states_hidden_style')}
-                      description={$tStore(
-                        'onboarding.states_hidden_style_desc'
-                      )}
-                      flexCol={true}
-                    >
-                      <SegmentedControl
-                        size="sm"
-                        fullWidth={true}
-                        options={[
-                          {
-                            value: 'dash',
-                            label: $tStore('onboarding.hidden_style_dash')
-                          },
-                          {
-                            value: 'clock',
-                            label: $tStore('onboarding.hidden_style_clock')
-                          }
-                        ]}
-                        bind:value={$autoHideDisplayStore}
-                      />
-                    </SettingItem>
+                      <SettingItem
+                        icon={MousePointerClick}
+                        badgeColor="indigo"
+                        label={$tStore('settings.click_outside_minimize_label')}
+                        description={$tStore(
+                          'settings.click_outside_minimize_desc'
+                        )}
+                      >
+                        <ToggleSwitch
+                          bind:checked={$clickOutsideMinimizeStore}
+                          ariaLabel={$tStore(
+                            'settings.click_outside_minimize_label'
+                          )}
+                        />
+                      </SettingItem>
+                    </BentoCard>
 
-                    <SettingItem
-                      icon={MousePointerClick}
-                      badgeColor="emerald"
-                      label={$tStore('onboarding.states_wake_method')}
-                      description={$tStore(
-                        'onboarding.states_wake_method_desc'
-                      )}
-                      flexCol={true}
-                    >
-                      <SegmentedControl
-                        size="sm"
-                        fullWidth={true}
-                        options={[
-                          {
-                            value: 'click',
-                            label: $tStore('settings.wake_method_click')
-                          },
-                          {
-                            value: 'hover',
-                            label: $tStore('settings.wake_method_hover')
-                          }
-                        ]}
-                        bind:value={$wakeMethodStore}
-                      />
-                    </SettingItem>
-
-                    <SettingItem
-                      icon={MousePointerClick}
-                      badgeColor="indigo"
-                      label={$tStore('settings.click_outside_minimize_label')}
-                      description={$tStore(
-                        'settings.click_outside_minimize_desc'
-                      )}
-                    >
-                      <ToggleSwitch
-                        bind:checked={$clickOutsideMinimizeStore}
-                        ariaLabel={$tStore(
-                          'settings.click_outside_minimize_label'
+                    <BentoCard variant="group">
+                      <SettingItem
+                        icon={SlidersHorizontal}
+                        badgeColor="purple"
+                        label={$tStore('onboarding.states_satellite_title')}
+                        description={$tStore(
+                          'onboarding.states_satellite_desc'
                         )}
                       />
-                    </SettingItem>
-                  </BentoCard>
+                      <SettingItem
+                        icon={MousePointerClick}
+                        badgeColor="blue"
+                        label={$tStore('onboarding.states_gestures_title')}
+                        description={$tStore('onboarding.states_gestures_desc')}
+                      />
+                    </BentoCard>
+                  {:else if currentStep === 3}
+                    <!-- Step 4: How It Behaves -->
+                    <BentoCard variant="group">
+                      <SettingItem
+                        icon={EyeOff}
+                        badgeColor="blue"
+                        label={$tStore('onboarding.behavior_autohide_title')}
+                        description={$tStore(
+                          'onboarding.behavior_autohide_desc'
+                        )}
+                      >
+                        <ToggleSwitch
+                          bind:checked={$homeAutoHideStore}
+                          ariaLabel={$tStore(
+                            'onboarding.behavior_autohide_title'
+                          )}
+                        />
+                      </SettingItem>
 
-                  <BentoCard variant="group">
-                    <SettingItem
-                      icon={SlidersHorizontal}
-                      badgeColor="purple"
-                      label={$tStore('onboarding.states_satellite_title')}
-                      description={$tStore('onboarding.states_satellite_desc')}
-                    />
-                    <SettingItem
-                      icon={MousePointerClick}
-                      badgeColor="blue"
-                      label={$tStore('onboarding.states_gestures_title')}
-                      description={$tStore('onboarding.states_gestures_desc')}
-                    />
-                  </BentoCard>
-                {:else if currentStep === 3}
-                  <!-- Step 4: How It Behaves -->
-                  <BentoCard variant="group">
-                    <SettingItem
-                      icon={EyeOff}
-                      badgeColor="blue"
-                      label={$tStore('onboarding.behavior_autohide_title')}
-                      description={$tStore('onboarding.behavior_autohide_desc')}
-                    >
-                      <ToggleSwitch
-                        bind:checked={$homeAutoHideStore}
-                        ariaLabel={$tStore(
-                          'onboarding.behavior_autohide_title'
+                      <SettingItem
+                        icon={ClockIcon}
+                        badgeColor="cyan"
+                        label={$tStore('onboarding.behavior_delay_title')}
+                        description={$tStore('onboarding.behavior_delay_desc')}
+                        flexCol={true}
+                        disabled={!$homeAutoHideStore}
+                      >
+                        <SegmentedControl
+                          size="sm"
+                          fullWidth={true}
+                          options={delayOptions}
+                          value={activeDelayPreset}
+                          onchange={(val) => {
+                            const sec = parseInt(val, 10)
+                            if (!isNaN(sec)) $autoHideDelayStore = sec
+                          }}
+                        />
+                      </SettingItem>
+                    </BentoCard>
+
+                    <BentoCard variant="group">
+                      <SettingItem
+                        icon={Timer}
+                        badgeColor="amber"
+                        label={$tStore('onboarding.behavior_lock_title')}
+                        description={$tStore('onboarding.behavior_lock_desc')}
+                      />
+                      <SettingItem
+                        icon={FolderInput}
+                        badgeColor="emerald"
+                        label={$tStore('onboarding.behavior_shelf_title')}
+                        description={$tStore('onboarding.behavior_shelf_desc')}
+                      />
+                      <SettingItem
+                        icon={Bell}
+                        badgeColor="rose"
+                        label={$tStore('onboarding.behavior_notif_title')}
+                        description={$tStore('onboarding.behavior_notif_desc')}
+                      />
+                    </BentoCard>
+                  {:else if currentStep === 4}
+                    <!-- Step 5: Shortcuts & Windows Limits -->
+                    <div class="onboarding-hotkey-grid">
+                      <BentoCard variant="bento" class="hotkey-chip-card">
+                        <span class="hotkey-chip-label"
+                          >{$tStore('onboarding.hotkey_toggle')}</span
+                        >
+                        <kbd class="kbd-pill"
+                          >{$globalHotkeyStore || 'Alt+Shift+V'}</kbd
+                        >
+                      </BentoCard>
+
+                      <BentoCard variant="bento" class="hotkey-chip-card">
+                        <span class="hotkey-chip-label"
+                          >{$tStore('onboarding.hotkey_mode')}</span
+                        >
+                        <kbd class="kbd-pill"
+                          >{$modeSwitchHotkeyStore || 'Alt+Shift+D'}</kbd
+                        >
+                      </BentoCard>
+
+                      <BentoCard variant="bento" class="hotkey-chip-card">
+                        <span class="hotkey-chip-label"
+                          >{$tStore('onboarding.hotkey_notes')}</span
+                        >
+                        <kbd class="kbd-pill"
+                          >{$quickNotesHotkeyStore || 'Alt+Shift+N'}</kbd
+                        >
+                      </BentoCard>
+
+                      <BentoCard variant="bento" class="hotkey-chip-card">
+                        <span class="hotkey-chip-label"
+                          >{$tStore('onboarding.hotkey_collapse')}</span
+                        >
+                        <kbd class="kbd-pill">Esc</kbd>
+                      </BentoCard>
+                    </div>
+
+                    <BentoCard variant="group">
+                      <SettingItem
+                        icon={Gamepad2}
+                        badgeColor="purple"
+                        label={$tStore('onboarding.limit_fullscreen_title')}
+                        description={$tStore(
+                          'onboarding.limit_fullscreen_short'
                         )}
                       />
-                    </SettingItem>
-
-                    <SettingItem
-                      icon={ClockIcon}
-                      badgeColor="cyan"
-                      label={$tStore('onboarding.behavior_delay_title')}
-                      description={$tStore('onboarding.behavior_delay_desc')}
-                      flexCol={true}
-                      disabled={!$homeAutoHideStore}
-                    >
-                      <SegmentedControl
-                        size="sm"
-                        fullWidth={true}
-                        options={delayOptions}
-                        value={activeDelayPreset}
-                        onchange={(val) => {
-                          const sec = parseInt(val, 10)
-                          if (!isNaN(sec)) $autoHideDelayStore = sec
-                        }}
+                      <SettingItem
+                        icon={ShieldAlert}
+                        badgeColor="rose"
+                        label={$tStore('onboarding.limit_admin_drm_title')}
+                        description={$tStore('onboarding.limit_admin_drm_desc')}
                       />
-                    </SettingItem>
-                  </BentoCard>
+                      <SettingItem
+                        icon={Monitor}
+                        badgeColor="blue"
+                        label={$tStore('onboarding.limit_gpu_title')}
+                        description={$tStore('onboarding.limit_gpu_desc')}
+                      />
+                    </BentoCard>
+                  {:else if currentStep === 5}
+                    <!-- Step 6: Optional Accounts & Sync -->
+                    <p class="onboarding-accounts-note">
+                      {$tStore('onboarding.accounts_optional_note')}
+                    </p>
 
-                  <BentoCard variant="group">
-                    <SettingItem
-                      icon={Timer}
-                      badgeColor="amber"
-                      label={$tStore('onboarding.behavior_lock_title')}
-                      description={$tStore('onboarding.behavior_lock_desc')}
-                    />
-                    <SettingItem
-                      icon={FolderInput}
-                      badgeColor="emerald"
-                      label={$tStore('onboarding.behavior_shelf_title')}
-                      description={$tStore('onboarding.behavior_shelf_desc')}
-                    />
-                    <SettingItem
-                      icon={Bell}
-                      badgeColor="rose"
-                      label={$tStore('onboarding.behavior_notif_title')}
-                      description={$tStore('onboarding.behavior_notif_desc')}
-                    />
-                  </BentoCard>
-                {:else if currentStep === 4}
-                  <!-- Step 5: Shortcuts & Windows Limits -->
-                  <div class="onboarding-hotkey-grid">
-                    <BentoCard variant="bento" class="hotkey-chip-card">
-                      <span class="hotkey-chip-label"
-                        >{$tStore('onboarding.hotkey_toggle')}</span
-                      >
-                      <kbd class="kbd-pill"
-                        >{$globalHotkeyStore || 'Alt+Shift+V'}</kbd
-                      >
+                    <BentoCard variant="group">
+                      {#if $googleAccountStore.connected}
+                        <SettingItem
+                          icon={Cloud}
+                          badgeColor="blue"
+                          label={$googleAccountStore.name ||
+                            $googleAccountStore.email}
+                          description={$googleAccountStore.email}
+                        >
+                          <button
+                            type="button"
+                            class="onboarding-account-ghost-btn danger"
+                            onclick={() => void signOutGoogleAccount()}
+                          >
+                            <LogOut size={14} />
+                            <span>{$tStore('account.sign_out')}</span>
+                          </button>
+                        </SettingItem>
+                      {:else}
+                        <SettingItem
+                          icon={Cloud}
+                          badgeColor="blue"
+                          label={$tStore('account.google_title')}
+                          description={$tStore(
+                            'onboarding.accounts_google_desc'
+                          )}
+                          flexCol={true}
+                        >
+                          <button
+                            type="button"
+                            class="onboarding-oauth-btn google"
+                            disabled={isGoogleBusy}
+                            onclick={handleGoogleSignIn}
+                          >
+                            <BrandLogo name="google" size={16} />
+                            <span>
+                              {isGoogleBusy
+                                ? $tStore('account.signing_in')
+                                : $tStore('account.sign_in_google')}
+                            </span>
+                          </button>
+                        </SettingItem>
+                      {/if}
+                      {#if googleError}
+                        <p class="onboarding-account-error" role="alert">
+                          {googleError}
+                        </p>
+                      {/if}
                     </BentoCard>
 
-                    <BentoCard variant="bento" class="hotkey-chip-card">
-                      <span class="hotkey-chip-label"
-                        >{$tStore('onboarding.hotkey_mode')}</span
-                      >
-                      <kbd class="kbd-pill"
-                        >{$modeSwitchHotkeyStore || 'Alt+Shift+D'}</kbd
-                      >
+                    <BentoCard variant="group">
+                      {#if $githubStatusStore.connected}
+                        <SettingItem
+                          icon={Terminal}
+                          badgeColor="purple"
+                          label={`@${$githubStatusStore.username}`}
+                          description={$tStore('account.github_connected_sub')}
+                        >
+                          <button
+                            type="button"
+                            class="onboarding-account-ghost-btn danger"
+                            onclick={() => void disconnectGitHubAccount()}
+                          >
+                            <LogOut size={14} />
+                            <span>{$tStore('account.disconnect')}</span>
+                          </button>
+                        </SettingItem>
+                      {:else}
+                        <SettingItem
+                          icon={Terminal}
+                          badgeColor="purple"
+                          label={$tStore('account.github_title')}
+                          description={$tStore(
+                            'onboarding.accounts_github_desc'
+                          )}
+                          flexCol={true}
+                        >
+                          <button
+                            type="button"
+                            class="onboarding-oauth-btn github"
+                            disabled={isGitHubBusy}
+                            onclick={handleGitHubDeviceSignIn}
+                          >
+                            <BrandLogo name="github" size={16} />
+                            <span>
+                              {isGitHubBusy
+                                ? $tStore('account.waiting_github')
+                                : $tStore('account.sign_in_github')}
+                            </span>
+                          </button>
+
+                          {#if githubUserCode}
+                            <div class="onboarding-device-code-box">
+                              <span class="onboarding-device-code-label">
+                                {$tStore('account.device_code_label')}
+                              </span>
+                              <code class="onboarding-device-code-value">
+                                {githubUserCode}
+                              </code>
+                            </div>
+                          {/if}
+                        </SettingItem>
+                      {/if}
+                      {#if githubError}
+                        <p class="onboarding-account-error" role="alert">
+                          {githubError}
+                        </p>
+                      {/if}
                     </BentoCard>
+                  {:else if currentStep === 6}
+                    <!-- Step 7: Look & Startup -->
+                    <div class="onboarding-theme-grid">
+                      {#each themes as t (t.id)}
+                        <button
+                          type="button"
+                          class="theme-preview-card"
+                          class:active={$themeStore === t.id}
+                          onclick={() => ($themeStore = t.id)}
+                        >
+                          <span class="theme-dot {t.id}"></span>
+                          <span class="theme-name">{t.name}</span>
+                        </button>
+                      {/each}
+                    </div>
 
-                    <BentoCard variant="bento" class="hotkey-chip-card">
-                      <span class="hotkey-chip-label"
-                        >{$tStore('onboarding.hotkey_notes')}</span
+                    <BentoCard variant="group">
+                      <SettingItem
+                        icon={Gauge}
+                        badgeColor="purple"
+                        label={$tStore('appearance.anim_scale_label')}
+                        description={$tStore('onboarding.anim_speed_desc')}
+                        flexCol={true}
                       >
-                      <kbd class="kbd-pill"
-                        >{$quickNotesHotkeyStore || 'Alt+Shift+N'}</kbd
+                        <SegmentedControl
+                          size="sm"
+                          fullWidth={true}
+                          options={[
+                            {
+                              value: '0',
+                              label: $tStore('appearance.anim_off')
+                            },
+                            {
+                              value: '0.7',
+                              label: $tStore('appearance.anim_snappy')
+                            },
+                            {
+                              value: '1',
+                              label: $tStore('appearance.anim_default')
+                            },
+                            {
+                              value: '1.3',
+                              label: $tStore('appearance.anim_smooth')
+                            }
+                          ]}
+                          value={animPresetValue}
+                          onchange={(val) => {
+                            $animScaleStore = parseFloat(val)
+                          }}
+                        />
+                      </SettingItem>
+
+                      <SettingItem
+                        icon={Scale}
+                        badgeColor="blue"
+                        label={$tStore('appearance.scale_label')}
+                        description={`${$tStore('appearance.scale_desc')} (${monitorWidth}×${monitorHeight})`}
+                        flexCol={true}
+                        isDefault={activeMonitorScale === 1.0}
+                        onReset={handleResetScale}
                       >
-                    </BentoCard>
+                        <CustomSelect
+                          options={uiScaleOptions}
+                          value={String(activeMonitorScale)}
+                          onChange={handleScaleChange}
+                          defaultValue="1"
+                          fullWidth={true}
+                          direction="auto"
+                        />
+                      </SettingItem>
 
-                    <BentoCard variant="bento" class="hotkey-chip-card">
-                      <span class="hotkey-chip-label"
-                        >{$tStore('onboarding.hotkey_collapse')}</span
-                      >
-                      <kbd class="kbd-pill">Esc</kbd>
-                    </BentoCard>
-                  </div>
-
-                  <BentoCard variant="group">
-                    <SettingItem
-                      icon={Gamepad2}
-                      badgeColor="purple"
-                      label={$tStore('onboarding.limit_fullscreen_title')}
-                      description={$tStore('onboarding.limit_fullscreen_short')}
-                    />
-                    <SettingItem
-                      icon={ShieldAlert}
-                      badgeColor="rose"
-                      label={$tStore('onboarding.limit_admin_drm_title')}
-                      description={$tStore('onboarding.limit_admin_drm_desc')}
-                    />
-                    <SettingItem
-                      icon={Monitor}
-                      badgeColor="blue"
-                      label={$tStore('onboarding.limit_gpu_title')}
-                      description={$tStore('onboarding.limit_gpu_desc')}
-                    />
-                  </BentoCard>
-                {:else if currentStep === 5}
-                  <!-- Step 6: Look & Startup -->
-                  <div class="onboarding-theme-grid">
-                    {#each themes as t (t.id)}
-                      <button
-                        type="button"
-                        class="theme-preview-card"
-                        class:active={$themeStore === t.id}
-                        onclick={() => ($themeStore = t.id)}
-                      >
-                        <span class="theme-dot {t.id}"></span>
-                        <span class="theme-name">{t.name}</span>
-                      </button>
-                    {/each}
-                  </div>
-
-                  <BentoCard variant="group">
-                    <SettingItem
-                      icon={Gauge}
-                      badgeColor="purple"
-                      label={$tStore('appearance.anim_scale_label')}
-                      description={$tStore('onboarding.anim_speed_desc')}
-                      flexCol={true}
-                    >
-                      <SegmentedControl
-                        size="sm"
-                        fullWidth={true}
-                        options={[
-                          {
-                            value: '0',
-                            label: $tStore('appearance.anim_off')
-                          },
-                          {
-                            value: '0.7',
-                            label: $tStore('appearance.anim_snappy')
-                          },
-                          {
-                            value: '1',
-                            label: $tStore('appearance.anim_default')
-                          },
-                          {
-                            value: '1.3',
-                            label: $tStore('appearance.anim_smooth')
-                          }
-                        ]}
-                        value={animPresetValue}
-                        onchange={(val) => {
-                          $animScaleStore = parseFloat(val)
-                        }}
-                      />
-                    </SettingItem>
-
-                    <SettingItem
-                      icon={Scale}
-                      badgeColor="blue"
-                      label={$tStore('appearance.scale_label')}
-                      description={`${$tStore('appearance.scale_desc')} (${monitorWidth}×${monitorHeight})`}
-                      flexCol={true}
-                      isDefault={activeMonitorScale === 1.0}
-                      onReset={handleResetScale}
-                    >
-                      <CustomSelect
-                        options={uiScaleOptions}
-                        value={String(activeMonitorScale)}
-                        onChange={handleScaleChange}
-                        defaultValue="1"
-                        fullWidth={true}
-                        direction="auto"
-                      />
-                    </SettingItem>
-
-                    <SettingItem
-                      icon={Power}
-                      badgeColor="emerald"
-                      label={$tStore('onboarding.start_with_windows')}
-                      description={$tStore(
-                        'onboarding.start_with_windows_desc'
-                      )}
-                    >
-                      <ToggleSwitch
-                        checked={$autostartStore}
-                        onchange={() => handleToggleAutostart()}
-                        ariaLabel={$tStore('onboarding.start_with_windows')}
-                      />
-                    </SettingItem>
-
-                    <SettingItem
-                      icon={Activity}
-                      badgeColor="cyan"
-                      label={$tStore('onboarding.system_stats')}
-                      description={$tStore('onboarding.system_stats_desc')}
-                    >
-                      <ToggleSwitch
-                        checked={Boolean(
-                          $homeWidgetsVisibilityStore.systemStats
+                      <SettingItem
+                        icon={Power}
+                        badgeColor="emerald"
+                        label={$tStore('onboarding.start_with_windows')}
+                        description={$tStore(
+                          'onboarding.start_with_windows_desc'
                         )}
-                        onchange={() => handleToggleSystemStats()}
-                        ariaLabel={$tStore('onboarding.system_stats')}
-                      />
-                    </SettingItem>
-                  </BentoCard>
-                {/if}
-              </div>
-            {/key}
-          </ScrollView>
-        </div>
+                      >
+                        <ToggleSwitch
+                          checked={$autostartStore}
+                          onchange={() => handleToggleAutostart()}
+                          ariaLabel={$tStore('onboarding.start_with_windows')}
+                        />
+                      </SettingItem>
 
-        <footer class="pane-footer">
-          <button
-            type="button"
-            class="onboarding-skip-link"
-            onclick={handleComplete}
-          >
-            {$tStore('common.skip')}
-          </button>
+                      <SettingItem
+                        icon={Activity}
+                        badgeColor="cyan"
+                        label={$tStore('onboarding.system_stats')}
+                        description={$tStore('onboarding.system_stats_desc')}
+                      >
+                        <ToggleSwitch
+                          checked={Boolean(
+                            $homeWidgetsVisibilityStore.systemStats
+                          )}
+                          onchange={() => handleToggleSystemStats()}
+                          ariaLabel={$tStore('onboarding.system_stats')}
+                        />
+                      </SettingItem>
+                    </BentoCard>
+                  {/if}
+                </div>
+              {/key}
+            </ScrollView>
+          </div>
 
-          <div class="pane-footer-actions">
-            {#if currentStep > 0}
-              <button
-                type="button"
-                class="onboarding-nav-btn secondary"
-                onclick={handlePrev}
-              >
-                <ChevronLeft size={14} strokeWidth={2.2} />
-                <span>{$tStore('common.back')}</span>
-              </button>
-            {/if}
-
+          <footer class="pane-footer">
             <button
               type="button"
-              class="onboarding-nav-btn primary"
-              onclick={handleNext}
+              class="onboarding-skip-link"
+              onclick={handleComplete}
             >
-              <span
-                >{currentStep === steps.length - 1
-                  ? $tStore('onboarding.btn_get_started')
-                  : $tStore('common.continue')}</span
-              >
-              {#if currentStep < steps.length - 1}
-                <ChevronRight size={14} strokeWidth={2.2} />
-              {/if}
+              {$tStore('common.skip')}
             </button>
-          </div>
-        </footer>
-      </section>
-    {/snippet}
-  </SidebarLayout>
-{/if}
+
+            <div class="pane-footer-actions">
+              {#if currentStep > 0}
+                <button
+                  type="button"
+                  class="onboarding-nav-btn secondary"
+                  onclick={handlePrev}
+                >
+                  <ChevronLeft size={14} strokeWidth={2.2} />
+                  <span>{$tStore('common.back')}</span>
+                </button>
+              {/if}
+
+              <button
+                type="button"
+                class="onboarding-nav-btn primary"
+                onclick={handleNext}
+              >
+                <span
+                  >{currentStep === steps.length - 1
+                    ? $tStore('onboarding.btn_get_started')
+                    : $tStore('common.continue')}</span
+                >
+                {#if currentStep < steps.length - 1}
+                  <ChevronRight size={14} strokeWidth={2.2} />
+                {/if}
+              </button>
+            </div>
+          </footer>
+        </section>
+      {/snippet}
+    </SidebarLayout>
+  {/snippet}
+</IslandPage>
 
 <style src="./styles/OnboardingPage.css"></style>
