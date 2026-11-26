@@ -14,7 +14,7 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$tokensCssPath = Join-Path $repoRoot "frontend\src\themes\tokens.css"
+$baseThemeCssPath = Join-Path $repoRoot "frontend\src\themes\presets\dark-gold\style.css"
 
 function Get-DeclaredVintaTokens {
     param([string]$CssFilePath)
@@ -51,20 +51,25 @@ function Test-ThemeTokens {
         return
     }
 
+    if ((Resolve-Path $cssFile).Path -ieq (Resolve-Path $baseThemeCssPath).Path) {
+        Write-Host "[Theme Audit] '$themeName' is the canonical base theme ($($BaseTokens.Count) tokens)." -ForegroundColor DarkGray
+        return
+    }
+
     $implementedTokens = Get-DeclaredVintaTokens -CssFilePath $cssFile
     $missingTokens = @($BaseTokens | Where-Object { $implementedTokens -notcontains $_ })
 
     if ($missingTokens.Count -gt 0) {
-        Write-Host "WARNING: Theme '$themeName' is missing $($missingTokens.Count) token(s) declared in tokens.css (will fall back to dark-gold):" -ForegroundColor Yellow
+        Write-Host "WARNING: Theme '$themeName' is missing $($missingTokens.Count) token(s) declared in dark-gold/style.css (will fall back to dark-gold):" -ForegroundColor Yellow
         foreach ($t in $missingTokens) {
             Write-Host "  - $t" -ForegroundColor Yellow
         }
     } else {
-        Write-Host "[Theme Audit] '$themeName' implements all $($BaseTokens.Count) tokens declared in tokens.css." -ForegroundColor DarkGray
+        Write-Host "[Theme Audit] '$themeName' implements all $($BaseTokens.Count) tokens declared in dark-gold/style.css." -ForegroundColor DarkGray
     }
 }
 
-$baseTokens = Get-DeclaredVintaTokens -CssFilePath $tokensCssPath
+$baseTokens = Get-DeclaredVintaTokens -CssFilePath $baseThemeCssPath
 
 if ($CheckOnly) {
     if ($ThemePath) {
@@ -130,7 +135,7 @@ if (-not (Test-Path $entryFile -PathType Leaf)) {
     exit 1
 }
 
-# Audit declared tokens against tokens.css (non-blocking warning)
+# Audit declared tokens against the canonical dark-gold base theme (non-blocking warning)
 if ($baseTokens.Count -gt 0) {
     Test-ThemeTokens -TargetDir $resolvedThemePath -BaseTokens $baseTokens
 }

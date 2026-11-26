@@ -2,8 +2,8 @@
  * Vinta CSS Token Reference Checker
  *
  * Scans frontend/src for all var(--vinta-*) usages and verifies that every
- * referenced custom property is defined in themes/tokens.css, a theme preset,
- * or an inline/component CSS/TS assignment.
+ * referenced custom property is defined in the canonical base theme
+ * (themes/presets/dark-gold/style.css) or an inline/component CSS/TS assignment.
  *
  * Exit code: 0 on success, 1 if any undefined --vinta-* token is referenced.
  */
@@ -21,8 +21,18 @@ printHelpIfRequested(
 )
 
 const SRC_DIR = path.resolve(__dirname, '../frontend/src')
+const PRESETS_DIR = path.resolve(SRC_DIR, 'themes/presets')
+const CANONICAL_BASE_PRESET = path.resolve(PRESETS_DIR, 'dark-gold')
 const EXTENSIONS = new Set(['.css', '.svelte', '.ts'])
 const SKIP_DIRS = new Set(['bindings', 'node_modules'])
+
+function isNonBaseThemePreset(filePath) {
+  const resolved = path.resolve(filePath)
+  return (
+    resolved.startsWith(PRESETS_DIR + path.sep) &&
+    !resolved.startsWith(CANONICAL_BASE_PRESET + path.sep)
+  )
+}
 
 function walk(dir, out = []) {
   return walkFiles(dir, { extensions: EXTENSIONS, skipDirs: SKIP_DIRS }, out)
@@ -41,6 +51,12 @@ function run() {
   for (const file of files) {
     const text = fs.readFileSync(file, 'utf8')
     contents.set(file, text)
+
+    // Only collect canonical theme tokens from dark-gold/style.css (plus component/runtime vars)
+    // so tokens defined solely in a secondary preset do not mask missing base tokens.
+    if (isNonBaseThemePreset(file)) {
+      continue
+    }
 
     let m
     defCssRegex.lastIndex = 0

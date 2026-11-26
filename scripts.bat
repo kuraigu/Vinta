@@ -495,11 +495,13 @@ echo   bindings                 Generates TypeScript bindings for frontend from 
 echo   syso                     Generates Windows syso resource file
 echo   installer                Builds standalone production binary and Windows NSIS installer
 echo   pack-theme ^<path^>        Packages a theme directory into a .vintatheme bundle
-echo   check-locales            Validates key parity and schema across all locale catalogs
+echo   check-themes [path]      Audits theme presets against dark-gold and validates --vinta-* tokens
+echo   check-locales [--all]    Validates key parity, registration, and schema across all locale catalogs
 echo   check-settings [default] Validates setting keys, defaults, and localStorage usage
 echo   check-transitions [--all] [--strict]  Audits CSS transitions and reduced-motion coverage
 echo   check-hardcoded-ui [--all] [--strict] Audits components/pages for hardcoded colors, strings, and native controls
-echo   sync-locales [--prune]   Propagates new keys from en.json to all other locale catalogs
+echo   sync-locales [--prune] [--dry-run]    Propagates new keys from en.json to all other locale catalogs
+echo   resource-profile [opts]  Monitors live unscaled CPU%% and RAM across Vinta's process tree
 echo   lint [--ci^|--native^|--all^|--strict]  Runs Go, C++, Frontend, Theme, and Locale linters
 echo   contributor ^<args^>       Adds a contributor via scripts\add_contributor.ps1
 echo.
