@@ -12,9 +12,29 @@ First-time environment setup script. Checks required developer toolchains (Go 1.
 Environment diagnostic script. Validates installed dependencies, version constraints, PATH availability, and CMake generator state.
 - Invocation: `task doctor` or `.\scripts.bat doctor`
 
+### `check-tokens.js` & `pack-theme.ps1`
+Validates all `var(--vinta-*)` references across `frontend/src/` against the canonical base theme (`frontend/src/themes/presets/dark-gold/style.css`), audits secondary presets and `templates/theme` for missing tokens, and packages custom themes into `.vintatheme` archives.
+- Invocation: `task check:themes` (`.\scripts.bat check-themes`) and `task theme:pack -- <path>` (`.\scripts.bat pack-theme <path>`)
+
+### `check-locales.js` & `sync-locales.js`
+Validates translation key parity, placeholder tokens, `@metadata` schema, and `i18n.ts` registration across `frontend/src/locales/*.json`, reporting per-locale coverage. `sync-locales.js` propagates new keys from `en.json` to all secondary catalogs.
+- Invocation: `task check:locales -- [--all]` and `task sync:locales -- [--prune] [--dry-run]`
+
+### `check-settings.js`
+Verifies unique `vinta_*` setting keys, schema migrations, and audits direct `localStorage` usage.
+- Invocation: `task check:settings -- [--defaults]`
+
 ### `check-transitions.js` & `lib/lint-utils.js`
 Audits production `.css` and `.svelte` files (excluding `devtest`) for non-composited CSS transitions and verifies `prefers-reduced-motion` support. Intentional outer container-bounds transitions can be documented with `/* vinta-ignore: transition */`.
 - Invocation: `task check:transitions -- [--all] [--strict]` or `.\scripts.bat check-transitions [--all] [--strict]`
+
+### `check-hardcoded-ui.js`
+Scans `frontend/src/components` and `frontend/src/pages` for hardcoded colors, native HTML controls, JS CSS imports, banned icons, and hardcoded UI attribute strings.
+- Invocation: `task check:hardcoded-ui -- [--all] [--changed] [--strict]`
+
+### `resource-profile.ps1`
+Samples live unscaled CPU% and working-set RAM across Vinta's Go and WebView2 process tree.
+- Invocation: `task profile:resources` or `.\scripts.bat resource-profile`
 
 ### `generate_icon.ps1`
 Generates multi-resolution Windows icon assets (`build/windows/icon.ico`) from `build/appicon.png` covering standard mipmap resolutions (16x16, 24x24, 32x32, 48x48, 64x64, 128x128, 256x256).

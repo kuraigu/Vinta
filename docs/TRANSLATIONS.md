@@ -147,29 +147,38 @@ Vinta displays vector SVG country flags in language selectors to make languages 
   - `nl` (Netherlands)
   - `fil` / `tl` / `ph` (Philippines)
 
+### Fallback Resolution Order
+When looking up a translation key, Vinta resolves catalogs in this order:
+1. Custom drop-in JSON file in `%APPDATA%/FreeMatrix Studios/Vinta/locales/`
+2. Bundled locale catalog in `frontend/src/locales/`
+3. Regional base language catalog (for example, `es-419` falls back to `es-ES` before English)
+4. Canonical base English catalog (`en.json`)
+
+Partial custom drop-in files only need to include overridden keys; omitted keys inherit automatically from the bundled locale before falling back to English.
+
 ### Synchronizing New Keys
 When new keys are added to `en.json`, propagate them to all other catalogs (preserving existing translations and `@metadata`) by running:
 
 ```cmd
-task sync-locales
+task sync:locales
 # or
 scripts.bat sync-locales
 ```
 
-Pass `--prune` to remove obsolete keys that no longer exist in `en.json`.
+Pass `--prune` to remove obsolete keys that no longer exist in `en.json`, or `--dry-run` to preview changes without writing files (for example: `task sync:locales -- --prune`).
 
 ### Validating Your Catalog
-To verify that your translation file has zero missing keys, extra keys, or formatting errors, run the locale checker:
+To verify that a translation file has zero missing keys, extra keys, placeholder mismatches, or registration issues, run the locale checker:
 
 ```cmd
-task check-locales
+task check:locales
 # or
 scripts.bat check-locales
 ```
 
-*(Note: `task check-locals` is also supported as a convenient alias).*
+*(Aliases `task check-locales` and `task check-locals` are also supported. Pass `--all` to print every untranslated or mismatched key without truncation.)*
 
-This validates all JSON files against `en.json` and outputs a clear report of missing, empty, or obsolete keys.
+This validates `en.json` and all target JSON files, confirms every catalog in `frontend/src/locales/` is registered in `frontend/src/services/i18n.ts`, and reports per-locale translation coverage.
 
 ### Adding a New Flag
 If your language code does not have a built-in flag yet, Vinta displays a clean globe icon (Globe) by default.

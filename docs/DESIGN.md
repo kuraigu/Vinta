@@ -23,17 +23,17 @@ Always prioritize existing shared components before writing custom HTML or style
 
 Vinta splits its Svelte UI into four clear layers so workspace state, overlays, and reusable controls stay decoupled:
 
-- **Primitives (`frontend/src/components/`):** Reusable, token-driven building blocks (`BentoCard`, `CustomSelect`, `OverlayPage`, `ScrollView`, `SearchInput`). Primitives stay free of page-specific layout rules.
-- **Widgets (`frontend/src/components/widgets/`):** Self-contained glance cards for the Home feed (`WeatherWidget`, `MediaGlanceWidget`, `CalendarGlanceWidget`, `SystemStatsWidget`, `ActionCenterWidget`, `AnnouncementWidget`, `NotificationWidget`). Widgets wrap `<WidgetFrame>` to carry `data-vinta-widget="<id>"` theme hooks, `contain: layout style` isolation, and Bento size presets (`1x1`, `2x1`, `2x2`).
-- **Workspace Pages (`frontend/src/pages/`):** Persistent base views (`HomePage`, `MediaPage`, `NotesPage`, `CalculatorPage`, `CalendarPage`, `SettingsPage`) that own the island frame and keep user context.
-- **Overlay Pages (`frontend/src/pages/overlays/`):** Top-level views (`NotificationsOverlayPage`, `AppsOverlayPage`) mounted inside `<OverlayPage>` above the active workspace. Closed overlays leave zero DOM nodes or listeners behind, and open overlays use solid elevated surfaces (`--vinta-bg-opaque` / `--vinta-surface-elevated`) instead of stacking a second `backdrop-filter: blur()` pass. Re-clicking the active dock trigger closes the overlay, and compact workspaces expand to at least `440px × 380px` while open before restoring exact dimensions on close or `Escape`.
+- **Primitives (`frontend/src/components/`):** Reusable, token-driven building blocks (`IslandPage`, `BentoCard`, `HeaderActionButton`, `CustomSelect`, `OverlayPage`, `ScrollView`, `SearchInput`). Primitives stay free of page-specific layout rules.
+- **Widgets (`frontend/src/components/widgets/`):** Self-contained glance cards for the Home feed (`WeatherWidget`, `MediaGlanceWidget`, `CalendarGlanceWidget`, `SystemStatsWidget`, `ActionCenterWidget`, `AnnouncementWidget`, `NotificationWidget`, `FlashcardsWidget`, `HabitsWidget`). Widgets wrap `<WidgetFrame>` to carry `data-vinta-widget="<id>"` theme hooks, `contain: layout style` isolation, and Bento size presets (`1x1`, `2x1`, `2x2`).
+- **Workspace Pages (`frontend/src/pages/`):** Persistent base views (`HomePage`, `MediaPage`, `NotesPage`, `CalculatorPage`, `CalendarPage`, `FlashcardsPage`, `HabitsPage`, `DevHubPage`, `FileShelfPage`, `PerformancePage`, `SettingsPage`) that own the island frame and keep user context. Pages with distinct minimal and expanded views use `<IslandPage {expanded}>` (`minimal` and `expandedContent` snippets) so the expanded DOM stays pre-warmed across collapse/expand transitions.
+- **Overlay Pages (`frontend/src/pages/overlays/`):** Top-level views (`NotificationsOverlayPage`, `AppsOverlayPage`, `FeedbackOverlayPage`) mounted inside `<OverlayPage>` above the active workspace. Closed overlays leave zero DOM nodes or listeners behind, and open overlays use solid elevated surfaces (`--vinta-bg-opaque` / `--vinta-surface-elevated`) instead of stacking a second `backdrop-filter: blur()` pass. Re-clicking the active dock trigger closes the overlay, and compact workspaces expand to at least `440px × 380px` while open before restoring exact dimensions on close or `Escape`. Any new app added to `AppsOverlayPage.svelte` requires a matching `.app-tile.app-<id> .tile-icon-box` gradient rule in `AppsOverlayPage.css`.
 
 ### Where to Look
 
 Check `frontend/src/components/` first:
 
-- **Cards and Containers:** Look for `BentoCard.svelte`, `BentoGrid.svelte`, and `BentoItem.svelte`.
-- **Navigation and Actions:** Look for `BackButton.svelte`, `DockButton.svelte`, and `RefreshButton.svelte`.
+- **Cards and Containers:** Look for `IslandPage.svelte`, `BentoCard.svelte`, `BentoGrid.svelte`, and `BentoItem.svelte`.
+- **Navigation and Actions:** Look for `HeaderActionButton.svelte` (`ghost` 32x32 circular, `pill`, and `hero` tiers), `BackButton.svelte`, `DockButton.svelte`, and `RefreshButton.svelte`.
 - **Form Controls:** Look for `CustomSelect.svelte`, `CustomDatePicker.svelte`, `CustomTimePicker.svelte`, and `SearchInput.svelte`.
 - **Settings Primitives:** Check `frontend/src/components/settings/` for items, action buttons, sliders, and banners.
 - **Drawers, Overlays, and Modals:** Look for `OverlayPage.svelte`, `DrawerPanel.svelte`, `EditorModal.svelte`, and `CustomContextMenu.svelte`.
@@ -52,21 +52,19 @@ Only create a new component when existing primitives cannot satisfy the requirem
 
 ## 2. Theming & Tokens
 
-Vinta uses a dynamic theme engine built on CSS Cascade Layers (`vinta.base`, `vinta.fallback`, `vinta.components`, `vinta.theme`) and `.vintatheme` packages.
+Vinta uses a dynamic theme engine built on CSS Cascade Layers (`vinta.base`, `vinta.components`, `vinta.theme`) and `.vintatheme` packages.
 
 ### Token Catalog & Declarations
 
-- **Source of Truth:** All base tokens are declared in `frontend/src/themes/tokens.css` with magenta (`#ff00ff`) missing-token sentinels. Check this file directly for the complete list of available `--vinta-*` variables.
-- **Default Values:** Runtime default values are defined in the fallback preset stylesheet at `frontend/src/themes/presets/dark-gold/style.css`.
-- **Adding Tokens:** Only edit `tokens.css` when introducing a brand new token to the system. Once declared with `#ff00ff`, provide concrete values inside the preset stylesheets under `frontend/src/themes/presets/*/style.css`.
-- **Do Not Edit Sentinels for Theme Tweaks:** Never change `#ff00ff` in `tokens.css` to adjust colors for a theme. Adjust the preset stylesheets instead.
+- **Canonical Base Theme:** `frontend/src/themes/presets/dark-gold/style.css` is the single source of truth for all `--vinta-*` CSS custom properties, mirroring how `frontend/src/locales/en.json` acts as the canonical base locale.
+- **Adding Tokens:** When introducing a new `--vinta-*` token, define it first in `frontend/src/themes/presets/dark-gold/style.css`, then add matching values to secondary presets (`frontend/src/themes/presets/*/style.css`) and `templates/theme/style.css`.
+- **Validation:** `task check:themes` (`scripts.bat check-themes`) validates every `var(--vinta-*)` reference across `frontend/src/` against `dark-gold/style.css` (plus component/runtime variables) and audits secondary themes for missing tokens. Any token omitted by a custom theme falls back cleanly to `dark-gold`.
 
 ### Cascade Layer Hierarchy
 
-1. `@layer vinta.base`: Foundational token declarations (`tokens.css`) using `#ff00ff` sentinels.
-2. `@layer vinta.fallback`: Production fallback preset (`dark-gold/style.css`), ensuring missing tokens resolve cleanly.
-3. `@layer vinta.components`: Scoped component styles compiled via Svelte `<style src="...">`.
-4. `@layer vinta.theme`: Active runtime theme overrides injected into `<style id="vinta-active-theme">`.
+1. `@layer vinta.base`: Canonical base theme (`frontend/src/themes/presets/dark-gold/style.css`) and local fonts, guaranteeing every `--vinta-*` variable resolves to a valid production value.
+2. `@layer vinta.components`: Scoped component styles compiled via Svelte `<style src="...">`.
+3. `@layer vinta.theme`: Active runtime theme overrides injected into `<style id="vinta-active-theme">`.
 
 ### Theme Manifest (`manifest.json`)
 
@@ -134,8 +132,9 @@ Do not write custom card background formulas or box shadows from scratch. Use `B
 
 ### Iconography
 
-- **Primary Library:** Use Lucide icons from `lucide-svelte`.
-- **Custom SVGs:** Place custom SVG icons in `frontend/src/assets/`. Use `fill="currentColor"` or `stroke="currentColor"` so icons inherit active theme colors.
+- **Primary Library:** Use Lucide icons from `lucide-svelte`. Avoid generic `Sparkle` and `Sparkles` icons; pick domain-specific icons instead.
+- **Icon Scale:** Keep UI icons on an even pixel scale `>= 12px` (`12`, `14`, `16`, `18`, `20`, `24`). Micro-SVG glyphs can be exempted explicitly via `<!-- vinta-ignore icon-size -->`.
+- **Custom & Brand SVGs:** Place custom SVG icons in `frontend/src/assets/` with `fill="currentColor"` or `stroke="currentColor"` so they inherit active theme colors. Use `BrandLogo.svelte` for third-party brand marks (Google, GitHub).
 - System and application icons for media sessions and notifications are resolved dynamically via `frontend/src/services/iconService.ts`.
 
 ### Illustrations
@@ -174,10 +173,10 @@ Native HTML select menus and date pickers break window transparency and clash wi
 
 ## 7. Satellites & Motion
 
-### Dynamic Island Motion
+### Adaptive Island Motion
 
-- Animate height and geometry smoothly using GPU-accelerated properties (`transform`, `opacity`) with cubic-bezier easing (`0.22, 1, 0.36, 1`).
-- Multiply CSS and Svelte transition durations by `--vinta-anim-scale` (`animScaleStore`) so morph, overlay, and tab transitions follow the user's animation speed setting cleanly down to instant `0` transitions.
+- Animate transitions using compositor-safe properties (`transform`, `opacity`) with cubic-bezier easing (`0.22, 1, 0.36, 1`). Avoid `transition: all` or animating layout/paint properties (`width`, `height`, `background`, `border-color`, `box-shadow`, `color`, `filter`) outside explicitly documented outer island container morphs (`/* vinta-ignore: transition */`).
+- Multiply CSS and Svelte transition durations by `--vinta-anim-scale` (`animScaleStore`) so morph, overlay, and tab transitions follow the animation speed setting cleanly down to instant `0` transitions, and respect `@media (prefers-reduced-motion: reduce)`.
 - Avoid rapid or distracting animations. Keep indicators and glimmers calm.
 
 ### Floating Satellites

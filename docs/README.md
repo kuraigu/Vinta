@@ -5,6 +5,7 @@ This directory contains design, style, and community documentation for Vinta.
 ## Documentation Index
 
 - [DESIGN.md](DESIGN.md): Visual aesthetics, design tokens, color variables, typography, form control standards, and bento card architecture.
+- [TRANSLATIONS.md](TRANSLATIONS.md): Localization structure, drop-in testing, key synchronization, and flag icon guidelines.
 - [CONTRIBUTORS.md](CONTRIBUTORS.md): Contributors Hall of Fame recognizing developers, designers, and community members.
 
 ## Core Contributing Guides

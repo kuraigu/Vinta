@@ -13,13 +13,15 @@ frontend/
 │   │   ├── timer/          # Stopwatch, countdown, focus, and alarm views
 │   │   ├── notes/          # Notes editor, list drawer, and formatting bar
 │   │   └── styles/         # Extracted stylesheets for complex components
-│   ├── pages/              # Top-level island views (Home, Media, Apps, etc.)
+│   ├── pages/              # Top-level island views (Home, Media, Calendar, Flashcards, Habits, DevHub, etc.)
+│   │   ├── overlays/       # Overlay views (Apps/Launcher, Notifications, Feedback)
 │   │   └── styles/         # Extracted stylesheets for pages
-│   ├── stores/             # Svelte reactive state stores
-│   ├── services/           # Window bounds, gestures, tooltips, and weather services
-│   ├── illustrations/      # Volumetric vector artwork for weather and widgets
-│   ├── themes/             # Theme engine, presets (dark-gold, nord-frost, colorblind-safe), base tokens
-│   └── utils/              # Gesture math, date formatting, and application helpers
+│   ├── stores/             # Svelte reactive state stores (settings, calendar, companion, dev integrations)
+│   ├── services/           # Window bounds, gestures, i18n, tooltips, and weather services
+│   ├── locales/            # Base en.json and community translation JSON catalogs
+│   ├── illustrations/      # Volumetric vector artwork for weather, mascot, and onboarding diagrams
+│   ├── themes/             # Theme engine and presets (dark-gold canonical base, nord-frost, colorblind-safe)
+│   └── utils/              # Gesture math, portal bounds, date formatting, and application helpers
 ├── bindings/               # Generated Wails v3 Go to TypeScript bindings
 └── index.html              # HTML shell configured for transparent webviews
 ```
