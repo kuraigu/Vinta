@@ -596,7 +596,7 @@ export function IsPortableMode(): $CancellablePromise<boolean> {
 }
 
 /**
- * IsPrivacySensitiveDisplayActive reports whether Windows is in presentation/busy mode
+ * IsPrivacySensitiveDisplayActive reports whether Windows is in presentation mode
  * or a known screen-sharing toolbar (Teams/Zoom) is currently visible.
  */
 export function IsPrivacySensitiveDisplayActive(): $CancellablePromise<boolean> {

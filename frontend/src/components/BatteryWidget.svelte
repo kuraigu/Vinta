@@ -68,12 +68,12 @@
   ></div>
 
   <div class="battery-pill-content">
-    <!-- vinta-ignore icon-size -->
     {#if !battery.hasBattery}
+      <!-- vinta-ignore icon-size -->
       <Plug size={8.5} strokeWidth={2.8} class="battery-plug-icon" />
     {:else}
-      <!-- vinta-ignore icon-size -->
       {#if battery.isCharging}
+        <!-- vinta-ignore icon-size -->
         <Zap size={8} strokeWidth={3.2} class="battery-status-icon" />
       {:else if battery.batterySaver}
         <!-- vinta-ignore icon-size -->
