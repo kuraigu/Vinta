@@ -660,8 +660,8 @@
             <span class="banner-app">{brand.name}</span>
             {#if $notifMinimalStyleStore === 'icon_only' || $privacyModeStore || ($autoPrivacyModeStore && $screenShareDetectedStore)}
               <span class="banner-message">
-                {notifications.length > 1
-                  ? `${notifications.length} ${$tStore('notification.page_title').toLowerCase()}`
+                {activeNotifications.length > 1
+                  ? `${activeNotifications.length} ${$tStore('notification.page_title').toLowerCase()}`
                   : $tStore('notification.privacy_hidden_preview')}
               </span>
             {:else}

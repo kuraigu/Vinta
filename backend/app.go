@@ -71,6 +71,10 @@ type App struct {
 	hitTestWasButtonDown     bool
 	hitTestLastRectsVer      uint64
 	hitTestRectsScratch      []pillHitBounds
+	hitTestHiddenHitStart    time.Time
+	hitTestHiddenLastPt      point32
+	hitTestHiddenInit        bool
+	hitTestHiddenMoved       bool
 	uiScale                  float64
 	overlayHeight            int
 	isForceInteractive       bool

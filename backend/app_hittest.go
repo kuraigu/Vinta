@@ -258,20 +258,60 @@ func (a *App) reconcileHitTest(hwnd uintptr) {
 			ci.cbSize = uint32(unsafe.Sizeof(ci))
 			ret, _, _ := procGetCursorInfo.Call(uintptr(unsafe.Pointer(&ci)))
 			if ret != 0 {
-				// Hidden cursors (such as locked FPS game pointers) must never click Vinta.
-				// Suppressed cursors (touch and pen input) are still valid pointers.
-				if (ci.flags & (cursorShowing | cursorSuppressed)) == 0 {
-					cursorHidden = true
+				pt := ci.ptScreenPos
+				if retScreen, _, _ := procScreenToClient.Call(hwnd, uintptr(unsafe.Pointer(&pt))); retScreen != 0 {
+					for _, rect := range rects {
+						if pt.X >= rect.left && pt.X <= rect.right &&
+							pt.Y >= rect.top && pt.Y <= rect.bottom {
+							cursorInAnyRect = true
+							break
+						}
+					}
+				}
+
+				// When the OS cursor is visible (or touch/pen suppressed), interact immediately.
+				// When the OS cursor is hidden (ci.flags == 0), distinguish locked FPS mouselook
+				// from games that render a custom software cursor in menus (e.g. Valorant):
+				// require active cursor movement, no tiny ClipCursor lock box, and 60ms continuous
+				// presence inside a hit rect so brief 1-frame FPS flicks never trigger clicks.
+				if (ci.flags & (cursorShowing | cursorSuppressed)) != 0 {
+					a.hitTestHiddenHitStart = time.Time{}
+					a.hitTestHiddenInit = false
+					a.hitTestHiddenMoved = false
 				} else {
-					pt := ci.ptScreenPos
-					if retScreen, _, _ := procScreenToClient.Call(hwnd, uintptr(unsafe.Pointer(&pt))); retScreen != 0 {
-						for _, rect := range rects {
-							if pt.X >= rect.left && pt.X <= rect.right &&
-								pt.Y >= rect.top && pt.Y <= rect.bottom {
-								cursorInAnyRect = true
-								break
+					if !a.hitTestHiddenInit {
+						a.hitTestHiddenLastPt = ci.ptScreenPos
+						a.hitTestHiddenInit = true
+					} else if ci.ptScreenPos != a.hitTestHiddenLastPt {
+						a.hitTestHiddenMoved = true
+						a.hitTestHiddenLastPt = ci.ptScreenPos
+					}
+
+					allowSoftwareCursor := false
+					if cursorInAnyRect && a.hitTestHiddenMoved {
+						microClipped := false
+						var clipRc rect32
+						if clipRet, _, _ := procGetClipCursor.Call(uintptr(unsafe.Pointer(&clipRc))); clipRet != 0 {
+							if (clipRc.Right-clipRc.Left) <= 16 && (clipRc.Bottom-clipRc.Top) <= 16 {
+								microClipped = true
 							}
 						}
+						if microClipped {
+							a.hitTestHiddenHitStart = time.Time{}
+						} else {
+							if a.hitTestHiddenHitStart.IsZero() {
+								a.hitTestHiddenHitStart = now
+							}
+							if now.Sub(a.hitTestHiddenHitStart) >= 60*time.Millisecond {
+								allowSoftwareCursor = true
+							}
+						}
+					} else {
+						a.hitTestHiddenHitStart = time.Time{}
+					}
+
+					if !allowSoftwareCursor {
+						cursorHidden = true
 					}
 				}
 			}
