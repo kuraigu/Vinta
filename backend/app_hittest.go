@@ -88,6 +88,10 @@ func (a *App) SetHitRects(rects []HitRect) {
 			copy(activeIslandRects, nextRects)
 		}
 		activeIslandMu.Unlock()
+
+		if h := a.getHwnd(); h != 0 {
+			a.reconcileHitTest(h)
+		}
 	}
 
 	if len(rects) > 0 {
@@ -128,6 +132,9 @@ func (a *App) SetHitRects(rects []HitRect) {
 func (a *App) setClickThrough(hwnd uintptr, transparent bool) bool {
 	gwl := int32(GWL_EXSTYLE)
 	style, _, _ := procGetWindowLong.Call(hwnd, uintptr(gwl))
+	if style == 0 {
+		return false
+	}
 	has := (style & WS_EX_TRANSPARENT) != 0
 	if has == transparent {
 		return false
@@ -204,35 +211,150 @@ func (a *App) setOutboundDragging(active bool) {
 	a.setClickThrough(hwnd, active)
 }
 
-// startHitTestingLoop runs a 60Hz reconciliation loop that is the single decider of
-// WS_EX_TRANSPARENT. Every tick it derives the desired click-through state from the live
-// cursor position and hit rects, then reconciles against the live Win32 window style via
-// setClickThrough. No cached style or stationary-cursor shortcut is retained across ticks,
-// so external style changes or race conditions self-heal on the next 16ms tick.
-//
-// Why 60Hz reconciliation instead of alternatives:
-//   - WH_MOUSE_LL (low-level mouse hook) sits on the global OS input path, can be silently
-//     unhooked by Windows if a callback stalls, and can trigger anti-cheat heuristics.
-//   - WM_NCHITTEST returning HTTRANSPARENT does not work across WebView2 out-of-process
-//     child windows (Chrome_WidgetWin_*), which intercept mouse input before parent hit testing.
-//   - SetWindowRgn clips physical window regions and causes visual tearing and clipping
-//     artifacts during smooth CSS transitions and shadow rendering.
+// reconcileHitTest evaluates the live cursor position against active hit rects and updates
+// WS_EX_TRANSPARENT immediately. Safe to call from WM_INPUT, SetHitRects, or the housekeeping loop.
+func (a *App) reconcileHitTest(hwnd uintptr) {
+	if hwnd == 0 {
+		return
+	}
+	a.hitTestEvalMu.Lock()
+	defer a.hitTestEvalMu.Unlock()
+
+	const (
+		cursorShowing    = 0x00000001
+		cursorSuppressed = 0x00000002
+	)
+
+	a.pillHitMu.RLock()
+	outbound := a.isOutboundDragging
+	force := a.isForceInteractive
+	rectsVer := a.hitRectsVersion
+	nRects := len(a.pillHitRects)
+	if cap(a.hitTestRectsScratch) < nRects {
+		a.hitTestRectsScratch = make([]pillHitBounds, nRects)
+	} else {
+		a.hitTestRectsScratch = a.hitTestRectsScratch[:nRects]
+	}
+	copy(a.hitTestRectsScratch, a.pillHitRects)
+	a.pillHitMu.RUnlock()
+
+	rects := a.hitTestRectsScratch
+	rectsChanged := rectsVer != a.hitTestLastRectsVer
+	a.hitTestLastRectsVer = rectsVer
+
+	isHit := false
+	cursorInAnyRect := false
+	cursorHidden := false
+	now := time.Now()
+
+	if !outbound {
+		if len(rects) > 0 || force {
+			var ci struct {
+				cbSize      uint32
+				flags       uint32
+				hCursor     uintptr
+				ptScreenPos point32
+			}
+			ci.cbSize = uint32(unsafe.Sizeof(ci))
+			ret, _, _ := procGetCursorInfo.Call(uintptr(unsafe.Pointer(&ci)))
+			if ret != 0 {
+				// Hidden cursors (such as locked FPS game pointers) must never click Vinta.
+				// Suppressed cursors (touch and pen input) are still valid pointers.
+				if (ci.flags & (cursorShowing | cursorSuppressed)) == 0 {
+					cursorHidden = true
+				} else {
+					pt := ci.ptScreenPos
+					if retScreen, _, _ := procScreenToClient.Call(hwnd, uintptr(unsafe.Pointer(&pt))); retScreen != 0 {
+						for _, rect := range rects {
+							if pt.X >= rect.left && pt.X <= rect.right &&
+								pt.Y >= rect.top && pt.Y <= rect.bottom {
+								cursorInAnyRect = true
+								break
+							}
+						}
+					}
+				}
+			}
+		}
+
+		switch {
+		case cursorHidden:
+			isHit = false
+		case force:
+			if cursorInAnyRect {
+				a.hitTestForceOutStart = time.Time{}
+			} else {
+				if a.hitTestForceOutStart.IsZero() {
+					a.hitTestForceOutStart = now
+				}
+				// Auto-expire force interactive if the cursor has been outside all rects for >1s and LMB is up.
+				if now.Sub(a.hitTestForceOutStart) > time.Second {
+					if lmbState, _, _ := procGetAsyncKeyState.Call(0x01); (lmbState & 0x8000) == 0 {
+						a.pillHitMu.Lock()
+						a.isForceInteractive = false
+						a.pillHitMu.Unlock()
+						force = false
+						a.hitTestForceOutStart = time.Time{}
+					}
+				}
+			}
+			isHit = force || cursorInAnyRect
+		default:
+			isHit = cursorInAnyRect
+		}
+	}
+
+	if isHit {
+		a.hitTestMissStart = time.Time{}
+	} else {
+		if a.hitTestMissStart.IsZero() {
+			a.hitTestMissStart = now
+		}
+		// Hold interactive state for 120ms when multiple stationary rects (satellites)
+		// are active so swift motion across gaps does not drop clicks.
+		if len(rects) > 1 && !rectsChanged && now.Sub(a.hitTestMissStart) < 120*time.Millisecond {
+			return
+		}
+		// Never switch to WS_EX_TRANSPARENT while the left mouse button is held during an
+		// inbound drag: changing styles mid-drag desyncs OLE DragLeave/Drop.
+		if !outbound {
+			if lmbState, _, _ := procGetAsyncKeyState.Call(0x01); (lmbState & 0x8000) != 0 {
+				gwl := int32(GWL_EXSTYLE)
+				style, _, _ := procGetWindowLong.Call(hwnd, uintptr(gwl))
+				if style != 0 && (style&WS_EX_TRANSPARENT) == 0 {
+					return
+				}
+			}
+		}
+	}
+
+	a.setClickThrough(hwnd, !isHit)
+
+	lmbState, _, _ := procGetAsyncKeyState.Call(0x01)
+	rmbState, _, _ := procGetAsyncKeyState.Call(0x02)
+	isButtonDown := (lmbState&0x8000) != 0 || (rmbState&0x8000) != 0
+	if isButtonDown && !a.hitTestWasButtonDown && !outbound && !cursorHidden && !force && !cursorInAnyRect && len(rects) > 0 {
+		if wailsApp := application.Get(); wailsApp != nil {
+			go wailsApp.Event.Emit("vinta:click-outside")
+		}
+	}
+	a.hitTestWasButtonDown = isButtonDown
+
+	a.pillHitMu.Lock()
+	a.isCurrentlyInteractive = isHit
+	a.pillHitMu.Unlock()
+}
+
+// startHitTestingLoop runs a housekeeping loop that backs up event-driven WM_INPUT hit testing.
+// When Raw Input (RIDEV_INPUTSINK) is active, mouse movement reconciles immediately (<1ms) on
+// WM_INPUT and this loop throttles down to 150ms for touch/pen, gap-hold expiry, force-interactive
+// timeouts, and HWND self-healing. If Raw Input registration fails, it falls back to 16ms polling.
 func (a *App) startHitTestingLoop(hwnd uintptr) {
 	go func() {
 		defer SetupPanicRecovery()
-		ticker := time.NewTicker(16 * time.Millisecond)
+		interval := 16 * time.Millisecond
+		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
-
-		const (
-			cursorShowing    = 0x00000001
-			cursorSuppressed = 0x00000002
-		)
-
-		missCount := 0
-		forceOutsideCount := 0
-		wasButtonDown := false
-		var rects []pillHitBounds
-		lastRectsVersion := ^uint64(0)
 
 		stopCtx := a.lifecycleContext()
 		for {
@@ -241,125 +363,33 @@ func (a *App) startHitTestingLoop(hwnd uintptr) {
 				return
 			case <-ticker.C:
 			}
-			if hwnd == 0 {
-				continue
-			}
-			isWin, _, _ := procIsWindow.Call(hwnd)
-			if isWin == 0 {
-				return
-			}
 
 			a.pillHitMu.RLock()
-			outbound := a.isOutboundDragging
-			force := a.isForceInteractive
-			rectsVer := a.hitRectsVersion
-			nRects := len(a.pillHitRects)
-			if cap(rects) < nRects {
-				rects = make([]pillHitBounds, nRects)
-			} else {
-				rects = rects[:nRects]
-			}
-			copy(rects, a.pillHitRects)
+			rawActive := a.rawInputRegistered
 			a.pillHitMu.RUnlock()
-
-			rectsChanged := rectsVer != lastRectsVersion
-			lastRectsVersion = rectsVer
-
-			isHit := false
-			cursorInAnyRect := false
-			cursorHidden := false
-			if !outbound {
-				if len(rects) > 0 || force {
-					var ci struct {
-						cbSize      uint32
-						flags       uint32
-						hCursor     uintptr
-						ptScreenPos point32
-					}
-					ci.cbSize = uint32(unsafe.Sizeof(ci))
-					ret, _, _ := procGetCursorInfo.Call(uintptr(unsafe.Pointer(&ci)))
-					if ret != 0 {
-						// Hidden cursors (such as locked FPS game pointers) must never click Vinta.
-						// Suppressed cursors (touch and pen input) are still valid pointers.
-						if (ci.flags & (cursorShowing | cursorSuppressed)) == 0 {
-							cursorHidden = true
-						} else {
-							pt := ci.ptScreenPos
-							if retScreen, _, _ := procScreenToClient.Call(hwnd, uintptr(unsafe.Pointer(&pt))); retScreen != 0 {
-								for _, rect := range rects {
-									if pt.X >= rect.left && pt.X <= rect.right &&
-										pt.Y >= rect.top && pt.Y <= rect.bottom {
-										cursorInAnyRect = true
-										break
-									}
-								}
-							}
-						}
-					}
-				}
-
-				switch {
-				case cursorHidden:
-					isHit = false
-				case force:
-					if cursorInAnyRect {
-						forceOutsideCount = 0
-					} else {
-						forceOutsideCount++
-						// Auto-expire force interactive if the cursor has been outside all rects for >1s and LMB is up.
-						if forceOutsideCount > 60 {
-							if lmbState, _, _ := procGetAsyncKeyState.Call(0x01); (lmbState & 0x8000) == 0 {
-								a.pillHitMu.Lock()
-								a.isForceInteractive = false
-								a.pillHitMu.Unlock()
-								force = false
-								forceOutsideCount = 0
-							}
-						}
-					}
-					isHit = force || cursorInAnyRect
-				default:
-					isHit = cursorInAnyRect
-				}
+			desiredInterval := 16 * time.Millisecond
+			if rawActive {
+				desiredInterval = 150 * time.Millisecond
+			}
+			if desiredInterval != interval {
+				interval = desiredInterval
+				ticker.Reset(interval)
 			}
 
-			if isHit {
-				missCount = 0
-			} else {
-				missCount++
-				// Hold interactive state for ~120ms (8 frames at 60Hz) when multiple stationary
-				// rects (satellites) are active so swift motion across gaps does not drop clicks.
-				if len(rects) > 1 && !rectsChanged && missCount < 8 {
+			if hwnd == 0 {
+				hwnd = a.getHwnd()
+				if hwnd == 0 {
 					continue
 				}
-				// Never switch to WS_EX_TRANSPARENT while the left mouse button is held during an
-				// inbound drag: changing styles mid-drag desyncs OLE DragLeave/Drop.
-				if !outbound {
-					if lmbState, _, _ := procGetAsyncKeyState.Call(0x01); (lmbState & 0x8000) != 0 {
-						gwl := int32(GWL_EXSTYLE)
-						style, _, _ := procGetWindowLong.Call(hwnd, uintptr(gwl))
-						if (style & WS_EX_TRANSPARENT) == 0 {
-							continue
-						}
-					}
+			}
+			if isWin, _, _ := procIsWindow.Call(hwnd); isWin == 0 {
+				hwnd = a.getHwnd()
+				if hwnd == 0 {
+					continue
 				}
 			}
 
-			a.setClickThrough(hwnd, !isHit)
-
-			lmbState, _, _ := procGetAsyncKeyState.Call(0x01)
-			rmbState, _, _ := procGetAsyncKeyState.Call(0x02)
-			isButtonDown := (lmbState&0x8000) != 0 || (rmbState&0x8000) != 0
-			if isButtonDown && !wasButtonDown && !outbound && !cursorHidden && !force && !cursorInAnyRect && len(rects) > 0 {
-				if wailsApp := application.Get(); wailsApp != nil {
-					wailsApp.Event.Emit("vinta:click-outside")
-				}
-			}
-			wasButtonDown = isButtonDown
-
-			a.pillHitMu.Lock()
-			a.isCurrentlyInteractive = isHit
-			a.pillHitMu.Unlock()
+			a.reconcileHitTest(hwnd)
 		}
 	}()
 }

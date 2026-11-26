@@ -1391,6 +1391,9 @@
         }
       } else {
         bounds.syncBounds(target, resting, islandNode, false, isHidden)
+        requestAnimationFrame(() =>
+          bounds.syncPillBounds(islandNode, isHidden, true)
+        )
       }
     })
   }
@@ -2108,6 +2111,10 @@
             isHidden
           )
           resyncAllSatellites()
+          requestAnimationFrame(() => {
+            bounds.syncPillBounds(islandNode, isHidden, true)
+            resyncAllSatellites()
+          })
         }
       } catch {}
     }
@@ -2118,8 +2125,12 @@
         cachedWindowDpr = window.devicePixelRatio
       }
       refreshDisplay()
-      bounds.syncPillBounds(islandNode, isHidden)
+      bounds.syncPillBounds(islandNode, isHidden, true)
       resyncAllSatellites()
+      requestAnimationFrame(() => {
+        bounds.syncPillBounds(islandNode, isHidden, true)
+        resyncAllSatellites()
+      })
     }
 
     const handleGlobalDragFailsafe = (e?: Event) => {
@@ -2443,6 +2454,9 @@
           islandNode,
           false,
           isHidden
+        )
+        requestAnimationFrame(() =>
+          bounds.syncPillBounds(islandNode, isHidden, true)
         )
         bounds.startLiveTracking(islandNode, 400)
       },
