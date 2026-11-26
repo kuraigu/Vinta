@@ -215,7 +215,7 @@ Every theme folder needs two files (grab the starter from [templates/theme/](tem
 ```
 
 **`style.css`**
-Override any `--vinta-*` variables inside `:root`. Anything omitted falls back to the default built-in theme in `frontend/src/themes/presets/dark-gold/style.css` (while `tokens.css` holds base `#ff00ff` missing-token sentinels).
+Override any `--vinta-*` variables inside `:root`. Anything omitted falls back to the canonical base theme in `frontend/src/themes/presets/dark-gold/style.css`.
 
 ### 2. Targeting Specific Widgets with `data-vinta`
 

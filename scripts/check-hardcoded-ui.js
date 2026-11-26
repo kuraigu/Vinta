@@ -115,7 +115,14 @@ function scanSvelteTemplate(rel, text, findings) {
       })
     }
     if (nativeTitleRe.test(line) && !/<iframe\b/i.test(line)) {
-      findings.nativeControls.push({ file: rel, line: lineNum, kind: 'native title="..."' })
+      // Ignore title="..." props passed to PascalCase Svelte components (e.g. <DrawerPanel title="...">)
+      const tagContext = lines.slice(Math.max(0, idx - 8), idx + 1).join('\n')
+      const openTagMatches = [...tagContext.matchAll(/<([A-Za-z][A-Za-z0-9_-]*)\b/g)]
+      const lastTag = openTagMatches.length > 0 ? openTagMatches[openTagMatches.length - 1][1] : ''
+      const isSvelteComponent = /^[A-Z]/.test(lastTag)
+      if (!isSvelteComponent) {
+        findings.nativeControls.push({ file: rel, line: lineNum, kind: 'native title="..."' })
+      }
     }
 
     let m
