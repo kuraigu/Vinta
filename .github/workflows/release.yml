@@ -168,11 +168,21 @@ jobs:
         shell: pwsh
         env:
           UPDATER_TOKEN: ${{ secrets.UPDATER_TOKEN }}
+          VINTA_GITHUB_CLIENT_ID: ${{ secrets.VINTA_GITHUB_CLIENT_ID }}
+          VINTA_GOOGLE_CLIENT_ID: ${{ secrets.VINTA_GOOGLE_CLIENT_ID }}
+          VINTA_FIREBASE_API_KEY: ${{ secrets.VINTA_FIREBASE_API_KEY }}
+          VINTA_FIREBASE_AUTH_DOMAIN: ${{ secrets.VINTA_FIREBASE_AUTH_DOMAIN }}
+          VINTA_FIREBASE_PROJECT_ID: ${{ secrets.VINTA_FIREBASE_PROJECT_ID }}
         run: |
           $version = "$env:RELEASE_VERSION"
           $buildDate = (Get-Date -Format 'yy.MMdd')
           $updaterToken = if ($env:UPDATER_TOKEN) { $env:UPDATER_TOKEN.Trim() } else { "" }
-          $ldflags = "-w -s -H windowsgui -X 'Vinta/backend.BuildType=Official' -X 'Vinta/backend.AppVersion=$version' -X 'Vinta/backend.GitCommit=${{ github.sha }}' -X 'Vinta/backend.BuildTime=$buildDate' -X 'Vinta/backend.UpdaterToken=$updaterToken' -X 'backend.BuildType=Official' -X 'backend.AppVersion=$version' -X 'backend.GitCommit=${{ github.sha }}' -X 'backend.BuildTime=$buildDate' -X 'backend.UpdaterToken=$updaterToken'"
+          $githubClientId = if ($env:VINTA_GITHUB_CLIENT_ID) { $env:VINTA_GITHUB_CLIENT_ID.Trim() } else { "" }
+          $googleClientId = if ($env:VINTA_GOOGLE_CLIENT_ID) { $env:VINTA_GOOGLE_CLIENT_ID.Trim() } else { "" }
+          $firebaseApiKey = if ($env:VINTA_FIREBASE_API_KEY) { $env:VINTA_FIREBASE_API_KEY.Trim() } else { "" }
+          $firebaseAuthDomain = if ($env:VINTA_FIREBASE_AUTH_DOMAIN) { $env:VINTA_FIREBASE_AUTH_DOMAIN.Trim() } else { "" }
+          $firebaseProjectId = if ($env:VINTA_FIREBASE_PROJECT_ID) { $env:VINTA_FIREBASE_PROJECT_ID.Trim() } else { "" }
+          $ldflags = "-w -s -H windowsgui -X 'Vinta/backend.BuildType=Official' -X 'Vinta/backend.AppVersion=$version' -X 'Vinta/backend.GitCommit=${{ github.sha }}' -X 'Vinta/backend.BuildTime=$buildDate' -X 'Vinta/backend.UpdaterToken=$updaterToken' -X 'Vinta/backend.buildGitHubClientID=$githubClientId' -X 'Vinta/backend.buildGoogleClientID=$googleClientId' -X 'Vinta/backend.buildFirebaseAPIKey=$firebaseApiKey' -X 'Vinta/backend.buildFirebaseAuthDomain=$firebaseAuthDomain' -X 'Vinta/backend.buildFirebaseProjectID=$firebaseProjectId' -X 'backend.BuildType=Official' -X 'backend.AppVersion=$version' -X 'backend.GitCommit=${{ github.sha }}' -X 'backend.BuildTime=$buildDate' -X 'backend.UpdaterToken=$updaterToken'"
 
           # 1. Build Frontend
           cmd.exe /c "cd frontend && npm run build"
