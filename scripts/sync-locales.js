@@ -15,11 +15,12 @@ const { hasFlag, printHelpIfRequested } = require('./lib/lint-utils')
 
 printHelpIfRequested(
   [
-    'Usage: node scripts/sync-locales.js [--prune] [--help]',
+    'Usage: node scripts/sync-locales.js [--prune] [--dry-run] [--help]',
     '',
     'Options:',
-    '  --prune  Remove obsolete keys not present in en.json',
-    '  --help   Show this help message'
+    '  --prune    Remove obsolete keys not present in en.json',
+    '  --dry-run  Preview changes without writing any files',
+    '  --help     Show this help message'
   ].join('\n')
 )
 
@@ -84,6 +85,7 @@ function preserveExtras(result, targetObj, baseObj) {
 
 function run() {
   const prune = hasFlag('--prune')
+  const dryRun = hasFlag('--dry-run')
 
   if (!fs.existsSync(LOCALES_DIR)) {
     console.error(`Error: Locales directory not found at: ${LOCALES_DIR}`)
@@ -102,7 +104,9 @@ function run() {
     .filter((f) => f.endsWith('.json') && f !== BASE_LOCALE)
     .sort()
 
-  console.log(`\nSyncing locale catalogs from [${BASE_LOCALE}]${prune ? ' (with --prune)' : ''}...\n`)
+  const modeNotes = [prune ? '--prune' : '', dryRun ? '--dry-run' : ''].filter(Boolean)
+  const suffix = modeNotes.length > 0 ? ` (${modeNotes.join(', ')})` : ''
+  console.log(`\nSyncing locale catalogs from [${BASE_LOCALE}]${suffix}...\n`)
 
   for (const file of files) {
     const filePath = path.join(LOCALES_DIR, file)
@@ -136,11 +140,20 @@ function run() {
     const existing = fs.readFileSync(filePath, 'utf8')
 
     if (serialized !== existing) {
-      fs.writeFileSync(filePath, serialized, 'utf8')
+      if (!dryRun) {
+        fs.writeFileSync(filePath, serialized, 'utf8')
+      }
       const pruneNote = prune && extras.length > 0 ? `, pruned ${extras.length}` : ''
-      console.log(`✔ ${file}: +${stats.added} key(s) synced${pruneNote}`)
+      const verb = dryRun ? 'would sync' : 'synced'
+      console.log(`✔ ${file}: +${stats.added} key(s) ${verb}${pruneNote}`)
     } else {
       console.log(`• ${file}: already up to date`)
+    }
+
+    if (!prune && extras.length > 0) {
+      console.log(
+        `  ⚠ ${extras.length} extra/obsolete key(s) preserved (check-locales will fail until synced with --prune)`
+      )
     }
   }
 

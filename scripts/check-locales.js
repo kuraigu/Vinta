@@ -13,17 +13,22 @@
 
 const fs = require('fs')
 const path = require('path')
-const { printHelpIfRequested } = require('./lib/lint-utils')
+const { hasFlag, printHelpIfRequested } = require('./lib/lint-utils')
 
 printHelpIfRequested(
   [
-    'Usage: node scripts/check-locales.js [--help]',
+    'Usage: node scripts/check-locales.js [--all] [--help]',
     '',
-    'Validates translation key parity, placeholder tokens, and @metadata across all locale catalogs.'
+    'Options:',
+    '  --all   Show all missing, empty, extra, and untranslated keys without truncation',
+    '  --help  Show this help message',
+    '',
+    'Validates translation key parity, placeholder tokens, i18n registration, and @metadata across all locale catalogs.'
   ].join('\n')
 )
 
 const LOCALES_DIR = path.resolve(__dirname, '../frontend/src/locales')
+const I18N_SERVICE_PATH = path.resolve(__dirname, '../frontend/src/services/i18n.ts')
 const BASE_LOCALE = 'en.json'
 const METADATA_KEY = '@metadata'
 
@@ -87,14 +92,59 @@ function run() {
     process.exit(1)
   }
 
+  const showAll = hasFlag('--all')
   const baseMap = flattenKeys(baseData)
   const files = fs
     .readdirSync(LOCALES_DIR)
     .filter((f) => f.endsWith('.json') && f !== BASE_LOCALE)
+    .sort()
 
   console.log(`\n🔍 Checking Vinta Locale Catalogs against base [${BASE_LOCALE}] (${baseMap.size} keys)...\n`)
 
   let hasErrors = false
+
+  // Validate base en.json itself for empty values and metadata schema
+  const baseEmptyKeys = []
+  for (const [key, val] of baseMap) {
+    if (typeof val === 'string' && val.trim() === '') {
+      baseEmptyKeys.push(key)
+    }
+  }
+  const baseMetaIssues = validateMetadata(BASE_LOCALE, baseData)
+  if (baseEmptyKeys.length > 0 || baseMetaIssues.length > 0) {
+    hasErrors = true
+    console.log(`✖ ${BASE_LOCALE} - ${baseEmptyKeys.length + baseMetaIssues.length} issue(s) found:`)
+    if (baseEmptyKeys.length > 0) {
+      console.log(`   Empty translation values (${baseEmptyKeys.length}):`)
+      const list = showAll ? baseEmptyKeys : baseEmptyKeys.slice(0, 10)
+      list.forEach((k) => console.log(`     - ${k}`))
+      if (!showAll && baseEmptyKeys.length > 10) {
+        console.log(`     ... and ${baseEmptyKeys.length - 10} more (pass --all to view all)`)
+      }
+    }
+    if (baseMetaIssues.length > 0) {
+      console.log(`   Metadata issues (${baseMetaIssues.length}):`)
+      baseMetaIssues.forEach((m) => console.log(`     ! ${m}`))
+    }
+    console.log('')
+  }
+
+  // Verify every locale JSON file on disk is imported in frontend/src/services/i18n.ts
+  let i18nSource = ''
+  if (fs.existsSync(I18N_SERVICE_PATH)) {
+    i18nSource = fs.readFileSync(I18N_SERVICE_PATH, 'utf8')
+  }
+  if (i18nSource) {
+    const unregistered = [BASE_LOCALE, ...files].filter(
+      (f) => !i18nSource.includes(`locales/${f}`)
+    )
+    if (unregistered.length > 0) {
+      hasErrors = true
+      console.log(`✖ Unregistered locale file(s) missing from frontend/src/services/i18n.ts:`)
+      unregistered.forEach((f) => console.log(`     - ${f}`))
+      console.log('')
+    }
+  }
 
   for (const file of files) {
     const filePath = path.join(LOCALES_DIR, file)
@@ -147,10 +197,14 @@ function run() {
 
     if (fileErrors === 0) {
       if (unchangedKeys.length > 0) {
-        console.log(`⚠ ${file} - in sync (${localeMap.size} keys), ${unchangedKeys.length} untranslated (unchanged from en.json):`)
-        unchangedKeys.slice(0, 5).forEach((k) => console.log(`     ~ ${k}`))
-        if (unchangedKeys.length > 5) {
-          console.log(`     ... and ${unchangedKeys.length - 5} more`)
+        const translatedPct = Math.round(
+          ((localeMap.size - unchangedKeys.length) / Math.max(1, localeMap.size)) * 100
+        )
+        console.log(`⚠ ${file} - in sync (${localeMap.size} keys, ${translatedPct}% translated, ${unchangedKeys.length} unchanged from en.json):`)
+        const list = showAll ? unchangedKeys : unchangedKeys.slice(0, 5)
+        list.forEach((k) => console.log(`     ~ ${k}`))
+        if (!showAll && unchangedKeys.length > 5) {
+          console.log(`     ... and ${unchangedKeys.length - 5} more (pass --all to view all)`)
         }
       } else {
         console.log(`✔ ${file} - 100% in sync (${localeMap.size} keys)`)
@@ -161,33 +215,37 @@ function run() {
 
       if (missingKeys.length > 0) {
         console.log(`   Missing keys (${missingKeys.length}):`)
-        missingKeys.slice(0, 15).forEach((k) => console.log(`     - ${k}`))
-        if (missingKeys.length > 15) {
-          console.log(`     ... and ${missingKeys.length - 15} more`)
+        const list = showAll ? missingKeys : missingKeys.slice(0, 15)
+        list.forEach((k) => console.log(`     - ${k}`))
+        if (!showAll && missingKeys.length > 15) {
+          console.log(`     ... and ${missingKeys.length - 15} more (pass --all to view all)`)
         }
       }
 
       if (emptyKeys.length > 0) {
         console.log(`   Empty translation values (${emptyKeys.length}):`)
-        emptyKeys.slice(0, 10).forEach((k) => console.log(`     - ${k}`))
-        if (emptyKeys.length > 10) {
-          console.log(`     ... and ${emptyKeys.length - 10} more`)
+        const list = showAll ? emptyKeys : emptyKeys.slice(0, 10)
+        list.forEach((k) => console.log(`     - ${k}`))
+        if (!showAll && emptyKeys.length > 10) {
+          console.log(`     ... and ${emptyKeys.length - 10} more (pass --all to view all)`)
         }
       }
 
       if (extraKeys.length > 0) {
         console.log(`   Extra / obsolete keys (${extraKeys.length}):`)
-        extraKeys.slice(0, 10).forEach((k) => console.log(`     + ${k}`))
-        if (extraKeys.length > 10) {
-          console.log(`     ... and ${extraKeys.length - 10} more`)
+        const list = showAll ? extraKeys : extraKeys.slice(0, 10)
+        list.forEach((k) => console.log(`     + ${k}`))
+        if (!showAll && extraKeys.length > 10) {
+          console.log(`     ... and ${extraKeys.length - 10} more (pass --all to view all)`)
         }
       }
 
       if (tokenMismatches.length > 0) {
         console.log(`   Interpolation {token} mismatches (${tokenMismatches.length}):`)
-        tokenMismatches.slice(0, 10).forEach((k) => console.log(`     ! ${k}`))
-        if (tokenMismatches.length > 10) {
-          console.log(`     ... and ${tokenMismatches.length - 10} more`)
+        const list = showAll ? tokenMismatches : tokenMismatches.slice(0, 10)
+        list.forEach((k) => console.log(`     ! ${k}`))
+        if (!showAll && tokenMismatches.length > 10) {
+          console.log(`     ... and ${tokenMismatches.length - 10} more (pass --all to view all)`)
         }
       }
 

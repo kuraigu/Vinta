@@ -134,66 +134,70 @@ function interpolate(
 }
 
 /**
+ * Looks up a translation key through the full fallback chain:
+ * custom drop-in -> embedded locale -> regional base language -> embedded English -> raw key.
+ */
+function lookupTranslation(
+  locale: string,
+  customCatalogs: Record<string, TranslationCatalog>,
+  key: string,
+  params?: Record<string, string | number>
+): string {
+  const activeLocale = locale || 'en'
+  const normalizedKey = activeLocale.toLowerCase()
+
+  const customCatalog =
+    customCatalogs[activeLocale] || customCatalogs[normalizedKey]
+  const embeddedCatalog =
+    embeddedCatalogs[activeLocale] || embeddedCatalogs[normalizedKey]
+
+  let result =
+    resolvePath(customCatalog, key) ?? resolvePath(embeddedCatalog, key)
+
+  // Fall back to regional base language (e.g. es-419 -> es/es-ES) before English.
+  if (!result && normalizedKey.includes('-')) {
+    const baseLang = normalizedKey.split('-')[0]
+    if (baseLang && baseLang !== 'en') {
+      const baseCatalog = customCatalogs[baseLang] || embeddedCatalogs[baseLang]
+      result = resolvePath(baseCatalog, key)
+    }
+  }
+
+  if (!result && normalizedKey !== 'en') {
+    result = resolvePath(embeddedCatalogs.en, key)
+  }
+
+  return interpolate(result ?? key, params)
+}
+
+/**
  * Synchronous lookup function using the currently active locale.
  *
  * @param key - Translation key in dot notation (e.g. 'common.save').
  * @param params - Optional token interpolation values.
- * @returns Translated string with English fallback.
+ * @returns Translated string with regional and English fallbacks.
  */
 export function t(
   key: string,
   params?: Record<string, string | number>
 ): string {
-  const currentLocale = get(localeStore) || 'en'
-  const customCatalogs = get(customCatalogsStore)
-  const normalizedKey = currentLocale.toLowerCase()
-
-  // 1. Try active locale (custom drop-in takes precedence, then embedded)
-  const activeCatalog =
-    customCatalogs[currentLocale] ||
-    customCatalogs[normalizedKey] ||
-    embeddedCatalogs[currentLocale] ||
-    embeddedCatalogs[normalizedKey]
-  let result = resolvePath(activeCatalog, key)
-
-  // 2. Fall back to embedded English
-  if (!result && currentLocale !== 'en') {
-    result = resolvePath(embeddedCatalogs.en, key)
-  }
-
-  // 3. Fall back to the raw key if untranslated
-  if (!result) {
-    result = key
-  }
-
-  return interpolate(result, params)
+  return lookupTranslation(
+    get(localeStore) || 'en',
+    get(customCatalogsStore),
+    key,
+    params
+  )
 }
 
 /**
- * Reactive Svelte translation store: `$t('common.save')`.
+ * Reactive Svelte translation store: `$tStore('common.save')`.
  * Re-evaluates automatically when the language is changed or custom translations reload.
  */
 export const tStore = derived(
   [localeStore, customCatalogsStore],
   ([$locale, $customCatalogs]) => {
-    return (key: string, params?: Record<string, string | number>): string => {
-      const activeLocale = $locale || 'en'
-      const normalizedKey = activeLocale.toLowerCase()
-      const activeCatalog =
-        $customCatalogs[activeLocale] ||
-        $customCatalogs[normalizedKey] ||
-        embeddedCatalogs[activeLocale] ||
-        embeddedCatalogs[normalizedKey]
-      let res = resolvePath(activeCatalog, key)
-
-      if (!res && activeLocale !== 'en') {
-        res = resolvePath(embeddedCatalogs.en, key)
-      }
-      if (!res) {
-        res = key
-      }
-      return interpolate(res, params)
-    }
+    return (key: string, params?: Record<string, string | number>): string =>
+      lookupTranslation($locale || 'en', $customCatalogs, key, params)
   }
 )
 

@@ -133,7 +133,7 @@ tasks:
       - cmd.exe /c "scripts.bat check-themes {{.CLI_ARGS}}"
 
   check:locales:
-    desc: Check translation key parity and schema across all locale catalogs
+    desc: Check translation key parity, registration, and schema across all locale catalogs (supports --all)
     aliases: [check-locales, check-locals]
     cmds:
       - cmd.exe /c "scripts.bat check-locales {{.CLI_ARGS}}"
@@ -163,7 +163,7 @@ tasks:
       - cmd.exe /c "scripts.bat resource-profile {{.CLI_ARGS}}"
 
   sync:locales:
-    desc: Propagate new English keys from en.json to all other locale catalogs (supports --prune)
+    desc: Propagate new English keys from en.json to all other locale catalogs (supports --prune, --dry-run)
     aliases: [sync-locales, sync-locals]
     cmds:
       - cmd.exe /c "scripts.bat sync-locales {{.CLI_ARGS}}"

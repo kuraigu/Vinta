@@ -6,7 +6,6 @@
  */
 
 import type { ThemeInfo } from './types.js'
-import tokensRawCss from './tokens.css?raw'
 import darkGoldManifest from './presets/dark-gold/manifest.json'
 import darkGoldCss from './presets/dark-gold/style.css?raw'
 import nordFrostManifest from './presets/nord-frost/manifest.json'
@@ -101,21 +100,22 @@ function extractDeclaredTokens(css: string): Set<string> {
 }
 
 /**
- * Logs a development-only console warning if a theme stylesheet omits tokens declared in `tokens.css`.
+ * Logs a development-only console warning if a theme stylesheet omits tokens declared
+ * in the canonical base theme (`presets/dark-gold/style.css`).
  *
  * @param themeId - Active theme identifier.
  * @param themeCss - Raw CSS content of the active theme.
  */
 function auditThemeTokensInDev(themeId: string, themeCss: string): void {
-  if (!import.meta.env.DEV) {
+  if (!import.meta.env.DEV || themeId === 'dark-gold') {
     return
   }
-  const declared = extractDeclaredTokens(tokensRawCss)
+  const declared = extractDeclaredTokens(darkGoldCss)
   const implemented = extractDeclaredTokens(themeCss)
   const missing = [...declared].filter((token) => !implemented.has(token))
   if (missing.length > 0) {
     console.warn(
-      `[Vinta Theme Audit] Theme "${themeId}" is missing ${missing.length} token(s) declared in tokens.css (using dark-gold fallback):`,
+      `[Vinta Theme Audit] Theme "${themeId}" is missing ${missing.length} token(s) declared in dark-gold/style.css (using dark-gold base fallback):`,
       missing
     )
   }
@@ -168,7 +168,6 @@ export async function applyThemeToDOM(themeId: string): Promise<void> {
   document.documentElement.dataset.theme = normalizedId
 
   if (normalizedId === 'dark-gold') {
-    auditThemeTokensInDev(normalizedId, darkGoldCss)
     styleTag.textContent = `@layer vinta.theme {\n${darkGoldCss}\n}`
     return
   }
