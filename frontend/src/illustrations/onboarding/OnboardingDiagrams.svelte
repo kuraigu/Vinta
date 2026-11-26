@@ -24,7 +24,11 @@
     Bell,
     Check,
     SlidersHorizontal,
-    Pin
+    Pin,
+    BookOpen,
+    Terminal,
+    LayoutGrid,
+    Settings
   } from 'lucide-svelte'
   import IconBadge from '../../components/IconBadge.svelte'
   import BentoCard from '../../components/BentoCard.svelte'
@@ -57,7 +61,7 @@
   }
 
   function welcomeDelay(slideIdx: number): string {
-    return `${((slideIdx - welcomeStartIndex + 7) % 7) * 3}s`
+    return `${((slideIdx - welcomeStartIndex + 9) % 9) * 3}s`
   }
 
   let effectiveStateMode = $derived<StatePreviewMode>(
@@ -111,10 +115,10 @@
               <span></span><span></span><span></span>
             </span>
             <span class="mini-action-btn press-pulse">
-              <Play size={10} strokeWidth={2.5} />
+              <Play size={12} strokeWidth={2.4} />
             </span>
             <span class="mini-action-btn">
-              <SkipForward size={10} strokeWidth={2.4} />
+              <SkipForward size={12} strokeWidth={2.4} />
             </span>
           </div>
         </div>
@@ -139,7 +143,7 @@
           <div class="welcome-action-pill action-timer" aria-hidden="true">
             <span class="mini-timer-readout">25:00</span>
             <span class="mini-action-btn press-pulse">
-              <Play size={10} strokeWidth={2.5} />
+              <Play size={12} strokeWidth={2.4} />
             </span>
           </div>
         </div>
@@ -166,7 +170,7 @@
               <span></span><span></span>
             </span>
             <span class="mini-action-btn press-pulse">
-              <Plus size={10} strokeWidth={2.6} />
+              <Plus size={12} strokeWidth={2.5} />
             </span>
           </div>
         </div>
@@ -191,7 +195,7 @@
           <div class="welcome-action-pill action-shelf" aria-hidden="true">
             <span class="mini-file-chip">.pdf</span>
             <span class="mini-action-btn press-pulse">
-              <Archive size={10} strokeWidth={2.4} />
+              <Archive size={12} strokeWidth={2.3} />
             </span>
           </div>
         </div>
@@ -216,16 +220,66 @@
           <div class="welcome-action-pill action-calendar" aria-hidden="true">
             <span class="mini-timer-readout">10:00</span>
             <span class="mini-action-btn press-pulse">
-              <Plus size={10} strokeWidth={2.6} />
+              <Plus size={12} strokeWidth={2.5} />
             </span>
           </div>
         </div>
 
-        <!-- Slide 6: Notifications -->
+        <!-- Slide 6: Flashcards & Daily Habits -->
         <div
           class="welcome-feature-slide"
           class:is-static-active={welcomeStartIndex === 5}
           style:animation-delay={welcomeDelay(5)}
+        >
+          <div class="welcome-slide-left">
+            <IconBadge icon={BookOpen} color="emerald" size="md" />
+            <div class="welcome-slide-text">
+              <span class="welcome-slide-title">
+                {$tStore('onboarding.welcome_feat_companion_title')}
+              </span>
+              <span class="welcome-slide-action">
+                {$tStore('onboarding.welcome_feat_companion_action')}
+              </span>
+            </div>
+          </div>
+          <div class="welcome-action-pill action-companion" aria-hidden="true">
+            <span class="mini-file-chip">4/5</span>
+            <span class="mini-action-btn press-pulse">
+              <Check size={12} strokeWidth={2.5} />
+            </span>
+          </div>
+        </div>
+
+        <!-- Slide 7: Developer Hub & Cloud Sync -->
+        <div
+          class="welcome-feature-slide"
+          class:is-static-active={welcomeStartIndex === 6}
+          style:animation-delay={welcomeDelay(6)}
+        >
+          <div class="welcome-slide-left">
+            <IconBadge icon={Terminal} color="purple" size="md" />
+            <div class="welcome-slide-text">
+              <span class="welcome-slide-title">
+                {$tStore('onboarding.welcome_feat_devhub_title')}
+              </span>
+              <span class="welcome-slide-action">
+                {$tStore('onboarding.welcome_feat_devhub_action')}
+              </span>
+            </div>
+          </div>
+          <div class="welcome-action-pill action-devhub" aria-hidden="true">
+            <span class="mini-file-chip">PR</span>
+            <span class="mini-action-btn press-pulse">
+              <Terminal size={12} strokeWidth={2.3} />
+            </span>
+          </div>
+        </div>
+
+        <!-- Slide 8: Notifications -->
+        <div
+          class="welcome-feature-slide"
+          class:is-static-active={welcomeStartIndex === 7}
+          style:animation-delay={welcomeDelay(7)}
         >
           <div class="welcome-slide-left">
             <IconBadge icon={Bell} color="indigo" size="md" />
@@ -242,16 +296,16 @@
             <span class="mini-notif-dot"></span>
             <span class="mini-file-chip">2</span>
             <span class="mini-action-btn press-pulse">
-              <Check size={10} strokeWidth={2.6} />
+              <Check size={12} strokeWidth={2.5} />
             </span>
           </div>
         </div>
 
-        <!-- Slide 7: Customize & Settings -->
+        <!-- Slide 9: Customize & Settings -->
         <div
           class="welcome-feature-slide"
-          class:is-static-active={welcomeStartIndex === 6}
-          style:animation-delay={welcomeDelay(6)}
+          class:is-static-active={welcomeStartIndex === 8}
+          style:animation-delay={welcomeDelay(8)}
         >
           <div class="welcome-slide-left">
             <IconBadge icon={SlidersHorizontal} color="cyan" size="md" />
@@ -269,7 +323,7 @@
               <span></span><span></span>
             </span>
             <span class="mini-action-btn press-pulse">
-              <SlidersHorizontal size={10} strokeWidth={2.4} />
+              <SlidersHorizontal size={12} strokeWidth={2.3} />
             </span>
           </div>
         </div>
@@ -283,7 +337,7 @@
           role="group"
           aria-label={$tStore('onboarding.welcome_slides_aria')}
         >
-          {#each ['onboarding.welcome_feat_media_title', 'onboarding.welcome_feat_timer_title', 'onboarding.welcome_feat_notes_title', 'onboarding.welcome_feat_shelf_title', 'onboarding.welcome_feat_calendar_title', 'onboarding.welcome_feat_notif_title', 'onboarding.welcome_feat_customize_title'] as labelKey, idx (labelKey)}
+          {#each ['onboarding.welcome_feat_media_title', 'onboarding.welcome_feat_timer_title', 'onboarding.welcome_feat_notes_title', 'onboarding.welcome_feat_shelf_title', 'onboarding.welcome_feat_calendar_title', 'onboarding.welcome_feat_companion_title', 'onboarding.welcome_feat_devhub_title', 'onboarding.welcome_feat_notif_title', 'onboarding.welcome_feat_customize_title'] as labelKey, idx (labelKey)}
             <button
               type="button"
               class="welcome-dot-btn"
@@ -309,9 +363,9 @@
             onclick={() => (isWelcomePaused = !isWelcomePaused)}
           >
             {#if isWelcomePaused}
-              <Play size={11} strokeWidth={2.3} />
+              <Play size={12} strokeWidth={2.3} />
             {:else}
-              <Pause size={11} strokeWidth={2.3} />
+              <Pause size={12} strokeWidth={2.3} />
             {/if}
           </button>
         {/if}
@@ -342,7 +396,7 @@
             <div class="mini-pill-row">
               <span>9:41</span>
               <span class="mini-pill-meta">
-                <Sun size={10} strokeWidth={2.4} />
+                <Sun size={12} strokeWidth={2.3} />
                 <span>24°</span>
               </span>
             </div>
@@ -396,9 +450,9 @@
           onclick={() => (isStatesPaused = !isStatesPaused)}
         >
           {#if isStatesPaused}
-            <Play size={11} strokeWidth={2.3} />
+            <Play size={12} strokeWidth={2.3} />
           {:else}
-            <Pause size={11} strokeWidth={2.3} />
+            <Pause size={12} strokeWidth={2.3} />
           {/if}
         </button>
       {/if}
@@ -436,7 +490,7 @@
                     </div>
                     <div class="morph-bento-tile">
                       <span class="morph-tile-title">
-                        <Music size={10} strokeWidth={2.2} />
+                        <Music size={12} strokeWidth={2.2} />
                       </span>
                       <span class="morph-tile-sub"
                         >{$tStore('onboarding.diag_playing')}</span
@@ -454,7 +508,7 @@
                 <div class="morph-compact-row">
                   <span>9:41</span>
                   <span class="morph-compact-right">
-                    <Sun size={10} strokeWidth={2.3} />
+                    <Sun size={12} strokeWidth={2.3} />
                     <span>24°</span>
                   </span>
                 </div>
@@ -478,19 +532,40 @@
             <div class="morph-satellite-dock" aria-hidden="true">
               {#if $clickOutsideMinimizeStore}
                 <span class="morph-sat-btn highlight morph-sat-pin">
-                  <Pin size={9} strokeWidth={2.4} />
+                  <Pin size={12} strokeWidth={2.2} />
                 </span>
               {/if}
               <span class="morph-sat-btn highlight">
-                <Minimize2 size={9} strokeWidth={2.4} />
+                <Minimize2 size={12} strokeWidth={2.2} />
               </span>
               <span class="morph-sat-btn highlight">
-                <EyeOff size={9} strokeWidth={2.4} />
+                <EyeOff size={12} strokeWidth={2.2} />
               </span>
               <span class="morph-sat-divider"></span>
               <span class="morph-sat-btn danger">
-                <Power size={9} strokeWidth={2.4} />
+                <Power size={12} strokeWidth={2.2} />
               </span>
+            </div>
+          </div>
+
+          <!-- Miniature Right-Click Context Menu Popover -->
+          <div class="morph-context-menu" aria-hidden="true">
+            <div class="morph-ctx-item">
+              <Pin size={12} strokeWidth={2.2} />
+              <span>{$tStore('onboarding.diag_ctx_pin')}</span>
+            </div>
+            <div class="morph-ctx-item">
+              <LayoutGrid size={12} strokeWidth={2.2} />
+              <span>{$tStore('onboarding.diag_ctx_apps')}</span>
+            </div>
+            <div class="morph-ctx-item">
+              <Settings size={12} strokeWidth={2.2} />
+              <span>{$tStore('onboarding.diag_ctx_settings')}</span>
+            </div>
+            <div class="morph-ctx-divider"></div>
+            <div class="morph-ctx-item is-hide">
+              <EyeOff size={12} strokeWidth={2.2} />
+              <span>{$tStore('onboarding.diag_ctx_hide')}</span>
             </div>
           </div>
 

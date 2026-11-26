@@ -345,7 +345,116 @@
   text-align: left;
 }
 
-/* Step 6 Personalize Theme Selector (Left-Aligned Horizontal Cards) */
+/* Step 6 Optional Accounts & Sync */
+.onboarding-accounts-note {
+  margin: 0;
+  font-size: 0.72rem;
+  line-height: 1.4;
+  color: var(--vinta-text-muted);
+  text-align: left;
+}
+
+.onboarding-oauth-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: var(--vinta-radius-button, 10px);
+  border: 1px solid var(--vinta-border);
+  background: var(--vinta-contrast-bg);
+  color: var(--vinta-text-primary);
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition:
+    transform 0.16s ease,
+    opacity 0.16s ease;
+}
+
+.onboarding-oauth-btn:hover:not(:disabled) {
+  background: var(--vinta-contrast-hover);
+  border-color: var(--vinta-border-accent);
+}
+
+.onboarding-oauth-btn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.onboarding-oauth-btn:focus-visible,
+.onboarding-account-ghost-btn:focus-visible {
+  outline: 2px solid var(--vinta-accent-primary);
+  outline-offset: 2px;
+}
+
+.onboarding-account-ghost-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: var(--vinta-radius-button, 10px);
+  border: 1px solid var(--vinta-border);
+  background: transparent;
+  color: var(--vinta-text-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    transform 0.16s ease,
+    opacity 0.16s ease;
+}
+
+.onboarding-account-ghost-btn.danger:hover {
+  background: var(--vinta-accent-danger-hover-bg);
+  border-color: var(--vinta-accent-danger);
+  color: var(--vinta-accent-danger-hover-text);
+}
+
+.onboarding-device-code-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  margin-top: 6px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--vinta-contrast-bg);
+  border: 1px solid var(--vinta-border-accent);
+  box-sizing: border-box;
+}
+
+.onboarding-device-code-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--vinta-text-secondary);
+}
+
+.onboarding-device-code-value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--vinta-accent-primary);
+}
+
+.onboarding-account-error {
+  margin: 4px 12px 10px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--vinta-accent-danger);
+  text-align: left;
+}
+
+/* Step 7 Personalize Theme Selector (Left-Aligned Horizontal Cards) */
 .onboarding-theme-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -398,15 +507,15 @@
 }
 
 .theme-dot.dark-gold {
-  background: #f59e0b;
+  background: var(--vinta-accent-warning);
 }
 
 .theme-dot.nord-frost {
-  background: #88c0d0;
+  background: var(--vinta-note-blue);
 }
 
 .theme-dot.colorblind-safe {
-  background: #009e73;
+  background: var(--vinta-accent-success);
 }
 
 .theme-name {
