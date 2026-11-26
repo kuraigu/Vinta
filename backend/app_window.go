@@ -50,6 +50,7 @@ var (
 	procGetAncestor              = user32.NewProc("GetAncestor")
 	procGetCursorPos             = user32.NewProc("GetCursorPos")
 	procGetCursorInfo            = user32.NewProc("GetCursorInfo")
+	procGetClipCursor            = user32.NewProc("GetClipCursor")
 	procScreenToClient           = user32.NewProc("ScreenToClient")
 	procIsWindow                 = user32.NewProc("IsWindow")
 	procSetWindowRgn             = user32.NewProc("SetWindowRgn")
@@ -1753,7 +1754,37 @@ func (a *App) SetDevPillBounds(width, height, extraH int, scale float64) {
 	a.updateWindowRegion()
 }
 
-// IsPrivacySensitiveDisplayActive reports whether Windows is in presentation/busy mode
+var (
+	enumShareMu     sync.Mutex
+	enumShareFound  bool
+	cbEnumShareOnce sync.Once
+	cbEnumSharePtr  uintptr
+)
+
+func getEnumShareCallback() uintptr {
+	cbEnumShareOnce.Do(func() {
+		cbEnumSharePtr = syscall.NewCallback(func(hwnd uintptr, _ uintptr) uintptr {
+			vis, _, _ := procIsWindowVisible.Call(hwnd)
+			if vis == 0 {
+				return 1
+			}
+			var clsBuf [128]uint16
+			n, _, _ := procGetClassName.Call(hwnd, uintptr(unsafe.Pointer(&clsBuf[0])), uintptr(len(clsBuf)))
+			if n == 0 {
+				return 1
+			}
+			cls := syscall.UTF16ToString(clsBuf[:n])
+			if cls == "ScreenSharingToolbar" || cls == "ZPFloatToolbarClass" || cls == "ZPToolBarParentWndClass" {
+				enumShareFound = true
+				return 0
+			}
+			return 1
+		})
+	})
+	return cbEnumSharePtr
+}
+
+// IsPrivacySensitiveDisplayActive reports whether Windows is in presentation mode
 // or a known screen-sharing toolbar (Teams/Zoom) is currently visible.
 func (a *App) IsPrivacySensitiveDisplayActive() bool {
 	var qState uint32
@@ -1765,28 +1796,16 @@ func (a *App) IsPrivacySensitiveDisplayActive() bool {
 	}
 	goruntime.UnlockOSThread()
 
-	if ret == 0 && (qState == QUNS_PRESENTATION_MODE || qState == QUNS_BUSY) {
+	// Only treat explicit presentation mode as privacy-sensitive; QUNS_BUSY is set for
+	// ordinary fullscreen games (e.g. Valorant) and should not trigger screen-share privacy.
+	if ret == 0 && qState == QUNS_PRESENTATION_MODE {
 		return true
 	}
 
-	foundShareToolbar := false
-	cb := syscall.NewCallback(func(hwnd uintptr, _ uintptr) uintptr {
-		vis, _, _ := procIsWindowVisible.Call(hwnd)
-		if vis == 0 {
-			return 1
-		}
-		var clsBuf [128]uint16
-		n, _, _ := procGetClassName.Call(hwnd, uintptr(unsafe.Pointer(&clsBuf[0])), uintptr(len(clsBuf)))
-		if n == 0 {
-			return 1
-		}
-		cls := syscall.UTF16ToString(clsBuf[:n])
-		if cls == "ScreenSharingToolbar" || cls == "ZPFloatToolbarClass" || cls == "ZPToolBarParentWndClass" {
-			foundShareToolbar = true
-			return 0
-		}
-		return 1
-	})
-	_, _, _ = procEnumWindows.Call(cb, 0)
+	enumShareMu.Lock()
+	enumShareFound = false
+	_, _, _ = procEnumWindows.Call(getEnumShareCallback(), 0)
+	foundShareToolbar := enumShareFound
+	enumShareMu.Unlock()
 	return foundShareToolbar
 }
