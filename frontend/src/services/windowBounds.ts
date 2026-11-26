@@ -35,6 +35,8 @@ export class WindowBoundsManager {
   private idleWatchdogTimer: number | undefined
   private lastHitRectsSignature: string = ''
   private lastHitRects: HitRect[] = []
+  private pendingHitRects: HitRect[] | null = null
+  private hitRectsInFlight: boolean = false
   private syncedMicrotaskNode: HTMLElement | null | undefined = undefined
   private syncedMicrotaskHidden: boolean | undefined = undefined
   private syncedMicrotaskQueued: boolean = false
@@ -70,11 +72,13 @@ export class WindowBoundsManager {
       if (targetNode) {
         const rect = targetNode.getBoundingClientRect()
         if (rect.width > 0 && rect.height > 0) {
-          const l = Math.round(rect.left * dpr)
+          const l = Math.max(0, Math.floor((rect.left - 2) * dpr))
+          const r = Math.ceil((rect.right + 2) * dpr)
           const t = 0
-          const w = Math.round(rect.width * dpr)
-          const h = Math.round((rect.bottom + 2) * dpr)
-          hitRects.push(new HitRect({ left: l, top: t, width: w, height: h }))
+          const h = Math.ceil((rect.bottom + 2) * dpr)
+          hitRects.push(
+            new HitRect({ left: l, top: t, width: r - l, height: h })
+          )
         }
       }
       if (typeof document !== 'undefined') {
@@ -84,12 +88,16 @@ export class WindowBoundsManager {
         if (contextMenu) {
           const cRect = contextMenu.getBoundingClientRect()
           if (cRect.width > 0 && cRect.height > 0) {
+            const l = Math.max(0, Math.floor(cRect.left * dpr))
+            const t = Math.max(0, Math.floor(cRect.top * dpr))
+            const r = Math.ceil(cRect.right * dpr)
+            const b = Math.ceil(cRect.bottom * dpr)
             hitRects.push(
               new HitRect({
-                left: Math.round(cRect.left * dpr),
-                top: Math.round(cRect.top * dpr),
-                width: Math.round(cRect.width * dpr),
-                height: Math.round(cRect.height * dpr)
+                left: l,
+                top: t,
+                width: r - l,
+                height: b - t
               })
             )
           }
@@ -111,12 +119,15 @@ export class WindowBoundsManager {
     if (targetNode) {
       const rect = targetNode.getBoundingClientRect()
       if (rect.width > 0 && rect.height > 0) {
+        const l = Math.max(0, Math.floor((rect.left - 2) * dpr))
+        const r = Math.ceil((rect.right + 2) * dpr)
+        const h = Math.ceil((rect.bottom + 4) * dpr)
         hitRects.push(
           new HitRect({
-            left: Math.round(rect.left * dpr),
+            left: l,
             top: 0,
-            width: Math.round(rect.width * dpr),
-            height: Math.round((rect.bottom + 4) * dpr)
+            width: r - l,
+            height: h
           })
         )
       }
@@ -132,10 +143,10 @@ export class WindowBoundsManager {
           // Add a 4px perimeter margin and bridge the 12px gap to the main island
           // so clicks and fast cursor entry do not pass through to background apps.
           const pad = 4
-          const l = Math.max(0, Math.round((rect.left - 12 - pad) * dpr))
-          const t = Math.max(0, Math.round((rect.top - pad) * dpr))
-          const r = Math.round((rect.right + pad) * dpr)
-          const b = Math.round((rect.bottom + pad) * dpr)
+          const l = Math.max(0, Math.floor((rect.left - 12 - pad) * dpr))
+          const t = Math.max(0, Math.floor((rect.top - pad) * dpr))
+          const r = Math.ceil((rect.right + pad) * dpr)
+          const b = Math.ceil((rect.bottom + pad) * dpr)
           hitRects.push(
             new HitRect({
               left: l,
@@ -154,12 +165,16 @@ export class WindowBoundsManager {
       if (contextMenu) {
         const rect = contextMenu.getBoundingClientRect()
         if (rect.width > 0 && rect.height > 0) {
+          const l = Math.max(0, Math.floor(rect.left * dpr))
+          const t = Math.max(0, Math.floor(rect.top * dpr))
+          const r = Math.ceil(rect.right * dpr)
+          const b = Math.ceil(rect.bottom * dpr)
           hitRects.push(
             new HitRect({
-              left: Math.round(rect.left * dpr),
-              top: Math.round(rect.top * dpr),
-              width: Math.round(rect.width * dpr),
-              height: Math.round(rect.height * dpr)
+              left: l,
+              top: t,
+              width: r - l,
+              height: b - t
             })
           )
         }
@@ -172,12 +187,16 @@ export class WindowBoundsManager {
       for (const win of folderWindows) {
         const rect = win.getBoundingClientRect()
         if (rect.width > 0 && rect.height > 0) {
+          const l = Math.max(0, Math.floor(rect.left * dpr))
+          const t = Math.max(0, Math.floor(rect.top * dpr))
+          const r = Math.ceil(rect.right * dpr)
+          const b = Math.ceil(rect.bottom * dpr)
           hitRects.push(
             new HitRect({
-              left: Math.round(rect.left * dpr),
-              top: Math.round(rect.top * dpr),
-              width: Math.round(rect.width * dpr),
-              height: Math.round(rect.height * dpr)
+              left: l,
+              top: t,
+              width: r - l,
+              height: b - t
             })
           )
         }
@@ -188,15 +207,45 @@ export class WindowBoundsManager {
   }
 
   /**
-   * Sends hit rectangles to the Go backend only when coordinates actually changed.
+   * Serializes SetHitRects IPC calls so at most one request is in flight at a time
+   * and newer updates coalesce, preventing out-of-order overwrites in the Go backend.
+   */
+  private enqueueHitRects(hitRects: HitRect[]): void {
+    this.pendingHitRects = hitRects
+    if (this.hitRectsInFlight) {
+      return
+    }
+    this.flushHitRects()
+  }
+
+  private flushHitRects(): void {
+    if (this.hitRectsInFlight || !this.pendingHitRects) {
+      return
+    }
+    const batch = this.pendingHitRects
+    this.pendingHitRects = null
+    this.hitRectsInFlight = true
+    SetHitRects(batch)
+      .catch(() => {})
+      .finally(() => {
+        this.hitRectsInFlight = false
+        if (this.pendingHitRects) {
+          this.flushHitRects()
+        }
+      })
+  }
+
+  /**
+   * Sends hit rectangles to the Go backend only when coordinates actually changed
+   * (or immediately when force is true).
    */
   private dispatchHitRects(
     hitRects: HitRect[],
-    _force: boolean = false,
+    force: boolean = false,
     explicitSig?: string
   ): void {
     if (explicitSig !== undefined) {
-      if (explicitSig === this.lastHitRectsSignature) {
+      if (!force && explicitSig === this.lastHitRectsSignature) {
         return
       }
       this.lastHitRectsSignature = explicitSig
@@ -211,12 +260,17 @@ export class WindowBoundsManager {
           }))
         )
       }
-      SetHitRects(hitRects).catch(() => {})
+      this.enqueueHitRects(hitRects)
+      return
+    }
+
+    // Never wipe active backend hit rects if the visible island transiently measured 0x0.
+    if (hitRects.length === 0) {
       return
     }
 
     const prev = this.lastHitRects
-    if (prev.length === hitRects.length && prev.length > 0) {
+    if (!force && prev.length === hitRects.length && prev.length > 0) {
       let same = true
       for (let i = 0; i < hitRects.length; i++) {
         const a = hitRects[i]
@@ -248,7 +302,7 @@ export class WindowBoundsManager {
         }))
       )
     }
-    SetHitRects(hitRects).catch(() => {})
+    this.enqueueHitRects(hitRects)
   }
 
   /**
@@ -260,26 +314,30 @@ export class WindowBoundsManager {
     force: boolean = false
   ): void {
     const targetNode = islandNode ?? this.activeIslandNode ?? null
-    if (
-      !force &&
-      this.syncedMicrotaskQueued &&
-      this.syncedMicrotaskNode === targetNode &&
-      this.syncedMicrotaskHidden === isHidden
-    ) {
+    if (force) {
+      this.syncedMicrotaskQueued = false
+      this.syncedMicrotaskNode = undefined
+      this.syncedMicrotaskHidden = undefined
+      const { hitRects, hiddenSig } = this.measureHitRects(targetNode, isHidden)
+      this.dispatchHitRects(hitRects, true, hiddenSig)
       return
     }
     this.syncedMicrotaskNode = targetNode
     this.syncedMicrotaskHidden = isHidden
-    if (!this.syncedMicrotaskQueued) {
-      this.syncedMicrotaskQueued = true
-      queueMicrotask(() => {
-        this.syncedMicrotaskQueued = false
-        this.syncedMicrotaskNode = undefined
-        this.syncedMicrotaskHidden = undefined
-      })
+    if (this.syncedMicrotaskQueued) {
+      return
     }
-    const { hitRects, hiddenSig } = this.measureHitRects(islandNode, isHidden)
-    this.dispatchHitRects(hitRects, force, hiddenSig)
+    this.syncedMicrotaskQueued = true
+    queueMicrotask(() => {
+      if (!this.syncedMicrotaskQueued) return
+      const node = this.syncedMicrotaskNode
+      const hidden = this.syncedMicrotaskHidden ?? false
+      this.syncedMicrotaskQueued = false
+      this.syncedMicrotaskNode = undefined
+      this.syncedMicrotaskHidden = undefined
+      const { hitRects, hiddenSig } = this.measureHitRects(node, hidden)
+      this.dispatchHitRects(hitRects, false, hiddenSig)
+    })
   }
 
   private liveTrackingRaf: number | undefined
@@ -438,20 +496,22 @@ export class WindowBoundsManager {
           rect.bottom + 4,
           (this.currentOSBounds.h || rect.height) + 4
         )
-        const l = Math.max(0, Math.round((centerX - unionW / 2) * dpr))
-        const w = Math.round(unionW * dpr)
-        const h = Math.round(unionH * dpr)
+        const l = Math.max(0, Math.floor((centerX - unionW / 2 - 2) * dpr))
+        const r = Math.ceil((centerX + unionW / 2 + 2) * dpr)
+        const h = Math.ceil(unionH * dpr)
         // Include active satellites, context menus, and folder windows alongside the union rect
         // so satellite buttons and popovers remain clickable during island morphs.
         const { hitRects } = this.measureHitRects(node, false)
-        const unionRect = new HitRect({ left: l, top: 0, width: w, height: h })
+        const unionRect = new HitRect({
+          left: l,
+          top: 0,
+          width: r - l,
+          height: h
+        })
         const combined =
           hitRects.length > 0 ? [unionRect, ...hitRects.slice(1)] : [unionRect]
         const sig = `transition:${combined.map((r) => `${r.left},${r.top},${r.width},${r.height}`).join(';')}`
-        if (sig !== this.lastHitRectsSignature) {
-          this.lastHitRectsSignature = sig
-          SetHitRects(combined).catch(() => {})
-        }
+        this.dispatchHitRects(combined, false, sig)
       }
     }
 
@@ -588,7 +648,7 @@ export class WindowBoundsManager {
     if (islandNode) this.activeIslandNode = islandNode
     this.currentOSBounds = { ...target }
     this.stopTrackingTransition()
-    this.syncPillBounds(islandNode || this.activeIslandNode, isHidden)
+    this.syncPillBounds(islandNode || this.activeIslandNode, isHidden, true)
     resyncAllSatellites()
     dismissAllTooltips()
     return Promise.resolve()

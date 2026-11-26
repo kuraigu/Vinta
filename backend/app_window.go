@@ -67,6 +67,7 @@ var (
 	procRegisterClassEx          = user32.NewProc("RegisterClassExW")
 	procCreateWindowEx           = user32.NewProc("CreateWindowExW")
 	procDefWindowProc            = user32.NewProc("DefWindowProcW")
+	procRegisterRawInputDevices  = user32.NewProc("RegisterRawInputDevices")
 
 	shell32                          = syscall.NewLazyDLL("shell32.dll")
 	procSHQueryUserNotificationState = shell32.NewProc("SHQueryUserNotificationState")
@@ -138,6 +139,8 @@ const (
 	GW_CHILD = 5
 	//nolint:revive // Windows API constants
 	GW_HWNDNEXT = 2
+	//nolint:revive // Windows API constants
+	GW_HWNDPREV = 3
 	//nolint:revive // Windows API constants
 	EVENT_SYSTEM_FOREGROUND = 0x0003
 	//nolint:revive // Windows API constants
@@ -637,15 +640,15 @@ func getMyWindowHwnd() uintptr {
 	}
 	cachedHwndMu.Unlock()
 
+	myPid := uint32(os.Getpid())
 	titlePtr, _ := syscall.UTF16PtrFromString("Vinta")
-	if hwnd, _, _ := procFindWindow.Call(0, uintptr(unsafe.Pointer(titlePtr))); hwnd != 0 {
+	if hwnd, _, _ := procFindWindow.Call(0, uintptr(unsafe.Pointer(titlePtr))); hwnd != 0 && winPID(hwnd) == myPid {
 		cachedHwndMu.Lock()
 		cachedWindowHwnd = hwnd
 		cachedHwndMu.Unlock()
 		return hwnd
 	}
 
-	myPid := uint32(os.Getpid())
 	desktop, _, _ := procGetDesktopWindow.Call()
 	for child, _, _ := procGetWindow.Call(desktop, GW_CHILD); child != 0; child, _, _ = procGetWindow.Call(child, GW_HWNDNEXT) {
 		if winPID(child) == myPid && winTitle(child) == "Vinta" {
@@ -991,7 +994,23 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 			_, fgExStyle := winStyle(curFg)
 			fgTopmost = (fgExStyle & WS_EX_TOPMOST) != 0
 		}
-		if !wasSubordinatedToSnip && !fgTopmost && (exStyle&WS_EX_TOPMOST) != 0 {
+		coveredByTopmost := false
+		for prev, _, _ := procGetWindow.Call(vintaHwnd, GW_HWNDPREV); prev != 0; prev, _, _ = procGetWindow.Call(prev, GW_HWNDPREV) {
+			vis, _, _ := procIsWindowVisible.Call(prev)
+			if vis == 0 {
+				continue
+			}
+			if isSnippingTool(prev) {
+				coveredByTopmost = false
+				break
+			}
+			var rc rect32
+			if res, _, _ := procGetWindowRect.Call(prev, uintptr(unsafe.Pointer(&rc))); res != 0 && rc.Right > rc.Left && rc.Bottom > rc.Top {
+				coveredByTopmost = true
+				break
+			}
+		}
+		if !wasSubordinatedToSnip && !fgTopmost && !coveredByTopmost && (exStyle&WS_EX_TOPMOST) != 0 {
 			return
 		}
 		wasSubordinatedToSnip = false
@@ -1312,19 +1331,30 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 			EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND, 0, cb, 0, 0, WINEVENT_OUTOFCONTEXT,
 		)
 
-		// Hidden top-level listener window so Windows broadcasts WM_DISPLAYCHANGE / WM_SETTINGCHANGE
-		// immediately on monitor hot-plug, resolution changes, or display mode switches.
+		// Hidden top-level listener window for WM_DISPLAYCHANGE, WM_SETTINGCHANGE, and
+		// event-driven mouse Raw Input (WM_INPUT via RIDEV_INPUTSINK) so WS_EX_TRANSPARENT
+		// reconciles in <1ms without 60Hz polling or global mouse hooks.
 		const (
 			wmDisplayChange = 0x007E
 			wmSettingChange = 0x001A
+			wmInput         = 0x00FF
 			spiSetWorkArea  = 0x002F
 			wsPopup         = 0x80000000
+			ridevInputSink  = 0x00000100
 		)
 		classNamePtr, _ := windows.UTF16PtrFromString("VintaDisplayEventListener")
 		wndProc := syscall.NewCallback(func(h uintptr, msg uint32, wParam, lParam uintptr) uintptr {
-			if msg == wmDisplayChange || (msg == wmSettingChange && wParam == spiSetWorkArea) {
+			switch msg {
+			case wmInput:
+				a.reconcileHitTest(vintaHwnd)
+			case wmDisplayChange:
 				InvalidateDisplayCache()
 				time.AfterFunc(120*time.Millisecond, evaluateForegroundState)
+			case wmSettingChange:
+				if wParam == spiSetWorkArea {
+					InvalidateDisplayCache()
+					time.AfterFunc(120*time.Millisecond, evaluateForegroundState)
+				}
 			}
 			r, _, _ := procDefWindowProc.Call(h, uintptr(msg), wParam, lParam)
 			return r
@@ -1350,10 +1380,31 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 		}
 		atom, _, _ := procRegisterClassEx.Call(uintptr(unsafe.Pointer(&wc)))
 		if atom != 0 {
-			_, _, _ = procCreateWindowEx.Call(
+			listenerHwnd, _, _ := procCreateWindowEx.Call(
 				0, uintptr(unsafe.Pointer(classNamePtr)), 0, wsPopup,
 				0, 0, 0, 0, 0, 0, 0, 0,
 			)
+			if listenerHwnd != 0 && procRegisterRawInputDevices.Find() == nil {
+				type rawInputDevice struct {
+					UsagePage uint16
+					Usage     uint16
+					Flags     uint32
+					Target    uintptr
+				}
+				rid := rawInputDevice{
+					UsagePage: 0x01,
+					Usage:     0x02,
+					Flags:     ridevInputSink,
+					Target:    listenerHwnd,
+				}
+				if ok, _, _ := procRegisterRawInputDevices.Call(
+					uintptr(unsafe.Pointer(&rid)), 1, unsafe.Sizeof(rid),
+				); ok != 0 {
+					a.pillHitMu.Lock()
+					a.rawInputRegistered = true
+					a.pillHitMu.Unlock()
+				}
+			}
 		}
 		var msg struct {
 			Hwnd    uintptr

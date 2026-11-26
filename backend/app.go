@@ -64,6 +64,13 @@ type App struct {
 	pillHitMu                sync.RWMutex
 	pillHitRects             []pillHitBounds
 	hitRectsVersion          uint64
+	rawInputRegistered       bool
+	hitTestEvalMu            sync.Mutex
+	hitTestMissStart         time.Time
+	hitTestForceOutStart     time.Time
+	hitTestWasButtonDown     bool
+	hitTestLastRectsVer      uint64
+	hitTestRectsScratch      []pillHitBounds
 	uiScale                  float64
 	overlayHeight            int
 	isForceInteractive       bool
