@@ -36,6 +36,7 @@
     alarmSoundPresetStore,
     alarmVolumeStore,
     alarmSnoozeMinutesStore,
+    alarmMaxRingSecondsStore,
     notifData,
     tStore
   } from '../../../store'
@@ -64,12 +65,43 @@
     }
   ])
 
+  const autoStopOptions = $derived([
+    {
+      value: '15',
+      label: $tStore('settings.notif_autostop_secs', { count: 15 })
+    },
+    {
+      value: '30',
+      label: $tStore('settings.notif_autostop_secs', { count: 30 })
+    },
+    {
+      value: '60',
+      label: $tStore('settings.notif_autostop_min_one')
+    },
+    {
+      value: '120',
+      label: $tStore('settings.notif_snooze_mins', { count: 2 })
+    },
+    {
+      value: '300',
+      label: $tStore('settings.notif_snooze_mins', { count: 5 })
+    }
+  ])
+
   let snoozeString = $state(String($alarmSnoozeMinutesStore))
+  let autoStopString = $state(String($alarmMaxRingSecondsStore))
 
   $effect(function syncSnoozeMinutes() {
     const parsed = parseInt(snoozeString, 10)
     if (!isNaN(parsed) && parsed !== $alarmSnoozeMinutesStore) {
       $alarmSnoozeMinutesStore = parsed
+    }
+  })
+
+  $effect(function syncAutoStopSeconds() {
+    const parsed = parseInt(autoStopString, 10)
+    if (!isNaN(parsed) && parsed !== $alarmMaxRingSecondsStore) {
+      $alarmMaxRingSecondsStore = parsed
     }
   })
 
@@ -271,6 +303,26 @@
           options={snoozeOptions}
           bind:value={snoozeString}
           placeholder={$tStore('settings.notif_snooze_label')}
+        />
+      </div>
+    </SettingItem>
+
+    <SettingItem
+      label={$tStore('settings.notif_autostop_label')}
+      description={$tStore('settings.notif_autostop_desc')}
+      icon={AlarmClock}
+      isDefault={$alarmMaxRingSecondsStore ===
+        alarmMaxRingSecondsStore.defaultValue}
+      onReset={() => {
+        alarmMaxRingSecondsStore.reset()
+        autoStopString = String(alarmMaxRingSecondsStore.defaultValue)
+      }}
+    >
+      <div class="snooze-select-box">
+        <CustomSelect
+          options={autoStopOptions}
+          bind:value={autoStopString}
+          placeholder={$tStore('settings.notif_autostop_label')}
         />
       </div>
     </SettingItem>

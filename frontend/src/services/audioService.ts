@@ -427,33 +427,50 @@ export function previewAlarmSound(
 }
 
 let alarmChimeIntervalId: number | undefined
+let alarmChimeAutoStopTimeoutId: number | undefined
+
+const DEFAULT_ALARM_MAX_DURATION_MS = 30_000
 
 /**
  * Initiates an energetic, repeating procedural ringing cadence for active alarms.
  *
- * Repeats every 1750ms with a brief 650ms rhythmic pause between musical phrases
- * to sustain urgency without acoustic fatigue.
+ * Repeats every 1750ms and automatically stops once maxDurationMs elapses so an
+ * unattended alarm never rings indefinitely.
  *
  * @param volume Master volume gain multiplier between 0 and 1.
  * @param preset The alarm sound preset to ring.
+ * @param maxDurationMs Maximum ringing duration in milliseconds before auto-stopping.
+ * @param onAutoStop Optional callback invoked when the ringing duration expires.
  */
 export function startAlarmRingingChime(
   volume = 0.85,
-  preset: AlarmSoundPreset = 'chime'
+  preset: AlarmSoundPreset = 'chime',
+  maxDurationMs = DEFAULT_ALARM_MAX_DURATION_MS,
+  onAutoStop?: () => void
 ): void {
   stopAlarmRingingChime()
   playAlarmPreset(preset, volume)
   alarmChimeIntervalId = window.setInterval(() => {
     playAlarmPreset(preset, volume)
   }, 1750)
+  if (maxDurationMs > 0) {
+    alarmChimeAutoStopTimeoutId = window.setTimeout(() => {
+      stopAlarmRingingChime()
+      onAutoStop?.()
+    }, maxDurationMs)
+  }
 }
 
 /**
- * Halts any actively ringing alarm chime interval.
+ * Halts any actively ringing alarm chime interval and clears its auto-stop timer.
  */
 export function stopAlarmRingingChime(): void {
   if (alarmChimeIntervalId !== undefined) {
     clearInterval(alarmChimeIntervalId)
     alarmChimeIntervalId = undefined
+  }
+  if (alarmChimeAutoStopTimeoutId !== undefined) {
+    clearTimeout(alarmChimeAutoStopTimeoutId)
+    alarmChimeAutoStopTimeoutId = undefined
   }
 }
