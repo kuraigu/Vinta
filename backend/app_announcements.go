@@ -214,7 +214,7 @@ func (a *App) GetDeveloperAnnouncements() (AnnouncementsPayload, error) {
 	token := resolveUpdaterToken()
 
 	if token == "" {
-		log.Println("[Announcements] No UPDATER_TOKEN detected (.env / env / ldflags). Private repo API calls will fail.")
+		log.Println("[Announcements] No GitHub token configured; using public Discussions endpoints.")
 	} else {
 		log.Printf("[Announcements] Token detected (length: %d). Querying GitHub Discussions...", len(token))
 	}
