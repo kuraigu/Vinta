@@ -690,6 +690,7 @@ import type { AlarmSoundPreset } from '../services/audioService'
 export const alarmSoundPresetStore = persistentWritable<AlarmSoundPreset>('vinta_alarm_sound_preset', 'chime')
 export const alarmVolumeStore = persistentWritable<number>('vinta_alarm_volume', 0.85)
 export const alarmSnoozeMinutesStore = persistentWritable<number>('vinta_alarm_snooze_minutes', 5)
+export const alarmMaxRingSecondsStore = persistentWritable<number>('vinta_alarm_max_ring_seconds', 30)
 export const reminderSoundPresetStore = persistentWritable<AlarmSoundPreset>('vinta_reminder_sound_preset', 'chime')
 
 // ============================================================================

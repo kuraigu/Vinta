@@ -17,11 +17,13 @@ import {
   stopAlarmRingingChime
 } from '../services/audioService'
 import { notifyTimerAlert } from '../services/vintaNotification'
+import { t } from '../services/i18n'
 import {
   timeFormatStore,
   alarmSoundPresetStore,
   alarmVolumeStore,
   alarmSnoozeMinutesStore,
+  alarmMaxRingSecondsStore,
   pageVisibilityStore
 } from './settings'
 
@@ -1035,9 +1037,12 @@ function checkAlarmsClock(): void {
       triggeredAt: nowTimestamp
     }
 
+    const maxRingMs = Math.max(5, get(alarmMaxRingSecondsStore) || 30) * 1000
     startAlarmRingingChime(
       get(alarmVolumeStore),
-      get(alarmSoundPresetStore)
+      get(alarmSoundPresetStore),
+      maxRingMs,
+      () => autoStopRingingAlarm(ringing.id)
     )
 
     const use24H = get(timeFormatStore) === '24h'
@@ -1109,9 +1114,12 @@ function checkAlarmsClock(): void {
 
   if (newlyRinging) {
     const ringingItem = newlyRinging as RingingAlarm
+    const maxRingMs = Math.max(5, get(alarmMaxRingSecondsStore) || 30) * 1000
     startAlarmRingingChime(
       get(alarmVolumeStore),
-      get(alarmSoundPresetStore)
+      get(alarmSoundPresetStore),
+      maxRingMs,
+      () => autoStopRingingAlarm(ringingItem.id)
     )
 
     const use24H = get(timeFormatStore) === '24h'
@@ -1154,6 +1162,27 @@ if (typeof setInterval !== 'undefined') {
       alarmClockInterval = null
     }
   })
+}
+
+/**
+ * Automatically silences an unattended ringing alarm once its maximum ring duration elapses.
+ *
+ * @param ringId Identifier of the ringing alarm instance to auto-stop.
+ */
+function autoStopRingingAlarm(ringId: string): void {
+  const current = get(timerAppStore).ringingAlarm
+  if (!current || current.id !== ringId) return
+
+  stopAlarmRingingChime()
+  timerAppStore.update((s) =>
+    s.ringingAlarm?.id === ringId ? { ...s, ringingAlarm: null } : s
+  )
+
+  const label = current.label?.trim() || t('timer.alarm_default_label')
+  sendToastNotification(
+    t('timer.alarm_missed_title'),
+    t('timer.alarm_missed_body', { label })
+  )
 }
 
 /**
