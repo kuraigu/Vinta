@@ -65,6 +65,7 @@ type App struct {
 	pillHitRects             []pillHitBounds
 	hitRectsVersion          uint64
 	rawInputRegistered       bool
+	hitTestSignal            chan struct{}
 	hitTestEvalMu            sync.Mutex
 	hitTestMissStart         time.Time
 	hitTestForceOutStart     time.Time
@@ -117,6 +118,7 @@ func NewApp(icon []byte) *App {
 		relocateOnFullscreen:   true,
 		returnOnFullscreenExit: false,
 		tooltips:               make(map[string]TooltipBounds),
+		hitTestSignal:          make(chan struct{}, 1),
 		themeService:           NewThemeService(),
 	}
 }
