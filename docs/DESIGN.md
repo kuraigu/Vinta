@@ -40,13 +40,14 @@ Check `frontend/src/components/` first:
 - **Scrolling and Layout:** Look for `ScrollView.svelte` and `SidebarLayout.svelte`.
 - **Accents and Badges:** Check `frontend/src/components/patterns/` and components like `ActionCapsule.svelte` or `DotIndicator.svelte`.
 
-### Adding New Components
+### Adding New Components, Widgets, Pages & Overlays
 
-Only create a new component when existing primitives cannot satisfy the requirements.
+Only create a new component when existing primitives cannot satisfy the requirements. Use the built-in generator (`task new:component`, `task new:widget`, `task new:page`, or `task new:overlay`) so files and paired stylesheets land in the right folders automatically.
 
 - **Variant Over Duplication:** If two designs share structure or purpose, add a variant prop to the existing component instead of writing a new one.
 - **Strict Tokenization:** Every new component must rely on `--vinta-*` CSS variables for background colors, borders, text, and active states.
 - **No Inline Styles for Themes:** Never hardcode hex, rgb, or hsl values for core UI surfaces.
+- **Subfolder Splitting:** When a top-level component or page grows large, keep its public entrypoint file at the root (`frontend/src/components/<Name>.svelte` or `frontend/src/pages/<Name>Page.svelte`) and place extracted subcomponents inside a dedicated subfolder (e.g., `frontend/src/components/calendar/`, `frontend/src/pages/notes/`).
 
 ---
 

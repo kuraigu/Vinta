@@ -456,6 +456,19 @@ if "%~1"=="installer" (
     exit /b !ERRORLEVEL!
 )
 
+if "%~1"=="new-ui" (
+    if "%~2"=="--help" (
+        node "%~dp0scripts\new-ui-item.js" --help
+        exit /b !ERRORLEVEL!
+    )
+    if "%~2"=="-h" (
+        node "%~dp0scripts\new-ui-item.js" --help
+        exit /b !ERRORLEVEL!
+    )
+    node "%~dp0scripts\new-ui-item.js" %2 %3 %4
+    exit /b !ERRORLEVEL!
+)
+
 if "%~1"=="contributor" (
     if "%~2"=="--help" (
         echo Usage: scripts.bat contributor ^<username^> ^<roles^> [display_name]
@@ -503,6 +516,7 @@ echo   check-hardcoded-ui [--all] [--strict] Audits components/pages for hardcod
 echo   sync-locales [--prune] [--dry-run]    Propagates new keys from en.json to all other locale catalogs
 echo   resource-profile [opts]  Monitors live unscaled CPU%% and RAM across Vinta's process tree
 echo   lint [--ci^|--native^|--all^|--strict]  Runs Go, C++, Frontend, Theme, and Locale linters
+echo   new-ui ^<type^> ^<Name^>     Scaffolds a component, widget, page, or overlay from templates/
 echo   contributor ^<args^>       Adds a contributor via scripts\add_contributor.ps1
 echo.
 echo Run 'scripts.bat ^<command^> --help' for command-specific flags.

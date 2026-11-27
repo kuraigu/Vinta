@@ -168,6 +168,26 @@ tasks:
     cmds:
       - cmd.exe /c "scripts.bat sync-locales {{.CLI_ARGS}}"
 
+  new:component:
+    desc: "Scaffold a new UI component (usage: task new:component -- <PascalName>)"
+    cmds:
+      - cmd.exe /c "scripts.bat new-ui component {{.CLI_ARGS}}"
+
+  new:widget:
+    desc: "Scaffold a new Home widget (usage: task new:widget -- <PascalName>)"
+    cmds:
+      - cmd.exe /c "scripts.bat new-ui widget {{.CLI_ARGS}}"
+
+  new:page:
+    desc: "Scaffold a new workspace page (usage: task new:page -- <PascalName>)"
+    cmds:
+      - cmd.exe /c "scripts.bat new-ui page {{.CLI_ARGS}}"
+
+  new:overlay:
+    desc: "Scaffold a new overlay page (usage: task new:overlay -- <PascalName>)"
+    cmds:
+      - cmd.exe /c "scripts.bat new-ui overlay {{.CLI_ARGS}}"
+
   contributor:
     desc: "Add a contributor with a custom name (usage: task contributor -- <username> <roles> <name>)"
     cmds:
