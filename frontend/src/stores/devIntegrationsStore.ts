@@ -193,7 +193,14 @@ export async function connectGitHubPAT(
   }
 }
 
-export async function startGitHubDeviceAuth(): Promise<{
+export interface GitHubAuthScopeOptions {
+  includeNotifications?: boolean
+  includePrivateRepos?: boolean
+}
+
+export async function startGitHubDeviceAuth(
+  options: GitHubAuthScopeOptions = {}
+): Promise<{
   ok: boolean
   info?: GitHubDeviceCodeInfo
   error?: string
@@ -202,7 +209,10 @@ export async function startGitHubDeviceAuth(): Promise<{
     return { ok: false, error: 'GitHub Device Flow unavailable' }
   }
   try {
-    const info = await StartGitHubDeviceFlow()
+    const info = await StartGitHubDeviceFlow(
+      Boolean(options.includeNotifications),
+      Boolean(options.includePrivateRepos)
+    )
     return { ok: true, info }
   } catch (err) {
     return {

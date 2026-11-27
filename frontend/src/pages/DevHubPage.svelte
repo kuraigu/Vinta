@@ -32,6 +32,7 @@
   import HeaderActionButton from '../components/HeaderActionButton.svelte'
   import BentoCard from '../components/BentoCard.svelte'
   import ScrollView from '../components/ScrollView.svelte'
+  import ToggleSwitch from '../components/ToggleSwitch.svelte'
   import HorizontalTabSelection, {
     type TabItem
   } from '../components/HorizontalTabSelection.svelte'
@@ -64,6 +65,8 @@
   let isSigningIn = $state(false)
   let deviceUserCode = $state('')
   let signInError = $state('')
+  let includeNotifications = $state(false)
+  let includePrivateRepos = $state(false)
 
   const mainTabs: TabItem<'github' | 'ai'>[] = $derived([
     {
@@ -153,7 +156,10 @@
     isSigningIn = true
     signInError = ''
     deviceUserCode = ''
-    const start = await startGitHubDeviceAuth()
+    const start = await startGitHubDeviceAuth({
+      includeNotifications,
+      includePrivateRepos
+    })
     if (!start.ok || !start.info) {
       isSigningIn = false
       signInError = start.error || $tStore('account.github_failed')
@@ -245,6 +251,36 @@
                 <p class="devhub-empty-desc">
                   {$tStore('devhub.connect_desc')}
                 </p>
+                <div class="devhub-scope-opts">
+                  <div class="devhub-scope-row">
+                    <div class="devhub-scope-text">
+                      <span class="devhub-scope-label"
+                        >{$tStore('account.github_opt_notifications_label')}</span
+                      >
+                      <span class="devhub-scope-desc"
+                        >{$tStore('account.github_opt_notifications_desc')}</span
+                      >
+                    </div>
+                    <ToggleSwitch
+                      bind:checked={includeNotifications}
+                      ariaLabel={$tStore('account.github_opt_notifications_label')}
+                    />
+                  </div>
+                  <div class="devhub-scope-row">
+                    <div class="devhub-scope-text">
+                      <span class="devhub-scope-label"
+                        >{$tStore('account.github_opt_private_label')}</span
+                      >
+                      <span class="devhub-scope-desc"
+                        >{$tStore('account.github_opt_private_desc')}</span
+                      >
+                    </div>
+                    <ToggleSwitch
+                      bind:checked={includePrivateRepos}
+                      ariaLabel={$tStore('account.github_opt_private_label')}
+                    />
+                  </div>
+                </div>
                 <footer class="devhub-empty-actions">
                   <button
                     type="button"

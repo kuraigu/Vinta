@@ -1160,9 +1160,11 @@ export function StartBackgroundUpdateChecker(): $CancellablePromise<void> {
 
 /**
  * StartGitHubDeviceFlow initiates GitHub OAuth Device Flow and opens the verification page.
+ * By default it requests only read:user (no repository permissions). Callers can opt into
+ * notifications and private repository access explicitly.
  */
-export function StartGitHubDeviceFlow(): $CancellablePromise<$models.GitHubDeviceCodeInfo> {
-    return $Call.ByID(3202903180).then(($result: any) => {
+export function StartGitHubDeviceFlow(includeNotifications: boolean, includePrivateRepos: boolean): $CancellablePromise<$models.GitHubDeviceCodeInfo> {
+    return $Call.ByID(3202903180, includeNotifications, includePrivateRepos).then(($result: any) => {
         return $$createType43($result);
     });
 }
