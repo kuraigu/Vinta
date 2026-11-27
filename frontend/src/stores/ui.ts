@@ -5,7 +5,7 @@
  * media drawer visibility, and test simulation overrides (mock battery, offline mode).
  */
 
-import { writable } from 'svelte/store'
+import { get, writable } from 'svelte/store'
 import type { WeatherData } from '../services/weatherService'
 
 export type OverlayPageId = 'notifications' | 'apps' | 'feedback' | null
@@ -49,7 +49,64 @@ export const feedbackOverlayKindStore = writable<FeedbackOverlayKind>('bug')
 export const hiddenPillOffsetXStore = writable<number>(0)
 export const isIslandHiddenStore = writable<boolean>(false)
 export const overlayPinnedStore = writable<boolean>(false)
+export const overlayPinOverrideStore = writable<{
+  scope: string
+  pinned: boolean
+} | null>(null)
+export const authSignInActiveStore = writable<boolean>(false)
 export const isMediaDrawerOpenStore = writable<boolean>(false)
+
+let activeAuthSignInCount = 0
+
+/**
+ * Returns the scope key for the currently visible page or overlay so pin state
+ * is bound to that view and never carries over across page navigation.
+ */
+export function getCurrentPinScope(): string {
+  const overlay = get(activeOverlayStore)
+  if (overlay !== null) {
+    return `overlay:${overlay}`
+  }
+  return `page:${get(activePageIdStore)}`
+}
+
+/**
+ * Toggles pin state strictly for the currently active page or overlay.
+ */
+export function toggleCurrentOverlayPin(): void {
+  const scope = getCurrentPinScope()
+  const nextPinned = !get(overlayPinnedStore)
+  overlayPinOverrideStore.set({ scope, pinned: nextPinned })
+}
+
+/**
+ * Clears any manual per-page pin override.
+ */
+export function clearOverlayPinOverride(): void {
+  if (get(overlayPinOverrideStore) !== null) {
+    overlayPinOverrideStore.set(null)
+  }
+}
+
+/**
+ * Marks an external browser sign-in flow as active so the island temporarily stays pinned.
+ */
+export function beginAuthSignIn(): void {
+  activeAuthSignInCount += 1
+  if (activeAuthSignInCount === 1) {
+    authSignInActiveStore.set(true)
+  }
+}
+
+/**
+ * Releases one active external browser sign-in flow, unpinning once all flows finish.
+ */
+export function endAuthSignIn(): void {
+  activeAuthSignInCount = Math.max(0, activeAuthSignInCount - 1)
+  if (activeAuthSignInCount === 0) {
+    authSignInActiveStore.set(false)
+  }
+}
 
 export const simulateOfflineStore = writable<boolean>(false)
 export const simulateWeatherStore = writable<WeatherData | null>(null)
