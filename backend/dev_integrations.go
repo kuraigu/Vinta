@@ -107,17 +107,26 @@ func (a *App) ConnectGitHubWithPAT(token string) (GitHubStatus, error) {
 }
 
 // StartGitHubDeviceFlow initiates GitHub OAuth Device Flow and opens the verification page.
-func (a *App) StartGitHubDeviceFlow() (GitHubDeviceCodeInfo, error) {
+// By default it requests only read:user (no repository permissions). Callers can opt into
+// notifications and private repository access explicitly.
+func (a *App) StartGitHubDeviceFlow(includeNotifications bool, includePrivateRepos bool) (GitHubDeviceCodeInfo, error) {
 	clientID := GetEnvConfig("VINTA_GITHUB_CLIENT_ID")
 	if clientID == "" {
 		return GitHubDeviceCodeInfo{}, fmt.Errorf("github sign-in is not configured in this build")
 	}
 	form := url.Values{}
 	form.Set("client_id", clientID)
-	// GitHub Apps (Iv... Client IDs) use fine-grained read-only permissions configured on the app itself.
-	// Classic OAuth Apps (Ov...) use least-privilege read:user + notifications scope.
+	// GitHub Apps (Iv... Client IDs) use fine-grained permissions configured on the app itself.
+	// Classic OAuth Apps (Ov...) default to read:user only and add optional scopes on user opt-in.
 	if !strings.HasPrefix(clientID, "Iv") {
-		form.Set("scope", "read:user notifications")
+		scopes := []string{"read:user"}
+		if includeNotifications {
+			scopes = append(scopes, "notifications")
+		}
+		if includePrivateRepos {
+			scopes = append(scopes, "repo")
+		}
+		form.Set("scope", strings.Join(scopes, " "))
 	}
 
 	req, err := http.NewRequest(http.MethodPost, "https://github.com/login/device/code", strings.NewReader(form.Encode()))

@@ -17,6 +17,7 @@
   import SettingItem from '../SettingItem.svelte'
   import BentoCard from '../../BentoCard.svelte'
   import BrandLogo from '../../BrandLogo.svelte'
+  import ToggleSwitch from '../../ToggleSwitch.svelte'
   import { tStore } from '../../../store'
   import {
     googleAccountStore,
@@ -42,6 +43,8 @@
   let isGitHubBusy = $state(false)
   let githubUserCode = $state('')
   let githubError = $state('')
+  let includeGitHubNotifications = $state(false)
+  let includeGitHubPrivateRepos = $state(false)
 
   let claudeKeyInput = $state('')
   let openaiKeyInput = $state('')
@@ -97,7 +100,10 @@
     isGitHubBusy = true
     githubError = ''
     githubUserCode = ''
-    const start = await startGitHubDeviceAuth()
+    const start = await startGitHubDeviceAuth({
+      includeNotifications: includeGitHubNotifications,
+      includePrivateRepos: includeGitHubPrivateRepos
+    })
     if (!start.ok || !start.info) {
       isGitHubBusy = false
       githubError = start.error || $tStore('account.github_failed')
@@ -257,6 +263,26 @@
             <code class="device-code-value">{githubUserCode}</code>
           </div>
         {/if}
+      </SettingItem>
+
+      <SettingItem
+        label={$tStore('account.github_opt_notifications_label')}
+        description={$tStore('account.github_opt_notifications_desc')}
+      >
+        <ToggleSwitch
+          bind:checked={includeGitHubNotifications}
+          ariaLabel={$tStore('account.github_opt_notifications_label')}
+        />
+      </SettingItem>
+
+      <SettingItem
+        label={$tStore('account.github_opt_private_label')}
+        description={$tStore('account.github_opt_private_desc')}
+      >
+        <ToggleSwitch
+          bind:checked={includeGitHubPrivateRepos}
+          ariaLabel={$tStore('account.github_opt_private_label')}
+        />
       </SettingItem>
     {/if}
 

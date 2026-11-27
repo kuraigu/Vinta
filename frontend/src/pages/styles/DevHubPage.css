@@ -85,6 +85,44 @@
   color: var(--vinta-text-secondary);
 }
 
+.devhub-scope-opts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  inline-size: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--vinta-border);
+  background: var(--vinta-item-bg);
+  box-sizing: border-box;
+}
+
+.devhub-scope-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.devhub-scope-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-inline-size: 0;
+}
+
+.devhub-scope-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--vinta-text-primary);
+}
+
+.devhub-scope-desc {
+  font-size: 11px;
+  line-height: 1.35;
+  color: var(--vinta-text-muted);
+}
+
 .devhub-empty-actions {
   display: flex;
   align-items: center;
