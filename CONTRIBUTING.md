@@ -132,15 +132,17 @@ Before writing UI code, read [docs/DESIGN.md](docs/DESIGN.md) for our component-
 ### Component-First Rule
 Always check `frontend/src/components/` before creating a new component. Reuse existing primitives (such as `<BentoCard>`, `<BackButton>`, `<CustomSelect>`, `<ScrollView>`) or extend them with variants rather than writing duplicate markup and styles.
 
-### Starter Templates
+### Starter Templates & Generators
 
-Boilerplates are available in `templates/`:
+Boilerplates are available in `templates/`, and you can scaffold new items directly with `task new:*` (or `.\scripts.bat new-ui <type> <Name>`):
 
-| Template      | Location                                                                                   | What's inside                                                                                                       |
-| :------------ | :----------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------ |
-| **Component** | [templates/component/ExampleComponent.svelte](templates/component/ExampleComponent.svelte) | Svelte 5+ runes (`$props`), `<BentoCard>`, and `--vinta-*` tokens.                                                  |
-| **Page**      | [templates/page/ExamplePage.svelte](templates/page/ExamplePage.svelte)                     | Module `IslandConfig` bounds, `<BackButton>`, `AppControls.doMinimize` setup, `data-vinta`, and 56px dock clearance. |
-| **Theme**     | [templates/theme/](templates/theme/)                                                       | Ready-to-edit `manifest.json` and `style.css` with token overrides and page-scoped selector examples.                 |
+| Type | Command | Template | What's inside |
+| :--- | :--- | :--- | :--- |
+| **Component** | `task new:component -- MyBadge` | [ExampleComponent.svelte](templates/component/ExampleComponent.svelte) | Svelte 5+ runes (`$props`), `<BentoCard>`, and `--vinta-*` tokens. |
+| **Widget** | `task new:widget -- MyStats` | [ExampleWidget.svelte](templates/widget/ExampleWidget.svelte) | `<WidgetFrame>` with `1x1`/`2x1`/`2x2` Bento sizing and `navigate` context. |
+| **Page** | `task new:page -- MyTool` | [ExamplePage.svelte](templates/page/ExamplePage.svelte) | Module `IslandConfig`, `<IslandPage>`, `<PageHeader>`, `data-vinta`, and 56px dock clearance. |
+| **Overlay** | `task new:overlay -- MyOverlay` | [ExampleOverlayPage.svelte](templates/overlay/ExampleOverlayPage.svelte) | `<OverlayPage>` with solid `--vinta-bg-opaque` surface and `Escape` handling. |
+| **Theme** | `task theme:pack -- <dir>` | [templates/theme/](templates/theme/) | Ready-to-edit `manifest.json` and `style.css` with token overrides and page-scoped selector examples. |
 
 ### Adding a New Component
 
