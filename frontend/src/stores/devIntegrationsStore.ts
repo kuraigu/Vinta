@@ -35,6 +35,7 @@ import {
   refreshGoogleCalendarStatus,
   syncGoogleCalendar
 } from './calendarStore'
+import { beginAuthSignIn, endAuthSignIn } from './ui'
 
 export const integrationCapabilitiesStore = writable<IntegrationCapabilities>({
   hasGoogleOAuth: false,
@@ -116,6 +117,7 @@ export async function signInGoogleAccount(): Promise<{
   if (typeof SignInWithGoogle !== 'function') {
     return { ok: false, error: 'Google sign-in unavailable in preview mode' }
   }
+  beginAuthSignIn()
   try {
     const status = await SignInWithGoogle()
     if (status) googleAccountStore.set(status)
@@ -126,6 +128,8 @@ export async function signInGoogleAccount(): Promise<{
     return { ok: true }
   } catch (err) {
     return { ok: false, error: formatError(err, 'Google sign-in failed') }
+  } finally {
+    endAuthSignIn()
   }
 }
 
@@ -198,6 +202,8 @@ export interface GitHubAuthScopeOptions {
   includePrivateRepos?: boolean
 }
 
+let githubAuthPinHeld = false
+
 export async function startGitHubDeviceAuth(
   options: GitHubAuthScopeOptions = {}
 ): Promise<{
@@ -208,6 +214,10 @@ export async function startGitHubDeviceAuth(
   if (typeof StartGitHubDeviceFlow !== 'function') {
     return { ok: false, error: 'GitHub Device Flow unavailable' }
   }
+  if (!githubAuthPinHeld) {
+    githubAuthPinHeld = true
+    beginAuthSignIn()
+  }
   try {
     const info = await StartGitHubDeviceFlow(
       Boolean(options.includeNotifications),
@@ -215,6 +225,10 @@ export async function startGitHubDeviceAuth(
     )
     return { ok: true, info }
   } catch (err) {
+    if (githubAuthPinHeld) {
+      githubAuthPinHeld = false
+      endAuthSignIn()
+    }
     return {
       ok: false,
       error: formatError(err, 'Could not start GitHub sign-in')
@@ -227,6 +241,10 @@ export async function completeGitHubDeviceAuth(
   interval: number
 ): Promise<{ ok: boolean; error?: string }> {
   if (typeof PollGitHubDeviceFlow !== 'function') {
+    if (githubAuthPinHeld) {
+      githubAuthPinHeld = false
+      endAuthSignIn()
+    }
     return { ok: false, error: 'GitHub Device Flow unavailable' }
   }
   try {
@@ -240,6 +258,11 @@ export async function completeGitHubDeviceAuth(
     return {
       ok: false,
       error: formatError(err, 'GitHub sign-in did not complete')
+    }
+  } finally {
+    if (githubAuthPinHeld) {
+      githubAuthPinHeld = false
+      endAuthSignIn()
     }
   }
 }

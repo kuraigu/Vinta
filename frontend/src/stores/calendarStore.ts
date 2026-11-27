@@ -25,6 +25,7 @@ import {
   notifyCalendarEvent,
   sendVintaNotification
 } from '../services/vintaNotification'
+import { beginAuthSignIn, endAuthSignIn } from './ui'
 import {
   collectDueHabitReminders,
   initHabitsStore
@@ -688,6 +689,7 @@ export async function refreshGoogleCalendarStatus(): Promise<void> {
 export async function connectGoogleCalendar(clientId = ''): Promise<void> {
   if (typeof ConnectGoogleCalendar !== 'function') return
   calendarStore.update((s) => ({ ...s, isSyncing: true, lastSyncError: '' }))
+  beginAuthSignIn()
   try {
     const status = await ConnectGoogleCalendar(clientId)
     if (status) googleCalendarStatusStore.set(status)
@@ -703,6 +705,8 @@ export async function connectGoogleCalendar(clientId = ''): Promise<void> {
             ? err
             : 'Google Calendar connection failed'
     }))
+  } finally {
+    endAuthSignIn()
   }
 }
 

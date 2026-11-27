@@ -153,6 +153,9 @@
     appsLauncherHotkeyStore,
     clickOutsideMinimizeStore,
     overlayPinnedStore,
+    overlayPinOverrideStore,
+    clearOverlayPinOverride,
+    authSignInActiveStore,
     notificationsOverlayTabStore,
     feedbackOverlayKindStore,
     type OverlayPageId,
@@ -884,29 +887,62 @@
     }, 120)
   }
 
-  let autoPinnedForShelf = false
+  let currentPinScope = $derived(
+    $activeOverlayStore !== null
+      ? `overlay:${$activeOverlayStore}`
+      : `page:${$activePageIdStore}`
+  )
+  let lastPinScope = ''
+  let authPinScope: string | null = null
 
   /**
-   * Automatically pins the island while File Shelf is expanded so users can
-   * click outside to grab files for drag-and-drop without collapsing the shelf.
+   * Computes and applies per-page and per-condition pin state:
+   * - Manual pin/unpin applies strictly to the active page or overlay and resets on
+   *   navigation or collapse so pin state never carries over to other pages.
+   * - File Shelf auto-pins while expanded for drag-and-drop.
+   * - External browser sign-in flows temporarily pin the originating page until done.
    */
-  $effect(function syncFileShelfAutoPin() {
-    const isShelfExpanded =
-      expanded &&
-      activePage === FileShelfPage &&
-      $activeOverlayStore === null &&
-      $clickOutsideMinimizeStore
+  $effect(function syncOverlayPinState() {
+    const scope = currentPinScope
+    const authActive = $authSignInActiveStore
+    const override = $overlayPinOverrideStore
 
-    if (isShelfExpanded) {
-      if (!get(overlayPinnedStore)) {
-        overlayPinnedStore.set(true)
-        autoPinnedForShelf = true
+    if (!expanded) {
+      lastPinScope = scope
+      if (!authActive) {
+        authPinScope = null
       }
-    } else if (autoPinnedForShelf) {
-      autoPinnedForShelf = false
+      clearOverlayPinOverride()
       if (get(overlayPinnedStore)) {
         overlayPinnedStore.set(false)
       }
+      return
+    }
+
+    if (lastPinScope && lastPinScope !== scope) {
+      clearOverlayPinOverride()
+    }
+    lastPinScope = scope
+
+    if (authActive && authPinScope === null) {
+      authPinScope = scope
+    } else if (!authActive && authPinScope !== null) {
+      authPinScope = null
+    }
+
+    const isShelfAutoPin =
+      activePage === FileShelfPage &&
+      $activeOverlayStore === null &&
+      $clickOutsideMinimizeStore
+    const isAuthAutoPin = authActive && authPinScope === scope
+
+    const scopedOverride = override && override.scope === scope ? override : null
+    const nextPinned = scopedOverride
+      ? scopedOverride.pinned
+      : isShelfAutoPin || isAuthAutoPin
+
+    if (get(overlayPinnedStore) !== nextPinned) {
+      overlayPinnedStore.set(nextPinned)
     }
   })
 

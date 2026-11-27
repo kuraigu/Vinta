@@ -13,6 +13,7 @@
     globalHotkeyStore,
     clickOutsideMinimizeStore,
     overlayPinnedStore,
+    toggleCurrentOverlayPin,
     tStore,
     type IslandConfig
   } from '../store'
@@ -55,7 +56,7 @@
           : $tStore('controls.pin')}
         tooltipPosition={expandedTooltipSide}
         onclick={() => {
-          overlayPinnedStore.update((pinned) => !pinned)
+          toggleCurrentOverlayPin()
         }}
       >
         <Pin size={14} strokeWidth={2.2} />
