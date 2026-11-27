@@ -39,7 +39,7 @@ jobs:
           fi
 
           # 2. Check if author already exists in .all-contributorsrc
-          EXISTING=$(jq -r ".contributors[]? | select(.login == \"$PR_AUTHOR\") | .login" .all-contributorsrc 2>/dev/null || echo "")
+          EXISTING=$(jq -r --arg author "$PR_AUTHOR" '.contributors[]? | select(.login == $author) | .login' .all-contributorsrc 2>/dev/null || echo "")
           if [ -n "$EXISTING" ]; then
             echo "Contributor $PR_AUTHOR already exists in .all-contributorsrc. Skipping."
             echo "should_add=false" >> $GITHUB_OUTPUT

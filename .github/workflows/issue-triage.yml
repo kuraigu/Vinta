@@ -2,7 +2,7 @@ name: Multipurpose Issue & Claim Triage
 
 on:
   schedule:
-    - cron: '0 */6 * * *' # Runs every 6 hours
+    - cron: '0 0 * * *' # Runs once daily at 00:00 UTC
   issues:
     types: [opened, assigned, unassigned, reopened]
   issue_comment:
