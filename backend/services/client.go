@@ -412,6 +412,14 @@ func SetAppHidden(hidden bool) {
 	}
 }
 
+// IsAppHidden reports whether Vinta is currently hidden.
+func IsAppHidden() bool {
+	hiddenMu.RLock()
+	hidden := isAppHidden
+	hiddenMu.RUnlock()
+	return hidden
+}
+
 // ResetMediaArtCacheState flushes in-memory media artwork deduplication state.
 func ResetMediaArtCacheState() {
 	mediaMu.Lock()

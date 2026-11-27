@@ -916,12 +916,54 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 	}
 
 	type monEvalCache struct {
-		fg         uintptr
-		style      uint32
-		winRect    rect32
-		shouldHide bool
-		evalTime   time.Time
+		fg             uintptr
+		style          uint32
+		winRect        rect32
+		hideBorderless bool
+		shouldHide     bool
+		reason         string
+		appName        string
+		evalTime       time.Time
 	}
+
+	const swpAsyncWindowPos = 0x4000
+
+	// Serialize async Wails window Show/Hide calls so rapid Alt+Tab transitions
+	// never reorder Hide after Show and never block fgEvalMu on the UI thread.
+	visibilityCh := make(chan bool, 1)
+	enqueueVisibility := func(show bool) {
+		select {
+		case visibilityCh <- show:
+		default:
+			select {
+			case <-visibilityCh:
+			default:
+			}
+			select {
+			case visibilityCh <- show:
+			default:
+			}
+		}
+	}
+	go func() {
+		stopCtx := a.lifecycleContext()
+		for {
+			select {
+			case <-stopCtx.Done():
+				return
+			case show := <-visibilityCh:
+				win := a.window
+				if win == nil {
+					continue
+				}
+				if show && !services.IsAppHidden() {
+					win.Show()
+				} else if !show && services.IsAppHidden() {
+					win.Hide()
+				}
+			}
+		}
+	}()
 
 	initVLeft, initVTop, initVWidth, initVHeight, _, initMonitors := GetDisplayMetrics()
 	var (
@@ -944,23 +986,26 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 
 	exitFullscreenHide := func() {
 		autoHiddenMu.Lock()
-		if autoHiddenByFullscreen {
+		wasHidden := autoHiddenByFullscreen
+		if wasHidden {
 			autoHiddenByFullscreen = false
 			services.SetAppHidden(false)
+		}
+		autoHiddenMu.Unlock()
+
+		if wasHidden {
 			_, _, _ = procSetWindowPos.Call(
 				vintaHwnd, ^uintptr(0), 0, 0, 0, 0,
-				SWP_NOSIZE|SWP_NOMOVE|SWP_NOACTIVATE|SWP_SHOWWINDOW,
+				SWP_NOSIZE|SWP_NOMOVE|SWP_NOACTIVATE|SWP_SHOWWINDOW|swpAsyncWindowPos,
 			)
-			if a.window != nil {
-				a.window.Show()
-			}
+			enqueueVisibility(true)
+			a.requestHitTestReconcile()
 			if services.IsFrontendReady() {
 				if app := application.Get(); app != nil {
 					app.Event.Emit("game-mode-exit")
 				}
 			}
 		}
-		autoHiddenMu.Unlock()
 	}
 
 	reassertTopmost := func(curFg, snipHwnd uintptr, snipKnown bool) {
@@ -1015,7 +1060,7 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 			return
 		}
 		wasSubordinatedToSnip = false
-		_, _, _ = procSetWindowPos.Call(vintaHwnd, ^uintptr(0), 0, 0, 0, 0, SWP_NOSIZE|SWP_NOMOVE|SWP_NOACTIVATE)
+		_, _, _ = procSetWindowPos.Call(vintaHwnd, ^uintptr(0), 0, 0, 0, 0, SWP_NOSIZE|SWP_NOMOVE|SWP_NOACTIVATE|swpAsyncWindowPos)
 	}
 
 	evaluateForegroundState := func() {
@@ -1043,10 +1088,11 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 				targetW = 1920
 			}
 			const swpNoZOrder = 0x0004
+			clear(evalCacheByMon)
 			_, _, _ = procSetWindowPos.Call(
 				vintaHwnd, 0,
 				uintptr(vLeft), uintptr(vTop), uintptr(targetW), uintptr(overlayHeight),
-				swpNoZOrder|SWP_NOACTIVATE,
+				swpNoZOrder|SWP_NOACTIVATE|swpAsyncWindowPos,
 			)
 
 			// If Vinta was on a disconnected monitor, snap back onto an active monitor.
@@ -1136,9 +1182,9 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 				curFg == cached.fg &&
 				style == cached.style &&
 				fgWinRect == cached.winRect &&
-				!cached.shouldHide &&
+				hideBorderless == cached.hideBorderless &&
 				time.Since(cached.evalTime) < 2400*time.Millisecond {
-				return false, "", ""
+				return cached.shouldHide, cached.reason, cached.appName
 			}
 			isFramelessOrPopup := isFullscreenStyle(style)
 			appName := getWindowAppName(curFg)
@@ -1168,11 +1214,14 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 				hideRes, reasonRes = false, ""
 			}
 			evalCacheByMon[mon.ID] = monEvalCache{
-				fg:         curFg,
-				style:      style,
-				winRect:    fgWinRect,
-				shouldHide: hideRes,
-				evalTime:   time.Now(),
+				fg:             curFg,
+				style:          style,
+				winRect:        fgWinRect,
+				hideBorderless: hideBorderless,
+				shouldHide:     hideRes,
+				reason:         reasonRes,
+				appName:        appName,
+				evalTime:       time.Now(),
 			}
 			return hideRes, reasonRes, appName
 		}
@@ -1200,9 +1249,7 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 
 						exitFullscreenHide()
 						a.updateWindowRegion()
-						if a.window != nil {
-							a.window.Show()
-						}
+						enqueueVisibility(true)
 						if app := application.Get(); app != nil && services.IsFrontendReady() {
 							app.Event.Emit("game-mode-relocate", map[string]interface{}{
 								"appName":         appName,
@@ -1223,23 +1270,25 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 			a.fullscreenRelocatedMu.Unlock()
 
 			autoHiddenMu.Lock()
-			if !autoHiddenByFullscreen {
+			enteredHide := !autoHiddenByFullscreen
+			if enteredHide {
 				autoHiddenByFullscreen = true
 				services.SetAppHidden(true)
+			}
+			autoHiddenMu.Unlock()
+
+			if enteredHide {
 				_, _, _ = procSetWindowPos.Call(
 					vintaHwnd, ^uintptr(1), 0, 0, 0, 0,
-					SWP_NOSIZE|SWP_NOMOVE|SWP_NOACTIVATE|SWP_HIDEWINDOW,
+					SWP_NOSIZE|SWP_NOMOVE|SWP_NOACTIVATE|SWP_HIDEWINDOW|swpAsyncWindowPos,
 				)
-				if a.window != nil {
-					a.window.Hide()
-				}
+				enqueueVisibility(false)
 				if app := application.Get(); app != nil && services.IsFrontendReady() {
 					app.Event.Emit("game-mode-enter", map[string]interface{}{
 						"reason": reason, "appName": appName,
 					})
 				}
 			}
-			autoHiddenMu.Unlock()
 			return
 		}
 
@@ -1347,7 +1396,7 @@ func (a *App) setupForegroundEventHook(vintaHwnd uintptr) {
 		wndProc := syscall.NewCallback(func(h uintptr, msg uint32, wParam, lParam uintptr) uintptr {
 			switch msg {
 			case wmInput:
-				a.reconcileHitTest(vintaHwnd)
+				a.requestHitTestReconcile()
 			case wmDisplayChange:
 				InvalidateDisplayCache()
 				time.AfterFunc(120*time.Millisecond, evaluateForegroundState)

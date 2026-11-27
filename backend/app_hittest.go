@@ -6,6 +6,8 @@ import (
 	"unsafe"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
+
+	"Vinta/backend/services"
 )
 
 // HitRect defines a physical client rectangle for hit testing.
@@ -89,8 +91,8 @@ func (a *App) SetHitRects(rects []HitRect) {
 		}
 		activeIslandMu.Unlock()
 
-		if h := a.getHwnd(); h != 0 {
-			a.reconcileHitTest(h)
+		if a.getHwnd() != 0 {
+			a.requestHitTestReconcile()
 		}
 	}
 
@@ -211,10 +213,22 @@ func (a *App) setOutboundDragging(active bool) {
 	a.setClickThrough(hwnd, active)
 }
 
+// requestHitTestReconcile signals the hit-test worker goroutine without blocking the caller.
+// Safe to call from high-frequency WM_INPUT handlers (1000Hz-8000Hz gaming mice) or WebView2 IPC.
+func (a *App) requestHitTestReconcile() {
+	if a.hitTestSignal == nil || services.IsAppHidden() {
+		return
+	}
+	select {
+	case a.hitTestSignal <- struct{}{}:
+	default:
+	}
+}
+
 // reconcileHitTest evaluates the live cursor position against active hit rects and updates
-// WS_EX_TRANSPARENT immediately. Safe to call from WM_INPUT, SetHitRects, or the housekeeping loop.
+// WS_EX_TRANSPARENT immediately. Must run on the hit-test worker goroutine, never inside wndProc.
 func (a *App) reconcileHitTest(hwnd uintptr) {
-	if hwnd == 0 {
+	if hwnd == 0 || services.IsAppHidden() {
 		return
 	}
 	a.hitTestEvalMu.Lock()
@@ -370,66 +384,110 @@ func (a *App) reconcileHitTest(hwnd uintptr) {
 
 	a.setClickThrough(hwnd, !isHit)
 
-	lmbState, _, _ := procGetAsyncKeyState.Call(0x01)
-	rmbState, _, _ := procGetAsyncKeyState.Call(0x02)
-	isButtonDown := (lmbState&0x8000) != 0 || (rmbState&0x8000) != 0
-	if isButtonDown && !a.hitTestWasButtonDown && !outbound && !cursorHidden && !force && !cursorInAnyRect && len(rects) > 0 {
-		if wailsApp := application.Get(); wailsApp != nil {
-			go wailsApp.Event.Emit("vinta:click-outside")
+	if !outbound && !cursorHidden && len(rects) > 0 {
+		lmbState, _, _ := procGetAsyncKeyState.Call(0x01)
+		rmbState, _, _ := procGetAsyncKeyState.Call(0x02)
+		isButtonDown := (lmbState&0x8000) != 0 || (rmbState&0x8000) != 0
+		if isButtonDown && !a.hitTestWasButtonDown && !force && !cursorInAnyRect {
+			if wailsApp := application.Get(); wailsApp != nil {
+				go wailsApp.Event.Emit("vinta:click-outside")
+			}
 		}
+		a.hitTestWasButtonDown = isButtonDown
+	} else {
+		a.hitTestWasButtonDown = false
 	}
-	a.hitTestWasButtonDown = isButtonDown
 
 	a.pillHitMu.Lock()
 	a.isCurrentlyInteractive = isHit
 	a.pillHitMu.Unlock()
 }
 
-// startHitTestingLoop runs a housekeeping loop that backs up event-driven WM_INPUT hit testing.
-// When Raw Input (RIDEV_INPUTSINK) is active, mouse movement reconciles immediately (<1ms) on
-// WM_INPUT and this loop throttles down to 150ms for touch/pen, gap-hold expiry, force-interactive
-// timeouts, and HWND self-healing. If Raw Input registration fails, it falls back to 16ms polling.
+// startHitTestingLoop runs the dedicated hit-test worker goroutine that reconciles WS_EX_TRANSPARENT
+// on coalesced WM_INPUT / SetHitRects signals (capped at ~120Hz so 1000Hz-8000Hz gaming mice never
+// flood Win32 syscalls or block the message loop) and backs them up with a 150ms housekeeping tick
+// (falling back to 16ms polling if Raw Input registration is unavailable).
 func (a *App) startHitTestingLoop(hwnd uintptr) {
 	go func() {
 		defer SetupPanicRecovery()
+		const minSignalInterval = 8 * time.Millisecond
 		interval := 16 * time.Millisecond
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
+
+		var (
+			lastReconcile time.Time
+			coalesceTimer *time.Timer
+			coalesceC     <-chan time.Time
+		)
+		defer func() {
+			if coalesceTimer != nil {
+				coalesceTimer.Stop()
+			}
+		}()
+
+		runReconcile := func() {
+			if services.IsAppHidden() {
+				return
+			}
+			if hwnd == 0 {
+				hwnd = a.getHwnd()
+				if hwnd == 0 {
+					return
+				}
+			}
+			if isWin, _, _ := procIsWindow.Call(hwnd); isWin == 0 {
+				hwnd = a.getHwnd()
+				if hwnd == 0 {
+					return
+				}
+			}
+			lastReconcile = time.Now()
+			a.reconcileHitTest(hwnd)
+		}
 
 		stopCtx := a.lifecycleContext()
 		for {
 			select {
 			case <-stopCtx.Done():
 				return
+			case <-a.hitTestSignal:
+				if services.IsAppHidden() {
+					continue
+				}
+				elapsed := time.Since(lastReconcile)
+				if elapsed >= minSignalInterval {
+					if coalesceTimer != nil {
+						coalesceTimer.Stop()
+						coalesceC = nil
+					}
+					runReconcile()
+				} else if coalesceC == nil {
+					wait := minSignalInterval - elapsed
+					if coalesceTimer == nil {
+						coalesceTimer = time.NewTimer(wait)
+					} else {
+						coalesceTimer.Reset(wait)
+					}
+					coalesceC = coalesceTimer.C
+				}
+			case <-coalesceC:
+				coalesceC = nil
+				runReconcile()
 			case <-ticker.C:
-			}
-
-			a.pillHitMu.RLock()
-			rawActive := a.rawInputRegistered
-			a.pillHitMu.RUnlock()
-			desiredInterval := 16 * time.Millisecond
-			if rawActive {
-				desiredInterval = 150 * time.Millisecond
-			}
-			if desiredInterval != interval {
-				interval = desiredInterval
-				ticker.Reset(interval)
-			}
-
-			if hwnd == 0 {
-				hwnd = a.getHwnd()
-				if hwnd == 0 {
-					continue
+				a.pillHitMu.RLock()
+				rawActive := a.rawInputRegistered
+				a.pillHitMu.RUnlock()
+				desiredInterval := 16 * time.Millisecond
+				if rawActive {
+					desiredInterval = 150 * time.Millisecond
 				}
-			}
-			if isWin, _, _ := procIsWindow.Call(hwnd); isWin == 0 {
-				hwnd = a.getHwnd()
-				if hwnd == 0 {
-					continue
+				if desiredInterval != interval {
+					interval = desiredInterval
+					ticker.Reset(interval)
 				}
+				runReconcile()
 			}
-
-			a.reconcileHitTest(hwnd)
 		}
 	}()
 }
